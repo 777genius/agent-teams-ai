@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { spawn, spawnSync } = require('node:child_process');
 const [mode, scriptPath] = process.argv.slice(2);
 const { terminateChild } = require(scriptPath)._internal;
+const silentDescendant = mode === 'silent-descendant' || mode === 'delayed-kill';
 const descendantSource = `
   process.on('SIGTERM', () => {});
   // Last-resort fixture lifetime, even if the outer test runner is interrupted.
@@ -19,7 +20,7 @@ const leaderSource =
     : `
   const descendant = require('node:child_process').spawn(process.execPath,
     ['-e', ${JSON.stringify(descendantSource)}],
-    { stdio: ['ignore', ${JSON.stringify(mode === 'silent-descendant' ? 'ignore' : 'inherit')}, ${JSON.stringify(mode === 'silent-descendant' ? 'ignore' : 'inherit')}, 'ipc'] });
+    { stdio: ['ignore', ${JSON.stringify(silentDescendant ? 'ignore' : 'inherit')}, ${JSON.stringify(silentDescendant ? 'ignore' : 'inherit')}, 'ipc'] });
   descendant.once('message', () => {
     console.log('descendant-pid:' + descendant.pid);
     console.log('fixture-ready');
@@ -52,7 +53,7 @@ const watchdog = setTimeout(() => {
   console.error('TEST watchdog expired');
   process.exitCode = 1;
   cleanup();
-}, 3000);
+}, 7000);
 async function run() {
   await new Promise((resolve, reject) => {
     let log = '';
@@ -69,26 +70,40 @@ async function run() {
     await exited;
     assert.equal(closeSeen, false);
   }
-  await terminateChild(child, closed, process.platform, 100);
+  const originalKill = process.kill;
+  if (mode === 'delayed-kill') {
+    process.kill = (pid, signal) => {
+      if (pid === -child.pid && signal === 'SIGKILL') {
+        // Model asynchronous signal delivery without letting the fixture escape cleanup.
+        setTimeout(() => {
+          try {
+            originalKill.call(process, pid, signal);
+          } catch (error) {
+            if (error.code !== 'ESRCH') throw error;
+          }
+        }, 75);
+        return true;
+      }
+      return originalKill.call(process, pid, signal);
+    };
+  }
+  try {
+    await terminateChild(child, closed, process.platform, 2000);
+  } finally {
+    process.kill = originalKill;
+  }
   assert.equal(closeSeen, true);
   assert.equal(child.stdout.readableEnded, true);
   assert.equal(child.stderr.readableEnded, true);
-  if (mode === 'silent-descendant') {
+  if (silentDescendant) {
     assert.ok(descendantPid);
-    // Orphans can remain as zombies until Linux PID 1 reaps them. Verify they
-    // cannot execute, rather than mistaking an unreaped PID for a live process.
-    const deadline = Date.now() + 1000;
-    let running = true;
-    while (running && Date.now() < deadline) {
-      const status = spawnSync('ps', ['-p', String(descendantPid), '-o', 'stat='], {
-        encoding: 'utf8',
-      });
-      assert.ifError(status.error);
-      assert.ok(status.status === 0 || status.status === 1);
-      running = status.stdout.trim() !== '' && !status.stdout.trim().startsWith('Z');
-      if (running) await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    assert.equal(running, false, 'silent descendant survived shutdown');
+    const status = spawnSync('ps', ['-p', String(descendantPid), '-o', 'stat='], {
+      encoding: 'utf8',
+    });
+    assert.ifError(status.error);
+    assert.ok(status.status === 0 || status.status === 1);
+    const state = status.stdout.trim();
+    assert.ok(state === '' || /^[ZX]/.test(state), 'silent descendant survived shutdown');
   }
   console.log('cleanup verified: close=true');
 }

@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 30_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
@@ -185,6 +185,30 @@ function waitForProcessClose(closePromise, timeoutMs) {
   });
 }
 
+async function waitForOwnedGroupExit(groupId, timeoutMs) {
+  if (!groupId) return; // Failed spawn has no owned process group.
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const result = spawnSync('ps', ['-ax', '-o', 'pgid=,stat='], {
+      encoding: 'utf8',
+      timeout: Math.max(1, deadline - Date.now()),
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error('Unable to verify packaged app process group cleanup');
+    // Orphans may remain as zombies until PID 1 reaps them; they cannot execute
+    // or retain open pipes, so waiting for their PIDs to vanish would hang CI.
+    const running = result.stdout.split('\n').some((line) => {
+      const match = /^\s*(\d+)\s+(\S+)/.exec(line);
+      return match && Number(match[1]) === groupId && !/^[ZX]/.test(match[2]);
+    });
+    if (!running) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(25, deadline - Date.now())));
+  }
+}
+
 async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOWN_TIMEOUT_MS) {
   // POSIX callers must spawn detached: only this smoke-owned process group is signalled.
   // The leader may already have exited while descendants still hold its output pipes.
@@ -218,7 +242,10 @@ async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOW
   if (await waitForProcessClose(closePromise, timeoutMs)) {
     // A descendant with redirected stdio can outlive close. Stop any remaining
     // members of our group before reporting success, even when no pipes remain.
-    if (platform !== 'win32') signalOwnedGroup('SIGKILL');
+    if (platform !== 'win32') {
+      signalOwnedGroup('SIGKILL');
+      await waitForOwnedGroupExit(child.pid, timeoutMs);
+    }
     return;
   }
   console.error(`[smokePackagedApp] shutdown grace expired: pid=${child.pid}; forcing cleanup`);
@@ -233,6 +260,7 @@ async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOW
         `pid=${child.pid} exitCode=${child.exitCode} signal=${child.signalCode}`
     );
   }
+  if (platform !== 'win32') await waitForOwnedGroupExit(child.pid, timeoutMs);
 }
 
 async function main() {

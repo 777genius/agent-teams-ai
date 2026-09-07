@@ -142,7 +142,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
   );
   const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
 
-  it.each(['normal', 'retained-pipes', 'already-exited', 'silent-descendant'])(
+  it.each(['normal', 'retained-pipes', 'already-exited', 'silent-descendant', 'delayed-kill'])(
     'closes %s fixture and lets its Node harness exit',
     (mode) => {
       const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-process-TEST-'));
@@ -150,7 +150,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
         const output = execFileSync(process.execPath, [fixturePath, mode, scriptPath], {
           cwd: sandbox,
           encoding: 'utf8',
-          timeout: 4_000,
+          timeout: 8_000,
         });
         expect(output).toContain('cleanup verified: close=true');
       } finally {
@@ -201,13 +201,13 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
         const result = spawnSync(process.execPath, nodeArgs, {
           cwd: sandbox,
           encoding: 'utf8',
-          timeout: 5_000,
+          timeout: 8_000,
           env: {
             ...process.env,
             TMPDIR: sandbox,
             PACKAGED_SMOKE_TIMEOUT_MS: '2000',
             PACKAGED_SMOKE_STABLE_MS: '0',
-            PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '100',
+            PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
           },
         });
         expect(result.error).toBeUndefined();
@@ -247,8 +247,8 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
       const result = spawnSync(process.execPath, [scriptPath, sandbox, 'linux'], {
         cwd: sandbox,
         encoding: 'utf8',
-        timeout: 4_000,
-        env: { ...process.env, PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '100' },
+        timeout: 8_000,
+        env: { ...process.env, PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000' },
       });
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(1);
