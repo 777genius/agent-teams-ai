@@ -1,14 +1,13 @@
-import { CoordinationEventHandoff } from '@features/coordination-events/core/application/CoordinationEventHandoff';
-import { encodeReplayCursor } from '@features/coordination-events/core/domain';
-import { SqliteCoordinationEventJournal } from '@features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal';
-import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import { createHash, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
+import { CoordinationEventHandoff } from '@features/coordination-events/core/application/CoordinationEventHandoff';
+import { encodeReplayCursor } from '@features/coordination-events/core/domain';
 import {
   HostedCoordinationEventStreamController,
   type HostedCoordinationEventStreamScheduler,
 } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController';
+import { SqliteCoordinationEventJournal } from '@features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal';
 import {
   bindProductHostedProducerInstance,
   clearProductHostedProducerProvenance,
@@ -25,6 +24,7 @@ import type {
   CoordinationReplayBatch,
   ReplayCursor,
 } from '@features/coordination-events/contracts';
+import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const cursor = (value: string): ReplayCursor => value as ReplayCursor;

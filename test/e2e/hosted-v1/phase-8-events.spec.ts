@@ -11,7 +11,6 @@ import {
   writeProviderInbox,
   writeProviderTask,
 } from '../../fixtures/hosted-v1/adversarialState';
-
 import { installSseObservation } from '../../fixtures/hosted-v1/sseObservation';
 
 interface RuntimeInput {

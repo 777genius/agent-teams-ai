@@ -24,7 +24,6 @@ export function installSseObservation(input: { after: string; expectedType?: str
   };
   record(`requested:${input.after}`);
   let settled = false;
-  let timer: number;
   state.dispose = () => {
     if (settled) return;
     settled = true;
@@ -37,7 +36,7 @@ export function installSseObservation(input: { after: string; expectedType?: str
     record(`terminal:${code}`);
     state.dispose();
   };
-  timer = window.setTimeout(() => fail('observation_timeout'), 25_000);
+  const timer = window.setTimeout(() => fail('observation_timeout'), 25_000);
   source.onopen = () => { if (!settled) { state.open = true; record('open'); } };
   source.onerror = () => {
     if (settled) return;
