@@ -4,10 +4,10 @@ import {
   cleanupCursorAgentProcessTrees,
   commandNamesOwnedWorkspace,
   CURSOR_AGENT_TREE_SWEEP_ENV,
-  isCursorAgentTreeSweepEnabled,
-  isConfusableWorkspacePath,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
+  isConfusableWorkspacePath,
   isCursorAgentRootProcess,
+  isCursorAgentTreeSweepEnabled,
   isSameWorkspacePath,
 } from './CursorAgentProcessCleanup';
 

@@ -1,5 +1,5 @@
 import { killProcessByPid } from '@main/utils/processKill';
-import { type UnixProcessIdentity, tryReadUnixProcessTable } from '@main/utils/unixProcessTable';
+import { tryReadUnixProcessTable,type UnixProcessIdentity } from '@main/utils/unixProcessTable';
 
 /**
  * Ends a process tree this app never spawned, addressed by pid alone.
