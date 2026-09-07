@@ -2,9 +2,10 @@ import { createHmac } from 'node:crypto';
 
 import { canonicalJson, exactRecord, sha256 } from './canonical';
 import { descriptorMap, u32, type HeldOwner } from './native-protocol';
+import { SERVER_AUTH_V1, SERVER_AUTH_V2, AUTH_DOCUMENT_MAXIMUM, privateProfileBytes,
+  validatePreparedProfileTransfer, type PreparedProfileTransfer, type ServerAuthFormat } from './private-profile-transfer';
 
 const BOOTSTRAP = 'agent-teams.hosted-control.bootstrap/v2';
-const AUTH = 'agent-teams.hosted-control.opencode-server-auth/v1';
 const LEASE = 'agent-teams.hosted-control.launcher-lease/v2';
 const STATEMENT = 'agent-teams.hosted-control.bootstrap-statement/v2';
 const HEX = /^[0-9a-f]{64}$/u;
@@ -62,6 +63,9 @@ export interface AssembledBootstrap extends BootstrapFrames {
     descriptorMapSha256: string; bootstrapStatementSha256: string }>;
 }
 export interface AssembleBootstrapInput {
+  /** Omission preserves the accepted launch-only v1 contract; selected composition explicitly uses v2. */
+  readonly serverAuthFormat?: ServerAuthFormat;
+  readonly preparedProfileTransfer?: PreparedProfileTransfer;
   readonly held: HeldOwner;
   readonly common: BootstrapCommon;
   readonly expectedHost: ExpectedSupervisedOpenCode;
@@ -203,15 +207,26 @@ export function assembleOwnerBootstrap(input: AssembleBootstrapInput): Assembled
   let header: Buffer | undefined, authenticated: Buffer | undefined;
   try {
     check(key.length === 32 && sha256(key) === common.bootstrapBinding.proofKeyId, 'proof_key');
-    authDocument = canonicalBytes({ format: AUTH, bootstrapDigest: common.bootstrapBinding.bootstrapDigest,
+    const authFormat = input.serverAuthFormat ?? SERVER_AUTH_V1;
+    check(authFormat === SERVER_AUTH_V1 || authFormat === SERVER_AUTH_V2, 'auth_version');
+    check(authFormat === SERVER_AUTH_V2 ? !!input.preparedProfileTransfer : !input.preparedProfileTransfer, 'profile_version');
+    const transfer = input.preparedProfileTransfer;
+    const preparedProfileBinding = transfer && validatePreparedProfileTransfer(transfer, key, {
+      expectedHostSha256, ownerProcessStartToken: s.ownerProcessStartToken,
+      bootstrapDigest: common.bootstrapBinding.bootstrapDigest,
+    });
+    authDocument = privateProfileBytes({ format: authFormat, bootstrapDigest: common.bootstrapBinding.bootstrapDigest,
       spawnNonce: held.spawnNonce, expectedHostSha256, descriptorMapSha256, serverAuthId: expectedHost.serverAuthId,
-      username, password }, 8192);
+      username, password, ...(transfer ? { publicationId: transfer.publicationId,
+        preparedProfileSha256: transfer.preparedProfileSha256, preparedProfile: transfer.preparedProfile } : {}) },
+    authFormat === SERVER_AUTH_V2 ? AUTH_DOCUMENT_MAXIMUM : 8192);
     authFrame = Buffer.concat([u32(authDocument.length), authDocument]);
     const h0 = { ...common, format: BOOTSTRAP, expectedHost, supervisorBinding: s, descriptorMap: map, rawRetention: raw,
+      ...(preparedProfileBinding ? { preparedProfileBinding } : {}),
       leaseEvidence: { device: leaseFd.device, inode: leaseFd.inode, uid: leaseFd.uid, gid: leaseFd.gid, mode: leaseFd.mode,
         launcherLeaseId: input.launcherLeaseId, launcherArtifactDigest: input.launcherArtifactDigest },
-      serverAuthBinding: { format: AUTH, serverAuthId: expectedHost.serverAuthId, expectedHostSha256, descriptorMapSha256,
-        authHmacSha256: mac(key, AUTH, authFrame).toString('hex') } };
+      serverAuthBinding: { format: authFormat, serverAuthId: expectedHost.serverAuthId, expectedHostSha256, descriptorMapSha256,
+        authHmacSha256: mac(key, authFormat, authFrame).toString('hex') } };
     const bootstrapStatementSha256 = sha256(Buffer.concat([Buffer.from(`${STATEMENT}\0`), canonicalBytes(h0, 65536)]));
     const leaseBytes = canonicalBytes({ format: LEASE, launcherLeaseId: input.launcherLeaseId, bootstrapStatementSha256 }, 65536);
     const leaseArtifactSha256 = sha256(leaseBytes);

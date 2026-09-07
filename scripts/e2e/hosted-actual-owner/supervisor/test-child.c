@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   close(11); /* Model the required Owner anchor consumption before any helper creation. */
   if (!strcmp(mode, "close-bootstrap")) { close(4); for (;;) pause(); }
   if (!strcmp(mode, "no-read")) { for (;;) pause(); }
-  unsigned char boot[65604], auth[8196], lease[65536];
+  unsigned char boot[65604], auth[1024 * 1024 + 4], lease[65536];
   size_t used[2] = {0, 0}; int open_input[2] = {1, 1};
   unsigned char *buffers[2] = {boot, auth}; size_t limits[2] = {sizeof boot, sizeof auth};
   int input[2] = {4, 7}; uint64_t until = now_ms() + 7000;

@@ -22,13 +22,16 @@ export function selectOwnerPlan(admission: PreflightAdmission) {
     s.source.executable.sha256 === s.executable.sha256, 'admitted_module');
   const contract = admission.closures.harness.entries.find(e => e.path === 'scripts/e2e/hosted-actual-owner/actual-owner-contract.v2.json');
   check(contract && /^[0-9a-f]{64}$/u.test(contract.sha256), 'harness_contract');
-  return { protocol: ownerChildPlanV2(), image: s.executable,
+  return { protocol: ownerChildPlanV2(!!s.preparationModule), image: s.executable,
     argv: Object.freeze(['run', s.source.module.path, ...OWNER_V2_ARGV]),
-    selection: { ownerSourceInvocation: s.source, ownerLaunchHelper: s.helper, ownerRecipeSha256: s.recipeSha256, ownerHarnessContractSha256: contract.sha256 } };
+    selection: { ownerSourceInvocation: s.source, ownerLaunchHelper: s.helper, ownerRecipeSha256: s.recipeSha256,
+      ownerHarnessContractSha256: contract.sha256,
+      ...(s.preparationModule ? { ownerPreparationModule: s.preparationModule } : {}),
+      ...(s.kernelModule ? { selectedKernelModule: s.kernelModule } : {}) } };
 }
 /** Checks redundant plan/manifest values at both the selected caller and transcript boundary. */
 export function assertOwnerPlanV2(plan: SupervisorPlan): void {
-  check(canonicalJson(plan.ownerChildProtocol) === canonicalJson(ownerChildPlanV2()), 'protocol_v2');
+  check(canonicalJson(plan.ownerChildProtocol) === canonicalJson(ownerChildPlanV2(!!plan.ownerPreparationModule)), 'protocol_v2');
   const supervisor = plan.supervisorSourceInvocation;
   if (supervisor) {
     check(supervisor.format === 'agent-teams.hosted-selected-supervisor-invocation/v1' &&

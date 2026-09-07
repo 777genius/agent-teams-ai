@@ -19,6 +19,7 @@ import {
   validateDecimal,
   validateRecordId,
   type ClosurePin,
+  type FilePin,
   type IntegrationDescriptor,
   type RawOrigin,
   type RuntimeCaptureName,
@@ -36,6 +37,9 @@ import { SELECTED_PLAN_MAXIMUM_BYTES } from './supervisor/selected-plan-input';
 import { SELECTED_PUBLIC_ARTIFACTS, SELECTED_PUBLIC_ARTIFACT_NAMES,
   type SelectedPublicArtifactName } from './supervisor/public-artifacts';
 import type { WrittenFileEvidence } from './secure-files';
+import { Duplex } from 'node:stream';
+import { prepareSelectedControllerExecution,
+  type SelectedControllerExecutionInputs } from './supervisor/selected-controller-execution';
 
 import { PARENT_DESCRIPTOR_ROLES } from './owner-descriptor-legacy';
 import type { ParentDescriptorLifecycleRecord } from './owner-descriptor-legacy';
@@ -58,6 +62,8 @@ const CLEANUP_OPERATION_TIMEOUT_MS = 2_000;
 const MAX_PROC_ENVIRON_BYTES = 256 * 1024;
 
 export interface SupervisorPlan {
+  readonly ownerPreparationModule?: FilePin;
+  readonly selectedKernelModule?: FilePin;
   /** Recipe-v3 extension; namespace launcher and running Node remain distinct. */
   readonly supervisorSourceInvocation?: SelectedSupervisorInvocation;
   /** Public descriptor data for independent namespace-local verification. */
@@ -2699,7 +2705,8 @@ export async function terminateAnchoredProcessGroup(
 export async function executeSupervisor(
   admission: PreflightAdmission,
   sandbox: DisposableSandbox,
-  consumedAttempt: WrittenFileEvidence
+  consumedAttempt: WrittenFileEvidence,
+  selectedInputs?: SelectedControllerExecutionInputs,
 ): Promise<SupervisorOutcome> {
   // The staged r4 executable predates the r307 producer contract. Keep planning/parsing testable,
   // but never launch a candidate which cannot author the required OpenCode streams itself.
@@ -2722,7 +2729,13 @@ export async function executeSupervisor(
   if (plan.supervisorSourceInvocation && planBytes.length > SELECTED_PLAN_MAXIMUM_BYTES) {
     throw new Error('p3c_selected_supervisor_plan_bound');
   }
-  if (admission.ownerLaunch) throw new Error('p3c_owner_v2_namespace_entry_not_selected');
+  if (admission.ownerLaunch && (!selectedInputs || !plan.ownerPreparationModule ||
+    !plan.supervisorSourceInvocation || !admission.selectedSupervisorArtifacts)) {
+    throw new Error('p3c_owner_v2_namespace_entry_not_selected');
+  }
+  if (selectedInputs && !admission.ownerLaunch) throw new Error('p3c_unexpected_selected_controller');
+  const controller = selectedInputs ? prepareSelectedControllerExecution(plan, selectedInputs) : undefined;
+  try {
   const ownershipMarker = plan.processOwnership.marker;
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
   const supervisor = spawn('/proc/self/fd/9', plan.supervisorSourceInvocation?.argv ?? [], {
@@ -2826,7 +2839,16 @@ export async function executeSupervisor(
     await terminateAndSettle();
     throw new Error('p3c_supervisor_plan_pipe');
   }
-  (planPipe as NodeJS.WritableStream).end(planBytes);
+  let controllerTask: Promise<void> | undefined;
+  let controllerFailure: Promise<never> | undefined;
+  if (controller) {
+    if (!(planPipe instanceof Duplex)) {
+      await terminateAndSettle(); throw new Error('p3c_selected_controller_not_duplex');
+    }
+    controllerTask = controller.serve(planPipe, processAnchor.pid, AbortSignal.timeout(plan.maximumRuntimeMs + plan.shutdownGraceMs));
+    controllerFailure = new Promise<never>((_resolve, reject) => { void controllerTask!.catch(reject); });
+    void controllerFailure.catch(() => undefined);
+  } else (planPipe as NodeJS.WritableStream).end(planBytes);
   let timeout: NodeJS.Timeout | undefined;
   const boundedExit = new Promise<never>((_, reject) => {
     timeout = setTimeout(
@@ -2837,7 +2859,8 @@ export async function executeSupervisor(
   });
   let exit: number | null;
   try {
-    [exit] = (await Promise.race([supervisorExit, boundedExit]).finally(() =>
+    [exit] = (await Promise.race([supervisorExit, boundedExit,
+      ...(controllerFailure ? [controllerFailure] : [])]).finally(() =>
       clearTimeout(timeout)
     )) as [number | null, NodeJS.Signals | null];
   } catch (error) {
@@ -2872,8 +2895,12 @@ export async function executeSupervisor(
     await terminateAndSettle();
     throw new Error('p3c_supervisor_nonzero_or_diagnostics');
   }
-  selectedSupervisorTranscripts.set(transcript, { pid: processAnchor.pid, startTime: processAnchor.startTime,
+  controller?.assertComplete();
+  if (controllerTask) await controllerTask;
+  const transcriptProcess = controller?.processReceipt() ?? processAnchor;
+  selectedSupervisorTranscripts.set(transcript, { pid: transcriptProcess.pid, startTime: transcriptProcess.startTime,
     transcriptSha256: sha256(transcript) });
   try { return parseSupervisorTranscript(transcript, plan); }
   finally { selectedSupervisorTranscripts.delete(transcript); }
+  } finally { controller?.close(); }
 }

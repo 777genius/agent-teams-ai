@@ -1,3 +1,4 @@
+import type { SelectedControllerClient } from './selected-controller-client';
 import { nativeActivationSocketIdentity, type NativeActivationSocketIdentity } from '../../../../src/main/composition/hosted/hostedNativeActivationSocketIdentity';
 import type { NativeSuccessorHandle } from '../../../../src/main/composition/hosted/hostedNativeSuccessorHandleContract';
 import { randomBytes, createHash } from 'node:crypto';
@@ -6,7 +7,7 @@ import { decodeNativeActivationHandleSelection, NATIVE_ACTIVATION_HANDLE_CONTRAC
 import { transferNativeActivationHandle } from './native-handle-transfer';
 import { assertSelectedSupervisorObservation, type SelectedSupervisorProcessObservation } from './selected-process-observation';
 import { assertSelectedPlanAdmission, type SelectedPlanAdmission } from './selected-plan-admission';
-import { encodeSelectedLaunchPhase, writeSelectedLaunchPhase, SELECTED_LAUNCH_PHASE } from './selected-launch-phase';
+import { assertSelectedLaunchPreflightBound, encodeSelectedLaunchPhase, writeSelectedLaunchPhase, SELECTED_LAUNCH_PHASE } from './selected-launch-phase';
 import { closeSync, createReadStream, fstatSync, openSync, constants } from 'node:fs';
 
 import type { SupervisorPlan } from '../processes';
@@ -17,6 +18,7 @@ import { canonicalJson, sha256 } from './canonical';
 import { assembleOwnerBootstrap, type AssembleBootstrapInput, type AssembledBootstrap } from './bootstrap-v2';
 import { launchNativeOwner, type NativeLaunchOptions, type NativeOwnerLaunch } from './native-launch';
 import { descriptorMap, OWNER_ROLES, wrapperStartToken, type HeldOwner } from './native-protocol';
+import { SERVER_AUTH_V2, validatePreparedProfileTransfer, type RetainedPreparedProfile } from './private-profile-transfer';
 
 export { launchNativeOwner, OwnerLaunchError } from './native-launch';
 export type { InheritedImage, NativeOwnerLaunch } from './native-launch';
@@ -24,6 +26,7 @@ export { assembleOwnerBootstrap } from './bootstrap-v2';
 export type { BootstrapCommon, ExpectedSupervisedOpenCode, RawRetentionBinding } from './bootstrap-v2';
 
 export interface LaunchOwnerFromPlanOptions {
+  readonly retainedPreparedProfile?: RetainedPreparedProfile;
   readonly plan: SupervisorPlan;
   readonly handles: Pick<NativeLaunchOptions, 'helper' | 'executable' | 'cwdFd' | 'rawFd' | 'walFd'>;
   /** Lets the concrete input owner close only writers retained after preflight
@@ -47,6 +50,7 @@ export interface LaunchOwnerFromPlanOptions {
   readonly signal?: AbortSignal;
   /** Explicit extension; old launch-only callers do not establish cross-process transfer. */
   readonly activationHandleIpc?: Readonly<{
+    readonly nativeController: SelectedControllerClient;
     readonly authorizeSuccessorHandle?: (selection: NativeActivationHandleSelection, endpoint: NativeActivationSocketIdentity) => Promise<NativeSuccessorHandle>;
     contract: 'agent-teams.hosted-native-activation-transfer/v1';
     /** Initial Product starts after actual Owner exec; replacements reuse its live IPC child. */
@@ -129,6 +133,8 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
       !invocation.modulePath.split('/').some(s => s === '.' || s === '..'), 'source_module');
   }
   assertOwnerPlanV2(plan);
+  check(plan.ownerPreparationModule ? bootstrap.serverAuthFormat === SERVER_AUTH_V2 :
+    bootstrap.serverAuthFormat !== SERVER_AUTH_V2, 'profile_recipe_selection');
   if (plan.supervisorSourceInvocation) {
     check(options.selectedPlanAdmission, 'selected_plan_admission_required');
     assertSelectedPlanAdmission(options.selectedPlanAdmission, plan);
@@ -146,6 +152,9 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
     check(options.selectedPlanAdmission === undefined, 'selected_plan_admission_unexpected');
   }
   if (options.activationHandleIpc) {
+    check(options.activationHandleIpc.nativeController &&
+      options.activationHandleIpc.nativeController.admission === options.selectedPlanAdmission &&
+      canonicalJson(options.activationHandleIpc.nativeController.plan) === canonicalJson(plan), 'native_controller_binding');
     const artifacts = options.activationHandleIpc.selectedArtifacts;
     check(invocation.kind === 'source-bun' && artifacts?.contract === SELECTED_LAUNCH_PHASE &&
       /^[0-9a-f]{64}$/u.test(artifacts.runtimeManifestSha256) &&
@@ -177,9 +186,21 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
       executableSha256: handles.executable.pin.sha256, implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1', moduleSha256: entrySha256 },
     producerRole: 'owner', streams: { ownerWalTimeline: { fd: 9, device: String(wal.dev), inode: String(wal.ino) } }, version: 2 });
   const ownerProcessStartToken = randomBytes(32).toString('hex');
+  check(bootstrap.preparedProfileTransfer === undefined, 'precomputed_profile_transfer');
+  check(bootstrap.serverAuthFormat === SERVER_AUTH_V2 ? !!options.retainedPreparedProfile :
+    !options.retainedPreparedProfile, 'retained_profile_selection');
+  // This token is the actual launch-selected token used in all subsequent
+  // native observations. Never transfer with a placeholder or a prior start.
+  const profileContext = { expectedHostSha256: sha256(canonicalJson(bootstrap.expectedHost)),
+    ownerProcessStartToken, bootstrapDigest: bootstrap.common.bootstrapBinding.bootstrapDigest };
+  let preparedProfileTransfer = options.retainedPreparedProfile
+    ? structuredClone(options.retainedPreparedProfile.transfer(bootstrap.key, profileContext)) : undefined;
+  const preparedProfileBinding = preparedProfileTransfer &&
+    validatePreparedProfileTransfer(preparedProfileTransfer, bootstrap.key, profileContext);
   // Retain static selected values before the child exists; only bounded native
   // observations and the actual assembled header digest are added after exec.
   const selectedStatic = options.activationHandleIpc ? Object.freeze(structuredClone({
+        ...(preparedProfileBinding ? { preparedProfileBinding } : {}),
         expectedHost: bootstrap.expectedHost, rawRetention: bootstrap.rawRetention,
         supervisorProcessStartToken: options.supervisorProcessStartToken, ownerProcessStartToken,
         recipeSha256: options.recipeSha256, harnessContractSha256: options.harnessContractSha256,
@@ -201,28 +222,25 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
         harnessContractPath: options.activationHandleIpc!.selectedArtifacts.harnessContractPath
   })) : undefined;
   if (selectedStatic) {
-    const bounded = encodeSelectedLaunchPhase({ ...selectedStatic, bootstrapV2HeaderSha256: '0'.repeat(64),
-      held: null, executed: null }, null);
-    // Native events contain eight fixed descriptor rows and bounded u32/u64
-    // values. Reserve 32 KiB for them before any native child is launched.
-    check(bounded.length <= 256 * 1024 - 32 * 1024, 'selection_phase_prelaunch_bound');
-    bounded.fill(0);
+    assertSelectedLaunchPreflightBound(selectedStatic);
   }
   let digests: AssembledBootstrap['digests'] | undefined;
   let wrapperObservation: OwnerWrapperObservation | undefined;
   const launch = await launchNativeOwner({ ...handles, signal: options.signal,
+    serverAuthFormat: bootstrap.serverAuthFormat,
     onWriterOwnershipTaken: options.onWriterOwnershipTaken,
     argv: ['/proc/self/fd/11', ...plan.expectedArgv.owner],
     environment: { ...options.environment, P3C_PROCESS_OWNERSHIP_MARKER: plan.processOwnership.marker,
       [provenance.environment]: capsule },
     async assemble(held) {
       wrapperObservation = await observeOwnerWrapper(held, handles.helper.pin);
-      const assembled = assembleOwnerBootstrap({ ...bootstrap, held, supervisorBinding: {
+      const assembled = assembleOwnerBootstrap({ ...bootstrap, preparedProfileTransfer, held, supervisorBinding: {
         supervisorPid: held.callerPid, supervisorStartTicks: held.callerStartTicks,
         supervisorStartToken: options.supervisorProcessStartToken, supervisorExecutableSha256: plan.expectedExecutableSha256.supervisor,
         recipeSha256: options.recipeSha256, ownerEntrySha256: entrySha256, ownerPid: held.ownerPid,
         ownerStartTicks: held.ownerStartTicks, ownerProcessStartToken, harnessContractSha256: options.harnessContractSha256,
         ownerProducerCapsuleSha256: sha256(capsule) } });
+      preparedProfileTransfer = undefined;
       digests = assembled.digests; return assembled;
     } });
   const map = descriptorMap(launch.held), cleanup = parentCleanup(launch.held, ownerProcessStartToken);
@@ -236,11 +254,17 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
   if (options.activationHandleIpc) {
     const endpoint = launch.activation.take();
     try {
-      const frame = encodeSelectedLaunchPhase({ ...selectedStatic!,
+      // One existing five-second budget covers root admission and the complete
+      // HSL1 write. Neither Product startup nor activation is a signing input.
+      const deadline = performance.now() + 5000;
+      const admissionSignal = AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(5000)]);
+      const selectedLaunch = Object.freeze({ ...selectedStatic!,
         bootstrapV2HeaderSha256: digests!.bootstrapV2HeaderSha256,
-        held: launch.held, executed: launch.executed,
-      }, launch.sealed);
-      try { selectedLaunchPhase = await writeSelectedLaunchPhase(endpoint, frame, performance.now() + 5000, options.signal); }
+        held: launch.held, executed: launch.executed });
+      const nativeAdmission = await options.activationHandleIpc.nativeController.nativeAdmission({ kind: 'native',
+        generation: bootstrap.common.ownerGeneration, ownerProcessStartToken, launch: selectedLaunch, sealed: launch.sealed }, admissionSignal);
+      const frame = encodeSelectedLaunchPhase(selectedLaunch, launch.sealed, nativeAdmission);
+      try { selectedLaunchPhase = await writeSelectedLaunchPhase(endpoint, frame, deadline, admissionSignal); }
       finally { frame.fill(0); }
       const selected = decodeNativeActivationHandleSelection({ contract: NATIVE_ACTIVATION_HANDLE_CONTRACT,
         ownerProcessStartToken, bootstrapV2HeaderSha256: digests!.bootstrapV2HeaderSha256,
@@ -262,6 +286,7 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
       const [disposal] = await Promise.allSettled([launch.dispose()]);
       throw new OwnerPostExecHandoffError(error, Object.freeze({
         held: launch.held, sealed: launch.sealed, executed: launch.executed,
+        parentWriterClosures: launch.parentWriterClosures,
         ownerProcessStartToken, evidence: launchEvidence(),
         ...(selectedLaunchPhase ? { selectedLaunchPhase } : {}),
       }), disposal);
@@ -282,6 +307,7 @@ export class OwnerPostExecHandoffError extends Error {
       held: NativeOwnerLaunch['held'];
       sealed: NativeOwnerLaunch['sealed'];
       executed: NativeOwnerLaunch['executed'];
+      parentWriterClosures: NativeOwnerLaunch['parentWriterClosures'];
       ownerProcessStartToken: string;
       evidence: OwnerLaunchEvidenceV2;
       selectedLaunchPhase?: Awaited<ReturnType<typeof writeSelectedLaunchPhase>>;

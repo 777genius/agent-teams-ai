@@ -15,6 +15,7 @@ import { assembleOwnerBootstrap, type AssembleBootstrapInput, type BootstrapFram
 import { canonicalJson as supervisorCanonicalJson, sha256 as supervisorSha256 } from './canonical';
 import { launchNativeOwner, OwnerLaunchError, type InheritedImage } from './native-launch';
 import { decodeFailure, NATIVE_EVENT, type HeldOwner } from './native-protocol';
+import { SERVER_AUTH_V2 } from './private-profile-transfer';
 
 const sources = dirname(fileURLToPath(import.meta.url));
 let sandbox: string;
@@ -173,6 +174,13 @@ test('real seal, maximum frames, cyclic remap, exact exec, separate parent, reta
         if (i === 0) { assert.equal(Number(flags) & 3, 0); assert.equal(Number(seals), 15); }
       }
       assert.equal(launch.executed.executableSha256, input.handles.executable.pin.sha256);
+      assert.equal(launch.parentWriterClosures.length, 2);
+      for (const row of launch.parentWriterClosures) {
+        assert.equal(row.spawnBoundaryMonotonicNs, launch.held.forkMonotonicNs);
+        assert(BigInt(row.observedOpenMonotonicNs) < BigInt(row.spawnBoundaryMonotonicNs));
+        assert(BigInt(row.spawnBoundaryMonotonicNs) < BigInt(row.observedClosedMonotonicNs));
+        assert(BigInt(row.observedClosedMonotonicNs) < BigInt(launch.executed.observedMonotonicNs));
+      }
       assert.notEqual(launch.executed.executable.inode, input.handles.helper.pin.inode);
       assert.equal(readFileSync(input.walPath, 'utf8'), 'wal-descriptor-survived\n');
       const echo = readSocket(activation, 4); activation.write('PING'); assert.equal((await echo).toString(), 'PING');
@@ -211,6 +219,40 @@ test('canonical H0 -> lease -> H2; distinct digests; only signed manifest digest
       assert.deepEqual(actual.bootstrapFrame, expected.bootstrapFrame); assert.deepEqual(actual.authFrame, expected.authFrame);
       assert.deepEqual(actual.leaseBytes, expected.leaseBytes);
     } finally { socket.destroy(); await launch.dispose(); }
+  } finally { input.closeBorrowed(); }
+});
+
+test('explicit FD7 v2 delivers 1 MiB concurrently with maximum FD4 and wipes transferred buffers', async () => {
+  const input = inputs('private-v2-maximum');
+  let sent!: BootstrapFrames;
+  let expected!: BootstrapFrames;
+  try {
+    const launch = await launchNativeOwner({ ...input.handles, argv: ['test-child'], environment: {},
+      serverAuthFormat: SERVER_AUTH_V2, assemble() {
+        sent = fixtureFrames(65536, 1024 * 1024); expected = retain(sent); return sent;
+      } });
+    const activation = launch.activation.take();
+    try {
+      await readSocket(activation, 5);
+      const actual = readReport(input.rawPath);
+      assert.deepEqual(actual.authFrame, expected.authFrame);
+      assert.deepEqual(actual.bootstrapFrame, expected.bootstrapFrame);
+      assert.equal(actual.authFrame.length, 1024 * 1024 + 4);
+      assert(sent.authFrame.every(byte => byte === 0));
+      assert(sent.bootstrapFrame.every(byte => byte === 0));
+    } finally { activation.destroy(); await launch.dispose(); }
+  } finally { input.closeBorrowed(); }
+});
+
+test('large private frame never probes or downgrades the default v1 selection', async () => {
+  const input = inputs('private-v1-reject');
+  let sent!: BootstrapFrames;
+  try {
+    const error = await failure(launchNativeOwner({ ...input.handles, argv: ['test-child'], environment: {},
+      assemble() { sent = fixtureFrames(65536, 8193); return sent; } }));
+    assert(!error.nativeEvents.some(event => event.type === NATIVE_EVENT.exec));
+    assert(sent.authFrame.every(byte => byte === 0));
+    assert(sent.bootstrapFrame.every(byte => byte === 0));
   } finally { input.closeBorrowed(); }
 });
 

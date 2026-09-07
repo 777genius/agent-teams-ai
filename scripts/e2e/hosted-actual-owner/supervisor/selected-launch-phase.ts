@@ -1,3 +1,4 @@
+import { decodeNativeLaunchAdmission, type NativeLaunchAdmission, NATIVE_ADMISSION_MAXIMUM } from './selected-native-admission-contract';
 import type { Socket } from 'node:net';
 import { canonicalJson, sha256 } from './canonical';
 
@@ -6,8 +7,21 @@ export const SELECTED_LAUNCH_MAXIMUM = 256 * 1024;
 
 /** The native launch stage constructs this from its retained inputs and native
  * events. This transport supplies no signer or public-key authority. */
-export function encodeSelectedLaunchPhase(launch: Readonly<Record<string, unknown>>, sealed: unknown): Buffer {
-  const bytes = Buffer.from(canonicalJson({ contract: SELECTED_LAUNCH_PHASE, launch, sealed }));
+export function assertSelectedLaunchPreflightBound(launch: Readonly<Record<string, unknown>>) {
+  // 32 KiB reserved for native events and 128 KiB for the signed admission.
+  if (Buffer.byteLength(canonicalJson(launch)) + 32 * 1024 + NATIVE_ADMISSION_MAXIMUM + 1024 > SELECTED_LAUNCH_MAXIMUM) {
+    throw new Error('owner_selected_launch_phase_preflight_bound');
+  }
+}
+export function encodeSelectedLaunchPhase(launch: Readonly<Record<string, unknown>>, sealed: unknown,
+  value: NativeLaunchAdmission): Buffer {
+  const nativeAdmission = decodeNativeLaunchAdmission(value);
+  if (nativeAdmission.statement.launchSha256 !== sha256(canonicalJson(launch)) ||
+    nativeAdmission.statement.sealedSha256 !== sha256(canonicalJson(sealed)) ||
+    nativeAdmission.statement.ownerProcessStartToken !== launch.ownerProcessStartToken) {
+    throw new Error('owner_selected_launch_phase_admission_binding');
+  }
+  const bytes = Buffer.from(canonicalJson({ contract: SELECTED_LAUNCH_PHASE, launch, sealed, nativeAdmission }));
   if (bytes.length === 0 || bytes.length > SELECTED_LAUNCH_MAXIMUM) {
     throw new Error('owner_selected_launch_phase_bound');
   }

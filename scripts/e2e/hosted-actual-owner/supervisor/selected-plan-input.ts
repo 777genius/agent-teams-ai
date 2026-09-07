@@ -1,14 +1,30 @@
 import { Socket } from 'node:net';
 import type { SupervisorPlan } from '../processes';
 import { canonicalJson } from './canonical';
+import { exactRecord } from './canonical';
+import { SELECTED_CONTROLLER_CHANNEL, type SelectedControllerChannel } from './selected-controller-channel';
 
 export const SELECTED_PLAN_MAXIMUM_BYTES = 4 * 1024 * 1024;
 
 /** Consume the existing inherited FD3 plan once, with bounded bytes and time.
  * A decoded plan is untrusted until selected-plan-admission verifies its signed
  * documents against the executable's independently provisioned public roots. */
-export async function readSelectedSupervisorPlan(signal: AbortSignal): Promise<SupervisorPlan> {
+export async function readSelectedSupervisorPlan(signal: AbortSignal, channel?: SelectedControllerChannel): Promise<SupervisorPlan> {
   signal.throwIfAborted();
+  if (channel) {
+    const envelope = exactRecord(await channel.read(signal, 5000), ['contract', 'kind', 'plan'], 'selected_plan_envelope');
+    if (envelope.contract !== SELECTED_CONTROLLER_CHANNEL || envelope.kind !== 'plan') {
+      throw new Error('selected_supervisor_plan_channel');
+    }
+    const plan = envelope.plan as SupervisorPlan;
+    if (!plan || plan.schemaVersion !== 2 || plan.protocol !== 'agent-teams.p3c.supervisor-transcript/v1' ||
+      !plan.supervisorSourceInvocation || !plan.supervisorAdmissionDescriptor ||
+      !plan.supervisorPublicArtifacts || !plan.ownerPreparationModule ||
+      Buffer.byteLength(canonicalJson(plan)) > SELECTED_PLAN_MAXIMUM_BYTES) {
+      throw new Error('selected_supervisor_plan_native_selection');
+    }
+    return plan;
+  }
   const bounded = AbortSignal.any([signal, AbortSignal.timeout(5000)]);
   // The selected Linux Node parent supplies a Unix socketpair for stdio[3],
   // like the existing native launch transport. Socket I/O keeps cancellation

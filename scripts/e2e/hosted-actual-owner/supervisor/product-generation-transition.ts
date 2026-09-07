@@ -8,6 +8,9 @@ import {
 import type { NativeActivationHandleSelection } from '../../../../src/main/composition/hosted/hostedNativeActivationHandleContract';
 
 const prepared = new WeakMap<ChildProcess, Readonly<{ digest: string; generation: number }>>();
+const adopted = new WeakMap<ChildProcess, Readonly<{
+  selection: NativeActivationHandleSelection; manifestDigest: string;
+}>>();
 
 /** No signer is selected here. Product verifies this independently signed ticket
  * against its original launcher pin before acknowledging a completed drain. */
@@ -33,6 +36,7 @@ export function observeProductGenerationAdoption(product: ChildProcess,
   if (selection.ownerGeneration > 1 && (!expected || expected.generation !== selection.ownerGeneration)) {
     return Promise.reject(new Error('product_transition_not_prepared'));
   }
+  let observedManifestDigest: string | undefined;
   return observe(product, `${APPROVAL_GENERATION_TRANSITION}/ready`, row => {
     if (Object.keys(row).sort().join(',') !== 'contract,manifestDigest,selection,transitionSha256' ||
       JSON.stringify(row.selection) !== JSON.stringify(selection) ||
@@ -42,7 +46,23 @@ export function observeProductGenerationAdoption(product: ChildProcess,
       throw new Error('product_transition_ready_binding');
     }
     prepared.delete(product);
-  }, signal);
+    observedManifestDigest = row.manifestDigest;
+  }, signal).then(() => {
+    if (!observedManifestDigest) throw new Error('product_generation_adoption_missing');
+    adopted.set(product, Object.freeze({ selection: Object.freeze({ ...selection }), manifestDigest: observedManifestDigest }));
+  });
+}
+
+/** Retained only from the existing validated ready message. It supplies the
+ * predecessor digest to root issuance, whose signer independently compares
+ * its own admitted predecessor. It is not a replacement for that admission. */
+export function readProductGenerationAdoption(product: ChildProcess, selection: NativeActivationHandleSelection) {
+  const receipt = adopted.get(product);
+  if (!receipt || prepared.has(product) || !product.connected || product.exitCode !== null ||
+    product.signalCode !== null || JSON.stringify(receipt.selection) !== JSON.stringify(selection)) {
+    throw new Error('product_generation_adoption_missing');
+  }
+  return receipt;
 }
 
 function observe(product: ChildProcess, contract: string,
