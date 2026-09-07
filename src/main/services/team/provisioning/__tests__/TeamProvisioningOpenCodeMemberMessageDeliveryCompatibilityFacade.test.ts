@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   type OpenCodeMemberInboxRelayResult,
@@ -20,6 +20,27 @@ vi.mock('../TeamProvisioningOpenCodeMemberInboxRelay', async (importOriginal) =>
   return {
     ...actual,
     relayOpenCodeMemberInboxMessagesWithPorts: vi.fn(),
+  };
+});
+
+vi.mock('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader')
+    >();
+  return {
+    ...actual,
+    // Only the disk probe is faked: the lane exists, holds state and holds no
+    // runtime evidence - the one shape the self-heal ladder may act on. The
+    // switch itself stays real, which is the point of these tests.
+    inspectOpenCodeRuntimeLaneStorage: vi.fn(async () => ({
+      laneDirectoryExists: true,
+      hasStateOnDisk: true,
+      hasRuntimeEvidenceOnDisk: false,
+      manifestEntryCount: 0,
+      manifestUpdatedAt: null,
+      fileNames: ['opencode-prompt-delivery-ledger.json'],
+    })),
   };
 });
 
@@ -220,6 +241,77 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       [run, 'active'],
       [run, 'idle'],
     ]);
+  });
+});
+
+/**
+ * The self-heal switch has to work on the wiring the app actually runs.
+ *
+ * This service always supplies `isOpenCodePrimaryLaneSelfHealEnabled` to the
+ * tracker, so the tracker never reaches its own default. While that port fell
+ * back to the module CONSTANT instead of the env reader, setting
+ * CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED changed nothing in the
+ * running app - the switch worked only in tests that built a tracker by hand.
+ *
+ * So this goes through the real service and the real tracker: it takes the
+ * `requestOpenCodePrimaryLaneRebootstrap` port the service hands to the delivery
+ * factory, and asks it. Restoring the constant makes these fail.
+ */
+describe('the self-heal switch on the production wiring', () => {
+  const ENV_NAME = 'CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED';
+  const request = {
+    teamName: 'team-a',
+    laneId: 'primary',
+    memberName: 'team-lead',
+    runId: 'run-wiring',
+    reason: 'opencode_primary_lane_bootstrap_missing',
+  };
+
+  afterEach(() => {
+    delete process.env[ENV_NAME];
+  });
+
+  function selfHealPortOf(service: ReturnType<typeof createService>) {
+    let port:
+      | ((input: typeof request) => Promise<{ action: string }>)
+      | undefined;
+    const withCapture = service as unknown as {
+      createOpenCodeMemberMessageDeliveryService(): unknown;
+      deps: { createDeliveryHost(): Record<string, unknown> };
+    };
+    const originalCreateHost = withCapture.deps.createDeliveryHost.bind(withCapture.deps);
+    withCapture.deps.createDeliveryHost = () => originalCreateHost();
+    const created = withCapture.createOpenCodeMemberMessageDeliveryService() as unknown as {
+      deps?: { requestOpenCodePrimaryLaneRebootstrap?: typeof port };
+    };
+    port = created.deps?.requestOpenCodePrimaryLaneRebootstrap;
+    return port;
+  }
+
+  it('stays off when the environment says nothing', async () => {
+    const port = selfHealPortOf(createService());
+    expect(port).toBeTypeOf('function');
+
+    await expect(port?.(request)).resolves.toMatchObject({ action: 'give_up' });
+  });
+
+  it('turns on when the environment says so', async () => {
+    process.env[ENV_NAME] = '1';
+    const port = selfHealPortOf(createService());
+
+    // Enabled: the ladder proceeds into its grace window instead of giving up.
+    await expect(port?.(request)).resolves.toMatchObject({ action: 'wait' });
+  });
+
+  it('lets an explicit dependency override the environment', async () => {
+    process.env[ENV_NAME] = '1';
+    const port = selfHealPortOf(
+      createService({
+        isOpenCodePrimaryLaneSelfHealEnabled: () => false,
+      } as Partial<TestDeps>)
+    );
+
+    await expect(port?.(request)).resolves.toMatchObject({ action: 'give_up' });
   });
 });
 
