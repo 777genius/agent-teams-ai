@@ -42,6 +42,9 @@ import {
   writeExclusive,
 } from './secure-files';
 
+import { selectedOwnerImages, verifyP3B2Recipe, type OwnerLaunchSelectionV2 } from './owner-recipe';
+export { verifyP3B2Recipe } from './owner-recipe';
+
 const MAX_DESCRIPTOR_BYTES = 2 * 1024 * 1024;
 const DESCRIPTOR_FIFO_TIMEOUT_MS = 5_000;
 const FIFO_NONBLOCK_FLAG = 0o4000;
@@ -82,6 +85,7 @@ function readFd(fd: number, buffer: Buffer, position: number | null): Promise<nu
 }
 
 export interface PreflightAdmission {
+  readonly ownerLaunch?: Readonly<{ selection: OwnerLaunchSelectionV2; executable: FileAnchor; helper: FileAnchor }>;
   readonly descriptor: IntegrationDescriptor;
   readonly roots: Readonly<Record<RootName, RootAnchor>>;
   readonly closures: Readonly<{
@@ -953,49 +957,6 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
     throw new Error('p3c_build_provenance_binding');
 }
 
-export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): void {
-  const recipe = exactRecord(
-    parseCanonicalObject(bytes, 'p3b2_recipe'),
-    [
-      'schemaVersion',
-      'purpose',
-      'sourceBaseCommit',
-      'resultCommit',
-      'entry',
-      'supervisor',
-      'closureMerkleRoot',
-      'candidateOpenCodeSha256',
-      'argv',
-      'sourceTreeRequired',
-      'accepted',
-    ],
-    'p3b2_recipe'
-  );
-  const entry = exactRecord(recipe.entry, ['relativePath', 'sha256'], 'p3b2_recipe_entry');
-  const supervisor = exactRecord(
-    recipe.supervisor,
-    ['relativePath', 'sha256'],
-    'p3b2_recipe_supervisor'
-  );
-  if (
-    recipe.schemaVersion !== 1 ||
-    recipe.purpose !== 'agent-teams.p3b2.built-actual-owner-entry/v1' ||
-    recipe.sourceBaseCommit !== descriptor.p3b2.sourceBaseCommit ||
-    recipe.resultCommit !== descriptor.p3b2.resultCommit ||
-    entry.relativePath !== descriptor.p3b2.entry.relativePath ||
-    entry.sha256 !== descriptor.p3b2.entry.sha256 ||
-    supervisor.relativePath !== descriptor.p3b2.supervisor.relativePath ||
-    supervisor.sha256 !== descriptor.p3b2.supervisor.sha256 ||
-    recipe.closureMerkleRoot !== descriptor.p3b2.closure.merkleRoot ||
-    recipe.candidateOpenCodeSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
-    canonicalJson(recipe.argv) !==
-      canonicalJson(['--runtime-manifest', '/sandbox/runtime-manifest.json']) ||
-    recipe.sourceTreeRequired !== false ||
-    recipe.accepted !== true
-  )
-    throw new Error('p3c_p3b2_recipe_binding');
-}
-
 function verifyProductCompositionDescriptor(
   bytes: Buffer,
   descriptor: IntegrationDescriptor
@@ -1182,12 +1143,15 @@ export async function admitIntegration(
         throw new Error(`p3c_${name}_not_empty`);
     }
 
+    const recipe = await openAndRead(roots.p3b2, descriptor.p3b2.recipe, 16 * 1024 * 1024);
+    openedFiles.push(recipe.anchor);
+    const ownerSelection = verifyP3B2Recipe(recipe.bytes, descriptor);
     const [harness, toolchain, productRuntime, browserBundle, p3b2] = await Promise.all([
       verifyClosure(roots.harness, descriptor.product.harnessClosure),
       verifyClosure(roots.toolchain, descriptor.toolchain.closure),
       verifyClosure(roots.productRuntime, descriptor.product.runtimeClosure),
       verifyClosure(roots.browserBundle, descriptor.product.browserBundle),
-      verifyClosure(roots.p3b2, descriptor.p3b2.closure),
+      verifyClosure(roots.p3b2, descriptor.p3b2.closure, selectedOwnerImages(ownerSelection)),
     ]);
 
     const read = async (root: RootAnchor, pin: FilePin, maximum: number) => {
@@ -1240,8 +1204,10 @@ export async function admitIntegration(
     );
     const ownerEntry = await verify(roots.p3b2, descriptor.p3b2.entry, 1024 ** 3);
     const supervisor = await verify(roots.p3b2, descriptor.p3b2.supervisor, 1024 ** 3);
-    const recipe = await read(roots.p3b2, descriptor.p3b2.recipe, 16 * 1024 * 1024);
-    verifyP3B2Recipe(recipe.bytes, descriptor);
+    const ownerLaunch = ownerSelection === undefined ? undefined : Object.freeze({
+      selection: ownerSelection, executable: await verify(roots.p3b2, ownerSelection.executable, 1024 ** 3),
+      helper: await verify(roots.p3b2, ownerSelection.helper, 1024 ** 3),
+    });
     const compositionEntry = await verify(
       roots.productRuntime,
       descriptor.product.compositionEntry,
@@ -1332,6 +1298,7 @@ export async function admitIntegration(
     ]);
     return Object.freeze({
       descriptor,
+      ...(ownerLaunch === undefined ? {} : { ownerLaunch }),
       roots: Object.freeze(roots),
       closures: Object.freeze({
         harness,
@@ -1360,7 +1327,8 @@ export async function admitIntegration(
 }
 
 export async function closeAdmission(admission: PreflightAdmission): Promise<void> {
-  await closeAnchors([...Object.values(admission.execution), ...Object.values(admission.roots)]);
+  await closeAnchors([...Object.values(admission.execution), ...Object.values(admission.roots),
+    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper] : [])]);
 }
 
 export async function consumeOneRunAuthorization(
