@@ -39,6 +39,7 @@ export class HostedTeamConfigurationAuthority {
           ),
           metadata: { name: request.name },
           members: request.members,
+          ...(Object.hasOwn(request, 'configuration') ? { configuration: request.configuration } : {}),
           deadlineAtMs: request.context.deadlineAtMs,
         },
         request.context.signal

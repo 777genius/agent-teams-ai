@@ -1,4 +1,5 @@
 import type {
+  HostedCreateDraftTeamRequest,
   HostedSavedTeamRequest,
   HostedTeamConfigurationIdempotencyKey,
   HostedTeamConfigurationIdentity,
@@ -66,6 +67,7 @@ export interface HostedTeamConfigurationApplicationPort {
     readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
     readonly name: string;
     readonly members: readonly HostedTeamConfigurationMember[];
+    readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
     readonly context: QueryContext;
   }): Promise<
     | Readonly<{

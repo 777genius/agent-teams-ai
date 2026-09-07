@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
+import { hostedRosterMembers } from '@features/team-configuration/contracts';
 import { sql } from 'drizzle-orm';
 import {
   check,
@@ -94,12 +95,25 @@ function revision(): string {
 }
 
 function draft(row: DraftRow) {
+  const stored: unknown = JSON.parse(row.members_json);
+  // Released records are arrays. New records use a strict versioned envelope in the same JSON column.
+  let roster: { members: unknown; configuration?: unknown };
+  if (Array.isArray(stored)) roster = { members: stored };
+  else {
+    if (!stored || typeof stored !== 'object' ||
+        Object.keys(stored).sort().join(',') !== 'configuration,members,schemaVersion' ||
+        (stored as { schemaVersion?: unknown }).schemaVersion !== 1) {
+      throw new TypeError('hosted-team-configuration-stored-roster-invalid');
+    }
+    roster = stored as { members: unknown; configuration: unknown };
+  }
   return parseHostedTeamConfigurationStorageDraft({
     workspaceId: row.workspace_id,
     teamId: row.team_id,
     revision: row.revision_token,
     metadata: JSON.parse(row.metadata_json),
-    members: JSON.parse(row.members_json),
+    members: roster.members,
+    ...(Object.hasOwn(roster, 'configuration') ? { configuration: roster.configuration } : {}),
   });
 }
 
@@ -170,7 +184,7 @@ export class HostedTeamConfigurationStorageOps {
           reservedTeamId,
           initialRevision,
           JSON.stringify(input.metadata),
-          JSON.stringify(input.members),
+          JSON.stringify(input.configuration ? { schemaVersion: 1, members: input.members, configuration: input.configuration } : input.members),
           admittedAtMs,
           admittedAtMs
         );
@@ -228,17 +242,23 @@ export class HostedTeamConfigurationStorageOps {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
         const nextRevision = revision();
-        const nextMetadata = { ...(JSON.parse(row.metadata_json) as object), ...input.updates };
+        const current = draft(row);
+        const { configuration, ...metadataUpdates } = input.updates;
+        const nextMetadata = { ...current.metadata, ...metadataUpdates };
+        const nextMembersJson = configuration
+          ? JSON.stringify({ schemaVersion: 1, members: hostedRosterMembers(configuration), configuration })
+          : row.members_json;
         const changed = db
           .prepare(
             `UPDATE hosted_team_configuration_drafts
               SET revision_ordinal = revision_ordinal + 1,
-                  revision_token = ?, metadata_json = ?, updated_at_ms = ?
+                  revision_token = ?, metadata_json = ?, members_json = ?, updated_at_ms = ?
             WHERE workspace_id = ? AND team_id = ? AND state = 'active' AND revision_token = ?`
           )
           .run(
             nextRevision,
             JSON.stringify(nextMetadata),
+            nextMembersJson,
             admittedAtMs,
             input.workspaceId,
             input.teamId,
@@ -252,6 +272,7 @@ export class HostedTeamConfigurationStorageOps {
             revision_ordinal: row.revision_ordinal + 1,
             revision_token: nextRevision,
             metadata_json: JSON.stringify(nextMetadata),
+            members_json: nextMembersJson,
           }),
         };
       })

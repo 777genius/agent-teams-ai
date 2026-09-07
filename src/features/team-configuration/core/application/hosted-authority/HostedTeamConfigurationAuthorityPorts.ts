@@ -1,4 +1,5 @@
 import type {
+  HostedCreateDraftTeamRequest,
   HostedSavedTeamRequest,
   HostedTeamConfigurationIdempotencyKey,
   HostedTeamConfigurationIdentity,
@@ -38,6 +39,7 @@ export interface HostedTeamConfigurationAuthorityStoragePort {
       readonly payloadHash: string;
       readonly metadata: Readonly<{ name: string }>;
       readonly members: readonly HostedTeamConfigurationMember[];
+      readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
       readonly deadlineAtMs: number;
     },
     signal: AbortSignal
@@ -73,5 +75,6 @@ export interface HostedTeamConfigurationAuthorityCreateRequest {
   readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
   readonly name: string;
   readonly members: readonly HostedTeamConfigurationMember[];
+  readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
   readonly context: QueryContext;
 }

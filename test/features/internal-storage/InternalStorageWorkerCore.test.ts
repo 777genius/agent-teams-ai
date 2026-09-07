@@ -1,15 +1,18 @@
+import { createHash } from 'node:crypto';
+
 import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { CoordinationSqliteSnapshotOps } from '@features/internal-storage/main/infrastructure/worker/coordinationSqliteSnapshotOps';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import * as schema from '@features/internal-storage/main/infrastructure/worker/internalStorageSchema';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { getTableColumns, getTableName } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   InternalStorageBackendInfo,
@@ -701,6 +704,80 @@ describe('InternalStorageWorkerCore', () => {
     } finally {
       reopened.close();
     }
+  });
+
+  it('preserves configured format v28 through backup/restore and refuses startup at supported v27', async () => {
+    const dbPath = await makeTmpDbPath();
+    const storage = track(makeCore(dbPath));
+    const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
+    const created = storage.handle('hostedTeamConfiguration.create', {
+      workspaceId, idempotencyKey: 'idempotency_format-admission-0001', payloadHash: 'a'.repeat(64),
+      metadata: { name: 'Configured' }, members: [{ name: 'lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+        { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5',
+          members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+      ] },
+    }) as { teamId: string };
+    storage.close();
+    const backupRunId = 'backup-configured-format';
+    const scratchRoot = `${dbPath}.coordination-backup-staging`;
+    await fs.mkdir(scratchRoot);
+    const scratchName = createHash('sha256').update('coordination-backup-scratch-v1\0').update(backupRunId).digest('hex');
+    const archivePath = path.join(scratchRoot, `${scratchName}.sqlite`);
+    const restoredPath = path.join(tmpDir!, 'restored.sqlite');
+    const source = new Database(dbPath);
+    source.prepare(`INSERT INTO coordination_backup_runs (
+      backup_run_id, deployment_id, state, revision, fence_completion_status,
+      record_json, requested_at, updated_at
+    ) VALUES (?, 'deployment-test', 'sqlite_snapshot', 1, NULL, ?, 'now', 'now')`)
+      .run(backupRunId, JSON.stringify({ backupRunId, state: 'sqlite_snapshot' }));
+    const rows = source.prepare('SELECT * FROM hosted_team_configuration_drafts').all();
+    const ledger = source.prepare('SELECT * FROM hosted_team_configuration_create_keys').all();
+    try {
+      expect(source.pragma('user_version', { simple: true })).toBe(28);
+      await source.backup(archivePath);
+    } finally { source.close(); }
+    const snapshotOps = new CoordinationSqliteSnapshotOps(
+      () => { throw new Error('verification must not open live storage'); },
+      (file, options) => new Database(file, options), dbPath
+    );
+    expect(snapshotOps.verifySqliteSnapshot({ backupRunId })).toMatchObject({ status: 'valid', userVersion: 28 });
+    await fs.copyFile(archivePath, restoredPath);
+
+    // Exercise the real source startup gate with the prior supported constant.
+    // This is deliberately NOT a built old-binary rollback qualification.
+    vi.resetModules();
+    vi.doMock('@features/internal-storage/main/application/internalStorageBackupContract', async (importOriginal) => ({
+      ...await importOriginal<typeof import('@features/internal-storage/main/application/internalStorageBackupContract')>(),
+      INTERNAL_STORAGE_SCHEMA_VERSION: 27,
+    }));
+    try {
+      const { InternalStorageWorkerCore: PriorSupportedCore } = await import('@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore');
+      const { CoordinationSqliteSnapshotOps: PriorSupportedSnapshots } = await import('@features/internal-storage/main/infrastructure/worker/coordinationSqliteSnapshotOps');
+      const priorSnapshots = new PriorSupportedSnapshots(
+        () => { throw new Error('verification must not open live storage'); },
+        (file, options) => new Database(file, options), dbPath
+      );
+      expect(priorSnapshots.verifySqliteSnapshot({ backupRunId })).toEqual({ status: 'invalid', reason: 'schema_mismatch' });
+      for (const file of [dbPath, archivePath, restoredPath]) {
+        const prior = track(new PriorSupportedCore({ databasePath: file, createDatabase: (name) => new Database(name) }));
+        expect(() => prior.handle('ping', {})).toThrow('Unsupported future internal storage schema version: 28 > 27');
+        expect(() => prior.handle('hostedTeamConfiguration.read', { workspaceId, teamId: created.teamId })).toThrow('28 > 27');
+        const unchanged = new Database(file, { readonly: true });
+        try {
+          expect(unchanged.pragma('user_version', { simple: true })).toBe(28);
+          expect(unchanged.prepare('SELECT * FROM hosted_team_configuration_drafts').all()).toEqual(rows);
+          expect(unchanged.prepare('SELECT * FROM hosted_team_configuration_create_keys').all()).toEqual(ledger);
+        } finally { unchanged.close(); }
+      }
+    } finally {
+      vi.doUnmock('@features/internal-storage/main/application/internalStorageBackupContract');
+      vi.resetModules();
+    }
+    const restored = track(makeCore(restoredPath));
+    expect(restored.handle('hostedTeamConfiguration.read', { workspaceId, teamId: created.teamId })).toMatchObject({
+      kind: 'found', draft: { configuration: { toolApprovalMode: 'manual' } },
+    });
   });
 
   it('keeps the raw migration DDL in sync with the drizzle schema', async () => {

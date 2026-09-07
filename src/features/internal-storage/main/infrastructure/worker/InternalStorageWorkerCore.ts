@@ -4,6 +4,8 @@ import * as path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 
+import { parseHostedTeamConfigurationStorageCreateRequest } from '../../../contracts/hostedTeamConfigurationStorageContracts';
+
 import {
   ApplicationCommandLedgerWorkerOps,
   handleApplicationCommandLedgerOp,
@@ -155,6 +157,9 @@ export class InternalStorageWorkerCore {
       if ((this.options.now?.() ?? new Date()).getTime() >= typed.admission.deadlineAtMs) {
         throw new Error('process-ownership-storage-deadline-expired');
       }
+    }
+    if (op === 'hostedTeamConfiguration.create') {
+      payload = parseHostedTeamConfigurationStorageCreateRequest(payload);
     }
     this.assertMutationAdmission(op, payload);
     switch (op) {

@@ -5,6 +5,7 @@ import {
   EvaluateHostedStateStartup,
   type EvaluateHostedStateStartupDependencies,
 } from '@features/hosted-state-compatibility';
+import { vi } from 'vitest';
 
 import {
   archiveReadModel,
@@ -110,6 +111,42 @@ describe('AdmitOfflineRestore', () => {
     });
 
     expect(result).toMatchObject({ status: 'admitted' });
+  });
+
+  it('uses SQLite version metadata even when the hosted header admits the archive', async () => {
+    const request = { archiveRef: 'configured-archive', mode: 'replace_deployment' as const,
+      sourceOfflineAttested: true, expectedRestoreSet: createRestoreSetIdentity(backupManifest(), coordinationSnapshot()) };
+    const manifest = { ...backupManifest(),
+      sqliteSnapshot: { ...backupManifest().sqliteSnapshot, userVersion: 28,
+        entry: { ...backupManifest().sqliteSnapshot.entry, schemaVersion: 28 } },
+      sqliteIntegrity: { ...backupManifest().sqliteIntegrity, userVersion: 28 },
+    };
+    const verified = immutableVerification();
+    if (verified.status !== 'verified') throw new Error('fixture-invalid');
+    const dependencies = restoreDependencies({
+      archiveReader: { readArchive: async () => archiveReadModel(manifest) },
+      archiveIntegrityProbe: { verify: async () => ({ ...verified, inspection: { ...verified.inspection, manifest } }) },
+    });
+    await expect(new AdmitOfflineRestore(dependencies).execute(request)).resolves.toMatchObject({ status: 'admitted' });
+    vi.resetModules();
+    vi.doMock('@features/internal-storage/contracts', async (importOriginal) => ({
+      ...await importOriginal<typeof import('@features/internal-storage/contracts')>(),
+      INTERNAL_STORAGE_SCHEMA_VERSION: 27,
+    }));
+    try {
+      // Real source admission at the prior supported version, not a built old binary.
+      const { AdmitOfflineRestore: PriorSupportedRestore } = await import('@features/hosted-state-compatibility/core/application/AdmitOfflineRestore');
+      await expect(new PriorSupportedRestore(dependencies).execute(request)).resolves.toEqual({
+        status: 'refused', reasons: ['sqlite_schema_unsupported'],
+      });
+    } finally {
+      vi.doUnmock('@features/internal-storage/contracts');
+      vi.resetModules();
+    }
+    const mismatched = { ...manifest, sqliteIntegrity: { ...manifest.sqliteIntegrity, userVersion: 27 } };
+    await expect(new AdmitOfflineRestore({ ...dependencies,
+      archiveIntegrityProbe: { verify: async () => ({ ...verified, inspection: { ...verified.inspection, manifest: mismatched } }) },
+    }).execute(request)).resolves.toEqual({ status: 'refused', reasons: ['sqlite_schema_unsupported'] });
   });
 
   it('refuses checksum mismatch returned through the integrity probe', async () => {

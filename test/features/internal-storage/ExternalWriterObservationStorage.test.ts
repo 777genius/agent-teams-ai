@@ -469,7 +469,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 27 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 28 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -507,7 +507,7 @@ describe('external writer observation checkpoint storage', () => {
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 27 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 28 });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated

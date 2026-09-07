@@ -16,6 +16,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -68,6 +70,48 @@ describe('stopped-stack recovery', () => {
       },
     });
     await expect(readdir(fixtureRoot)).resolves.toEqual([]);
+  });
+
+  it('preserves configured SQLite v28 and legacy JSON through stopped-stack archive and restore', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-configured-restore-'));
+    roots.push(root);
+    const sourceRoot = join(root, 'source');
+    const archiveRoot = join(root, 'archive');
+    const targetRoot = join(root, 'target');
+    await mkdir(join(sourceRoot, 'data'), { recursive: true });
+    await mkdir(targetRoot);
+    const header = { format: 'hosted-state-header/v1', schemaVersion: 1,
+      deploymentId: 'deployment_fixture', hostedStateSchemaVersion: 1 };
+    await writeFile(join(sourceRoot, 'data', 'hosted-state-header.v1.json'), JSON.stringify(header));
+    const sourcePath = join(sourceRoot, 'data', 'storage', 'app.db');
+    const worker = new InternalStorageWorkerCore({ databasePath: sourcePath, createDatabase: (file) => new Database(file) });
+    const create = { workspaceId: `workspace_${'1'.repeat(32)}`, metadata: { name: 'Draft' },
+      members: [{ name: 'lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER, payloadHash: 'a'.repeat(64) };
+    try {
+      worker.handle('hostedTeamConfiguration.create', { ...create, idempotencyKey: 'idempotency_restore-legacy-0001' });
+      worker.handle('hostedTeamConfiguration.create', { ...create, idempotencyKey: 'idempotency_restore-configured-0001',
+        configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+          { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+        ] },
+      });
+    } finally { worker.close(); }
+    const before = new Database(sourcePath, { readonly: true });
+    const rows = before.prepare('SELECT * FROM hosted_team_configuration_drafts ORDER BY team_id').all();
+    const ledger = before.prepare('SELECT * FROM hosted_team_configuration_create_keys ORDER BY team_id').all();
+    before.close();
+    await createStoppedStackArchive({ sourceRoot, archiveRoot });
+    await restoreStoppedStackArchive({ archiveRoot, targetRoot, restoreGeneration: 1,
+      openDatabase: (file) => new Database(file),
+    });
+    for (const file of [join(archiveRoot, 'payload', 'data', 'storage', 'app.db'), join(targetRoot, 'data', 'storage', 'app.db')]) {
+      const database = new Database(file, { readonly: true });
+      try {
+        expect(database.pragma('user_version', { simple: true })).toBe(28);
+        expect(database.prepare('SELECT * FROM hosted_team_configuration_drafts ORDER BY team_id').all()).toEqual(rows);
+        expect(database.prepare('SELECT * FROM hosted_team_configuration_create_keys ORDER BY team_id').all()).toEqual(ledger);
+      } finally { database.close(); }
+    }
+    expect(JSON.parse(await readFile(join(targetRoot, 'data', 'hosted-state-header.v1.json'), 'utf8'))).toEqual(header);
   });
 
   it('leaves interrupted targets fail closed and never merges into them', async () => {

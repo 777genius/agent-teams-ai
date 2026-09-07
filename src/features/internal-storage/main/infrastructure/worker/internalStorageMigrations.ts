@@ -34,7 +34,6 @@ export {
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '../../application/internalStorageBackupContract';
-
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 interface InternalStorageMigration {
   version: number;
@@ -750,6 +749,8 @@ const MIGRATIONS: InternalStorageMigration[] = [
   },
   EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION,
   EXTERNAL_WRITER_RECONCILIATION_MIGRATION,
+  // Format admission only: configured members_json envelopes; never rewrite legacy arrays.
+  { version: 28, statements: [] },
 ];
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });

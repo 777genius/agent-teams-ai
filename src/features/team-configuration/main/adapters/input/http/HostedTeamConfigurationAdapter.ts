@@ -21,6 +21,10 @@ import {
   parseHostedGetSavedTeamRequest,
   parseHostedUpdateDraftTeamRequest,
 } from '../../../../contracts/hosted';
+import {
+  assertHostedRosterMatches,
+  parseHostedRosterConfiguration,
+} from '../../../../contracts/hostedRosterConfiguration';
 
 import type {
   HostedTeamConfigurationApplicationPort,
@@ -142,7 +146,16 @@ function projectDraft(
     names.add(name);
     members.push(Object.freeze({ name }));
   }
-  return Object.freeze({ ...identity, revision, metadata, members: Object.freeze(members) });
+  try {
+    const configuration = Object.hasOwn(value, 'configuration')
+      ? parseHostedRosterConfiguration(value.configuration) : undefined;
+    if (configuration) assertHostedRosterMatches(configuration, members);
+    return Object.freeze({ ...identity, revision, metadata, members: Object.freeze(members),
+      ...(configuration ? { configuration } : {}),
+    });
+  } catch {
+    return null;
+  }
 }
 
 export interface HostedTeamConfigurationFacade {
@@ -203,6 +216,7 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
         idempotencyKey: parsed.value.idempotencyKey,
         name: parsed.value.name,
         members: parsed.value.members,
+        ...(parsed.value.configuration ? { configuration: parsed.value.configuration } : {}),
         context: principal,
       });
       if (result.kind === 'error') return applicationError(result.error);
