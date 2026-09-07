@@ -47,7 +47,7 @@ This update fixes OpenCode startup checks and makes provider sign-in failures ea
 ### Fixes
 
 - Stop valid OpenCode settings managed by the app from incorrectly blocking model checks.
-- Show the provider's sign-in error when it rejects access with a 401 response.
+- Show the provider's sign-in error when it rejects access with a 401 or 403 response.
 - Reuse newly started OpenCode servers without incorrectly reporting that their settings have changed.
 
 ### Downloads
