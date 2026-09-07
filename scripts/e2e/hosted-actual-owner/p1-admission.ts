@@ -6,6 +6,10 @@ import type { SupervisorOutcome, SupervisorPlan } from './processes';
 
 export const P2_SCENARIO_REQUIREMENTS = Object.freeze([
   'owner-wal-disk-custody-and-verified-native-corpus',
+  'owner-wal-successful-receipts-retained-independently-of-disk-bindings',
+  'owner-wal-sealed-generation-file-pins-and-fenced-predecessor-absence',
+  'owner-wal-independent-operation-requests-results-and-clock-witnesses',
+  'owner-wal-replacement-process-lineage-bound-to-retained-generations',
   'native-scenario-derivation-without-legacy-effect-total-rows',
 ]);
 
