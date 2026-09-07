@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   cleanupCursorAgentProcessTrees,
   commandNamesOwnedWorkspace,
+  isConfusableWorkspacePath,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
   isCursorAgentRootProcess,
   isSameWorkspacePath,
@@ -970,5 +971,40 @@ describe('ownership proof that the platform cannot supply', () => {
     });
 
     expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+});
+
+/**
+ * Both counter-examples review reproduced through a real sweep. A joined argv
+ * has no argument boundaries left in it, so these are not parser bugs to fix -
+ * they are the shape of the ambiguity, and the sweep has to decline.
+ */
+describe('directory names that a joined command line cannot distinguish', () => {
+  it('refuses an owned path whose sibling merely adds " - suffix"', () => {
+    const command = 'cursor-agent --print --workspace /work/app - backup --model m';
+    // The real workspace is `/work/app - backup`; a stop of `/work/app` must not
+    // reach it. A single leading dash is an ordinary directory name.
+    expect(commandNamesOwnedWorkspace(command, '/work/app', 'darwin')).toBe(false);
+  });
+
+  it('still matches the normal case, where a long flag follows', () => {
+    const command = 'cursor-agent --print --workspace /work/app --model m';
+    expect(commandNamesOwnedWorkspace(command, '/work/app', 'darwin')).toBe(true);
+  });
+
+  /**
+   * The residual case the parser cannot settle: a directory literally named
+   * `/work/app --model auto` renders identically to `/work/app` plus a model
+   * argument. The stop path refuses it on evidence instead - see
+   * teamLeadProcessTreeReap's confusable-workspace guard.
+   */
+  it('names the pair that stays ambiguous', () => {
+    expect(isConfusableWorkspacePath('/work/app --model auto', '/work/app', 'darwin')).toBe(true);
+    expect(isConfusableWorkspacePath('/work/app - backup', '/work/app', 'darwin')).toBe(true);
+    // Symmetric, and never true for equal or unrelated paths.
+    expect(isConfusableWorkspacePath('/work/app', '/work/app - backup', 'darwin')).toBe(true);
+    expect(isConfusableWorkspacePath('/work/app', '/work/app', 'darwin')).toBe(false);
+    expect(isConfusableWorkspacePath('/work/app-backup', '/work/app', 'darwin')).toBe(false);
+    expect(isConfusableWorkspacePath('/work/other', '/work/app', 'darwin')).toBe(false);
   });
 });

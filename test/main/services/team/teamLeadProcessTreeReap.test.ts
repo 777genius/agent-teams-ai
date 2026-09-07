@@ -264,3 +264,51 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     ]);
   });
 });
+
+/**
+ * The counter-example review reproduced through the real stop helper: stopping a
+ * team in `/work/app` reached the live tree of a team in `/work/app - backup`.
+ *
+ * No parsing rule settles it - `ps` joins argv, so `--workspace /work/app -
+ * backup` and `--workspace /work/app` plus arguments are the same string. What
+ * the stop DOES know is which teams are still running and where, and that is
+ * evidence rather than guesswork.
+ */
+describe('a live team whose directory cannot be told apart on a command line', () => {
+  it('declines instead of reaping', async () => {
+    writeTeamConfig('stopped-confusable', { projectPath: '/work/app' });
+    writeTeamConfig('alive-confusable', { projectPath: '/work/app - backup' });
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'stopped-confusable',
+      otherAliveTeams: ['alive-confusable'],
+      requestedAtMs: 1_700_000_000_000,
+    });
+
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(result.killedPids).toEqual([]);
+    expect(result.diagnostics.join(' ')).toContain('cannot be told apart');
+  });
+
+  /** The same guard must not fire for an unrelated neighbour. */
+  it('still reaps when the other team is merely nearby', async () => {
+    writeTeamConfig('stopped-nearby', { projectPath: '/work/app' });
+    writeTeamConfig('alive-nearby', { projectPath: '/work/app-backup' });
+    sweepCursorAgentTrees.mockResolvedValueOnce({
+      scanned: 1,
+      killed: [8100],
+      keptRecent: [],
+      incomplete: false,
+      diagnostics: [],
+    });
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'stopped-nearby',
+      otherAliveTeams: ['alive-nearby'],
+      requestedAtMs: 1_700_000_000_000,
+    });
+
+    expect(sweepCursorAgentTrees).toHaveBeenCalledTimes(1);
+    expect(result.killedPids).toEqual([8100]);
+  });
+});

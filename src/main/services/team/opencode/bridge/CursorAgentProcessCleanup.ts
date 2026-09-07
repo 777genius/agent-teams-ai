@@ -192,6 +192,30 @@ function normalizeWorkspacePath(value: string, platform: NodeJS.Platform): strin
   return cased.slice(0, end);
 }
 
+/**
+ * Whether two workspaces could produce the same command line once `ps` has
+ * joined the argument vector.
+ *
+ * `left` is confusable with `right` when one is the other followed by a space:
+ * `/work/app - backup` renders as `--workspace /work/app - backup`, which is
+ * indistinguishable from `--workspace /work/app` plus arguments. The same holds
+ * the other way round, so the test is symmetric.
+ *
+ * Callers use this to decline rather than to match. It is the only honest answer
+ * available from a joined argv - the boundaries are gone, and no parsing rule
+ * puts them back.
+ */
+export function isConfusableWorkspacePath(
+  left: string,
+  right: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  const a = normalizeWorkspacePath(left, platform);
+  const b = normalizeWorkspacePath(right, platform);
+  if (a.length === 0 || b.length === 0 || a === b) return false;
+  return a.startsWith(`${b} `) || b.startsWith(`${a} `);
+}
+
 /** The same exact comparison the sweep uses, for callers that scope it. */
 export function isSameWorkspacePath(
   left: string,
@@ -265,7 +289,11 @@ export function commandNamesOwnedWorkspace(
     const firstSpace = value.indexOf(' ');
     const firstToken = firstSpace === -1 ? value : value.slice(0, firstSpace);
     if (normalizeWorkspacePath(firstToken, platform) !== normalizedOwned) return false;
-    return firstSpace === -1 || value.slice(firstSpace).trimStart().startsWith('-');
+    // A single leading dash is not enough: `/work/app - backup` is a perfectly
+    // ordinary directory name, and accepting it lets a stop of `/work/app` reap
+    // the tree of a live team working in that other directory. A long flag is
+    // the narrowest thing that still admits the normal case.
+    return firstSpace === -1 || value.slice(firstSpace).trimStart().startsWith('--');
   }
 
   // An owned path that DOES contain spaces is only recognisable when the value

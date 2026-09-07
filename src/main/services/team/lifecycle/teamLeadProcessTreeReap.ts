@@ -4,6 +4,7 @@ import {
   CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
   type CursorAgentTreeSweepPort,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
+  isConfusableWorkspacePath,
   isSameWorkspacePath,
 } from '../opencode/bridge/CursorAgentProcessCleanup';
 import { readTeamProjectWorkspace } from '../TeamProjectWorkspaces';
@@ -55,11 +56,38 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   }
 
   const sharedWith: string[] = [];
+  const confusableWith: string[] = [];
   for (const otherTeam of input.otherAliveTeams) {
     const otherWorkspace = await readTeamProjectWorkspace(teamsBasePath, otherTeam);
-    if (otherWorkspace && isSameWorkspacePath(otherWorkspace, workspace)) {
+    if (!otherWorkspace) continue;
+    if (isSameWorkspacePath(otherWorkspace, workspace)) {
       sharedWith.push(otherTeam);
+    } else if (isConfusableWorkspacePath(otherWorkspace, workspace)) {
+      confusableWith.push(otherTeam);
     }
+  }
+  if (confusableWith.length > 0) {
+    // The independent proof this sweep otherwise lacks.
+    //
+    // A process table gives a JOINED command line, so `--workspace /work/app -
+    // backup` cannot be told apart from `--workspace /work/app` followed by
+    // arguments. No parsing rule recovers the argv boundaries, which means a
+    // stop of `/work/app` could reach the tree of a live team working in
+    // `/work/app - backup`.
+    //
+    // What the caller does know is which teams are still running and where.
+    // When one of them sits in a directory whose spelling could be read as
+    // this team's plus arguments, the ambiguity is not hypothetical - it is
+    // present right now, on this machine - and the sweep declines rather than
+    // resolving it by guesswork.
+    return {
+      killedPids: [],
+      incomplete: false,
+      diagnostics: [
+        'Skipped cursor-agent sweep: a still-running team works in a directory whose command ' +
+          `line cannot be told apart from this team's (${confusableWith.join(', ')})`,
+      ],
+    };
   }
   if (sharedWith.length > 0) {
     return {
