@@ -42,7 +42,7 @@ import {
   writeExclusive,
 } from './secure-files';
 
-import { verifyP3B2Recipe, type OwnerLaunchSelectionV2 } from './owner-recipe';
+import { selectedOwnerImages, verifyP3B2Recipe, type OwnerLaunchSelectionV2 } from './owner-recipe';
 export { verifyP3B2Recipe } from './owner-recipe';
 
 const MAX_DESCRIPTOR_BYTES = 2 * 1024 * 1024;
@@ -1151,8 +1151,7 @@ export async function admitIntegration(
       verifyClosure(roots.toolchain, descriptor.toolchain.closure),
       verifyClosure(roots.productRuntime, descriptor.product.runtimeClosure),
       verifyClosure(roots.browserBundle, descriptor.product.browserBundle),
-      verifyClosure(roots.p3b2, descriptor.p3b2.closure, ownerSelection === undefined ? [] :
-        [ownerSelection.executable, ownerSelection.helper]),
+      verifyClosure(roots.p3b2, descriptor.p3b2.closure, selectedOwnerImages(ownerSelection)),
     ]);
 
     const read = async (root: RootAnchor, pin: FilePin, maximum: number) => {

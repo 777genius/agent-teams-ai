@@ -32,12 +32,17 @@ function privateImage(value: unknown): PrivateOwnerImagePin {
   check(p.inode !== '0', 'image_inode');
   return Object.freeze({ ...p }) as unknown as PrivateOwnerImagePin;
 }
-/** Selection comes from the exact freeze-bound recipe bytes, never from an argv/FD guess. */
+/**
+ * The independently authenticated P3.C1 freeze binds recipeSha256 AND closureMerkleRoot
+ * (preflight.verifyControlDocuments). Package recipe bytes first, then enumerate/hash the complete closure,
+ * including the recipe, then freeze both digests. V2 must not embed its enclosing root.
+ * This parser checks recipe bytes against that descriptor; it does not grant freeze authority.
+ */
 export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): OwnerLaunchSelectionV2 | undefined {
   const value = parseCanonicalObject(bytes, 'p3b2_recipe');
   if (value.schemaVersion === 1) { verifyLegacyP3B2Recipe(bytes, descriptor); return undefined; }
   const r = exactRecord(value, ['schemaVersion', 'purpose', 'sourceBaseCommit', 'resultCommit', 'entry',
-    'supervisor', 'closureMerkleRoot', 'candidateOpenCodeSha256', 'argv', 'sourceTreeRequired', 'accepted',
+    'supervisor', 'candidateOpenCodeSha256', 'argv', 'sourceTreeRequired', 'accepted',
     'sourceInvocation', 'launchHelper'], 'owner_recipe_v2');
   const selected = descriptor.p3b2;
   check(r.schemaVersion === 2 && r.purpose === 'agent-teams.p3b2.source-actual-owner-entry/v2' &&
@@ -45,7 +50,7 @@ export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescripto
   check(r.sourceBaseCommit === selected.sourceBaseCommit && r.resultCommit === selected.resultCommit &&
     canonicalJson(r.entry) === canonicalJson({ relativePath: selected.entry.relativePath, sha256: selected.entry.sha256 }) &&
     canonicalJson(r.supervisor) === canonicalJson({ relativePath: selected.supervisor.relativePath, sha256: selected.supervisor.sha256 }) &&
-    r.closureMerkleRoot === selected.closure.merkleRoot && r.accepted === true && r.sourceTreeRequired === true &&
+    r.accepted === true && r.sourceTreeRequired === true &&
     r.candidateOpenCodeSha256 === descriptor.openCode.linuxX64Binary.sha256 &&
     r.candidateOpenCodeSha256 === descriptor.openCode.identities.linuxX64BinarySha256, 'binding');
   const source = exactRecord(r.sourceInvocation, ['format', 'executable', 'module'], 'owner_source');
@@ -104,4 +109,8 @@ function verifyLegacyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor
     recipe.accepted !== true
   )
     throw new Error('p3c_p3b2_recipe_binding');
+}
+
+export function selectedOwnerImages(selection?: OwnerLaunchSelectionV2): readonly FilePin[] {
+  return selection === undefined ? [] : [selection.executable, selection.helper];
 }

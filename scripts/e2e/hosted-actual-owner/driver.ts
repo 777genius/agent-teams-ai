@@ -16,6 +16,7 @@ import {
   type RawFileEvidence,
   type SupervisorOutcome,
 } from './processes';
+import { selectedOwnerImages } from './owner-recipe';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
 import { readStable, verifyClosure, type WrittenFileEvidence } from './secure-files';
@@ -107,7 +108,7 @@ async function readSandboxEvidenceFile(
   }
 }
 
-async function revalidateBeforeExecution(
+export async function revalidateBeforeExecution(
   admission: PreflightAdmission,
   sandbox: DisposableSandbox,
   consumedAttempt: WrittenFileEvidence
@@ -116,6 +117,7 @@ async function revalidateBeforeExecution(
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
+    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper].map(assertFileCurrent) : []),
   ]);
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
   const freshlyRehashedOpenCode = sha256(await readStable(admission.execution.openCode));
@@ -130,7 +132,8 @@ async function revalidateBeforeExecution(
     verifyClosure(admission.roots.toolchain, admission.descriptor.toolchain.closure),
     verifyClosure(admission.roots.productRuntime, admission.descriptor.product.runtimeClosure),
     verifyClosure(admission.roots.browserBundle, admission.descriptor.product.browserBundle),
-    verifyClosure(admission.roots.p3b2, admission.descriptor.p3b2.closure),
+    verifyClosure(admission.roots.p3b2, admission.descriptor.p3b2.closure,
+      selectedOwnerImages(admission.ownerLaunch?.selection)),
   ]);
   if (
     harness.merkleRoot !== admission.closures.harness.merkleRoot ||

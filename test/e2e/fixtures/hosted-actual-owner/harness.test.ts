@@ -718,6 +718,21 @@ describe('P3.C exact contract', () => {
     ).toThrow('p3c_p3c1_freeze_binding');
   });
 
+  it('independently authenticates both recipe and complete closure digests outside the recipe', () => {
+    const fixture = signedControlFixture();
+    for (const p3b2 of [
+      { ...fixture.descriptor.p3b2, recipeSha256: digest('substituted-recipe'),
+        recipe: { ...fixture.descriptor.p3b2.recipe, sha256: digest('substituted-recipe') } },
+      { ...fixture.descriptor.p3b2, closure: { ...fixture.descriptor.p3b2.closure,
+        merkleRoot: digest('substituted-complete-closure') } },
+    ]) {
+      expect(() => verifyControlDocuments(
+        { ...fixture.descriptor, p3b2 }, fixture.freeze, fixture.review, fixture.authorization,
+        fixture.reviewerPublicKey, fixture.runAuthorizationPublicKey, fixture.trustAnchor
+      )).toThrow('p3c_p3c1_freeze_binding');
+    }
+  });
+
   it('structurally cross-checks exact OpenCode release-manifest bytes', () => {
     const platforms = [
       ['linux', 'x64'],

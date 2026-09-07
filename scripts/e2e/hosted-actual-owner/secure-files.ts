@@ -226,7 +226,7 @@ async function walkDirectory(
     );
     try {
       const before = await handle.stat({ bigint: true });
-      const mode = Number(before.mode & 0o777n);
+      const mode = Number(before.mode & 0o7777n);
       if (
         !before.isFile() ||
         before.nlink !== 1n ||
@@ -293,6 +293,9 @@ export async function verifyClosure(
   const actual: ClosureEntry[] = [];
   await walkDirectory(root, root.handle, '', pin.manifest.relativePath, actual, privateImagePaths);
   for (const image of privateImages) {
+    // Bind device/inode and exact permissions too, not merely the manifest path/hash.
+    const anchor = await openFileAnchor(root, image);
+    try { await verifyStableDigest(anchor); } finally { await anchor.handle.close(); }
     const entry = actual.find(e => e.path === image.relativePath);
     if (!entry || entry.sha256 !== image.sha256 || entry.size !== image.size || entry.mode !== image.mode)
       throw new Error('p3c_closure_private_image_binding');

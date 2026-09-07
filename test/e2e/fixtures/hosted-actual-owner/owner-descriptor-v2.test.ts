@@ -136,7 +136,7 @@ function recipeFixture() {
   const recipe = { schemaVersion: 2, purpose: 'agent-teams.p3b2.source-actual-owner-entry/v2',
     sourceBaseCommit: descriptor.p3b2.sourceBaseCommit, resultCommit: descriptor.p3b2.resultCommit,
     entry: { relativePath: 'owner.ts', sha256: hex(11) }, supervisor: { relativePath: 'supervisor', sha256: hex(12) },
-    closureMerkleRoot: hex(14), candidateOpenCodeSha256: hex(15), argv: ['run', '/p3b2/owner.ts', ...OWNER_V2_ARGV],
+    candidateOpenCodeSha256: hex(15), argv: ['run', '/p3b2/owner.ts', ...OWNER_V2_ARGV],
     sourceTreeRequired: true, accepted: true, sourceInvocation: { format: 'agent-teams.hosted-owner-source-invocation/v1',
       executable: pin('bun', 16, 0o500), module: { path: '/p3b2/owner.ts', sha256: hex(11) } }, launchHelper: pin('helper', 17, 0o500) };
   const bound = (value = recipe) => {
@@ -175,6 +175,9 @@ describe('explicit source recipe and caller version', () => {
       { ...f.recipe, candidateOpenCodeSha256: hex(99) },
       { ...f.recipe, sourceInvocation: { ...f.recipe.sourceInvocation, module: { path: '/p3b2/other.ts', sha256: hex(11) } } },
       { ...f.recipe, launchHelper: f.recipe.sourceInvocation.executable },
+      { ...f.recipe, launchHelper: { ...f.recipe.launchHelper, mode: 0o4500 } },
+      { ...f.recipe, sourceInvocation: { ...f.recipe.sourceInvocation,
+        executable: { ...f.recipe.sourceInvocation.executable, mode: 0o2500 } } },
       { ...f.recipe, sourceTreeRequired: false },
       { ...f.recipe, schemaVersion: 1 },
     ];

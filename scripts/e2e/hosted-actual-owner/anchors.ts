@@ -37,7 +37,7 @@ function identity(stat: import('node:fs').BigIntStats): StableIdentity {
   return Object.freeze({
     device: String(stat.dev),
     inode: String(stat.ino),
-    mode: Number(stat.mode & 0o777n),
+    mode: Number(stat.mode & 0o7777n),
     nlink: String(stat.nlink),
     uid: String(stat.uid),
     gid: String(stat.gid),
