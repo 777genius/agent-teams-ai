@@ -1,188 +1,152 @@
-# OpenCode lead without a committed session: root cause
+# OpenCode lead without a committed session: a closed incident
 
-Investigated 2026-09-07. This document exists because the symptom was diagnosed
-three times, each time one layer too shallow, and because the fix that shipped
-first treated the symptom rather than the cause. If you are here to change
-anything about OpenCode lead bootstrap, read this before you do.
+> **Status: fixed on `main` since 2026-07-20. This is a post-mortem, not an open
+> bug.** The defect described here was closed as a side effect of `55dbb5010`
+> ("refactor(team): split provisioning service facades"). If you are reading this
+> because you are seeing the symptom today, **it is not this bug** - jump to
+> [Is it this bug?](#is-it-this-bug) before you change anything.
+
+Written 2026-09-07, after an investigation that reached the right mechanism and
+the wrong conclusion. Both halves are recorded on purpose: the mechanism is worth
+knowing, and the mistake is worth not repeating.
 
 ## The symptom
 
 A team on the OpenCode runtime launches, looks alive in the UI, and the lead
-answers nobody. Every message to it - from the user, from teammates, from the
-board - is refused with:
+answers nobody. Every message to it is refused with:
 
 ```
 No stored OpenCode session record for <team>/primary/team-lead
 ```
 
-The delivery row spends its whole attempt budget in under a minute, settles
-`failed_terminal`, and stays that way for the life of the team. Nothing recovers
-it. The user sees a team that is running and silent, with no indication why.
+The delivery row spends its attempt budget in under a minute, settles
+`failed_terminal`, and stays that way for the life of the team.
 
-## The root cause
+## The mechanism (as it was before 2026-07-20)
 
-**On the `pure_opencode_member_lanes` path, no launch command was ever sent for
-the lead.**
+**No launch command was ever sent for the lead on the
+`pure_opencode_member_lanes` path.**
 
-Not a race, not a timeout, not a lost response. The lead was absent from the
-roster the app asked the orchestrator to launch.
-
-The chain:
-
-1. The lane planner (`planTeamRuntimeLanes`) works on the **teammate** roster.
-   `isLeadMember` is filtered out during normalization, in both
-   `selectMembersMetaTeammates` and `extractTeammateSpecsFromConfig`. No plan it
-   produces names a lead - that is true of all five of its modes and is part of
-   its contract.
-2. The lead is synthesized back in exactly one place,
+1. The lane planner works on the **teammate** roster - `isLeadMember` is filtered
+   out of it upstream, in `selectMembersMetaTeammates` and
+   `extractTeammateSpecsFromConfig`. Note that `normalizePlannedMembers` inside
+   the planner does *not* filter it; the absence comes from the callers.
+2. The lead is synthesized back in one place,
    `buildOpenCodeRuntimeAdapterLaunchMembers`, whose result is
    `runtimeLaunchMembers`.
-3. That result reached only `runOpenCodeTeamRuntimeAdapterLaunch`. The aggregate
-   path was handed `lanePlan.primaryMembers`, which never contained a lead.
-4. `config.json` records the lead regardless
-   (`TeamProvisioningOpenCodeTeamConfigWriter`), so the app then addressed a
-   member nobody had launched.
+3. Back then that result reached only `runOpenCodeTeamRuntimeAdapterLaunch`. The
+   aggregate path was handed `lanePlan.primaryMembers`, which contained no lead.
+4. `config.json` records the lead regardless, so the app addressed a member
+   nobody had launched.
 
-When **every** teammate qualified for a side lane, the effect was total:
-`primaryMembers` came out empty and `launchOpenCodeAggregatePrimaryLane`
-returned at its very first line (`if (effectiveMembers.length === 0) return
-null`). No `launchTeam lane=primary` was sent for that team at all, ever.
+When every teammate qualified for a side lane, `primaryMembers` came out empty
+and `launchOpenCodeAggregatePrimaryLane` returned at its first line
+(`if (effectiveMembers.length === 0) return null`) - no `launchTeam lane=primary`
+for that team at all.
 
-### When it triggers
+### Why it looked intermittent
 
-The aggregate path is taken when the plan is `pure_opencode_member_lanes`, which
-happens when **at least one teammate** has either:
+The aggregate path is taken when at least one teammate has a **different model**
+than the lead or its **own worktree/cwd**. Homogeneous teams took another path
+where the lead reached the bridge normally.
 
-- a model different from the lead's (`usesDistinctModel`), or
-- its own working directory or worktree (`usesDistinctRoot`).
+## How it got fixed
 
-A homogeneous team takes `pure_opencode` or `pure_opencode_solo`, where the lead
-reaches the bridge normally. That is why the failure looked intermittent.
+`TeamProvisioningServiceMemberLifecycleFacade.preserveAtomicOpenCodeRuntimePreparation()`
+(added in `55dbb5010`, called from the constructor via
+`initializeTeamProvisioningService`) wraps `prepareOpenCodeRuntimeAdapterLaunch`
+and **re-plans the lane plan from `prepared.runtimeLaunchMembers`** - the roster
+that already carries the synthesized lead. A lead has no `cwd` and takes
+`request.model`, so it matches neither `usesDistinctModel` nor `usesDistinctRoot`
+and always lands in `primaryMembers`.
 
-## The evidence
+Verified empirically by running the real planner with a lead-bearing roster:
 
-From the bridge command ledger on a developer machine (2888 records):
+```
+MODE=pure_opencode_member_lanes
+PRIMARY=["team-lead"]
+SIDE=["alice"]
+```
 
-| Team | `launchTeam` commands | Primary lane |
-|---|---|---|
-| `beacon-desk-24` | 3 × secondary only | **never launched**, yet 3 DMs to `primary/team-lead` |
-| `zai-managed-heavy-e2e-20260716-202700` | 5 × secondary only | **never launched**, yet 11 DMs to `primary/team-lead` |
-| `vector-room-182` | primary + 2 × secondary | launched, but created the session for `tom`, not the lead |
+The same facade also overrides `runOpenCodeWorktreeRootAggregateLaunch` and
+replaces `input.members` with the remembered `runtimeLaunchMembers`, so both the
+plan and the roster carry the lead.
 
-`vector-room-182` is the clearest: the primary lane ran, and it ran a
-**teammate**. The orchestrator's session store holds
-`vector-room-182::primary::tom`, while the app kept asking for
-`vector-room-182/primary/team-lead`.
+The fix was incidental - the commit is a facade refactor, and nothing in it
+mentions this defect. That is exactly why this file exists.
 
-Of 16 teams with a real OpenCode primary lane on disk, 9 had no committed lead
-session.
+## The evidence, and the trap in it
 
-## What was ruled out, and how
+From the bridge command ledger:
 
-**Upstream OpenCode is not involved.** The string `No stored OpenCode session
-record` does not exist in the OpenCode source; it is thrown by our own bundled
-orchestrator (`agent_teams_orchestrator`, package `claude-multimodel`). A GitHub
-code search for it returns three hits across all of GitHub, none of them in the
-OpenCode repository.
+| Team | `launchTeam` | Primary lane | Date |
+|---|---|---|---|
+| `beacon-desk-24` | 3 × secondary only | never launched, 3 DMs to `primary/team-lead` | 2026-07-18 |
+| `zai-managed-heavy-e2e-...` | 5 × secondary only | never launched, 11 DMs to `primary/team-lead` | 2026-07-16 |
+| `vector-room-182` | primary + 2 × secondary | launched for `tom`, not the lead | 2026-07-18 |
 
-Three real OpenCode issues were considered and rejected as causes: they are all
-on the ACP transport, and this app talks HTTP (`POST /session`,
-`prompt_async` - see `OpenCodeApiCapabilities.ts`). One of them
-([#38064](https://github.com/anomalyco/opencode/issues/38064)) actually proves
-the opposite of a session-creation race: the session row is durable before the
-first prompt.
+Every artifact predates `55dbb5010` (2026-07-20). The investigation read them as
+current, built a fix on top, and the fix turned out to be a no-op: the guard it
+added ("is a lead already on the plan?") is always true today.
 
-**A bootstrap timeout is not the cause either.** The orchestrator does have a
-narrow MCP readiness budget during bootstrap, and it throws before the session is
-written to its store - a real defect, tracked separately. But it cannot explain
-these artifacts: for the affected teams no primary launch was attempted, so
-there was nothing to time out.
+**The lesson, stated plainly: date your artifacts against the code that produced
+them.** A session store and a command ledger are append-only and keep entries for
+months; nothing in them says which build wrote them.
 
-## Why the app never noticed
+## Is it this bug?
 
-Three separate places let the failure pass silently. Each is worth keeping in
-mind when touching this area:
+If you are seeing `No stored OpenCode session record` today, check in this order:
 
-- **The launch reports success.** The orchestrator's `success()` always returns
-  `ok: true`; a member failure lives inside `data.teamLaunchState`. The app's
-  ledger records the transport status, so the artifacts read
-  `status=completed err=None`.
-- **The lead veto has a hole.** `classifyOpenCodePrimaryLeadBootstrap` returns
-  `'confirmed'` when the lead is absent from the result. Its comment justifies
-  this by `normalizeExpectedOpenCodeRuntimeLaunchMembers` turning a missing
-  expected member into `failed_to_start` - but that function is not called
-  anywhere in production code.
-- **The evidence commit is skipped without a word.** In
-  `TeamProvisioningOpenCodeAggregateLaunchPersistence`, a member that is
-  confirmed but carries no `runtimeSessionId` hits a bare `continue`.
+1. **Was a primary launch even attempted?** In the bridge command ledger
+   (`~/Library/Application Support/agent-teams-ai/opencode-bridge/command-ledger.json`
+   on macOS), look for `opencode.launchTeam` with `lane=primary` for that team.
+   If there is none, and the entry is recent, something regressed the facade
+   above - start there. If there is one, this is a different failure.
+2. **Is the record in the orchestrator's store?**
+   `~/Library/Application Support/claude-multimodel-nodejs/opencode/session-store.json`,
+   key `<team>::primary::<lead>`. Present means the app is asking for the wrong
+   name; absent means bootstrap never committed it.
+3. **Did the bootstrap fail and get cleaned up?** Until
+   `agent_teams_orchestrator#65`, `cleanupFailedLaunchSession` deleted the record
+   outright, which made the failure permanent - `sendMessage` recovers only from
+   a record that is *stale*, never from a missing one.
+4. **Was the member confirmed without a session id?** In
+   `TeamProvisioningOpenCodeAggregateLaunchPersistence`, a member that is
+   confirmed but carries no `runtimeSessionId` still hits a bare `continue`. No
+   evidence, no diagnostic. This route is open and reaches the same symptom.
 
-## Why the self-heal ladder is off by default
+## Still open
 
-`OpenCodePrimaryLaneBootstrapSelfHeal` re-bootstraps a primary lane that holds no
-committed session: stop the lane, relaunch it, require committed lead evidence.
-It was written as a fix for this symptom and originally shipped enabled.
+These are unrelated to the closed defect, but they are the reason the failure was
+invisible for so long, and they are worth closing:
 
-It is gated behind `CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED`, default
-off, on the branch of PR #582 - the branch that introduces the ladder in the
-first place. Two reasons:
-
-1. **Against this root cause it cannot work.** The re-bootstrap relaunches the
-   primary lane through the same code path that omitted the lead in the first
-   place. A second attempt omits it again. It would spend two relaunches, tens of
-   seconds and the lead's whole context, and end in the same terminal state.
-2. **Relaunching a lead unasked is a product decision with a blast radius.** The
-   lane-storage probe it depends on keys off a fixed set of evidence filenames.
-   If that layout ever changes, the probe starts reporting healthy lanes as
-   unbootstrapped, and every user's lead restarts twice per run - with no way to
-   stop it short of a new release.
-
-It is kept rather than deleted because the non-aggregate path does launch the
-lead, and a genuine bootstrap failure there is exactly what it was built for.
-Turn it on deliberately, for a reproduction you understand.
-
-## What is fixed, and what is not
-
-Fixed here, in this repository, on `main`:
-
-| Fix | Where |
+| Gap | Where |
 |---|---|
-| Lead is placed on the aggregate primary lane | `TeamProvisioningOpenCodeRuntimeAdapterTeamFlow` |
-
-The lead is added at the aggregate boundary, not in the planner: the planner's
-contract holds for all five of its modes, and only this one path needs the lead
-materialized into a roster.
-
-Fixed in the orchestrator, released separately with its binary
-(`777genius/agent_teams_orchestrator#65`):
-
-| Fix | Where |
-|---|---|
-| A failed bootstrap leaves the session record stale instead of deleting it | `cleanupFailedLaunchSession` |
-
-**Still open**, and deliberately so - each rides with the branch that owns the
-code, not with this fix:
-
-| Gap | Where it will land |
-|---|---|
+| Confirmed member without a session id skipped in silence | `TeamProvisioningOpenCodeAggregateLaunchPersistence`, unclaimed |
 | Absent lead read as `'confirmed'` by the lead veto | branch of PR #580 |
-| Self-heal ladder enabled by default | branch of PR #582 |
-| Confirmed member without a session id skipped with a bare `continue` | `TeamProvisioningOpenCodeAggregateLaunchPersistence`, unclaimed |
 | Members outside `expectedMembers` dropped from the launch result | `OpenCodeTeamRuntimeAdapter`, unclaimed |
 
-The last two matter for anyone debugging this again: the evidence commit can
-still be skipped in silence when a member is confirmed without a session id, so
-the original symptom is reachable by a second route even with the launch fixed.
+The last one is subtler than it looks: keeping such members is *not* a safe
+default, because `commitOpenCodeRuntimeAdapterLaunchSessionEvidence` iterates
+over all result members and is shared with secondary lanes, so a teammate
+reported on the primary lane would get its session committed under
+`laneId: 'primary'`. Whatever closes that gap has to scope what it keeps.
 
-## How to tell it is happening again
+## What was ruled out
 
-- `~/.claude/teams/<team>/.opencode-runtime/lanes/primary/` holds only
-  `opencode-prompt-delivery-ledger.json`, with no `opencode-sessions.json`.
-- The orchestrator's store
-  (`~/Library/Application Support/claude-multimodel-nodejs/opencode/session-store.json`
-  on macOS) has no `<team>::primary::<lead>` key, or has one for the wrong
-  member.
-- The bridge ledger shows `sendMessage` to `primary/<lead>` with no preceding
-  `launchTeam lane=primary` for the same team.
+**Upstream OpenCode is not involved.** `No stored OpenCode session record` is
+thrown by our own bundled orchestrator (`agent_teams_orchestrator`, package
+`claude-multimodel`), not by OpenCode - a GitHub code search returns three hits
+across all of GitHub, none in the OpenCode repository.
 
-The first check to run is the third one: if the launch was never sent, nothing
-downstream can explain it.
+Three real OpenCode issues were considered and rejected: all three are on the ACP
+transport, and this app talks HTTP (`POST /session`, `prompt_async`, see
+`OpenCodeApiCapabilities.ts`). One of them
+([#38064](https://github.com/anomalyco/opencode/issues/38064)) proves the
+opposite of a session-creation race - the session row is durable before the first
+prompt.
+
+**A bootstrap MCP-readiness timeout was also considered.** The orchestrator does
+have a narrow budget there and throws before writing the session to its store.
+Real, but it cannot explain these artifacts: no primary launch was attempted, so
+there was nothing to time out.
