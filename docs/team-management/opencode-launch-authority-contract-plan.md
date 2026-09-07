@@ -1,6 +1,6 @@
 # OpenCode: план устойчивой проверки контракта запуска
 
-Дата: 2026-09-07. Статус: контракт реализован и выпущен в runtime `v0.0.84`, [PR #68](https://github.com/777genius/agent_teams_orchestrator/pull/68), commit `b567c93a3f424e5d23301cbce5f6f7ade8273c18`. Frontend PR #604 и release PR #605 merged. App `v2.13.2` остаётся draft; выполняется Linux recovery. Актуальная доставка и незавершённая приёмка зафиксированы в конце документа.
+Дата: 2026-09-07. Статус: контракт реализован и выпущен в runtime `v0.0.84`, [PR #68](https://github.com/777genius/agent_teams_orchestrator/pull/68), commit `b567c93a3f424e5d23301cbce5f6f7ade8273c18`. Frontend PR #604 и release PR #605 merged. App [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2) опубликован; Linux recovery и updater guard прошли. Актуальная доставка и незавершённая приёмка зафиксированы в конце документа.
 
 Разделы 1–15 сохраняют принятый план, исходные оценки и исследованные версии до реализации. Их формулировки «актуальный main», «перед реализацией» и порядок PR относятся к тому этапу; они не означают, что уже выпущенный контракт нужно реализовать повторно.
 
@@ -52,7 +52,7 @@ Runtime исследован по отдельной копии исходник
 
 | Факт | Следствие |
 | --- | --- |
-| R1:67–170: helper возвращает `profile | null`, callback диагностики изолирован | Сохранить return contract; ошибка наблюдаемости не меняет допуск |
+| R1:67–170: helper возвращает `profile \| null`, callback диагностики изолирован | Сохранить return contract; ошибка наблюдаемости не меняет допуск |
 | R2:1333–1359: приложение импортирует `provider/model/small_model/plugin`; provider subtree сохраняется целиком | Нельзя проверять только curated baseURL и забыть custom SDK options/credentials |
 | R2:2520–2545: импорт глубоко объединяется с managed config, затем применяются overrides и isolation | Ожидание строится из окончательного prepared config, не непосредственно из каталога |
 | R2:757: model-limit override заменяет `limit`, в том числе может убрать старый `input` | Нельзя восстановить старый limit из каталога при сравнении |
@@ -358,7 +358,8 @@ Runtime использует Bun и не имеет frontend `pnpm typecheck` sc
 - [x] Ровно один необходимый `/agent` GET, никаких новых provider inventory GET, calibration hosts, authority caches, registry migrations или зависимостей.
 - [x] Focused CI действительно исполняет новые tests на Linux и Windows (run34149790888, SHA3595a929).
 - [x] Conformance evidence двух pinned OpenCode версий получено в полной тестовой изоляции.
-- [ ] Curated live launch и packaged proof зафиксированы; Z.AI и Windows имеют отдельный честный status.
+- [x] Packaged release `v2.13.2` опубликован и проверен; отрицательная Z.AI-приёмка и Windows CI имеют отдельный status.
+- [ ] Успешный curated/mixed live launch и Copilot task/file proof зафиксированы.
 - [x] Независимое review выполнено на конечном production SHA3595a929 и version-only delta be27add1; исходные чужие изменения не затронуты.
 - [x] Broad fingerprint defect и неизвестные будущие runtime-root поля явно записаны как оставшиеся ограничения.
 
@@ -395,10 +396,10 @@ Runtime ссылки привязаны к exact release SHA; путь и стр
 - **Runtime выпущен:** [PR #68](https://github.com/777genius/agent_teams_orchestrator/pull/68) merged в `b567c93a3f424e5d23301cbce5f6f7ade8273c18`, source tag `v0.0.84`; [публичные бинарники](https://github.com/777genius/agent_teams_orchestrator_binaries/releases/tag/runtime-v0.0.84). Все пять платформ собраны; manifest/GitHub digests, anonymous download gate и native app bootstrap проверены. [Runtime build run](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34150738449).
 - **Проверки контракта:** final focused suite 645 tests / 3253 assertions, dev/production builds; новых typecheck ошибок относительно baseline нет. [CI run 34149790888](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34149790888) на `3595a929` завершил все шесть jobs, включая полный Windows authority suite и conformance. Production-код release head совпадает с этим проверенным срезом. Linux conformance покрывает pinned OpenCode 1.18.4/1.18.29, inline/file и auto/manual с настоящим permission engine и MCP; у локальной macOS-проверки сохранено ограничение системной изоляции.
 - **Frontend интегрирован:** [PR #604](https://github.com/777genius/agent-teams-ai/pull/604), merge `3d7c427064053badf6c5412edc006fe980d67fe4`, изолирует wrapper и cleanup; 24 wrapper tests прошли. [PR #605](https://github.com/777genius/agent-teams-ai/pull/605), merge `906395bc7cf846b2c3debc8271e4853fb7173e5f`, закрепляет runtime assets и служит основанием tag `v2.13.2`.
-- **App пока draft:** в [исходном release run](https://github.com/777genius/agent-teams-ai/actions/runs/34151777575) Windows/macOS собраны; Linux дважды сообщил smoke OK, но завис на удерживаемых descendant pipes. Выполняется отдельный [Linux recovery run 34155202396](https://github.com/777genius/agent-teams-ai/actions/runs/34155202396). Packaged qualification, финальная публикация и updater guard пока не завершены.
+- **App опубликован:** [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2), source `906395bc7cf846b2c3debc8271e4853fb7173e5f`. Windows/macOS проверены в [исходном release run](https://github.com/777genius/agent-teams-ai/actions/runs/34151777575); [Linux recovery](https://github.com/777genius/agent-teams-ai/actions/runs/34155202396) прошёл с pinned внешним smoke helper после упаковки неизменного tag source. Все 12 исходных Windows/macOS assets сохранены по ID/size/digest. [Promotion run](https://github.com/777genius/agent-teams-ai/actions/runs/34156281715) проверил SHA-256 десяти основных файлов и выпустил релиз; updater guard подтвердил public/latest/updater-ready в CI и повторно после выпуска. Исправление smoke для будущих сборок отдельно слито в [PR #606](https://github.com/777genius/agent-teams-ai/pull/606).
 - **Z.AI: отрицательная приёмка выполнена.** По уточнённому запросу пользователя действующих credentials нет. Один canary опубликованного darwin-arm64 runtime с заведомо неверным disposable key прошёл config gate и получил настоящий HTTP 401; task dispatch отсутствовал, cleanup подтверждён. Обработка реального 401/403 envelope проверена. Это отказ авторизации, не успешное authenticated task E2E.
 - **Copilot: положительная приёмка не выполнена.** Прежний config blocker устранён, но execution probe и отдельная диагностика `/responses` получили `model_not_supported`. Причина account/limits не установлена; task/file E2E не засчитан.
 - **Windows: отдельный дефект исправлен, исходный инцидент не доказан.** Fresh `launch_runtime` теперь сохраняет managed fingerprint для strict adoption. Persisted algorithms и wire schema не менялись; старые несовпадающие live-записи остаются fail-closed. Registry wipe/migration не добавлены. Причина и исправление именно пользовательского upgrade-инцидента без его artifacts остаются неподтверждёнными.
-- **Оставшиеся требования:** успешный curated/mixed secondary-lane canary, Copilot assigned-task/file proof, полная packaged qualification и проверка исходного Windows-состояния. Broad fingerprint order и неизвестные будущие runtime-root поля остаются отдельными ограничениями исходного плана.
+- **Оставшиеся требования:** успешный curated/mixed secondary-lane canary, Copilot assigned-task/file proof и проверка исходного Windows-состояния. Broad fingerprint order и неизвестные будущие runtime-root поля остаются отдельными ограничениями исходного плана.
 
 Независимые технические ревью production-изменений выполнены; зелёный ReviewRouter gate не заявляется, поскольку его provider отклонил запуск из-за quota. Runtime/provisioning проверки выполнялись только в новых TEST/temp проектах. Исходные dirty checkout и пользовательские auth stores сохранены. Локальный архив содержит redacted canary/conformance artifacts; проверяемые PR, CI и release-ссылки приведены выше.

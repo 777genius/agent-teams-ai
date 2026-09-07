@@ -1,6 +1,6 @@
 # OpenCode Selected-Config Authority: Incident Context and Durable-Fix Options
 
-**Status:** historical incident and design exploration from the `v0.0.83` / app `v2.13.1` hotfix. The accepted positive launch contract is implemented in runtime `v0.0.84` ([PR #68](https://github.com/777genius/agent_teams_orchestrator/pull/68), commit `b567c93a3f424e5d23301cbce5f6f7ade8273c18`). App `v2.13.2` remains a draft pending Linux recovery and release verification.
+**Status:** historical incident and design exploration from the `v0.0.83` / app `v2.13.1` hotfix. The accepted positive launch contract is implemented in runtime `v0.0.84` ([PR #68](https://github.com/777genius/agent_teams_orchestrator/pull/68), commit `b567c93a3f424e5d23301cbce5f6f7ade8273c18`). App [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2) is published; Linux recovery and updater verification passed.
 
 **Current decision:** the calibration-first recommendations in sections 9 and 13 are superseded by the [accepted launch contract plan](opencode-launch-authority-contract-plan.md). It keeps an explicit supported-provider contract and checks effective permission order through `/agent`, without a production calibration host or persisted T0 baseline. The observations, alternatives and verification statements below describe the earlier hotfix investigation; current delivery evidence and outstanding acceptance are recorded at the end of the plan.
 
@@ -16,7 +16,7 @@
 
 After upgrading to app `v2.13.0`, **every** team containing an OpenCode member failed at the readiness gate before anything spawned. Reported on Windows 11, OpenCode runtime 1.18.29, provider Z.AI Coding Plan (`zai-coding-plan`, GLM models):
 
-```
+```text
 glm-5.3-flash - Selected model check failed: OpenCode readiness bridge failed:
 provider_error: OpenCode selected readiness host/config/auth/project/MCP authority
 is unavailable (selected_config_match:provider)
@@ -24,7 +24,7 @@ is unavailable (selected_config_match:provider)
 
 Launch trace:
 
-```
+```text
 [validating] Validating OpenCode team launch gate
 [spawning]   Starting OpenCode sessions through runtime adapter
 [failed]     OpenCode team launch failed readiness gate - configReady=true
@@ -188,7 +188,7 @@ Any durable fix must start by choosing a better comparison target, not by gettin
 
 Notation: `T` = OpenCode's opaque transformation; `managed` = the config we send; `user`/`project` = the user's and project's own OpenCode configs, which are **deliberately** merged in (there is an explicit comment in `OpenCodeProfileManager.ts` about keeping project/global plugin config untouched, and `readSafeOpenCodeRuntimeConfigImport()` merges `~/.config/opencode/opencode.json`, the XDG variant, and `OPENCODE_CONFIG_CONTENT`). So in general:
 
-```
+```text
 live = T(managed ⊕ user ⊕ project)
 ```
 

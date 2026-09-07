@@ -28,7 +28,7 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.13.2 (2026-09-07)
+## Released: v2.13.2 (2026-09-07)
 
 GitHub release: [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2).
 
