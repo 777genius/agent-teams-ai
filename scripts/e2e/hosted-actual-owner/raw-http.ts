@@ -1,3 +1,7 @@
+import { classifySupervisedProviderOperation } from './http-provider-operation';
+import type { HostedHttpOperationV2 as OwnerHttpOperation, HostedHttpRecordV1, SupportedHostedHttpRecord } from './raw-http-types';
+// Product codec extended from accepted Owner 18d6568771003bd8f344bb9a984bc354532f087f.
+// Data validation only; this module grants no admission or effect authority.
 import { canonicalJson, exactRecord, MATRIX_ROWS, sha256, type RawRecord } from './contracts';
 import {
   HTTP_LIMITS,
@@ -259,9 +263,25 @@ export function httpHeaderStatus(headers: readonly (readonly [string, string])[]
   };
 }
 
-export function decodeHttpRecord(payload: Record<string, unknown>): HostedHttpRecord {
+export const OWNER_HTTP_OBSERVATION_KIND = 'opencode-http-observation/v2' as const;
+export const OWNER_HTTP_OBSERVATION_PURPOSE = 'agent-teams.p3c.opencode-http-observation/v2' as const;
+export type OwnerHostedHttpRecordV2 = Readonly<{
+  schemaVersion: 2;
+  purpose: typeof OWNER_HTTP_OBSERVATION_PURPOSE;
+  context: HostedHttpContext;
+  observation: Exclude<HostedHttpRecord['observation'], { phase: 'request-retained' }> |
+    Readonly<{ phase: 'request-retained'; ownerExchangeNonce: string; operation: OwnerHttpOperation;
+      method: 'GET' | 'POST'; path: string; body: import('./raw-http-types').RetainedHttpBody }>;
+}>;
+export function decodeHttpRecord(payload: Record<string, unknown>): HostedHttpRecordV1 {
+  return decodeVersionedHttpRecord(payload, 1) as HostedHttpRecordV1;
+}
+export function decodeOwnerHttpRecordV2(payload: Record<string, unknown>): OwnerHostedHttpRecordV2 {
+  return decodeVersionedHttpRecord(payload, 2) as OwnerHostedHttpRecordV2;
+}
+function decodeVersionedHttpRecord(payload: Record<string, unknown>, version: 1 | 2): HostedHttpRecord | OwnerHostedHttpRecordV2 {
   exactRecord(payload, ['kind', 'recordBase64', 'recordSha256'], 'http_payload');
-  httpCheck(payload.kind === HTTP_OBSERVATION_KIND && httpHex(payload.recordSha256), 'payload');
+  httpCheck(payload.kind === (version === 1 ? HTTP_OBSERVATION_KIND : OWNER_HTTP_OBSERVATION_KIND) && httpHex(payload.recordSha256), 'payload');
   const bytes = decodeHttpBase64(payload.recordBase64, HTTP_LIMITS.record, 'record_base64');
   httpCheck(sha256(bytes) === payload.recordSha256, 'record_digest');
   const record = exactRecord(
@@ -270,7 +290,7 @@ export function decodeHttpRecord(payload: Record<string, unknown>): HostedHttpRe
     'http_record'
   );
   httpCheck(
-    record.schemaVersion === 1 && record.purpose === HTTP_OBSERVATION_PURPOSE,
+    record.schemaVersion === version && record.purpose === (version === 1 ? HTTP_OBSERVATION_PURPOSE : OWNER_HTTP_OBSERVATION_PURPOSE),
     'record_version'
   );
   const context = parseHttpContext(record.context);
@@ -328,14 +348,14 @@ export function decodeHttpRecord(payload: Record<string, unknown>): HostedHttpRe
       'metadata_limit'
     );
     if (phase === 'request-retained') {
-      const operation = parseHttpOperation(observation.operation);
+      const operation = version === 1 ? parseHttpOperation(observation.operation) : parseOwnerHttpOperationV2(observation.operation);
+      const route = ownerHttpOperationRouteV2(operation);
       httpCheck(
-        observation.method === (operation.kind === 'reply' ? 'POST' : 'GET') &&
-          observation.path === httpOperationPath(operation),
+        observation.method === route.method && observation.path === route.path,
         'request_route'
       );
-      httpCheck(operation.kind === 'capability' || context.routeId !== null, 'request_route_id');
-      httpCheck(operation.kind === 'reply' || bodyBytes.length === 0, 'get_body');
+      httpCheck(!['observe', 'reply'].includes(operation.kind) || context.routeId !== null, 'request_route_id');
+      httpCheck(route.method === 'POST' || bodyBytes.length === 0, 'get_body');
     } else {
       httpCheck(
         httpHex(observation.requestRecordId) &&
@@ -373,7 +393,7 @@ export function decodeHttpRecord(payload: Record<string, unknown>): HostedHttpRe
   return freezeHttpData(record as unknown as HostedHttpRecord);
 }
 
-export function assertHttpOuterBinding(outer: RawRecord, http: HostedHttpRecord): void {
+export function assertHttpOuterBinding(outer: RawRecord, http: HostedHttpRecord | OwnerHostedHttpRecordV2): void {
   const events = {
     'request-retained': 'hosted_http_request_retained',
     'response-retained': 'hosted_http_response_retained',
@@ -389,4 +409,45 @@ export function assertHttpOuterBinding(outer: RawRecord, http: HostedHttpRecord)
       outer.correlation === (http.observation.ownerExchangeNonce ?? http.context.captureId),
     'outer_binding'
   );
+}
+
+/** Explicit Owner operation ABI v2. P1 parsing above stays closed to extensions.
+ * Product reader acceptance is required before selecting v2 records. */
+export const OWNER_HTTP_OPERATION_ABI = 'agent-teams.owner.http-operation/v2' as const;
+export function parseOwnerHttpOperationV2(value: unknown): OwnerHttpOperation {
+  httpCheck(value !== null && typeof value === 'object', 'operation');
+  const kind = (value as Record<string, unknown>).kind;
+  if (kind === 'capability' || kind === 'observe' || kind === 'reply') return parseHttpOperation(value);
+  if (kind === 'provider') {
+    const op = exactRecord(value, ['kind', 'name', 'method', 'path'], 'http_provider_operation');
+    httpCheck(typeof op.method === 'string' && typeof op.path === 'string', 'provider_route');
+    const actual = classifySupervisedProviderOperation(op.method, op.path);
+    httpCheck(actual.kind === 'provider' && actual.name === op.name, 'provider_name');
+    return actual;
+  }
+  if (kind === 'events') {
+    const op = exactRecord(value, ['kind', 'path'], 'http_events_operation');
+    httpCheck(op.path === '/event' || op.path === '/global/event', 'events_path');
+    return Object.freeze({ kind, path: op.path });
+  }
+  const op = exactRecord(value, ['kind', 'sessionId', 'limit'], 'http_transcript_operation');
+  httpCheck(kind === 'transcript' && typeof op.sessionId === 'string' &&
+    /^[A-Za-z0-9_-]{1,256}$/.test(op.sessionId) && op.limit === 50, 'transcript_route');
+  return Object.freeze({ kind: 'transcript', sessionId: op.sessionId, limit: 50 });
+}
+
+export function ownerHttpOperationRouteV2(value: unknown): Readonly<{ method: 'GET' | 'POST'; path: string }> {
+  const op = parseOwnerHttpOperationV2(value);
+  if (op.kind === 'provider') return Object.freeze({ method: op.method, path: op.path });
+  if (op.kind === 'events') return Object.freeze({ method: 'GET', path: op.path });
+  if (op.kind === 'transcript') return Object.freeze({ method: 'GET',
+    path: `/session/${encodeURIComponent(op.sessionId)}/message?limit=50` });
+  return Object.freeze({ method: op.kind === 'reply' ? 'POST' : 'GET', path: httpOperationPath(op) });
+}
+
+/** Explicit dispatch only: never probe another decoder after failure. */
+export function decodeSupportedHttpRecord(payload: Record<string, unknown>): SupportedHostedHttpRecord {
+  if (payload.kind === HTTP_OBSERVATION_KIND) return decodeHttpRecord(payload);
+  if (payload.kind === OWNER_HTTP_OBSERVATION_KIND) return decodeOwnerHttpRecordV2(payload);
+  throw new Error('p3c_http_payload_version');
 }

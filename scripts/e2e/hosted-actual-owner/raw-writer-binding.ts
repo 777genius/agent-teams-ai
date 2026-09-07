@@ -1,5 +1,5 @@
 import { canonicalJson, type RawOrigin } from './contracts';
-import { HTTP_OBSERVATION_KIND } from './raw-http-types';
+import { HTTP_OBSERVATION_KIND, HTTP_OBSERVATION_KIND_V2 } from './raw-http-types';
 
 import type { LocatedRawRecord } from './evidence';
 import type { ProcessEvidenceRole, SupervisorOutcome } from './processes';
@@ -37,7 +37,7 @@ export function assertRawRecordWriters(
       BigInt(record.monotonicNs) <= BigInt(start.observedMonotonicNs)
     )
       fail();
-    if (record.kind === HTTP_OBSERVATION_KIND) {
+    if (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2) {
       roles.add('owner');
       if (
         origin !== 'opencode' ||

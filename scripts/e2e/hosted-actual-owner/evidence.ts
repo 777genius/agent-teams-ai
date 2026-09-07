@@ -34,13 +34,14 @@ import type {
 import {
   assertHttpOuterBinding,
   decodeHttpBase64,
-  decodeHttpRecord,
+  decodeSupportedHttpRecord,
   parseHttpCanonical,
 } from './raw-http';
 import {
   HTTP_LIMITS,
   HTTP_OBSERVATION_KIND,
-  type HostedHttpRecord,
+  HTTP_OBSERVATION_KIND_V2,
+  type SupportedHostedHttpRecord,
   type LocatedHttpRawRecord,
   type ParsedHttpRawRecord,
 } from './raw-http-types';
@@ -505,9 +506,9 @@ function parseRecord(
     payloadBase64: item.payloadBase64,
     payloadSha256,
   });
-  if (semantic.kind === HTTP_OBSERVATION_KIND) {
+  if (semantic.kind !== 'legacy') {
     assertHttpOuterBinding(outer, semantic.http);
-    return Object.freeze({ ...outer, kind: HTTP_OBSERVATION_KIND, http: semantic.http });
+    return Object.freeze({ ...outer, kind: semantic.kind, http: semantic.http }) as ParsedHttpRawRecord;
   }
   return Object.freeze({
     ...outer,
@@ -1500,7 +1501,7 @@ export function validateStructuralPayload(
   controllerNonce: string,
   payload: Buffer
 ):
-  | { readonly kind: typeof HTTP_OBSERVATION_KIND; readonly http: HostedHttpRecord }
+  | { readonly kind: typeof HTTP_OBSERVATION_KIND | typeof HTTP_OBSERVATION_KIND_V2; readonly http: SupportedHostedHttpRecord }
   | {
       readonly kind: 'legacy';
       readonly identity: SemanticIdentity;
@@ -1518,14 +1519,14 @@ export function validateStructuralPayload(
   if (canonicalJson(value) !== payload.toString('utf8'))
     throw new Error('p3c_raw_payload_noncanonical');
   const item = exactRecord(value, ['kind', 'recordBase64', 'recordSha256'], 'raw_payload');
-  if (item.kind === HTTP_OBSERVATION_KIND) {
+  if (item.kind === HTTP_OBSERVATION_KIND || item.kind === HTTP_OBSERVATION_KIND_V2) {
     if (origin !== 'opencode' || payload.length > HTTP_LIMITS.payload)
       throw new Error('p3c_raw_payload_structure');
     parseHttpCanonical(payload, 'payload');
-    const http = decodeHttpRecord(item);
+    const http = decodeSupportedHttpRecord(item);
     if (http.context.row !== row || http.context.activation.controllerNonce !== controllerNonce)
       throw new Error('p3c_http_payload_binding');
-    return Object.freeze({ kind: HTTP_OBSERVATION_KIND, http });
+    return Object.freeze({ kind: item.kind, http });
   }
   if (payload.length > 1024 * 1024) throw new Error('p3c_raw_payload_frame');
   const kinds: Readonly<Record<RawOrigin, string>> = Object.freeze({
@@ -1662,7 +1663,8 @@ export function parseRawOrigin(
     const record = parseRecord(value, origin, index + 1, controllerNonce);
     if (record.kind === 'legacy' && line.length > 2 * 1024 * 1024)
       throw new Error('p3c_raw_origin_line');
-    if (record.kind === HTTP_OBSERVATION_KIND) parseHttpCanonical(Buffer.from(line), 'outer');
+    if (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2)
+      parseHttpCanonical(Buffer.from(line), 'outer');
     const current = BigInt(record.monotonicNs);
     if (current <= previous) throw new Error('p3c_raw_origin_clock');
     previous = current;
@@ -1713,7 +1715,7 @@ export function deriveEvidence(
     });
   }
   const decoded = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
-  if (decoded.some((record) => record.kind === HTTP_OBSERVATION_KIND))
+  if (decoded.some((record) => (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2)))
     throw new P1AdmissionUnverified();
   const all = decoded.filter(isLegacyRecord);
   if (new Set(all.map(({ recordId }) => recordId)).size !== all.length)
@@ -2029,7 +2031,7 @@ export function prepareEvidence(input: EvidencePreparationInput) {
     throw new Error('p3c_evidence_supervisor_raw_disagreement');
   assertRawRecordWriters('opencode', opencode, outcome);
   const httpRecords = opencode.filter(
-    (record): record is LocatedHttpRawRecord => record.kind === HTTP_OBSERVATION_KIND
+    (record): record is LocatedHttpRawRecord => (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2)
   );
   if (httpRecords.length > 0) {
     const correlation = correlations?.length

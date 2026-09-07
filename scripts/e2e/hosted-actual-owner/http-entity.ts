@@ -290,6 +290,7 @@ export function decodeReadResponse(
       response.body.byteLength <= (operation.kind === 'capability' ? 16 * 1024 : 1024 * 1024),
     'read_response_limit'
   );
+  httpCheck(operation.kind === 'capability' || operation.kind === 'observe', 'read_operation');
   const parsed = parseHttpEntity(Buffer.from(response.body.bodyBase64, 'base64'));
   if (operation.kind === 'observe' && response.status === 500) {
     const error = exactRecord(parsed, ['_tag'], 'http_observe_overflow');

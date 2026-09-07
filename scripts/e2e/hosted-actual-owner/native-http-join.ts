@@ -1,5 +1,6 @@
 import { canonicalJson, sha256 } from './contracts';
 import { appliedHttpReceipt, type AppliedHttpReceipt } from './http-entity';
+import { parseNativeRawEnvelope } from './http-raw-envelope';
 import type { NativeCaptureShard } from './native-captures';
 import {
   buildOpenCodeOperationIndex,
@@ -12,14 +13,14 @@ import type { SupervisorOutcome } from './processes';
 import {
   assertHttpOuterBinding,
   decodeHttpBase64,
-  decodeHttpRecord,
+  decodeSupportedHttpRecord,
   httpCheck,
   httpHeaderStatus,
   httpHex,
   parseHttpCanonical,
   snapshotHttpContext,
 } from './raw-http';
-import { HTTP_LIMITS, HTTP_OBSERVATION_KIND } from './raw-http-types';
+import { HTTP_LIMITS, isHttpObservationKind } from './raw-http-types';
 import type {
   HostedHttpContext,
   HttpRequestObservation,
@@ -182,21 +183,25 @@ function assertCompleteHttpSelection(
     'ledger_frame'
   );
   const selected = new Set(records.map(({ byteStart, byteEnd }) => `${byteStart}:${byteEnd}`));
+  httpCheck(selected.size === records.length, 'duplicate_selection');
+  let sequence = 1;
+  let previous = -1n;
   let byteStart = 0;
   while (byteStart < ledger.length) {
     const byteEnd = ledger.indexOf(0x0a, byteStart);
     httpCheck(byteEnd >= byteStart && byteEnd - byteStart + 1 <= HTTP_LIMITS.line, 'ledger_line');
-    const outer = parseHttpCanonical(
-      ledger.subarray(byteStart, byteEnd),
-      'selection_outer'
-    ) as Record<string, unknown>;
+    const outer = parseNativeRawEnvelope(
+      ledger.subarray(byteStart, byteEnd), sequence++, records[0]?.controllerNonce ?? ''
+    );
+    httpCheck(BigInt(outer.monotonicNs) > previous, 'selection_clock');
+    previous = BigInt(outer.monotonicNs);
     const payload = parseHttpCanonical(
       decodeHttpBase64(outer.payloadBase64, HTTP_LIMITS.payload, 'selection_payload'),
       'selection_payload'
     ) as Record<string, unknown>;
-    httpCheck(payload.kind === HTTP_OBSERVATION_KIND, 'mixed_recorder_kinds');
+    httpCheck(isHttpObservationKind(payload.kind), 'mixed_recorder_kinds');
     httpCheck(
-      selected.has(`${byteStart}:${byteEnd}`) === (payload.kind === HTTP_OBSERVATION_KIND),
+      selected.has(`${byteStart}:${byteEnd}`) === (isHttpObservationKind(payload.kind)),
       'raw_selection_incomplete'
     );
     byteStart = byteEnd + 1;
@@ -263,7 +268,8 @@ export function correlateOpenCodeHttpEvidence(input: {
       Buffer.from(record.payloadBase64, 'base64'),
       'located_payload'
     );
-    const decoded = decodeHttpRecord(payload as Record<string, unknown>);
+    httpCheck((payload as Record<string, unknown>).kind === record.kind, 'raw_fact_kind');
+    const decoded = decodeSupportedHttpRecord(payload as Record<string, unknown>);
     httpCheck(canonicalJson(decoded) === canonicalJson(record.http), 'raw_fact_content');
     assertHttpOuterBinding(record, decoded);
     httpCheck(!recordIds.has(record.recordId), 'duplicate_record');
@@ -293,6 +299,7 @@ export function correlateOpenCodeHttpEvidence(input: {
       request &&
         request.http.observation.ownerExchangeNonce === observation.ownerExchangeNonce &&
         request.sequence < record.sequence &&
+        request.kind === record.kind &&
         canonicalJson(request.http.context) === canonicalJson(record.http.context),
       'exchange_snapshot'
     );
@@ -341,6 +348,11 @@ export function correlateOpenCodeHttpEvidence(input: {
       const key = operationKey(bound.producer, bound.activation, response.peerOperationNonce);
       httpCheck(!claimedGroups.has(key), 'operation_reused');
       claimedGroups.add(key);
+      httpCheck(
+        request.operation.kind === 'capability' || request.operation.kind === 'observe' ||
+          request.operation.kind === 'reply',
+        'general_operation_native_facts_unavailable'
+      );
       const group = index.get(key);
       httpCheck(group, 'native_operation_missing');
       for (const fact of group.facts) {

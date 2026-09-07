@@ -212,6 +212,10 @@ export function joinHttpOperationBody(
   httpCheck(group.problem === null, 'native_group_incomplete');
   httpCheck(response.complete, 'incomplete_response');
   const operation = request.operation;
+  httpCheck(
+    operation.kind === 'capability' || operation.kind === 'observe' || operation.kind === 'reply',
+    'general_operation_native_facts_unavailable'
+  );
   if (operation.kind !== 'reply') {
     httpCheck(
       group.facts.length === 1 &&
