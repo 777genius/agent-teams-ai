@@ -234,39 +234,21 @@ export class InternalStorageWorkerCore {
         return this.hasStoreImport(typed.storeId, typed.teamName);
       }
       case 'teamIdentity.reserve':
-        return this.teamIdentityOps.reserveIdentity(payload as never);
       case 'teamIdentity.prepareReserved':
-        return this.teamIdentityOps.prepareReservedAdoption(payload as never);
       case 'teamIdentity.recordPublished':
-        return this.teamIdentityOps.recordIdentityFilePublished(payload as never);
       case 'teamIdentity.commitAdoption':
-        return this.teamIdentityOps.commitAdoption(payload as never);
       case 'teamIdentity.tombstone':
-        return this.teamIdentityOps.tombstoneLegacyKey(payload as never);
+      case 'teamIdentity.list':
+      case 'teamIdentity.listActive':
+      case 'teamIdentity.captureExternalWriterInventory':
+      case 'teamIdentity.get':
+        return this.handleTeamIdentityStorageOp(op, payload);
       case 'draftPublication.lookup':
         return this.draftPublicationOps.lookupOperation(payload);
       case 'draftPublication.read':
         return this.draftPublicationOps.read(payload);
       case 'draftPublication.settle':
         return this.draftPublicationOps.settle(payload);
-      case 'teamIdentity.list':
-        return this.teamIdentityOps.listIdentities();
-      case 'teamIdentity.listActive':
-        return this.teamIdentityOps.listActiveIdentities();
-      case 'teamIdentity.captureExternalWriterInventory':
-        return this.teamIdentityOps.captureExternalWriterInventory(
-          (
-            payload as Extract<
-              InternalStorageWorkerRequest,
-              { op: 'teamIdentity.captureExternalWriterInventory' }
-            >['payload']
-          ).retirementCandidates
-        );
-      case 'teamIdentity.get':
-        return this.teamIdentityOps.getIdentity(
-          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
-            .teamId
-        );
       case 'teamRoster.get':
         return this.teamRosterOps.getRoster(
           (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.get' }>['payload'])
@@ -327,6 +309,42 @@ export class InternalStorageWorkerCore {
         }
         throw new Error(`Unknown internal-storage op: ${String(op)}`);
       }
+    }
+  }
+
+  private handleTeamIdentityStorageOp(
+    op: Exclude<Extract<InternalStorageWorkerOp, `teamIdentity.${string}`>, 'teamIdentity.snapshot'>,
+    payload: InternalStorageWorkerRequest['payload']
+  ): unknown {
+    switch (op) {
+      case 'teamIdentity.reserve':
+        return this.teamIdentityOps.reserveIdentity(payload as never);
+      case 'teamIdentity.prepareReserved':
+        return this.teamIdentityOps.prepareReservedAdoption(payload as never);
+      case 'teamIdentity.recordPublished':
+        return this.teamIdentityOps.recordIdentityFilePublished(payload as never);
+      case 'teamIdentity.commitAdoption':
+        return this.teamIdentityOps.commitAdoption(payload as never);
+      case 'teamIdentity.tombstone':
+        return this.teamIdentityOps.tombstoneLegacyKey(payload as never);
+      case 'teamIdentity.list':
+        return this.teamIdentityOps.listIdentities();
+      case 'teamIdentity.listActive':
+        return this.teamIdentityOps.listActiveIdentities();
+      case 'teamIdentity.captureExternalWriterInventory':
+        return this.teamIdentityOps.captureExternalWriterInventory(
+          (
+            payload as Extract<
+              InternalStorageWorkerRequest,
+              { op: 'teamIdentity.captureExternalWriterInventory' }
+            >['payload']
+          ).retirementCandidates
+        );
+      case 'teamIdentity.get':
+        return this.teamIdentityOps.getIdentity(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
+            .teamId
+        );
     }
   }
 

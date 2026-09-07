@@ -607,7 +607,10 @@ export function createHostedOperatorProductionCompositionFromPlan(
     surfaceDependencies,
     async drain(): Promise<void> {
       while (pending.size) await Promise.allSettled([...pending]);
-      if (drainFailure !== undefined) throw drainFailure;
+      if (drainFailure instanceof Error) throw drainFailure;
+      if (drainFailure !== undefined) {
+        throw new Error('hosted-operator-production-drain-failed', { cause: drainFailure });
+      }
     },
     isReady: () => !closed && recovered,
     reconcileApprovalDecision(

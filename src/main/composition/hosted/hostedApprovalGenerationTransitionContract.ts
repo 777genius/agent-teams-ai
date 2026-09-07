@@ -27,15 +27,15 @@ export function decodeApprovalGenerationTransition(value: unknown): ApprovalGene
     typeof row.admissionDocument !== 'string' || typeof row.signature !== 'string' ||
     typeof row.predecessorManifestDigest !== 'string' || typeof row.predecessorProcessStartToken !== 'string' ||
     row.contract !== APPROVAL_GENERATION_TRANSITION || Buffer.byteLength(JSON.stringify(row)) > 300_000 ||
-    !/^sha256:[0-9a-f]{64}$/u.test(row.predecessorManifestDigest as string) ||
-    !/^[0-9a-f]{64}$/u.test(row.predecessorProcessStartToken as string) ||
-    !/^[A-Za-z0-9_-]{86}$/u.test(row.signature as string)) throw new Error('approval_transition_message');
+    !/^sha256:[0-9a-f]{64}$/u.test(row.predecessorManifestDigest) ||
+    !/^[0-9a-f]{64}$/u.test(row.predecessorProcessStartToken) ||
+    !/^[A-Za-z0-9_-]{86}$/u.test(row.signature)) throw new Error('approval_transition_message');
   return Object.freeze({ contract: APPROVAL_GENERATION_TRANSITION,
-    predecessorManifestDigest: row.predecessorManifestDigest as string,
-    predecessorProcessStartToken: row.predecessorProcessStartToken as string,
+    predecessorManifestDigest: row.predecessorManifestDigest,
+    predecessorProcessStartToken: row.predecessorProcessStartToken,
     successorGeneration: row.successorGeneration as number, successorSessionId: row.successorSessionId,
-    successorBootstrapDigest: row.successorBootstrapDigest, admissionDocument: row.admissionDocument as string,
-    signature: row.signature as string });
+    successorBootstrapDigest: row.successorBootstrapDigest, admissionDocument: row.admissionDocument,
+    signature: row.signature });
 }
 
 /** Exact domain-separated bytes to be signed by the independently pinned

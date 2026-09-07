@@ -185,7 +185,7 @@ export class HostedDraftDirectoryPublisher {
       }
       const marker = Buffer.from(`${JSON.stringify({ schemaVersion: 1, operationId: request.operationId,
         teamId: request.teamId, directoryFingerprint: observed,
-        rootFingerprint: fingerprint(this.ancestry[this.ancestry.length - 2]!),
+        rootFingerprint: fingerprint(this.ancestry[this.ancestry.length - 2]),
         teamsFingerprint: fingerprint(this.teams) })}\n`, 'utf8');
       const assertEffect = async () => {
         await current(retained);
