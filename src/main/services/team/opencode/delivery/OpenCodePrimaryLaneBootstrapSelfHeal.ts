@@ -29,21 +29,28 @@ export const PRIMARY_LANE_REBOOTSTRAP_RETRY_DELAY_MS = 15_000;
  * See `docs/team-management/opencode-lead-session-root-cause.md` for the full
  * account, including the bridge-ledger evidence.
  *
+ * That defect is closed - incidentally, by a facade refactor
+ * (`55dbb5010`, 2026-07-20) that re-plans the lane plan from a roster which
+ * already carries the lead. So the ladder no longer has the failure it was
+ * written for.
+ *
  * Two reasons it is off by default:
  *
- * 1. Against that cause it cannot work. The re-bootstrap relaunches the primary
- *    lane through the same code path that omitted the lead, so a second attempt
- *    omits it again - two relaunches, tens of seconds and the lead's whole
- *    context spent to arrive at the same terminal state.
+ * 1. Its motivating cause is gone. What remains is a mechanism that stops and
+ *    relaunches a lead - discarding its context and spending tens of seconds -
+ *    for failure modes nobody has characterised yet. Off is the honest default
+ *    for that.
  * 2. Relaunching a lead nobody asked to relaunch has a blast radius. The
  *    lane-storage probe keys off a fixed set of evidence filenames; if that
  *    layout ever changes, healthy lanes start reading as unbootstrapped and
  *    every user's lead restarts twice per run, with no way to stop it short of
  *    a release.
  *
- * It is kept rather than deleted because the NON-aggregate path does launch the
- * lead, and a genuine bootstrap failure there is exactly what this was built
- * for. Turn it on deliberately, for a reproduction you understand.
+ * It is kept rather than deleted because a bootstrap CAN still fail for reasons
+ * unrelated to the closed defect - the evidence commit is skipped in silence
+ * when a member is confirmed without a session id, and until
+ * `agent_teams_orchestrator#65` a failed bootstrap deleted its own session
+ * record. Turn it on deliberately, for a reproduction you understand.
  *
  * With it off the lane still refuses the unwinnable send and the delivery row
  * still settles - it just settles terminal immediately instead of after a

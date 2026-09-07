@@ -366,10 +366,11 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
 });
 
 /**
- * The ladder ships off. It was written against a symptom whose cause was
- * elsewhere - on the aggregate launch path the lead was never in the roster sent
- * to the orchestrator - and against that cause a re-bootstrap relaunches through
- * the same code that omitted the lead. See
+ * The ladder ships off. It was written against a symptom whose cause turned out
+ * to be elsewhere - the lead was missing from the aggregate launch roster - and
+ * that cause is already closed on main by a facade refactor. What remains is a
+ * mechanism that stops and relaunches a lead for failure modes nobody has
+ * characterised yet, so off is the honest default. See
  * docs/team-management/opencode-lead-session-root-cause.md.
  */
 describe('the self-heal switch', () => {
