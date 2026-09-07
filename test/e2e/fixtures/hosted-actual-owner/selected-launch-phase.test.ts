@@ -6,19 +6,21 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { encodeSelectedLaunchPhase, SELECTED_LAUNCH_MAXIMUM, SELECTED_LAUNCH_PHASE,
+import { assertSelectedLaunchPreflightBound, encodeSelectedLaunchPhase, SELECTED_LAUNCH_MAXIMUM, SELECTED_LAUNCH_PHASE,
   writeSelectedLaunchPhase } from '../../../../scripts/e2e/hosted-actual-owner/supervisor/selected-launch-phase';
+import { nativeContractFixture } from '../../../../scripts/e2e/hosted-actual-owner/supervisor/selected-native-admission.fixture';
 
 // Transport tests only. These values are not admitted launch selections.
 describe('selected-launch FD5 phase transport', () => {
   it('bounds the versioned aggregate before writing', () => {
-    const frame = encodeSelectedLaunchPhase({ actual: 'input' }, { actual: 'event' });
+    const f = nativeContractFixture();
+    const frame = encodeSelectedLaunchPhase(f.request.launch, f.request.sealed, f.admission);
     expect(frame.readUInt32BE(0)).toBe(0x48534c31);
     expect(frame.readUInt32BE(4)).toBe(frame.length - 8);
     expect(JSON.parse(frame.subarray(8).toString())).toEqual({
-      contract: SELECTED_LAUNCH_PHASE, launch: { actual: 'input' }, sealed: { actual: 'event' },
+      contract: SELECTED_LAUNCH_PHASE, launch: f.request.launch, sealed: f.request.sealed, nativeAdmission: f.admission,
     });
-    expect(() => encodeSelectedLaunchPhase({ data: 'x'.repeat(SELECTED_LAUNCH_MAXIMUM) }, {})).toThrow('bound');
+    expect(() => assertSelectedLaunchPreflightBound({ data: 'x'.repeat(SELECTED_LAUNCH_MAXIMUM) })).toThrow('bound');
   });
 
   it('writes the prelude and preserves the same live Unix endpoint for later activation', async () => {
@@ -33,7 +35,8 @@ describe('selected-launch FD5 phase transport', () => {
       peer.on('data', part => received.push(Buffer.from(part)));
       const ended = once(peer, 'end');
       [writer] = await accepted as [Socket];
-      const frame = encodeSelectedLaunchPhase({ retained: 'input' }, { retained: 'native-event' });
+      const f = nativeContractFixture();
+      const frame = encodeSelectedLaunchPhase(f.request.launch, f.request.sealed, f.admission);
       const observed = await writeSelectedLaunchPhase(writer, frame, performance.now() + 5000);
       expect(observed.byteLength).toBe(frame.length);
       expect(writer.destroyed).toBe(false);

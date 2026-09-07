@@ -22,6 +22,7 @@ import { selectedOwnerImages } from './owner-recipe';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
 import { readStable, verifyClosure, type WrittenFileEvidence } from './secure-files';
+import type { SelectedControllerExecutionInputs } from './supervisor/selected-controller-execution';
 
 export function assertLiveCaptureMode(liveMode: number, sealedMode: number): void {
   if (sealedMode !== 0o400 || liveMode !== sealedMode) {
@@ -151,11 +152,12 @@ export async function revalidateBeforeExecution(
 export async function runDriver(
   admission: PreflightAdmission,
   sandbox: DisposableSandbox,
-  consumedAttempt: WrittenFileEvidence
+  consumedAttempt: WrittenFileEvidence,
+  selectedInputs?: SelectedControllerExecutionInputs,
 ): Promise<DriverResult> {
   await revalidateBeforeExecution(admission, sandbox, consumedAttempt);
   const selectedLaunch = snapshotP1LaunchSelection(buildSupervisorPlan(admission, sandbox));
-  const outcome = await executeSupervisor(admission, sandbox, consumedAttempt);
+  const outcome = await executeSupervisor(admission, sandbox, consumedAttempt, selectedInputs);
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_driver_owned_survivors');
   const raw = {} as Record<RawOrigin, Buffer>;
   for (const origin of RAW_ORIGINS)

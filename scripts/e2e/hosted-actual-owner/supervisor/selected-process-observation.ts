@@ -12,7 +12,7 @@ function check(value: unknown, reason: string): asserts value {
   if (!value) throw new Error(`selected_supervisor_observation_${reason}`);
 }
 
-function processIdentity(pid: number) {
+export function processIdentity(pid: number) {
   const fd = openSync(`/proc/${pid}/stat`, constants.O_RDONLY | constants.O_NOFOLLOW);
   let source: string;
   try {
@@ -38,7 +38,7 @@ function processIdentity(pid: number) {
   });
 }
 
-async function executingImage(pid: number, pin: FilePin, signal: AbortSignal) {
+export async function executingImage(pid: number, pin: FilePin, signal: AbortSignal) {
   check(Number.isSafeInteger(pin.size) && pin.size > 0 && pin.size <= 1024 ** 3 &&
     /^[0-9a-f]{64}$/u.test(pin.sha256), 'image_pin');
   const fd = openSync(`/proc/${pid}/exe`, constants.O_RDONLY);

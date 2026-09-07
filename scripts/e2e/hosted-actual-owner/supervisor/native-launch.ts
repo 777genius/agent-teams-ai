@@ -5,6 +5,7 @@ import { Socket } from 'node:net';
 import type { Readable, Writable } from 'node:stream';
 
 import type { BootstrapFrames } from './bootstrap-v2';
+import { maximumAuthFrame, SERVER_AUTH_V1, type ServerAuthFormat } from './private-profile-transfer';
 import { decodeDelivery, decodeExecuted, decodeExit, decodeFailure, decodeHeld, decodeSealed,
   nativeMessage, NATIVE_COMMAND, NATIVE_EVENT, NATIVE_MAGIC, u32,
   type Delivery, type ExecutedOwner, type HeldOwner, type NativeDescriptor, type OwnerExit, type SealedLease } from './native-protocol';
@@ -14,6 +15,7 @@ export interface InheritedImage {
   readonly pin: Readonly<{ device: string; inode: string; size: number; mode: number; sha256: string }>;
 }
 export interface NativeLaunchOptions {
+  readonly serverAuthFormat?: ServerAuthFormat;
   /** Borrowed until launch settles. Both images are already selected by descriptor admission. */
   readonly helper: InheritedImage;
   readonly executable: InheritedImage;
@@ -50,6 +52,10 @@ export class OwnedEndpoint {
   close(): void { this.owned?.destroy(); this.owned = undefined; }
 }
 export interface NativeOwnerLaunch {
+  readonly parentWriterClosures: readonly Readonly<{
+    fd: number; device: string; inode: string; observedOpenMonotonicNs: string;
+    spawnBoundaryMonotonicNs: string; observedClosedMonotonicNs: string;
+  }>[];
   readonly held: HeldOwner;
   readonly sealed: SealedLease;
   readonly executed: ExecutedOwner & { readonly executableSha256: string };
@@ -186,6 +192,8 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
   let frames: BootstrapFrames | undefined, transfer: Buffer | undefined;
   const startup = new AbortController();
   const writerCloseFailures: unknown[] = [];
+  const parentWriterClosures: { fd: number; device: string; inode: string;
+    observedOpenMonotonicNs: string; spawnBoundaryMonotonicNs: string; observedClosedMonotonicNs: string }[] = [];
   const closeWriters = () => {
     for (const fd of ownedWriters) {
       ownedWriters.delete(fd); // Never retry a numeric descriptor after a possible close/reuse.
@@ -223,6 +231,7 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     options.signal?.throwIfAborted();
     const [helperStat, imageStat] = await Promise.all([hashImage(options.helper, options.signal), hashImage(options.executable, options.signal)]);
     const rawStat = fstatSync(options.rawFd, { bigint: true }), walStat = fstatSync(options.walFd, { bigint: true });
+    const writersObservedMonotonicNs = process.hrtime.bigint().toString();
     requireValue(fstatSync(options.cwdFd).isDirectory(), 'cwd_descriptor');
     const slots = options.sourceSlots ?? [3, 4, 5, 6, 7, 8];
     requireValue(slots.length === 6 && new Set(slots).size === 6 && slots.every(n => Number.isInteger(n) && n >= 3 && n <= 254), 'source_slots');
@@ -247,13 +256,24 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     }
     act.on('error', () => undefined); live.on('error', () => undefined);
     activation = new OwnedEndpoint(act); liveness = new OwnedEndpoint(live);
-    closeWriters(); // libuv has already duplicated them. No writer retained in this TS process.
-    requireValue(writerCloseFailures.length === 0, 'writer_close_failed');
     await writeMessage(control, NATIVE_COMMAND.init, init); init.fill(0);
     const held = decodeHeld(await channel.next(NATIVE_EVENT.held));
     requireValue(held.parentPid === helper.pid && held.callerPid === process.pid &&
       matchesDescriptor(imageStat, held.descriptors[7]) && matchesDescriptor(rawStat, held.descriptors[5]) &&
       matchesDescriptor(walStat, held.descriptors[6]), 'held_inherited_handles');
+    // The real Owner is held before exec. Close the main-process writers after
+    // its actual fork, before any bootstrap assembly/release. This retains the
+    // existing single executing-writer custody and supplies actual parent-close
+    // ordering for the accepted capture lineage (the helper is an intermediate
+    // parent, not a substitute producer start).
+    for (const [fd, stat] of [[options.rawFd, rawStat], [options.walFd, walStat]] as const) {
+      ownedWriters.delete(fd);
+      closeAndObserve(fd);
+      parentWriterClosures.push({ fd, device: String(stat.dev), inode: String(stat.ino),
+        observedOpenMonotonicNs: writersObservedMonotonicNs,
+        spawnBoundaryMonotonicNs: held.forkMonotonicNs,
+        observedClosedMonotonicNs: process.hrtime.bigint().toString() });
+    }
     startup.signal.throwIfAborted();
     // Cancellation also interrupts a slow assembler; the native deadline remains independent of JS timers.
     const assembling = Promise.resolve(options.assemble(held)).then(value => {
@@ -268,7 +288,8 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     })]);
     const { leaseBytes, bootstrapFrame, authFrame } = frames;
     requireValue(leaseBytes.length > 0 && leaseBytes.length <= 65536 && bootstrapFrame.length >= 70 &&
-      bootstrapFrame.length <= 65604 && authFrame.length >= 6 && authFrame.length <= 8196, 'frame_bound');
+      bootstrapFrame.length <= 65604 && authFrame.length >= 6 &&
+      authFrame.length <= maximumAuthFrame(options.serverAuthFormat ?? SERVER_AUTH_V1), 'frame_bound');
     transfer = Buffer.concat([u32(leaseBytes.length), u32(bootstrapFrame.length), u32(authFrame.length), leaseBytes, bootstrapFrame, authFrame]);
     await writeMessage(control, NATIVE_COMMAND.assembled, transfer); transfer.fill(0);
     const sealed = decodeSealed(await channel.next(NATIVE_EVENT.sealed)), lease = held.descriptors[0];
@@ -297,7 +318,8 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     });
     void exit.catch(() => undefined);
     const retainedChannel = channel;
-    return Object.freeze({ held, sealed, executed: Object.freeze({ ...executed, executableSha256: options.executable.pin.sha256 }),
+    return Object.freeze({ held, sealed, parentWriterClosures: Object.freeze(parentWriterClosures.map(row => Object.freeze(row))),
+      executed: Object.freeze({ ...executed, executableSha256: options.executable.pin.sha256 }),
       delivery, activation, liveness, exit, nativeEvents: () => Object.freeze([...retainedChannel.records]), dispose });
   } catch (cause) {
     closeWriters();

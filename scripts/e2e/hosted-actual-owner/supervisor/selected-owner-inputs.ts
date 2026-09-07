@@ -4,15 +4,19 @@ import type { LaunchOwnerFromPlanOptions, launchOwnerFromPlan } from './index';
 import { assertSelectedPlanAdmission, type SelectedPlanAdmission } from './selected-plan-admission';
 
 type OwnerLaunch = Awaited<ReturnType<typeof launchOwnerFromPlan>>;
+type PreparedLaunchInputs = Omit<LaunchOwnerFromPlanOptions, 'activationHandleIpc'> & {
+  readonly activationHandleIpc: Omit<NonNullable<LaunchOwnerFromPlanOptions['activationHandleIpc']>, 'product' | 'nativeController'>;
+};
 
 /** Prepared by the actual OpenCode/bootstrap/raw-custody operations. Descriptor
  * ownership transfers to this scope; these are not expected-result fixtures. */
 export interface PreparedSelectedOwnerInputs {
+  readonly retainedPreparedProfile?: LaunchOwnerFromPlanOptions['retainedPreparedProfile'];
   readonly rawFd: number;
   readonly walFd: number;
   readonly bootstrap: LaunchOwnerFromPlanOptions['bootstrap'];
   readonly environment: LaunchOwnerFromPlanOptions['environment'];
-  readonly activationHandleIpc: NonNullable<LaunchOwnerFromPlanOptions['activationHandleIpc']>;
+  readonly activationHandleIpc: PreparedLaunchInputs['activationHandleIpc'];
 }
 
 /** Concrete input-resource operation for SelectedScheduleOperations. Borrowed
@@ -22,7 +26,7 @@ export async function withSelectedOwnerInputs(
   plan: SupervisorPlan,
   admission: SelectedPlanAdmission,
   prepared: PreparedSelectedOwnerInputs,
-  run: (inputs: LaunchOwnerFromPlanOptions) => Promise<OwnerLaunch>,
+  run: (inputs: PreparedLaunchInputs) => Promise<OwnerLaunch>,
 ): Promise<OwnerLaunch> {
   const rawFd = prepared.rawFd, walFd = prepared.walFd;
   if (![rawFd, walFd].every(fd => Number.isSafeInteger(fd) && fd >= 3) || rawFd === walFd) {
@@ -81,6 +85,7 @@ export async function withSelectedOwnerInputs(
       recipeSha256: admission.recipe.sha256,
       harnessContractSha256: selectedPlan.ownerHarnessContractSha256!,
       bootstrap,
+      retainedPreparedProfile: prepared.retainedPreparedProfile,
       invocation: { kind: 'source-bun', modulePath: source.module.path, moduleSha256: source.module.sha256 },
       environment,
       activationHandleIpc,

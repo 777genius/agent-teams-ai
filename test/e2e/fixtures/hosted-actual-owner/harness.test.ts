@@ -816,6 +816,41 @@ describe('retained evidence redaction', () => {
 });
 
 describe('descriptor-relative filesystem safety', () => {
+  it('admits exact private selected CJS/native closure members without admitting unselected private files', async () => {
+    const path = await temporaryPrivateDirectory();
+    const names = ['kernel.node', 'preparation.cjs', 'selected.cjs'];
+    const root = await openRootAnchor('p3b2', await rootPin(path));
+    try {
+      const pins: FilePin[] = [];
+      const entries: ClosureEntry[] = [];
+      for (const name of names) {
+        // Data-only fixture: none of these files is loaded or executed.
+        const bytes = Buffer.from(`selected-fixture:${name}`);
+        await writeFile(join(path, name), bytes, { flag: 'wx', mode: 0o400 });
+        const pin = await pinnedFile('p3b2', join(path, name), name, 0o400);
+        pins.push(pin);
+        entries.push({ path: name, mode: 0o400, size: bytes.length, sha256: pin.sha256 });
+      }
+      const bytes = Buffer.from(canonicalJson(entries));
+      await writeFile(join(path, 'manifest.json'), bytes, { flag: 'wx', mode: 0o400 });
+      const manifest = await pinnedFile('p3b2', join(path, 'manifest.json'), 'manifest.json', 0o400);
+      const closure = { manifest, manifestSha256: manifest.sha256,
+        merkleRoot: closureDigestForTest(entries), fileCount: entries.length,
+        totalBytes: entries.reduce((sum, entry) => sum + entry.size, 0) };
+      await expect(verifyClosure(root, closure, pins)).resolves.toMatchObject({ fileCount: 3 });
+      await expect(verifyClosure(root, closure, pins.slice(1))).rejects.toThrow('p3c_closure_entry_value');
+      await expect(verifyClosure(root, closure, [...pins, pins[0]])).rejects.toThrow('p3c_closure_private_image_alias');
+      await expect(verifyClosure(root, closure, pins.map(pin =>
+        pin === pins[0] ? { ...pin, relativePath: 'unselected.txt' } : pin))).rejects.toThrow('p3c_closure_private_image_selection');
+      await chmod(join(path, names[0]), 0o500);
+      await expect(verifyClosure(root, closure, pins)).rejects.toThrow('p3c_closure_file_metadata');
+    } finally {
+      await root.handle.close();
+      for (const name of [...names, 'manifest.json']) await unlink(join(path, name)).catch(() => undefined);
+      await rmdir(path);
+    }
+  });
+
   it('binds a private root and stable single-link file to exact identities and digest', async () => {
     const path = await temporaryPrivateDirectory();
     const leaf = join(path, 'input.bin');

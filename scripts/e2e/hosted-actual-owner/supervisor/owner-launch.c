@@ -28,7 +28,9 @@
 #define SEALS (F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE)
 #define MAX_INIT 32768u
 #define MAX_BOOT 65604u
-#define MAX_AUTH 8196u
+/* Transport ceiling only. The selected TS producer and Owner decoder enforce
+ * explicit v1/v2 document limits, with no probing or downgrade. */
+#define MAX_AUTH (1024u * 1024u + 4u)
 #define MAX_LEASE 65536u
 #define ROLES 8
 enum { INIT = 1, ASSEMBLED, EXEC_ACK, CANCEL };

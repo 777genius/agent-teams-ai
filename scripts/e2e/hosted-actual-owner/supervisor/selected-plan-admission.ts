@@ -1,4 +1,4 @@
-import { closeSync, constants, openSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync } from 'node:fs';
 import type { IntegrationDescriptor } from '../contracts';
 import type { ControllerTrustAnchor } from '../controller-authority';
 import { assertOwnerPlanV2 } from '../owner-plan';
@@ -11,7 +11,7 @@ import { readReadonlyArtifact } from './readonly-artifact';
 import { admitSelectedControlDocuments } from './selected-control-admission';
 import { assertSelectedSupervisorObservation, observeSelectedSupervisor } from './selected-process-observation';
 
-const admittedPlans = new WeakMap<object, string>();
+const admittedPlans = new WeakMap<object, { plan: string; assertControlCurrent(): void }>();
 export type SelectedPlanAdmission = Awaited<ReturnType<typeof admitSelectedSupervisorPlan>>;
 
 function check(value: unknown, reason: string): asserts value {
@@ -29,6 +29,7 @@ export async function admitSelectedSupervisorPlan(
   signal: AbortSignal,
 ) {
   const selected = structuredClone(descriptor), selectedPlan = structuredClone(plan);
+  const selectedRoots = structuredClone(publicRoots);
   check(canonicalJson(selectedPlan.supervisorAdmissionDescriptor) === canonicalJson(selected),
     'descriptor_selection');
   const roots: number[] = [];
@@ -36,7 +37,23 @@ export async function admitSelectedSupervisorPlan(
     signal.throwIfAborted();
     const documents = openSync('/admission', constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
     roots.push(documents);
-    const control = admitSelectedControlDocuments(publicRoots, selected, documents);
+    const documentRoot = fstatSync(documents, { bigint: true });
+    const control = admitSelectedControlDocuments(selectedRoots, selected, documents);
+    const retainedControl = canonicalJson(control);
+    const assertControlCurrent = () => {
+      const current = openSync('/admission', constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+      try {
+        const stat = fstatSync(current, { bigint: true });
+        check(stat.dev === documentRoot.dev && stat.ino === documentRoot.ino &&
+          stat.mode === documentRoot.mode && stat.uid === documentRoot.uid && stat.gid === documentRoot.gid,
+        'control_root_changed');
+        // Reopen and hash the exact readonly signed documents at consumption.
+        // Cached successful admission is not current control authority after
+        // an asynchronous preparation or a generation replacement boundary.
+        check(canonicalJson(admitSelectedControlDocuments(selectedRoots, selected, current)) === retainedControl,
+          'control_changed');
+      } finally { closeSync(current); }
+    };
     const publicFiles = Object.fromEntries(SELECTED_PUBLIC_ARTIFACT_NAMES.map(name => {
       const pin = selected.control[name], mount = SELECTED_PUBLIC_ARTIFACTS[name];
       return [name, { descriptor: mount.fd, path: `/admission/${mount.name}`,
@@ -54,6 +71,10 @@ export async function admitSelectedSupervisorPlan(
     const recipeBytes = readReadonlyArtifact(payload, selected.p3b2.recipe, 16 * 1024 * 1024);
     const recipe = verifyP3B2Recipe(recipeBytes, selected);
     check(recipe?.supervisor && selectedPlan.supervisorSourceInvocation, 'recipe_v3_required');
+    check(canonicalJson(selectedPlan.ownerPreparationModule ?? null) ===
+      canonicalJson(recipe.preparationModule ?? null), 'preparation_module_selection');
+    check(canonicalJson(selectedPlan.selectedKernelModule ?? null) ===
+      canonicalJson(recipe.kernelModule ?? null), 'kernel_module_selection');
     check(selectedPlan.controllerNonce === selected.controllerNonce &&
       selectedPlan.runId === sha256(`agent-teams.p3c.run/v1\0${selected.controllerNonce}`) &&
       canonicalJson(selectedPlan.supervisorSourceInvocation) === canonicalJson(recipe.supervisor) &&
@@ -91,13 +112,16 @@ export async function admitSelectedSupervisorPlan(
     const admission = Object.freeze({
       contract: 'agent-teams.hosted-selected-supervisor-admission/v1' as const,
       control,
+      ...(recipe.preparationModule ? { preparationModule: recipe.preparationModule } : {}),
+      ...(recipe.kernelModule ? { kernelModule: recipe.kernelModule } : {}),
       ownerExecutable: Object.freeze({ ...recipe.executable }),
       recipe: Object.freeze({ path: `/p3b2/${selected.p3b2.recipe.relativePath}`,
         sha256: recipe.recipeSha256, device: selected.p3b2.recipe.device,
         inode: selected.p3b2.recipe.inode, size: selected.p3b2.recipe.size }),
       process: observation,
     });
-    admittedPlans.set(admission, canonicalJson(selectedPlan));
+    assertControlCurrent();
+    admittedPlans.set(admission, { plan: canonicalJson(selectedPlan), assertControlCurrent });
     return admission;
   } finally {
     const failures: unknown[] = [];
@@ -111,7 +135,9 @@ export async function admitSelectedSupervisorPlan(
 /** Only the actual namespace verifier can produce this receipt. Its internal
  * selection is checked in full before every native Owner launch. */
 export function assertSelectedPlanAdmission(admission: SelectedPlanAdmission, plan: SupervisorPlan): void {
-  check(admission && admittedPlans.get(admission) === canonicalJson(plan) &&
+  const retained = admission && admittedPlans.get(admission);
+  check(retained && retained.plan === canonicalJson(plan) &&
     plan.supervisorSourceInvocation, 'receipt');
   assertSelectedSupervisorObservation(admission.process, plan.supervisorSourceInvocation);
+  retained.assertControlCurrent();
 }

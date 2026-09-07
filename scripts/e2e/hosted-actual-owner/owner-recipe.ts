@@ -3,9 +3,12 @@ import type { FilePin, IntegrationDescriptor } from './contracts';
 import { OPENCODE_IDENTITIES } from './open-code-identities';
 import { parseSelectedSupervisorInvocation, type SelectedSupervisorInvocation } from './supervisor/selected-invocation';
 import { OWNER_V2_ARGV, type OwnerSourceInvocation } from './owner-child-protocol';
+import { parseSelectedKernelPin } from './supervisor/selected-kernel-pin';
 
 export type PrivateOwnerImagePin = FilePin & { readonly root: 'p3b2'; readonly mode: 320 };
 export interface OwnerLaunchSelectionV2 {
+  readonly preparationModule?: FilePin;
+  readonly kernelModule?: FilePin;
   readonly protocolVersion: 2;
   readonly recipeSha256: string;
   readonly executable: PrivateOwnerImagePin;
@@ -47,7 +50,8 @@ export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescripto
   const selectedSupervisor = value.schemaVersion === 3;
   const r = exactRecord(value, ['schemaVersion', 'purpose', 'sourceBaseCommit', 'resultCommit', 'entry',
     'supervisor', 'candidateOpenCodeSha256', 'argv', 'sourceTreeRequired', 'accepted',
-    'sourceInvocation', 'launchHelper', ...(selectedSupervisor ? ['supervisorInvocation'] : [])], 'owner_recipe_v2');
+    'sourceInvocation', 'launchHelper', ...(selectedSupervisor ? ['supervisorInvocation'] : []),
+    ...(selectedSupervisor && Object.hasOwn(value, 'nativeComposition') ? ['nativeComposition'] : [])], 'owner_recipe_v2');
   const selected = descriptor.p3b2;
   check((selectedSupervisor
     ? r.purpose === 'agent-teams.p3b2.selected-native-supervisor/v3'
@@ -64,16 +68,35 @@ export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescripto
   const executable = privateImage(source.executable), helper = privateImage(r.launchHelper);
   const supervisor = selectedSupervisor
     ? parseSelectedSupervisorInvocation(r.supervisorInvocation, descriptor) : undefined;
+  let preparationModule: FilePin | undefined;
+  let kernelModule: FilePin | undefined;
+  if (r.nativeComposition !== undefined) {
+    const composition = exactRecord(r.nativeComposition, ['format', 'serverAuthFormat', 'preparationModule', 'kernelModule'], 'native_composition');
+    check(composition.format === 'agent-teams.hosted-selected-native-composition/v1' &&
+      composition.serverAuthFormat === 'agent-teams.hosted-control.opencode-server-auth/v2', 'composition_version');
+    // Reuse the selected module parser's complete CJS pin/path/alias checks.
+    const parsed = parseSelectedSupervisorInvocation({ ...r.supervisorInvocation as object,
+      module: composition.preparationModule,
+      argv: ['--selected-namespace-v1', descriptor.toolchain.loader.relativePath,
+        descriptor.toolchain.node.relativePath, (composition.preparationModule as FilePin)?.relativePath],
+    }, descriptor);
+    preparationModule = parsed.module;
+    kernelModule = parseSelectedKernelPin(composition.kernelModule);
+    check(supervisor && preparationModule.relativePath !== supervisor.module.relativePath &&
+      `${preparationModule.device}:${preparationModule.inode}` !== `${supervisor.module.device}:${supervisor.module.inode}`, 'preparation_alias');
+  }
   check(source.format === 'agent-teams.hosted-owner-source-invocation/v1' &&
     module.path === `/p3b2/${selected.entry.relativePath}` && module.sha256 === selected.entry.sha256 &&
     /\.(?:ts|tsx|mts)$/u.test(selected.entry.relativePath), 'module');
   const pins = [executable, helper, selected.entry, selected.supervisor, selected.recipe,
-    ...(supervisor ? [supervisor.module] : [])];
+    ...(supervisor ? [supervisor.module] : []), ...(preparationModule ? [preparationModule] : []),
+    ...(kernelModule ? [kernelModule] : [])];
   check(new Set(pins.map(p => p.relativePath)).size === pins.length &&
     new Set(pins.map(p => `${p.device}:${p.inode}`)).size === pins.length, 'image_alias');
   check(canonicalJson(r.argv) === canonicalJson(['run', module.path, ...OWNER_V2_ARGV]), 'argv');
   return Object.freeze({ protocolVersion: 2, recipeSha256: selected.recipeSha256, executable, helper,
-    ...(supervisor ? { supervisor } : {}),
+    ...(supervisor ? { supervisor } : {}), ...(preparationModule ? { preparationModule } : {}),
+    ...(kernelModule ? { kernelModule } : {}),
     source: Object.freeze({ format: 'agent-teams.hosted-owner-source-invocation/v1',
       executable: Object.freeze({ device: executable.device, inode: executable.inode, sha256: executable.sha256 }),
       module: Object.freeze({ path: module.path as string, sha256: selected.entry.sha256 }) }) });
@@ -123,5 +146,7 @@ function verifyLegacyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor
 
 export function selectedOwnerImages(selection?: OwnerLaunchSelectionV2): readonly FilePin[] {
   return selection === undefined ? [] : [selection.executable, selection.helper,
-    ...(selection.supervisor ? [selection.supervisor.module] : [])];
+    ...(selection.supervisor ? [selection.supervisor.module] : []),
+    ...(selection.preparationModule ? [selection.preparationModule] : []),
+    ...(selection.kernelModule ? [selection.kernelModule] : [])];
 }

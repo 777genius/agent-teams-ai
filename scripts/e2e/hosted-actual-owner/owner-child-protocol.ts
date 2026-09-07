@@ -73,6 +73,14 @@ export const OWNER_CHILD_PROTOCOL_V2 = Object.freeze({
   parentCleanup: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v3',
   parentOwnership: OWNER_CHILD_PROTOCOL.parentOwnership,
 } as const);
+/** Explicit selected profile transport. Legacy v2 launches retain server-auth/v1. */
+export const OWNER_CHILD_PROTOCOL_PROFILE_V2 = Object.freeze({ ...OWNER_CHILD_PROTOCOL_V2,
+  privateServerAuth: Object.freeze({ ...OWNER_CHILD_PROTOCOL_V2.privateServerAuth,
+    format: 'agent-teams.hosted-control.opencode-server-auth/v2' as const,
+    maximumDocumentBytes: 1024 * 1024, maximumFrameBytes: 1024 * 1024 + 4,
+    maximumProfileBytes: 768 * 1024,
+  }),
+});
 export function legacyOwnerChildPlan() {
   return Object.freeze({
     wrapperArgv: Object.freeze([OWNER_WRAPPER_ARGUMENT, '/sandbox/runtime-manifest.json'] as const),
@@ -83,11 +91,12 @@ export function legacyOwnerChildPlan() {
     compatibilityProbing: false as const, socketPathReconnect: false as const,
   });
 }
-export function ownerChildPlanV2() {
+export function ownerChildPlanV2(preparedProfile = false) {
   return Object.freeze({ ...legacyOwnerChildPlan(), protocolVersion: 2 as const,
     // Any wrapper caller must preserve the discriminator too. No legacy shell path is authorized.
     wrapperArgv: OWNER_V2_ARGV, sealedArgv: OWNER_V2_ARGV,
-    childLocalDescriptors: OWNER_CHILD_FDS_V2, descriptorContract: OWNER_CHILD_PROTOCOL_V2 });
+    childLocalDescriptors: OWNER_CHILD_FDS_V2,
+    descriptorContract: preparedProfile ? OWNER_CHILD_PROTOCOL_PROFILE_V2 : OWNER_CHILD_PROTOCOL_V2 });
 }
 export type OwnerChildPlan = ReturnType<typeof legacyOwnerChildPlan> | ReturnType<typeof ownerChildPlanV2>;
 export interface OwnerSourceInvocation {
