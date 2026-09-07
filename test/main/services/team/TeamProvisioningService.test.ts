@@ -19965,7 +19965,11 @@ describe('TeamProvisioningService', () => {
       expect(svc.isTeamAlive(teamName)).toBe(true);
       expect(progress.at(-1)).toMatchObject({
         state: 'ready',
-        message: 'OpenCode team is running with unavailable members',
+        // The lead is absent from this launch result and holds no committed
+        // session on disk, so the lead gate reports it as pending. The team
+        // still promotes - the side lanes carry it - but the message now names
+        // the actual condition instead of the generic "unavailable members".
+        message: 'OpenCode lead is waiting for its runtime bootstrap evidence',
         error: undefined,
       });
 

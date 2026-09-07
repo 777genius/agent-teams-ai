@@ -22,10 +22,27 @@ import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondary
  */
 export type OpenCodePrimaryLeadBootstrapState = 'confirmed' | 'pending' | 'failed';
 
+/**
+ * The lead this gate is entitled to judge: the one that runs ON this lane.
+ *
+ * A team can have a lead on another runtime - a Cursor lead beside OpenCode side
+ * lanes is an ordinary, working shape - and such a lead is absent from an
+ * OpenCode launch result for a completely legitimate reason. Vetoing on it would
+ * hold back a launch that is fine, so a lead with an explicit non-OpenCode
+ * provider is not this gate's business. A member with no provider recorded takes
+ * the lane's own runtime, which is the historical default and stays included.
+ */
 export function resolveOpenCodeAggregatePrimaryLeadName(
-  members: readonly { name: string }[]
+  members: readonly { name: string; providerId?: string }[]
 ): string | null {
-  return members.find((member) => isLeadMember(member))?.name?.trim() || null;
+  return (
+    members
+      .find(
+        (member) =>
+          isLeadMember(member) && (member.providerId ?? 'opencode') === 'opencode'
+      )
+      ?.name?.trim() || null
+  );
 }
 
 export function findOpenCodePrimaryLeadEvidence(
@@ -96,10 +113,14 @@ export function classifyOpenCodePrimaryLeadBootstrap(input: {
     // is the honest answer: the team is not ready, and the bootstrap check-in
     // path is given its chance to land the evidence.
     //
-    // Disk evidence still outranks the absence, for the same reason it may only
-    // ever downgrade elsewhere: a lane that already committed a lead session is
-    // confirmed no matter what this particular result carried.
-    return input.committedSessionEvidence === true ? 'confirmed' : 'pending';
+    // Only a NEGATIVE disk read downgrades, exactly as everywhere else in this
+    // function: `false` is proof that no lead session was committed, while
+    // `null` means the read failed or no reader is wired, and an absence of
+    // evidence may not hold back a launch on its own. Downgrading on `null` also
+    // fails the legitimate shape where the lead does not belong to this lane at
+    // all - a Cursor lead beside OpenCode side lanes - which is a launch that
+    // works today.
+    return input.committedSessionEvidence === false ? 'pending' : 'confirmed';
   }
   if (evidence.launchState === 'failed_to_start' || evidence.hardFailure === true) {
     return 'failed';

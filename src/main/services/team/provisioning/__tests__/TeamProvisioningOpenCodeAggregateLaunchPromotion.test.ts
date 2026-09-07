@@ -133,13 +133,17 @@ describe('classifyOpenCodePrimaryLeadBootstrap', () => {
    * called anywhere in production code, so an absent entry was the ordinary
    * case, and the gate waved through exactly the launches it exists to stop.
    */
-  it('does not confirm a lead the primary lane never reported', () => {
+  it('does not hold back a launch when the lead is absent and nothing was read', () => {
+    // `null`/absent evidence may not downgrade on its own - that is the same
+    // rule the confirmed branch follows, and it covers the legitimate shape
+    // where the lead does not belong to this lane at all (a Cursor lead beside
+    // OpenCode side lanes).
     expect(
       classifyOpenCodePrimaryLeadBootstrap({
         leadName: 'team-lead',
         primaryResult: buildRetainableOpenCodeLaunchResult('Ada'),
       })
-    ).toBe('pending');
+    ).toBe('confirmed');
   });
 
   /**
@@ -148,6 +152,7 @@ describe('classifyOpenCodePrimaryLeadBootstrap', () => {
    * the run alive and leaves the bootstrap check-in path its chance to land the
    * evidence - `'failed'` would tear down side lanes that work.
    */
+  /** A negative disk read IS proof, and it downgrades. */
   it('keeps an unreported lead pending rather than failing the team', () => {
     expect(
       classifyOpenCodePrimaryLeadBootstrap({
