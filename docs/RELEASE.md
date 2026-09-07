@@ -28,6 +28,75 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
+## Draft: v2.13.3 (2026-09-07)
+
+GitHub release: [v2.13.3](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.3).
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.85`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release preparation: the host recovery fix merged in [runtime PR #69](https://github.com/777genius/agent_teams_orchestrator/pull/69), commit `c44a763b7ecca2ed67f58911501752552f5642d9`. [Runtime CI](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158064866) passed all six jobs after one Windows standalone API-read job retry. [Runtime release build](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158627878) succeeded; `runtime.lock.json` pins all five [published archives](https://github.com/777genius/agent_teams_orchestrator_binaries/releases/tag/runtime-v0.0.85) with matching manifest/GitHub SHA-256 digests. App packaging, qualification and publication remain pending.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.13.3 -->
+This update fixes team launch retries after a previously reused OpenCode server stops.
+
+### Fixes
+
+- Start a replacement OpenCode server on retry once previous sessions have released the stopped server.
+- Show a clear error while existing sessions still hold a stopped OpenCode server.
+- Avoid duplicate replacement servers when several team launches retry at the same time.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai_2.13.3_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.13.3 -->
+
 ## Released: v2.13.2 (2026-09-07)
 
 GitHub release: [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2).
