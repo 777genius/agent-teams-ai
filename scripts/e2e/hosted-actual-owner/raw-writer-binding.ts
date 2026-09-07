@@ -1,3 +1,4 @@
+import { PRIVATE_HTTP_KIND } from './private-http-types';
 import { canonicalJson, type RawOrigin } from './contracts';
 import { HTTP_OBSERVATION_KIND, HTTP_OBSERVATION_KIND_V2 } from './raw-http-types';
 
@@ -37,7 +38,7 @@ export function assertRawRecordWriters(
       BigInt(record.monotonicNs) <= BigInt(start.observedMonotonicNs)
     )
       fail();
-    if (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2) {
+    if (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2 || record.kind === PRIVATE_HTTP_KIND) {
       roles.add('owner');
       if (
         origin !== 'opencode' ||

@@ -1,6 +1,9 @@
+import { PRIVATE_HTTP_KIND, type LocatedHttpObservation } from './private-http-types';
+import { decodePrivateHttpRecord, assertPrivateHttpOuterBinding } from './private-http';
+import { privateHttpPairReader } from './private-http-pairs';
 import { canonicalJson, sha256 } from './contracts';
 import { appliedHttpReceipt, type AppliedHttpReceipt } from './http-entity';
-import { parseNativeRawEnvelope } from './http-raw-envelope';
+import { parseHttpObservationEnvelope } from './http-observation-envelope';
 import type { NativeCaptureShard } from './native-captures';
 import {
   buildOpenCodeOperationIndex,
@@ -67,6 +70,7 @@ export interface P1HttpCorrelationResult {
   readonly ledgerSha256: string;
   readonly recordIds: readonly string[];
   readonly exchanges: readonly P1HttpExchangeCorrelation[];
+  readonly privateObservations: readonly { readonly recordId: string; readonly bodyCommitment: 'unverified' }[];
   readonly unboundFailureRecordIds: readonly string[];
   readonly unmatchedNativeFacts: readonly OpenCodeFact[];
   readonly nativeProblems: readonly string[];
@@ -176,7 +180,7 @@ function bindCorrelationInput(
 
 function assertCompleteHttpSelection(
   ledger: Buffer,
-  records: readonly LocatedHttpRawRecord[]
+  records: readonly LocatedHttpObservation[]
 ): void {
   httpCheck(
     ledger.length > 0 && ledger.length <= HTTP_LIMITS.ledger && ledger.at(-1) === 0x0a,
@@ -190,7 +194,7 @@ function assertCompleteHttpSelection(
   while (byteStart < ledger.length) {
     const byteEnd = ledger.indexOf(0x0a, byteStart);
     httpCheck(byteEnd >= byteStart && byteEnd - byteStart + 1 <= HTTP_LIMITS.line, 'ledger_line');
-    const outer = parseNativeRawEnvelope(
+    const outer = parseHttpObservationEnvelope(
       ledger.subarray(byteStart, byteEnd), sequence++, records[0]?.controllerNonce ?? ''
     );
     httpCheck(BigInt(outer.monotonicNs) > previous, 'selection_clock');
@@ -199,9 +203,9 @@ function assertCompleteHttpSelection(
       decodeHttpBase64(outer.payloadBase64, HTTP_LIMITS.payload, 'selection_payload'),
       'selection_payload'
     ) as Record<string, unknown>;
-    httpCheck(isHttpObservationKind(payload.kind), 'mixed_recorder_kinds');
+    httpCheck(isHttpObservationKind(payload.kind) || payload.kind === PRIVATE_HTTP_KIND, 'mixed_recorder_kinds');
     httpCheck(
-      selected.has(`${byteStart}:${byteEnd}`) === (isHttpObservationKind(payload.kind)),
+      selected.has(`${byteStart}:${byteEnd}`) === (isHttpObservationKind(payload.kind) || payload.kind === PRIVATE_HTTP_KIND),
       'raw_selection_incomplete'
     );
     byteStart = byteEnd + 1;
@@ -211,7 +215,7 @@ function assertCompleteHttpSelection(
 /** Characterizes retained-byte agreement only. No caller object or publication digest can
  * authenticate this result, authorize a receipt or supply admitted P1 evidence to derivation. */
 export function correlateOpenCodeHttpEvidence(input: {
-  readonly records: readonly LocatedHttpRawRecord[];
+  readonly records: readonly LocatedHttpObservation[];
   readonly ledger: Buffer;
   readonly shards: readonly NativeCaptureShard[];
   readonly correlations: readonly P1HttpCorrelationInput[];
@@ -239,6 +243,7 @@ export function correlateOpenCodeHttpEvidence(input: {
   const recordIds = new Set<string>();
   const exchanges = new Set<string>();
   let previousSequence = 0;
+  const pair = privateHttpPairReader(input.ledger.length);
   for (const record of records) {
     const line = input.ledger.subarray(record.byteStart, record.byteEnd + 1);
     httpCheck(
@@ -269,9 +274,12 @@ export function correlateOpenCodeHttpEvidence(input: {
       'located_payload'
     );
     httpCheck((payload as Record<string, unknown>).kind === record.kind, 'raw_fact_kind');
-    const decoded = decodeSupportedHttpRecord(payload as Record<string, unknown>);
+    const decoded = record.kind === PRIVATE_HTTP_KIND
+      ? decodePrivateHttpRecord(payload as Record<string, unknown>)
+      : decodeSupportedHttpRecord(payload as Record<string, unknown>);
     httpCheck(canonicalJson(decoded) === canonicalJson(record.http), 'raw_fact_content');
-    assertHttpOuterBinding(record, decoded);
+    if (decoded.purpose === 'agent-teams.p3c.opencode-http-private-observation/v1') assertPrivateHttpOuterBinding(record, decoded);
+    else assertHttpOuterBinding(record, decoded);
     httpCheck(!recordIds.has(record.recordId), 'duplicate_record');
     recordIds.add(record.recordId);
     const bound = correlations.get(canonicalJson(record.http.context));
@@ -282,6 +290,14 @@ export function correlateOpenCodeHttpEvidence(input: {
         BigInt(record.monotonicNs) > BigInt(bound.owner.observedMonotonicNs),
       'recorder_start'
     );
+    pair(record);
+    if (record.kind === PRIVATE_HTTP_KIND) {
+      const observation = record.http.observation;
+      if (observation.phase === 'response-retained') httpCheck(
+        observation.connectedPeer.remoteAddress === bound.assertion.endpoint.address &&
+        observation.connectedPeer.remotePort === bound.assertion.endpoint.port, 'connected_endpoint');
+      continue; // Custody-bound UNVERIFIED commitment; never enter any approval body parser.
+    }
     const observation = record.http.observation;
     if (observation.phase === 'request-retained') {
       httpCheck(!exchanges.has(observation.ownerExchangeNonce), 'exchange_reused');
@@ -399,6 +415,7 @@ export function correlateOpenCodeHttpEvidence(input: {
   const nativeProblems = groups.flatMap((group) => (group.problem === null ? [] : [group.problem]));
   return Object.freeze({
     status:
+      !records.some(record => record.kind === PRIVATE_HTTP_KIND) &&
       results.length > 0 &&
       results.every((result) => result.status === 'correlated-unverified') &&
       unboundFailures.length === 0 &&
@@ -411,6 +428,8 @@ export function correlateOpenCodeHttpEvidence(input: {
     ledgerSha256,
     recordIds: Object.freeze([...recordIds]),
     exchanges: Object.freeze(results),
+    privateObservations: Object.freeze(records.filter(record => record.kind === PRIVATE_HTTP_KIND).map(record =>
+      Object.freeze({ recordId: record.recordId, bodyCommitment: 'unverified' as const }))),
     unboundFailureRecordIds: Object.freeze(unboundFailures),
     unmatchedNativeFacts: Object.freeze(unmatchedNativeFacts),
     nativeProblems: Object.freeze(nativeProblems),
