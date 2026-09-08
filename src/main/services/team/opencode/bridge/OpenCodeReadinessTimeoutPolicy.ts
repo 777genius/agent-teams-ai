@@ -23,7 +23,10 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   commandStatus: 5_000,
 } as const;
 
-const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 90_000;
+// Each participant costs a full model turn on these CLIs, and a Cursor turn was
+// measured between 40 and 250 seconds on a healthy account. At 90s a two-member
+// team ran out of budget before its first agent had answered.
+const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 240_000;
 const MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS = 10 * 60_000;
 
 /** Per-command timeout overrides accepted by the readiness bridge. */

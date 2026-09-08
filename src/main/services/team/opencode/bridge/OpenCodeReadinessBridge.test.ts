@@ -31,10 +31,17 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
       { name: 'two', role: 'developer', prompt: 'two' },
     ];
 
+    // Three participants at four minutes each. A Cursor turn was measured
+    // between 40 and 250 seconds, so the old ninety-second slice ran out before
+    // the first agent had answered.
+    // Three participants at four minutes each is twelve minutes, so the ten
+    // minute ceiling applies. A Cursor turn was measured between 40 and 250
+    // seconds, and the old ninety-second slice ran out before the first agent
+    // had answered.
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'cursor-acp/auto', members })).toBe(
-      270_000
+      600_000
     );
-    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(270_000);
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(600_000);
   });
 
   it('honors an explicit launch timeout override', () => {
