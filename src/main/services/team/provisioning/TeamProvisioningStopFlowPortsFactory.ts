@@ -1,3 +1,5 @@
+import { clearPendingOpenCodePromptDeliveriesForTeam } from '../lifecycle/teamForceStopFlow';
+
 import {
   type OpenCodeRuntimeStopFlowPorts,
   stopMixedSecondaryRuntimeLanes,
@@ -206,6 +208,26 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
   deps: TeamProvisioningStopFlowFactoryDeps<TRun>
 ): TeamProvisioningStopTeamPorts<TRun> {
   return {
+    cancelOpenCodePromptDeliveries: async (teamName) => {
+      const primary = deps.runtimeAdapterRunByTeam.get(teamName);
+      const secondary = deps.getSecondaryRuntimeRuns(teamName);
+      await clearPendingOpenCodePromptDeliveriesForTeam({
+        teamName,
+        teamsBasePath: deps.getTeamsBasePath(),
+        ownedRunIds: [
+          ...(primary?.providerId === 'opencode' ? [primary.runId] : []),
+          ...secondary.map((run) => run.runId),
+        ],
+        ownedLaneIds: [
+          ...(primary?.providerId === 'opencode' ? ['primary'] : []),
+          ...secondary.map((run) => run.laneId),
+        ],
+        requestedAtMs: Date.now(),
+        includeRecoverableTerminal: true,
+        reason: 'stop_requested: pending delivery cancelled by user stop',
+        throwOnError: true,
+      });
+    },
     invalidateRuntimeSnapshotCaches: (teamName) => deps.invalidateRuntimeSnapshotCaches(teamName),
     pauseActiveIntervalsForTeam: (teamName) => deps.pauseActiveIntervalsForTeam(teamName),
     stopPersistentTeamMembers: (teamName) =>

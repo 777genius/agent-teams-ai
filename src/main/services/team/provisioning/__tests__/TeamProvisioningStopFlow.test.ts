@@ -76,6 +76,7 @@ function makePorts(
 } {
   const ports = {
     invalidateRuntimeSnapshotCaches: vi.fn(),
+    cancelOpenCodePromptDeliveries: vi.fn().mockResolvedValue(undefined),
     pauseActiveIntervalsForTeam: vi.fn(),
     stopPersistentTeamMembers: vi.fn(),
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
@@ -151,6 +152,7 @@ describe('team provisioning stop flow', () => {
     await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
     expect(rejectOnce).toHaveBeenCalledOnce();
     expect(run.leadRelayCapture).toBeNull();
+    expect(ports.cancelOpenCodePromptDeliveries).toHaveBeenCalledWith('team-a');
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     finishStop();
     await stopping;

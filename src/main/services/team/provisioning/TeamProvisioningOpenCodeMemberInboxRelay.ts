@@ -1,3 +1,4 @@
+import { isOpenCodeDeliveryFromOtherRun } from '../opencode/delivery/OpenCodePromptDeliveryRunEligibility';
 import { OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 import { OpenCodePromptDeliveryCancelledError } from '../opencode/delivery/OpenCodePromptDeliveryCancellationGuard';
 import {
@@ -335,9 +336,7 @@ async function runOpenCodeMemberInboxRelayWork(
   const unread = selectOpenCodeMemberInboxRelayUnreadMessages({
     inboxMessages,
     onlyMessageId,
-    // Terminal ledger rows remain unread so they can be recovered later. Scan the
-    // full ordered inbox here; otherwise a batch-sized prefix of terminal rows
-    // permanently starves every deliverable message behind it.
+    // Scan past historical terminal rows so new messages are not starved.
     maxRelay: inboxMessages.length,
   });
 
@@ -347,8 +346,6 @@ async function runOpenCodeMemberInboxRelayWork(
     return taskRefInferenceTasks;
   };
 
-  // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
-  // user message (see findNextUnreadUserMessageIndex) instead of breaking.
   let cursor = 0;
   while (cursor < unread.length) {
     const index = cursor;
@@ -365,6 +362,24 @@ async function runOpenCodeMemberInboxRelayWork(
         inboxMessageId: message.messageId,
       })
       .catch(() => null);
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
+    if (existingRecord) {
+      const currentRunId = await ports.resolveCurrentOpenCodeRuntimeRunId(
+        teamName,
+        memberIdentity.laneId
+      );
+      if (isOpenCodeDeliveryFromOtherRun(existingRecord, currentRunId)) {
+        // Persist the fence so due scans cannot repeatedly select this historical row.
+        await promptLedger.ensurePending({
+          ...existingRecord,
+          runId: currentRunId,
+          now: ports.nowIso(),
+        });
+        continue;
+      }
+    }
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
@@ -596,9 +611,6 @@ async function runOpenCodeMemberInboxRelayWork(
         ...(result.diagnostics ?? []),
         ...(delivery.diagnostics ?? [delivery.reason ?? 'opencode_delivery_response_pending']),
       ];
-      // A pending non-user delivery (teammate report, system/task notification)
-      // must not starve a newer user message: hand that message to the delivery
-      // service, which queues it until fresh observation settles the blocker.
       const nextUserMessageIndex = findNextUnreadUserMessageIndex({
         unread,
         afterIndex: index,

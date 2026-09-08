@@ -1,6 +1,10 @@
 import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
+import {
+  cancelOpenCodeDeliveryFromOtherRun,
+  isOpenCodeDeliveryFromOtherRun,
+} from './OpenCodePromptDeliveryRunEligibility';
 import { isOpenCodeSessionRefreshResponseState } from './OpenCodeSessionRefreshReasonClassifier';
 
 import type {
@@ -178,6 +182,11 @@ export class OpenCodePromptDeliveryLedgerStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.id === id);
       if (existing) {
+        if (isOpenCodeDeliveryFromOtherRun(existing, input.runId)) {
+          const cancelled = cancelOpenCodeDeliveryFromOtherRun(existing, input.now);
+          result = cancelled;
+          return records.map((record) => (record.id === id ? cancelled : record));
+        }
         if (isOpenCodePromptDeliveryCancelled(existing)) {
           result = existing;
           return records;
@@ -300,6 +309,7 @@ export class OpenCodePromptDeliveryLedgerStore {
   }
 
   async getActiveForMember(input: {
+    runId?: string | null;
     teamName: string;
     memberName: string;
     laneId: string;
@@ -312,6 +322,7 @@ export class OpenCodePromptDeliveryLedgerStore {
             record.teamName === input.teamName &&
             record.memberName.toLowerCase() === input.memberName.toLowerCase() &&
             record.laneId === input.laneId &&
+            !isOpenCodeDeliveryFromOtherRun(record, input.runId) &&
             !isTerminalForAutomaticSelection(record)
         )
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))[0] ?? null
@@ -725,24 +736,9 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
-  /**
-   * Marks every record the automatic selection can still pick up as
-   * failed_terminal so the retry machinery (watchdog, due-attempt selection)
-   * stops re-attempting them.
-   *
-   * The guard is `isTerminalForAutomaticSelection`, the same predicate
-   * `listDue` and `getActiveForMember` filter by, so what this cancels is
-   * exactly what they can still return. A record that answered in plain text
-   * with no visible reply and no committed inbox read is not finished for that
-   * purpose whatever its status says, and a missing `nextAttemptAt` makes it
-   * due, so a status-only guard left the force stop with work still queued
-   * against it. Records the predicate calls terminal are history and keep the
-   * reason they ended.
-   *
-   * The lane ledger outlives the run that wrote it, so the caller also says
-   * which work is its own: see `isInCancellationScope`.
-   */
+  /** Cancels selectable work within the captured Stop scope; inbox rows are retained. */
   async cancelNonTerminalRecords(input: {
+    includeRecoverableTerminal?: boolean;
     now: string;
     reason: string;
     /**
@@ -764,7 +760,11 @@ export class OpenCodePromptDeliveryLedgerStore {
     let keptForLaterRun = 0;
     await this.store.updateLocked((records) =>
       records.map((record) => {
-        if (isTerminalForAutomaticSelection(record)) {
+        if (
+          isOpenCodePromptDeliveryCancelled(record) ||
+          record.inboxReadCommittedAt ||
+          (isTerminalForAutomaticSelection(record) && !input.includeRecoverableTerminal)
+        ) {
           return record;
         }
         if (!isInCancellationScope(record, ownedRunIds, createdAtOrBeforeMs)) {

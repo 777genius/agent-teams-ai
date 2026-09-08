@@ -247,6 +247,9 @@ export async function readOwnedOpenCodeRuntimeRunIdsForTeam(input: {
  */
 export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   teamName: string;
+  includeRecoverableTerminal?: boolean;
+  reason?: string;
+  throwOnError?: boolean;
   teamsBasePath?: string;
   now?: () => Date;
   ownedRunIds?: readonly string[];
@@ -274,13 +277,15 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
       const result = await ledger.cancelNonTerminalRecords({
         now: (input.now?.() ?? new Date()).toISOString(),
-        reason: FORCE_STOP_DELIVERY_CANCEL_REASON,
+        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+        includeRecoverableTerminal: input.includeRecoverableTerminal,
         ownedRunIds: input.ownedRunIds,
         createdAtOrBeforeMs: input.requestedAtMs,
       });
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {
+      if (input.throwOnError) throw error;
       diagnostics.push(
         `Failed to cancel pending deliveries for lane ${laneId}: ${
           error instanceof Error ? error.message : String(error)
