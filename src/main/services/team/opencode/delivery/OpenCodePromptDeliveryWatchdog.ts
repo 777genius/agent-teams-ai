@@ -8,6 +8,21 @@ import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team'
 export const OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS = 3_000;
 export const OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS = 15_000;
 /**
+ * Retry delay once the runtime has already answered and the answer merely lacks
+ * the proof the delivery requires (the visible reply is not readable yet, the
+ * text was an acknowledgement, ...).
+ *
+ * The default delay assumes a retry lands on a lane that did nothing with the
+ * prompt, where a fast second attempt is free. A lane that answered is in the
+ * opposite situation: one turn regularly spans several assistant messages - a
+ * few task writes, then the reply - and a retry that lands between them puts
+ * the same prompt in front of a member who has no memory of having answered it,
+ * so the user is answered twice. The turn-activity guard already refuses a
+ * retry while output is still arriving, but it can only refuse what it can
+ * observe; the grace is what covers the quiet gaps inside one long turn.
+ */
+export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS = 90_000;
+/**
  * Absolute ceiling for deferring a due retry because the turn still looks
  * active: a lane that never stops producing output must not starve the retry
  * budget forever.
@@ -172,6 +187,25 @@ export function isOpenCodeVisibleReplyReadCommitAllowed(input: {
   // Transcript-only message_send proves OpenCode attempted a visible reply, but not
   // whether the destination store committed it yet. Keep it pending for the watchdog.
   return input.transcriptOnlyVisibleReply !== true;
+}
+
+/**
+ * Pending reasons that say the runtime accepted the prompt and already
+ * answered, and only the answer's destination proof has not materialized yet -
+ * the reply file write races the observation, or a freshly bootstrapped lane's
+ * reply destination becomes visible only after the attempt budget is spent.
+ *
+ * They are timing and deliverability conditions, not member behavior, so the
+ * attempt cap must not turn them terminal: nothing re-arms a terminal record,
+ * and its unread inbox row would then stay unread until an unrelated inbox
+ * write happened to wake the lane.
+ */
+export function isOpenCodeDeliveryProofPendingReason(reason: string | null | undefined): boolean {
+  const normalized = reason?.trim();
+  return (
+    normalized === 'visible_reply_destination_not_found_yet' ||
+    normalized === 'plain_text_visible_reply_not_materialized_yet'
+  );
 }
 
 export function isOpenCodePromptDeliveryRetryableResponseState(
