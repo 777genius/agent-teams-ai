@@ -474,8 +474,9 @@ jobs:
           exit 1
 
   verify-public-runtime:
-    name: verify public runtime (${{ matrix.platform }})
+    name: verify runtime (${{ matrix.platform }})
     needs: prepare-runtime
+    if: ${{ always() && (needs.prepare-runtime.result == 'success' || (inputs.publish_release && inputs.reuse_existing_draft_assets)) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -505,7 +506,16 @@ jobs:
       - name: Verify runtime lock pins on the release ref
         run: node ./scripts/ci/verify-runtime-lock.mjs
 
+      - name: Verify draft runtime archive before packaging
+        if: ${{ !inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: |
+          node ./scripts/stage-runtime.mjs --platform ${{ matrix.platform }}
+          node ./scripts/ci/verify-staged-runtime-version.mjs
+
       - name: Verify anonymous runtime bootstrap before packaging
+        if: ${{ inputs.publish_release }}
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs
 
   release-mac:
@@ -990,9 +1000,10 @@ jobs:
         run: node scripts/ci/promote-existing-draft.mjs
 
   promote-existing-draft:
+    needs: verify-public-runtime
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets }}
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets && needs.verify-public-runtime.result == 'success' }}
 
     steps:
       - name: Checkout release promotion

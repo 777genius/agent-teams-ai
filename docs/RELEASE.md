@@ -28,49 +28,54 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.13.3 (2026-09-07)
+## Draft: v2.14.0 (2026-09-08)
 
-GitHub release: [v2.13.3](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.3).
-
-Target branch: `main`.
+Target branch: `main`, including Cursor integration and the merged team Stop and recovery fixes.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.85`.
+- Agent Teams runtime: `v0.0.87`, all five platform builds and exact-commit CI passed; pinned archive digests verified.
 - Terminal Platform runtime: `v0.3.3`.
 
-Release preparation: the host recovery fix merged in [runtime PR #69](https://github.com/777genius/agent_teams_orchestrator/pull/69), commit `c44a763b7ecca2ed67f58911501752552f5642d9`. [Runtime CI](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158064866) passed all six jobs after one Windows standalone API-read job retry. [Runtime release build](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158627878) succeeded; `runtime.lock.json` pins all five [published archives](https://github.com/777genius/agent_teams_orchestrator_binaries/releases/tag/runtime-v0.0.85) with matching manifest/GitHub SHA-256 digests. App packaging, qualification and publication remain pending.
+Draft preparation only. Publication and updater distribution require separate owner approval for v2.14.0. The previous v2.13.3 draft was removed; its historical tag is retained.
 
 Draft body source for GitHub release:
 
-<!-- RELEASE_BODY_START v2.13.3 -->
-This update fixes team launch retries after a previously reused OpenCode server stops.
+<!-- RELEASE_BODY_START v2.14.0 -->
+Build teams with Cursor alongside your other AI providers, with clearer launch failures and safer Stop behavior.
+
+### What's New
+
+- Add Cursor agents to teams and let them exchange messages and complete assigned tasks.
+- Keep Cursor connections separate between profiles, so different accounts do not share the wrong endpoint.
 
 ### Fixes
 
-- Start a replacement OpenCode server on retry once previous sessions have released the stopped server.
-- Show a clear error while existing sessions still hold a stopped OpenCode server.
-- Avoid duplicate replacement servers when several team launches retry at the same time.
+- Stop active Cursor shell commands when stopping their team.
+- Prevent accepted messages from replaying after a team stops.
+- Keep stopping one team from interrupting other teams sharing an OpenCode server.
+- Recover failed team launches without reusing a stopped server or an outdated session.
+- Cancel unfinished recovery work when force-stopping a team.
 
 ### Downloads
 
 <table>
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-arm64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/Agent.Teams.AI-2.14.0-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-x64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/Agent.Teams.AI-2.14.0-x64.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/Agent.Teams.AI.Setup.2.14.0.exe">
     <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3-arm64.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/Agent.Teams.AI.Setup.2.14.0-arm64.exe">
     <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
@@ -79,23 +84,23 @@ This update fixes team launch retries after a previously reused OpenCode server 
   <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3.AppImage">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/Agent.Teams.AI-2.14.0.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai_2.13.3_amd64.deb">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/agent-teams-ai_2.14.0_amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.x86_64.rpm">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/agent-teams-ai-2.14.0.x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.pacman">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.0/agent-teams-ai-2.14.0.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
   </a>
 </td>
 </tr>
 </table>
-<!-- RELEASE_BODY_END v2.13.3 -->
+<!-- RELEASE_BODY_END v2.14.0 -->
 
 ## Released: v2.13.2 (2026-09-07)
 
