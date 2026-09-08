@@ -39,6 +39,7 @@ export interface TeamProvisioningStopRun
 }
 
 export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
+  cancelOpenCodePromptDeliveries(teamName: string): Promise<void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   pauseActiveIntervalsForTeam(teamName: string): void;
   stopPersistentTeamMembers(teamName: string): void;
@@ -192,8 +193,14 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
-  await stopTeamRuntimeFlow(teamName, ports);
-  await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+  // Keep the team lock until both branches settle, including runtime-owned
+  // cleanup on runtime success even when durable cancellation fails.
+  await awaitAllOwnedProcessStops([
+    ports.cancelOpenCodePromptDeliveries(teamName),
+    stopTeamRuntimeFlow(teamName, ports).then(() =>
+      ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName)
+    ),
+  ]);
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

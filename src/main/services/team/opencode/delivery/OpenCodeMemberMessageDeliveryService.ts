@@ -491,6 +491,7 @@ export class OpenCodeMemberMessageDeliveryService {
     const now = nowIso();
     let active = ledger
       ? await ledger.getActiveForMember({
+          runId: runtimeRunId,
           teamName,
           memberName: canonicalMemberName,
           laneId: laneIdentity.laneId,

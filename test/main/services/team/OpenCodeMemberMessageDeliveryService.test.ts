@@ -316,6 +316,7 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
       teamName: 'team-a',
       memberName: 'alice',
       laneId: 'primary',
+      runId: 'run-1',
     });
     expect(delivery).toMatchObject({
       delivered: true,
