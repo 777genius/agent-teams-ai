@@ -2755,6 +2755,41 @@ describe('hosted v1 browser E2E sandbox', () => {
     );
   });
 
+  it.each(['022', '077'])('keeps fixture directories private under umask %s', async (mask) => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-private-custody-'));
+    try {
+      // Only the isolated child changes umask; Vitest's process-wide state stays untouched.
+      await execFileAsync(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          '--input-type=module',
+          '--eval',
+          `
+            import { createHostedV1Sandbox } from './test/fixtures/hosted-v1/createSandbox.ts';
+            process.umask(Number.parseInt(process.argv[2], 8));
+            await createHostedV1Sandbox(process.argv[1]);
+          `,
+          root,
+          mask,
+        ],
+        { ...boundedExecOptions, cwd: process.cwd() }
+      );
+      for (const path of [join(root, 'claude'), join(root, 'claude', 'teams')]) {
+        const stat = await lstat(path);
+        expect(stat.isDirectory()).toBe(true);
+        expect(stat.mode & 0o7777).toBe(0o700);
+      }
+    } finally {
+      const markerPath = join(root, '.agent-teams-hosted-v1-e2e-owner.json');
+      const { marker } = JSON.parse(await readFile(markerPath, 'utf8')) as { marker: string };
+      await assertHostedV1MarkerOwnedRoot(root, markerPath, marker);
+      await rm(root, { recursive: true });
+    }
+    await expect(lstat(root)).rejects.toMatchObject({ code: 'ENOENT' });
+  }, 40_000);
+
   it('creates only fresh marker-owned state and a committed sandbox repository', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-v1-harness-test-'));
     roots.push(root);

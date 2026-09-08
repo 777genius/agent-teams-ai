@@ -162,7 +162,9 @@ describe('hosted auth internal storage', () => {
       createDatabase: (path, options) => new Database(path, options),
     });
     cores.push(second);
-    expect(second.handle('ping', {})).toMatchObject({ schemaVersion: 29 });
+    expect(second.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
     const idempotent = new Database(harness.databasePath, { readonly: true });
     expectCurrentPublicationRestore(idempotent);
     expect(publicationRestoreSnapshot(idempotent)).toEqual(before);
