@@ -372,9 +372,10 @@ async function isPreviousOpenCodeRuntimeConfirmedDead(
   // Main's persisted snapshot reader excludes the lead from the UI roster,
   // but retains its lane-owned runtime evidence in members. Require every
   // teammate in the roster and every runtime member (including the lead) below.
-  const expectedTeammateNames = [...expectedNames].filter((name) => !isLeadMember({ name }));
+  const leadNames = new Set(members.filter(isLeadMember).map((member) => member.name));
+  const expectedTeammateNames = [...expectedNames].filter((name) => !leadNames.has(name));
   const snapshotTeammateNames =
-    snapshot?.expectedMembers.filter((name) => !isLeadMember({ name })) ?? [];
+    snapshot?.expectedMembers.filter((name) => !leadNames.has(name)) ?? [];
   if (
     !snapshot ||
     snapshot.teamName !== teamName ||
