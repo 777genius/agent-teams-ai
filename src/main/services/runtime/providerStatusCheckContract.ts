@@ -261,7 +261,18 @@ export function mergeProviderStatusDisplayEvidence(
   );
   const displayPairRetained = displayPair.models === current.models;
   const launchUnproved = !hasAuthoritativeLaunchEvidence || catalogRetained || displayPairRetained;
-  const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
+  // If a transient Codex fallback retains the previous flat model list, retain
+  // its catalog too. Otherwise the card and picker describe different models.
+  // This is stale display evidence only; launchUnproved still revokes launch.
+  const retainCodexDisplayCatalog =
+    incoming.providerId === 'codex' &&
+    incoming.statusCheckOutcome === 'transient_error' &&
+    incoming.modelCatalog?.source === 'static-fallback' &&
+    current.modelCatalog?.source === 'app-server' &&
+    displayPairRetained;
+  const retainedCatalog = retainCodexDisplayCatalog
+    ? current.modelCatalog
+    : (incoming.modelCatalog ?? current.modelCatalog ?? null);
   const modelCatalog =
     retainedCatalog && launchUnproved
       ? { ...retainedCatalog, status: 'stale' as const }
