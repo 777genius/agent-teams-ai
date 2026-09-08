@@ -40,6 +40,7 @@ export interface TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceH
     info(message: string): void;
     warn(message: string): void;
     debug(message: string): void;
+    diagnostic(message: string): void;
   };
   getErrorMessage(error: unknown): string;
 }
@@ -72,6 +73,13 @@ export function createOpenCodePromptDeliveryWatchdogSchedulerDepsFromService(
           source: 'watchdog',
         });
       }
+      // The wake's own account travels back to the scheduler. Discarding it is
+      // what made a wake that was refused on every attempt silent: the only
+      // reader of a relay result was the inbox file-change path, so a lane that
+      // received no new inbox row explained itself nowhere. It is the targeted
+      // relay's result, not the re-relay's: the re-relay is about the rows
+      // queued behind this one, and this wake is about this row.
+      return result;
     },
     getInboxMessages: (input) =>
       service.inboxReader.getMessagesFor(input.teamName, input.memberName),
@@ -90,6 +98,7 @@ export function createOpenCodePromptDeliveryWatchdogSchedulerDepsFromService(
     info: (message) => options.logger.info(message),
     warn: (message) => options.logger.warn(message),
     debug: (message) => options.logger.debug(message),
+    diagnostic: (message) => options.logger.diagnostic(message),
     getErrorMessage: options.getErrorMessage,
   };
 }

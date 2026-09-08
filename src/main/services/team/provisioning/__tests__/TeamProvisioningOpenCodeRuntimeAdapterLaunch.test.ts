@@ -233,12 +233,12 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
     ];
 
-    function previousSnapshot(): PersistedTeamLaunchSnapshot {
+    function previousSnapshot(snapshotMembers = members): PersistedTeamLaunchSnapshot {
       return {
         ...failedSnapshot(),
-        expectedMembers: members.map((member) => member.name),
+        expectedMembers: snapshotMembers.map((member) => member.name),
         members: Object.fromEntries(
-          members.map((member) => [
+          snapshotMembers.map((member) => [
             member.name,
             {
               ...failedSnapshot().members.alice,
@@ -266,9 +266,9 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       };
     }
 
-    function preflight(ports: OpenCodeRuntimeAdapterLaunchPorts) {
+    function preflight(ports: OpenCodeRuntimeAdapterLaunchPorts, launchMembers = members) {
       return prepareOpenCodeRuntimeAdapterLaunchPreflight(
-        { teamName: 'team-a', members, onProgress: vi.fn() },
+        { teamName: 'team-a', members: launchMembers, onProgress: vi.fn() },
         ports
       );
     }
@@ -294,6 +294,53 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
         [42002, 0],
       ]);
     });
+
+    it.each(['includes-lead', 'teammates-only'])(
+      'recognizes an agentType lead with a noncanonical name in a %s roster',
+      async (roster) => {
+        const probe = mockGone();
+        const namedLead = { ...members[0], name: 'coordinator', agentType: 'orchestrator' };
+        const launchMembers = [namedLead, ...members.slice(1)];
+        const rawSnapshot = previousSnapshot(launchMembers);
+        if (roster === 'teammates-only') rawSnapshot.expectedMembers = ['alice', 'bob'];
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', rawSnapshot)!;
+        // The reader has only names, so it retains a noncanonical lead name
+        // when present in the roster. Request metadata identifies that lead.
+        expect(snapshot.expectedMembers).toEqual(rawSnapshot.expectedMembers);
+        expect(Object.keys(snapshot.members)).toEqual(['coordinator', 'alice', 'bob']);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports, launchMembers)).resolves.toBeNull();
+
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+        expect(probe.mock.calls).toEqual([
+          [42001, 0],
+          [42002, 0],
+        ]);
+      }
+    );
+
+    it.each(['missing-lead', 'unknown-pid', 'live-lead'])(
+      'preserves strict stop for a named agentType lead with %s',
+      async (failure) => {
+        const probe = mockGone();
+        const namedLead = { ...members[0], name: 'coordinator', agentType: 'orchestrator' };
+        const launchMembers = [namedLead, ...members.slice(1)];
+        const rawSnapshot = previousSnapshot(launchMembers);
+        rawSnapshot.expectedMembers = ['alice', 'bob'];
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', rawSnapshot)!;
+        if (failure === 'missing-lead') delete snapshot.members.coordinator;
+        if (failure === 'unknown-pid') delete snapshot.members.coordinator.runtimePid;
+        if (failure === 'live-lead') probe.mockReturnValue(true);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports, launchMembers)).rejects.toThrow('strict stop rejected');
+
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+        if (failure === 'live-lead') expect(probe.mock.calls).toEqual([[42001, 0]]);
+        else expect(probe).not.toHaveBeenCalled();
+      }
+    );
 
     it.each(['missing-lead', 'missing-teammate', 'partial-roster', 'unknown-pid', 'live-lead'])(
       'preserves strict stop for a normalized snapshot with %s',
