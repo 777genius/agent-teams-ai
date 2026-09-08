@@ -28,7 +28,212 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.13.0 (2026-09-04)
+## Draft: v2.13.3 (2026-09-07)
+
+GitHub release: [v2.13.3](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.3).
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.85`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release preparation: the host recovery fix merged in [runtime PR #69](https://github.com/777genius/agent_teams_orchestrator/pull/69), commit `c44a763b7ecca2ed67f58911501752552f5642d9`. [Runtime CI](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158064866) passed all six jobs after one Windows standalone API-read job retry. [Runtime release build](https://github.com/777genius/agent_teams_orchestrator/actions/runs/34158627878) succeeded; `runtime.lock.json` pins all five [published archives](https://github.com/777genius/agent_teams_orchestrator_binaries/releases/tag/runtime-v0.0.85) with matching manifest/GitHub SHA-256 digests. App packaging, qualification and publication remain pending.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.13.3 -->
+This update fixes team launch retries after a previously reused OpenCode server stops.
+
+### Fixes
+
+- Start a replacement OpenCode server on retry once previous sessions have released the stopped server.
+- Show a clear error while existing sessions still hold a stopped OpenCode server.
+- Avoid duplicate replacement servers when several team launches retry at the same time.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI.Setup.2.13.3-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/Agent.Teams.AI-2.13.3.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai_2.13.3_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.3/agent-teams-ai-2.13.3.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.13.3 -->
+
+## Released: v2.13.2 (2026-09-07)
+
+GitHub release: [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2).
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.84`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.13.2 -->
+This update fixes OpenCode startup checks and makes provider sign-in failures easier to identify.
+
+### Fixes
+
+- Stop valid OpenCode settings managed by the app from incorrectly blocking model checks.
+- Show the provider's sign-in error when it rejects access with a 401 or 403 response.
+- Reuse newly started OpenCode servers without incorrectly reporting that their settings have changed.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/Agent.Teams.AI-2.13.2-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/Agent.Teams.AI-2.13.2-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/Agent.Teams.AI.Setup.2.13.2.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/Agent.Teams.AI.Setup.2.13.2-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/Agent.Teams.AI-2.13.2.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/agent-teams-ai_2.13.2_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/agent-teams-ai-2.13.2.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.2/agent-teams-ai-2.13.2.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.13.2 -->
+
+## Published: v2.13.1 (2026-09-07)
+
+GitHub release: [v2.13.1](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.1).
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.83`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.13.1 -->
+Fixes team launches for Z.AI Coding Plan models. On 2.13.0 their model check always failed, which blocked every team that included an OpenCode member.
+
+### Fixes
+
+- Start teams that use Z.AI Coding Plan models such as GLM again.
+- Start mixed teams that combine a Z.AI member with Anthropic or Codex members.
+- Report the provider's own sign-in errors instead of a generic startup failure.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/Agent.Teams.AI-2.13.1-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/Agent.Teams.AI-2.13.1-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/Agent.Teams.AI.Setup.2.13.1.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/Agent.Teams.AI.Setup.2.13.1-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/Agent.Teams.AI-2.13.1.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/agent-teams-ai_2.13.1_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/agent-teams-ai-2.13.1.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.1/agent-teams-ai-2.13.1.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.13.1 -->
+
+## Published: v2.13.0 (2026-09-07)
+
+GitHub release: [v2.13.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.0).
 
 Target branch: `main`.
 
@@ -40,32 +245,30 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.0 -->
-Edit live agent settings, stop teams from either team view, and review product news without leaving the app. Provider checks and mixed-team relaunches are now more reliable.
+This update makes mixed-provider teams easier to set up and manage, with clearer model checks and fixes for startup, task delivery, and duplicate messages.
 
 ### What's New
 
-- Edit teammate provider, model, effort, workflow, worktree, and MCP settings directly from their cards.
-- Change supported lead models and reasoning effort without relaunching healthy teammates.
-- Review product news in the app and dismiss announcements permanently across restarts.
-- Stop a team from Team List or Team Details with one shared progress state.
-- See task attachment mosaics on Kanban cards, with previews that refresh after changes.
+- Change teammate settings and supported lead models without restarting the whole team.
+- Read product news in the app and dismiss announcements you have already seen.
+- Preview task attachments directly on the board.
+- Stop teams from either the team list or the team details page.
 
 ### Improvements
 
-- Browse models from every connected OpenCode provider with pagination, freshness indicators, and safer refreshes.
-- See automatic preflight progress for each selected model before creating or relaunching a team.
-- See first-launch project trust warnings only when Anthropic or Codex needs them.
-- Reuse existing worktrees without resetting branches or local changes, with branch details shown before launch.
-- Team leads now coordinate delegated tasks instead of duplicating their teammates' work.
+- Find newly available models, including GPT-6 Astra, listed first and marked NEW.
+- Browse models from all connected OpenCode providers, not just its built-in free models.
+- See checks for each selected model before launch, with the option to skip optional checks.
+- Reuse existing Git worktrees without losing local changes or resetting branches.
 
 ### Bug Fixes
 
-- Codex teammates launch with ChatGPT or API-key authentication without refresh-token loops.
-- ChatGPT-incompatible Codex models are blocked before launch with a clear explanation.
-- Failed or superseded launches no longer leave teams stuck on `Launching...` or overwrite newer attempts.
-- Mixed-team assignments arrive during startup, and relaunch instructions run without needing another message.
-- Windows OpenCode teammates no longer flash console windows during tool calls.
-- Replayed agent turns no longer duplicate tasks, deleted-task notices, or final messages.
+- Fix Codex sign-in and mixed-team startup failures, and keep Codex updates downloading on slow connections.
+- Fix OpenCode teams getting stuck after a failed stop and needing manual data cleanup to launch again.
+- Deliver assignments during team startup and run new instructions when teams restart.
+- Prevent duplicate tasks and messages, and stop leads from repeating work they delegated.
+- Avoid repeating first-launch trust warnings for projects already trusted by Anthropic or Codex.
+- Stop OpenCode from flashing console windows on Windows.
 
 ### Downloads
 

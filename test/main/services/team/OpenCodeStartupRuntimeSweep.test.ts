@@ -1,0 +1,284 @@
+import {
+  OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS,
+  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
+  runOpenCodeStartupRuntimeSweepTail,
+} from '@main/services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import {
+  beginOpenCodeStartupRuntimeSweep,
+  OPEN_CODE_STARTUP_SWEEP_WAIT_TIMEOUT_MS,
+  whenOpenCodeStartupRuntimeSweepSettled,
+} from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
+import { addLogSink, createLogger, type LogSinkEntry } from '@shared/utils/logger';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { OpenCodeManagedHostCleanupResult } from '@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
+
+function sweepResult(
+  overrides: Partial<OpenCodeManagedHostCleanupResult> = {}
+): OpenCodeManagedHostCleanupResult {
+  return { scanned: 0, killed: 0, candidates: [], diagnostics: [], ...overrides };
+}
+
+function sweepPorts(
+  overrides: Partial<Parameters<typeof runOpenCodeStartupRuntimeSweepTail>[0]> = {}
+) {
+  return {
+    sweepCommandSettledAtMs: 1_000,
+    logSweepResult: vi.fn(),
+    logWarning: vi.fn(),
+    logError: vi.fn(),
+    waitMs: vi.fn(() => Promise.resolve()),
+    ...overrides,
+  };
+}
+
+describe('runOpenCodeStartupRuntimeSweepTail', () => {
+  // The fence is the moment the registry sweep command SETTLED. The host this
+  // tail exists to reap is the one that command boots, so it starts after the
+  // command was issued: an issue-time fence classifies it `kept_recent` and the
+  // tail reaps nothing it was written for.
+  it('fences the reap by the moment the sweep command settled', async () => {
+    const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult({ scanned: 3, killed: 1 })));
+    const ports = sweepPorts({
+      sweepCommandSettledAtMs: 4_242,
+      sweepManagedHosts,
+    });
+
+    await runOpenCodeStartupRuntimeSweepTail(ports);
+
+    expect(ports.waitMs).toHaveBeenCalledWith(OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS);
+    expect(sweepManagedHosts).toHaveBeenCalledWith({ startedBeforeMs: 4_242 });
+    expect(ports.logSweepResult).toHaveBeenCalledWith(
+      'opencode_managed_hosts_killed sweep=startup count=1 scanned=3'
+    );
+  });
+
+  // The tail runs in `force` mode with no lineage check, so the start-time
+  // fence alone would let it reap an orchestrator host of another install, or
+  // one a user started themselves, purely because its command line names this
+  // app's own binary. The instance markers are what make that impossible.
+  it('carries the ownership markers of this app instance into the reap', async () => {
+    const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult()));
+    const ports = sweepPorts({
+      sweepCommandSettledAtMs: 4_242,
+      ownershipMarkers: { requiredDetailsMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID=9-1000'] },
+      sweepManagedHosts,
+    });
+
+    await runOpenCodeStartupRuntimeSweepTail(ports);
+
+    expect(sweepManagedHosts).toHaveBeenCalledWith({
+      startedBeforeMs: 4_242,
+      requiredDetailsMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID=9-1000'],
+    });
+  });
+
+  // The settle window comes first or the reap finds nothing: the orchestrator
+  // is still booting the host this tail exists to remove when the sweep
+  // command returns, and a reap that ran immediately would report a clean
+  // sweep and leave the host holding the loopback port.
+  it('waits out the settle window before it reaps anything', async () => {
+    const order: string[] = [];
+    const ports = sweepPorts({
+      waitMs: vi.fn(() => {
+        order.push('wait');
+        return Promise.resolve();
+      }),
+      sweepManagedHosts: () => {
+        order.push('sweep');
+        return Promise.resolve(sweepResult());
+      },
+    });
+
+    await runOpenCodeStartupRuntimeSweepTail(ports);
+
+    expect(order).toEqual(['wait', 'sweep']);
+  });
+
+  // The destructive counter has to outlive the process without costing every
+  // developer a console line - the reason it is `diagnostic` and not `warn`,
+  // and the reason the suite needs no per-event console allowlist for it.
+  it('records the kill count durably without writing to the console', async () => {
+    const entries: LogSinkEntry[] = [];
+    const removeSink = addLogSink((entry) => entries.push(entry));
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const logger = createLogger('OpenCode:startup-sweep');
+
+    try {
+      await runOpenCodeStartupRuntimeSweepTail(
+        sweepPorts({
+          logSweepResult: (message) => logger.diagnostic(message),
+          sweepManagedHosts: () => Promise.resolve(sweepResult({ scanned: 2, killed: 2 })),
+        })
+      );
+
+      expect(entries).toEqual([
+        expect.objectContaining({
+          level: 'diagnostic',
+          args: ['opencode_managed_hosts_killed sweep=startup count=2 scanned=2'],
+        }),
+      ]);
+      expect(consoleWarn).toHaveBeenCalledTimes(0);
+    } finally {
+      removeSink();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  // The caller runs the stale-lock purge straight after this tail, and the
+  // locks left by hosts the reap could not reach are the ones the next launch
+  // queues behind. A rejected scan must therefore end here, not take the purge
+  // with it.
+  it('reports a failing reap instead of aborting the cleanup that follows it', async () => {
+    const ports = sweepPorts({
+      sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
+    });
+
+    await expect(runOpenCodeStartupRuntimeSweepTail(ports)).resolves.toBeUndefined();
+
+    // A caught main-process failure goes to the error channel: `warn` reaches
+    // the durable sinks but its console line is filtered out at the production
+    // log level, so the failure that explains an empty reap would be invisible
+    // exactly where it matters.
+    expect(ports.logError).toHaveBeenCalledWith(
+      '[OpenCode] Startup sweep host cleanup failed: Error: process table unreadable'
+    );
+    expect(ports.logWarning).not.toHaveBeenCalled();
+    expect(ports.logSweepResult).not.toHaveBeenCalled();
+  });
+
+  it('reports what the sweep could not do without failing the startup', async () => {
+    const ports = sweepPorts({
+      sweepManagedHosts: () =>
+        Promise.resolve(sweepResult({ scanned: 1, diagnostics: ['pid=91 identity changed'] })),
+    });
+
+    await runOpenCodeStartupRuntimeSweepTail(ports);
+
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      '[OpenCode] startup sweep host cleanup: pid=91 identity changed'
+    );
+    // One host the sweep could not handle is a warning, not a failed sweep.
+    expect(ports.logError).not.toHaveBeenCalled();
+  });
+});
+
+describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
+  // `orphaned`, not `force`: a host whose parent is still alive may belong to
+  // an active bridge command, and the fence keeps this instance's own work out
+  // of scope entirely.
+  it('reaps only what predates this instance and is no longer parented', async () => {
+    const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult({ scanned: 2, killed: 1 })));
+    const logSweepResult = vi.fn();
+
+    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+      appStartedAtMs: 7_000,
+      sweepManagedHosts,
+      logSweepResult,
+      logWarning: vi.fn(),
+      logError: vi.fn(),
+    });
+
+    expect(sweepManagedHosts).toHaveBeenCalledWith({ mode: 'orphaned', startedBeforeMs: 7_000 });
+    expect(logSweepResult).toHaveBeenCalledWith(
+      'opencode_managed_hosts_killed sweep=startup_preflight count=1 scanned=2'
+    );
+  });
+
+  // It is awaited on the startup path, so it must not be able to stop the app -
+  // and a scan that could not run has reaped nothing, so it must not report a
+  // count either.
+  it('reports a failing sweep instead of failing the startup', async () => {
+    const logWarning = vi.fn();
+    const logError = vi.fn();
+    const logSweepResult = vi.fn();
+
+    await expect(
+      reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+        appStartedAtMs: 7_000,
+        sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
+        logSweepResult,
+        logWarning,
+        logError,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(logError).toHaveBeenCalledWith(
+      '[OpenCode] Startup preflight host cleanup failed: Error: process table unreadable'
+    );
+    expect(logWarning).not.toHaveBeenCalled();
+    expect(logSweepResult).not.toHaveBeenCalled();
+  });
+});
+
+describe('OpenCodeStartupSweepGate', () => {
+  it('resolves at once when no sweep is pending', async () => {
+    const onWaitStart = vi.fn();
+
+    await whenOpenCodeStartupRuntimeSweepSettled({ onWaitStart });
+
+    expect(onWaitStart).not.toHaveBeenCalled();
+  });
+
+  it('parks a caller until the pending sweep settles, and reports the wait', async () => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const onWaitStart = vi.fn();
+    const logWaited = vi.fn();
+    let now = 0;
+
+    const waiting = whenOpenCodeStartupRuntimeSweepSettled({
+      onWaitStart,
+      logWaited,
+      nowMs: () => now,
+    });
+    expect(onWaitStart).toHaveBeenCalledTimes(1);
+    now = 2_500;
+    settle();
+    await waiting;
+
+    expect(logWaited).toHaveBeenCalledWith(
+      'opencode_startup_sweep_wait waitedMs=2500 settled=true'
+    );
+    // The gate is clear again: the next caller must not pay the wait twice.
+    await whenOpenCodeStartupRuntimeSweepSettled({ onWaitStart });
+    expect(onWaitStart).toHaveBeenCalledTimes(1);
+  });
+
+  // A sweep that throws still has to release everything waiting on it, which is
+  // why the settle callback is invoked from a `finally` at the call site.
+  it('releases waiters when the sweep it fronts fails', async () => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const waiting = whenOpenCodeStartupRuntimeSweepSettled({});
+
+    await Promise.reject(new Error('sweep exploded'))
+      .catch(() => undefined)
+      .finally(settle);
+
+    await expect(waiting).resolves.toBeUndefined();
+  });
+
+  it('gives up after the bound rather than parking a launch forever', async () => {
+    beginOpenCodeStartupRuntimeSweep();
+    const logWaited = vi.fn();
+    const onWaitStart = vi.fn();
+    let now = 0;
+
+    await whenOpenCodeStartupRuntimeSweepSettled({
+      logWaited,
+      nowMs: () => now,
+      setTimeoutImpl: ((resolve: () => void) => {
+        now = OPEN_CODE_STARTUP_SWEEP_WAIT_TIMEOUT_MS;
+        resolve();
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as unknown as typeof setTimeout,
+    });
+
+    expect(logWaited).toHaveBeenCalledWith(
+      `opencode_startup_sweep_wait waitedMs=${OPEN_CODE_STARTUP_SWEEP_WAIT_TIMEOUT_MS} settled=false`
+    );
+    // Giving up once is enough: the abandoned sweep must not charge the next
+    // launch the same bound all over again.
+    await whenOpenCodeStartupRuntimeSweepSettled({ onWaitStart });
+    expect(onWaitStart).not.toHaveBeenCalled();
+  });
+});

@@ -75,6 +75,7 @@ export interface TeamProvisioningPersistenceReconcileFacadeServiceHost<
     launchPhase: PersistedTeamLaunchPhase
   ): PersistedTeamLaunchSnapshot | null;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
+  getTrackedRunId(teamName: string): string | null | undefined;
 }
 
 export class TeamProvisioningPersistenceReconcileFacade<
@@ -188,9 +189,10 @@ export class TeamProvisioningPersistenceReconcileFacade<
       ...this.ports.reconcile,
       readLaunchState: (targetTeamName) => this.ports.readLaunchState(targetTeamName),
       readMembersMeta: (targetTeamName) => this.ports.readMembersMeta(targetTeamName),
-      writeLaunchStateSnapshot: (targetTeamName, snapshot) =>
-        this.writeLaunchStateSnapshot(targetTeamName, snapshot),
-      clearPersistedLaunchState: (targetTeamName) => this.clearPersistedLaunchState(targetTeamName),
+      writeLaunchStateSnapshot: (targetTeamName, snapshot, options) =>
+        this.writeLaunchStateSnapshot(targetTeamName, snapshot, options),
+      clearPersistedLaunchState: (targetTeamName, options) =>
+        this.clearPersistedLaunchState(targetTeamName, options),
     });
   }
 }
@@ -213,6 +215,7 @@ export function createTeamProvisioningPersistenceReconcileFacadeFromService<
     invalidateRuntimeSnapshotCaches: (teamName) =>
       service.invalidateRuntimeSnapshotCaches(teamName),
     reconcile: {
+      getTrackedRunId: (teamName) => service.getTrackedRunId(teamName),
       recoverStaleMixedSecondaryLaunchSnapshot: (teamName, bootstrapSnapshot, persistedSnapshot) =>
         service.recoverStaleMixedSecondaryLaunchSnapshot(
           teamName,

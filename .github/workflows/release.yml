@@ -950,6 +950,7 @@ jobs:
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/linux-unpacked" linux x64
 
       - name: Smoke packaged app (Linux)
+        timeout-minutes: 2
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "release/linux-unpacked" linux
 
       - name: Upload assets to release

@@ -33,6 +33,39 @@ describe('shared logger sinks', () => {
     }
   });
 
+  it('persists a diagnostic entry without writing to the console', () => {
+    const entries: LogSinkEntry[] = [];
+    const removeSink = addLogSink((entry) => entries.push(entry));
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      createLogger('TestLogger').diagnostic('opencode_launch_prompt_queued lead=lead chars=12');
+
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        level: 'diagnostic',
+        namespace: 'TestLogger',
+        args: ['opencode_launch_prompt_queued lead=lead chars=12'],
+      });
+      // The whole point of the level: durable evidence that costs nobody a
+      // console line, so the suite-wide "no unexpected console output"
+      // invariant needs no per-event allowlist.
+      expect(warn).toHaveBeenCalledTimes(0);
+      expect(error).toHaveBeenCalledTimes(0);
+      expect(log).toHaveBeenCalledTimes(0);
+      expect(debug).toHaveBeenCalledTimes(0);
+    } finally {
+      removeSink();
+      debug.mockRestore();
+      log.mockRestore();
+      warn.mockRestore();
+      error.mockRestore();
+    }
+  });
+
   it('isolates application behavior from a failing sink', () => {
     const removeSink = addLogSink(() => {
       throw new Error('disk unavailable');

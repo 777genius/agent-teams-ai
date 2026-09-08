@@ -126,6 +126,7 @@ function createDeps(
     isCurrentTrackedRun: vi.fn(() => true),
     logger: {
       warn: vi.fn(),
+      info: vi.fn(),
     },
   };
 }
@@ -260,13 +261,17 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     expect(deps.service.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledTimes(1);
     expect(deps.service.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledTimes(1);
     expect(deps.service.buildAggregateLaunchSnapshot).toHaveBeenCalledTimes(1);
-    expect(deps.service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot);
+    expect(deps.service.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      'atlas-hq',
+      snapshot,
+      undefined
+    );
   });
 
   it('builds mixed secondary lane wiring deps from service-shaped dependencies', async () => {
     const service = createService();
     const has = vi.fn(() => true);
-    const logger = { warn: vi.fn() };
+    const logger = { warn: vi.fn(), info: vi.fn() };
     const host = {
       stoppingSecondaryRuntimeTeams: { has },
       appShellBoundary: {
@@ -360,7 +365,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       lane.laneId
     );
     expect(service.buildAggregateLaunchSnapshot).toHaveBeenCalledTimes(1);
-    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot);
+    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot, undefined);
   });
 
   it('exposes mixed secondary lane state helpers on the boundary', () => {

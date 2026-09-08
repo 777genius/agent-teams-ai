@@ -616,10 +616,15 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
 };
 
 export interface TeamForceStopResult {
-  /** Outcome of the bounded regular stop attempt. */
-  stopOutcome: 'stopped' | 'stop_failed' | 'timed_out';
+  /**
+   * Outcome of the bounded regular stop attempt.
+   * `runtime_already_down`: the recorded runtime hosts exited before the
+   * orchestrator acknowledged, so waiting for the ack was pointless.
+   */
+  stopOutcome: 'stopped' | 'stop_failed' | 'timed_out' | 'runtime_already_down';
   /** Incomplete includes unsupported or unconfirmed runtime cleanup. */
   cleanupOutcome: 'completed' | 'incomplete';
+  /** PIDs of retained runtime processes that were killed (process trees on Windows). */
   killedRuntimePids: number[];
   /** Number of pending OpenCode prompt delivery ledger records cancelled. */
   clearedPendingDeliveries: number;
