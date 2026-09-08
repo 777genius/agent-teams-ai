@@ -172,11 +172,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
    */
   async rebootstrapOpenCodeAggregatePrimaryLane(
     teamName: string,
-    reason: string
+    reason: string,
+    expectedRunId: string | null
   ): Promise<boolean> {
     return this.runAfterInFlightTeamOperation(teamName, async () => {
       const outcome = await rebootstrapOpenCodeAggregatePrimaryLaneHelper(
-        { teamName, reason },
+        { teamName, reason, expectedRunId },
         createOpenCodePrimaryLaneRebootstrapPorts(
           this.aggregatePrimaryLaneHost,
           this.aggregatePrimaryProgress

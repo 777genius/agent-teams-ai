@@ -71,6 +71,10 @@ export interface TeamProvisioningOpenCodeDeliveryCompositionPorts {
  * that returns `false` and nothing else in the app changes.
  */
 export interface TeamProvisioningOpenCodePrimaryLaneSelfHealPorts {
-  rebootstrapOpenCodeAggregatePrimaryLane?(teamName: string, reason: string): Promise<boolean>;
+  rebootstrapOpenCodeAggregatePrimaryLane?(
+    teamName: string,
+    reason: string,
+    expectedRunId: string | null
+  ): Promise<boolean>;
   isOpenCodePrimaryLaneSelfHealEnabled?: OpenCodePrimaryLaneBootstrapSelfHealPorts['isOpenCodePrimaryLaneSelfHealEnabled'];
 }

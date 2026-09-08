@@ -1,3 +1,8 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
+import { isUnbootstrappedOpenCodePrimaryLaneStorage } from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
+import { inspectOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeLaunchResult } from '../runtime';
 import type { OpenCodeAggregatePrimaryLaneStopPorts } from './OpenCodeAggregatePrimaryLaneStopHelpers';
 import type {
@@ -81,6 +86,14 @@ export function createOpenCodePrimaryLaneRebootstrapPorts(
   const asProvisioningRun = (run: OpenCodePrimaryLaneRebootstrapRun): ProvisioningRun =>
     run as ProvisioningRun;
   return {
+    isPrimaryLaneUnbootstrapped: async (teamName) =>
+      isUnbootstrappedOpenCodePrimaryLaneStorage(
+        await inspectOpenCodeRuntimeLaneStorage({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          laneId: 'primary',
+        })
+      ),
     getAdapter: () => host.getOpenCodeRuntimeAdapter(),
     resolveActiveRun: (teamName) => host.resolveActiveRun(teamName),
     hasManualRestartInFlight: (teamName) => host.hasManualRestartInFlight(teamName),

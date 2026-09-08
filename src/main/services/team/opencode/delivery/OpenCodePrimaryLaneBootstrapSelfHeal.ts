@@ -228,6 +228,7 @@ export interface OpenCodePrimaryLaneBootstrapSelfHealPorts {
    */
   isOpenCodePrimaryLaneSelfHealEnabled?: () => boolean;
   rebootstrapPrimaryLane(input: {
+    expectedRunId: string | null;
     teamName: string;
     reason: string;
     attempt: number;
@@ -329,6 +330,7 @@ export class OpenCodePrimaryLaneBootstrapSelfHealTracker {
     // hold the delivery open for it. The ledger's deferral owns the next wake.
     entry.inFlight = this.ports
       .rebootstrapPrimaryLane({
+        expectedRunId: request.runId,
         teamName: request.teamName,
         reason: request.reason,
         attempt: decision.attempt,

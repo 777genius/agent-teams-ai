@@ -183,8 +183,12 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
         teamName,
         laneId,
       }),
-    rebootstrapPrimaryLane: async ({ teamName, reason }) =>
-      (await this.deps.rebootstrapOpenCodeAggregatePrimaryLane?.(teamName, reason)) ?? false,
+    rebootstrapPrimaryLane: async ({ teamName, reason, expectedRunId }) =>
+      (await this.deps.rebootstrapOpenCodeAggregatePrimaryLane?.(
+        teamName,
+        reason,
+        expectedRunId
+      )) ?? false,
     // Falls back to the ENV READER, not to the constant. This port is always
     // supplied, so the tracker never reaches its own default - and with the
     // constant here, setting CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED
@@ -348,8 +352,11 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
     setLeadActivity: (run, state) => service.setLeadActivity(run, state),
     ...(service.rebootstrapOpenCodeAggregatePrimaryLane
       ? {
-          rebootstrapOpenCodeAggregatePrimaryLane: (teamName: string, reason: string) =>
-            service.rebootstrapOpenCodeAggregatePrimaryLane!(teamName, reason),
+          rebootstrapOpenCodeAggregatePrimaryLane: (
+            teamName: string,
+            reason: string,
+            expectedRunId: string | null
+          ) => service.rebootstrapOpenCodeAggregatePrimaryLane!(teamName, reason, expectedRunId),
         }
       : {}),
     ...(service.isOpenCodePrimaryLaneSelfHealEnabled

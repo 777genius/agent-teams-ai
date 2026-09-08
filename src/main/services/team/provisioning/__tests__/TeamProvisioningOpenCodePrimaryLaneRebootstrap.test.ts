@@ -26,6 +26,7 @@ function createPorts(overrides: Partial<OpenCodePrimaryLaneRebootstrapPorts> = {
 } {
   const calls: string[] = [];
   const ports: OpenCodePrimaryLaneRebootstrapPorts = {
+    isPrimaryLaneUnbootstrapped: async () => true,
     getAdapter: () => ({}) as TeamLaunchRuntimeAdapter,
     resolveActiveRun: () => run,
     hasManualRestartInFlight: () => false,
@@ -63,6 +64,15 @@ function createPorts(overrides: Partial<OpenCodePrimaryLaneRebootstrapPorts> = {
     resolveLeadName: () => 'team-lead',
     ...overrides,
   };
+  let launchAttempted = false;
+  const launchPrimary = ports.launchOpenCodeAggregatePrimaryLane.bind(ports);
+  ports.launchOpenCodeAggregatePrimaryLane = async (input) => {
+    launchAttempted = true;
+    return launchPrimary(input);
+  };
+  const postLaunchEvidence = ports.hasCommittedLeadSessionEvidence.bind(ports);
+  ports.hasCommittedLeadSessionEvidence = async (input) =>
+    launchAttempted ? postLaunchEvidence(input) : false;
   return { ports, calls };
 }
 
@@ -93,7 +103,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane refusal gates', () => {
       const { ports, calls } = createPorts(override);
 
       const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-        { teamName: TEAM_NAME, reason: REASON },
+        { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
         ports
       );
 
@@ -103,22 +113,40 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane refusal gates', () => {
     });
   }
 
+  it('refuses when ownership changes during the final evidence read', async () => {
+    let current = run;
+    const { ports, calls } = createPorts({ resolveActiveRun: () => current });
+    ports.hasCommittedLeadSessionEvidence = async () => {
+      current = { runId: 'replacement-run' } as never;
+      return false;
+    };
+    const result = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
+      ports
+    );
+    expect(result.refusal).toBe('run_changed');
+    expect(calls).not.toContain('publishPending');
+    expect(calls).not.toContain('stopPrimary');
+    expect(calls).not.toContain('launchPrimary');
+  });
+
   it('refuses when the stop generation changes before the first stop', async () => {
     let generation = 0;
     const { ports, calls } = createPorts({
       getStopTeamGeneration: () => generation,
-      publishPending: () => {
-        calls.push('publishPending');
+      isPrimaryLaneUnbootstrapped: async () => {
         generation = 1;
+        return true;
       },
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
     expect(outcome.refusal).toBe('stop_generation_changed');
+    expect(calls).not.toContain('publishPending');
     expect(calls).not.toContain('stopPrimary');
     expect(calls).toContain('releaseLease');
   });
@@ -129,7 +157,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     const { ports, calls } = createPorts();
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -150,7 +178,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     const { ports, calls } = createPorts({ hasCommittedLeadSessionEvidence: async () => false });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -168,7 +196,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -205,7 +233,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -224,7 +252,10 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
   it('reaps the relaunched host when the lead evidence is still missing', async () => {
     const { ports, calls } = createPorts({ hasCommittedLeadSessionEvidence: async () => false });
 
-    await rebootstrapOpenCodeAggregatePrimaryLane({ teamName: TEAM_NAME, reason: REASON }, ports);
+    await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
+      ports
+    );
 
     expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(2);
     expect(calls.indexOf('publishFailed')).toBeGreaterThan(calls.lastIndexOf('stopPrimary'));
@@ -245,7 +276,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const result = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -273,7 +304,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -311,7 +342,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -338,7 +369,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -364,7 +395,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -383,7 +414,7 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     });
 
     const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -410,7 +441,7 @@ describe('a re-bootstrap that throws does not leave a host behind', () => {
     });
 
     const result = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -431,7 +462,7 @@ describe('a re-bootstrap that throws does not leave a host behind', () => {
     });
 
     const result = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 
@@ -455,7 +486,7 @@ describe('a re-bootstrap that throws does not leave a host behind', () => {
     });
 
     const result = await rebootstrapOpenCodeAggregatePrimaryLane(
-      { teamName: TEAM_NAME, reason: REASON },
+      { teamName: TEAM_NAME, reason: REASON, expectedRunId: 'run-a1' },
       ports
     );
 

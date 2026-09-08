@@ -33,6 +33,8 @@ export type OpenCodePrimaryLaneRebootstrapRefusal =
   | 'stop_generation_changed'
   | 'runtime_not_deliverable'
   | 'no_active_run'
+  | 'run_changed'
+  | 'bootstrap_evidence_present'
   | 'adapter_unavailable'
   | 'lead_evidence_still_missing'
   | 'relaunch_failed';
@@ -43,6 +45,7 @@ export interface OpenCodePrimaryLaneRebootstrapResult {
 }
 
 export interface OpenCodePrimaryLaneRebootstrapPorts {
+  isPrimaryLaneUnbootstrapped(teamName: string): Promise<boolean>;
   getAdapter(): TeamLaunchRuntimeAdapter | null;
   resolveActiveRun(teamName: string): OpenCodePrimaryLaneRebootstrapRun | null;
   hasManualRestartInFlight(teamName: string): boolean;
@@ -82,7 +85,7 @@ export interface OpenCodePrimaryLaneRebootstrapPorts {
 }
 
 export async function rebootstrapOpenCodeAggregatePrimaryLane(
-  params: { teamName: string; reason: string },
+  params: { teamName: string; reason: string; expectedRunId: string | null },
   ports: OpenCodePrimaryLaneRebootstrapPorts
 ): Promise<OpenCodePrimaryLaneRebootstrapResult> {
   const { teamName } = params;
@@ -104,6 +107,8 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
   if (!run || run.processKilled === true || run.cancelRequested === true) {
     return refuse('no_active_run');
   }
+  if (!params.expectedRunId || run.runId !== params.expectedRunId) return refuse('run_changed');
+  const ownsRun = (): boolean => ports.resolveActiveRun(teamName)?.runId === params.expectedRunId;
   const adapter = ports.getAdapter();
   if (!adapter) return refuse('adapter_unavailable');
 
@@ -147,7 +152,6 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
    */
   let relaunchAttempted = false;
   try {
-    ports.publishPending(run, 'Re-bootstrapping the OpenCode lead lane');
     // The lease is never held across the relaunch: a leaked lease deadlocks
     // every teammate delivery, so each stage re-reads the stop generation
     // instead of trusting a claim it made before it started.
@@ -155,6 +159,20 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
       return refuse('stop_generation_changed');
     }
 
+    // Probe again inside the team operation gate: the delivery-time probe may
+    // predate a completed bootstrap, even for the same run. Unknown is unsafe.
+    const unbootstrapped = await ports.isPrimaryLaneUnbootstrapped(teamName).catch(() => false);
+    if (!ownsRun()) return refuse('run_changed');
+    const committedBeforeStop = await ports
+      .hasCommittedLeadSessionEvidence({ teamName, runId: run.runId, memberName: leadName })
+      .catch(() => null);
+    if (!ownsRun()) return refuse('run_changed');
+    if (stopRequested() || lease.lease.cancelRequested) return refuse('stop_generation_changed');
+    if (!unbootstrapped || committedBeforeStop !== false)
+      return refuse('bootstrap_evidence_present');
+    ports.publishPending(run, 'Re-bootstrapping the OpenCode lead lane');
+    if (!ownsRun()) return refuse('run_changed');
+    if (stopRequested() || lease.lease.cancelRequested) return refuse('stop_generation_changed');
     await ports.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
     if (stopRequested() || lease.lease.cancelRequested) {
       return refuse('stop_generation_changed');

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { inspectOpenCodeRuntimeLaneStorage } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from '../TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import {
   type OpenCodeMemberInboxRelayResult,
   relayOpenCodeMemberInboxMessagesWithPorts,
@@ -9,6 +11,8 @@ import {
   TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService,
   type TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps,
 } from '../TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade';
+
+import { buildUncommittedPrimaryLeadLaunchResult } from './support/openCodeUncommittedPrimaryLane';
 
 import type { OpenCodeLeadTurnActivityNotification } from '../../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
@@ -450,9 +454,7 @@ describe('the self-heal switch on the production wiring', () => {
   type SelfHealPort = (input: typeof request) => Promise<{ action: string }>;
 
   /** The port the service hands to the delivery factory - the production seam. */
-  function selfHealPortOf(
-    service: ReturnType<typeof createService>
-  ): SelfHealPort | undefined {
+  function selfHealPortOf(service: ReturnType<typeof createService>): SelfHealPort | undefined {
     const created = (
       service as unknown as { createOpenCodeMemberMessageDeliveryService(): unknown }
     ).createOpenCodeMemberMessageDeliveryService() as {
@@ -460,6 +462,110 @@ describe('the self-heal switch on the production wiring', () => {
     };
     return created.deps?.requestOpenCodePrimaryLaneRebootstrap;
   }
+
+  it.each(['new-run', 'committed', 'missing'] as const)(
+    'fences the real delivery, queued facade and helper chain: %s',
+    async (scenario) => {
+      process.env[ENV_NAME] = '1';
+      const clock = vi.spyOn(Date, 'now');
+      clock.mockReturnValue(0);
+      let activeRun = {
+        runId: request.runId,
+        teamName: request.teamName,
+        request: { teamName: request.teamName, cwd: '/sandbox/self-heal' },
+        effectiveMembers: [],
+      };
+      let committed = false;
+      let releaseOperation!: () => void;
+      const operation = new Promise<void>((resolve) => {
+        releaseOperation = resolve;
+      });
+      const stop = vi.fn(async () => undefined);
+      const launch = vi.fn(async () => {
+        committed = true;
+        return buildUncommittedPrimaryLeadLaunchResult();
+      });
+      const host = {
+        getOpenCodeRuntimeAdapter: () => ({}),
+        resolveActiveRun: () => activeRun,
+        hasManualRestartInFlight: () => false,
+        hasPrimaryStopInFlight: () => false,
+        isStopped: async () => false,
+        getStopAllTeamsGeneration: () => 0,
+        getStopTeamGeneration: () => 0,
+        canDeliverToOpenCodeRuntime: () => true,
+        stopOpenCodeRuntimeAdapterTeam: stop,
+        setAliveRunId: vi.fn(),
+        launchOpenCodeAggregatePrimaryLane: launch,
+        hasCommittedLeadSessionEvidence: async () => committed,
+        persistLaunchStateSnapshot: vi.fn(async () => undefined),
+        getMixedSecondaryLaunchPhase: () => 'finished',
+        beginRebootstrapLease: () => ({ lease: {}, release: vi.fn() }),
+        resolveLeadName: () => 'team-lead',
+        logWarn: vi.fn(),
+      };
+      let recovery: Promise<boolean> | undefined;
+      const facade = {
+        aggregatePrimaryLaneHost: host,
+        aggregatePrimaryProgress: {
+          publishPending: vi.fn(),
+          publishReady: vi.fn(),
+          publishFailed: vi.fn(),
+        },
+        runAfterInFlightTeamOperation: async (_team: string, action: () => Promise<boolean>) => {
+          await operation;
+          return action();
+        },
+      };
+      const port = selfHealPortOf(
+        createService({
+          rebootstrapOpenCodeAggregatePrimaryLane: (...args) => {
+            recovery = Reflect.apply(
+              TeamProvisioningOpenCodeAggregatePrimaryFacade.prototype
+                .rebootstrapOpenCodeAggregatePrimaryLane,
+              facade,
+              args
+            );
+            return recovery;
+          },
+        })
+      );
+      try {
+        await port?.(request);
+        clock.mockReturnValue(20_001);
+        const probe = vi.mocked(inspectOpenCodeRuntimeLaneStorage);
+        const missing = await probe({
+          teamsBasePath: '/sandbox',
+          teamName: 'test',
+          laneId: 'primary',
+        });
+        let releaseProbe!: () => void;
+        probe.mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              releaseProbe = () => resolve(missing);
+            })
+        );
+        const pending = port?.(request);
+        if (scenario === 'new-run') activeRun = { ...activeRun, runId: 'healthy-run-b' };
+        if (scenario === 'committed') committed = true;
+        releaseProbe();
+        await pending;
+        releaseOperation();
+        await expect(recovery).resolves.toBe(scenario === 'missing');
+        expect(facade.aggregatePrimaryProgress.publishPending).toHaveBeenCalledTimes(
+          scenario === 'missing' ? 1 : 0
+        );
+        expect(stop).toHaveBeenCalledTimes(scenario === 'missing' ? 1 : 0);
+        expect(launch).toHaveBeenCalledTimes(scenario === 'missing' ? 1 : 0);
+        if (scenario === 'missing')
+          expect(stop).toHaveBeenCalledWith(request.teamName, request.runId);
+      } finally {
+        releaseOperation();
+        clock.mockRestore();
+      }
+    }
+  );
 
   it('stays off when the environment says nothing', async () => {
     const port = selfHealPortOf(createService());

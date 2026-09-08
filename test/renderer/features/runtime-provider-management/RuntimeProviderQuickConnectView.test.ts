@@ -341,9 +341,9 @@ describe('RuntimeProviderQuickConnectView', () => {
       'cursor',
       'github-copilot',
       'supergrok',
-      'kiro',
-      'kimi-code-membership',
       'zai-coding-plan',
+      'kimi-code-membership',
+      'kiro',
       'minimax-token-plan',
       'xiaomi-mimo-token-plan',
       'openrouter',
@@ -432,9 +432,9 @@ describe('RuntimeProviderQuickConnectView', () => {
     const connect = host.querySelector<HTMLButtonElement>(
       '[data-testid="provider-quick-action-openrouter"]'
     );
-    expect(connect?.closest('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain(
-      'Available to connect'
-    );
+    expect(
+      connect?.closest('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('Available to connect');
     expect(
       connect
         ?.closest('[data-testid="provider-quick-card-openrouter"]')
