@@ -5,6 +5,7 @@ import {
   collectOpenCodeAggregateLaneDiagnostics,
   resolveOpenCodeAggregateLaunchStateForLeadBootstrap,
   resolveOpenCodeAggregatePrimaryLeadBootstrap,
+  resolveOpenCodeAggregatePrimaryLeadName,
   summarizeOpenCodeAggregateLaunchPromotion,
 } from '../TeamProvisioningOpenCodeAggregateLaunchPromotion';
 import { buildOpenCodeAggregateFinalProgress } from '../TeamProvisioningOpenCodeAggregateRunModel';
@@ -446,5 +447,49 @@ describe('resolveOpenCodeAggregatePrimaryLeadBootstrap', () => {
 
     expect(read).not.toHaveBeenCalled();
     expect(outcome).toEqual({ state: 'confirmed', leadName: null });
+  });
+});
+
+/**
+ * The gate may only judge the lead that runs ON this lane.
+ *
+ * A team can run a Cursor (or Claude) lead beside OpenCode side lanes, and such
+ * a lead is absent from an OpenCode launch result for a completely legitimate
+ * reason. Vetoing on it held back a launch that works - caught by
+ * TeamProvisioningService's "keeps a materialized pending OpenCode lane alive
+ * when a Cursor sibling fails first".
+ */
+describe('resolveOpenCodeAggregatePrimaryLeadName', () => {
+  it('takes a lead that runs on OpenCode', () => {
+    expect(
+      resolveOpenCodeAggregatePrimaryLeadName([
+        { name: 'team-lead', providerId: 'opencode' },
+        { name: 'alice', providerId: 'opencode' },
+      ])
+    ).toBe('team-lead');
+  });
+
+  it('takes a lead with no provider recorded, which defaults to this lane', () => {
+    expect(resolveOpenCodeAggregatePrimaryLeadName([{ name: 'team-lead' }])).toBe('team-lead');
+  });
+
+  it('ignores a lead that runs on another runtime', () => {
+    expect(
+      resolveOpenCodeAggregatePrimaryLeadName([
+        { name: 'team-lead', providerId: 'cursor-acp' },
+        { name: 'alice', providerId: 'opencode' },
+      ])
+    ).toBeNull();
+    expect(
+      resolveOpenCodeAggregatePrimaryLeadName([
+        { name: 'team-lead', providerId: 'anthropic' },
+      ])
+    ).toBeNull();
+  });
+
+  it('answers null when the roster names no lead at all', () => {
+    expect(
+      resolveOpenCodeAggregatePrimaryLeadName([{ name: 'alice', providerId: 'opencode' }])
+    ).toBeNull();
   });
 });

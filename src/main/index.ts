@@ -2111,7 +2111,7 @@ async function initializeServices(): Promise<void> {
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
-    new TeamTaskStallSnapshotSource(teamTranscriptSourceLocator),
+    new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
     new TeamTaskStallPolicy(),
     new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
     new TeamTaskStallNotifier(teamDataService, teamProvisioningService)

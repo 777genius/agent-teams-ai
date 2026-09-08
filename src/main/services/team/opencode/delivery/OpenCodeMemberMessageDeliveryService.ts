@@ -14,6 +14,7 @@ import {
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { noteOpenCodeLaneTurnActivity } from './OpenCodeLaneTurnActivityRegistry';
 import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import {
@@ -27,8 +28,6 @@ import {
   isOpenCodePromptDeliveryAttemptDue,
 } from './OpenCodePromptDeliveryLedger';
 import {
-  buildOpenCodePromptDeliveryAttemptText,
-  buildOpenCodePromptDeliveryRepairControlText,
   hasOpenCodeAcceptedRuntimePrompt,
   isOpenCodeAcceptedDeliveryMissingPromptProof,
   isOpenCodeDeliveryRetryablePendingResponse,
@@ -40,11 +39,14 @@ import {
   buildOpenCodeStalePendingPlainTextObservation,
   decideOpenCodeStalePendingResolution,
   getOpenCodeObservedSessionActivity,
+  getOpenCodePromptDeliveryPendingAgeMs,
 } from './OpenCodePromptDeliveryStalePendingPolicy';
 import {
+  decideOpenCodePromptDeliveryTurnActivity,
   isOpenCodePromptDeliveryRetryAttemptDue,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
+import { prepareOpenCodePromptDispatch } from './OpenCodePromptDispatchPreparation';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
@@ -457,21 +459,23 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneKind === 'primary' &&
       isOpenCodeLeadRecipient(canonicalMemberName, directory);
     const activityRunId = runtimeRunId;
+    const notifyLeadTurnActivity = activityRunId
+      ? (notification: Omit<OpenCodeLeadTurnActivityNotification, 'runId'>): void => {
+          this.deps.notifyOpenCodeLeadTurnActivity?.({ ...notification, runId: activityRunId });
+        }
+      : undefined;
     const notifyActivity = (state: OpenCodeLeadTurnActivityNotification['state']): void => {
-      if (!isLeadRecipient || !activityRunId) return;
-      try {
-        this.deps.notifyOpenCodeLeadTurnActivity?.({
+      noteOpenCodeLaneTurnActivity(
+        {
           teamName,
           memberName: canonicalMemberName,
           laneId: laneIdentity.laneId,
-          runId: activityRunId,
+          isLeadRecipient,
           state,
-        });
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${getErrorMessage(error)}`
-        );
-      }
+          observedAt: nowIso(),
+        },
+        { notifyLeadTurnActivity, logger }
+      );
     };
     const messageId = input.messageId?.trim();
     const ledger = messageId
@@ -751,6 +755,13 @@ export class OpenCodeMemberMessageDeliveryService {
           observed.responseObservation
         );
         await checkpoint();
+        // Snapshot every turn-activity dimension before `applyObservation`
+        // overwrites the record with this observation: comparing the record
+        // against itself afterwards would never show progress.
+        const previousAssistantMessageId = ledgerRecord.observedAssistantMessageId?.trim() ?? '';
+        const previousToolCallCount = ledgerRecord.observedToolCallNames.length;
+        const previousAssistantPreview = ledgerRecord.observedAssistantPreview?.trim() ?? '';
+        const turnActivityAgeMs = getOpenCodePromptDeliveryPendingAgeMs(ledgerRecord, Date.now());
         await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
           teamName,
           runId: runtimeRunId,
@@ -913,7 +924,42 @@ export class OpenCodeMemberMessageDeliveryService {
           visibleReply: proof.visibleReply,
           readAllowed,
         });
-        const retryDue = retryDueBeforeObserve;
+        const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
+          previousAssistantMessageId,
+          previousToolCallCount,
+          previousAssistantPreview,
+          observation: responseObservation,
+          observedDiagnostics: observed.diagnostics,
+          pendingAgeMs: turnActivityAgeMs,
+        });
+        const turnStillActive = turnActivity.active;
+        const retryDue = retryDueBeforeObserve && !turnStillActive;
+        if (retryDueBeforeObserve && retryable && turnStillActive) {
+          this.deps.logOpenCodePromptDeliveryEvent(
+            'opencode_prompt_delivery_retry_deferred_turn_active',
+            ledgerRecord,
+            {
+              reason: pendingReason,
+              turnActivityReason: turnActivity.reason,
+              previousAssistantMessageId,
+              previousToolCallCount,
+            }
+          );
+        }
+        // Retry-due passes only, and durable: reconstructing why a retry did or
+        // did not fire needs the observation the decision saw, and the
+        // lane-scoped ledger holding it is gone once the team stops.
+        if (retryDueBeforeObserve) {
+          logger.diagnostic(
+            `[${teamName}] opencode_prompt_delivery_turn_activity ` +
+              `${canonicalMemberName}/${laneIdentity.laneId} msg=${ledgerRecord.inboxMessageId} ` +
+              `active=${turnActivity.active} reason=${turnActivity.reason} ` +
+              `retryable=${retryable} responseState=${ledgerRecord.responseState} ` +
+              `pendingAgeMs=${turnActivityAgeMs ?? -1} ` +
+              `tools=${previousToolCallCount}->${responseObservation?.toolCallNames?.length ?? 0} ` +
+              `diagnostics=${JSON.stringify(observed.diagnostics.slice(0, 4))}`
+          );
+        }
         if (
           retryDue &&
           retryable &&
@@ -1003,52 +1049,16 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
 
-    const retryReadAllowed = ledgerRecord
-      ? await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
-          teamName,
-          memberName: canonicalMemberName,
-          responseState: ledgerRecord.responseState,
-          actionMode: ledgerRecord.actionMode ?? undefined,
-          taskRefs: ledgerRecord.taskRefs,
-          visibleReply: null,
-          ledgerRecord,
-        })
-      : false;
-    const retryPendingReason = ledgerRecord
-      ? this.deps.getOpenCodeDeliveryPendingReason({
-          responseState: ledgerRecord.responseState,
-          actionMode: ledgerRecord.actionMode,
-          taskRefs: ledgerRecord.taskRefs,
-          visibleReply: null,
-          ledgerRecord,
-        })
-      : 'opencode_delivery_response_pending';
-    const controlUrl =
-      input.messageKind === 'member_work_sync_nudge'
-        ? await this.deps.resolveControlApiBaseUrl()
-        : null;
-    if (
-      !forceOpenCodeSessionRefreshReason &&
-      ledgerRecord?.status === 'retry_scheduled' &&
-      !hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) &&
-      isOpenCodePromptDeliveryAttemptDue(ledgerRecord) &&
-      isOpenCodeSessionRefreshRetryRecord(ledgerRecord, ledgerRecord.lastReason)
-    ) {
-      forceOpenCodeSessionRefreshReason =
-        ledgerRecord.lastSessionRefreshReason ??
-        ledgerRecord.lastReason ??
-        ledgerRecord.responseState ??
-        'session_stale';
-    }
-    const deliveryText = buildOpenCodePromptDeliveryAttemptText({
-      text: input.text,
-      controlText: buildOpenCodePromptDeliveryRepairControlText({
-        ledgerRecord,
-        readAllowed: retryReadAllowed,
-        pendingReason: retryPendingReason,
-        controlUrl,
-      }),
+    const dispatch = await prepareOpenCodePromptDispatch({
+      deps: this.deps,
+      teamName,
+      memberName: canonicalMemberName,
+      message: input,
+      ledgerRecord,
+      forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
     });
+    const { controlUrl, deliveryText } = dispatch;
+    forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
     await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
@@ -1200,6 +1210,9 @@ export class OpenCodeMemberMessageDeliveryService {
     );
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
     const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
+    // Riders reach the model only when the attempt carrying them is accepted;
+    // every post-dispatch return must repeat that proof or the relay redelivers.
+    const coalescedNoticesDispatched = Boolean(input.coalescedNoticeText?.trim()) && promptAccepted;
     const promptAcceptanceMissingRuntimePromptId =
       result.ok && !promptAcceptedByRuntimeIdentity && !promptAcceptedByObservation;
     const deliveryDiagnostics = promptAcceptanceMissingRuntimePromptId
@@ -1335,6 +1348,7 @@ export class OpenCodeMemberMessageDeliveryService {
           delivered: false,
           accepted: true,
           responsePending: false,
+          ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
           responseState: ledgerRecord.responseState,
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
@@ -1424,6 +1438,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     return {
       delivered: promptAccepted || acceptanceUnknown,
+      ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
       ...(ledgerRecord || responseObservation ? { accepted: promptAccepted } : {}),
       ...(ledgerRecord || responseObservation ? { responsePending } : {}),
       ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
