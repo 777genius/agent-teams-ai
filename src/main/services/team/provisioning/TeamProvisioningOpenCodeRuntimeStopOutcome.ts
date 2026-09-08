@@ -45,6 +45,7 @@ export interface OpenCodeRuntimeStopResultLike {
   stopped?: unknown;
   diagnostics?: unknown;
   warnings?: unknown;
+  members?: Record<string, { stopped?: boolean; diagnostics?: unknown }>;
 }
 
 export type OpenCodeRuntimeStopOutcome =
@@ -61,7 +62,12 @@ function stringList(value: unknown): string[] {
 export function describeOpenCodeRuntimeStopResult(
   result: OpenCodeRuntimeStopResultLike | null
 ): string {
-  return [...stringList(result?.diagnostics), ...stringList(result?.warnings)]
+  const memberFailures = Object.entries(result?.members ?? {}).flatMap(([name, member]) =>
+    member?.stopped === false
+      ? [`${name}: ${stringList(member.diagnostics).join('; ') || 'stop unconfirmed'}`]
+      : []
+  );
+  return [...stringList(result?.diagnostics), ...stringList(result?.warnings), ...memberFailures]
     .map((entry) => entry.trim())
     .filter(Boolean)
     .join('; ');

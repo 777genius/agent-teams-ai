@@ -428,7 +428,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
         requiredCommand: string;
         expectedRunId: string;
         expectedCapabilitySnapshotId: string;
-        expectedManifestHighWatermark: number;
+        expectedManifestHighWatermark: number | null;
         client: { bridgeProtocol: { expectedBehaviorFingerprintSchemaVersion: number } };
       };
     };
@@ -436,7 +436,8 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       requiredCommand: 'opencode.launchTeam',
       expectedRunId: 'run-valid',
       expectedCapabilitySnapshotId: 'issue443-capability-v2',
-      expectedManifestHighWatermark: 0,
+      // Selected launch uses run/capability/behavior proof, not the app store's counter.
+      expectedManifestHighWatermark: null,
       client: { bridgeProtocol: { expectedBehaviorFingerprintSchemaVersion: 2 } },
     });
     expect(JSON.parse(traces[1].outputRaw).data).toMatchObject({
