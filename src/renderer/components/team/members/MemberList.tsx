@@ -64,7 +64,7 @@ interface MemberListProps {
   onAssignTask?: (member: ResolvedTeamMember) => void;
   onEditMember?: (member: ResolvedTeamMember) => void;
   onOpenTask?: (taskId: string) => void;
-  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onRestartMember?: (memberName: string, expectedSecondary?: boolean) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
@@ -681,7 +681,7 @@ interface MemberCardRowProps {
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
   onEditMember?: (member: ResolvedTeamMember) => void;
-  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onRestartMember?: (memberName: string, expectedSecondary?: boolean) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }

@@ -1230,8 +1230,13 @@ const electronAPI: ElectronAPI = {
         teamName
       );
     },
-    restartMember: async (teamName: string, memberName: string) => {
-      return invokeIpcWithResult<void>(TEAM_RESTART_MEMBER, teamName, memberName);
+    restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
+      return invokeIpcWithResult<void>(
+        TEAM_RESTART_MEMBER,
+        teamName,
+        memberName,
+        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      );
     },
     skipMemberForLaunch: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<void>(TEAM_SKIP_MEMBER_FOR_LAUNCH, teamName, memberName);

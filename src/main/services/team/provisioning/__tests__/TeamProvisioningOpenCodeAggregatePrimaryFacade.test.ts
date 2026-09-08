@@ -190,6 +190,28 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
 }
 
 describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
+  it('rejects stale secondary retry intent without stopping primary or healthy siblings', async () => {
+    const stop = vi.fn();
+    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    facade.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        { providerId: 'opencode', stop } as unknown as TeamLaunchRuntimeAdapter,
+      ])
+    );
+    const run = createRun();
+    facade.trackRun(run, {
+      runId: run.runId,
+      providerId: 'opencode',
+      cwd: '/safe-test-workspace/alpha',
+    });
+    await expect(facade.restartMember(run.teamName, 'Worker', true)).rejects.toThrow(
+      'refusing aggregate primary restart'
+    );
+    expect(stop).not.toHaveBeenCalled();
+    expect(facade.launchedMemberNames).toEqual([]);
+    expect(run.processKilled).toBe(false);
+  });
+
   it('keeps aggregate primary restart ownership visible to shutdown coordination', () => {
     const facade = new TestOpenCodeAggregatePrimaryFacade();
     facade.trackAggregatePrimaryRestartForShutdown('Restart-Team');

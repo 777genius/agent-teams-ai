@@ -1,3 +1,4 @@
+import { assertSecondaryRetryOwned } from './OpenCodeAggregatePrimaryRestartPolicy';
 import {
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
@@ -268,35 +269,27 @@ export class TeamProvisioningMemberLifecycleController {
     this.restartUseCases = useCases.restart ?? {};
     this.openCodeRetryUseCases = useCases.openCodeRetry ?? {};
   }
-
   private get runs(): TeamProvisioningMemberLifecycleHost['runs'] {
     return this.host.runs;
   }
-
   private get runtimeAdapterRunByTeam(): TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam'] {
     return this.host.runtimeAdapterRunByTeam;
   }
-
   private get failedOpenCodeSecondaryRetryInFlightByTeam(): TeamProvisioningMemberLifecycleHost['failedOpenCodeSecondaryRetryInFlightByTeam'] {
     return this.host.failedOpenCodeSecondaryRetryInFlightByTeam;
   }
-
   private get mcpConfigBuilder(): TeamProvisioningMemberLifecycleHost['mcpConfigBuilder'] {
     return this.host.mcpConfigBuilder;
   }
-
   private get membersMetaStore(): TeamProvisioningMemberLifecycleHost['membersMetaStore'] {
     return this.host.membersMetaStore;
   }
-
   private get teamMetaStore(): TeamProvisioningMemberLifecycleHost['teamMetaStore'] {
     return this.host.teamMetaStore;
   }
-
   private get launchStateStore(): TeamProvisioningMemberLifecycleHost['launchStateStore'] {
     return this.host.launchStateStore;
   }
-
   private getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null {
     return this.host.getRunTrackedCwd(run);
   }
@@ -1229,15 +1222,6 @@ export class TeamProvisioningMemberLifecycleController {
     return isMemberLifecycleOperationInProgressError(error);
   }
 
-  private async runMemberLifecycleOperation<T>(
-    teamName: string,
-    memberName: string,
-    kind: MemberLifecycleOperationKind,
-    operation: () => Promise<T>
-  ): Promise<T> {
-    return await this.runMemberLifecycleOperationInternal(teamName, memberName, kind, operation);
-  }
-
   async runMemberLifecycleOperationInternal<T>(
     teamName: string,
     memberName: string,
@@ -1358,7 +1342,7 @@ export class TeamProvisioningMemberLifecycleController {
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
     const seam = this.actionUseCases.attachLiveRosterMember;
-    return this.runMemberLifecycleOperation(
+    return this.runMemberLifecycleOperationInternal(
       teamName,
       memberName,
       this.getLiveRosterAttachLifecycleKind(options?.reason),
@@ -1568,8 +1552,14 @@ export class TeamProvisioningMemberLifecycleController {
 
   async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
     const seam = this.actionUseCases.detachLiveRosterMember;
-    return this.runMemberLifecycleOperation(teamName, memberName, 'primary_member_removed', () =>
-      seam ? seam(teamName, memberName) : this.detachLiveRosterMemberUnlocked(teamName, memberName)
+    return this.runMemberLifecycleOperationInternal(
+      teamName,
+      memberName,
+      'primary_member_removed',
+      () =>
+        seam
+          ? seam(teamName, memberName)
+          : this.detachLiveRosterMemberUnlocked(teamName, memberName)
     );
   }
 
@@ -1643,11 +1633,18 @@ export class TeamProvisioningMemberLifecycleController {
     }
   }
 
-  async restartMember(teamName: string, memberName: string): Promise<void> {
+  async restartMember(
+    teamName: string,
+    memberName: string,
+    expectedSecondary?: boolean
+  ): Promise<void> {
     const seam = this.actionUseCases.restartMember;
-    return this.runMemberLifecycleOperation(teamName, memberName, 'manual_restart', () =>
-      seam ? seam(teamName, memberName) : this.restartMemberUnlocked(teamName, memberName)
-    );
+    return this.runMemberLifecycleOperationInternal(teamName, memberName, 'manual_restart', () => {
+      if (expectedSecondary) {
+        assertSecondaryRetryOwned(this.runs.get(this.getAliveRunId(teamName) ?? ''), memberName);
+      }
+      return seam ? seam(teamName, memberName) : this.restartMemberUnlocked(teamName, memberName);
+    });
   }
 
   private async restartMemberUnlocked(teamName: string, memberName: string): Promise<void> {
@@ -2155,7 +2152,7 @@ export class TeamProvisioningMemberLifecycleController {
       }
 
       try {
-        await this.runMemberLifecycleOperation(
+        await this.runMemberLifecycleOperationInternal(
           teamName,
           candidate.memberName,
           'opencode_retry',
@@ -2293,7 +2290,7 @@ export class TeamProvisioningMemberLifecycleController {
 
   async skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {
     const seam = this.actionUseCases.skipMemberForLaunch;
-    return this.runMemberLifecycleOperation(teamName, memberName, 'skip_for_launch', () =>
+    return this.runMemberLifecycleOperationInternal(teamName, memberName, 'skip_for_launch', () =>
       seam ? seam(teamName, memberName) : this.skipMemberForLaunchInternal(teamName, memberName)
     );
   }
@@ -2450,7 +2447,7 @@ export class TeamProvisioningMemberLifecycleController {
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.runMemberLifecycleOperation(
+    return this.runMemberLifecycleOperationInternal(
       teamName,
       memberName,
       this.getOpenCodeReattachLifecycleKind(options?.reason),
@@ -2629,8 +2626,11 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
-    return this.runMemberLifecycleOperation(teamName, memberName, 'opencode_member_removed', () =>
-      this.detachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName)
+    return this.runMemberLifecycleOperationInternal(
+      teamName,
+      memberName,
+      'opencode_member_removed',
+      () => this.detachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName)
     );
   }
 

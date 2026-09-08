@@ -580,7 +580,11 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   retryFailedOpenCodeSecondaryLanes: (
     teamName: string
   ) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;
-  restartMember: (teamName: string, memberName: string) => Promise<void>;
+  restartMember: (
+    teamName: string,
+    memberName: string,
+    expectedSecondary?: boolean
+  ) => Promise<void>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
