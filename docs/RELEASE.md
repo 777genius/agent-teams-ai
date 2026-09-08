@@ -42,21 +42,18 @@ Owner approved publication of v2.14.1 after the fresh draft passes the required 
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.1 -->
+Fixes startup and recovery for existing Cursor, GLM (Z.AI), and SuperGrok integrations, with safer team stopping and individual teammate retries.
 
-Build teams with Cursor alongside your other AI providers, with clearer launch failures and safer Stop behavior.
+### Improvements
 
-### What's New
-
-- Add Cursor agents to teams and let them exchange messages and complete assigned tasks.
-- Keep Cursor connections separate for each profile so requests reach the correct account.
 - Retry a failed OpenCode teammate individually without restarting the whole team.
 
 ### Fixes
 
+- Fix startup and recovery failures in mixed teams using Cursor, GLM (Z.AI), and SuperGrok.
+- Keep Cursor profiles connected to the correct account.
 - Stop active Cursor shell commands when stopping their team.
-- Prevent already accepted messages from being sent again after stopping a team.
-- Keep stopping one team from interrupting other teams sharing an OpenCode server.
-- Recover failed team launches without reusing a stopped server or an outdated session.
+- Prevent repeat message delivery after Stop and avoid interrupting other teams sharing an OpenCode server.
 - Keep GPT-6 Astra visible in model selection after a temporary Codex catalog refresh failure.
 
 ### Downloads
