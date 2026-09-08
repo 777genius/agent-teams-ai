@@ -21,13 +21,14 @@ vi.mock('@main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => teamsBasePath.value,
 }));
 
-const { releaseLoopbackRuntimesOnAppShutdown } = await import(
-  '@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease'
-);
+const { releaseLoopbackRuntimesOnAppShutdown } =
+  await import('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease');
 
 const tempDirs: string[] = [];
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -75,7 +76,7 @@ describe('releasing loopback runtimes when the app exits', () => {
    * a model for the user's own chat window right now, and "Agent Teams is
    * closing" says nothing about that.
    */
-  it('evicts only the models this app teams were configured to run on', async () => {
+  it('does not unload models based on historical team configurations', async () => {
     givenTeams({ alpha: ['ollama/qwen3'], beta: ['ollama/qwen3', 'anthropic/claude'] });
     const homeDir = givenLoopbackProvider('ollama', 'http://127.0.0.1:11434');
     vi.spyOn(os, 'homedir').mockReturnValue(homeDir);
@@ -104,7 +105,8 @@ describe('releasing loopback runtimes when the app exits', () => {
 
     await releaseLoopbackRuntimesOnAppShutdown();
 
-    expect(evicted).toEqual(['qwen3']);
+    expect(evicted).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
     expect(evicted).not.toContain('llama-the-user-is-using');
     vi.unstubAllGlobals();
   });
@@ -125,7 +127,7 @@ describe('releasing loopback runtimes when the app exits', () => {
 
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(diagnostic).toHaveBeenCalledWith(
-      expect.stringContaining('reason=no_app_owned_models')
+      expect.stringContaining('reason=no_launch_owned_runtime_evidence')
     );
     vi.unstubAllGlobals();
   });

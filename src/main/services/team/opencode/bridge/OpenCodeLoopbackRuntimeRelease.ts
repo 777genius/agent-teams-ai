@@ -2,31 +2,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { listAllTeamMemberModels } from '@main/services/team/TeamProjectWorkspaces';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
 
 const logger = createLogger('OpenCodeLoopbackRuntimeRelease');
 
 /**
- * A loopback OpenAI-compatible runtime keeps the model it last served resident
- * so a lane wake-up never pays a cold reload. That reservation is worth holding
- * for as long as a team is running and worth nothing the moment the last one
- * stops - but the runtime cannot tell the two apart on its own, because all it
- * ever sees is requests arriving or not arriving.
- *
- * So the app says it out loud: once the last team is down, every loopback
- * provider from the user's opencode config that the stopped members were
- * running on is asked to release what it reserved for them.
- *
- * Two rules keep this from turning into an outbound request to somebody else's
- * server, and they are the whole reason the module is shaped this way. Only a
- * base URL on the loopback interface is ever contacted, and only a provider the
- * stopped members actually used. Everything after that is best effort and
- * bounded: a runtime that does not answer is a diagnostic, never a failed stop.
- *
- * Opt out with AGENT_TEAMS_RUNTIME_RELEASE_DISABLED=1.
+ * Low-level release for explicitly selected loopback providers. Configuration
+ * identifies an endpoint, not ownership of its loaded models. Automatic team
+ * stop and application shutdown therefore skip release until launch-owned
+ * endpoint/model evidence is available; historical team configs are not proof.
+ * Other scoped stop and startup-lock cleanup steps still run normally.
  */
 
 /**
@@ -57,8 +43,8 @@ export interface LoopbackRuntimeReleaseOptions {
   homeDir?: string;
   /**
    * Only the providers these models ran on are released (`<provider>/<model>`).
-   * Omitted means every configured loopback provider, which is the app-shutdown
-   * case: no team is left to attribute a reservation to.
+   * Omitted means every configured loopback provider. This is an explicit
+   * low-level operation, never the automatic application-shutdown policy.
    */
   memberModels?: readonly (string | undefined | null)[];
   fetchImpl?: typeof fetch;
@@ -177,9 +163,7 @@ export function selectProvidersUsedByModels(
 
 /**
  * The model names the stopped members ran on one provider, with the provider
- * prefix taken off, or `null` when there is no member filter at all - the
- * app-shutdown case, where nothing this app started is left running and every
- * loaded model is this app's to release.
+ * prefix taken off, or `null` when there is no member filter at all - an explicit unfiltered low-level call. This does not establish ownership.
  */
 export function selectMemberModelNamesForProvider(
   providerId: string,
@@ -210,9 +194,8 @@ export function selectMemberModelNamesForProvider(
  * loopback runtime is a shared machine service: an Ollama the stopped team used
  * may be holding models for another application, another user session, or a
  * chat window the user has open right now. Only what the stopped members were
- * running is evicted; `null` means there is nobody left to attribute a
- * reservation to, which is the app-shutdown case and the only one that drops
- * everything.
+ * running is evicted; `null` requests an explicit unfiltered eviction. Automatic shutdown never
+ * requests it.
  */
 async function evictLoadedModels(
   origin: string,
@@ -363,31 +346,16 @@ function reportReleaseOutcome(result: LoopbackRuntimeReleaseResult): void {
   }
 }
 
-/**
- * The app-exit half.
- *
- * It is filtered, and that is the whole point of it. "The app is exiting" says
- * nothing about who else is using the loopback runtime: an Ollama this app's
- * teams were running on is a shared machine service, and the same instance may
- * be holding a model for the user's own chat window, an editor extension, or
- * another application entirely. Evicting everything it serves because THIS app
- * is closing takes a model the user is actively using and makes them wait out a
- * cold reload for it.
- *
- * So the filter is the same one the per-team release uses, widened to every team
- * this app has on disk: what this app may ask to be released is what this app
- * asked to be loaded. A teams directory that lists no models yields an empty
- * filter, and an empty filter releases NOTHING - which is the correct reading of
- * "nothing here is attributable to this app", and the opposite of the `undefined`
- * that means "no filter at all".
- */
+/** Fail closed until cleanup can identify the current launch's reservation. */
+export function reportUnattributedLoopbackRuntimeRelease(
+  phase: 'team_stop' | 'app_shutdown'
+): void {
+  logger.diagnostic(
+    `[OpenCode] opencode_loopback_runtime_release_skipped phase=${phase} reason=no_launch_owned_runtime_evidence`
+  );
+}
+
+/** Historical team configs cannot authorize unloading a shared runtime. */
 export async function releaseLoopbackRuntimesOnAppShutdown(): Promise<void> {
-  const memberModels = await listAllTeamMemberModels(getTeamsBasePath()).catch(() => []);
-  if (memberModels.length === 0) {
-    logger.diagnostic(
-      '[OpenCode] opencode_loopback_runtime_release_skipped reason=no_app_owned_models'
-    );
-    return;
-  }
-  await releaseLoopbackRuntimeModels({ memberModels });
+  reportUnattributedLoopbackRuntimeRelease('app_shutdown');
 }

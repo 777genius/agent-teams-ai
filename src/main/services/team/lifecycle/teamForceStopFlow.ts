@@ -16,7 +16,7 @@ import {
   PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
   purgeStaleOpenCodeHostStartupLocks,
 } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
-import { releaseLoopbackRuntimeModels } from '../opencode/bridge/OpenCodeLoopbackRuntimeRelease';
+import { reportUnattributedLoopbackRuntimeRelease } from '../opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
@@ -24,7 +24,6 @@ import {
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
-import { readTeamMemberModels } from '../TeamProjectWorkspaces';
 
 import type { TeamLaunchStateReadResult } from '../TeamLaunchStateStore';
 import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
@@ -535,31 +534,15 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
 }
 
 /**
- * The models this team's members were configured to run on, read straight off
- * its config. A config this app cannot read yields an empty list rather than
- * "unknown": the release below narrows to what this list names, so an
- * unreadable config has to release nothing at all instead of widening onto
- * every runtime the user configured.
- */
-/**
- * The implementor of `releaseSharedLocalRuntime` this app ships, and the reason
- * that port exists: the team's members were running on loopback runtimes that
- * hold a model reserved for them, and once the team is down and no other team
- * is alive, that reservation belongs to nobody.
- *
- * It is the caller of `releaseSharedRuntimeResourcesAfterStop` that hands this
- * in rather than the flow reaching for it, because only the caller knows the
- * team is the last one; and it resolves rather than rejects on every runtime
- * that does not answer, because by this point the stop has already done
- * everything that mattered.
+ * A configured provider/model does not identify a launch-owned reservation:
+ * project overrides may select another endpoint, and models may be shared.
+ * Keep the production cleanup port, but never infer ownership from config.
  */
 export async function releaseLoopbackRuntimesReservedByTeam(
-  teamsBasePath: string,
-  teamName: string
+  _teamsBasePath: string,
+  _teamName: string
 ): Promise<void> {
-  await releaseLoopbackRuntimeModels({
-    memberModels: await readTeamMemberModels(teamsBasePath, teamName),
-  });
+  reportUnattributedLoopbackRuntimeRelease('team_stop');
 }
 
 /**
@@ -614,7 +597,7 @@ export async function releaseSharedRuntimeResourcesAfterStop(input: {
   if (input.releaseSharedLocalRuntime) {
     try {
       await input.releaseSharedLocalRuntime();
-      diagnostics.push('Released the shared runtime held for this team');
+      diagnostics.push('Shared runtime cleanup completed');
     } catch (error) {
       diagnostics.push(
         `Shared runtime release failed: ${error instanceof Error ? error.message : String(error)}`

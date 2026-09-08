@@ -23,6 +23,7 @@ const releaseLoopbackRuntimeModels = vi.hoisted(() =>
 );
 vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', () => ({
   releaseLoopbackRuntimeModels,
+  reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -938,7 +939,7 @@ describe('releaseSharedRuntimeResourcesAfterStop', () => {
     });
 
     expect(releaseSharedLocalRuntime).toHaveBeenCalledTimes(1);
-    expect(result.diagnostics).toEqual(['Released the shared runtime held for this team']);
+    expect(result.diagnostics).toEqual(['Shared runtime cleanup completed']);
   });
 
   // The alive-team list is read before this step runs, so a launch that starts
@@ -1007,7 +1008,7 @@ describe('releaseLoopbackRuntimesReservedByTeam', () => {
     return base;
   }
 
-  it('releases only what the team members were configured to run on', async () => {
+  it('does not treat configured models as a launch-owned reservation', async () => {
     releaseLoopbackRuntimeModels.mockClear();
     const teamsBasePath = writeTeamConfig({
       projectPath: '/projects/demo',
@@ -1021,9 +1022,7 @@ describe('releaseLoopbackRuntimesReservedByTeam', () => {
 
     await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
 
-    expect(releaseLoopbackRuntimeModels).toHaveBeenCalledExactlyOnceWith({
-      memberModels: ['local-provider/model-a', 'cursor-acp/auto'],
-    });
+    expect(releaseLoopbackRuntimeModels).not.toHaveBeenCalled();
   });
 
   // Fail closed: an unreadable config means the release has no list to narrow
@@ -1035,6 +1034,6 @@ describe('releaseLoopbackRuntimesReservedByTeam', () => {
 
     await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
 
-    expect(releaseLoopbackRuntimeModels).toHaveBeenCalledExactlyOnceWith({ memberModels: [] });
+    expect(releaseLoopbackRuntimeModels).not.toHaveBeenCalled();
   });
 });
