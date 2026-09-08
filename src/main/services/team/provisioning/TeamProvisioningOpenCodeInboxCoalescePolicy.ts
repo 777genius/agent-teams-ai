@@ -122,7 +122,6 @@ async function selectQueuedReplyOptionalNotices(
   if (
     !anchor ||
     !isCoalescableNoticeKind(anchor) ||
-<<<<<<< HEAD
     // "Its own prompt" cuts both ways: nothing rides along with the board's
     // completion notice, and (below) the notice never rides along with anything
     // else. A rider is marked read on the anchor's dispatch, so a notice folded
@@ -130,10 +129,7 @@ async function selectQueuedReplyOptionalNotices(
     // whatever it travelled with - and this one is the trigger for a message the
     // lead has to compose on its own.
     isBoardCompletionNotice(anchor) ||
-    !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
-=======
     !input.isEligibleContract(input.anchorReplyRecipient)
->>>>>>> origin/main
   ) {
     return [];
   }
