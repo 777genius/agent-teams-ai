@@ -31,6 +31,12 @@ export const ISOLATED_PATH_KEYS = [
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+export function allocateSmokeOwnedRoot(prefix, platform = process.platform, tempDirectory = os.tmpdir()) {
+  // macOS's per-user tmpdir is too long for nested tsx Unix socket paths.
+  const parent = platform === 'darwin' ? '/tmp' : tempDirectory;
+  return fs.realpathSync(fs.mkdtempSync(path.join(parent, prefix)));
+}
+
 export function preserveSelectedOAuth(initialJson, isolatedAuthPath) {
   const initial = JSON.parse(initialJson);
   const current = JSON.parse(fs.readFileSync(isolatedAuthPath, 'utf8'));
@@ -330,7 +336,7 @@ export async function runFullTeamSmoke({
       );
     }
   }
-  const ownedRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-full-team-')));
+  const ownedRoot = allocateSmokeOwnedRoot('opencode-full-team-');
   let ownedProject;
   let isolatedAuthPath;
   let exitStatus = 1;

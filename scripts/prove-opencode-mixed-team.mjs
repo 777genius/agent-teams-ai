@@ -11,6 +11,7 @@ import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mj
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
 
 import {
+  allocateSmokeOwnedRoot,
   assertOwnedSmokeEnvironment,
   isCompleteSmokeProof,
   ISOLATED_PATH_KEYS,
@@ -119,7 +120,7 @@ export async function runMixedTeamSmoke({
       );
     }
   }
-  const ownedRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-')));
+  const ownedRoot = allocateSmokeOwnedRoot('opencode-mixed-team-');
   let ownedProject;
   let isolatedAuthPath;
   const proofDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-proof-'));

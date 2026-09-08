@@ -1,14 +1,52 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
 
-import { assertOwnedSmokeEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
+import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
   TEST_PROJECT_MARKER_CONTENT, writeSmokeOwnership } from '../../scripts/prove-opencode-full-team.mjs';
 
 import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
+
+for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
+  test(`${prefix} allocates private canonical Darwin roots with room for tsx sockets`, { skip: process.platform === 'win32' }, () => {
+    const longTemp = '/private/var/folders/zz/abcdefghijklmnopqrstuvwxyz0123456789/T';
+    const socketSuffix = 'tmpdir/tsx-501/12345.pipe';
+    assert.ok(Buffer.byteLength(path.join(longTemp, `${prefix}XXXXXX`, socketSuffix)) >= 104);
+    const roots = [];
+    try {
+      roots.push(allocateSmokeOwnedRoot(prefix, 'darwin', longTemp));
+      roots.push(allocateSmokeOwnedRoot(prefix, 'darwin', longTemp));
+      assert.notEqual(roots[0], roots[1]);
+      for (const root of roots) {
+        assert.equal(path.dirname(root), fs.realpathSync('/tmp'));
+        assert.equal(root, fs.realpathSync(root));
+        assert.ok(path.basename(root).startsWith(prefix));
+        assert.ok(Buffer.byteLength(path.join(root, socketSuffix)) < 104);
+        if (process.platform !== 'win32') assert.equal(fs.statSync(root).mode & 0o777, 0o700);
+      }
+    } finally {
+      for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test(`${prefix} keeps the usual temporary parent on other platforms`, () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'owned-root-TEST-'));
+    try {
+      for (const platform of ['linux', 'win32', 'freebsd']) {
+        const root = allocateSmokeOwnedRoot(prefix, platform, parent);
+        assert.equal(path.dirname(root), fs.realpathSync(parent));
+        assert.equal(root, fs.realpathSync(root));
+        assert.ok(path.basename(root).startsWith(prefix));
+      }
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  });
+}
 
 function passingProof() {
   return {
