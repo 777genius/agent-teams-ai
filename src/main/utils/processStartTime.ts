@@ -29,6 +29,54 @@ export async function readProcessStartTimeMs(
     : readNativeProcessStartTimeMs(pid, timeoutMs);
 }
 
+/**
+ * Memoizes a start-time reader for the lifetime of a single sweep.
+ *
+ * A sweep asks about the same pid more than once - a process can be both a tree
+ * root and the parent of another candidate - and every ask costs a child
+ * process: on Windows a whole PowerShell, on an already busy cold start. The
+ * cache is deliberately per-sweep and not per-process: a start time is only
+ * stable while the pid is, and a cache that outlived the sweep would hand a
+ * recycled pid the identity of its predecessor.
+ *
+ * A failed read is cached as `null` rather than re-thrown, so one unreadable
+ * pid is one "start time unobservable" answer instead of an exception that ends
+ * the sweep for every pid behind it. A reader is a plain function and not
+ * necessarily an async one, so it can fail before it returns a promise at all;
+ * that is the same answer and never an escaping exception.
+ */
+export function createProcessStartTimeCache(
+  read: (pid: number) => Promise<number | null>
+): (pid: number) => Promise<number | null> {
+  const cache = new Map<number, Promise<number | null>>();
+  return (pid) => {
+    const cached = cache.get(pid);
+    if (cached) {
+      return cached;
+    }
+    const pending = readStartTimeOrNull(read, pid);
+    cache.set(pid, pending);
+    return pending;
+  };
+}
+
+/**
+ * One probe, and every way it can fail answers `null`. The reader is called
+ * before the first `await`, so it is still started the moment the first caller
+ * asks for it and a second caller joins that one probe rather than starting
+ * another.
+ */
+async function readStartTimeOrNull(
+  read: (pid: number) => Promise<number | null>,
+  pid: number
+): Promise<number | null> {
+  try {
+    return await read(pid);
+  } catch {
+    return null;
+  }
+}
+
 async function readNativeProcessStartTimeMs(
   pid: number,
   timeoutMs: number

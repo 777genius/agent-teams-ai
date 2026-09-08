@@ -5,6 +5,7 @@ import {
 import {
   countLiveRecordedRuntimeHostsForTeam,
   RUNTIME_HOSTS_POLL_INTERVAL_MS,
+  releaseLoopbackRuntimesReservedByTeam,
   releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
   STOP_ESCALATION_TIMEOUT_MS,
@@ -14,6 +15,16 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const releaseLoopbackRuntimeModels = vi.hoisted(() =>
+  vi.fn<(options: { memberModels: readonly string[] }) => Promise<unknown>>(() =>
+    Promise.resolve({ attempted: [], released: [], diagnostics: [] })
+  )
+);
+vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', () => ({
+  releaseLoopbackRuntimeModels,
+  reportUnattributedLoopbackRuntimeRelease: vi.fn(),
+}));
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
@@ -660,6 +671,130 @@ describe('countLiveRecordedRuntimeHostsForTeam', () => {
   });
 });
 
+describe('post-stop external lead process tree reap', () => {
+  /**
+   * The step the kill above it cannot do. A scoped stop that confirmed has
+   * released the team's sessions and never touched the external lead, which is
+   * exactly the case where the tree is left behind, so unlike the host kill this
+   * runs on both paths.
+   */
+  it('reaps on a stop that confirmed, where the kill step never runs', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.resolve({
+          killedPids: [8100],
+          diagnostics: ['Reaped 1 cursor-agent process tree(s)'],
+        })
+      ),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(ports.reapOwnedLeadProcessTrees).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('completed');
+    expect(result.killedRuntimePids).toEqual([8100]);
+    expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
+  });
+
+  /**
+   * The sweep reports a tree that refused to die per tree and carries on, so
+   * the reap resolves. It has still left the workspace occupied, and a stop
+   * that called itself completed over it would be telling the user the team is
+   * fully down while its lead is still running.
+   */
+  it('reports an incomplete cleanup when a lead tree the reap targeted refused to die', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.resolve({
+          killedPids: [],
+          incomplete: true,
+          diagnostics: ['cursor-agent sweep: cursor-agent tree kill failed pid=8100: EPERM'],
+        })
+      ),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(result.diagnostics).toEqual([
+      'cursor-agent sweep: cursor-agent tree kill failed pid=8100: EPERM',
+    ]);
+  });
+
+  // Between the kill and the release: the reap is a kill, and the release
+  // unlinks locks that only a dead process lets go of.
+  it('reaps after the kill step and before the shared runtime release', async () => {
+    const order: string[] = [];
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
+      killRetainedRuntimeProcesses: vi.fn(() => {
+        order.push('kill');
+        return Promise.resolve({ killedPids: [4242], diagnostics: [] });
+      }),
+      reapOwnedLeadProcessTrees: vi.fn(() => {
+        order.push('reap');
+        return Promise.resolve({ killedPids: [8100], diagnostics: [] });
+      }),
+      releaseSharedRuntimeResources: vi.fn(() => {
+        order.push('release');
+        return Promise.resolve({ diagnostics: [] });
+      }),
+    });
+
+    const result = await runTeamForceStopFlow('fixteam', ports);
+
+    expect(order).toEqual(['kill', 'reap', 'release']);
+    expect(result.killedRuntimePids).toEqual([4242, 8100]);
+  });
+
+  // The port has no upstream default, so the common case is that no caller
+  // supplies one, and that case must be indistinguishable from the behaviour
+  // before the port existed.
+  it('behaves exactly as before when no caller supplies the port', async () => {
+    const ports = createPorts({ markTeamStopped: vi.fn(() => Promise.resolve()) });
+    expect(ports.reapOwnedLeadProcessTrees).toBeUndefined();
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result).toEqual({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'completed',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [],
+    });
+    expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A reap that threw left a tree standing, which is what an incomplete cleanup
+   * means - but the stop itself has already done everything else it owed, so it
+   * still finishes and still writes the stopped state.
+   */
+  it('reports a reap that threw as an incomplete cleanup and still finishes the stop', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.reject(new Error('process table unavailable'))
+      ),
+      markTeamStopped: vi.fn(() => Promise.resolve()),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(result.diagnostics).toEqual([
+      'Lead process tree reap failed: process table unavailable',
+    ]);
+    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+  });
+});
+
 describe('post-stop shared runtime release', () => {
   it('releases after a stop that confirmed on its own, before the stopped state is written', async () => {
     const order: string[] = [];
@@ -804,7 +939,7 @@ describe('releaseSharedRuntimeResourcesAfterStop', () => {
     });
 
     expect(releaseSharedLocalRuntime).toHaveBeenCalledTimes(1);
-    expect(result.diagnostics).toEqual(['Released the shared runtime held for this team']);
+    expect(result.diagnostics).toEqual(['Shared runtime cleanup completed']);
   });
 
   // The alive-team list is read before this step runs, so a launch that starts
@@ -848,5 +983,57 @@ describe('releaseSharedRuntimeResourcesAfterStop', () => {
       'lock purge failed: lock dir gone',
       'Shared runtime release failed: runtime unreachable',
     ]);
+  });
+});
+
+/**
+ * The port implementor. `releaseSharedRuntimeResourcesAfterStop` decides
+ * whether a release happens at all; this decides what it is allowed to touch,
+ * and that is only what the stopped team's own members were running on.
+ */
+describe('releaseLoopbackRuntimesReservedByTeam', () => {
+  const teamsBasePaths: string[] = [];
+
+  afterEach(() => {
+    for (const base of teamsBasePaths.splice(0)) {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  function writeTeamConfig(config: unknown): string {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'at-teams-'));
+    teamsBasePaths.push(base);
+    fs.mkdirSync(path.join(base, 'fixteam'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'fixteam', 'config.json'), JSON.stringify(config));
+    return base;
+  }
+
+  it('does not treat configured models as a launch-owned reservation', async () => {
+    releaseLoopbackRuntimeModels.mockClear();
+    const teamsBasePath = writeTeamConfig({
+      projectPath: '/projects/demo',
+      members: [
+        { name: 'lead', model: 'local-provider/model-a' },
+        { name: 'worker', model: '  ' },
+        { name: 'broken', model: 42 },
+        { name: 'other', model: 'cursor-acp/auto' },
+      ],
+    });
+
+    await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
+
+    expect(releaseLoopbackRuntimeModels).not.toHaveBeenCalled();
+  });
+
+  // Fail closed: an unreadable config means the release has no list to narrow
+  // by, and "no list" must release nothing rather than everything.
+  it('narrows to nothing when the team config cannot be read', async () => {
+    releaseLoopbackRuntimeModels.mockClear();
+    const teamsBasePath = fs.mkdtempSync(path.join(os.tmpdir(), 'at-teams-'));
+    teamsBasePaths.push(teamsBasePath);
+
+    await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
+
+    expect(releaseLoopbackRuntimeModels).not.toHaveBeenCalled();
   });
 });
