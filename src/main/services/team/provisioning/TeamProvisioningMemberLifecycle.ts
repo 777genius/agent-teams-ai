@@ -30,8 +30,8 @@ import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
 import { getConfiguredCliFlavor } from '../cliFlavor';
 import { sanitizeProcessRuntimeEventFilePrefix } from '../ProcessBootstrapTransportEvidence';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
-import { assertSecondaryRetryOwned } from './OpenCodeAggregatePrimaryRestartPolicy';
 
+import { assertSecondaryRetryOwned } from './OpenCodeAggregatePrimaryRestartPolicy';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   type DirectProcessRuntimeEventInput,
