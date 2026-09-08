@@ -468,6 +468,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   ports: OpenCodeRuntimeAdapterLaunchPorts
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
+  const previousRuntimeRun = ports.getRuntimeAdapterRun(teamName);
   const preflightCancellation = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
     {
       teamName,
@@ -479,6 +480,18 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   );
   if (preflightCancellation) {
     return preflightCancellation;
+  }
+
+  // Successful preflight either stopped the previous runtime or proved it dead.
+  // The dead-runtime shortcut leaves its in-memory owner behind. Retire that
+  // exact owner before publishing a pending replacement, or Stop will select
+  // the old alive run and reject cleanup against the replacement's manifest.
+  // Keep persisted lane evidence for the launch's existing recovery/CAS checks.
+  if (
+    previousRuntimeRun?.providerId === 'opencode' &&
+    ports.getRuntimeAdapterRun(teamName) === previousRuntimeRun
+  ) {
+    ports.deleteRuntimeOwnershipIfCurrent(teamName, previousRuntimeRun.runId);
   }
 
   const runId = ports.randomUUID();
