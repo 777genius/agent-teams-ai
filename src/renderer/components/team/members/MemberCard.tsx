@@ -108,7 +108,7 @@ interface MemberCardProps {
   onSendMessage?: () => void;
   onAssignTask?: () => void;
   onEditMember?: () => void;
-  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onRestartMember?: (memberName: string, expectedSecondary?: boolean) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
@@ -959,12 +959,14 @@ export const MemberCard = memo(function MemberCard({
     : null;
   const hasLiveLaunchControls =
     isTeamAlive === true || isTeamProvisioning === true || isLaunchSettling === true;
+  const isOpenCodeSecondary =
+    member.providerId === 'opencode' && (runtimeEntry?.laneKind ?? member.laneKind) === 'secondary';
   const hasRestartMemberControl =
     !isRemoved &&
     !isLeadMember(member) &&
     Boolean(onRestartMember) &&
     hasLiveLaunchControls &&
-    runtimeEntry?.restartable !== false;
+    (runtimeEntry?.restartable !== false || (isFailedLaunch && isOpenCodeSecondary));
   const openCodeRelaunchActionable = isOpenCodeRelaunchActionable({
     member,
     spawnEntry,
@@ -1011,13 +1013,13 @@ export const MemberCard = memo(function MemberCard({
   const handleRestartMember = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
     event.preventDefault();
     event.stopPropagation();
-    if (!onRestartMember || retryingLaunch) {
-      return;
-    }
+    if (!onRestartMember || retryingLaunch) return;
     setRetryLaunchError(null);
     setRetryingLaunch(true);
     try {
-      await onRestartMember(member.name);
+      await (isOpenCodeSecondary
+        ? onRestartMember(member.name, true)
+        : onRestartMember(member.name));
     } catch (error) {
       setRetryLaunchError(error instanceof Error ? error.message : restartActionErrorFallback);
     } finally {

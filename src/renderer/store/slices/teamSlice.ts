@@ -1626,7 +1626,7 @@ export interface TeamSlice {
     request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  restartMember: (teamName: string, memberName: string) => Promise<void>;
+  restartMember: typeof api.teams.restartMember;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
   restoreMember: (teamName: string, memberName: string) => Promise<void>;
@@ -4113,10 +4113,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await unwrapIpc('team:addMember', () => api.teams.addMember(teamName, request));
     await get().refreshTeamData(teamName);
   },
-
-  restartMember: async (teamName: string, memberName: string) => {
+  restartMember: async (teamName, memberName, expectedSecondary) => {
     try {
-      await unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName));
+      await unwrapIpc('team:restartMember', () =>
+        api.teams.restartMember(teamName, memberName, expectedSecondary)
+      );
     } finally {
       await Promise.allSettled([
         get().refreshTeamMessagesHead(teamName),

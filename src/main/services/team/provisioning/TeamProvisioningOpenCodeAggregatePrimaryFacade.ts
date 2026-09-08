@@ -122,7 +122,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     const pendingTeamOperation = this.teamOpLocks.get(teamName);
     return pendingTeamOperation ? pendingTeamOperation.then(operation) : operation();
   }
-
   protected async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
     await waitForAggregateMemberLifecycleOperations({
       teamName,
@@ -130,7 +129,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       failedLaneRetries: this.failedOpenCodeSecondaryRetryInFlightByTeam.entries(),
     });
   }
-
   protected collectFailedOpenCodeSecondaryRetryCandidates(
     run: MemberLifecycleProvisioningRun
   ): ReturnType<
@@ -140,7 +138,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       run
     );
   }
-
   private beginOpenCodeAggregatePrimaryRestart(
     teamName: string,
     memberName: string,
@@ -154,17 +151,21 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       memberLifecycleCompletions: this.memberLifecycleCompletionByKey,
     });
   }
-
   private isOpenCodeAggregatePrimaryRestartCandidate(
     teamName: string,
-    memberName: string
+    memberName: string,
+    expectedSecondary?: boolean
   ): { runId: string; run: ProvisioningRun | null } | null {
     const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
     const aliveRunId = this.runTracking.getAliveRunId(teamName);
     const run = aliveRunId ? (this.runs.get(aliveRunId) ?? null) : null;
-    return resolveAggregatePrimaryRestartCandidate({ runtimeRun, run, memberName });
+    return resolveAggregatePrimaryRestartCandidate({
+      runtimeRun,
+      run,
+      memberName,
+      expectedSecondary,
+    });
   }
-
   /**
    * Delivery-time recovery for a lead whose lane never committed a session.
    * Serialized behind any in-flight team operation; every refusal gate lives in
@@ -595,7 +596,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     );
   }
 
-  override async restartMember(teamName: string, memberName: string): Promise<void> {
+  override async restartMember(
+    teamName: string,
+    memberName: string,
+    expectedSecondary?: boolean
+  ): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, async () => {
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
         teamName.trim().toLowerCase()
@@ -605,9 +610,17 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           `OpenCode aggregate primary restart for teammate "${activeRestart.memberName}" is already in progress for team "${teamName}"`
         );
       }
-      const candidate = this.isOpenCodeAggregatePrimaryRestartCandidate(teamName, memberName);
+      const candidate = this.isOpenCodeAggregatePrimaryRestartCandidate(
+        teamName,
+        memberName,
+        expectedSecondary
+      );
       if (!candidate) {
-        return this.memberLifecycleController.restartMember(teamName, memberName);
+        return this.memberLifecycleController.restartMember(
+          teamName,
+          memberName,
+          expectedSecondary
+        );
       }
 
       const restart = this.beginOpenCodeAggregatePrimaryRestart(

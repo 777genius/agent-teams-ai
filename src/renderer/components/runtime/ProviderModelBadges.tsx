@@ -211,7 +211,10 @@ export const ProviderModelBadges = ({
       getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus) ??
       formatModelBadgeLabel(providerId, model);
     const recentlyReleased =
-      (providerId === 'codex' && model === 'gpt-6-astra') || isRecentlyReleasedModel(catalogModel);
+      (providerId === 'codex' &&
+        model === 'gpt-6-astra' &&
+        !catalogModel?.metadata?.releaseDate?.trim()) ||
+      isRecentlyReleasedModel(catalogModel);
     const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
     const hasFollowingModel = index < displayedModels.length - 1;
     const title = [

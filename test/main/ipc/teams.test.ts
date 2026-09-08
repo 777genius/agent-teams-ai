@@ -6347,6 +6347,16 @@ describe('ipc teams handlers', () => {
       vi.mocked(console.error).mockClear();
     });
 
+    it('validates and forwards isolated secondary restart intent', async () => {
+      const handler = handlers.get(TEAM_RESTART_MEMBER)!;
+      const invalid = await handler({} as never, 'my-team', 'alice', 'true');
+      expect(invalid).toEqual({ success: false, error: 'Invalid expectedSecondary' });
+      expect(teamHandlerMocks.restartMember).not.toHaveBeenCalled();
+      const result = await handler({} as never, 'my-team', 'alice', true);
+      expect(result).toEqual({ success: true, data: undefined });
+      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice', true);
+    });
+
     it('blocks live replaceMembers when a member migrates from primary runtime ownership to OpenCode', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       service.getTeamData.mockResolvedValueOnce({

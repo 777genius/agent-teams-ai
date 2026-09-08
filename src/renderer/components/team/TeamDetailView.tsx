@@ -2174,8 +2174,12 @@ export const TeamDetailView = memo(function TeamDetailView({
     openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch');
   }, [data?.isAlive, isTeamProvisioning, openLaunchDialog]);
   const handleRestartMember = useCallback(
-    async (memberName: string): Promise<void> => {
-      await restartMember(teamName, memberName);
+    async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
+      await restartMember(
+        teamName,
+        memberName,
+        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      );
     },
     [restartMember, teamName]
   );

@@ -4151,7 +4151,8 @@ async function handleGetAgentRuntime(
 async function handleRestartMember(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
-  memberName: unknown
+  memberName: unknown,
+  expectedSecondary?: unknown
 ): Promise<IpcResult<void>> {
   const validatedTeamName = validateTeamName(teamName);
   if (!validatedTeamName.valid) {
@@ -4161,11 +4162,15 @@ async function handleRestartMember(
   if (!validatedMemberName.valid) {
     return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
   }
+  if (expectedSecondary !== undefined && typeof expectedSecondary !== 'boolean') {
+    return { success: false, error: 'Invalid expectedSecondary' };
+  }
   return wrapTeamHandler('restartMember', async () => {
     try {
       await getTeamMemberLifecycleApi().restartMember(
         validatedTeamName.value!,
-        validatedMemberName.value!
+        validatedMemberName.value!,
+        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
       );
     } finally {
       getTeamDataService().invalidateMessageFeed(validatedTeamName.value!);

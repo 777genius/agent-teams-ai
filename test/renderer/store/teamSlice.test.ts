@@ -5319,7 +5319,7 @@ describe('teamSlice actions', () => {
 
     await store.getState().restartMember('my-team', 'alice');
 
-    expect(hoisted.restartMember).toHaveBeenCalledWith('my-team', 'alice');
+    expect(hoisted.restartMember).toHaveBeenCalledWith('my-team', 'alice', undefined);
     expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
       alice: expect.objectContaining({ status: 'spawning', launchState: 'starting' }),
     });

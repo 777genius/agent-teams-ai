@@ -179,7 +179,7 @@ export interface TeamMemberLifecycleApi {
     options?: { reason?: TeamLiveRosterAttachReason }
   ): Promise<void>;
   detachLiveRosterMember(teamName: string, memberName: string): Promise<void>;
-  restartMember(teamName: string, memberName: string): Promise<void>;
+  restartMember(teamName: string, memberName: string, expectedSecondary?: boolean): Promise<void>;
   retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult>;

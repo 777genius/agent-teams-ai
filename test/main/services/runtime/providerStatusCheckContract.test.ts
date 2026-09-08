@@ -520,3 +520,61 @@ describe('provider status check contract', () => {
     ).toBe(true);
   });
 });
+
+describe('Codex transient catalog display consistency', () => {
+  function codexStatus(modelId: string, source: 'app-server' | 'static-fallback') {
+    const seed = providerStatus();
+    return providerStatus({
+      providerId: 'codex',
+      models: [modelId],
+      modelCatalog: {
+        ...seed.modelCatalog!,
+        providerId: 'codex',
+        source,
+        defaultModelId: modelId,
+        defaultLaunchModel: modelId,
+        models: [{ ...seed.modelCatalog!.models[0], id: modelId, launchModel: modelId, source }],
+      },
+    });
+  }
+
+  it('retains Astra consistently in card and picker after a timeout without granting launch', () => {
+    const current = codexStatus('gpt-6-astra', 'app-server');
+    const incoming = {
+      ...codexStatus('gpt-5.5', 'static-fallback'),
+      statusCheckOutcome: 'transient_error' as const,
+      statusCheckErrorCode: 'timeout' as const,
+    };
+    const merged = mergeProviderStatusDisplayEvidence(incoming, current);
+    expect(merged.models).toEqual(['gpt-6-astra']);
+    expect(merged.modelCatalog?.models.map((model) => model.id)).toEqual(merged.models);
+    expect(merged.modelCatalog?.source).toBe('app-server');
+    expect(merged.modelCatalog?.status).toBe('stale');
+    expect(merged.modelCatalogRefreshState).toBe('error');
+    expect(merged.authenticated).toBe(false);
+    expect(merged.capabilities.teamLaunch).toBe(false);
+    expect(isProviderModelCatalogExactReady(merged)).toBe(false);
+  });
+
+  it('accepts a fresh authoritative catalog that no longer lists Astra', () => {
+    const merged = mergeProviderStatusDisplayEvidence(
+      codexStatus('gpt-5.5', 'app-server'),
+      codexStatus('gpt-6-astra', 'app-server')
+    );
+    expect(merged.models).toEqual(['gpt-5.5']);
+    expect(merged.modelCatalog?.models.map((model) => model.id)).toEqual(merged.models);
+    expect(merged.modelCatalog?.status).toBe('ready');
+    expect(merged.capabilities.teamLaunch).toBe(true);
+  });
+
+  it('does not invent live models when only a static fallback was previously known', () => {
+    const current = codexStatus('gpt-5.5', 'static-fallback');
+    const merged = mergeProviderStatusDisplayEvidence(
+      { ...current, statusCheckOutcome: 'transient_error', statusCheckErrorCode: 'timeout' },
+      current
+    );
+    expect(merged.models).toEqual(['gpt-5.5']);
+    expect(merged.modelCatalog?.source).toBe('static-fallback');
+    expect(merged.capabilities.teamLaunch).toBe(false);
+  });
+});

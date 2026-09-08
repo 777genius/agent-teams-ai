@@ -277,6 +277,41 @@ function createHost(
 }
 
 describe('TeamProvisioningMemberLifecycle stale run guards', () => {
+  it('rechecks secondary ownership after waiting for the member lifecycle lock', async () => {
+    const run = createRun({ name: 'Worker', role: 'Developer', providerId: 'opencode' });
+    let aliveRunId: string | null = run.runId;
+    let release!: () => void;
+    const lock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const host = createHost(run, { getAliveRunId: () => aliveRunId });
+    run.mixedSecondaryLanes.push(
+      host.createMixedSecondaryLaneStateForMember(run, {
+        name: 'Worker',
+        role: 'Developer',
+        providerId: 'opencode',
+      })
+    );
+    const restart = vi.fn(async () => undefined);
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      {
+        ...immediateOperationUseCases,
+        async runMemberLifecycleOperation(_teamName, _memberName, _kind, operation) {
+          await lock;
+          return operation();
+        },
+      },
+      { actions: { restartMember: restart } }
+    );
+    const pending = controller.restartMember('team-a', 'Worker', true);
+    aliveRunId = null;
+    release();
+    await expect(pending).rejects.toThrow('refusing aggregate primary restart');
+    expect(restart).not.toHaveBeenCalled();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
   it('does not spawn a primary-owned attach after the active run changes during config reads', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',

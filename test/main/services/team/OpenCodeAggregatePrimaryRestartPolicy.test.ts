@@ -1,4 +1,8 @@
-import { clearCancelledAggregateRestartState } from '@main/services/team/provisioning/OpenCodeAggregatePrimaryRestartPolicy';
+import type { ProvisioningRun } from '@main/services/team/provisioning/TeamProvisioningRunModel';
+import {
+  clearCancelledAggregateRestartState,
+  resolveAggregatePrimaryRestartCandidate,
+} from '@main/services/team/provisioning/OpenCodeAggregatePrimaryRestartPolicy';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('OpenCodeAggregatePrimaryRestartPolicy', () => {
@@ -42,5 +46,48 @@ describe('OpenCodeAggregatePrimaryRestartPolicy', () => {
       ['run-current', launchError],
       ['run-current', primaryError],
     ]);
+  });
+});
+
+describe('secondary retry isolation', () => {
+  const run = {
+    runId: 'run-current',
+    processKilled: false,
+    cancelRequested: false,
+    mixedSecondaryLanes: [{ member: { name: 'alice' } }, { member: { name: 'bob' } }],
+  } as ProvisioningRun;
+  it('routes a tracked failed secondary to member-only recovery without modifying siblings', () => {
+    const before = structuredClone(run);
+    expect(
+      resolveAggregatePrimaryRestartCandidate({
+        runtimeRun: { runId: run.runId, providerId: 'opencode' },
+        run,
+        memberName: 'alice',
+        expectedSecondary: true,
+      })
+    ).toBeNull();
+    expect(run).toEqual(before);
+  });
+  it.each([null, { ...run, mixedSecondaryLanes: [] }, { ...run, processKilled: true }])(
+    'rejects stale secondary ownership before aggregate routing (%j)',
+    (candidate) => {
+      expect(() =>
+        resolveAggregatePrimaryRestartCandidate({
+          runtimeRun: { runId: run.runId, providerId: 'opencode' },
+          run: candidate,
+          memberName: 'alice',
+          expectedSecondary: true,
+        })
+      ).toThrow('refusing aggregate primary restart');
+    }
+  );
+  it('preserves primary member routing', () => {
+    expect(
+      resolveAggregatePrimaryRestartCandidate({
+        runtimeRun: { runId: run.runId, providerId: 'opencode' },
+        run,
+        memberName: 'primary-member',
+      })
+    ).toEqual({ runId: run.runId, run });
   });
 });
