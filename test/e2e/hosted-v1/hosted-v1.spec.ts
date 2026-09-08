@@ -939,8 +939,8 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     },
     { token: csrfToken, identity: createdIdentity, revision: draftRows[0].revision }
   );
-  // seedContainer rejects the non-seeded TeamId with fake_runtime_authority_invalid
-  // and closes the socket; the real command HTTP adapter maps this to this exact 503.
+  // seedContainer rejects the non-seeded TeamId with a signed unavailable response;
+  // the command HTTP adapter maps this to this exact 503 without losing the Owner.
   for (const denial of draftExecutionDenials) {
     expect(denial.status, denial.rawBody).toBe(503);
     expect(denial.body).toEqual({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null });

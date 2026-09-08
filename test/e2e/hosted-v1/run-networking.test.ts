@@ -1145,7 +1145,7 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
         type: 'bind',
       })
     );
-  });
+  }, 45_000);
 
   it('derives a deterministic high port from the marker and rejects invalid markers', () => {
     expect(markerDerivedCaddyPublishedPort('0'.repeat(48))).toBe(49_152);

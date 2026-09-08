@@ -6471,6 +6471,29 @@ async function serveFakeRuntime(): Promise<void> {
           throw new Error('fake_runtime_provenance_invalid');
         }
         assertOwnerEffectFenceCurrent(authority);
+        const respond = (responsePayload: unknown, resourceRevision: unknown): void => {
+          // Every owner result, including one emitted after an asynchronous trace write, must be
+          // fenced at the final synchronous response boundary.
+          assertLifecycleEffectFence(operationOwnerBinding, context, authority);
+          if (socket.destroyed || body.slice(newline + 1).trim().length !== 0) {
+            throw new Error('fake_runtime_extra_frame');
+          }
+          const envelope = {
+            schemaVersion: 2,
+            exchangeId: request.exchangeId,
+            operation: request.operation,
+            provenance: {
+              from: provenance.to,
+              to: provenance.from,
+              target: provenance.target,
+            },
+            ownerBinding: operationOwnerBinding,
+            ownerEffectFence: request.ownerEffectFence,
+            authority: { ...authority, resourceRevision },
+            payload: responsePayload,
+          };
+          writeFakeRuntimeLifecycleSignedFrame(socket, trustAnchor, 'response', envelope);
+        };
         if (authority.teamId !== TEAM_ID) {
           // Preserve seeded-only admission. Attribute this refusal only after the signed
           // envelope, payload, context, provenance and live authority fence all pass.
@@ -6519,32 +6542,17 @@ async function serveFakeRuntime(): Promise<void> {
             })
           );
           await publishDenialEvidence();
-          throw new Error('fake_runtime_authority_invalid');
+          respond(
+            {
+              schemaVersion: request.operation === 'authorize' ? 2 : 1,
+              kind: 'unavailable',
+              retryAfterMs: null,
+            },
+            null
+          );
+          return;
         }
         await traceLifecycle({ operation: request.operation, stage: 'authority_valid' });
-        const respond = (responsePayload: unknown, resourceRevision: unknown): void => {
-          // Every owner result, including one emitted after an asynchronous trace write, must be
-          // fenced at the final synchronous response boundary.
-          assertLifecycleEffectFence(operationOwnerBinding, context, authority);
-          if (socket.destroyed || body.slice(newline + 1).trim().length !== 0) {
-            throw new Error('fake_runtime_extra_frame');
-          }
-          const envelope = {
-            schemaVersion: 2,
-            exchangeId: request.exchangeId,
-            operation: request.operation,
-            provenance: {
-              from: provenance.to,
-              to: provenance.from,
-              target: provenance.target,
-            },
-            ownerBinding: operationOwnerBinding,
-            ownerEffectFence: request.ownerEffectFence,
-            authority: { ...authority, resourceRevision },
-            payload: responsePayload,
-          };
-          writeFakeRuntimeLifecycleSignedFrame(socket, trustAnchor, 'response', envelope);
-        };
         if (
           request.operation === 'control_state' ||
           request.operation === 'prepare_provisioning' ||
