@@ -593,16 +593,6 @@ async function ensureBootstrappedRuntime() {
     isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  if (isCacheValid()) {
-    return {
-      binaryPath: cachedBinaryPath,
-      versionText: readBinaryVersion(cachedBinaryPath),
-      sourceLabel: `cached release ${runtimeLock.sourceRef}`,
-      cacheDir,
-      downloaded: false,
-    };
-  }
-
   ensureDir(cacheDir);
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 

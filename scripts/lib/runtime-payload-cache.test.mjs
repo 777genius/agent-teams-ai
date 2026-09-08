@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import {
@@ -69,3 +70,45 @@ for (const archiveKind of ['tar.gz']) {
     }
   }
 }
+
+
+test('cached bootstrap waits for publication lock before validating or executing the binary', async () => {
+  const source = fs.readFileSync(new URL('../dev-with-runtime.mjs', import.meta.url), 'utf8');
+  const functionSource = source.slice(source.indexOf('async function ensureBootstrappedRuntime()'),
+    source.indexOf('function validateRuntimeRepoRoot('));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-cache-reader-'));
+  const events = [];
+  let unlock;
+  const publication = new Promise((resolve) => { unlock = resolve; });
+  const run = runInNewContext(`${functionSource}; ensureBootstrappedRuntime`, {
+    fs, path,
+    runtimeCacheRoot: root,
+    readRuntimeLock: () => ({ version: 'fixture', sourceRef: 'fixture',
+      assets: { fixture: { binaryName: 'orchestrator', sha256: 'a'.repeat(64) } } }),
+    getExpectedRuntimeCliVersion: () => 'fixture',
+    getPlatformAssetKey: () => 'fixture',
+    ensureDir: (directory) => fs.mkdirSync(directory, { recursive: true }),
+    acquireBootstrapLock: async () => {
+      events.push('waiting');
+      await publication;
+      events.push('locked');
+      return { close: async () => { events.push('closed'); } };
+    },
+    isRuntimePayloadCacheValid: () => { events.push('validate'); return true; },
+    isCachedBinaryValid: () => true,
+    readBinaryVersion: () => { events.push('execute-version'); return 'fixture'; },
+  });
+  try {
+    const result = run();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(events, ['waiting']);
+    unlock();
+    const resolved = await result;
+    assert.equal(resolved.downloaded, false);
+    assert.equal(resolved.versionText, 'fixture');
+    assert.deepEqual(events, ['waiting', 'locked', 'validate', 'execute-version', 'closed']);
+  } finally {
+    unlock();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
