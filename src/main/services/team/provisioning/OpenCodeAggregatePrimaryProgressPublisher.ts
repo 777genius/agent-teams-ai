@@ -30,6 +30,23 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     this.ports.invalidateRuntimeSnapshotCaches(run.teamName);
   }
 
+  /**
+   * Clears the pending banner an automatic re-bootstrap raised. Without it a
+   * heal that succeeded leaves the team showing "disconnected" until the next
+   * unrelated progress write, which reads as a failure the user never had.
+   */
+  publishReady(run: ProvisioningRun, message: string): void {
+    run.progress = this.publish(run, {
+      ...run.progress,
+      state: 'ready',
+      message,
+      messageSeverity: undefined,
+      updatedAt: nowIso(),
+      error: undefined,
+    });
+    this.ports.invalidateRuntimeSnapshotCaches(run.teamName);
+  }
+
   publishFailed(run: ProvisioningRun, message: string, error: unknown): void {
     const errorMessage = getErrorMessage(error);
     run.progress = this.publish(run, {
