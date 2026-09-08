@@ -48,13 +48,13 @@ Build teams with Cursor alongside your other AI providers, with clearer launch f
 ### What's New
 
 - Add Cursor agents to teams and let them exchange messages and complete assigned tasks.
-- Keep Cursor connections separate between profiles, so different accounts do not share the wrong endpoint.
+- Keep Cursor connections separate for each profile so requests reach the correct account.
 - Retry a failed OpenCode teammate individually without restarting the whole team.
 
 ### Fixes
 
 - Stop active Cursor shell commands when stopping their team.
-- Prevent accepted messages from replaying after a team stops.
+- Prevent already accepted messages from being sent again after stopping a team.
 - Keep stopping one team from interrupting other teams sharing an OpenCode server.
 - Recover failed team launches without reusing a stopped server or an outdated session.
 - Keep GPT-6 Astra visible in model selection after a temporary Codex catalog refresh failure.
