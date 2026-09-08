@@ -71,11 +71,19 @@ export interface CursorAgentProcessCleanupOptions {
    * app is responsible for inherits the orchestrator's env from the serve host
    * that spawned it.
    *
-   * POSIX only. Windows does not let one process read another's environment. A
-   * caller that also sets `requireOwnershipProof` therefore cannot be satisfied
-   * there, and the sweep refuses outright rather than quietly falling back to
-   * the command line - falling back would grant exactly the weaker fence the
-   * caller was refusing to rely on.
+   * LINUX ONLY, despite the POSIX shape of the reader.
+   *
+   * `ps eww -o command=` appends the environment on Linux, where procps reads
+   * `/proc/<pid>/environ`. It does NOT on macOS: verified on 15.6.1 against a
+   * process this very shell had just spawned, `ps eww`, `ps eww -o command=`
+   * and `ps -E` all return the command and nothing else, so the marker is
+   * unfindable there for a process the app genuinely owns. Windows has no such
+   * facility at all.
+   *
+   * A caller that also sets `requireOwnershipProof` therefore cannot be
+   * satisfied on macOS or Windows, and the sweep refuses outright rather than
+   * quietly falling back to the command line - falling back would grant exactly
+   * the weaker fence the caller was refusing to rely on.
    */
   requiredEnvMarkers?: readonly string[];
   /**
@@ -235,6 +243,19 @@ function normalizeWorkspacePath(value: string, platform: NodeJS.Platform): strin
  * available from a joined argv - the boundaries are gone, and no parsing rule
  * puts them back.
  */
+/**
+ * Whether this platform lets one process read another's environment at all.
+ *
+ * Linux does, through `/proc/<pid>/environ`, which is what `ps eww` prints.
+ * macOS does not - verified on 15.6.1, where `ps eww`, `ps eww -o command=`
+ * and `ps -E` all return the command alone even for a child of the caller -
+ * and Windows has no equivalent facility. On those two, an env marker is not a
+ * weaker ownership proof than the command line; it is the absence of one.
+ */
+export function platformExposesProcessEnvironment(platform: NodeJS.Platform): boolean {
+  return platform !== 'win32' && platform !== 'darwin';
+}
+
 export function isConfusableWorkspacePath(
   left: string,
   right: string,
@@ -397,12 +418,18 @@ export async function cleanupCursorAgentProcessTrees(
       : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
   const killTree =
     options.killTree ?? ((pid: number) => killExternalProcessTree(pid, { platform }));
-  // Windows cannot read another process's environment at all, so an env fence
-  // there is not a weaker check - it is no check.
   const requestedEnvMarkers = options.requiredEnvMarkers ?? [];
-  const requiredEnvMarkers = platform === 'win32' ? [] : requestedEnvMarkers;
+  // Windows offers no way to read another process's environment at all, so no
+  // reader can exist there and the fence is dropped unconditionally. macOS
+  // simply does not expose it through `ps`, which is what the DEFAULT reader
+  // uses; a caller that injects its own reader is asserting it has another way,
+  // and that assertion is trusted over the platform default.
+  const environmentIsReadable =
+    platform !== 'win32' &&
+    (platformExposesProcessEnvironment(platform) || options.readProcessDetails !== undefined);
+  const requiredEnvMarkers = environmentIsReadable ? requestedEnvMarkers : [];
   const requireOwnershipProof = options.requireOwnershipProof === true;
-  if (platform === 'win32' && requireOwnershipProof && requestedEnvMarkers.length > 0) {
+  if (!environmentIsReadable && requireOwnershipProof && requestedEnvMarkers.length > 0) {
     // The caller asked to reap only what it can prove it owns, and on this
     // platform the proof it named is unobtainable. Dropping the marker list and
     // continuing would silently downgrade that to "reap on the command line
@@ -410,7 +437,7 @@ export async function cleanupCursorAgentProcessTrees(
     // that cannot meet its own precondition does nothing and says so.
     result.diagnostics.push(
       'cursor-agent sweep skipped: ownership proof was required, and a process environment ' +
-        'cannot be read on Windows'
+        `cannot be read on ${platform === 'win32' ? 'Windows' : 'macOS'}`
     );
     return result;
   }

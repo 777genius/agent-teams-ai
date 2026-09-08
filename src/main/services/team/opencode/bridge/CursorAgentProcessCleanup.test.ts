@@ -730,6 +730,27 @@ describe('ownership fences beyond the command line', () => {
    * ownership proof cannot get it. The sweep refuses rather than quietly falling
    * back to the command line - see the dedicated describe block below.
    */
+  it('refuses ownership proof on macOS, where ps cannot reach an environment', async () => {
+    // Verified on macOS 15.6.1: `ps eww`, `ps eww -o command=` and `ps -E` all
+    // return the command alone, even for a child of the caller. Without this
+    // the sweep kept every candidate one by one with an "environment could not
+    // be read" line, which reads like a transient failure instead of a platform
+    // that has no such facility.
+    const killTree = vi.fn(reapedTree);
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.diagnostics.join(' ')).toContain('cannot be read on macOS');
+  });
+
   it('does not ask for an environment it cannot read on Windows', async () => {
     const readProcessDetails = vi.fn(() => Promise.resolve(null));
     const killTree = vi.fn(reapedTree);
