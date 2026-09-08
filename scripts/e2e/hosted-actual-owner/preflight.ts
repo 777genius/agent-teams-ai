@@ -1,5 +1,10 @@
-import { parseCanonicalObject, contentAddress, parseControllerTrustAnchor,
-  verifyControlDocuments, type ControllerTrustAnchor } from './controller-authority';
+import {
+  parseCanonicalObject,
+  contentAddress,
+  parseControllerTrustAnchor,
+  verifyControlDocuments,
+  type ControllerTrustAnchor,
+} from './controller-authority';
 export { parseControllerTrustAnchor, verifyControlDocuments } from './controller-authority';
 export type { ControllerTrustAnchor } from './controller-authority';
 import { constants, fstat, read, type BigIntStats } from 'node:fs';
@@ -87,8 +92,12 @@ function readFd(fd: number, buffer: Buffer, position: number | null): Promise<nu
 
 export interface PreflightAdmission {
   readonly selectedSupervisorArtifacts?: Readonly<Record<SelectedPublicArtifactName, FileAnchor>>;
-  readonly ownerLaunch?: Readonly<{ selection: OwnerLaunchSelectionV2; executable: FileAnchor; helper: FileAnchor;
-    supervisorModule?: FileAnchor }>;
+  readonly ownerLaunch?: Readonly<{
+    selection: OwnerLaunchSelectionV2;
+    executable: FileAnchor;
+    helper: FileAnchor;
+    supervisorModule?: FileAnchor;
+  }>;
   readonly descriptor: IntegrationDescriptor;
   readonly roots: Readonly<Record<RootName, RootAnchor>>;
   readonly closures: Readonly<{
@@ -238,7 +247,7 @@ function assertDescriptorBindings(descriptor: IntegrationDescriptor): void {
       OPENCODE_IDENTITIES.buildProvenanceBundleSha256 ||
     descriptor.openCode.linuxX64Archive.sha256 !== OPENCODE_IDENTITIES.linuxX64ArchiveSha256 ||
     descriptor.openCode.linuxX64Binary.sha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
-    descriptor.p3b2.entry.mode !== 0o555 ||
+    ![0o555, 0o500].includes(descriptor.p3b2.entry.mode) ||
     descriptor.p3b2.supervisor.mode !== 0o555 ||
     descriptor.openCode.linuxX64Binary.mode !== 0o555 ||
     descriptor.product.compositionEntry.mode !== 0o555 ||
@@ -296,7 +305,6 @@ function controllerTrustAnchorFromEnvironment(): ControllerTrustAnchor {
   if (canonicalJson(value) !== source) throw new Error('p3c_controller_trust_anchor_noncanonical');
   return parseControllerTrustAnchor(value);
 }
-
 
 function verifyAcquisitionReceipt(bytes: Buffer): void {
   const value = parseCanonicalObject(bytes, 'acquisition_receipt');
@@ -568,9 +576,7 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
       };
     }),
     { name: 'release-manifest.json', digest: { sha256: sha256(manifestBytes) } },
-  ].sort((left, right) =>
-    Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8'))
-  );
+  ].sort((left, right) => Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8')));
   const actualSubjects = statement.subject
     .map((subject, index) => {
       const item = exactRecord(subject, ['name', 'digest'], `build_provenance_subject_${index}`);
@@ -584,9 +590,7 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
         digest: { sha256: exactText(digest.sha256, /^[0-9a-f]{64}$/u, 'subject_sha') },
       };
     })
-    .sort((left, right) =>
-      Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8'))
-    );
+    .sort((left, right) => Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8')));
   const predicate = exactRecord(
     statement.predicate,
     ['buildDefinition', 'runDetails'],
@@ -801,6 +805,8 @@ export async function admitIntegration(
     const recipe = await openAndRead(roots.p3b2, descriptor.p3b2.recipe, 16 * 1024 * 1024);
     openedFiles.push(recipe.anchor);
     const ownerSelection = verifyP3B2Recipe(recipe.bytes, descriptor);
+    if (descriptor.p3b2.entry.mode !== (ownerSelection?.compiled ? 0o500 : 0o555))
+      throw new Error('p3c_descriptor_owner_entry_mode');
     const [harness, toolchain, productRuntime, browserBundle, p3b2] = await Promise.all([
       verifyClosure(roots.harness, descriptor.product.harnessClosure),
       verifyClosure(roots.toolchain, descriptor.toolchain.closure),
@@ -859,13 +865,25 @@ export async function admitIntegration(
     );
     const ownerEntry = await verify(roots.p3b2, descriptor.p3b2.entry, 1024 ** 3);
     const supervisor = await verify(roots.p3b2, descriptor.p3b2.supervisor, 1024 ** 3);
-    const ownerLaunch = ownerSelection === undefined ? undefined : Object.freeze({
-      selection: ownerSelection, executable: await verify(roots.p3b2, ownerSelection.executable, 1024 ** 3),
-      helper: await verify(roots.p3b2, ownerSelection.helper, 1024 ** 3),
-      ...(ownerSelection.supervisor ? {
-        supervisorModule: await verify(roots.p3b2, ownerSelection.supervisor.module, 32 * 1024 * 1024),
-      } : {}),
-    });
+    const ownerLaunch =
+      ownerSelection === undefined
+        ? undefined
+        : Object.freeze({
+            selection: ownerSelection,
+            executable: ownerSelection.compiled
+              ? ownerEntry
+              : await verify(roots.p3b2, ownerSelection.executable, 1024 ** 3),
+            helper: await verify(roots.p3b2, ownerSelection.helper, 1024 ** 3),
+            ...(ownerSelection.supervisor
+              ? {
+                  supervisorModule: await verify(
+                    roots.p3b2,
+                    ownerSelection.supervisor.module,
+                    32 * 1024 * 1024
+                  ),
+                }
+              : {}),
+          });
     const compositionEntry = await verify(
       roots.productRuntime,
       descriptor.product.compositionEntry,
@@ -933,9 +951,13 @@ export async function admitIntegration(
     verifyBuildProvenanceBundle(buildProvenanceBundle.bytes, releaseManifest.bytes);
     verifyBrowserDescriptor(browserDescriptor.bytes, descriptor);
 
-    const publicArtifacts = Object.freeze({ freeze: freeze.anchor, harnessReview: harnessReview.anchor,
-      oneRunAuthorization: oneRunAuthorization.anchor, harnessReviewerPublicKey: harnessReviewerPublicKey.anchor,
-      runAuthorizationPublicKey: runAuthorizationPublicKey.anchor });
+    const publicArtifacts = Object.freeze({
+      freeze: freeze.anchor,
+      harnessReview: harnessReview.anchor,
+      oneRunAuthorization: oneRunAuthorization.anchor,
+      harnessReviewerPublicKey: harnessReviewerPublicKey.anchor,
+      runAuthorizationPublicKey: runAuthorizationPublicKey.anchor,
+    });
     const selectedSupervisorArtifacts = ownerSelection?.supervisor ? publicArtifacts : undefined;
 
     await closeAnchors([
@@ -987,10 +1009,20 @@ export async function admitIntegration(
 }
 
 export async function closeAdmission(admission: PreflightAdmission): Promise<void> {
-  await closeAnchors([...Object.values(admission.execution), ...Object.values(admission.roots),
+  await closeAnchors([
+    ...Object.values(admission.execution),
+    ...Object.values(admission.roots),
     ...Object.values(admission.selectedSupervisorArtifacts ?? {}),
-    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper,
-      ...(admission.ownerLaunch.supervisorModule ? [admission.ownerLaunch.supervisorModule] : [])] : [])]);
+    ...(admission.ownerLaunch
+      ? [
+          admission.ownerLaunch.executable,
+          admission.ownerLaunch.helper,
+          ...(admission.ownerLaunch.supervisorModule
+            ? [admission.ownerLaunch.supervisorModule]
+            : []),
+        ]
+      : []),
+  ]);
 }
 
 export async function consumeOneRunAuthorization(

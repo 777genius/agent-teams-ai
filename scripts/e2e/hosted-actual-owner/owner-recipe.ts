@@ -1,7 +1,10 @@
 import { canonicalJson, exactRecord, sha256 } from './supervisor/canonical';
 import type { FilePin, IntegrationDescriptor } from './contracts';
 import { OPENCODE_IDENTITIES } from './open-code-identities';
-import { parseSelectedSupervisorInvocation, type SelectedSupervisorInvocation } from './supervisor/selected-invocation';
+import {
+  parseSelectedSupervisorInvocation,
+  type SelectedSupervisorInvocation,
+} from './supervisor/selected-invocation';
 import { OWNER_V2_ARGV, type OwnerSourceInvocation } from './owner-child-protocol';
 import { parseSelectedKernelPin } from './supervisor/selected-kernel-pin';
 
@@ -13,7 +16,10 @@ export interface OwnerLaunchSelectionV2 {
   readonly recipeSha256: string;
   readonly executable: PrivateOwnerImagePin;
   readonly helper: PrivateOwnerImagePin;
-  readonly source: OwnerSourceInvocation;
+  readonly source?: OwnerSourceInvocation;
+  readonly compiled?: {
+    readonly module: { readonly path: '/p3b2/bin/hosted-owner'; readonly sha256: string };
+  };
   readonly supervisor?: SelectedSupervisorInvocation;
 }
 function check(value: unknown, reason: string): asserts value {
@@ -21,20 +27,44 @@ function check(value: unknown, reason: string): asserts value {
 }
 function parseCanonicalObject(bytes: Buffer, label: string): Record<string, unknown> {
   let value: unknown;
-  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
-  catch { throw new Error(`p3c_${label}_json`); }
+  try {
+    value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } catch {
+    throw new Error(`p3c_${label}_json`);
+  }
   if (canonicalJson(value) !== bytes.toString('utf8')) throw new Error(`p3c_${label}_noncanonical`);
   return value as Record<string, unknown>;
 }
 function privateImage(value: unknown): PrivateOwnerImagePin {
-  const p = exactRecord(value, ['root', 'relativePath', 'sha256', 'size', 'mode', 'device', 'inode', 'nlink'], 'owner_image');
-  check(p.root === 'p3b2' && p.mode === 0o500 && p.nlink === 1 && Number.isSafeInteger(p.size) &&
-    Number(p.size) > 0 && Number(p.size) <= 1024 ** 3, 'image_metadata');
-  check(typeof p.relativePath === 'string' && /^[\x21-\x7e]{1,512}$/u.test(p.relativePath) &&
-    !p.relativePath.includes('\\') && p.relativePath.split('/').every(s => s && s !== '.' && s !== '..'), 'image_path');
+  const p = exactRecord(
+    value,
+    ['root', 'relativePath', 'sha256', 'size', 'mode', 'device', 'inode', 'nlink'],
+    'owner_image'
+  );
+  check(
+    p.root === 'p3b2' &&
+      p.mode === 0o500 &&
+      p.nlink === 1 &&
+      Number.isSafeInteger(p.size) &&
+      Number(p.size) > 0 &&
+      Number(p.size) <= 1024 ** 3,
+    'image_metadata'
+  );
+  check(
+    typeof p.relativePath === 'string' &&
+      /^[\x21-\x7e]{1,512}$/u.test(p.relativePath) &&
+      !p.relativePath.includes('\\') &&
+      p.relativePath.split('/').every((s) => s && s !== '.' && s !== '..'),
+    'image_path'
+  );
   check(typeof p.sha256 === 'string' && /^[0-9a-f]{64}$/u.test(p.sha256), 'image_digest');
-  for (const n of [p.device, p.inode]) check(typeof n === 'string' && /^(?:0|[1-9][0-9]{0,19})$/u.test(n) &&
-    BigInt(n) <= 0xffffffffffffffffn, 'image_identity');
+  for (const n of [p.device, p.inode])
+    check(
+      typeof n === 'string' &&
+        /^(?:0|[1-9][0-9]{0,19})$/u.test(n) &&
+        BigInt(n) <= 0xffffffffffffffffn,
+      'image_identity'
+    );
   check(p.inode !== '0', 'image_inode');
   return Object.freeze({ ...p }) as unknown as PrivateOwnerImagePin;
 }
@@ -44,62 +74,186 @@ function privateImage(value: unknown): PrivateOwnerImagePin {
  * including the recipe, then freeze both digests. V2 must not embed its enclosing root.
  * This parser checks recipe bytes against that descriptor; it does not grant freeze authority.
  */
-export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): OwnerLaunchSelectionV2 | undefined {
+export function verifyP3B2Recipe(
+  bytes: Buffer,
+  descriptor: IntegrationDescriptor
+): OwnerLaunchSelectionV2 | undefined {
+  check(bytes.length <= 16 * 1024 * 1024, 'size');
   const value = parseCanonicalObject(bytes, 'p3b2_recipe');
-  if (value.schemaVersion === 1) { verifyLegacyP3B2Recipe(bytes, descriptor); return undefined; }
-  const selectedSupervisor = value.schemaVersion === 3;
-  const r = exactRecord(value, ['schemaVersion', 'purpose', 'sourceBaseCommit', 'resultCommit', 'entry',
-    'supervisor', 'candidateOpenCodeSha256', 'argv', 'sourceTreeRequired', 'accepted',
-    'sourceInvocation', 'launchHelper', ...(selectedSupervisor ? ['supervisorInvocation'] : []),
-    ...(selectedSupervisor && Object.hasOwn(value, 'nativeComposition') ? ['nativeComposition'] : [])], 'owner_recipe_v2');
+  if (value.schemaVersion === 1) {
+    verifyLegacyP3B2Recipe(bytes, descriptor);
+    return undefined;
+  }
+  const compiled = value.schemaVersion === 4;
+  const selectedSupervisor = value.schemaVersion === 3 || compiled;
+  const r = exactRecord(
+    value,
+    [
+      'schemaVersion',
+      'purpose',
+      'sourceBaseCommit',
+      'resultCommit',
+      'entry',
+      'supervisor',
+      'candidateOpenCodeSha256',
+      'argv',
+      'sourceTreeRequired',
+      'accepted',
+      ...(compiled ? ['compiledInvocation'] : ['sourceInvocation']),
+      'launchHelper',
+      ...(selectedSupervisor ? ['supervisorInvocation'] : []),
+      ...(selectedSupervisor && Object.hasOwn(value, 'nativeComposition')
+        ? ['nativeComposition']
+        : []),
+    ],
+    'owner_recipe_v2'
+  );
   const selected = descriptor.p3b2;
-  check((selectedSupervisor
-    ? r.purpose === 'agent-teams.p3b2.selected-native-supervisor/v3'
-    : r.schemaVersion === 2 && r.purpose === 'agent-teams.p3b2.source-actual-owner-entry/v2') &&
-    sha256(bytes) === selected.recipeSha256 && sha256(bytes) === selected.recipe.sha256, 'version_digest');
-  check(r.sourceBaseCommit === selected.sourceBaseCommit && r.resultCommit === selected.resultCommit &&
-    canonicalJson(r.entry) === canonicalJson({ relativePath: selected.entry.relativePath, sha256: selected.entry.sha256 }) &&
-    canonicalJson(r.supervisor) === canonicalJson({ relativePath: selected.supervisor.relativePath, sha256: selected.supervisor.sha256 }) &&
-    r.accepted === true && r.sourceTreeRequired === true &&
-    r.candidateOpenCodeSha256 === descriptor.openCode.linuxX64Binary.sha256 &&
-    r.candidateOpenCodeSha256 === descriptor.openCode.identities.linuxX64BinarySha256, 'binding');
-  const source = exactRecord(r.sourceInvocation, ['format', 'executable', 'module'], 'owner_source');
+  check(
+    (selectedSupervisor
+      ? r.purpose ===
+        (compiled
+          ? 'agent-teams.p3b2.compiled-actual-owner-entry/v4'
+          : 'agent-teams.p3b2.selected-native-supervisor/v3')
+      : r.schemaVersion === 2 && r.purpose === 'agent-teams.p3b2.source-actual-owner-entry/v2') &&
+      sha256(bytes) === selected.recipeSha256 &&
+      sha256(bytes) === selected.recipe.sha256,
+    'version_digest'
+  );
+  check(
+    r.sourceBaseCommit === selected.sourceBaseCommit &&
+      r.resultCommit === selected.resultCommit &&
+      canonicalJson(r.entry) ===
+        canonicalJson({
+          relativePath: selected.entry.relativePath,
+          sha256: selected.entry.sha256,
+        }) &&
+      canonicalJson(r.supervisor) ===
+        canonicalJson({
+          relativePath: selected.supervisor.relativePath,
+          sha256: selected.supervisor.sha256,
+        }) &&
+      r.accepted === true &&
+      r.sourceTreeRequired === !compiled &&
+      r.candidateOpenCodeSha256 === descriptor.openCode.linuxX64Binary.sha256 &&
+      r.candidateOpenCodeSha256 === descriptor.openCode.identities.linuxX64BinarySha256,
+    'binding'
+  );
+  const source = exactRecord(
+    compiled ? r.compiledInvocation : r.sourceInvocation,
+    ['format', 'executable', 'module'],
+    'owner_source'
+  );
   const module = exactRecord(source.module, ['path', 'sha256'], 'owner_source_module');
-  const executable = privateImage(source.executable), helper = privateImage(r.launchHelper);
+  const executable = privateImage(source.executable),
+    helper = privateImage(r.launchHelper);
   const supervisor = selectedSupervisor
-    ? parseSelectedSupervisorInvocation(r.supervisorInvocation, descriptor) : undefined;
+    ? parseSelectedSupervisorInvocation(r.supervisorInvocation, descriptor)
+    : undefined;
   let preparationModule: FilePin | undefined;
   let kernelModule: FilePin | undefined;
   if (r.nativeComposition !== undefined) {
-    const composition = exactRecord(r.nativeComposition, ['format', 'serverAuthFormat', 'preparationModule', 'kernelModule'], 'native_composition');
-    check(composition.format === 'agent-teams.hosted-selected-native-composition/v1' &&
-      composition.serverAuthFormat === 'agent-teams.hosted-control.opencode-server-auth/v2', 'composition_version');
+    const composition = exactRecord(
+      r.nativeComposition,
+      ['format', 'serverAuthFormat', 'preparationModule', 'kernelModule'],
+      'native_composition'
+    );
+    check(
+      composition.format === 'agent-teams.hosted-selected-native-composition/v1' &&
+        composition.serverAuthFormat === 'agent-teams.hosted-control.opencode-server-auth/v2',
+      'composition_version'
+    );
     // Reuse the selected module parser's complete CJS pin/path/alias checks.
-    const parsed = parseSelectedSupervisorInvocation({ ...r.supervisorInvocation as object,
-      module: composition.preparationModule,
-      argv: ['--selected-namespace-v1', descriptor.toolchain.loader.relativePath,
-        descriptor.toolchain.node.relativePath, (composition.preparationModule as FilePin)?.relativePath],
-    }, descriptor);
+    const parsed = parseSelectedSupervisorInvocation(
+      {
+        ...(r.supervisorInvocation as object),
+        module: composition.preparationModule,
+        argv: [
+          '--selected-namespace-v1',
+          descriptor.toolchain.loader.relativePath,
+          descriptor.toolchain.node.relativePath,
+          (composition.preparationModule as FilePin)?.relativePath,
+        ],
+      },
+      descriptor
+    );
     preparationModule = parsed.module;
     kernelModule = parseSelectedKernelPin(composition.kernelModule);
-    check(supervisor && preparationModule.relativePath !== supervisor.module.relativePath &&
-      `${preparationModule.device}:${preparationModule.inode}` !== `${supervisor.module.device}:${supervisor.module.inode}`, 'preparation_alias');
+    check(
+      supervisor &&
+        preparationModule.relativePath !== supervisor.module.relativePath &&
+        `${preparationModule.device}:${preparationModule.inode}` !==
+          `${supervisor.module.device}:${supervisor.module.inode}`,
+      'preparation_alias'
+    );
   }
-  check(source.format === 'agent-teams.hosted-owner-source-invocation/v1' &&
-    module.path === `/p3b2/${selected.entry.relativePath}` && module.sha256 === selected.entry.sha256 &&
-    /\.(?:ts|tsx|mts)$/u.test(selected.entry.relativePath), 'module');
-  const pins = [executable, helper, selected.entry, selected.supervisor, selected.recipe,
-    ...(supervisor ? [supervisor.module] : []), ...(preparationModule ? [preparationModule] : []),
-    ...(kernelModule ? [kernelModule] : [])];
-  check(new Set(pins.map(p => p.relativePath)).size === pins.length &&
-    new Set(pins.map(p => `${p.device}:${p.inode}`)).size === pins.length, 'image_alias');
-  check(canonicalJson(r.argv) === canonicalJson(['run', module.path, ...OWNER_V2_ARGV]), 'argv');
-  return Object.freeze({ protocolVersion: 2, recipeSha256: selected.recipeSha256, executable, helper,
-    ...(supervisor ? { supervisor } : {}), ...(preparationModule ? { preparationModule } : {}),
+  if (compiled) {
+    check(
+      source.format === 'agent-teams.hosted-owner-compiled-invocation/v1' &&
+        executable.relativePath === 'bin/hosted-owner' &&
+        canonicalJson(executable) === canonicalJson(selected.entry) &&
+        module.path === '/p3b2/bin/hosted-owner' &&
+        module.sha256 === executable.sha256,
+      'compiled_module'
+    );
+  } else {
+    check(
+      source.format === 'agent-teams.hosted-owner-source-invocation/v1' &&
+        module.path === `/p3b2/${selected.entry.relativePath}` &&
+        module.sha256 === selected.entry.sha256 &&
+        /\.(?:ts|tsx|mts)$/u.test(selected.entry.relativePath),
+      'module'
+    );
+  }
+  const pins = [
+    executable,
+    helper,
+    ...(compiled ? [] : [selected.entry]),
+    selected.supervisor,
+    selected.recipe,
+    ...(supervisor ? [supervisor.module] : []),
+    ...(preparationModule ? [preparationModule] : []),
+    ...(kernelModule ? [kernelModule] : []),
+  ];
+  check(
+    new Set(pins.map((p) => p.relativePath)).size === pins.length &&
+      new Set(pins.map((p) => `${p.device}:${p.inode}`)).size === pins.length,
+    'image_alias'
+  );
+  check(
+    canonicalJson(r.argv) ===
+      canonicalJson(compiled ? OWNER_V2_ARGV : ['run', module.path, ...OWNER_V2_ARGV]),
+    'argv'
+  );
+  return Object.freeze({
+    protocolVersion: 2,
+    recipeSha256: selected.recipeSha256,
+    executable,
+    helper,
+    ...(supervisor ? { supervisor } : {}),
+    ...(preparationModule ? { preparationModule } : {}),
     ...(kernelModule ? { kernelModule } : {}),
-    source: Object.freeze({ format: 'agent-teams.hosted-owner-source-invocation/v1',
-      executable: Object.freeze({ device: executable.device, inode: executable.inode, sha256: executable.sha256 }),
-      module: Object.freeze({ path: module.path as string, sha256: selected.entry.sha256 }) }) });
+    ...(compiled
+      ? {
+          compiled: Object.freeze({
+            module: Object.freeze({
+              path: '/p3b2/bin/hosted-owner' as const,
+              sha256: executable.sha256,
+            }),
+          }),
+        }
+      : {
+          source: Object.freeze({
+            format: 'agent-teams.hosted-owner-source-invocation/v1',
+            executable: Object.freeze({
+              device: executable.device,
+              inode: executable.inode,
+              sha256: executable.sha256,
+            }),
+            module: Object.freeze({ path: module.path as string, sha256: selected.entry.sha256 }),
+          }),
+        }),
+  });
 }
 function verifyLegacyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): void {
   const recipe = exactRecord(
@@ -145,8 +299,13 @@ function verifyLegacyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor
 }
 
 export function selectedOwnerImages(selection?: OwnerLaunchSelectionV2): readonly FilePin[] {
-  return selection === undefined ? [] : [selection.executable, selection.helper,
-    ...(selection.supervisor ? [selection.supervisor.module] : []),
-    ...(selection.preparationModule ? [selection.preparationModule] : []),
-    ...(selection.kernelModule ? [selection.kernelModule] : [])];
+  return selection === undefined
+    ? []
+    : [
+        selection.executable,
+        selection.helper,
+        ...(selection.supervisor ? [selection.supervisor.module] : []),
+        ...(selection.preparationModule ? [selection.preparationModule] : []),
+        ...(selection.kernelModule ? [selection.kernelModule] : []),
+      ];
 }

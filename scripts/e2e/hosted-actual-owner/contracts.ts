@@ -30,11 +30,15 @@ export const AUDITED_PRODUCT_COMMIT = 'd71671599c062244767494d392575cfacba5e1ff'
 export const AUDITED_PRODUCT_TREE = 'af7fa38ec50893550ce14026c39b428f8dbfd1f2' as const;
 export const P3B_SOURCE_COMMIT = '459eae38e60a1463ca2b7b077047bc18e4ab3bcc' as const;
 
-
 export const PRODUCT_ORIGIN = 'http://127.0.0.1:45131' as const;
 export const INTEGRATION_DESCRIPTOR_FD = 3;
 export const BROWSER_OBSERVATION_FD = 4;
-export { OWNER_CHILD_FDS, OWNER_WRAPPER_ARGUMENT, OWNER_SEALED_PROTOCOL_ARGUMENT, OWNER_CHILD_PROTOCOL } from './owner-child-protocol';
+export {
+  OWNER_CHILD_FDS,
+  OWNER_WRAPPER_ARGUMENT,
+  OWNER_SEALED_PROTOCOL_ARGUMENT,
+  OWNER_CHILD_PROTOCOL,
+} from './owner-child-protocol';
 
 export const ROOT_NAMES = Object.freeze([
   'harness',
@@ -126,9 +130,7 @@ export const PRODUCER_PROVENANCE_CONTRACT = Object.freeze({
 });
 
 /** Digest of the exact shared, LF-terminated, repo-neutral contract artifact bytes. */
-export const PRODUCER_PROVENANCE_CONTRACT_SHA256 = sha256(
-  producerProvenanceContractArtifact
-);
+export const PRODUCER_PROVENANCE_CONTRACT_SHA256 = sha256(producerProvenanceContractArtifact);
 if (
   Buffer.byteLength(producerProvenanceContractArtifact) !== 56_415 ||
   PRODUCER_PROVENANCE_CONTRACT_SHA256 !==
@@ -300,7 +302,10 @@ export interface RawRecord {
 export const ORDERED_PRODUCER_IDENTITIES = Object.freeze([
   Object.freeze({ role: 'browser', implementationId: 'agent-teams.product.browser-observer.v1' }),
   Object.freeze({ role: 'opencode', implementationId: 'agent-teams.opencode.hosted-approval.v1' }),
-  Object.freeze({ role: 'owner', implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1' }),
+  Object.freeze({
+    role: 'owner',
+    implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1',
+  }),
   Object.freeze({
     role: 'product-producer',
     implementationId: 'agent-teams.product.hosted-approval.v1',
@@ -567,7 +572,7 @@ function rootPin(value: unknown, label: string): RootPin {
   });
 }
 
-function filePin(value: unknown, label: string): FilePin {
+function filePin(value: unknown, label: string, allowPrivateEntry = false): FilePin {
   const item = exactRecord(
     value,
     ['root', 'relativePath', 'sha256', 'size', 'mode', 'device', 'inode', 'nlink'],
@@ -580,7 +585,11 @@ function filePin(value: unknown, label: string): FilePin {
     (item.size as number) > 1024 ** 3
   )
     throw new TypeError(`p3c_${label}_size`);
-  if (![0o400, 0o444, 0o555].includes(item.mode as number) || item.nlink !== 1)
+  if (
+    (![0o400, 0o444, 0o555].includes(item.mode as number) &&
+      !(allowPrivateEntry && item.mode === 0o500)) ||
+    item.nlink !== 1
+  )
     throw new TypeError(`p3c_${label}_metadata`);
   return Object.freeze({
     root: item.root as RootName,
@@ -899,7 +908,8 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     p3b2: Object.freeze({
       sourceBaseCommit: P3B_SOURCE_COMMIT,
       resultCommit: p3b2Result,
-      entry: filePin(p3b2.entry, 'p3b2_entry'),
+      // Recipe admission subsequently requires 0500 for v4 and 0555 for source/legacy.
+      entry: filePin(p3b2.entry, 'p3b2_entry', true),
       supervisor: filePin(p3b2.supervisor, 'p3b2_supervisor'),
       recipe: p3b2Recipe,
       closure: closurePin(p3b2.closure, 'p3b2_closure'),
@@ -959,8 +969,14 @@ export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProduc
   const item = exactRecord(
     parseCanonicalCandidateDocument(bytes, 'producer_candidate'),
     [
-      'contract', 'contractSha256', 'producers', 'productionEligible', 'purpose',
-      'releaseEligible', 'schemaVersion', 'signedBuildProvenanceRequired',
+      'contract',
+      'contractSha256',
+      'producers',
+      'productionEligible',
+      'purpose',
+      'releaseEligible',
+      'schemaVersion',
+      'signedBuildProvenanceRequired',
     ],
     'producer_candidate'
   );
@@ -981,8 +997,14 @@ export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProduc
     const producer = exactRecord(
       value,
       [
-        'artifactManifestSha256', 'executableSha256', 'implementationId', 'moduleSha256',
-        'role', 'sourceCommit', 'sourceRepository', 'sourceTree',
+        'artifactManifestSha256',
+        'executableSha256',
+        'implementationId',
+        'moduleSha256',
+        'role',
+        'sourceCommit',
+        'sourceRepository',
+        'sourceTree',
       ],
       `producer_candidate_producer_${index}`
     );
@@ -1004,7 +1026,10 @@ export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProduc
     }
     return Object.freeze(producer) as SignedProducerCandidatePayload['producers'][number];
   });
-  return Object.freeze({ ...item, producers: Object.freeze(producers) }) as unknown as SignedProducerCandidatePayload;
+  return Object.freeze({
+    ...item,
+    producers: Object.freeze(producers),
+  }) as unknown as SignedProducerCandidatePayload;
 }
 
 export function parseProducerCandidateSignatureSidecar(
