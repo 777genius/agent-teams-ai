@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
+import { stripTypeScriptTypes } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
@@ -9,6 +10,32 @@ import {
   preserveRotatedSelectedOAuth,
   runMixedTeamSmoke,
 } from '../../scripts/prove-opencode-mixed-team.mjs';
+
+// These helpers have no application imports; Node's type stripping exercises the same
+// predicates used by both paid suites without loading Vitest or any provider runtime.
+async function importOfflineHelper(relativePath) {
+  const url = new URL(relativePath, import.meta.url);
+  const source = fs.readFileSync(url, 'utf8').replaceAll('import.meta.url', JSON.stringify(url.href));
+  const javascript = stripTypeScriptTypes(source);
+  return import(`data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`);
+}
+const evidenceHelpers = await importOfflineHelper('../main/services/team/openCodeMixedTeamEvidence.ts');
+const diagnosticsHelpers = await importOfflineHelper('../main/services/team/openCodeFullTeamProofDiagnostics.ts');
+
+
+function passingProof() {
+  const names = ['zai-one', 'zai-two', 'grok-one', 'grok-two'];
+  const models = ['zai-coding-plan/model', 'xai/grok-test'];
+  return {
+    status: 'passed', cleanupConfirmed: true, models, runId: 'mixed-run',
+    finalStopConfirmed: true, independentAssertionsPassed: true,
+    sessions: names.map((name, i) => ({ name, model: models[i < 2 ? 0 : 1], sessionId: `session-${i}` })),
+    tasks: names.map((owner, i) => ({ owner, taskId: `task-${i}` })),
+    evidence: names.map((member, i) => ({ member, model: models[i < 2 ? 0 : 1], taskId: `task-${i}`,
+      status: 'completed', sha256: 'a'.repeat(64), executionMarker: `EXEC:${member}:${i}-nonce` })),
+    peerAcknowledgements: names.map((to, i) => ({ to, from: names[(i + 2) % 4], token: `ACK:${i}-nonce` })),
+  };
+}
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mixed-team-wrapper-TEST-'));
@@ -21,9 +48,12 @@ function fixture() {
       unrelated: { type: 'api', key: 'unrelated-synthetic-secret' },
     })
   );
+  fs.writeFileSync(path.join(root, 'vitest.mjs'), '// synthetic entry; never executed');
   return {
     root,
     env: {
+      OPENCODE_E2E: '1',
+      OPENCODE_E2E_MIXED_TEAM: '1',
       OPENCODE_E2E_ZAI_MODEL: 'zai-coding-plan/model',
       OPENCODE_E2E_SUPERGROK_MODEL: 'xai/grok-test',
       CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: process.execPath,
@@ -43,6 +73,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
   let input;
   try {
     const status = await runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
       sourceEnv: {
         ...env,
         HOME: '/real-home',
@@ -52,6 +83,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
       log() {},
       preflight: async (value) => {
         input = value;
+        await evidenceHelpers.assertOwnedSmokeEnvironment(value.env, 'MIXED');
         assert.deepEqual(value.requiredModels, ['zai-coding-plan/model', 'xai/grok-test']);
         assert.equal(value.projectPath, fs.realpathSync(value.projectPath));
         assert.equal(value.env.OPENCODE_E2E_OWNED_PROJECT_PATH, value.projectPath);
@@ -79,15 +111,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
         assert.equal(options.timeout, 30 * 60_000);
         fs.writeFileSync(
           path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
-          JSON.stringify({
-            status: 'passed',
-            cleanupConfirmed: true,
-            models: ['zai-coding-plan/model', 'xai/grok-test'],
-            finalStopConfirmed: true,
-            independentAssertionsPassed: true,
-            evidence: [{}, {}, {}, {}],
-            peerAcknowledgements: [{}, {}, {}, {}],
-          })
+          JSON.stringify(passingProof())
         );
         return { status: 0 };
       },
@@ -114,6 +138,7 @@ test('fails missing explicit prerequisites before launching or reading source cr
     ]) {
       await assert.rejects(
         runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
           sourceEnv: { ...env, [key]: '' },
           preflight: () => assert.fail('must not launch'),
           spawn: () => assert.fail('must not launch'),
@@ -130,6 +155,7 @@ test('does not count missing model or zero exit without proof as successful clea
   let input;
   try {
     const status = await runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
       sourceEnv: env,
       log() {},
       preflight: async (value) => {
@@ -143,6 +169,7 @@ test('does not count missing model or zero exit without proof as successful clea
     cleanup(input);
     await assert.rejects(
       runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
         sourceEnv: env,
         log() {},
         preflight: async (value) => {
@@ -165,6 +192,7 @@ test('rejects external project and absent/non-OAuth SuperGrok before preflight',
     const mustReject = (sourceEnv) =>
       assert.rejects(
         runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
           sourceEnv,
           log() {},
           preflight: () => assert.fail('must not launch'),
@@ -217,6 +245,7 @@ test('fails successful inference cleanup if selected OAuth cannot be recovered',
   let input;
   try {
     const status = await runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
       sourceEnv: env,
       log() {},
       preflight: async (value) => {
@@ -226,15 +255,7 @@ test('fails successful inference cleanup if selected OAuth cannot be recovered',
       spawn: (_command, _args, { env: runEnv }) => {
         fs.writeFileSync(
           path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
-          JSON.stringify({
-            status: 'passed',
-            cleanupConfirmed: true,
-            finalStopConfirmed: true,
-            independentAssertionsPassed: true,
-            models: ['zai-coding-plan/model', 'xai/grok-test'],
-            evidence: [{}, {}, {}, {}],
-            peerAcknowledgements: [{}, {}, {}, {}],
-          })
+          JSON.stringify(passingProof())
         );
         fs.writeFileSync(path.join(runEnv.XDG_DATA_HOME, 'opencode/auth.json'), '{}');
         return { status: 0 };
@@ -246,4 +267,197 @@ test('fails successful inference cleanup if selected OAuth cannot be recovered',
     cleanup(input);
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('mixed wrapper requires both explicit opt-ins before credential access', async () => {
+  const { root, env } = fixture();
+  try {
+    for (const key of ['OPENCODE_E2E', 'OPENCODE_E2E_MIXED_TEAM']) {
+      await assert.rejects(runMixedTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'),
+        sourceEnv: { ...env, [key]: '0', OPENCODE_E2E_TEST_AUTH_PATH: '/must-not-read' },
+        preflight: () => assert.fail('must not launch'), spawn: () => assert.fail('must not launch'),
+      }), /opt-in required/);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('mixed wrapper rejects wrong member/model/task/ACK and empty evidence despite zero exit', async () => {
+  const { root, env } = fixture();
+  let input;
+  try {
+    for (const mutate of [
+      (proof) => { proof.evidence = [{}, {}, {}, {}]; },
+      (proof) => { proof.evidence[0].model = 'zai-coding-plan/fallback'; },
+      (proof) => { proof.evidence[0].taskId = 'foreign-task'; },
+      (proof) => { proof.evidence[1] = proof.evidence[0]; },
+      (proof) => { proof.sessions[1].sessionId = proof.sessions[0].sessionId; },
+      (proof) => { proof.peerAcknowledgements[0].from = 'zai-two'; },
+      (proof) => { proof.peerAcknowledgements[0].token += '-extra'; },
+    ]) {
+      await assert.rejects(runMixedTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: env, log() {},
+        preflight: async (value) => { input = value; return { ok: true }; },
+        spawn: (_command, _args, { env: runEnv }) => {
+          const proof = passingProof(); mutate(proof);
+          fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(proof));
+          return { status: 0 };
+        },
+      }), /complete cleanup-confirmed proof/);
+      assert.ok(fs.existsSync(input.env.HOME)); cleanup(input);
+    }
+  } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('OAuth handoff covers every selected provider and rejects lost refresh tokens', () => {
+  const { root, env } = fixture();
+  let handoff;
+  const initial = {
+    'zai-coding-plan': { type: 'oauth', access: 'synthetic-zai', refresh: 'synthetic-zai-refresh' },
+    xai: { type: 'oauth', access: 'synthetic-xai', refresh: 'synthetic-xai-refresh' },
+  };
+  try {
+    fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({ ...initial,
+      'zai-coding-plan': { ...initial['zai-coding-plan'], refresh: 'synthetic-zai-rotated' },
+      unrelated: { type: 'api', key: 'synthetic-unrelated' },
+    }));
+    handoff = preserveRotatedSelectedOAuth(JSON.stringify(initial), env.OPENCODE_E2E_TEST_AUTH_PATH);
+    const saved = JSON.parse(fs.readFileSync(handoff, 'utf8'));
+    assert.equal(saved['zai-coding-plan'].refresh, 'synthetic-zai-rotated');
+    assert.equal(saved.unrelated, undefined);
+    fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({ ...initial, xai: { type: 'oauth', access: 'synthetic-new' } }));
+    assert.throws(() => preserveRotatedSelectedOAuth(JSON.stringify(initial), env.OPENCODE_E2E_TEST_AUTH_PATH), /recovery unavailable/);
+  } finally {
+    if (handoff) fs.rmSync(path.dirname(handoff), { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+function toolTranscript(name, input, output = '', overrides = {}) {
+  return { data: { sessionId: 'session-1', messages: [{ role: 'assistant', providerId: 'selected',
+    modelId: 'model', contentBlocks: [
+      { type: 'tool_use', id: 'call-1', name, input },
+      { type: 'tool_result', toolUseId: 'call-1', status: 'completed', isError: false, contentText: output },
+    ], ...overrides }] } };
+}
+
+test('task completion requires the exact task, team and actor in a successful canonical tool', () => {
+  const { successfulTools, hasTaskCompletion } = evidenceHelpers;
+  const input = { teamName: 'test-team', taskId: 'task-1', actor: 'alice' };
+  assert.equal(hasTaskCompletion(successfulTools(toolTranscript('agent-teams_task_complete', input)), 'test-team', 'task-1', 'alice'), true);
+  for (const bad of [
+    { ...input, taskId: 'task-10', note: 'task-1' },
+    { ...input, teamName: 'foreign-team' }, { ...input, actor: 'bob' },
+    { note: JSON.stringify(input) },
+  ]) assert.equal(hasTaskCompletion(successfulTools(toolTranscript('agent-teams_task_complete', bad)), 'test-team', 'task-1', 'alice'), false);
+  assert.equal(hasTaskCompletion(successfulTools(toolTranscript('fake_task_complete_suffix', input)), 'test-team', 'task-1', 'alice'), false);
+  const failed = toolTranscript('agent-teams_task_complete', input);
+  failed.data.messages[0].contentBlocks[1].isError = true;
+  assert.equal(hasTaskCompletion(successfulTools(failed), 'test-team', 'task-1', 'alice'), false);
+});
+
+test('ACK proof checks exact sender, recipient and payload rather than incidental strings', () => {
+  const { successfulTools, hasMessage } = evidenceHelpers;
+  const input = { teamName: 'test-team', from: 'alice', to: 'bob', text: 'ACK:nonce' };
+  const accepted = (name, args) => hasMessage(successfulTools(toolTranscript(name, args)), 'test-team', 'alice', 'bob', 'ACK:nonce');
+  assert.equal(accepted('mcp__agent-teams__message_send', input), true);
+  for (const bad of [
+    { ...input, text: 'ACK:nonce-extra' }, { ...input, to: 'user' },
+    { ...input, from: 'bob' }, { ...input, teamName: 'foreign-team' },
+    { ...input, text: 'unrelated', summary: 'ACK:nonce' },
+  ]) assert.equal(accepted('agent-teams_message_send', bad), false);
+  assert.equal(accepted('fake_message_send', input), false);
+});
+
+test('execution markers cannot come from user echoes, tool names or longer output lines', () => {
+  const { successfulTools, hasExecution } = evidenceHelpers;
+  assert.equal(hasExecution(successfulTools(toolTranscript('bash', { command: 'node test.cjs' }, 'preamble\r\nEXEC:nonce\r\n')), 'EXEC:nonce'), true);
+  for (const raw of [
+    toolTranscript('fake_bash_tool', {}, 'EXEC:nonce'),
+    toolTranscript('bash', {}, 'command: echo EXEC:nonce'),
+    toolTranscript('bash', {}, 'EXEC:nonce-extra'),
+    toolTranscript('bash', {}, 'EXEC:nonce', { role: 'user' }),
+  ]) assert.equal(hasExecution(successfulTools(raw), 'EXEC:nonce'), false);
+});
+
+test('model and session proof reject missing attribution, stale sessions and mixed inference', () => {
+  const { assertTranscriptModel, assertTranscriptSession } = evidenceHelpers;
+  const transcript = toolTranscript('bash', {}, 'proof');
+  assert.doesNotThrow(() => assertTranscriptModel(transcript, 'selected/model'));
+  assert.doesNotThrow(() => assertTranscriptSession(transcript, 'session-1'));
+  assert.throws(() => assertTranscriptSession(transcript, 'stale-session'));
+  for (const added of [
+    { role: 'assistant', contentBlocks: [] },
+    { role: 'assistant', providerId: 'selected', modelId: 'fallback' },
+  ]) assert.throws(() => assertTranscriptModel({ data: { ...transcript.data, messages: [...transcript.data.messages, added] } }, 'selected/model'));
+  assert.throws(() => assertTranscriptSession({ data: { messages: transcript.data.messages } }, 'session-1'));
+  transcript.data.messages[0].sessionId = 'another-session';
+  assert.throws(() => assertTranscriptSession(transcript, 'session-1'));
+});
+
+test('Stop proof rejects empty snapshots, missing members and unrelated runs', () => {
+  const { assertStoppedSnapshot } = evidenceHelpers;
+  const snapshot = { runId: 'run-1', members: { alice: { alive: false }, bob: { alive: false } } };
+  assert.doesNotThrow(() => assertStoppedSnapshot(snapshot, 'run-1', ['alice', 'bob']));
+  assert.doesNotThrow(() => assertStoppedSnapshot({ ...snapshot, runId: null }, 'run-1', ['alice', 'bob']));
+  for (const bad of [null, {}, { ...snapshot, members: {} },
+    { ...snapshot, runId: 'other-run' }, { ...snapshot, members: { alice: { alive: false } } },
+    { ...snapshot, members: { alice: { alive: false }, bob: { alive: true } } },
+  ]) assert.throws(() => assertStoppedSnapshot(bad, 'run-1', ['alice', 'bob']));
+});
+
+test('partial harness setup closes its owned resource and redacts setup/close failures', async () => {
+  const { closeOnSetupFailure } = evidenceHelpers;
+  let closes = 0;
+  const resource = { close: async () => { closes++; } };
+  const value = await closeOnSetupFailure(resource, async () => 'ready');
+  assert.equal(value, 'ready'); assert.equal(closes, 0);
+  await assert.rejects(closeOnSetupFailure(resource, async () => { throw new Error('synthetic-provider-secret'); }),
+    (error) => error.message === 'Owned control API setup failed');
+  assert.equal(closes, 1);
+  await assert.rejects(closeOnSetupFailure({ close: async () => { throw new Error('synthetic-close-secret'); } },
+    async () => { throw new Error('synthetic-provider-secret'); }),
+  (error) => error.message === 'Owned control API setup failed; close not confirmed');
+});
+
+test('diagnostics tolerate cyclic/non-JSON errors and omit raw delivery details', () => {
+  const { classifyFailure } = diagnosticsHelpers;
+  const circular = {}; circular.self = circular;
+  for (const value of [circular, 1n, { toJSON() { throw new Error('synthetic-secret'); } }]) {
+    assert.equal(classifyFailure(value), 'unclassified');
+  }
+  const metadata = evidenceHelpers.relayMetadata({ attempted: 1, lastDelivery: {
+    reason: 'synthetic-secret', ledgerStatus: 'accepted', accepted: true, acceptanceUnknown: true,
+  } });
+  assert.equal(JSON.stringify(metadata).includes('synthetic-secret'), false);
+  assert.equal(metadata.acceptanceUnknown, true);
+  assert.equal(metadata.terminalFailure, false);
+});
+
+test('mixed timeout never retries uncertain provider effects or prints raw errors', async () => {
+  const { root, env } = fixture();
+  let input, spawns = 0;
+  const logs = [];
+  try {
+    await assert.rejects(runMixedTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: env,
+      log(message) { logs.push(message); },
+      preflight: async (value) => { input = value; return { ok: true }; },
+      spawn: () => { spawns++; return { status: null, error: new Error('synthetic-provider-secret') }; },
+    }), /Live test process failed; inspect owned state/);
+    assert.equal(spawns, 1);
+    assert.equal(logs.join('\n').includes('synthetic-provider-secret'), false);
+    assert.ok(fs.existsSync(input.env.HOME));
+  } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('failed proof persistence still resets process-wide Claude path isolation', async () => {
+  let resets = 0;
+  await assert.rejects(evidenceHelpers.finalizeProof(
+    async () => { throw new Error('synthetic-write-failure'); }, () => { resets++; }
+  ), /synthetic-write-failure/);
+  assert.equal(resets, 1);
+  await evidenceHelpers.finalizeProof(async () => {}, () => { resets++; });
+  assert.equal(resets, 2);
 });

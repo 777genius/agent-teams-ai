@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertTranscriptModel, relayMetadata, successfulTools } from './openCodeMixedTeamEvidence';
+import {
+  assertTranscriptModel,
+  assertTranscriptSession,
+  hasMessage,
+  hasTaskCompletion,
+  relayMetadata,
+  successfulTools,
+} from './openCodeMixedTeamEvidence';
 // These run offline even when the paid scenario is disabled.
 describe('mixed team tool evidence acceptance', () => {
   const use = { type: 'tool_use', id: 'call-1', name: 'bash', input: { command: 'echo proof' } };
@@ -16,7 +23,7 @@ describe('mixed team tool evidence acceptance', () => {
   }
   it('accepts only a successful completed assistant call/result pair', () => {
     expect(successfulTools(transcript('assistant', [use, result]))).toEqual([
-      { name: 'bash', input: '{"command":"echo proof"}', output: 'proof' },
+      { name: 'bash', input: { command: 'echo proof' }, output: 'proof' },
     ]);
   });
   it('rejects injected user text, mismatched results, running calls and tool errors', () => {
@@ -59,4 +66,24 @@ it('whitelists relay metadata and only rejects confirmed terminal failures', () 
       .terminalFailure
   ).toBe(false);
   expect(relayMetadata({ lastDelivery: { ledgerStatus: 'secret' } }).ledgerStatus).toBeNull();
+});
+
+
+it('rejects unattributed assistant rows and transcripts from another session', () => {
+  const transcript = { data: { sessionId: 'session-1', messages: [
+    { role: 'assistant', providerId: 'selected', modelId: 'requested' },
+  ] } };
+  expect(() => assertTranscriptSession(transcript, 'session-2')).toThrow();
+  expect(() => assertTranscriptModel({ data: { messages: [
+    ...transcript.data.messages, { role: 'assistant', contentBlocks: [] },
+  ] } }, 'selected/requested')).toThrow();
+});
+
+it('requires task and message identity in argument fields, never substrings or notes', () => {
+  const completion = { name: 'agent-teams_task_complete', output: '',
+    input: { teamName: 'test-team', taskId: 'task-10', actor: 'alice', note: 'task-1' } };
+  expect(hasTaskCompletion([completion], 'test-team', 'task-1', 'alice')).toBe(false);
+  const message = { name: 'agent-teams_message_send', output: '',
+    input: { teamName: 'test-team', from: 'bob', to: 'user', text: 'ACK:nonce' } };
+  expect(hasMessage([message], 'test-team', 'bob', 'alice', 'ACK:nonce')).toBe(false);
 });

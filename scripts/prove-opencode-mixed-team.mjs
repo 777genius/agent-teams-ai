@@ -10,6 +10,14 @@ import { fileURLToPath } from 'node:url';
 import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
 
+import {
+  assertOwnedSmokeEnvironment,
+  isCompleteSmokeProof,
+  ISOLATED_PATH_KEYS,
+  preserveSelectedOAuth,
+  writeSmokeOwnership,
+} from './prove-opencode-full-team.mjs';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export async function runMixedTeamSmoke({
@@ -19,6 +27,9 @@ export async function runMixedTeamSmoke({
   vitestEntryPath = path.join(repoRoot, 'node_modules/vitest/vitest.mjs'),
   log = console.log,
 } = {}) {
+  if (sourceEnv.OPENCODE_E2E !== '1' || sourceEnv.OPENCODE_E2E_MIXED_TEAM !== '1') {
+    throw new Error('Explicit OPENCODE_E2E=1 and OPENCODE_E2E_MIXED_TEAM=1 opt-in required');
+  }
   if (
     !path.isAbsolute(vitestEntryPath) ||
     !fs.existsSync(vitestEntryPath) ||
@@ -108,7 +119,7 @@ export async function runMixedTeamSmoke({
       );
     }
   }
-  const ownedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-'));
+  const ownedRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-')));
   let ownedProject;
   let isolatedAuthPath;
   const proofDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-proof-'));
@@ -138,6 +149,7 @@ export async function runMixedTeamSmoke({
         )
       ),
       CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binaryPath,
+      OPENCODE_E2E_OWNED_ROOT: ownedRoot,
       OPENCODE_E2E: '1',
       OPENCODE_E2E_MIXED_TEAM: '1',
       OPENCODE_E2E_PROJECT_PATH: projectPath,
@@ -148,21 +160,7 @@ export async function runMixedTeamSmoke({
       OPENCODE_DISABLE_AUTOUPDATE: '1',
     };
     // Credentials enter only via the explicit test input above; never inherit auth profiles.
-    for (const key of [
-      'HOME',
-      'USERPROFILE',
-      'APPDATA',
-      'LOCALAPPDATA',
-      'XDG_CONFIG_HOME',
-      'XDG_DATA_HOME',
-      'XDG_STATE_HOME',
-      'XDG_CACHE_HOME',
-      'CLAUDE_MULTIMODEL_DATA_HOME',
-      'CLAUDE_MULTIMODEL_CACHE_HOME',
-      'TMP',
-      'TEMP',
-      'TMPDIR',
-    ]) {
+    for (const key of ISOLATED_PATH_KEYS) {
       env[key] = path.join(ownedRoot, key.toLowerCase());
       fs.mkdirSync(env[key], { recursive: true });
     }
@@ -179,6 +177,8 @@ export async function runMixedTeamSmoke({
       env,
       repoRoot,
     });
+    writeSmokeOwnership(env, 'MIXED');
+    assertOwnedSmokeEnvironment(env, 'MIXED');
     log(
       `OpenCode mixed team proof: ${model}, project ${projectPath}, CLI ${env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH}`
     );
@@ -218,15 +218,7 @@ export async function runMixedTeamSmoke({
     if (result.error) throw new Error('Live test process failed; inspect owned state');
     if (result.status === 0) {
       const proof = JSON.parse(fs.readFileSync(path.join(proofDirectory, 'proof.json'), 'utf8'));
-      if (
-        proof.status !== 'passed' ||
-        proof.cleanupConfirmed !== true ||
-        proof.finalStopConfirmed !== true ||
-        proof.independentAssertionsPassed !== true ||
-        proof.evidence?.length !== 4 ||
-        proof.peerAcknowledgements?.length !== 4 ||
-        JSON.stringify(proof.models) !== JSON.stringify(models)
-      ) {
+      if (!isCompleteSmokeProof(proof, 'MIXED', models)) {
         throw new Error('Live test did not produce complete cleanup-confirmed proof');
       }
       completedSuccessfully = true;
@@ -259,19 +251,7 @@ export async function runMixedTeamSmoke({
 }
 
 export function preserveRotatedSelectedOAuth(initialJson, isolatedAuthPath) {
-  const initial = JSON.parse(initialJson);
-  const current = JSON.parse(fs.readFileSync(isolatedAuthPath, 'utf8'));
-  if (current?.xai?.type !== 'oauth') throw new Error('Selected OAuth state unavailable');
-  if (initial.xai.access === current.xai.access && initial.xai.refresh === current.xai.refresh)
-    return null;
-  const selected = Object.fromEntries(
-    Object.keys(initial).map((provider) => [provider, current[provider]])
-  );
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-auth-handoff-'));
-  fs.chmodSync(directory, 0o700);
-  const destination = path.join(directory, 'auth.json');
-  fs.writeFileSync(destination, JSON.stringify(selected), { mode: 0o600, flag: 'wx' });
-  return destination;
+  return preserveSelectedOAuth(initialJson, isolatedAuthPath);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

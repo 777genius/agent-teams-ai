@@ -5,33 +5,11 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 
-import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
-import { registerTeamRoutes } from '../../../../src/main/http/teams';
-import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
-import {
-  createOpenCodeBridgeCommandLeaseStore,
-  createOpenCodeBridgeCommandLedgerStore,
-} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import {
-  createOpenCodeBridgeClientIdentity,
-  OpenCodeBridgeCommandHandshakePort,
-} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeLaunchAuthorityWriter } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
-import { OpenCodeRuntimeManifestEvidenceReader } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
-import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
-import {
-  getTeamsBasePath,
-  setClaudeBasePathOverride,
-} from '../../../../src/main/utils/pathDecoder';
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import { assertOpenCodeSmokeCleanup } from './assertOpenCodeSmokeCleanup';
 import {
@@ -42,17 +20,32 @@ import {
   transcriptMetadata,
 } from './openCodeFullTeamProofDiagnostics';
 import {
-  buildLiveTeamControlApiServices,
   getRuntimeTranscript,
   waitForMemberInboxMessage,
   waitForOpenCodeLanesStopped,
   waitUntil,
 } from './openCodeLiveTestHarness';
+import {
+  assertOwnedSmokeEnvironment,
+  assertStoppedSnapshot,
+  assertTranscriptModel,
+  assertTranscriptSession,
+  finalizeProof,
+  hasExecution,
+  hasMessage,
+  hasTaskCompletion,
+  relayMetadata,
+  successfulTools,
+} from './openCodeMixedTeamEvidence';
+import { createMixedHarness as createHarness } from './openCodeMixedTeamHarness';
 
-import type { HttpServices } from '../../../../src/main/http';
+import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
-const liveDescribe = process.env.OPENCODE_E2E_FULL_TEAM === '1' ? describe : describe.skip;
+const liveDescribe =
+  process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_FULL_TEAM === '1'
+    ? describe
+    : describe.skip;
 const members = ['alice', 'bob'] as const;
 type Member = (typeof members)[number];
 type JsonRecord = Record<string, unknown>;
@@ -61,6 +54,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
   it(
     'executes cooperative board work, semantic peer replies, and fresh work after relaunch',
     async () => {
+      await assertOwnedSmokeEnvironment(process.env, 'FULL');
       const projectPath = requiredEnv('OPENCODE_E2E_PROJECT_PATH');
       const model = requiredEnv('OPENCODE_E2E_MODEL');
       const proofDirectory = requiredEnv('OPENCODE_E2E_PROOF_DIRECTORY');
@@ -283,20 +277,23 @@ liveDescribe('OpenCode full paid team collaboration', () => {
           });
           const calls = successfulTools(transcript);
           assertTranscriptModel(transcript, model);
+          assertTranscriptSession(transcript, snapshot.members[member].runtimeSessionId);
           const marker = member === 'alice' ? `ALICE_EXEC:${aliceNonce}` : `BOB_EXEC:${bobNonce}`;
-          expect(
-            calls.some((call) => /bash|shell|exec/.test(call.name) && call.output.includes(marker))
-          ).toBe(true);
-          expect(calls.some((call) => /task_complete/.test(call.name))).toBe(true);
+          expect(hasExecution(calls, marker)).toBe(true);
+          const taskId = member === 'alice' ? aliceTask.id : bobTask.id;
+          expect(hasTaskCompletion(calls, teamName, taskId, member)).toBe(true);
           const peerNonce = member === 'alice' ? bobNonce : aliceNonce;
+          const peer = member === 'alice' ? 'bob' : 'alice';
+          expect(hasMessage(calls, teamName, member, peer, `ACK:${peerNonce}`)).toBe(true);
           expect(
-            calls.some(
-              (call) => /message_send/.test(call.name) && call.input.includes(`ACK:${peerNonce}`)
-            )
+            hasMessage(calls, teamName, member, peer,
+              `CHALLENGE:${member === 'alice' ? aliceNonce : bobNonce}`)
           ).toBe(true);
           toolProofs.push({
             member,
-            successfulToolNames: [...new Set(calls.map((call) => call.name))],
+            executionConfirmed: true,
+            taskCompletionConfirmed: true,
+            peerResponseConfirmed: true,
             executionMarker: marker,
             peerResponse: `ACK:${peerNonce}`,
           });
@@ -324,7 +321,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         ]);
 
         await checkpoint('stop-before-relaunch');
-        await stopped(svc, teamName);
+        await stopped(svc, teamName, runId);
         proof.initialStopConfirmed = true;
         await checkpoint('relaunch');
         const relaunchProgress: TeamProvisioningProgress[] = [];
@@ -335,8 +332,13 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await ready(relaunchProgress);
         expect(relaunch.runId).not.toBe(runId);
         const relaunched = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(relaunched.runId).toBe(relaunch.runId);
+        expect(
+          new Set(members.map((member) => relaunched.members[member]?.runtimeSessionId)).size
+        ).toBe(2);
         for (const member of members) {
           expect(relaunched.members[member]).toMatchObject({ alive: true, runtimeModel: model });
+          expect(relaunched.members[member].runtimeSessionId).toBeTruthy();
         }
         await checkpoint('parallel-work-after-relaunch');
         const followups = await Promise.all(
@@ -376,15 +378,10 @@ liveDescribe('OpenCode full paid team collaboration', () => {
               projectPath,
             });
             assertTranscriptModel(transcript, model);
+            assertTranscriptSession(transcript, relaunched.members[member].runtimeSessionId);
             const calls = successfulTools(transcript);
-            expect(
-              calls.some(
-                (call) => /bash|shell|exec/.test(call.name) && call.output.includes(marker)
-              )
-            ).toBe(true);
-            expect(
-              calls.some((call) => /task_complete/.test(call.name) && call.input.includes(task.id))
-            ).toBe(true);
+            expect(hasExecution(calls, marker)).toBe(true);
+            expect(hasTaskCompletion(calls, teamName, task.id, member)).toBe(true);
           })
         );
         await verifyImplementation(projectPath);
@@ -402,7 +399,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
           ),
         };
         await checkpoint('final-stop');
-        await stopped(svc, teamName);
+        await stopped(svc, teamName, relaunch.runId);
         proof.finalStopConfirmed = true;
         proof.status = 'passed';
       } catch (error) {
@@ -451,8 +448,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         }
         proof.phase = phase;
         proof.finishedAt = new Date().toISOString();
-        await checkpoint(phase);
-        setClaudeBasePathOverride(null);
+        await finalizeProof(() => checkpoint(phase), () => setClaudeBasePathOverride(null));
       }
       if (cleanupFailure)
         throw new Error('Owned host cleanup not confirmed; failed state retained');
@@ -522,26 +518,14 @@ async function submitPeerOnce(
       source: 'manual',
     })
     .catch((error: unknown) => ({ error: classifyFailure(error) }));
-  const value = record(result);
-  const delivery = record(value?.lastDelivery);
-  return {
-    member,
-    messageId,
-    attempted: value?.attempted,
-    relayed: value?.relayed,
-    failed: value?.failed,
-    reason: delivery?.reason,
-    ledgerStatus: delivery?.ledgerStatus,
-    accepted: delivery?.accepted,
-    error: value?.error,
-  };
+  return { member, messageId, ...relayMetadata(result) };
 }
 
-async function stopped(svc: TeamProvisioningService, teamName: string): Promise<void> {
+async function stopped(svc: TeamProvisioningService, teamName: string, runId: string): Promise<void> {
   await svc.stopTeam(teamName);
   await waitForOpenCodeLanesStopped(teamName);
   const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
-  for (const name of members) expect(snapshot.members[name]?.alive ?? false).toBe(false);
+  assertStoppedSnapshot(snapshot, runId, members);
 }
 
 async function verifyImplementation(projectPath: string): Promise<void> {
@@ -577,124 +561,6 @@ async function fileHashes(projectPath: string, files: string[]): Promise<JsonRec
   );
 }
 
-// Read structured assistant tool evidence, never substring-match a user prompt or raw JSON dump.
-function successfulTools(transcript: unknown): { name: string; input: string; output: string }[] {
-  const data = record(record(transcript)?.data);
-  const messages = data?.messages;
-  if (!Array.isArray(messages)) return [];
-  const calls: { name: string; input: string; output: string }[] = [];
-  for (const rawMessage of messages) {
-    const message = record(rawMessage);
-    if (message?.role !== 'assistant' || !Array.isArray(message.contentBlocks)) continue;
-    const blocks = message.contentBlocks
-      .map(record)
-      .filter((block): block is JsonRecord => block !== null);
-    for (const block of blocks) {
-      if (
-        block.type !== 'tool_use' ||
-        typeof block.name !== 'string' ||
-        typeof block.id !== 'string'
-      )
-        continue;
-      const result = blocks.find(
-        (candidate) =>
-          candidate.type === 'tool_result' &&
-          candidate.toolUseId === block.id &&
-          candidate.isError !== true &&
-          candidate.status === 'completed'
-      );
-      if (result)
-        calls.push({
-          name: block.name,
-          input: JSON.stringify(block.input),
-          output: String(result.contentText ?? ''),
-        });
-    }
-  }
-  return calls;
-}
-function assertTranscriptModel(transcript: unknown, selected: string): void {
-  const messages = record(record(transcript)?.data)?.messages;
-  expect(Array.isArray(messages)).toBe(true);
-  const modelPairs = (Array.isArray(messages) ? messages : [])
-    .map(record)
-    .filter((message) => message?.role === 'assistant' && message.providerId && message.modelId)
-    .map((message) => `${message!.providerId}/${message!.modelId}`);
-  expect(modelPairs.length).toBeGreaterThan(0);
-  expect([...new Set(modelPairs)]).toEqual([selected]);
-}
-
-function record(value: unknown): JsonRecord | null {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as JsonRecord)
-    : null;
-}
-
-async function createHarness(tempDir: string, claudeRoot: string) {
-  const svc = new TeamProvisioningService();
-  const app = Fastify({ logger: false });
-  registerTeamRoutes(app, buildLiveTeamControlApiServices(svc) as HttpServices);
-  await app.listen({ host: '127.0.0.1', port: 0 });
-  const address = app.server.address();
-  if (!address || typeof address === 'string') throw new Error('Control API unavailable');
-  const baseUrl = `http://127.0.0.1:${address.port}`;
-  svc.setControlApiBaseUrlResolver(async () => baseUrl);
-  const mcp = await resolveAgentTeamsMcpLaunchSpec();
-  // Wrapper already allowlists process.env and provides isolated HOME/XDG paths.
-  const bridgeClient = new OpenCodeBridgeCommandClient({
-    binaryPath: requiredEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH'),
-    tempDirectory: path.join(tempDir, 'bridge-input'),
-    env: {
-      ...process.env,
-      AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
-      CLAUDE_TEAM_CONTROL_URL: baseUrl,
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcp.command,
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcp.args[0] ?? '',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcp.args),
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcp.env ?? {}),
-    },
-  });
-  const clientIdentity = createOpenCodeBridgeClientIdentity({
-    appVersion: '1.3.0-e2e',
-    gitSha: null,
-    buildId: 'full-team-proof',
-  });
-  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
-    expectedClientIdentity: clientIdentity,
-    handshakePort: new OpenCodeBridgeCommandHandshakePort({ bridge: bridgeClient, clientIdentity }),
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({
-      filePath: path.join(tempDir, 'leases.json'),
-    }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({ filePath: path.join(tempDir, 'ledger.json') }),
-    bridge: bridgeClient,
-    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
-      teamsBasePath: getTeamsBasePath(),
-    }),
-    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
-      teamsBasePath: getTeamsBasePath(),
-    }),
-  });
-  const readiness = new OpenCodeReadinessBridge(bridgeClient, {
-    stateChangingCommands,
-    timeoutMs: 180_000,
-    launchTimeoutMs: 180_000,
-    reconcileTimeoutMs: 90_000,
-    stopTimeoutMs: 90_000,
-  });
-  svc.setRuntimeAdapterRegistry(
-    new TeamRuntimeAdapterRegistry([new OpenCodeTeamRuntimeAdapter(readiness)])
-  );
-  return {
-    svc,
-    bridgeClient,
-    readiness,
-    close: async () => {
-      svc.setControlApiBaseUrlResolver(null);
-      await app.close();
-    },
-  };
-}
-
 // These run offline even when the paid scenario is disabled.
 describe('full team tool evidence acceptance', () => {
   const use = { type: 'tool_use', id: 'call-1', name: 'bash', input: { command: 'echo proof' } };
@@ -710,7 +576,7 @@ describe('full team tool evidence acceptance', () => {
   }
   it('accepts only a successful completed assistant call/result pair', () => {
     expect(successfulTools(transcript('assistant', [use, result]))).toEqual([
-      { name: 'bash', input: '{"command":"echo proof"}', output: 'proof' },
+      { name: 'bash', input: { command: 'echo proof' }, output: 'proof' },
     ]);
   });
   it('rejects injected user text, mismatched results, running calls and tool errors', () => {

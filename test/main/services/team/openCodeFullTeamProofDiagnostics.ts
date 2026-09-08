@@ -13,7 +13,12 @@ function finite(value: unknown): number | null {
 }
 export function classifyFailure(error: unknown): string {
   // Inspect in memory, persist only a finite enum. Never persist provider messages/bodies.
-  const text = error instanceof Error ? `${error.name} ${error.message}` : JSON.stringify(error);
+  let text: string | undefined;
+  try {
+    text = error instanceof Error ? `${error.name} ${error.message}` : JSON.stringify(error);
+  } catch {
+    return 'unclassified';
+  }
   for (const [pattern, classification] of [
     [/MessageAbortedError|message_aborted/, 'message_aborted'],
     [/ERR_ACCESS_DENIED|permission denied|permission.*reject|EACCES/i, 'permission_denied'],

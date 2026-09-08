@@ -24,12 +24,26 @@ import {
   waitForOpenCodeLanesStopped,
   waitUntil,
 } from './openCodeLiveTestHarness';
-import { assertTranscriptModel, relayMetadata, successfulTools } from './openCodeMixedTeamEvidence';
+import {
+  assertOwnedSmokeEnvironment,
+  assertStoppedSnapshot,
+  assertTranscriptModel,
+  assertTranscriptSession,
+  finalizeProof,
+  hasExecution,
+  hasMessage,
+  hasTaskCompletion,
+  relayMetadata,
+  successfulTools,
+} from './openCodeMixedTeamEvidence';
 import { createMixedHarness } from './openCodeMixedTeamHarness';
 
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
-const liveDescribe = process.env.OPENCODE_E2E_MIXED_TEAM === '1' ? describe : describe.skip;
+const liveDescribe =
+  process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_MIXED_TEAM === '1'
+    ? describe
+    : describe.skip;
 const names = ['zai-one', 'zai-two', 'grok-one', 'grok-two'];
 function required(key: string): string {
   const value = process.env[key]?.trim();
@@ -41,6 +55,7 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
   it(
     'proves four independent tasks, cross-provider challenge replies and confirmed stop',
     async () => {
+      await assertOwnedSmokeEnvironment(process.env, 'MIXED');
       const projectPath = required('OPENCODE_E2E_PROJECT_PATH');
       expect(projectPath).toBe(required('OPENCODE_E2E_OWNED_PROJECT_PATH'));
       expect(path.isAbsolute(projectPath)).toBe(true);
@@ -287,29 +302,15 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
             projectPath,
           });
           assertTranscriptModel(transcript, task.model);
+          assertTranscriptSession(transcript, snapshot.members[task.name].runtimeSessionId);
           const tools = successfulTools(transcript);
-          expect(
-            tools.some(
-              (tool) => /bash|shell|exec/.test(tool.name) && tool.output.includes(task.marker)
-            )
-          ).toBe(true);
-          expect(
-            tools.some(
-              (tool) => /task_complete/.test(tool.name) && tool.input.includes(task.taskId)
-            )
-          ).toBe(true);
+          expect(hasExecution(tools, task.marker)).toBe(true);
+          expect(hasTaskCompletion(tools, teamName, task.taskId, task.name)).toBe(true);
           const peer = tasks.find(({ name }) => name === task.peer)!;
           expect(
-            tools.some(
-              (tool) =>
-                /message_send/.test(tool.name) && tool.input.includes(`CHALLENGE:${task.nonce}`)
-            )
+            hasMessage(tools, teamName, task.name, task.peer, `CHALLENGE:${task.nonce}`)
           ).toBe(true);
-          expect(
-            tools.some(
-              (tool) => /message_send/.test(tool.name) && tool.input.includes(`ACK:${peer.nonce}`)
-            )
-          ).toBe(true);
+          expect(hasMessage(tools, teamName, task.name, task.peer, `ACK:${peer.nonce}`)).toBe(true);
           expect((await fs.lstat(path.join(projectPath, task.file))).isFile()).toBe(true);
           const script = `const a=require('node:assert/strict'),{sum}=require('./${task.file}');for(const [v,n] of [[[],0],[[2,-5,7],4],[[1.5,2.5],4],[[-2,-3],-5]])a.equal(sum(v),n);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
           await promisify(execFile)(
@@ -334,7 +335,7 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
         await svc.stopTeam(teamName);
         await waitForOpenCodeLanesStopped(teamName);
         const stopped = await svc.getTeamAgentRuntimeSnapshot(teamName);
-        for (const member of Object.values(stopped.members)) expect(member.alive).toBe(false);
+        assertStoppedSnapshot(stopped, runId, names);
         proof.finalStopConfirmed = true;
         proof.status = 'passed';
       } catch (error) {
@@ -385,8 +386,7 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
         );
         if (failed) proof.status = 'failed';
         proof.finishedAt = new Date().toISOString();
-        await checkpoint(phase);
-        setClaudeBasePathOverride(null);
+        await finalizeProof(() => checkpoint(phase), () => setClaudeBasePathOverride(null));
       }
       if (failed)
         throw new Error(

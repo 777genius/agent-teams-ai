@@ -84,3 +84,12 @@ describe('full-team bounded diagnostics', () => {
     );
   });
 });
+
+
+it('does not let non-serializable provider errors interrupt cleanup diagnostics', () => {
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+  expect(classifyFailure(circular)).toBe('unclassified');
+  expect(classifyFailure(1n)).toBe('unclassified');
+  expect(classifyFailure({ toJSON() { throw new Error('synthetic-secret'); } })).toBe('unclassified');
+});
