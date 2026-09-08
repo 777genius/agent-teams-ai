@@ -369,15 +369,22 @@ async function isPreviousOpenCodeRuntimeConfirmedDead(
   } catch {
     return false;
   }
+  // Main's persisted snapshot reader excludes the lead from the UI roster,
+  // but retains its lane-owned runtime evidence in members. Require every
+  // teammate in the roster and every runtime member (including the lead) below.
+  const expectedTeammateNames = [...expectedNames].filter((name) => !isLeadMember({ name }));
+  const snapshotTeammateNames =
+    snapshot?.expectedMembers.filter((name) => !isLeadMember({ name })) ?? [];
   if (
     !snapshot ||
     snapshot.teamName !== teamName ||
     snapshot.launchPhase !== 'finished' ||
     hasPendingLaunch() ||
     ports.getRuntimeAdapterRun(teamName) !== previousRun ||
-    snapshot.expectedMembers.length !== expectedNames.size ||
-    new Set(snapshot.expectedMembers).size !== expectedNames.size ||
+    new Set(snapshot.expectedMembers).size !== snapshot.expectedMembers.length ||
     snapshot.expectedMembers.some((name) => !expectedNames.has(name)) ||
+    snapshotTeammateNames.length !== expectedTeammateNames.length ||
+    expectedTeammateNames.some((name) => !snapshotTeammateNames.includes(name)) ||
     Object.keys(snapshot.members).length !== expectedNames.size
   )
     return false;
