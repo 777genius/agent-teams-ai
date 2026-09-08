@@ -12,6 +12,12 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
+import {
+  extractArchive,
+  findExtractedBinary,
+  isRuntimePayloadCacheValid,
+  publishRuntimePayload,
+} from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 import {
   formatRuntimeVersionForDisplay,
@@ -545,45 +551,6 @@ function downloadReleaseAssetWithGh(download, destinationPath) {
   return false;
 }
 
-function extractArchive(archivePath, extractDir, archiveKind) {
-  ensureDir(extractDir);
-
-  if (archiveKind === 'tar.gz') {
-    runOrExit('tar', ['-xzf', archivePath, '-C', extractDir]);
-    return;
-  }
-
-  if (archiveKind === 'zip') {
-    if (process.platform === 'win32') {
-      runOrExit('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -Path '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
-      return;
-    }
-
-    runOrExit('unzip', ['-oq', archivePath, '-d', extractDir]);
-    return;
-  }
-
-  throw new Error(`Unsupported runtime archive kind: ${archiveKind}`);
-}
-
-function findExtractedBinary(extractDir, binaryName) {
-  const directCandidate = path.join(extractDir, 'runtime', binaryName);
-  if (fs.existsSync(directCandidate)) {
-    return directCandidate;
-  }
-
-  const fallbackCandidate = path.join(extractDir, binaryName);
-  if (fs.existsSync(fallbackCandidate)) {
-    return fallbackCandidate;
-  }
-
-  throw new Error(`Extracted runtime archive does not contain ${binaryName}`);
-}
-
 async function acquireBootstrapLock(lockPath) {
   const waitDeadline = Date.now() + 120_000;
   let announcedWait = false;
@@ -620,9 +587,13 @@ async function ensureBootstrappedRuntime() {
   }
 
   const cacheDir = path.join(runtimeCacheRoot, runtimeLock.version, platformKey);
-  const cachedBinaryPath = path.join(cacheDir, asset.binaryName);
+  const payloadDir = path.join(cacheDir, 'payload-v1');
+  const cachedBinaryPath = path.join(payloadDir, asset.binaryName);
+  const isCacheValid = () =>
+    isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
+    isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  if (isCachedBinaryValid(cachedBinaryPath, expectedCliVersion)) {
+  if (isCacheValid()) {
     return {
       binaryPath: cachedBinaryPath,
       versionText: readBinaryVersion(cachedBinaryPath),
@@ -636,7 +607,7 @@ async function ensureBootstrappedRuntime() {
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCachedBinaryValid(cachedBinaryPath, expectedCliVersion)) {
+    if (isCacheValid()) {
       return {
         binaryPath: cachedBinaryPath,
         versionText: readBinaryVersion(cachedBinaryPath),
@@ -659,38 +630,24 @@ async function ensureBootstrappedRuntime() {
       await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
 
       const extractDir = path.join(workDir, 'extracted');
-      extractArchive(archivePath, extractDir, asset.archiveKind);
+      extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
-      const nextBinaryPath = `${cachedBinaryPath}.tmp`;
-      await fs.promises.copyFile(extractedBinaryPath, nextBinaryPath);
-
-      try {
-        if (process.platform !== 'win32') {
-          await fs.promises.chmod(nextBinaryPath, 0o755);
-        }
-
-        await fs.promises.rm(cachedBinaryPath, { force: true });
-        await fs.promises.rename(nextBinaryPath, cachedBinaryPath);
-
-        const versionText = readBinaryVersion(cachedBinaryPath);
-        if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
-          await fs.promises.rm(cachedBinaryPath, { force: true });
-          throw new Error(
-            `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
-          );
-        }
-
-        return {
-          binaryPath: cachedBinaryPath,
-          versionText,
-          sourceLabel: `downloaded release ${runtimeLock.sourceRef}`,
-          cacheDir,
-          downloaded: true,
-        };
-      } finally {
-        await fs.promises.rm(nextBinaryPath, { force: true });
+      if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
+      const versionText = readBinaryVersion(extractedBinaryPath);
+      if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
+        throw new Error(
+          `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
+        );
       }
+      publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      return {
+        binaryPath: cachedBinaryPath,
+        versionText,
+        sourceLabel: `downloaded release ${runtimeLock.sourceRef}`,
+        cacheDir,
+        downloaded: true,
+      };
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });
     }

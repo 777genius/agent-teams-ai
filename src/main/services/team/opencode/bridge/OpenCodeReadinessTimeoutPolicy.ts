@@ -23,10 +23,12 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   commandStatus: 5_000,
 } as const;
 
-// Each participant costs a full model turn on these CLIs, and a Cursor turn was
-// measured between 40 and 250 seconds on a healthy account. At 90s a two-member
-// team ran out of budget before its first agent had answered.
-const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 240_000;
+// Provisional Cursor allowance: reported 250s handoff plus 20s per participant
+// overhead and a shared 30s setup/commit/cleanup reserve. Bootstrap noReply is
+// not necessarily a model turn. Root desktop E2E must validate phase timings.
+const CURSOR_HANDOFF_ALLOWANCE_MS = 270_000;
+const CURSOR_PHASE_RESERVE_MS = 30_000;
+const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 90_000;
 const MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS = 10 * 60_000;
 
 /** Per-command timeout overrides accepted by the readiness bridge. */
@@ -57,7 +59,9 @@ export function resolveOpenCodeLaunchTimeoutMs(
     MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS,
     Math.max(
       OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch,
-      participantCount * NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS
+      input.selectedModel.startsWith('cursor-acp/')
+        ? participantCount * CURSOR_HANDOFF_ALLOWANCE_MS + CURSOR_PHASE_RESERVE_MS
+        : participantCount * NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS
     )
   );
 }

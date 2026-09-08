@@ -31,17 +31,28 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
       { name: 'two', role: 'developer', prompt: 'two' },
     ];
 
-    // Three participants at four minutes each. A Cursor turn was measured
-    // between 40 and 250 seconds, so the old ninety-second slice ran out before
-    // the first agent had answered.
-    // Three participants at four minutes each is twelve minutes, so the ten
-    // minute ceiling applies. A Cursor turn was measured between 40 and 250
-    // seconds, and the old ninety-second slice ran out before the first agent
-    // had answered.
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'cursor-acp/auto', members })).toBe(
       600_000
     );
-    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(600_000);
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(270_000);
+  });
+
+  it.each([
+    ['cursor-acp/auto', 0, 300_000],
+    ['cursor-acp/auto', 1, 570_000],
+    ['cursor-acp/auto', 2, 600_000],
+    ['cursor-acp/auto', 20, 600_000],
+    ['kiro/auto', 0, 120_000],
+    ['kiro/auto', 1, 180_000],
+    ['kiro/auto', 20, 600_000],
+    ['openai/gpt-5.4', 20, 120_000],
+  ] as const)('budgets %s with %i teammates', (selectedModel, count, expected) => {
+    const members = Array.from({ length: count }, (_, i) => ({
+      name: `member-${i}`,
+      role: 'developer',
+      prompt: 'fixture',
+    }));
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel, members })).toBe(expected);
   });
 
   it('honors an explicit launch timeout override', () => {
@@ -157,22 +168,16 @@ describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
   });
 
   it.each(['cursor-acp/auto'])(
-    'registers the endpoint before launching %s',
+    'leaves global registration untouched when launching %s',
     async (selectedModel) => {
-      const { bridge, execute } = buildBridge({
-        resolveAgentTeamsMcpUrl: () => 'http://127.0.0.1:9999/mcp#instance-1',
-      });
+      const { bridge, execute } = buildBridge({});
 
       await expect(bridge.launchOpenCodeTeam({ ...launchBody, selectedModel })).resolves.toEqual(
         launchData
       );
 
-      expect(prepareCursorAcpLaunchMcpConfig).toHaveBeenCalledWith({
-        mcpUrl: 'http://127.0.0.1:9999/mcp#instance-1',
-      });
-      expect(vi.mocked(prepareCursorAcpLaunchMcpConfig).mock.invocationCallOrder[0]).toBeLessThan(
-        execute.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
-      );
+      expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+      expect(execute).toHaveBeenCalledOnce();
     }
   );
 
