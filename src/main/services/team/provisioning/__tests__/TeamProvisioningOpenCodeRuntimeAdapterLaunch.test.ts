@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildOpenCodeRuntimeAdapterFinalProgress,
@@ -188,12 +188,14 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     const result = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
       {
         teamName: 'team-a',
+        members: [],
         sourceWarning: 'source warning',
         onProgress: vi.fn(),
       },
       {
         getStopAllTeamsGeneration: () => stopAllGeneration,
         getRuntimeAdapterRun: () => ({ runId: 'old-run', providerId: 'opencode' }),
+        readLaunchState: async () => null,
         stopOpenCodeRuntimeAdapterTeam: async () => {
           calls.push('stopPreviousRuntimeRun');
         },
@@ -219,6 +221,289 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       'cancelPreviousPendingRun',
       'recordCancelledLaunch',
     ]);
+  });
+
+  describe('confirmed-dead primary runtime relaunch', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    const members: TeamCreateRequest['members'] = [
+      { name: 'team-lead', role: 'Team Lead', providerId: 'opencode' },
+      { name: 'alice', role: 'Engineer', providerId: 'opencode' },
+      { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+    ];
+
+    function previousSnapshot(): PersistedTeamLaunchSnapshot {
+      return {
+        ...failedSnapshot(),
+        expectedMembers: members.map((member) => member.name),
+        members: Object.fromEntries(
+          members.map((member) => [
+            member.name,
+            {
+              ...failedSnapshot().members.alice,
+              name: member.name,
+              laneId: 'primary',
+              runtimeRunId: 'old-run',
+              runtimePid: member.name === 'bob' ? 42002 : 42001,
+            },
+          ])
+        ),
+      };
+    }
+
+    function previousPorts(snapshot: PersistedTeamLaunchSnapshot | null) {
+      const previousRun = { runId: 'old-run', providerId: 'opencode' };
+      return {
+        ...basePorts([]),
+        getRuntimeAdapterRun: () => previousRun,
+        readLaunchState: vi.fn(async () => snapshot),
+        stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => {
+          throw new Error('strict stop rejected');
+        }),
+      };
+    }
+
+    function preflight(ports: OpenCodeRuntimeAdapterLaunchPorts) {
+      return prepareOpenCodeRuntimeAdapterLaunchPreflight(
+        { teamName: 'team-a', members, onProgress: vi.fn() },
+        ports
+      );
+    }
+
+    function mockGone() {
+      return vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+      });
+    }
+
+    it('requires every unique PID to be gone and still invokes the normal new-run launch', async () => {
+      const probe = mockGone();
+      const snapshot = previousSnapshot();
+      const previous = previousPorts(snapshot);
+      const { ports } = ownedPorts([], {
+        getRuntimeAdapterRun: previous.getRuntimeAdapterRun,
+        readLaunchState: previous.readLaunchState,
+        stopOpenCodeRuntimeAdapterTeam: previous.stopOpenCodeRuntimeAdapterTeam,
+      });
+      const launch = vi.fn(async () => runtimeResult());
+      const input = launchParams(launch);
+      input.members = members;
+
+      await expect(runOpenCodeTeamRuntimeAdapterLaunch(input, ports)).resolves.toEqual({
+        runId: 'run-1',
+      });
+
+      expect(previous.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(probe.mock.calls).toEqual([
+        [42001, 0],
+        [42002, 0],
+      ]);
+      expect(launch).toHaveBeenCalledTimes(1);
+      // The adapter remains authoritative; no stopped or capability evidence is synthesized.
+      expect(previous.readLaunchState).toHaveBeenCalledTimes(2);
+    });
+
+    it('preserves runtime launch rejection after the frontend dead-process check', async () => {
+      mockGone();
+      const calls: string[] = [];
+      const previous = previousPorts(previousSnapshot());
+      const { ports } = ownedPorts(calls, {
+        getRuntimeAdapterRun: previous.getRuntimeAdapterRun,
+        readLaunchState: previous.readLaunchState,
+        stopOpenCodeRuntimeAdapterTeam: previous.stopOpenCodeRuntimeAdapterTeam,
+      });
+      const launch = vi.fn(async () =>
+        runtimeResult({
+          teamLaunchState: 'partial_failure',
+          diagnostics: ['replacement host ownership changed'],
+        })
+      );
+      const input = launchParams(launch);
+      input.members = members;
+
+      await runOpenCodeTeamRuntimeAdapterLaunch(input, ports);
+
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(calls).not.toContain('setAliveRun');
+      expect(previous.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+    });
+
+    it.each<[string, (snapshot: PersistedTeamLaunchSnapshot) => void]>([
+      [
+        'missing lead',
+        (s) => {
+          delete s.members['team-lead'];
+        },
+      ],
+      [
+        'missing teammate',
+        (s) => {
+          delete s.members.bob;
+        },
+      ],
+      [
+        'extra member',
+        (s) => {
+          s.members.extra = { ...s.members.alice, name: 'extra' };
+        },
+      ],
+      [
+        'partial expected roster',
+        (s) => {
+          s.expectedMembers.pop();
+        },
+      ],
+      [
+        'duplicate expected member',
+        (s) => {
+          s.expectedMembers[2] = 'alice';
+        },
+      ],
+      [
+        'foreign expected member',
+        (s) => {
+          s.expectedMembers[2] = 'other';
+        },
+      ],
+      [
+        'foreign team',
+        (s) => {
+          s.teamName = 'other-team';
+        },
+      ],
+      [
+        'foreign run',
+        (s) => {
+          s.members.bob.runtimeRunId = 'other-run';
+        },
+      ],
+      [
+        'secondary lane',
+        (s) => {
+          s.members.bob.laneId = 'secondary:bob';
+        },
+      ],
+      [
+        'other provider',
+        (s) => {
+          s.members.bob.providerId = 'codex';
+        },
+      ],
+      [
+        'missing PID',
+        (s) => {
+          delete s.members.bob.runtimePid;
+        },
+      ],
+      [
+        'zero PID',
+        (s) => {
+          s.members.bob.runtimePid = 0;
+        },
+      ],
+      [
+        'negative PID',
+        (s) => {
+          s.members.bob.runtimePid = -1;
+        },
+      ],
+      [
+        'fractional PID',
+        (s) => {
+          s.members.bob.runtimePid = 1.5;
+        },
+      ],
+      [
+        'nonfinite PID',
+        (s) => {
+          s.members.bob.runtimePid = Infinity;
+        },
+      ],
+      [
+        'member name mismatch',
+        (s) => {
+          s.members.bob.name = 'other';
+        },
+      ],
+      [
+        'unfinished snapshot',
+        (s) => {
+          s.launchPhase = 'active';
+        },
+      ],
+    ])('keeps strict stop for %s', async (_name, mutate) => {
+      const probe = mockGone();
+      const snapshot = previousSnapshot();
+      mutate(snapshot);
+      const ports = previousPorts(snapshot);
+      await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it.each(['alive', 'EPERM', 'EIO', 'unknown'])(
+      'keeps strict stop when any PID is %s',
+      async (status) => {
+        const probe = vi.spyOn(process, 'kill').mockImplementation((pid) => {
+          if (pid === 42001) throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+          if (status === 'alive') return true;
+          throw Object.assign(
+            new Error('probe failed'),
+            status === 'unknown' ? {} : { code: status }
+          );
+        });
+        const ports = previousPorts(previousSnapshot());
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+        expect(probe.mock.calls).toEqual([
+          [42001, 0],
+          [42002, 0],
+        ]);
+      }
+    );
+
+    it('keeps strict stop when the current request omits the lead', async () => {
+      const probe = mockGone();
+      const ports = previousPorts(previousSnapshot());
+      await expect(
+        prepareOpenCodeRuntimeAdapterLaunchPreflight(
+          { teamName: 'team-a', members: members.slice(1), onProgress: vi.fn() },
+          ports
+        )
+      ).rejects.toThrow('strict stop rejected');
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it.each(['spawning', 'unknown'])(
+      'keeps strict stop with %s pending launch evidence',
+      async (state) => {
+        const probe = mockGone();
+        const ports = previousPorts(previousSnapshot());
+        await expect(
+          preflight({
+            ...ports,
+            getProvisioningRun: () => 'old-run',
+            getRuntimeAdapterProgress: () =>
+              state === 'unknown' ? undefined : progress({ state: 'spawning' }),
+            isCancellableRuntimeAdapterProgress: () => true,
+          })
+        ).rejects.toThrow('strict stop rejected');
+        expect(probe).not.toHaveBeenCalled();
+      }
+    );
+
+    it('keeps strict stop if the persisted read fails or current ownership changes during it', async () => {
+      const probe = mockGone();
+      for (const changeOwner of [false, true]) {
+        const ports = previousPorts(previousSnapshot());
+        ports.readLaunchState.mockImplementation(async () => {
+          if (!changeOwner) throw new Error('unreadable');
+          ports.getRuntimeAdapterRun = () => ({ runId: 'new-owner', providerId: 'opencode' });
+          return previousSnapshot();
+        });
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+      }
+      expect(probe).not.toHaveBeenCalled();
+    });
   });
 
   it('coordinates successful launch side effects in the original order', async () => {

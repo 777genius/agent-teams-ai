@@ -143,7 +143,8 @@ import {
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
 import {
-  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildOpenCodeAppProfileScope,
+  buildOpenCodeAppProcessOwnershipMarkers,
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
@@ -502,9 +503,12 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
+  const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
     CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+    CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
@@ -533,6 +537,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
       mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
         CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
       });
     }
   };
@@ -590,7 +595,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
@@ -622,7 +628,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
@@ -736,7 +743,14 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeProcessOwnershipMarkers() : {}),
+    ...(reason === 'shutdown'
+      ? getOpenCodeProcessOwnershipMarkers()
+      : {
+          requiredProfileScope: buildOpenCodeAppProfileScope(
+            app.getPath('userData'),
+            getClaudeBasePath()
+          ),
+        }),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
 
@@ -768,18 +782,8 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   }
 }
 
-function getOpenCodeProcessOwnershipMarkers(): Pick<
-  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
-> {
-  return process.platform === 'win32'
-    ? {
-        requiredServeConfigMarkersAny: [
-          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
-        ],
-      }
-    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
-}
+const getOpenCodeProcessOwnershipMarkers = () =>
+  buildOpenCodeAppProcessOwnershipMarkers(openCodeManagedHostInstanceId);
 
 async function cleanupOpenCodeHostProcessFallback(
   label: string,
@@ -2109,6 +2113,10 @@ async function initializeServices(): Promise<void> {
   });
   await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
     appStartedAtMs,
+    requiredProfileScope: buildOpenCodeAppProfileScope(
+      app.getPath('userData'),
+      getClaudeBasePath()
+    ),
     logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
     logWarning: (message) => logger.warn(message),
     logError: (message) => logger.error(message),

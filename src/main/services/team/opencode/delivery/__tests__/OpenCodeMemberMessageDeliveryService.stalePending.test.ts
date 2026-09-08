@@ -527,6 +527,32 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       queuedBehindMessageId: 'user-1',
     });
   });
+  it.each(['user', 'alice'])(
+    'wakes the queued %s message without requiring another inbox event',
+    async (replyRecipient) => {
+      const harness = createHarness({ ledgerDir, send: async () => acceptedSendResult() });
+      await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 2 });
+      const queued = { ...userMessage, messageId: 'queued-peer', replyRecipient };
+
+      expect(await harness.service.deliver(TEAM, queued)).toMatchObject({
+        accepted: false,
+        queuedBehindMessageId: taskCommentNotification.messageId,
+      });
+      expect(harness.send).not.toHaveBeenCalled();
+      expect(harness.scheduleWatchdog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: TEAM,
+          memberName: LEAD,
+          messageId: queued.messageId,
+        })
+      );
+      expect(harness.scheduleWatchdog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: taskCommentNotification.messageId,
+        })
+      );
+    }
+  );
   it.each(['pending', 'prompt_not_indexed'] as const)(
     'marks the lead active when unknown acceptance is proven busy by observe (%s)',
     async (state) => {
