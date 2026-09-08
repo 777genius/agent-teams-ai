@@ -263,21 +263,43 @@ async function setup() {
       teamIdentities: gateway,
       nowMs: Date.now,
     });
-    const host = createTeamLifecycleReadHost(
-      createTeamLifecycleReadComposition({ authority, ...ports, nowMs: Date.now }),
-      (readAuthority, signal) =>
-        createQueryContext({
-          actorId: readAuthority.actorId,
-          authorizedScope: readAuthority.authorizedScope,
-          deploymentId: readAuthority.deploymentId,
-          bootId: readAuthority.bootId,
-          sessionId: 'session_canonical-read-fixture',
-          requestId: 'request_canonical-read-fixture',
-          signal,
-          deadlineAtMs: Date.now() + 10_000,
-        })
+    const readRuntime = vi.spyOn(ports.legacyRuntime, 'getRuntimeState');
+    const composition = createTeamLifecycleReadComposition({
+      authority,
+      ...ports,
+      nowMs: Date.now,
+    });
+    const host = createTeamLifecycleReadHost(composition, (readAuthority, signal) =>
+      createQueryContext({
+        actorId: readAuthority.actorId,
+        authorizedScope: readAuthority.authorizedScope,
+        deploymentId: readAuthority.deploymentId,
+        bootId: readAuthority.bootId,
+        sessionId: 'session_canonical-read-fixture',
+        requestId: 'request_canonical-read-fixture',
+        signal,
+        deadlineAtMs: Date.now() + 10_000,
+      })
     );
-    return { host, gateway };
+    return {
+      host,
+      gateway,
+      readRuntime,
+      runtimeProjection: (teamId: Parameters<typeof identities.getTeamIdentity>[0]) =>
+        composition.teamLifecycle.getRuntimeStateProjection(
+          { schemaVersion: 1, workspaceId: runtimeWorkspaceId, teamId, expectedRevision: null },
+          createQueryContext({
+            actorId,
+            authorizedScope,
+            deploymentId: runtimeInstance.deploymentId,
+            bootId: runtimeInstance.bootId,
+            sessionId: 'session_canonical-runtime-fixture',
+            requestId: 'request_canonical-runtime-fixture',
+            signal: new AbortController().signal,
+            deadlineAtMs: Date.now() + 10_000,
+          })
+        ),
+    };
   };
   return {
     root,
@@ -341,7 +363,12 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
       payload: { schemaVersion: 1, ...body.identity },
     });
     expect(saved.statusCode).toBe(200);
-    expect(saved.json().draft.metadata.name).toBe(payload.name);
+    expect(saved.json().draft).toMatchObject({
+      ...body.identity,
+      revision: body.revision,
+      metadata: { name: payload.name },
+      members: payload.members,
+    });
     const replay = await app.inject({ method: 'POST', url: routes.createDraft, payload });
     expect(replay.json()).toEqual({ ...body, outcome: 'idempotent_replay' });
     expect(await f.identities.listTeamIdentities()).toHaveLength(1);
@@ -360,13 +387,81 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
       publication: { state: 'published' },
     });
     expect(JSON.stringify(status.json())).not.toContain(f.root);
-    const { host } = f.reload();
-    expect(
-      await host.listTeamLifecycle({ schemaVersion: 1, cursor: null, expectedRevision: null })
-    ).toMatchObject({
-      kind: 'success',
-      items: [{ teamId: body.identity.teamId, workspaceId: runtimeWorkspaceId }],
+    const assertPublishedDraft = async () => {
+      const { host, gateway, runtimeProjection, readRuntime } = f.reload();
+      expect(await gateway.getTeamIdentity(body.identity.teamId)).toMatchObject({
+        teamId: body.identity.teamId,
+        state: 'active',
+        identityChecksum: identity!.identityChecksum,
+      });
+      const listed = await host.listTeamLifecycle({
+        schemaVersion: 1,
+        cursor: null,
+        expectedRevision: null,
+      });
+      expect(listed.kind).toBe('success');
+      if (listed.kind !== 'success') throw new Error('canonical draft list failed');
+      const rows = listed.items.filter(
+        (item) => item.teamId === body.identity.teamId && item.workspaceId === runtimeWorkspaceId
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        teamId: body.identity.teamId,
+        workspaceId: runtimeWorkspaceId,
+        lifecycle: 'draft',
+        revision: expect.stringMatching(/^revision_/u),
+      });
+      // Generic workspace attribution is intentionally not executable admission.
+      expect(await resolveHostedTeamWorkspaceId(host, body.identity.teamId, gateway)).toEqual({
+        kind: 'found',
+        runtimeWorkspaceId,
+        attributionRevision: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        identityChecksum: identity!.identityChecksum,
+      });
+      expect(await runtimeProjection(body.identity.teamId)).toMatchObject({
+        schemaVersion: 1,
+        kind: 'failure',
+        error: { code: 'unavailable', reason: 'source_unavailable' },
+        retryable: true,
+      });
+      expect(readRuntime).not.toHaveBeenCalled();
+      expect(
+        JSON.parse(
+          await fs.readFile(
+            path.join(f.claudeRoot, 'teams', identity!.legacyKey, 'config.json'),
+            'utf8'
+          )
+        )
+      ).toEqual({ name: identity!.legacyKey, pendingCreate: true });
+    };
+    await assertPublishedDraft();
+    const updated = await app.inject({
+      method: 'POST',
+      url: routes.updateDraft,
+      payload: {
+        schemaVersion: 1,
+        ...body.identity,
+        expectedRevision: body.revision,
+        updates: { description: 'Published draft remains configurable' },
+      },
     });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toMatchObject({
+      kind: 'updated',
+      draft: {
+        ...body.identity,
+        metadata: { name: payload.name, description: 'Published draft remains configurable' },
+        members: payload.members,
+      },
+    });
+    const savedAgain = await f.mount().inject({
+      method: 'POST',
+      url: routes.getSavedRequest,
+      payload: { schemaVersion: 1, ...body.identity },
+    });
+    expect(savedAgain.statusCode).toBe(200);
+    expect(savedAgain.json().draft).toEqual(updated.json().draft);
+    await assertPublishedDraft();
   });
 
   it('retains the durable create identity after directory IO returns EROFS and publishes it on replay', async () => {
@@ -451,7 +546,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     }
   });
 
-  it('reloads a reserved draft for configuration while the existing launch attribution refuses it', async () => {
+  it('reloads a reserved draft for configuration while generic workspace attribution is unavailable', async () => {
     const f = await setup();
     let release!: () => void;
     let entered!: () => void;

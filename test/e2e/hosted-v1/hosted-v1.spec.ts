@@ -845,7 +845,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   });
   const lifecycleItems = (
     readModels.lifecycle.body as {
-      items: { revision: string; teamId: string; workspaceId: string }[];
+      items: { revision: string; teamId: string; workspaceId: string; lifecycle: string }[];
     }
   ).items;
   expect(lifecycleItems).toContainEqual(
@@ -854,10 +854,164 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       workspaceId: runtime.workspaceId,
     })
   );
-  expect(lifecycleItems).not.toContainEqual(expect.objectContaining(createdIdentity));
+  const draftRows = lifecycleItems.filter(
+    (item) =>
+      item.teamId === createdIdentity.teamId && item.workspaceId === createdIdentity.workspaceId
+  );
+  expect(draftRows).toHaveLength(1);
+  expect(draftRows[0]).toMatchObject({
+    ...createdIdentity,
+    lifecycle: 'draft',
+    revision: expect.stringMatching(/^revision_/u),
+  });
   const activeTeam = lifecycleItems.find((item) => item.teamId === runtime.teamId);
   expect(activeTeam?.revision).toMatch(/^revision_/u);
   if (activeTeam === undefined) throw new Error('hosted_e2e_active_team_missing');
+
+  // Published draft attribution is valid, but is not an Owner execution grant.
+  // Observe the existing fixture's durable effect state, not absence of a log file.
+  const draftRuntimeBefore = await readFile(runtime.fakeRuntimeStateFile, 'utf8');
+  expect(JSON.parse(draftRuntimeBefore)).toMatchObject({
+    schemaVersion: 1,
+    commands: [],
+    activeRuns: [],
+    eventIds: [],
+    lifecycleCommandLedger: [],
+    lifecycleReleaseLedger: [],
+  });
+  const seedTeamDirectory = resolve(
+    runtime.fakeRuntimeStateFile,
+    '..',
+    '..',
+    'claude',
+    'teams',
+    runtime.teamName
+  );
+  const seedTeamBefore = await snapshotDirectoryFiles(seedTeamDirectory);
+  const teamsDirectory = resolve(seedTeamDirectory, '..');
+  const teamDirectoriesBefore = (await readdir(teamsDirectory)).sort();
+  const publishedDraftDirectories = [];
+  for (const name of teamDirectoriesBefore) {
+    const identity = JSON.parse(
+      await readFile(resolve(teamsDirectory, name, 'team.identity.json'), 'utf8')
+    ) as { teamId: string };
+    if (identity.teamId === createdIdentity.teamId) publishedDraftDirectories.push(name);
+  }
+  expect(publishedDraftDirectories).toHaveLength(1);
+  const publishedDraftDirectory = resolve(teamsDirectory, publishedDraftDirectories[0]);
+  const publishedDraftBefore = await snapshotDirectoryFiles(publishedDraftDirectory);
+  expect(JSON.parse(publishedDraftBefore['config.json'])).toEqual({
+    name: publishedDraftDirectories[0],
+    pendingCreate: true,
+  });
+  const draftTraceBefore = JSON.parse(
+    await readFile(`${runtime.fakeRuntimeLifecycleTraceFile}.denials.json`, 'utf8')
+  ) as { teamId: string }[];
+  const draftExecutionDenials = await page.evaluate(
+    async ({ token, identity, revision }) => {
+      const results = [];
+      for (const action of ['control-state', 'prepare', 'launch']) {
+        results.push(
+          await window.__hostedE2eProbe(`/api/hosted/v1/team-lifecycle/${action}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'content-type': 'application/json',
+              'x-agent-teams-csrf': token,
+            },
+            body: JSON.stringify({
+              schemaVersion: 1,
+              ...identity,
+              // Projection requests accept identity only; launch uses the lifecycle revision,
+              // which is independent of the saved configuration revision and display name.
+              ...(action === 'launch'
+                ? {
+                    expectedRevision: revision,
+                    commandId: 'lifecycle-command_hosted-v1-draft-denied',
+                    idempotencyKey: 'idempotency_hosted-v1-draft-denied',
+                  }
+                : {}),
+            }),
+          })
+        );
+      }
+      return results;
+    },
+    { token: csrfToken, identity: createdIdentity, revision: draftRows[0].revision }
+  );
+  // seedContainer rejects the non-seeded TeamId with fake_runtime_authority_invalid
+  // and closes the socket; the real command HTTP adapter maps this to this exact 503.
+  for (const denial of draftExecutionDenials) {
+    expect(denial.status, denial.rawBody).toBe(503);
+    expect(denial.body).toEqual({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null });
+  }
+  const draftTraceAfter = JSON.parse(
+    await readFile(`${runtime.fakeRuntimeLifecycleTraceFile}.denials.json`, 'utf8')
+  ) as { exchangeId: string; teamId: string; operation: string }[];
+  expect(draftTraceAfter.slice(0, draftTraceBefore.length)).toEqual(draftTraceBefore);
+  // Count only this freshly created identity, across all operations. The mounted
+  // seeded-team health poll cannot add records here or race a truncate/read.
+  expect(draftTraceBefore.filter((entry) => entry.teamId === createdIdentity.teamId)).toEqual([]);
+  const draftTraceDelta = draftTraceAfter.filter(
+    (entry) => entry.teamId === createdIdentity.teamId
+  );
+  expect(draftTraceDelta).toHaveLength(6);
+  expect(new Set(draftTraceDelta.map((entry) => entry.exchangeId)).size).toBe(3);
+  for (const [index, operation] of [
+    'control_state',
+    'prepare_provisioning',
+    'authorize',
+  ].entries()) {
+    const exchangeId = draftTraceDelta[index * 2].exchangeId;
+    expect(exchangeId).toMatch(/^lifecycle-request_[0-9a-f]{32}$/);
+    expect(draftTraceDelta[index * 2]).toEqual({
+      exchangeId,
+      operation,
+      teamId: createdIdentity.teamId,
+      stage: 'signed_request',
+    });
+    expect(draftTraceDelta[index * 2 + 1]).toEqual({
+      exchangeId,
+      operation,
+      ...createdIdentity,
+      request: {
+        schemaVersion: 1,
+        ...createdIdentity,
+        ...(operation === 'authorize'
+          ? {
+              action: 'launch',
+              expectedRevision: draftRows[0].revision,
+              commandId: 'lifecycle-command_hosted-v1-draft-denied',
+              idempotencyKey: 'idempotency_hosted-v1-draft-denied',
+            }
+          : {}),
+      },
+      signedProofValid: true,
+      nonTeamAuthorityValid: true,
+      stage: 'rejected',
+      reason: 'nonseeded_team',
+    });
+  }
+  const draftRuntimeAfter = await readFile(runtime.fakeRuntimeStateFile, 'utf8');
+  expect(draftRuntimeAfter).toBe(draftRuntimeBefore);
+  expect(await snapshotDirectoryFiles(seedTeamDirectory)).toEqual(seedTeamBefore);
+  expect((await readdir(teamsDirectory)).sort()).toEqual(teamDirectoriesBefore);
+  expect(await snapshotDirectoryFiles(publishedDraftDirectory)).toEqual(publishedDraftBefore);
+  await testInfo.attach('personal-draft-execution-denial.json', {
+    body: JSON.stringify(
+      {
+        identity: createdIdentity,
+        lifecycleRevision: draftRows[0].revision,
+        responses: draftExecutionDenials,
+        ownerTrace: draftTraceDelta,
+        runtimeBefore: draftRuntimeBefore,
+        runtimeAfter: draftRuntimeAfter,
+      },
+      null,
+      2
+    ),
+    contentType: 'application/json',
+  });
 
   const draftCrud = await page.evaluate(
     async ({ csrfToken: token, identity, revision }) => {
