@@ -339,6 +339,9 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         for (const member of members) {
           expect(relaunched.members[member]).toMatchObject({ alive: true, runtimeModel: model });
           expect(relaunched.members[member].runtimeSessionId).toBeTruthy();
+          expect(relaunched.members[member].runtimeSessionId).not.toBe(
+            snapshot.members[member].runtimeSessionId
+          );
         }
         await checkpoint('parallel-work-after-relaunch');
         const followups = await Promise.all(

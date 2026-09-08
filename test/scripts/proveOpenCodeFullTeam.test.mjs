@@ -259,7 +259,7 @@ test('full runner preserves rotated selected OAuth before deleting successful st
     assert.equal(status, 0);
     assert.equal(fs.existsSync(input.env.HOME), false);
     assert.equal(JSON.parse(fs.readFileSync(handoff, 'utf8')).selected.refresh, 'synthetic-rotated');
-    assert.equal(fs.statSync(handoff).mode & 0o777, 0o600);
+    if (process.platform !== 'win32') assert.equal(fs.statSync(handoff).mode & 0o777, 0o600);
     assert.equal(fs.readFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, 'utf8'), JSON.stringify({ selected }));
   } finally {
     if (handoff) fs.rmSync(path.dirname(handoff), { recursive: true, force: true });
