@@ -498,6 +498,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Require the selected release tag to match the workflow commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse FETCH_HEAD^{commit})" = "$GITHUB_SHA"
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
