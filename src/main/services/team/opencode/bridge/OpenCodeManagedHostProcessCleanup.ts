@@ -611,7 +611,17 @@ async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | nu
   }
 }
 
-async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
+/**
+ * A process's command line WITH its environment, which is the only ownership
+ * signal available for a process this app did not spawn and never recorded a
+ * pid for. Exported because the cursor-agent lead sweep needs exactly the same
+ * answer about exactly the same kind of process, and a second `ps eww` spelling
+ * would be a second thing to keep correct.
+ *
+ * POSIX only: Windows does not let one process read another's environment, so
+ * callers there have to prove ownership some other way.
+ */
+export async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
 }
 
