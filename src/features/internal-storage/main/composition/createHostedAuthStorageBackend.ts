@@ -9,6 +9,7 @@ import type {
 } from '../../contracts/externalWriterObservationStorageContracts';
 import type { ExternalWriterReconciliationStorageGateway } from '../../contracts/externalWriterReconciliationStorageContracts';
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
+import type { HostedPromotionStorageGateway } from '../../contracts/hostedPromotionStorageContracts';
 import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { HostedTeamConfigurationStorageGateway } from '../../contracts/hostedTeamConfigurationStorageContracts';
 import type { TeamDraftPublicationStorageGateway } from '../../contracts/teamDraftPublicationContracts';
@@ -31,6 +32,7 @@ export interface HostedAuthStorageBackend {
   captureIdentitySnapshot(): Promise<Uint8Array>;
   readonly gateway: HostedAuthStorageGateway;
   readonly identityPublication: TeamIdentityPublicationGateway;
+  readonly promotions: HostedPromotionStorageGateway;
   readonly draftPublications: TeamDraftPublicationStorageGateway;
   /** Live canonical identities served by this same serialized hosted worker. */
   readonly teamIdentities: TeamIdentityReadGateway;
@@ -126,6 +128,7 @@ export function createHostedAuthStorageBackend(databasePath: string): HostedAuth
     gateway: client,
     captureIdentitySnapshot: () => client.captureIdentitySnapshot(),
     identityPublication: client.identityPublication,
+    promotions: client.promotions,
     draftPublications: client.draftPublications,
     teamIdentities: client,
     coordinationEvents,

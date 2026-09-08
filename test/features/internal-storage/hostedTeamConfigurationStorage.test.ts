@@ -7,6 +7,7 @@ import {
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { readRetainedPromotionObjects } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionMigrationAdmission';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { RESERVED_TEAM_IDENTITY_TRANSITION } from '@features/internal-storage/main/infrastructure/worker/teamDraftPublicationMigration';
 import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
@@ -422,7 +423,7 @@ describe('hosted team configuration SQLite authority', () => {
     } finally { database.close(); }
   });
 
-  it.each([27, 28] as const)('migrates released v%s to v29 without rewriting legacy records and still allows metadata edits', async (version) => {
+  it.each([27, 28] as const)('migrates released v%s to the current schema without rewriting legacy records and still allows metadata edits', async (version) => {
     const file = await databasePath();
     const initial = core(file);
     const created = initial.handle('hostedTeamConfiguration.create', create) as HostedTeamConfigurationStorageCreateResult;
@@ -452,12 +453,21 @@ describe('hosted team configuration SQLite authority', () => {
       expect(database.prepare('SELECT * FROM hosted_team_configuration_create_keys').all()).toEqual(ledger);
       expect(database.prepare('SELECT * FROM team_identity_records').all()).toEqual(identities);
       expect(database.prepare('SELECT * FROM legacy_team_key_reservations').all()).toEqual(reservations);
-      expect(legacySchema.all()).toEqual(schemaBefore);
+      // Admission checks exact names, owners, types and SQL for the complete v30 component.
+      const promotionObjects = readRetainedPromotionObjects(database);
+      expect(promotionObjects).toHaveLength(18); // One table, fourteen triggers, three autoindexes.
+      expect(database.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
+      const promotionNames = new Set(promotionObjects.map((object) => object.name));
+      const schemaAfter = legacySchema.all() as { name: string }[];
+      expect(schemaAfter.filter((object) => !promotionNames.has(object.name))).toEqual(schemaBefore);
       expect(database.prepare('SELECT * FROM hosted_team_configuration_publications').all()).toEqual([]);
       expect(database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'trg_team_identity_transition'").get()).toEqual({
         sql: RESERVED_TEAM_IDENTITY_TRANSITION,
       });
       expect(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'trigger' AND tbl_name = 'hosted_team_configuration_publications' ORDER BY name").all()).toEqual([
+        { name: 'hosted_promotions_publication_no_replace' },
+        { name: 'hosted_promotions_publication_tombstone' },
+        { name: 'hosted_promotions_publication_update_collision' },
         { name: 'hosted_team_configuration_publications_immutable' },
         { name: 'hosted_team_configuration_publications_no_delete' },
       ]);

@@ -1,3 +1,9 @@
+export type {
+  HostedPromotionFence,
+  HostedPromotionPrerequisitePorts,
+  HostedPromotionRequest,
+  HostedPromotionStatus,
+} from '../core/application/hosted-authority/FreezeHostedPromotion';
 export type { HostedDraftWorkspaceFence } from '../core/application/hosted-authority/HostedDraftPublicationPort';
 export {
   HostedTeamConfigurationAdapter,
@@ -8,6 +14,7 @@ export {
   type HostedTeamConfigurationContextFactory,
   registerHostedTeamConfigurationHttp,
 } from './adapters/input/http/registerHostedTeamConfigurationHttp';
+export { createHostedPromotionPrerequisite } from './composition/createHostedPromotionPrerequisite';
 export { createHostedTeamConfigurationAuthority } from './composition/createHostedTeamConfigurationAuthority';
 export {
   createHostedTeamConfigurationFeature,

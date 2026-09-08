@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { setImmediate } from 'node:timers/promises';
 
 import {
   parseDirectoryFingerprint,
@@ -152,9 +153,10 @@ function expectRejectedBeforeDdl(db: Database.Database) {
   expect({ main: schemaSnapshot(db, 'main'), temp: schemaSnapshot(db, 'temp') }).toEqual(before);
 }
 
-afterEach(() => {
+afterEach(async () => {
   for (const db of databases.splice(0)) if (db.open) db.close();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  await setImmediate();
 });
 
 describe('v29 exact publication restore admission', () => {
@@ -163,7 +165,7 @@ describe('v29 exact publication restore admission', () => {
     expect(db.prepare('SELECT sql FROM sqlite_schema WHERE name = ?')
       .get('trg_team_identity_transition')).toEqual({ sql: oldTrigger });
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(29);
+    expect(db.pragma('user_version', { simple: true })).toBe(30);
     expect(db.prepare('SELECT sql FROM sqlite_schema WHERE name = ?')
       .get('trg_team_identity_transition')).toEqual({ sql: RESERVED_TEAM_IDENTITY_TRANSITION });
     seedCurrentPublicationRestore(db);
@@ -179,9 +181,11 @@ describe('v29 exact publication restore admission', () => {
     expect(db.prepare('SELECT name FROM main.sqlite_schema WHERE name = ?').get(table)).toBeUndefined();
     const before = schemaSnapshot(db, 'main');
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(29);
+    expect(db.pragma('user_version', { simple: true })).toBe(30);
     const after = schemaSnapshot(db, 'main');
-    expect(after.rows.filter(({ name }) => name !== table)).toEqual(before.rows);
+    expect(after.rows.filter(({ name }) => name !== table &&
+      name !== 'hosted_team_configuration_promotions')).toEqual(before.rows);
+    expect(db.prepare('SELECT * FROM main.hosted_team_configuration_promotions').all()).toEqual([]);
     expect(after.objects).toEqual(expect.arrayContaining(before.objects.filter((object) =>
       object.name !== 'trg_team_identity_transition')));
     expect(db.prepare('SELECT sql FROM main.sqlite_schema WHERE name = ?')
@@ -449,7 +453,7 @@ describe('v29 exact publication restore admission', () => {
     const before = publicationRestoreSnapshot(db);
     relabel(db);
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(29);
+    expect(db.pragma('user_version', { simple: true })).toBe(30);
     expect(publicationRestoreSnapshot(db)).toEqual(before);
   });
 

@@ -93,7 +93,8 @@ export class HostedTeamConfigurationAuthority {
       if (result.kind === 'updated') return result;
       return result.kind === 'not_found'
         ? error('not_found', 'team_configuration_not_found')
-        : error('conflict', 'team_configuration_revision_conflict');
+        : error('conflict', result.reason === 'promotion_frozen'
+          ? 'team_configuration_promotion_frozen' : 'team_configuration_revision_conflict');
     } catch {
       return this.unavailable();
     }
@@ -113,7 +114,8 @@ export class HostedTeamConfigurationAuthority {
           ...(captured ? { publicationBinding: captured.binding } : {}) },
         context.signal
       );
-      if (result.kind === 'conflict') return error('conflict', 'team_configuration_revision_conflict');
+      if (result.kind === 'conflict') return error('conflict', result.reason === 'promotion_frozen'
+          ? 'team_configuration_promotion_frozen' : 'team_configuration_revision_conflict');
       const publication = await this.dependencies.publication?.settle(identity, context, captured);
       if (publication && publication.state !== 'tombstoned') return this.unavailable();
       return result;

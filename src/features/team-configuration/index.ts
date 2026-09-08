@@ -1,3 +1,4 @@
+export { compileHostedPromotionPlan } from './core/domain/compileHostedPromotionPlan';
 export {
   isProvisioningTeamName,
   parseOptionalBoolean,

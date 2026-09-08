@@ -1,3 +1,4 @@
+import { readRetainedPromotionObjects } from './hostedPromotionMigrationAdmission';
 import {
   RESERVED_TEAM_IDENTITY_TRANSITION,
   TEAM_DRAFT_PUBLICATION_MIGRATION,
@@ -49,8 +50,12 @@ const PUBLICATION_SCHEMA: readonly TeamIdentityStorageSchemaDefinition[] = [
  * Admit only the retained predecessor or a fully validated durable v29 replay.
  * Never normalize or modify the read-only identity projection to select a path.
  */
-export function runTeamDraftPublicationMigrationAdmission(db: SqliteDatabase): void {
-  const objects = readObjects(db, 'main');
+export function runTeamDraftPublicationMigrationAdmission(
+  db: SqliteDatabase, requireReplay = false
+): void {
+  const promotion = readRetainedPromotionObjects(db, ERROR);
+  const promotionNames = new Set(promotion.map((object) => object.name));
+  const objects = readObjects(db, 'main').filter((object) => !promotionNames.has(object.name));
   // Reject shadows before any unqualified retained DDL or identity graph reads.
   if (readObjects(db, 'temp').length !== 0) throw new Error(ERROR);
   const identity = objects.filter((object) => isIdentity(object));
@@ -62,6 +67,7 @@ export function runTeamDraftPublicationMigrationAdmission(db: SqliteDatabase): v
   );
   const predecessor = matches(identity, TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS);
   const replay = matches(identity, currentIdentity) && matches(publication, PUBLICATION_SCHEMA);
+  if ((requireReplay || promotion.length !== 0) && !replay) throw new Error(ERROR);
   if (!(predecessor && publication.length === 0) && !replay) throw new Error(ERROR);
   assertRelationships(db, replay);
   if (!replay) {
