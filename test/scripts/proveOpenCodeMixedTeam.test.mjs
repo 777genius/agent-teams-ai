@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import { stripTypeScriptTypes } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
+import { URL } from 'node:url';
 
 import {
   preserveRotatedSelectedOAuth,
