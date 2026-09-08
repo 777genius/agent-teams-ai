@@ -220,7 +220,7 @@ function verifyServiceMounts(serviceName, service, violations) {
 
   for (const contract of expected) {
     const mount = actual.find((candidate) => candidate?.target === contract.target);
-    if (!mount || !mountMatches(mount, contract)) {
+    if (!mount || !mountMatches(mount, contract, actual)) {
       violations.push(`service:${serviceName}:mount_contract_invalid`);
       return;
     }
@@ -229,6 +229,13 @@ function verifyServiceMounts(serviceName, service, violations) {
 
 function expectedMounts(serviceName) {
   const claude = { type: 'bind', target: '/data/.claude', readOnly: true };
+  const teams = {
+    type: 'bind',
+    target: '/data/.claude/teams',
+    readOnly: false,
+    sourceParentTarget: '/data/.claude',
+    createHostPath: false,
+  };
   const state = {
     type: 'volume',
     source: 'agent-teams-data',
@@ -257,6 +264,7 @@ function expectedMounts(serviceName) {
     case 'agent-teams-personal':
       return [
         claude,
+        teams,
         state,
         applicationData,
         lifecycleTrust,
@@ -265,6 +273,7 @@ function expectedMounts(serviceName) {
     case 'agent-teams-keycloak':
       return [
         claude,
+        teams,
         state,
         applicationData,
         caddyTrust,
@@ -339,10 +348,15 @@ function caddyMounts(caddyfile, dataVolume, configVolume) {
   ];
 }
 
-function mountMatches(mount, contract) {
+function mountMatches(mount, contract, mounts) {
   if (mount.type !== contract.type || mount.target !== contract.target) return false;
   if ((mount.read_only === true) !== (contract.readOnly === true)) return false;
   if (contract.source && mount.source !== contract.source) return false;
+  if (contract.sourceParentTarget) {
+    const parent = mounts.find((candidate) => candidate?.target === contract.sourceParentTarget);
+    if (typeof parent?.source !== 'string' || !isAbsolute(parent.source)) return false;
+    if (mount.source !== join(parent.source, 'teams')) return false;
+  }
   if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
   if (contract.absoluteSource === true && !isAbsolute(String(mount.source))) return false;
   if (contract.createHostPath === false && mount.bind?.create_host_path !== false) return false;

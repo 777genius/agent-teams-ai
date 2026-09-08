@@ -771,7 +771,10 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     },
     { ...runtime, csrfToken }
   );
-  expect(configuredDraft.status).toBe(201);
+  expect(
+    configuredDraft.status,
+    `POST /api/hosted/v1/team-configuration/draft/create: ${configuredDraft.rawBody}`
+  ).toBe(201);
   expect(configuredDraft.body).toMatchObject({
     schemaVersion: 1,
     kind: 'created',
