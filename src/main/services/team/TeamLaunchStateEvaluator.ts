@@ -3,6 +3,9 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import { extractMessageSendRoutingReason } from './TeamLaunchFailureReasonText';
+import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCodeLaneMemberPolicy';
+
 import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
@@ -230,59 +233,6 @@ function normalizeOpenCodeAppManagedBootstrapCandidate(
     ...(model ? { model } : {}),
     ...(agent ? { agent } : {}),
   };
-}
-
-function decodeJsonStringLiteral(value: string): string {
-  try {
-    return JSON.parse(`"${value}"`) as string;
-  } catch {
-    return value.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
-  }
-}
-
-function extractLooseJsonStringField(text: string, fieldName: string): string | undefined {
-  const strictMatch = new RegExp(`"${fieldName}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`).exec(text);
-  if (strictMatch?.[1]) {
-    return decodeJsonStringLiteral(strictMatch[1]).trim() || undefined;
-  }
-
-  const looseMatch = new RegExp(`"${fieldName}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)$`).exec(text);
-  return looseMatch?.[1] ? decodeJsonStringLiteral(looseMatch[1]).trim() || undefined : undefined;
-}
-
-function joinUniqueReasonParts(parts: readonly (string | undefined)[]): string | undefined {
-  const uniqueParts = Array.from(
-    new Set(parts.map((part) => part?.trim()).filter((part): part is string => !!part))
-  );
-  return uniqueParts.length > 0 ? uniqueParts.join(': ') : undefined;
-}
-
-function extractMessageSendRoutingReason(text: string): string | undefined {
-  const trimmed = text.trim();
-  if (!trimmed.includes('Message sent to') && !trimmed.includes('"routing"')) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed) as {
-      success?: unknown;
-      message?: unknown;
-      routing?: { summary?: unknown; content?: unknown };
-    };
-    if (parsed.success === true && parsed.routing && typeof parsed.routing === 'object') {
-      return joinUniqueReasonParts([
-        typeof parsed.routing.summary === 'string' ? parsed.routing.summary : undefined,
-        typeof parsed.routing.content === 'string' ? parsed.routing.content : undefined,
-      ]);
-    }
-  } catch {
-    // Fall through to loose extraction for persisted reasons truncated by older builds.
-  }
-
-  return joinUniqueReasonParts([
-    extractLooseJsonStringField(trimmed, 'summary'),
-    extractLooseJsonStringField(trimmed, 'content'),
-  ]);
 }
 
 export function normalizeLaunchFailureReasonText(value: unknown): string | undefined {
@@ -590,7 +540,15 @@ function normalizePersistedMemberState(
   }
   const parsed = value as Record<string, unknown>;
   const normalizedName = normalizeMemberName(memberName);
-  if (!normalizedName || normalizedName === 'user' || isLeadMember({ name: normalizedName })) {
+  // A lane-owned OpenCode lead is the one lead that survives read-back: it is a
+  // real runtime member with its own lane, and dropping it is what made a team
+  // with a dead lead report `clean_success` with no liveness at all.
+  if (
+    !normalizedName ||
+    normalizedName === 'user' ||
+    (isLeadMember({ name: normalizedName }) &&
+      !isPersistedOpenCodePrimaryLaneLeadMember({ ...parsed, name: normalizedName }))
+  ) {
     return null;
   }
   const providerId = normalizeOptionalTeamProviderId(parsed.providerId);
@@ -1041,6 +999,11 @@ export function normalizePersistedLaunchSnapshot(
       typeof record.teamName === 'string' && record.teamName.trim().length > 0
         ? record.teamName.trim()
         : teamName,
+    // The lead survives in `members` (so `teamLaunchState` and the member
+    // diagnostics finally see it) but is deliberately NOT added to
+    // `expectedMembers`: that list is the team roster the UI renders, and the
+    // lead has never been a card in it. `summarizePersistedLaunchMembers` unions
+    // both, so the aggregate state is honest either way.
     expectedMembers,
     leadSessionId:
       typeof record.leadSessionId === 'string' && record.leadSessionId.trim().length > 0

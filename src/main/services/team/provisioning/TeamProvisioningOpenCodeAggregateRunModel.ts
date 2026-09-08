@@ -1,5 +1,9 @@
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 
+import {
+  type OpenCodeAggregatePrimaryLeadBootstrapPorts,
+  type OpenCodePrimaryLeadBootstrapState,
+} from './TeamProvisioningOpenCodeAggregateLaunchPromotion';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { getTeamsBasePathsToProbe } from './TeamProvisioningRuntimeLaunchSelection';
 import {
@@ -170,7 +174,10 @@ export interface OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
   ): TeamLaunchResponse;
 }
 
-export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
+export interface OpenCodeWorktreeRootAggregateLaunchPorts
+  extends
+    OpenCodeWorktreeRootAggregateLaunchPreflightPorts,
+    OpenCodeAggregatePrimaryLeadBootstrapPorts {
   randomUUID(): string;
   nowMs(): number;
   nowIso(): string;
@@ -247,6 +254,8 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
+  /** Durable sink for blocked or undeliverable launch reports. */
+  logDiagnostic?(message: string): void;
 }
 
 export interface RunOpenCodeWorktreeRootAggregateLaunchInput {
@@ -262,38 +271,60 @@ export interface RunOpenCodeWorktreeRootAggregateLaunchInput {
 export interface OpenCodeAggregateFinalProgressInput {
   launching: TeamProvisioningProgress;
   launchState: TeamRuntimeLaunchResult['teamLaunchState'];
+  /**
+   * The lead's veto. A team whose lead cannot receive a single message is never
+   * "running with unavailable members" and is never a ready config.
+   */
+  leadBootstrap?: OpenCodePrimaryLeadBootstrapState;
   laneDiagnostics: readonly string[];
   updatedAt: string;
   partialTeamCanContinue?: boolean;
   terminalFailureError?: string | null;
 }
 
+function buildOpenCodeAggregateFinalMessage(input: OpenCodeAggregateFinalProgressInput): string {
+  if (input.leadBootstrap === 'failed') {
+    return 'OpenCode lead bootstrap failed; the team has no usable lead';
+  }
+  if (input.leadBootstrap === 'pending') {
+    return 'OpenCode lead is waiting for its runtime bootstrap evidence';
+  }
+  if (input.launchState === 'clean_success') {
+    return 'OpenCode member lanes are ready';
+  }
+  if (input.launchState === 'partial_pending') {
+    return 'OpenCode member lanes are waiting for runtime evidence or permissions';
+  }
+  return input.partialTeamCanContinue
+    ? 'OpenCode team is running with unavailable members'
+    : 'OpenCode member lane launch failed readiness gate';
+}
+
 export function buildOpenCodeAggregateFinalProgress(
   input: OpenCodeAggregateFinalProgressInput
 ): TeamProvisioningProgress {
-  const success = input.launchState === 'clean_success';
   const pending = input.launchState === 'partial_pending';
   const failed = input.launchState === 'partial_failure';
   const terminalFailure = failed && input.partialTeamCanContinue !== true;
   return {
     ...input.launching,
     state: terminalFailure ? 'failed' : 'ready',
-    message: success
-      ? 'OpenCode member lanes are ready'
-      : pending
-        ? 'OpenCode member lanes are waiting for runtime evidence or permissions'
-        : input.partialTeamCanContinue
-          ? 'OpenCode team is running with unavailable members'
-          : 'OpenCode member lane launch failed readiness gate',
+    message: buildOpenCodeAggregateFinalMessage(input),
     messageSeverity:
-      pending || input.partialTeamCanContinue ? 'warning' : failed ? 'error' : undefined,
+      input.leadBootstrap === 'failed'
+        ? 'error'
+        : pending || input.leadBootstrap === 'pending' || input.partialTeamCanContinue
+          ? 'warning'
+          : failed
+            ? 'error'
+            : undefined,
     updatedAt: input.updatedAt,
     error: terminalFailure
       ? (input.terminalFailureError ??
         (input.laneDiagnostics.filter(Boolean).join('\n') || 'OpenCode member lane launch failed'))
       : undefined,
     cliLogsTail: input.laneDiagnostics.join('\n') || undefined,
-    configReady: true,
+    configReady: input.leadBootstrap !== 'failed',
   };
 }
 
