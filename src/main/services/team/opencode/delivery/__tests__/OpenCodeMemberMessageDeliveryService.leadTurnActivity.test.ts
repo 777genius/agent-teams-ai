@@ -3,6 +3,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { openCodeLaneTurnActivityRegistry } from '../OpenCodeLaneTurnActivityRegistry';
 import {
   type OpenCodeLeadTurnActivityNotification,
   type OpenCodeMemberLaneIdentity,
@@ -155,6 +156,7 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
 
   beforeEach(async () => {
     ledgerDir = await mkdtemp(join(tmpdir(), 'opencode-lead-turn-activity-'));
+    openCodeLaneTurnActivityRegistry.clear();
   });
 
   afterEach(async () => {
@@ -246,6 +248,11 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
 
     expect(delivery.accepted).toBe(true);
     expect(notify).not.toHaveBeenCalled();
+    // The turn is still recorded: nothing else in the app sees a secondary lane settle.
+    expect(openCodeLaneTurnActivityRegistry.get('team-a', 'Muse')).toMatchObject({
+      laneId: SECONDARY_LANE.laneId,
+      state: 'idle',
+    });
   });
 
   it('never reports lead activity for a same-model primary teammate', async () => {
@@ -265,6 +272,11 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
 
     expect(delivery.accepted).toBe(true);
     expect(notify).not.toHaveBeenCalled();
+    // Lane membership is not lead identity, but the turn still belongs in the registry.
+    expect(openCodeLaneTurnActivityRegistry.get('team-a', 'Muse')).toMatchObject({
+      laneId: 'primary',
+      state: 'idle',
+    });
   });
 
   it('swallows notification failures without affecting the delivery result', async () => {
