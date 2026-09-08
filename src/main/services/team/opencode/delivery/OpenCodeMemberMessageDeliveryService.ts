@@ -1279,9 +1279,20 @@ export class OpenCodeMemberMessageDeliveryService {
     );
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
     const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
-    // Riders reach the model only when the attempt carrying them is accepted;
-    // every post-dispatch return must repeat that proof or the relay redelivers.
-    const coalescedNoticesDispatched = Boolean(input.coalescedNoticeText?.trim()) && promptAccepted;
+    // Riders reach the model only when the attempt carrying them is accepted AND
+    // actually carried them.
+    //
+    // `promptBodyAlreadyDelivered` is the redelivery shape: the prompt body was
+    // accepted by the runtime on an earlier attempt, so this attempt sends only
+    // the missing-proof control text and drops `input.text` entirely - and the
+    // coalesced-notice block lives inside `input.text`. Claiming the riders were
+    // delivered there marks them read in the inbox while their text never
+    // reached the model, and a rider has no ledger row of its own to redeliver
+    // it. The loss is silent and permanent.
+    const coalescedNoticesDispatched =
+      Boolean(input.coalescedNoticeText?.trim()) &&
+      promptAccepted &&
+      !dispatch.promptBodyAlreadyDelivered;
     const promptAcceptanceMissingRuntimePromptId =
       result.ok && !promptAcceptedByRuntimeIdentity && !promptAcceptedByObservation;
     const deliveryDiagnostics = promptAcceptanceMissingRuntimePromptId
