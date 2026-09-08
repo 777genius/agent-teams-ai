@@ -93,6 +93,9 @@ function recordReferencesTask(
     return true;
   }
   return record.taskRefs.some((ref) => {
+    if (ref.teamName !== record.teamName) {
+      return false;
+    }
     const taskId = normalizeTaskRef(ref.taskId);
     const displayId = normalizeTaskRef(ref.displayId);
     return Boolean((taskId && taskRefs.has(taskId)) || (displayId && taskRefs.has(displayId)));
@@ -232,7 +235,16 @@ export class TaskLogOpenCodeSessionEvidenceSource implements OpenCodeTaskLogSess
     const records = recordBatches
       .flat()
       .filter((record) => shouldUseRecord(record, teamName, task, taskRefs))
-      .sort((left, right) => recordSortTimestamp(right) - recordSortTimestamp(left));
+      .sort((left, right) => {
+        // Completion notices must not evict the owner's actual assignment from the bounded scan.
+        const owner = task.owner?.trim().toLowerCase();
+        const leftIsOwner = left.memberName.trim().toLowerCase() === owner;
+        const rightIsOwner = right.memberName.trim().toLowerCase() === owner;
+        return (
+          Number(rightIsOwner) - Number(leftIsOwner) ||
+          recordSortTimestamp(right) - recordSortTimestamp(left)
+        );
+      });
 
     const seen = new Set<string>();
     const result: OpenCodeTaskLogAttributionRecord[] = [];

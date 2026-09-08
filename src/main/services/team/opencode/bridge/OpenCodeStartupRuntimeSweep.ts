@@ -54,12 +54,13 @@ export type OpenCodeManagedHostSweep = (
  */
 export type OpenCodeManagedHostOwnershipMarkers = Pick<
   OpenCodeManagedHostProcessCleanupOptions,
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
+  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny' | 'requiredProfileScope'
 >;
 
 const sweepManagedHostsByProcessScan: OpenCodeManagedHostSweep = (input) =>
   cleanupManagedOpenCodeServeProcesses({
     mode: input.mode ?? 'force',
+    requiredProfileScope: input.requiredProfileScope,
     startedBeforeMs: input.startedBeforeMs,
     ...(input.requiredDetailsMarkers
       ? { requiredDetailsMarkers: input.requiredDetailsMarkers }
@@ -155,6 +156,7 @@ export async function runOpenCodeStartupRuntimeSweepTail(
  */
 export async function reapOrphanedOpenCodeHostsBeforeRuntimeRegistry(ports: {
   appStartedAtMs: number;
+  requiredProfileScope: string;
   sweepManagedHosts?: OpenCodeManagedHostSweep;
   logSweepResult(message: string): void;
   logWarning(message: string): void;
@@ -166,6 +168,7 @@ export async function reapOrphanedOpenCodeHostsBeforeRuntimeRegistry(ports: {
     const sweep = await sweepManagedHosts({
       mode: 'orphaned',
       startedBeforeMs: ports.appStartedAtMs,
+      requiredProfileScope: ports.requiredProfileScope,
     });
     ports.logSweepResult(
       `opencode_managed_hosts_killed sweep=startup_preflight count=${sweep.killed} scanned=${sweep.scanned}`

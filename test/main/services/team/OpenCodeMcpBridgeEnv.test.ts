@@ -1,4 +1,6 @@
 import {
+  buildOpenCodeAppProfileScope,
+  buildOpenCodeAppProcessOwnershipMarkers,
   buildOpenCodeAppScopedMcpOwnershipMarker,
   buildOpenCodeAppScopedMcpUrl,
   clearOpenCodeLocalMcpLaunchEnv,
@@ -13,6 +15,27 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCodeMcpBridgeEnv', () => {
+  it('preserves exact profile ownership across app restarts and separates full authority roots', () => {
+    const profile = buildOpenCodeAppProfileScope('/tmp/desktop/profile', '/tmp/desktop/.claude');
+    expect(buildOpenCodeAppProfileScope('/tmp/desktop/profile', '/tmp/desktop/.claude')).toBe(
+      profile
+    );
+    expect(buildOpenCodeAppProfileScope('/tmp/full/profile', '/tmp/desktop/.claude')).not.toBe(
+      profile
+    );
+    expect(buildOpenCodeAppProfileScope('/tmp/desktop/profile', '/tmp/full/.claude')).not.toBe(
+      profile
+    );
+    for (const instance of ['old-instance', 'new-instance']) {
+      const url = new URL(
+        buildOpenCodeAppScopedMcpUrl('http://127.0.0.1:41001/mcp', instance, profile)
+      );
+      expect(new URLSearchParams(url.hash.slice(1)).get('agent-teams-app-profile')).toBe(profile);
+      expect(url.pathname).toBe('/mcp');
+    }
+    expect(() => buildOpenCodeAppProfileScope('', '/tmp/claude')).toThrow();
+  });
+
   it('adds an app-instance marker without changing the MCP network endpoint', () => {
     const scopedUrl = buildOpenCodeAppScopedMcpUrl('http://127.0.0.1:41001/mcp', '123-456');
     const parsed = new URL(scopedUrl);
@@ -261,5 +284,17 @@ describe('OpenCodeMcpBridgeEnv', () => {
     expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBeUndefined();
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
     expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe('http://127.0.0.1:41001/mcp');
+  });
+});
+
+describe('buildOpenCodeAppProcessOwnershipMarkers', () => {
+  it('uses native environment or Windows config identity for the same instance', () => {
+    expect(buildOpenCodeAppProcessOwnershipMarkers('test-instance', 'darwin')).toEqual({
+      requiredDetailsMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID=test-instance'],
+    });
+    expect(buildOpenCodeAppProcessOwnershipMarkers('test-instance', 'win32')).toEqual({
+      requiredServeConfigMarkersAny: ['agent-teams-app-instance=test-instance'],
+    });
+    expect(() => buildOpenCodeAppProcessOwnershipMarkers('  ')).toThrow();
   });
 });

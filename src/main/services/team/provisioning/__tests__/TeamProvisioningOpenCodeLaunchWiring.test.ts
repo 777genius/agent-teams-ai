@@ -423,16 +423,21 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       ),
     } as unknown as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    host.runtimeAdapterRunByTeam.set('team-a', {
-      runId: 'newer-run',
-      providerId: 'opencode',
-    });
-    host.aliveRuns.set('team-a', 'newer-run');
     const onRuntimeRegistered = vi.fn();
     const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, onRuntimeRegistered);
     const artifactModule = await import('../../TeamLaunchFailureArtifactPack');
     const storageModule =
       await import('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader');
+    vi.mocked(storageModule.clearOpenCodeRuntimeLaneStorage).mockImplementationOnce(async () => {
+      // A successor arrives during awaited failure cleanup, after preflight
+      // has retired any previous owner. Keep exercising the ownership CAS below.
+      host.runtimeAdapterRunByTeam.set('team-a', {
+        runId: 'newer-run',
+        providerId: 'opencode',
+      });
+      host.aliveRuns.set('team-a', 'newer-run');
+      return true;
+    });
 
     const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({
       request: request([{ name: 'alice', role: 'Engineer', providerId: 'opencode' }]),
@@ -453,6 +458,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     );
     expect(host.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('newer-run');
     expect(host.aliveRuns.get('team-a')).toBe('newer-run');
+    expect(host.provisioningRunByTeam.has('team-a')).toBe(false);
+    expect(calls).toContain('emit:process:failed');
+    expect(calls).not.toContain('clearPrimaryIfOwned');
+    expect(calls).not.toContain('deleteAliveRun');
     expect(onRuntimeRegistered).not.toHaveBeenCalled();
   });
 });
