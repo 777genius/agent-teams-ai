@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 
-import { prepareCursorAcpLaunchMcpConfig } from '../config/CursorMcpConfigWriter';
 import { openCodeReadinessArtifactKey } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../readiness/OpenCodeProjectIdentity';
 
@@ -78,13 +77,6 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
 export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeTimeoutOptions {
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
-  /**
-   * Current Agent Teams MCP HTTP URL (`CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL`).
-   * When it resolves, a launch registers it as a real Cursor MCP server; when
-   * it is absent nothing is written, so this stays an opt-in of the app entry
-   * point rather than a default of the bridge.
-   */
-  resolveAgentTeamsMcpUrl?: () => string | undefined | Promise<string | undefined>;
 }
 
 export interface OpenCodeReadinessBridgeCommandBody {
@@ -189,7 +181,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   async launchOpenCodeTeam(
     input: OpenCodeLaunchTeamCommandBody
   ): Promise<OpenCodeLaunchTeamCommandData> {
-    await this.registerAgentTeamsMcpServer(input);
+    // Managed Cursor receives profile HTTP MCP configuration from the runtime.
+    // Launch must never register an app endpoint in the user's global Cursor config.
     const result = await this.executeStateChangingCommand<
       OpenCodeLaunchTeamCommandBody,
       OpenCodeLaunchTeamCommandData
@@ -206,18 +199,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       : isAmbiguousOpenCodeLaunchFailure(result)
         ? reconciliationRequiredLaunchData(input, result)
         : blockedLaunchData(input.runId, result);
-  }
-
-  /** Cursor's native wrapper restores the host home before loading MCP config. */
-  private async registerAgentTeamsMcpServer(
-    input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel'>
-  ): Promise<void> {
-    if (!input.selectedModel.startsWith('cursor-acp/') || !this.options.resolveAgentTeamsMcpUrl) {
-      return;
-    }
-    await prepareCursorAcpLaunchMcpConfig({
-      mcpUrl: await this.options.resolveAgentTeamsMcpUrl(),
-    });
   }
 
   async reconcileOpenCodeTeam(

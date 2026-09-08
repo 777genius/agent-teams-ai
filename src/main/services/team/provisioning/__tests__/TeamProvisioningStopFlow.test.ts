@@ -5,6 +5,10 @@ import {
   stopTeamFlow,
   type TeamProvisioningStopTeamPorts,
 } from '../TeamProvisioningStopFlow';
+import {
+  createTeamProvisioningTransientRunStatePorts,
+  TeamProvisioningTransientRunState,
+} from '../TeamProvisioningTransientRunState';
 
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../../runtime/anthropicTeamApiKeyHelper';
 import type { TeamProvisioningProgress } from '@shared/types';
@@ -76,6 +80,7 @@ function makePorts(
 } {
   const ports = {
     invalidateRuntimeSnapshotCaches: vi.fn(),
+    cancelOpenCodePromptDeliveries: vi.fn().mockResolvedValue(undefined),
     pauseActiveIntervalsForTeam: vi.fn(),
     stopPersistentTeamMembers: vi.fn(),
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
@@ -131,7 +136,99 @@ function makePorts(
   return ports;
 }
 
+function makeLockPorts() {
+  return createTeamProvisioningTransientRunStatePorts({
+    pendingTimeouts: new Map(),
+    teamOpLocks: new Map(),
+    cancelPendingAutoResume: vi.fn(),
+    clearOpenCodeRuntimeToolApprovals: vi.fn(),
+    invalidateRuntimeSnapshotCaches: vi.fn(),
+    clearRuntimeProcessRowsForTeam: vi.fn(),
+    retainedClaudeLogsByTeam: new Map(),
+    persistedTranscriptClaudeLogs: { invalidate: vi.fn() },
+    leadInboxRelayInFlight: new Map(),
+    relayedLeadInboxMessageIds: new Map(),
+    leadRecoveryMessageIds: new Map(),
+    successfulLeadRecoveryMessageIds: new Map(),
+    pendingCrossTeamFirstReplies: new Map(),
+    recentCrossTeamLeadDeliveryMessageIds: new Map(),
+    recentSameTeamNativeFingerprints: new Map(),
+    memberInboxRelayInFlight: new Map(),
+    openCodeMemberInboxRelayInFlight: new Map(),
+    openCodeMemberSendInFlightByLane: new Map(),
+    openCodePromptDeliveryWatchdogScheduler: { cancelTeam: vi.fn() },
+    openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn(), resetTeamForNewRun: vi.fn() },
+    relayedMemberInboxMessageIds: new Map(),
+    liveLeadProcessMessages: new Map(),
+    relayLeadInboxMessages: vi.fn().mockResolvedValue(0),
+    warn: vi.fn(),
+    nowMs: () => Date.parse('2026-01-02T03:04:05.000Z'),
+  });
+}
+
 describe('team provisioning stop flow', () => {
+  it.each([false, true])(
+    'holds the team lock after ledger failure until runtime settles (runtime fails: %s)',
+    async (runtimeFails) => {
+      const teamName = 'team-a';
+      const ledgerError = new Error('ledger failed');
+      const runtimeError = new Error('runtime failed');
+      const events: string[] = [];
+      let finishRuntime!: () => void;
+      const runtimeGate = new Promise<void>((resolve) => {
+        finishRuntime = resolve;
+      });
+      const transient = new TeamProvisioningTransientRunState(makeLockPorts());
+      const ports = makePorts(teamName, new Map(), new Map([[teamName, 'old']]));
+      ports.withTeamLock = (team, fn) => transient.withTeamLock(team, fn);
+      ports.runtimeAdapterRunByTeam.set(teamName, { runId: 'old', providerId: 'opencode' });
+      ports.cancelOpenCodePromptDeliveries = vi.fn(async () => {
+        throw ledgerError;
+      });
+      ports.stopOpenCodeRuntimeAdapterTeam = vi.fn(async () => {
+        events.push('runtime-start');
+        await runtimeGate;
+        events.push('runtime-settled');
+        if (runtimeFails) throw runtimeError;
+      });
+      ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam = vi.fn(async () => {
+        events.push('cleanup');
+      });
+      let settled = false;
+      const stopping = transient.withTeamLock(teamName, () => stopTeamFlow(teamName, ports));
+      const checked = stopping.catch((error: unknown) => {
+        settled = true;
+        return error;
+      });
+      const successor = transient.withTeamLock(teamName, async () => {
+        events.push('successor');
+      });
+      try {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(events).toEqual(['runtime-start']);
+        expect(settled).toBe(false);
+      } finally {
+        finishRuntime();
+        await successor;
+      }
+      expect(await checked).toBe(ledgerError);
+      expect(events).toEqual(
+        runtimeFails
+          ? ['runtime-start', 'runtime-settled', 'successor']
+          : ['runtime-start', 'runtime-settled', 'cleanup', 'successor']
+      );
+    }
+  );
+
+  it('propagates runtime failure without cleaning runtime-owned helper material', async () => {
+    const ports = makePorts('team-a', new Map());
+    const error = new Error('runtime failed');
+    ports.hasSecondaryRuntimeRuns = vi.fn(() => true);
+    ports.stopMixedSecondaryRuntimeLanes = vi.fn().mockRejectedValue(error);
+    await expect(stopTeamFlow('team-a', ports)).rejects.toBe(error);
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
+  });
+
   it('cancels the owning relay before waiting for process termination', async () => {
     const rejectOnce = vi.fn();
     const run = { ...makeRun('run-1'), leadRelayCapture: { rejectOnce } };
@@ -151,6 +248,7 @@ describe('team provisioning stop flow', () => {
     await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
     expect(rejectOnce).toHaveBeenCalledOnce();
     expect(run.leadRelayCapture).toBeNull();
+    expect(ports.cancelOpenCodePromptDeliveries).toHaveBeenCalledWith('team-a');
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     finishStop();
     await stopping;

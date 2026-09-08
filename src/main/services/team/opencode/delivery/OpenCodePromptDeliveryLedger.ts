@@ -2,6 +2,10 @@ import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
 import { validateOpenCodePromptDeliveryLedgerRecords } from './OpenCodePromptDeliveryLedgerRecordSchema';
+import {
+  cancelOpenCodeDeliveryFromOtherRun,
+  isOpenCodeDeliveryFromOtherRun,
+} from './OpenCodePromptDeliveryRunEligibility';
 import { isOpenCodeSessionRefreshResponseState } from './OpenCodeSessionRefreshReasonClassifier';
 import { type OpenCodeTurnProgress, resolveOpenCodeTurnProgress } from './OpenCodeTurnProgress';
 
@@ -135,6 +139,11 @@ export class OpenCodePromptDeliveryLedgerStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.id === id);
       if (existing) {
+        if (isOpenCodeDeliveryFromOtherRun(existing, input.runId)) {
+          const cancelled = cancelOpenCodeDeliveryFromOtherRun(existing, input.now);
+          result = cancelled;
+          return records.map((record) => (record.id === id ? cancelled : record));
+        }
         if (isOpenCodePromptDeliveryCancelled(existing)) {
           result = existing;
           return records;
@@ -257,6 +266,7 @@ export class OpenCodePromptDeliveryLedgerStore {
   }
 
   async getActiveForMember(input: {
+    runId?: string | null;
     teamName: string;
     memberName: string;
     laneId: string;
@@ -269,6 +279,7 @@ export class OpenCodePromptDeliveryLedgerStore {
             record.teamName === input.teamName &&
             record.memberName.toLowerCase() === input.memberName.toLowerCase() &&
             record.laneId === input.laneId &&
+            !isOpenCodeDeliveryFromOtherRun(record, input.runId) &&
             !isTerminalForAutomaticSelection(record)
         )
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))[0] ?? null
@@ -708,20 +719,9 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
-  /**
-   * Marks every record with remaining delivery or watchdog work as
-   * failed_terminal so retries and read-commit follow-ups stop.
-   *
-   * The guard is `isOpenCodePromptDeliveryWatchdogTerminal`: cancellation also
-   * covers watchdog read-commit work after a response has left automatic
-   * selection. This does not reopen materialized direct-send replies for
-   * `listDue` or `getActiveForMember`. Already-read terminal history keeps the
-   * reason it ended.
-   *
-   * The lane ledger outlives the run that wrote it, so the caller also says
-   * which work is its own: see `isInCancellationScope`.
-   */
+  /** Cancels delivery and watchdog work within the captured Stop scope; inbox rows are retained. */
   async cancelNonTerminalRecords(input: {
+    includeRecoverableTerminal?: boolean;
     now: string;
     reason: string;
     /**
@@ -743,7 +743,11 @@ export class OpenCodePromptDeliveryLedgerStore {
     let keptForLaterRun = 0;
     await this.store.updateLocked((records) =>
       records.map((record) => {
-        if (isOpenCodePromptDeliveryWatchdogTerminal(record)) {
+        if (
+          isOpenCodePromptDeliveryCancelled(record) ||
+          record.inboxReadCommittedAt ||
+          (isOpenCodePromptDeliveryWatchdogTerminal(record) && !input.includeRecoverableTerminal)
+        ) {
           return record;
         }
         if (!isInCancellationScope(record, ownedRunIds, createdAtOrBeforeMs)) {

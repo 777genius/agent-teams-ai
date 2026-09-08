@@ -15,10 +15,6 @@ import {
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../OpenCodePromptDeliveryLedger';
-import {
-  OpenCodePromptDeliveryWatchdogCoordinator,
-  type OpenCodePromptDeliveryWatchdogCoordinatorPorts,
-} from '../OpenCodePromptDeliveryWatchdogCoordinator';
 import { isOpenCodeDeliveryResponseReadCommitAllowed } from '../OpenCodePromptDeliveryReadCommitPolicy';
 import {
   isOpenCodePromptDeliveryStalePending,
@@ -27,6 +23,10 @@ import {
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
   type OpenCodeStalePendingPolicyConfig,
 } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import {
+  OpenCodePromptDeliveryWatchdogCoordinator,
+  type OpenCodePromptDeliveryWatchdogCoordinatorPorts,
+} from '../OpenCodePromptDeliveryWatchdogCoordinator';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 import type { OpenCodeDeliveryResponseObservation } from '../../bridge/OpenCodeBridgeCommandContract';

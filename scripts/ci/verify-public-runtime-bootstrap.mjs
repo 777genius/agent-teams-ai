@@ -79,6 +79,7 @@ try {
     cacheRoot,
     runtimeLock.version,
     platformKey,
+    'payload-v1',
     asset.binaryName
   );
   if (path.resolve(runtimePath) !== path.resolve(expectedRuntimePath)) {
@@ -130,7 +131,7 @@ try {
     fail('second bootstrap did not return the same cached runtime path', cachedBootstrap);
   }
 
-  const cacheDirEntries = fs.readdirSync(path.dirname(runtimePath));
+  const cacheDirEntries = fs.readdirSync(path.dirname(path.dirname(runtimePath)));
   const staleBootstrapEntry = cacheDirEntries.find(
     (entry) => entry === '.bootstrap.lock' || entry.startsWith('.bootstrap-')
   );

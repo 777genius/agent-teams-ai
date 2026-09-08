@@ -590,6 +590,9 @@ export async function readOwnedOpenCodeRuntimeRunIdsForTeam(input: {
  */
 export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   teamName: string;
+  includeRecoverableTerminal?: boolean;
+  reason?: string;
+  throwOnError?: boolean;
   teamsBasePath?: string;
   now?: () => Date;
   ownedRunIds?: readonly string[];
@@ -603,6 +606,7 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
 
   let cleared = 0;
   let keptForLaterRun = 0;
+  const laneErrors: unknown[] = [];
   for (const laneId of laneIds) {
     const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath,
@@ -617,19 +621,24 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
       const result = await ledger.cancelNonTerminalRecords({
         now: (input.now?.() ?? new Date()).toISOString(),
-        reason: FORCE_STOP_DELIVERY_CANCEL_REASON,
+        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+        includeRecoverableTerminal: input.includeRecoverableTerminal,
         ownedRunIds: input.ownedRunIds,
         createdAtOrBeforeMs: input.requestedAtMs,
       });
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {
+      laneErrors.push(error);
       diagnostics.push(
         `Failed to cancel pending deliveries for lane ${laneId}: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
     }
+  }
+  if (input.throwOnError && laneErrors.length > 0) {
+    throw laneErrors[0];
   }
   if (cleared > 0) {
     diagnostics.push(`Cancelled ${cleared} pending prompt delivery record(s)`);
