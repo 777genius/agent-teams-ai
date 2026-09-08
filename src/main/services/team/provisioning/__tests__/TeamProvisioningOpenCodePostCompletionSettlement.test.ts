@@ -55,14 +55,33 @@ function userInboxMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
   };
 }
 
+/**
+ * An APP-WRITTEN notice: the only thing settlement is allowed to absorb. Every
+ * app notice carries `source: 'system_notification'`, which is what the relay
+ * turns into the informational reply recipient used below.
+ */
 function notice(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
   return {
-    from: 'Scribe',
+    from: 'system',
     to: 'team-lead',
-    text: '#de5126de done.',
+    text: '#de5126de moved to completed.',
     timestamp: '2026-01-01T10:00:10.000Z',
     read: false,
     messageId: 'notice-1',
+    source: 'system_notification',
+    ...overrides,
+  };
+}
+
+/** A message a teammate actually wrote. Never absorbable, settled or not. */
+function teammateMessage(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
+  return {
+    from: 'Scribe',
+    to: 'team-lead',
+    text: 'The deploy config still points at staging - somebody has to fix that.',
+    timestamp: '2026-01-01T10:00:10.000Z',
+    read: false,
+    messageId: 'teammate-1',
     ...overrides,
   };
 }
@@ -74,7 +93,7 @@ function createSettlementPorts(
     readTasks: vi.fn().mockResolvedValue([completedTask()]),
     readTasksAfterCommit: vi.fn().mockResolvedValue([completedTask()]),
     readUserInbox: vi.fn().mockResolvedValue([userInboxMessage()]),
-    resolveReplyRecipient: () => 'Scribe',
+    resolveReplyRecipient: () => 'system',
     hasExistingRecord: vi.fn().mockResolvedValue(false),
     markRead: vi.fn().mockResolvedValue(undefined),
     logReadCommitFailure: vi.fn(),
@@ -321,7 +340,7 @@ describe('hasBoardMovedSinceSettlement', () => {
 });
 
 describe('settleOpenCodePostCompletionNotices', () => {
-  it('read-commits the anchor and every reply-optional notice behind it', async () => {
+  it('read-commits the anchor and every app-written notice behind it', async () => {
     const anchor = notice();
     const follower = notice({ messageId: 'notice-2', timestamp: '2026-01-01T10:00:11.000Z' });
     const markRead = vi.fn().mockResolvedValue(undefined);
@@ -329,7 +348,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
     const outcome = await settleOpenCodePostCompletionNotices({
       unread: [anchor, follower],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       anchorHasLedgerRecord: false,
       ports: createSettlementPorts({ markRead }),
     });
@@ -358,7 +377,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
       settleOpenCodePostCompletionNotices({
         unread: [notice()],
         index: 0,
-        anchorReplyRecipient: 'Scribe',
+        anchorReplyRecipient: 'system',
         anchorHasLedgerRecord: true,
         ports: createSettlementPorts({ markRead }),
       })
@@ -369,7 +388,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
       settleOpenCodePostCompletionNotices({
         unread: [notice({ messageKind: 'member_work_sync_nudge' })],
         index: 0,
-        anchorReplyRecipient: 'Scribe',
+        anchorReplyRecipient: 'system',
         anchorHasLedgerRecord: false,
         ports: createSettlementPorts({ markRead }),
       })
@@ -384,7 +403,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
       settleOpenCodePostCompletionNotices({
         unread: [notice()],
         index: 0,
-        anchorReplyRecipient: 'Scribe',
+        anchorReplyRecipient: 'system',
         anchorHasLedgerRecord: false,
         ports: createSettlementPorts({
           markRead,
@@ -417,7 +436,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
     const outcome = await settleOpenCodePostCompletionNotices({
       unread: [anchor],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       anchorHasLedgerRecord: false,
       ports: createSettlementPorts({
         readTasksAfterCommit: vi.fn().mockResolvedValue(reopened),
@@ -461,13 +480,55 @@ describe('settleOpenCodePostCompletionNotices', () => {
     const outcome = await settleOpenCodePostCompletionNotices({
       unread: [anchor, boardComplete, trailing],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       anchorHasLedgerRecord: false,
       ports: createSettlementPorts({ markRead: followerMarkRead }),
     });
 
     expect(followerMarkRead).toHaveBeenCalledWith([anchor]);
     expect(outcome).toMatchObject({ kind: 'read_committed', messages: [anchor] });
+  });
+
+  it('never absorbs a message a teammate wrote, as anchor or as follower', async () => {
+    // `teammate_report` is decided by the SENDER, so every ordinary teammate
+    // `SendMessage` is reply-optional. Absorbing on that alone dropped real
+    // teammate traffic on a settled board: marked read, never delivered, no
+    // turn spent and no trace on the recipient side.
+    const anchorMarkRead = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      settleOpenCodePostCompletionNotices({
+        unread: [teammateMessage()],
+        index: 0,
+        anchorReplyRecipient: 'Scribe',
+        anchorHasLedgerRecord: false,
+        ports: createSettlementPorts({
+          markRead: anchorMarkRead,
+          resolveReplyRecipient: () => 'Scribe',
+        }),
+      })
+    ).resolves.toEqual({ kind: 'deliver' });
+    expect(anchorMarkRead).not.toHaveBeenCalled();
+
+    // Behind an app notice the walk stops in front of it, so it becomes the
+    // anchor of the next pass and is delivered there.
+    const appNotice = notice();
+    const written = teammateMessage({ timestamp: '2026-01-01T10:00:11.000Z' });
+    const followerMarkRead = vi.fn().mockResolvedValue(undefined);
+
+    const outcome = await settleOpenCodePostCompletionNotices({
+      unread: [appNotice, written],
+      index: 0,
+      anchorReplyRecipient: 'system',
+      anchorHasLedgerRecord: false,
+      ports: createSettlementPorts({
+        markRead: followerMarkRead,
+        resolveReplyRecipient: (message) => (message.from === 'system' ? 'system' : 'Scribe'),
+      }),
+    });
+
+    expect(followerMarkRead).toHaveBeenCalledWith([appNotice]);
+    expect(outcome).toMatchObject({ kind: 'read_committed', messages: [appNotice] });
   });
 
   it('leaves the notices unread and delivers normally when the read-commit fails', async () => {
@@ -477,7 +538,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
       settleOpenCodePostCompletionNotices({
         unread: [notice()],
         index: 0,
-        anchorReplyRecipient: 'Scribe',
+        anchorReplyRecipient: 'system',
         anchorHasLedgerRecord: false,
         ports: createSettlementPorts({
           markRead: vi.fn().mockRejectedValue(new Error('inbox locked')),
@@ -495,7 +556,7 @@ describe('settleOpenCodePostCompletionNotices', () => {
       settleOpenCodePostCompletionNotices({
         unread: [notice()],
         index: 0,
-        anchorReplyRecipient: 'Scribe',
+        anchorReplyRecipient: 'system',
         anchorHasLedgerRecord: false,
         ports: createSettlementPorts({ isCurrentGeneration: () => generations.shift() ?? true }),
       })
