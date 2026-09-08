@@ -97,7 +97,10 @@ import {
   type TeamRuntimeStopResult,
 } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
-import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import {
+  createPersistedLaunchSnapshot,
+  normalizePersistedLaunchSnapshot,
+} from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
 import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
@@ -312,6 +315,7 @@ describe(
     let projectPath: string;
     let originalClaudeCliPath: string | undefined;
     let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
+    let runtimePidProbe: ReturnType<typeof stubFakeOpenCodeRuntimePidProbes> | undefined;
 
     const blockedMixedLaunches: {
       adapter: { releaseLaunches(): void };
@@ -323,7 +327,7 @@ describe(
       ClaudeBinaryResolver.clearCache();
       originalClaudeCliPath = process.env.CLAUDE_CLI_PATH;
       originalWorkspaceTrustEnv = snapshotWorkspaceTrustTestEnv();
-      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-launch-matrix-e2e-'));
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-launch-matrix-TEST-e2e-'));
       tempClaudeRoot = path.join(tempDir, '.claude');
       projectPath = path.join(tempDir, 'project');
       await fs.mkdir(projectPath, { recursive: true });
@@ -340,6 +344,8 @@ describe(
       const launchResults = await Promise.allSettled(
         launchesToDrain.map(({ run }) => run.mixedSecondaryLaneLaunchQueue)
       );
+      runtimePidProbe?.restore();
+      runtimePidProbe = undefined;
       TeamConfigReader.clearCacheForTests();
       restoreOptionalEnvValue('CLAUDE_CLI_PATH', originalClaudeCliPath);
       restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
@@ -476,14 +482,19 @@ describe(
     });
 
     it.each([
-      { publication: 'before', preserveSuccessor: false },
-      { publication: 'after', preserveSuccessor: false },
-      { publication: 'after', preserveSuccessor: true },
+      { publication: 'before', preserveSuccessor: false, runtimeAlive: true },
+      { publication: 'after', preserveSuccessor: false, runtimeAlive: true },
+      { publication: 'after', preserveSuccessor: true, runtimeAlive: true },
+      { publication: 'before', preserveSuccessor: false, runtimeAlive: false },
+      { publication: 'after', preserveSuccessor: false, runtimeAlive: false },
+      { publication: 'after', preserveSuccessor: true, runtimeAlive: false },
     ] as const)(
-      'cancels an untracked OpenCode restart $publication snapshot publication (preserve successor: $preserveSuccessor)',
-      async ({ publication, preserveSuccessor }) => {
+      'cancels an untracked OpenCode restart $publication snapshot publication (preserve successor: $preserveSuccessor, runtime alive: $runtimeAlive)',
+      async ({ publication, preserveSuccessor, runtimeAlive }) => {
         const teamName = 'pure-opencode-untracked-restart-persist-stop-safe-e2e';
         const adapter = new FakeOpenCodeRuntimeAdapter();
+        const deadPids = new Set<number>();
+        runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter, deadPids);
         const svc = new TeamProvisioningService();
         svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -498,6 +509,10 @@ describe(
           },
           () => undefined
         );
+
+        if (!runtimeAlive) {
+          for (const pid of adapter.runtimePids) deadPids.add(pid);
+        }
 
         let markPersistenceEntered!: () => void;
         let releasePersistence!: () => void;
@@ -519,7 +534,11 @@ describe(
           persistOpenCodeRuntimeAdapterLaunchResult(...args: unknown[]): Promise<unknown>;
           clearPersistedOpenCodeLaunchStateIfOwned(...args: unknown[]): Promise<void>;
           openCodeAggregatePrimaryRestartByTeam: Map<string, { candidateRunId?: string }>;
-          runTracking: { getTrackedRunId(teamName: string): string | null };
+          runtimeAdapterRunByTeam: Map<string, { runId: string }>;
+          runTracking: {
+            getTrackedRunId(teamName: string): string | null;
+            getAliveRunId(teamName: string): string | null;
+          };
           launchStateWrittenRunIdByTeam: Map<string, string>;
           writeLaunchStateSnapshot(
             teamName: string,
@@ -559,6 +578,11 @@ describe(
           expect(candidateRunId).not.toBe(adapter.launchInputs[0]?.runId);
           const lease = lifecycle.openCodeAggregatePrimaryRestartByTeam.get(teamName);
           expect(lease?.candidateRunId).toBe(candidateRunId);
+          // Even a dead runtime whose Stop was skipped must relinquish memory
+          // ownership before the pending candidate publishes its lane manifest.
+          expect(lifecycle.runtimeAdapterRunByTeam.get(teamName)).toBeUndefined();
+          expect(lifecycle.runTracking.getAliveRunId(teamName)).toBeNull();
+          expect(lifecycle.runTracking.getTrackedRunId(teamName)).toBe(candidateRunId);
           const publishedSnapshot =
             publication === 'after' ? JSON.parse(await fs.readFile(launchStatePath, 'utf8')) : null;
           if (publishedSnapshot) {
@@ -3028,9 +3052,86 @@ describe(
       });
     });
 
+    it.each([
+      { leadAlive: true, teammateAlive: true, expectedStops: 1 },
+      { leadAlive: true, teammateAlive: false, expectedStops: 1 },
+      { leadAlive: false, teammateAlive: true, expectedStops: 1 },
+      { leadAlive: false, teammateAlive: false, expectedStops: 0 },
+    ])(
+      'uses normalized persisted PID evidence for relaunch (lead alive: $leadAlive, teammate alive: $teammateAlive)',
+      async ({ leadAlive, teammateAlive, expectedStops }) => {
+        const teamName = 'pure-opencode-relaunch-pid-authority-safe-e2e';
+        const adapter = new FakeOpenCodeRuntimeAdapter();
+        const deadPids = new Set<number>();
+        runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter, deadPids);
+        const svc = new TeamProvisioningService();
+        svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+        const request = {
+          teamName,
+          cwd: projectPath,
+          providerId: 'opencode' as const,
+          model: 'opencode/big-pickle',
+          skipPermissions: true,
+        };
+        const first = await svc.createTeam(
+          {
+            ...request,
+            members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          },
+          () => undefined
+        );
+        const snapshot = normalizePersistedLaunchSnapshot(
+          teamName,
+          JSON.parse(
+            await fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
+          )
+        );
+        // The real reader drops the lead from the UI roster, retaining its
+        // primary-lane evidence. Both member PIDs must be ESRCH to skip Stop.
+        expect(snapshot).toMatchObject({
+          teamName,
+          launchPhase: 'finished',
+          expectedMembers: ['alice'],
+          members: {
+            'team-lead': { laneId: 'primary', runtimeRunId: first.runId, runtimePid: 10_000 },
+            alice: { laneId: 'primary', runtimeRunId: first.runId, runtimePid: 10_001 },
+          },
+        });
+        if (!leadAlive) deadPids.add(snapshot!.members['team-lead'].runtimePid!);
+        if (!teammateAlive) deadPids.add(snapshot!.members.alice.runtimePid!);
+        runtimePidProbe.probedPids.length = 0;
+
+        const second = await svc.launchTeam(request, () => undefined);
+
+        expect(second.runId).not.toBe(first.runId);
+        expect(adapter.launchInputs.map((input) => input.runId)).toEqual([
+          first.runId,
+          second.runId,
+        ]);
+        expect(runtimePidProbe.probedPids).toContain(10_000);
+        if (!leadAlive) expect(runtimePidProbe.probedPids).toContain(10_001);
+        expect(adapter.stopInputs).toHaveLength(expectedStops);
+        if (expectedStops) {
+          expect(adapter.stopInputs[0]).toMatchObject({
+            teamName,
+            runId: first.runId,
+            laneId: 'primary',
+            reason: 'user_requested',
+            force: true,
+          });
+        }
+        // An explicit user Stop remains strict even for an all-ESRCH runtime.
+        await svc.stopTeam(teamName);
+        expect(adapter.stopInputs).toHaveLength(expectedStops + 1);
+        expect(adapter.stopInputs.at(-1)).toMatchObject({ runId: second.runId, laneId: 'primary' });
+        expect(svc.isTeamAlive(teamName)).toBe(false);
+      }
+    );
+
     it('stops the stale pure OpenCode primary runtime before same-team relaunch', async () => {
       const teamName = 'pure-opencode-relaunch-stops-stale-runtime-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3114,6 +3215,7 @@ describe(
       const relaunchTeamName = 'pure-opencode-relaunch-isolated-a-safe-e2e';
       const survivingTeamName = 'pure-opencode-relaunch-isolated-b-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3187,6 +3289,7 @@ describe(
     it('serializes same-team pure OpenCode relaunch behind an in-flight launch before replacing the current run', async () => {
       const teamName = 'pure-opencode-relaunch-queued-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3261,6 +3364,7 @@ describe(
     it('keeps relaunch waiting while the previous same-team OpenCode runtime stop is slow', async () => {
       const teamName = 'pure-opencode-relaunch-slow-stop-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3410,6 +3514,7 @@ describe(
       const stoppingTeamName = 'pure-opencode-cross-team-slow-stop-a-safe-e2e';
       const relaunchTeamName = 'pure-opencode-cross-team-slow-stop-b-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3613,6 +3718,7 @@ describe(
     it('does not resurrect a same-team OpenCode relaunch after stopAllTeams during slow replacement stop', async () => {
       const teamName = 'pure-opencode-relaunch-stop-all-during-slow-stop-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -3677,6 +3783,7 @@ describe(
     it('allows a fresh OpenCode launch after stopAllTeams cancelled a queued same-team relaunch', async () => {
       const teamName = 'pure-opencode-launch-after-stop-all-cancelled-relaunch-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
+      runtimePidProbe = stubFakeOpenCodeRuntimePidProbes(adapter);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -22151,6 +22258,7 @@ function createStaleWatermarkStopAdapterFixture(input: {
 
 class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
+  readonly runtimePids = new Set<number>();
   readonly launchInputs: TeamRuntimeLaunchInput[] = [];
   readonly messageInputs: OpenCodeTeamRuntimeMessageInput[] = [];
   readonly permissionAnswerInputs: TeamRuntimePermissionAnswerInput[] = [];
@@ -22414,6 +22522,10 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       : bootstrapPending
         ? 'OpenCode runtime pid reported by bridge without local process verification'
         : undefined;
+    const runtimePid = failed ? undefined : 10_000 + index;
+    if (runtimePid !== undefined) {
+      this.runtimePids.add(runtimePid);
+    }
     return {
       memberName: member.name,
       providerId: 'opencode',
@@ -22451,7 +22563,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           ]
         : undefined,
       sessionId: failed ? undefined : `session-${member.name}`,
-      runtimePid: failed ? undefined : 10_000 + index,
+      runtimePid,
       livenessKind,
       pidSource: failed ? undefined : 'opencode_bridge',
       runtimeDiagnostic,
@@ -23279,6 +23391,31 @@ async function writeStoppedProcessRegistry(teamName: string): Promise<void> {
 
 function expectDirectChildKillCount(actual: number, expected: number): void {
   expect(actual).toBe(expected);
+}
+
+// Replacement/slow-stop tests model a LIVE runtime even when these synthetic
+// PIDs are absent on the CI host. Intercept only emitted adapter PIDs; retain
+// real signal-0 probes for filesystem lock owners, and never send real signals.
+function stubFakeOpenCodeRuntimePidProbes(
+  adapter: FakeOpenCodeRuntimeAdapter,
+  deadPids: ReadonlySet<number> = new Set()
+): { probedPids: number[]; restore: () => void } {
+  const originalKill = process.kill.bind(process);
+  const probedPids: number[] = [];
+  const spy = vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
+    if (signal !== 0) {
+      throw new Error('Synthetic OpenCode PID authority only supports signal-0 probes');
+    }
+    if (!adapter.runtimePids.has(pid)) {
+      return originalKill(pid, 0);
+    }
+    probedPids.push(pid);
+    if (deadPids.has(pid)) {
+      throw Object.assign(new Error('Synthetic OpenCode runtime is gone'), { code: 'ESRCH' });
+    }
+    return true;
+  });
+  return { probedPids, restore: () => spy.mockRestore() };
 }
 
 function trackProcessKillsForPids(pids: readonly number[]): {
