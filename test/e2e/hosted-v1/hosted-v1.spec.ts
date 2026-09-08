@@ -1079,12 +1079,12 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     },
   });
   expect(draftCrud.savedAfterDelete).toMatchObject({
-    status: 404,
+    status: 503,
     body: {
       schemaVersion: 1,
       kind: 'error',
-      error: { code: 'not_found', reason: 'team_configuration_not_found' },
-      retryable: false,
+      error: { code: 'unavailable', reason: 'team_configuration_unavailable' },
+      retryable: true,
     },
   });
 
