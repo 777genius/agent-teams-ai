@@ -18,6 +18,7 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
         relayed: 0,
         failed: 0,
         skipped: 0,
+        diagnostics: ['refused'],
       })),
       inboxReader: {
         getMessagesFor: vi.fn(async () => [{ messageId: 'message-1', read: false }]),
@@ -34,6 +35,7 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
       info: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn(),
+      diagnostic: vi.fn(),
     };
     const getErrorMessage = vi.fn((error: unknown) =>
       error instanceof Error ? error.message : String(error)
@@ -48,7 +50,11 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
     await expect(
       deps.recoverBeforeDelivery({ teamName: 'alpha', memberName: 'Builder' })
     ).resolves.toBe(true);
-    await deps.relay({ teamName: 'alpha', memberName: 'Builder', messageId: 'message-1' });
+    // The relay's own account has to survive the hop, or a refused wake has
+    // nothing to report.
+    await expect(
+      deps.relay({ teamName: 'alpha', memberName: 'Builder', messageId: 'message-1' })
+    ).resolves.toMatchObject({ diagnostics: ['refused'] });
     await expect(
       deps.getInboxMessages({ teamName: 'alpha', memberName: 'Builder' })
     ).resolves.toEqual([{ messageId: 'message-1', read: false }]);
@@ -111,9 +117,74 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
     deps.info('info');
     deps.warn('warn');
     deps.debug('debug');
+    deps.diagnostic('diagnostic');
     expect(logger.info).toHaveBeenCalledWith('info');
     expect(logger.warn).toHaveBeenCalledWith('warn');
     expect(logger.debug).toHaveBeenCalledWith('debug');
+    expect(logger.diagnostic).toHaveBeenCalledWith('diagnostic');
+  });
+
+  it('wakes the rows queued behind a terminal record exactly once', async () => {
+    // A terminal ledger write emits no inbox event, so the rows queued behind
+    // the failed one need a wake of their own. Exactly one path issues it: the
+    // lane-wide re-relay below. Any second source of that wake - a periodic
+    // ledger sweep, a re-arm on the next observe - relays the same lane twice
+    // for one terminal record, which is why there is only one.
+    const relayOpenCodeMemberInboxMessages = vi.fn(
+      async (
+        _teamName: string,
+        _memberName: string,
+        _options: { onlyMessageId?: string; source: 'watchdog' }
+      ) => ({
+        attempted: 1,
+        delivered: 0,
+        relayed: 0,
+        failed: 1,
+        skipped: 0,
+        lastDelivery: {
+          delivered: false,
+          accepted: true,
+          ledgerStatus: 'failed_terminal',
+          reason: 'opencode_stale_pending_observe_window_exhausted',
+        },
+      })
+    );
+    const deps = createOpenCodePromptDeliveryWatchdogSchedulerDepsFromService(
+      {
+        canDeliverToOpenCodeRuntimeForTeam: () => true,
+        tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: async () => true,
+        relayOpenCodeMemberInboxMessages,
+        inboxReader: { getMessagesFor: async () => [] },
+        openCodeRuntimeRecoveryIdentity: {
+          resolveOpenCodeMemberDeliveryIdentity: async () => null,
+          isOpenCodeRuntimeLaneIndexActive: async () => false,
+        },
+      } as unknown as TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
+      {
+        logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), diagnostic: vi.fn() },
+        getErrorMessage: String,
+      }
+    );
+
+    const outcome = await deps.relay({
+      teamName: 'alpha',
+      memberName: 'Builder',
+      messageId: 'message-1',
+    });
+
+    const laneWakes = relayOpenCodeMemberInboxMessages.mock.calls.filter(
+      ([, , options]) => options.onlyMessageId === undefined
+    );
+    expect(laneWakes).toHaveLength(1);
+    expect(relayOpenCodeMemberInboxMessages.mock.calls).toEqual([
+      ['alpha', 'Builder', { onlyMessageId: 'message-1', source: 'watchdog' }],
+      ['alpha', 'Builder', { source: 'watchdog' }],
+    ]);
+    // What comes back is this row's own relay, not the lane wake's: the wake
+    // reports the row it was scheduled for.
+    expect(outcome).toMatchObject({
+      lastDelivery: { ledgerStatus: 'failed_terminal' },
+    });
   });
 
   it('creates the OpenCode prompt delivery watchdog scheduler', () => {
@@ -141,6 +212,7 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
           info: vi.fn(),
           warn: vi.fn(),
           debug: vi.fn(),
+          diagnostic: vi.fn(),
         },
         getErrorMessage: String,
       }
