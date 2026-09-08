@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizePersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
-
 import {
   buildOpenCodeRuntimeAdapterFinalProgress,
   buildOpenCodeRuntimeAdapterLaunchInput,
