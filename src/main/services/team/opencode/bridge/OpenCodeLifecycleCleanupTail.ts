@@ -48,6 +48,8 @@ export interface OpenCodeLifecycleCleanupTailInput {
   /** The instant the registry sweep command settled; the fence for the reap. */
   sweepCommandSettledAtMs: number;
   managedHostInstanceId: string;
+  /** Persistent application profile ownership retained across restarts. */
+  profileScope?: string;
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
   /**
    * The workspaces this app has teams for. It is the ownership proof the
@@ -128,7 +130,7 @@ export async function runOpenCodeLifecycleCleanupTail(
           excludePids: reason === 'startup' ? input.registryHostPids : undefined,
           ...(reason === 'shutdown'
             ? buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId)
-            : {}),
+            : { requiredProfileScope: input.profileScope }),
           startedBeforeMs: reason === 'startup' ? input.appStartedAtMs : null,
         },
         ports

@@ -200,6 +200,43 @@ describe('TaskLogOpenCodeSessionEvidenceSource', () => {
     ]);
   });
 
+  it('retains the owner assignment ahead of three newer lead completion notifications', async () => {
+    const teamsBasePath = await createTempTeamsBasePath();
+    await writeLedger({
+      teamsBasePath,
+      teamName: 'team-a',
+      laneId: 'lane-a',
+      records: [
+        createLedgerRecord({ id: 'owner-assignment' }),
+        ...[3, 4, 5].map((minute) =>
+          createLedgerRecord({
+            id: `lead-notice-${minute}`,
+            memberName: 'team-lead',
+            runtimeSessionId: 'session-lead',
+            deliveredUserMessageId: `lead-prompt-${minute}`,
+            updatedAt: `2026-04-21T10:0${minute}:00.000Z`,
+          })
+        ),
+        createLedgerRecord({
+          id: 'foreign-team-ref',
+          taskRefs: [{ taskId: 'task-a', displayId: 'task-a', teamName: 'other-team' }],
+          deliveredUserMessageId: 'foreign-prompt',
+          updatedAt: '2026-04-21T10:09:00.000Z',
+        }),
+      ],
+    });
+    const source = new TaskLogOpenCodeSessionEvidenceSource({ teamsBasePath });
+    const records = await source.readTaskRecords('team-a', createTask({ status: 'completed' }));
+
+    expect(records).toHaveLength(3);
+    expect(records[0]).toMatchObject({ memberName: 'bob', startMessageUuid: 'runtime-user-a' });
+    expect(records.map((record) => record.startMessageUuid)).toEqual([
+      'runtime-user-a',
+      'lead-prompt-5',
+      'lead-prompt-4',
+    ]);
+  });
+
   it('returns an empty candidate list when no matching ledger exists', async () => {
     const teamsBasePath = await createTempTeamsBasePath();
     const source = new TaskLogOpenCodeSessionEvidenceSource({ teamsBasePath });

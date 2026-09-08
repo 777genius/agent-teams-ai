@@ -122,6 +122,19 @@ function recordSteps(): void {
 }
 
 describe('runOpenCodeLifecycleCleanupTail', () => {
+  it('retains the application profile fence on the startup fallback', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      profileScope: 'test-profile-scope',
+      ports: createPorts(),
+    });
+    expect(cleanupManagedOpenCodeServeProcesses).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'orphaned', requiredProfileScope: 'test-profile-scope' })
+    );
+  });
+
   it('forces the shutdown sweep against this instance markers and runs no startup steps', async () => {
     vi.clearAllMocks();
     recordSteps();

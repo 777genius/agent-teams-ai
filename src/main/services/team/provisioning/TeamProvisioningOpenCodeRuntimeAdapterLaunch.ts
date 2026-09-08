@@ -1,3 +1,4 @@
+import { isLeadMember } from '@shared/utils/leadDetection';
 import * as path from 'path';
 
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
@@ -52,6 +53,7 @@ export interface OpenCodeRuntimeAdapterFinalProgressInput {
 export interface OpenCodeRuntimeAdapterLaunchPreflightPorts {
   getStopAllTeamsGeneration(): number;
   getRuntimeAdapterRun(teamName: string): OpenCodeRuntimeAdapterRunEntry | undefined;
+  readLaunchState(teamName: string): Promise<TeamRuntimeLaunchInput['previousLaunchState']>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   getProvisioningRun(teamName: string): string | undefined;
   getRuntimeAdapterProgress(runId: string): TeamProvisioningProgress | undefined;
@@ -84,7 +86,6 @@ export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapte
     onProgress?: (progress: TeamProvisioningProgress) => void
   ): TeamProvisioningProgress;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
-  readLaunchState(teamName: string): Promise<TeamRuntimeLaunchInput['previousLaunchState']>;
   clearPersistedLaunchState(teamName: string, options: { expectedRunId: string }): Promise<void>;
   getTeamsBasePath(): string;
   migrateLegacyOpenCodeRuntimeState(input: {
@@ -342,9 +343,85 @@ export function buildOpenCodeRuntimeAdapterFinalProgress(
   };
 }
 
+async function isPreviousOpenCodeRuntimeConfirmedDead(
+  teamName: string,
+  previousRun: OpenCodeRuntimeAdapterRunEntry,
+  members: TeamCreateRequest['members'],
+  ports: OpenCodeRuntimeAdapterLaunchPreflightPorts
+): Promise<boolean> {
+  const hasPendingLaunch = (): boolean => {
+    const runId = ports.getProvisioningRun(teamName);
+    if (!runId) return false;
+    const progress = ports.getRuntimeAdapterProgress(runId);
+    return (
+      runId !== previousRun.runId ||
+      !progress ||
+      ports.isCancellableRuntimeAdapterProgress(progress)
+    );
+  };
+  if (!previousRun.runId.trim() || hasPendingLaunch() || !members.some(isLeadMember)) return false;
+  const expectedNames = new Set(members.map((member) => member.name));
+  if (expectedNames.size !== members.length || expectedNames.has('')) return false;
+
+  let snapshot: TeamRuntimeLaunchInput['previousLaunchState'];
+  try {
+    snapshot = await ports.readLaunchState(teamName);
+  } catch {
+    return false;
+  }
+  // Main's persisted snapshot reader excludes the lead from the UI roster,
+  // but retains its lane-owned runtime evidence in members. Require every
+  // teammate in the roster and every runtime member (including the lead) below.
+  const leadNames = new Set(members.filter(isLeadMember).map((member) => member.name));
+  const expectedTeammateNames = [...expectedNames].filter((name) => !leadNames.has(name));
+  const snapshotTeammateNames =
+    snapshot?.expectedMembers.filter((name) => !leadNames.has(name)) ?? [];
+  if (
+    !snapshot ||
+    snapshot.teamName !== teamName ||
+    snapshot.launchPhase !== 'finished' ||
+    hasPendingLaunch() ||
+    ports.getRuntimeAdapterRun(teamName) !== previousRun ||
+    new Set(snapshot.expectedMembers).size !== snapshot.expectedMembers.length ||
+    snapshot.expectedMembers.some((name) => !expectedNames.has(name)) ||
+    snapshotTeammateNames.length !== expectedTeammateNames.length ||
+    expectedTeammateNames.some((name) => !snapshotTeammateNames.includes(name)) ||
+    Object.keys(snapshot.members).length !== expectedNames.size
+  )
+    return false;
+
+  const pids = new Set<number>();
+  for (const name of expectedNames) {
+    const member = snapshot.members[name];
+    if (
+      !member ||
+      member.name !== name ||
+      member.providerId !== 'opencode' ||
+      member.laneId !== 'primary' ||
+      member.runtimeRunId !== previousRun.runId ||
+      !Number.isSafeInteger(member.runtimePid) ||
+      (member.runtimePid ?? 0) <= 0
+    )
+      return false;
+    pids.add(member.runtimePid!);
+  }
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 0);
+      return false;
+    } catch (error) {
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ESRCH') {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 export async function prepareOpenCodeRuntimeAdapterLaunchPreflight(
   input: {
     teamName: string;
+    members: TeamCreateRequest['members'];
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
   },
@@ -352,7 +429,18 @@ export async function prepareOpenCodeRuntimeAdapterLaunchPreflight(
 ): Promise<TeamLaunchResponse | null> {
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
   const previousRuntimeRun = ports.getRuntimeAdapterRun(input.teamName);
-  if (previousRuntimeRun?.providerId === 'opencode') {
+  // A proven-dead primary runtime needs no preparatory abort. The following
+  // launch still performs the runtime's locked host/run recovery and CAS checks.
+  // User Stop and every unverified/alive runtime retain strict stop semantics.
+  if (
+    previousRuntimeRun?.providerId === 'opencode' &&
+    !(await isPreviousOpenCodeRuntimeConfirmedDead(
+      input.teamName,
+      previousRuntimeRun,
+      input.members,
+      ports
+    ))
+  ) {
     await ports.stopOpenCodeRuntimeAdapterTeam(input.teamName, previousRuntimeRun.runId);
   }
   const previousPendingRunId = ports.getProvisioningRun(input.teamName);
@@ -381,9 +469,11 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   ports: OpenCodeRuntimeAdapterLaunchPorts
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
+  const previousRuntimeRun = ports.getRuntimeAdapterRun(teamName);
   const preflightCancellation = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
     {
       teamName,
+      members: input.members,
       sourceWarning: input.sourceWarning,
       onProgress: input.onProgress,
     },
@@ -391,6 +481,18 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   );
   if (preflightCancellation) {
     return preflightCancellation;
+  }
+
+  // Successful preflight either stopped the previous runtime or proved it dead.
+  // The dead-runtime shortcut leaves its in-memory owner behind. Retire that
+  // exact owner before publishing a pending replacement, or Stop will select
+  // the old alive run and reject cleanup against the replacement's manifest.
+  // Keep persisted lane evidence for the launch's existing recovery/CAS checks.
+  if (
+    previousRuntimeRun?.providerId === 'opencode' &&
+    ports.getRuntimeAdapterRun(teamName) === previousRuntimeRun
+  ) {
+    ports.deleteRuntimeOwnershipIfCurrent(teamName, previousRuntimeRun.runId);
   }
 
   const runId = ports.randomUUID();
