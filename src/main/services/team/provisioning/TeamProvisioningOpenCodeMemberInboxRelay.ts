@@ -5,6 +5,7 @@ import {
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
+import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
 import {
@@ -19,6 +20,16 @@ import {
   selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
+import {
+  buildOpenCodeCoalesceDeferredDiagnostic,
+  buildOpenCodeCoalescedNoticeText,
+  buildOpenCodeCoalesceNotDispatchedDiagnostic,
+  canCoalesceNoticesIntoOpenCodeDelivery,
+  findNextUnreadUserMessageIndex,
+  isOpenCodeCoalescedNoticeDeliveryProven,
+  type OpenCodeReplyOptionalCoalescePorts,
+  selectOpenCodeReplyOptionalCoalescedFollowers,
+} from './TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
@@ -35,6 +46,7 @@ import {
   dedupeOpenCodeMemberInboxRelayDiagnostics,
   type OpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
+import { settleOpenCodePostCompletionNotices } from './TeamProvisioningOpenCodePostCompletionSettlement';
 
 import type {
   OpenCodeMemberIdentityResolution,
@@ -341,10 +353,49 @@ async function runOpenCodeMemberInboxRelayWork(
     maxRelay: inboxMessages.length,
   });
 
+  // A rider that did not travel with this prompt must still get a turn of its
+  // own: the anchor's read-commit usually re-fires the inbox watcher, but a
+  // delivery that writes no inbox row would otherwise leave the rider waiting.
+  const scheduleOpenCodeCoalesceRiderWake = (rider?: RelayInboxMessage): void => {
+    if (!rider || rider.read) return;
+    ports.scheduleOpenCodeMemberInboxDeliveryWake({
+      teamName,
+      memberName,
+      messageId: rider.messageId,
+      delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+    });
+  };
+
   let taskRefInferenceTasks: Promise<readonly TeamTask[]> | null = null;
   const readTaskRefInferenceTasks = (): Promise<readonly TeamTask[]> => {
     taskRefInferenceTasks ??= ports.readTaskRefInferenceTasks(teamName).catch(() => []);
     return taskRefInferenceTasks;
+  };
+
+  // How a queued row is judged as a follower: by its own reply contract and its
+  // own ledger state, never by the anchor's. Both the coalescing prompt and the
+  // post-completion read-commit select followers this way.
+  const coalescePorts: OpenCodeReplyOptionalCoalescePorts = {
+    resolveReplyRecipient: (candidate) =>
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName,
+        message: candidate,
+        existingRecord: null,
+        deliveryMetadata: options.deliveryMetadata,
+        inferredTaskRefs: [],
+        source: options.source,
+      }).replyRecipient,
+    hasExistingRecord: async (candidate) =>
+      Boolean(
+        await promptLedger
+          .getByInboxMessage({
+            teamName,
+            memberName: memberIdentity.canonicalMemberName,
+            laneId: memberIdentity.laneId,
+            inboxMessageId: candidate.messageId,
+          })
+          .catch(() => null)
+      ),
   };
 
   // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
@@ -516,6 +567,47 @@ async function runOpenCodeMemberInboxRelayWork(
       inferredTaskRefs,
       source: options.source,
     });
+    // Settled team (board complete, final user message already sent): this
+    // notice and the reply-optional notices behind it are read-committed
+    // without spending a runtime turn on any of them.
+    const settlement = await settleOpenCodePostCompletionNotices({
+      unread,
+      index,
+      anchorReplyRecipient: deliveryDecision.replyRecipient,
+      anchorHasLedgerRecord: Boolean(existingRecord),
+      ports: {
+        ...coalescePorts,
+        readTasks: readTaskRefInferenceTasks,
+        readTasksAfterCommit: () => ports.readTaskRefInferenceTasks(teamName),
+        readUserInbox: () => ports.readInboxMessages(teamName, 'user'),
+        markRead: (messages) => ports.markInboxMessagesRead(teamName, memberName, messages),
+        logReadCommitFailure: (error) =>
+          ports.logWarning(
+            `[${teamName}] OpenCode inbox relay could not read-commit settled notices for ${memberName}: ${ports.getErrorMessage(
+              error
+            )}`
+          ),
+        isCurrentGeneration,
+      },
+    });
+    if (settlement.kind === 'superseded') {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
+    if (settlement.kind === 'read_committed') {
+      result.relayed += settlement.messages.length;
+      result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      for (let skipIndex = index + 1; skipIndex < unread.length; skipIndex += 1) {
+        if (!settlement.messages.includes(unread[skipIndex])) break;
+        cursor = Math.max(cursor, skipIndex + 1);
+      }
+      continue;
+    }
+    if (settlement.kind === 'catch_up') {
+      // The rows are read, but work reopened during the commit: the anchor is
+      // delivered anyway so the reopened board is not announced to nobody.
+      result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      taskRefInferenceTasks = Promise.resolve(settlement.tasks);
+    }
     result.attempted += 1;
     const attachmentPayloads = await ports.resolveOpenCodeInboxAttachmentPayloads({
       teamName,
@@ -553,9 +645,46 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
+    // Reply-optional notices (system/task notifications, teammate reports)
+    // that queued up behind this one ride along in the same prompt: one runtime
+    // turn instead of one per notice. Draining them one at a time made the lead
+    // spend a full turn on every done/started/comment notification, and each
+    // turn is memoryless, so it kept re-answering the same finished work.
+    // Riders ride along ONLY in a prompt this call actually dispatches, and are
+    // marked read only on `coalescedNoticesDelivered` - never on `delivered`.
+    const coalesceAllowed = canCoalesceNoticesIntoOpenCodeDelivery(existingRecord);
+    const coalescable = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index,
+      anchorReplyRecipient: deliveryDecision.replyRecipient,
+      ports: coalescePorts,
+    });
+    const coalesced = coalesceAllowed ? coalescable : [];
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
+    if (!coalesceAllowed && coalescable.length > 0) {
+      // Only a rider that would really have ridden along was deferred: an
+      // accepted anchor with nothing coalescable behind it was merely observed.
+      result.diagnostics = [
+        ...(result.diagnostics ?? []),
+        buildOpenCodeCoalesceDeferredDiagnostic({
+          anchorMessageId: message.messageId,
+          deferredMessageId: coalescable[0]?.messageId,
+          record: existingRecord,
+        }),
+      ];
+      // The anchor's read-commit normally re-fires the file watcher and the
+      // rider becomes its own anchor; an anchor that ends terminally writes no
+      // inbox row, so arm an explicit wake too.
+      scheduleOpenCodeCoalesceRiderWake(coalescable[0]);
+    }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
       memberName,
       text: message.text,
+      ...(coalesced.length
+        ? { coalescedNoticeText: buildOpenCodeCoalescedNoticeText(coalesced) }
+        : {}),
       messageId: message.messageId,
       replyRecipient: deliveryDecision.replyRecipient,
       actionMode: deliveryDecision.actionMode ?? undefined,
@@ -571,6 +700,38 @@ async function runOpenCodeMemberInboxRelayWork(
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
     result.lastDelivery = delivery;
+    if (coalesced.length > 0 && isOpenCodeCoalescedNoticeDeliveryProven(delivery)) {
+      try {
+        await ports.markInboxMessagesRead(teamName, memberName, coalesced);
+        result.relayed += coalesced.length;
+        result.diagnostics = [
+          ...(result.diagnostics ?? []),
+          `opencode_inbox_relay_coalesced_notices: ${message.messageId} += ${coalesced
+            .map((candidate) => candidate.messageId)
+            .join(',')}`,
+        ];
+      } catch (error) {
+        // The riders stay unread and become their own anchors on the next pass.
+        // The anchor's own read-commit below is unaffected.
+        ports.logWarning(
+          `[${teamName}] OpenCode inbox relay could not mark coalesced notices read for ${memberName}: ${ports.getErrorMessage(
+            error
+          )}`
+        );
+      }
+    } else if (coalesced.length > 0) {
+      // The prompt was not dispatched with the riders (observe-only pass, queued
+      // behind another record, response already sufficient). Leave them unread.
+      result.diagnostics = [
+        ...(result.diagnostics ?? []),
+        buildOpenCodeCoalesceNotDispatchedDiagnostic({
+          anchorMessageId: message.messageId,
+          deferredMessageIds: coalesced.map((candidate) => candidate.messageId),
+          delivery,
+        }),
+      ];
+      scheduleOpenCodeCoalesceRiderWake(coalesced[0]);
+    }
     if (!delivery.delivered) {
       const failureProjection = projectOpenCodeInboxDeliveryFailure({
         delivery,
@@ -639,28 +800,6 @@ async function runOpenCodeMemberInboxRelayWork(
   }
 
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
-}
-
-/**
- * Index of the first unread user message after `afterIndex`, or -1. Only a
- * pending non-user delivery yields to a user message; a pending user delivery
- * keeps the inbox order (the next user message queues behind it).
- */
-export function findNextUnreadUserMessageIndex(input: {
-  unread: readonly RelayInboxMessage[];
-  afterIndex: number;
-  currentReplyRecipient: string;
-}): number {
-  if (input.currentReplyRecipient.trim().toLowerCase() === 'user') {
-    return -1;
-  }
-  for (let index = input.afterIndex + 1; index < input.unread.length; index += 1) {
-    const candidate = input.unread[index];
-    if (candidate && !candidate.read && candidate.from.trim().toLowerCase() === 'user') {
-      return index;
-    }
-  }
-  return -1;
 }
 
 export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {

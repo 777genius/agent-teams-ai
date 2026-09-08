@@ -10,6 +10,18 @@ import {
 
 import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
 
+/**
+ * Inbox-relay coalesce diagnostics. Both carry message ids, so the
+ * informational allowlist below matches them by prefix; they describe expected
+ * control flow, and classifying them as warnings would file every deferred
+ * rider under the durable error log.
+ */
+export const OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC =
+  'opencode_inbox_relay_coalesce_deferred_dispatched_base';
+
+export const OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC =
+  'opencode_inbox_relay_coalesced_notices_not_dispatched';
+
 export function normalizeOpenCodeRuntimeDeliveryDiagnostic(
   message: string | null | undefined
 ): string | null {
@@ -71,6 +83,13 @@ function stripOpenCodeGenericApiErrorPrefix(message: string): string {
   return message.replace(/^opencode api error(?:[.:\s-]+|$)/i, '');
 }
 
+function isOpenCodeInboxRelayCoalesceDiagnostic(message: string): boolean {
+  return (
+    message.startsWith(OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC) ||
+    message.startsWith(OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC)
+  );
+}
+
 function isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(message: string): boolean {
   return (
     isOpenCodeRuntimeDeliverySessionRefreshScheduledDiagnostic(message) ||
@@ -89,6 +108,7 @@ export function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
       'opencode prompt_async accepted; response observation will continue through durable app-side ledger reconciliation.' ||
     normalized === 'opencode session status busy' ||
     normalized === 'opencode_delivery_response_pending' ||
+    Boolean(normalized && isOpenCodeInboxRelayCoalesceDiagnostic(normalized)) ||
     Boolean(normalized && isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(normalized))
   );
 }

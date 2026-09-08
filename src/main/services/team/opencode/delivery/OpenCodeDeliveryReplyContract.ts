@@ -53,6 +53,25 @@ export function classifyOpenCodeDeliveryReplyContract(
  * must never be re-prompted for "missing reply proof" — every retry spends
  * another model turn on a message that asked nothing.
  */
+/**
+ * True when NOBODY authored this delivery: the app itself wrote it (a task
+ * state change, a comment notification, a stall or restart notice), so no
+ * member is waiting on anything and the text carries no instruction of its own.
+ *
+ * This is deliberately narrower than `isOpenCodeReplyOptionalDeliveryContract`.
+ * "Reply optional" also covers `teammate_report`, and that classification is
+ * made purely from the SENDER: every ordinary `SendMessage` a teammate writes
+ * lands there, including "I found a bug in your module, please look". Optional
+ * reply is a safe thing to tell the runtime about such a message; SUPPRESSING
+ * it is not. Anything that absorbs a message instead of delivering it must use
+ * this predicate, so only app-written notices can ever be absorbed.
+ */
+export function isOpenCodeAppAuthoredNoticeContract(
+  replyRecipient: string | null | undefined
+): boolean {
+  return classifyOpenCodeDeliveryReplyContract(replyRecipient) === 'informational';
+}
+
 export function isOpenCodeReplyOptionalDeliveryContract(
   replyRecipient: string | null | undefined
 ): boolean {
