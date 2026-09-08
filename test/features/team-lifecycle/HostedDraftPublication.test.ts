@@ -9,7 +9,8 @@ import {
 } from '@features/internal-storage/contracts';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { createReservedDraftConfigurationAttribution } from '@features/team-configuration/main/hosted';
-import { createHostedDraftPublicationFeature } from '@features/team-lifecycle/main/composition';
+import { serializeTeamIdentityFile } from '@features/team-lifecycle/main/infrastructure/TeamIdentityFileStore';
+import { createHostedDraftPublicationPublisher } from '@main/composition/hosted/hostedDraftPublicationComposition';
 import { parseActorId, parseDeploymentId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -77,7 +78,7 @@ async function fixture(shared = false) {
   const load = async () => (await journal.readTeamDraftPublication(scope))!;
   const identities = identityGateway(canonical);
   const makeFeature = async (gateway = identities) => {
-    const feature = await createHostedDraftPublicationFeature({ claudeRoot, identities: gateway, now: () => new Date(timestamp) });
+    const feature = await createHostedDraftPublicationPublisher({ claudeRoot, identities: gateway, now: () => new Date(timestamp) });
     owned.features.push(feature);
     return feature;
   };
@@ -123,6 +124,13 @@ describe.skipIf(process.platform !== 'linux')('canonical draft publication sourc
       .toEqual({ name: operation.legacyKey, pendingCreate: true });
     expect(JSON.parse(await fs.readFile(path.join(folder, 'team.identity.json'), 'utf8')))
       .toEqual({ schemaVersion: 1, teamId: f.created.teamId, createdAt: timestamp, originDeploymentId: binding.deploymentId });
+    // Pin compatibility with the retained reader's canonical serializer, including byte layout.
+    const identityBytes = await fs.readFile(path.join(folder, 'team.identity.json'), 'utf8');
+    expect(identityBytes).toBe(serializeTeamIdentityFile({
+      schemaVersion: 1, teamId: f.created.teamId, createdAt: timestamp,
+      originDeploymentId: binding.deploymentId,
+    }));
+    expect(identity?.identityChecksum).toBe(createHash('sha256').update(identityBytes, 'utf8').digest('hex'));
     const replay = f.drafts.handle('hostedTeamConfiguration.create', create);
     expect(replay).toEqual({ ...f.created, outcome: 'idempotent_replay' });
     expect(await f.load()).toEqual(operation);

@@ -68,6 +68,8 @@ import { parseRunId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hos
 import Database from 'better-sqlite3-node';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
+import { createReleasedInternalStorageSchema } from '../../../internal-storage/fixtures/releasedInternalStorageSchema';
+
 import type {
   RuntimeCancellation,
   RuntimeCancellationId,
@@ -788,17 +790,11 @@ parentPort.on('message', (message) => {
 
   it('upgrades an existing schema-v10 database before admitting ownership writes', async () => {
     const file = await databasePath();
-    const initial = makeStore(file);
-    initial.core.handle('ping', {});
-    initial.core.close();
+    await fs.mkdir(path.dirname(file), { recursive: true });
     const legacy = openDatabase(file);
-    legacy.exec('DROP TRIGGER trg_process_ownership_residual_update_immutable');
-    legacy.exec('DROP TRIGGER trg_process_ownership_residual_delete_immutable');
-    legacy.exec('DROP TABLE process_ownership_records');
-    legacy.exec('DROP TABLE process_ownership_corruption_markers');
-    legacy.exec('DROP TABLE hosted_workspace_grants');
-    legacy.exec('DROP TABLE hosted_workspaces');
-    legacy.pragma('user_version = 10');
+    createReleasedInternalStorageSchema(legacy, 10);
+    legacy.prepare(`INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
+      VALUES ('v10-proof', 'historical-ownership', '2026-08-04T00:00:00.000Z', 4)`).run();
     legacy.close();
 
     const migrated = makeStore(file);
@@ -807,19 +803,21 @@ parentPort.on('message', (message) => {
     await expect(
       new CreateSpawnIntent(migrated.store).execute(createRequest(context()))
     ).resolves.toMatchObject({ status: 'created' });
+    const inspection = openDatabase(file, { readonly: true });
+    try {
+      expect(inspection.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v10-proof'").get())
+        .toEqual({ entry_count: 4 });
+      expect(inspection.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      inspection.close();
+    }
   });
 
   it('refuses the v11 migration while a persisted backup fence is active', async () => {
     const file = await databasePath();
-    const initial = makeStore(file);
-    initial.core.handle('ping', {});
-    initial.core.close();
+    await fs.mkdir(path.dirname(file), { recursive: true });
     const legacy = openDatabase(file);
-    legacy.exec('DROP TRIGGER trg_process_ownership_residual_update_immutable');
-    legacy.exec('DROP TRIGGER trg_process_ownership_residual_delete_immutable');
-    legacy.exec('DROP TABLE process_ownership_records');
-    legacy.exec('DROP TABLE process_ownership_corruption_markers');
-    legacy.pragma('user_version = 10');
+    createReleasedInternalStorageSchema(legacy, 10);
     legacy
       .prepare(
         `INSERT INTO coordination_backup_runs (

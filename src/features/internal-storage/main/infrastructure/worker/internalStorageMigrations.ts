@@ -24,6 +24,7 @@ import {
 import { assertNoActiveBackupFenceForMigration } from './internalStorageMigrationGuards';
 import { PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS } from './processOwnershipStorageOps';
 import { TEAM_DRAFT_PUBLICATION_MIGRATION } from './teamDraftPublicationMigration';
+import { runTeamDraftPublicationMigrationAdmission } from './teamDraftPublicationMigrationAdmission';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
 import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
@@ -688,7 +689,8 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
       if (migration.version === 15) ensureHostedAuthResetColumns(db);
       if (migration.version === 16) migrateHostedWorkspaceAccess(db);
       const approvalMigrationHandled = runHostedTeamApprovalMigrationRepair(db, migration.version);
-      if (!approvalMigrationHandled) {
+      if (migration.version === 29) runTeamDraftPublicationMigrationAdmission(db);
+      if (!approvalMigrationHandled && migration.version !== 29) {
         for (const statement of migration.statements) {
           db.exec(statement);
         }

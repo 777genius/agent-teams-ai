@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   readSchemaVersion,
   runInternalStorageMigrations,
@@ -13,7 +15,7 @@ type Database = InstanceType<typeof DatabaseConstructor>;
 // No copied DDL, rewritten versions, swallowed migration errors or production hooks.
 export function createReleasedInternalStorageSchema(
   db: Database,
-  version: 6 | 18 | 24 | 25 | 27 | 28
+  version: 6 | 7 | 8 | 9 | 10 | 17 | 18 | 20 | 21 | 22 | 24 | 25 | 27 | 28
 ): void {
   expect(readSchemaVersion(db)).toBe(0);
   expect(db.prepare("SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'").all()).toEqual([]);
@@ -66,4 +68,14 @@ function expectReleasedIdentitySchema(db: Database): void {
   expect(db.prepare("SELECT sql FROM sqlite_schema WHERE name = 'trg_team_identity_transition'").get()).toEqual({
     sql: oldTrigger.replace(' IF NOT EXISTS', ''),
   });
+  const identityObjects = db.prepare(`SELECT type, name, tbl_name, sql FROM sqlite_schema
+    WHERE tbl_name IN ('legacy_team_key_reservations', 'team_adoption_intents',
+      'team_identity_records', 'team_identity_storage_metadata')
+    ORDER BY type, name, tbl_name`).all();
+  // Pin the complete retained v5 component, including autoindexes and trigger bytes.
+  expect(identityObjects).toHaveLength(23);
+  expect(createHash('sha256').update(JSON.stringify(identityObjects)).digest('hex'))
+    .toBe('570be2f0773d8768848f2bef11c3cd70129199ac86730b055980fc46b90fdf36');
+  expect(db.prepare('SELECT component, schema_version FROM team_identity_storage_metadata').all())
+    .toEqual([{ component: 'team-identity', schema_version: 1 }]);
 }

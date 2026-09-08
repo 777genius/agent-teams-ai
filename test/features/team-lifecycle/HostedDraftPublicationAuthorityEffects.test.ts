@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import { createHostedDraftPublicationFeature } from '@features/team-lifecycle/main/composition';
+import { createHostedDraftPublicationPublisher } from '@main/composition/hosted/hostedDraftPublicationComposition';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,7 +48,7 @@ async function fixture() {
   } as never) as { teamId: string };
   const scope = { workspaceId, teamId: created.teamId, actorId: binding.actorId, deploymentId: binding.deploymentId };
   const load = () => core.handle('draftPublication.read', scope as never) as TeamDraftPublication;
-  const publisher = await createHostedDraftPublicationFeature({ claudeRoot, identities });
+  const publisher = await createHostedDraftPublicationPublisher({ claudeRoot, identities });
   cleanup.push(() => publisher.dispose());
   const attempt = (assertCurrent: () => Promise<void>) => publisher.publishDraft({
     publication: load(), assertCurrent,

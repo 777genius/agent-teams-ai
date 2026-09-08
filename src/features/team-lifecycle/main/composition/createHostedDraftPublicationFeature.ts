@@ -1,28 +1,21 @@
-import { createHash } from 'node:crypto';
-
 import {
   parseDirectoryFingerprint,
   parseTeamDraftPublication,
   parseTeamIdentityChecksum,
-  type TeamIdentityPublicationGateway,
 } from '@features/internal-storage/contracts';
-
-import { HostedDraftDirectoryPublisher } from '../adapters/output/HostedDraftDirectoryPublisher';
-import { serializeTeamIdentityFile } from '../infrastructure/TeamIdentityFileStore';
 
 import type {
   HostedDraftPublicationFeature,
   HostedDraftPublicationRequest,
   HostedDraftPublicationResult,
 } from '../../core/application/ports/HostedDraftPublicationFeature';
+import type { HostedDraftPublicationDependencies } from '../ports/HostedDraftPublicationDependencies';
 
-/** Production host admission is concrete and asynchronous; a path-shaped value grants no custody. */
-export async function createHostedDraftPublicationFeature(dependencies: {
-  readonly claudeRoot: string;
-  readonly identities: TeamIdentityPublicationGateway;
-  readonly now?: () => Date;
-}): Promise<HostedDraftPublicationFeature> {
-  const publisher = await HostedDraftDirectoryPublisher.admit(dependencies.claudeRoot);
+/** The host admits custody before construction and transfers its disposal to this facade. */
+export function createHostedDraftPublicationFeature(
+  dependencies: HostedDraftPublicationDependencies
+): HostedDraftPublicationFeature {
+  const publisher = dependencies.directories;
   const identities = dependencies.identities;
   const now = dependencies.now ?? (() => new Date());
   // A single serialized writer owns each reservation. Local ordering also avoids concurrent initial
@@ -73,11 +66,12 @@ export async function createHostedDraftPublicationFeature(dependencies: {
           await assertCurrent();
           await identities.reserveTeamIdentity(reservation);
         }
-        const identityBytes = serializeTeamIdentityFile({
+        // Canonical v1 identity projection: fixed key order, two-space indentation, final newline.
+        const identityBytes = `${JSON.stringify({
           schemaVersion: 1, teamId: operation.teamId, createdAt: operation.createdAt,
           originDeploymentId: operation.deploymentId,
-        });
-        const identityChecksum = parseTeamIdentityChecksum(createHash('sha256').update(identityBytes, 'utf8').digest('hex'));
+        }, null, 2)}\n`;
+        const identityChecksum = parseTeamIdentityChecksum(dependencies.checksumIdentity(identityBytes));
         // Compatibility projection carries no provider plan or launch capability.
         const configBytes = `${JSON.stringify({ name: operation.legacyKey, pendingCreate: true }, null, 2)}\n`;
         await assertCurrent();

@@ -834,6 +834,35 @@ describe('hosted approval activation-v2', () => {
     expect(replacementOwnerLoss).not.toHaveBeenCalled();
   });
 
+  it('buffers retained peer bytes and EOF until resumed, preserving order across pauses', () => {
+    const socket = new ActivationPeerSocket('00'.repeat(32) as OrchestratorLifecycleOwnerProofKey);
+    const observed: string[] = [];
+    socket.on('data', (chunk: Buffer) => {
+      observed.push(chunk.toString());
+      if (observed.length === 1) socket.pause();
+    });
+    socket.on('end', () => observed.push('EOF'));
+    socket.receivePeerData(Buffer.from('first'));
+    socket.receivePeerData(Buffer.from('second'));
+    socket.endPeerStream();
+    expect(observed).toEqual([]);
+    expect(socket.resumeCalls).toBe(0);
+    expect(socket.resume()).toBe(socket);
+    expect(observed).toEqual(['first']);
+    expect(socket.resume()).toBe(socket);
+    expect(observed).toEqual(['first', 'second', 'EOF']);
+    expect(socket.resumeCalls).toBe(2);
+    socket.resume();
+    expect(observed).toEqual(['first', 'second', 'EOF']);
+    const closed = new ActivationPeerSocket('00'.repeat(32) as OrchestratorLifecycleOwnerProofKey);
+    const data = vi.fn();
+    closed.on('data', data);
+    closed.receivePeerData(Buffer.from('discarded-on-destroy'));
+    closed.destroy();
+    closed.resume();
+    expect(data).not.toHaveBeenCalled();
+  });
+
   it('runs the unchanged golden exchange on an already-connected retained FD5 transport', async () => {
     const fixture = await golden();
     const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
@@ -841,12 +870,13 @@ describe('hosted approval activation-v2', () => {
     const socket = new ActivationPeerSocket(key);
     const inspectSocketIdentity = vi.fn();
     const connect = vi.fn();
+    const signingIdentity = ephemeralSigningIdentity(fixture);
     const lease = await activateHostedApprovalRuntimeOverConnectedTransport(
       {
         binding: candidate.binding,
         admissionDocument: candidate.admissionDocument,
         proofKey: key,
-        signingIdentity: ephemeralSigningIdentity(fixture),
+        signingIdentity,
         generateChallenge: () => CHALLENGE,
         inspectSocketIdentity,
         connect,
@@ -857,11 +887,24 @@ describe('hosted approval activation-v2', () => {
     );
 
     expect(socket.writes).toHaveLength(2);
+    const prepare = independentVerify(socket.writes[0]!, key, 'owner-ready-request');
+    expect(prepare.value.binding).toEqual(candidate.binding);
+    expect(prepare.value.challenge).toBe(CHALLENGE);
+    expect(prepare.value.operation).toBe('approval_activation_prepare');
+    expect(socket.writes[1]).toBe(
+      serializeHostedApprovalRuntimeActivationPublication(
+        key, signingIdentity, candidate.binding, candidate.admissionDocument
+      )
+    );
+    expect(socket.resumeCalls).toBe(1);
     expect(socket.connectSubscriptions).toBe(0);
     expect(inspectSocketIdentity).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
     expect(lease.isReady()).toBe(true);
+    expect(lease.currentBinding()).toEqual(candidate.binding.ownerBinding);
     lease.invalidate();
+    expect(lease.isReady()).toBe(false);
+    expect(lease.currentBinding()).toBeNull();
   });
 
   it('finishes every synchronous validation and publication check before normal socket creation', async () => {
@@ -943,7 +986,7 @@ describe('hosted approval activation-v2', () => {
     }
   });
 
-  it.each(['extra-frame', 'eof'] as const)(
+  it.each(['extra-frame', 'eof', 'owner-loss'] as const)(
     'synchronously revokes a retained FD5 lease on %s',
     async (loss) => {
       const fixture = await golden();
@@ -964,8 +1007,12 @@ describe('hosted approval activation-v2', () => {
         HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
       );
 
-      if (loss === 'extra-frame') socket.emit('data', Buffer.from('{}\n'));
-      else socket.emit('end');
+      expect(socket.resumeCalls).toBe(1);
+      expect(lease.isReady()).toBe(true);
+      expect(lease.currentBinding()).toEqual(candidate.binding.ownerBinding);
+      if (loss === 'extra-frame') socket.receivePeerData(Buffer.from('{}\n'));
+      else if (loss === 'eof') socket.endPeerStream();
+      else socket.loseOwner();
       expect(lease.isReady()).toBe(false);
       expect(lease.currentBinding()).toBeNull();
       expect(onOwnerLoss).toHaveBeenCalledOnce();
@@ -995,9 +1042,45 @@ describe('hosted approval activation-v2', () => {
     });
     await vi.waitFor(() => expect(socket.writes).toHaveLength(2));
     expect(exposed).toBe(false);
-    socket.emit('end');
+    expect(socket.resumeCalls).toBe(1);
+    socket.endPeerStream();
     await expect(activating).rejects.toThrow(/owner-lost/u);
     expect(exposed).toBe(false);
+  });
+
+  it.each([
+    ['legacy-ready', 1],
+    ['stale-owner-ready', 1],
+    ['forged-final-ready', 2],
+  ] as const)('rejects retained FD5 %s without exposing a ready lease', async (behavior, writes) => {
+    const fixture = await golden();
+    const candidate = candidateActivationInput(fixture);
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key, behavior);
+    const connect = vi.fn();
+    const inspectSocketIdentity = vi.fn();
+    await expect(
+      activateHostedApprovalRuntimeOverConnectedTransport(
+        {
+          binding: candidate.binding,
+          admissionDocument: candidate.admissionDocument,
+          proofKey: key,
+          signingIdentity: ephemeralSigningIdentity(fixture),
+          generateChallenge: () => CHALLENGE,
+          connect,
+          inspectSocketIdentity,
+          onOwnerLoss: vi.fn(),
+        },
+        { socket: socket as unknown as Socket },
+        HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+      )
+    ).rejects.toThrow(/response-invalid/u);
+    expect(socket.resumeCalls).toBe(1);
+    expect(socket.writes).toHaveLength(writes);
+    expect(socket.destroyed).toBe(true);
+    expect(socket.connectSubscriptions).toBe(0);
+    expect(connect).not.toHaveBeenCalled();
+    expect(inspectSocketIdentity).not.toHaveBeenCalled();
   });
 
   it('rejects a replaced path socket during final verification without exposing a lease', async () => {
@@ -1120,6 +1203,48 @@ class ActivationPeerSocket extends EventEmitter {
   destroyed = false;
   readonly writes: string[] = [];
   connectSubscriptions = 0;
+  resumeCalls = 0;
+  private flowing = false;
+  private peerEnded = false;
+  private readonly pending: Array<Buffer | null> = [];
+
+  pause(): this {
+    this.flowing = false;
+    return this;
+  }
+
+  resume(): this {
+    this.resumeCalls += 1;
+    if (this.destroyed) return this;
+    this.flowing = true;
+    this.flushPending();
+    return this;
+  }
+
+  receivePeerData(chunk: Buffer): void {
+    if (this.destroyed || this.peerEnded) return;
+    this.pending.push(chunk);
+    this.flushPending();
+  }
+
+  endPeerStream(): void {
+    if (this.destroyed || this.peerEnded) return;
+    this.peerEnded = true;
+    this.pending.push(null);
+    this.flushPending();
+  }
+
+  private flushPending(): void {
+    while (this.flowing && !this.destroyed && this.pending.length > 0) {
+      const chunk = this.pending.shift()!;
+      if (chunk === null) {
+        this.flowing = false;
+        this.emit('end');
+      } else {
+        this.emit('data', chunk);
+      }
+    }
+  }
 
   constructor(
     private readonly proofKey: OrchestratorLifecycleOwnerProofKey,
@@ -1137,7 +1262,12 @@ class ActivationPeerSocket extends EventEmitter {
     super.once(event, listener);
     if (event === 'connect') {
       this.connectSubscriptions += 1;
-      queueMicrotask(() => this.emit('connect'));
+      queueMicrotask(() => {
+        // Fresh connections begin flowing on connect; retained FD5 starts paused
+        // and depends on the production connected-transport resume call.
+        this.resume();
+        this.emit('connect');
+      });
     }
     return this;
   }
@@ -1167,7 +1297,7 @@ class ActivationPeerSocket extends EventEmitter {
         binding,
       });
       queueMicrotask(() =>
-        this.emit('data', Buffer.from(`${sign(unsigned, this.proofKey, 'owner-ready')}\n`))
+        this.receivePeerData(Buffer.from(`${sign(unsigned, this.proofKey, 'owner-ready')}\n`))
       );
       return true;
     }
@@ -1187,17 +1317,19 @@ class ActivationPeerSocket extends EventEmitter {
       this.behavior === 'forged-final-ready'
         ? sign(unsigned, 'ff'.repeat(32), 'ready')
         : sign(unsigned, this.proofKey, 'ready');
-    queueMicrotask(() => this.emit('data', Buffer.from(`${response}\n`)));
+    queueMicrotask(() => this.receivePeerData(Buffer.from(`${response}\n`)));
     return true;
   }
 
   destroy(): this {
     this.destroyed = true;
+    this.flowing = false;
+    this.pending.length = 0;
     return this;
   }
 
   loseOwner(): void {
-    this.destroyed = true;
+    this.destroy();
     this.emit('close');
   }
 }

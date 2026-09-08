@@ -19,9 +19,13 @@ import { HostedTeamStorageWorkerClient } from '@features/internal-storage/main/i
 import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalCanonicalIdentityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalDeliveryReconciliationStorageMigration';
+import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { HostedApprovalDecisionDeliveryCoordinator } from '@features/team-approvals/main/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
 
 import type {
   HostedTeamApprovalAuthorityScope,
@@ -214,14 +218,62 @@ function readPending(
   }) as HostedTeamApprovalPendingReadResult;
 }
 
-function dropApprovalV18(database: NodeSqliteCompatibilityDatabase): void {
-  database.exec(`
-    DROP TABLE hosted_team_approval_delivery_outbox;
-    DROP TABLE hosted_team_approval_audit;
-    DROP TABLE hosted_team_approval_idempotency;
-    DROP TABLE hosted_team_approval_records;
-    PRAGMA user_version = 17;
-  `);
+function readApprovalMigrationState(database: NodeSqliteCompatibilityDatabase) {
+  return {
+    schema: database.prepare('SELECT type, name, tbl_name, sql FROM main.sqlite_schema ORDER BY name').all(),
+    rows: [
+      'hosted_team_approval_records', 'hosted_team_approval_audit',
+      'hosted_team_approval_idempotency', 'hosted_team_approval_delivery_outbox',
+    ].map((table) => database.prepare(`SELECT * FROM main.${table} ORDER BY rowid`).all()),
+  };
+}
+
+// Raw, whole-schema inventory: never normalize SQL or consult the v24 adapter.
+function readRawMigrationInventory(
+  database: NodeSqliteCompatibilityDatabase,
+  schema: 'main' | 'temp'
+) {
+  const quote = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
+  const objects = database.prepare(
+    `SELECT type, name, tbl_name, sql FROM ${schema}.sqlite_schema ORDER BY type, name, tbl_name`
+  ).all();
+  const tables = database.prepare(
+    `SELECT name FROM ${schema}.sqlite_schema WHERE type = 'table' ORDER BY name`
+  ).all() as { name: string }[];
+  return {
+    objects,
+    rows: tables.map(({ name }) => {
+      const columns = database.pragma(`${schema}.table_info(${quote(name)})`) as { name: string }[];
+      return {
+        name,
+        rows: database.prepare(`SELECT * FROM ${schema}.${quote(name)}
+          ORDER BY ${columns.map((column) => quote(column.name)).join(', ')}`).all(),
+      };
+    }),
+  };
+}
+
+// Stop an already-populated genuine prefix before opening the next transaction.
+function migrateThroughApprovalVersion(database: NodeSqliteCompatibilityDatabase, version: 23 | 24) {
+  const prefixComplete = new Error('approval-prefix-complete');
+  const connection = nonClosingDatabase(database);
+  const bounded = new Proxy(connection, {
+    get(target, property) {
+      if (property === 'transaction') {
+        return (operation: () => void) => {
+          if (database.pragma('user_version', { simple: true }) === version) throw prefixComplete;
+          return target.transaction(operation);
+        };
+      }
+      return Reflect.get(target, property, target);
+    },
+  });
+  try {
+    runInternalStorageMigrations(bounded);
+  } catch (error) {
+    if (error !== prefixComplete) throw error;
+  }
+  expect(database.pragma('user_version', { simple: true })).toBe(version);
 }
 
 function installPopulatedHistoricalApprovalSchema(
@@ -229,14 +281,12 @@ function installPopulatedHistoricalApprovalSchema(
   version: 18 | 20,
   storageNow: number
 ): void {
-  database.exec(`
-    DROP TABLE hosted_team_approval_delivery_outbox;
-    DROP TABLE hosted_team_approval_audit;
-    DROP TABLE hosted_team_approval_idempotency;
-    DROP TABLE hosted_team_approval_records;
-  `);
+  createReleasedInternalStorageSchema(nonClosingDatabase(database), version);
   for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
-    database.exec(statement);
+    const name = /CREATE (?:UNIQUE )?(?:TABLE|INDEX) IF NOT EXISTS (\w+)/.exec(statement)?.[1];
+    expect(name).toBeDefined();
+    expect(database.prepare('SELECT sql FROM main.sqlite_schema WHERE name = ?').get(name!))
+      .toEqual({ sql: statement.replace(' IF NOT EXISTS', '') });
   }
   database
     .prepare(
@@ -262,7 +312,92 @@ function installPopulatedHistoricalApprovalSchema(
       storageNow - 10,
       'f'.repeat(64)
     );
-  database.pragma(`user_version = ${version}`);
+  database.prepare(`INSERT INTO hosted_team_approval_records (
+    principal_id, workspace_id, team_id, authority_generation, restore_generation,
+    approval_id, approval_generation, category, summary, requested_at_ms, delivery_ref,
+    state, decision, revision, observed_at_ms, resolved_at_ms, last_idempotency_key, payload_hash
+  ) SELECT principal_id, workspace_id, team_id, authority_generation, restore_generation,
+    ?, approval_generation, category, 'Retained resolved approval', requested_at_ms, delivery_ref,
+    'resolved', 'allow', 2, observed_at_ms, ?, 'historical-resolved', payload_hash
+    FROM hosted_team_approval_records`).run(`approval_${'e'.repeat(32)}`, storageNow);
+  database.exec(`
+    INSERT INTO hosted_team_approval_audit (
+      audit_id, principal_id, workspace_id, team_id, authority_generation, restore_generation,
+      approval_id, approval_generation, decision, payload_hash, actor_id, session_id, occurred_at_ms
+    ) SELECT 'approval_audit_legacy', principal_id, workspace_id, team_id, authority_generation,
+      restore_generation, approval_id, approval_generation, decision, payload_hash,
+      principal_id, 'session_alice', resolved_at_ms FROM hosted_team_approval_records
+      WHERE state = 'resolved';
+    INSERT INTO hosted_team_approval_delivery_outbox (
+      delivery_id, principal_id, workspace_id, team_id, authority_generation, restore_generation,
+      approval_id, approval_generation, decision, payload_hash, delivery_ref, intent_json,
+      state, delivery_generation, created_at_ms
+    ) SELECT 'approval_delivery_legacy', principal_id, workspace_id, team_id, authority_generation,
+      restore_generation, approval_id, approval_generation, decision, payload_hash,
+      delivery_ref, '{"historical":true}', 'pending', 0, resolved_at_ms
+      FROM hosted_team_approval_records WHERE state = 'resolved';
+    INSERT INTO hosted_team_approval_idempotency (
+      principal_id, workspace_id, team_id, authority_generation, restore_generation,
+      idempotency_key, approval_id, approval_generation, decision, payload_hash, revision,
+      audit_id, delivery_id, created_at_ms
+    ) SELECT principal_id, workspace_id, team_id, authority_generation, restore_generation,
+      last_idempotency_key, approval_id, approval_generation, decision, payload_hash, revision,
+      'approval_audit_legacy', 'approval_delivery_legacy', resolved_at_ms
+      FROM hosted_team_approval_records WHERE state = 'resolved';
+  `);
+  expect(database.pragma('foreign_key_check')).toEqual([]);
+}
+
+function installPopulatedCanonicalApprovalSchema(
+  database: NodeSqliteCompatibilityDatabase,
+  version: 21 | 22,
+  storageNow: number
+): void {
+  createReleasedInternalStorageSchema(nonClosingDatabase(database), version);
+  const columns = database.pragma('table_info(hosted_team_approval_delivery_outbox)') as { name: string }[];
+  expect(columns.map(({ name }) => name)).toContain('delivery_owner_id');
+  expect(columns.map(({ name }) => name)).not.toContain('reconciliation_ref');
+  expect(columns.map(({ name }) => name)).not.toContain('operator_required_at_ms');
+  expect(columns.some(({ name }) => name === 'principal_id')).toBe(version === 22);
+  database.prepare(`INSERT INTO hosted_team_approval_records (
+    workspace_id, team_id, authority_generation, restore_generation, run_id, request_id,
+    approval_id, approval_generation, category, summary, requested_at_ms, delivery_ref,
+    state, decision, revision, observed_at_ms, resolved_at_ms, last_idempotency_key, payload_hash
+  ) VALUES (?, ?, 'generation_authority-v1', 2, ?, 'request_historical', ?,
+    'generation_approval-v1', 'command', 'Historical decision', ?, 'delivery_ref_historical',
+    'resolved', 'allow', 2, ?, ?, 'historical-decision', ?)`)
+    .run(`workspace_${'a'.repeat(32)}`, `team_${'b'.repeat(32)}`, `run_${'d'.repeat(32)}`,
+      `approval_${'c'.repeat(32)}`, storageNow - 20, storageNow - 10, storageNow, 'a'.repeat(64));
+  database.exec(`
+    INSERT INTO hosted_team_approval_audit (
+      audit_id, workspace_id, team_id, authority_generation, restore_generation,
+      run_id, request_id, approval_id, approval_generation, decision, payload_hash,
+      actor_id, session_id, occurred_at_ms
+    ) SELECT 'approval_audit_historical', workspace_id, team_id, authority_generation,
+      restore_generation, run_id, request_id, approval_id, approval_generation,
+      decision, payload_hash, 'actor_alice', 'session_alice', resolved_at_ms
+      FROM hosted_team_approval_records;
+    INSERT INTO hosted_team_approval_delivery_outbox (
+      delivery_id, workspace_id, team_id, authority_generation, restore_generation,
+      run_id, request_id, approval_id, approval_generation, decision, payload_hash,
+      delivery_ref, intent_json, state, delivery_generation, created_at_ms
+    ) SELECT 'approval_delivery_historical', workspace_id, team_id, authority_generation,
+      restore_generation, run_id, request_id, approval_id, approval_generation,
+      decision, payload_hash, delivery_ref, '{"historical":true}', 'pending', 0, resolved_at_ms
+      FROM hosted_team_approval_records;
+    INSERT INTO hosted_team_approval_idempotency (
+      workspace_id, team_id, authority_generation, restore_generation, run_id, idempotency_key,
+      request_id, approval_id, approval_generation, decision, payload_hash, revision,
+      audit_id, delivery_id, created_at_ms
+    ) SELECT workspace_id, team_id, authority_generation, restore_generation, run_id,
+      last_idempotency_key, request_id, approval_id, approval_generation, decision, payload_hash,
+      revision, 'approval_audit_historical', 'approval_delivery_historical', resolved_at_ms
+      FROM hosted_team_approval_records;
+  `);
+  if (version === 22) {
+    database.exec("UPDATE main.hosted_team_approval_delivery_outbox SET principal_id = 'actor_alice'");
+  }
+  expect(database.pragma('foreign_key_check')).toEqual([]);
 }
 
 describe('HostedTeamApprovalAuthorityStorage', () => {
@@ -324,6 +459,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
   async function databasePath(name = 'app.db'): Promise<string> {
     temporaryDirectory ??= await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-team-approval-'));
+    await fs.mkdir(path.join(temporaryDirectory, 'storage'), { recursive: true });
     return path.join(temporaryDirectory, 'storage', name);
   }
 
@@ -349,16 +485,10 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('migrates a genuine v17 database, CASes two tabs, and recovers replay after reopen', async () => {
     const file = await databasePath();
     let storageNow = Date.now();
-    const initializer = track(makeCore(file, () => storageNow));
-    expect(initializer.handle('ping', {})).toMatchObject({
-      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
-      integrity: 'ok',
-    });
-    initializer.close();
 
     const v17 = openDatabase(file);
     try {
-      dropApprovalV18(v17);
+      createReleasedInternalStorageSchema(nonClosingDatabase(v17), 17);
       v17
         .prepare(
           `INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
@@ -461,9 +591,6 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     async (version) => {
       const file = await databasePath(`upgrade-v${version}.db`);
       const storageNow = Date.now();
-      const initialized = track(makeCore(file, () => storageNow));
-      initialized.handle('ping', {});
-      initialized.close();
       const historical = openDatabase(file);
       try {
         installPopulatedHistoricalApprovalSchema(historical, version, storageNow);
@@ -494,6 +621,19 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
             .get(`approval_${'c'.repeat(32)}`) as { runId: string }
         ).runId;
         expect(legacyRunId).toMatch(/^run_[0-9a-f]{32}$/);
+        expect(inspection.prepare(`SELECT audit.actor_id, delivery.intent_json, delivery.principal_id,
+          keys.idempotency_key, records.summary FROM hosted_team_approval_records AS records
+          JOIN hosted_team_approval_audit AS audit USING
+            (workspace_id, team_id, authority_generation, restore_generation, run_id, request_id)
+          JOIN hosted_team_approval_delivery_outbox AS delivery USING
+            (workspace_id, team_id, authority_generation, restore_generation, run_id, request_id)
+          JOIN hosted_team_approval_idempotency AS keys USING
+            (workspace_id, team_id, authority_generation, restore_generation, run_id, request_id)
+          WHERE audit.audit_id = 'approval_audit_legacy'`).get()).toEqual({
+          actor_id: 'actor_alice', intent_json: '{"historical":true}',
+          principal_id: '{"kind":"operator","actorId":"actor_alice"}',
+          idempotency_key: 'historical-resolved', summary: 'Retained resolved approval',
+        });
         expect(inspection.pragma('foreign_key_check')).toEqual([]);
         expect(
           inspection
@@ -516,23 +656,23 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('rolls v21 back atomically when a populated v20 upgrade cannot complete', async () => {
     const file = await databasePath('upgrade-v20-rollback.db');
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('ping', {});
-    initialized.close();
     const historical = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
       installPopulatedHistoricalApprovalSchema(historical, 20, storageNow);
       historical.exec(`
         CREATE TABLE migration_index_collision (value TEXT NOT NULL);
         CREATE INDEX idx_hosted_team_approval_identity ON migration_index_collision (value);
       `);
+      before = readApprovalMigrationState(historical);
     } finally {
       historical.close();
     }
     const failed = track(makeCore(file, () => storageNow));
-    expect(() => failed.handle('ping', {})).toThrow();
+    expect(() => failed.handle('ping', {})).toThrow('index idx_hosted_team_approval_identity already exists');
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(20);
       expect(
         unchanged.prepare('SELECT principal_id FROM hosted_team_approval_records').get()
@@ -572,24 +712,17 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     ],
   ])('rejects a corrupt v21 %s fingerprint atomically', async (_label, search, replacement) => {
     const file = await databasePath(`corrupt-${_label.replaceAll(' ', '-')}.db`);
-    const initialized = track(makeCore(file, Date.now));
-    initialized.handle('ping', {});
-    initialized.close();
     const database = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
-      database.exec(`
-        DROP TABLE hosted_team_approval_delivery_outbox;
-        DROP TABLE hosted_team_approval_audit;
-        DROP TABLE hosted_team_approval_idempotency;
-        DROP TABLE hosted_team_approval_records;
-      `);
-      for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
-        database.exec(statement);
-      }
+      createReleasedInternalStorageSchema(nonClosingDatabase(database), 20);
+      expect(HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS
+        .some((statement) => statement.includes(search))).toBe(true);
       for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
         database.exec(statement.replace(search, replacement));
       }
       database.pragma('user_version = 21');
+      before = readApprovalMigrationState(database);
     } finally {
       database.close();
     }
@@ -598,6 +731,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
       expect(unchanged.pragma("table_info('hosted_team_approval_delivery_outbox')")).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ name: 'principal_id' })])
@@ -609,24 +743,17 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
   it('rejects a case-sensitive CHECK literal mutation without advancing v21', async () => {
     const file = await databasePath('corrupt-case-sensitive-check.db');
-    const initialized = track(makeCore(file, Date.now));
-    initialized.handle('ping', {});
-    initialized.close();
     const database = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
-      database.exec(`
-        DROP TABLE hosted_team_approval_delivery_outbox;
-        DROP TABLE hosted_team_approval_audit;
-        DROP TABLE hosted_team_approval_idempotency;
-        DROP TABLE hosted_team_approval_records;
-      `);
-      for (const statement of HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS) {
-        database.exec(statement);
-      }
+      createReleasedInternalStorageSchema(nonClosingDatabase(database), 20);
+      expect(HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS
+        .some((statement) => statement.includes("'pending', 'delivered'"))).toBe(true);
       for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
         database.exec(statement.replace("'pending', 'delivered'", "'PENDING', 'delivered'"));
       }
       database.pragma('user_version = 21');
+      before = readApprovalMigrationState(database);
     } finally {
       database.close();
     }
@@ -635,6 +762,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
     } finally {
       unchanged.close();
@@ -644,19 +772,16 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('rejects an owned trigger before v22 and preserves its delivery row atomically', async () => {
     const file = await databasePath('unexpected-approval-trigger.db');
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
-    initialized.close();
     const database = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
+      installPopulatedCanonicalApprovalSchema(database, 21, storageNow);
       database.exec(`
-        ALTER TABLE hosted_team_approval_delivery_outbox DROP COLUMN principal_id;
         CREATE TRIGGER hosted_team_approval_delete_after_principal
         AFTER UPDATE ON hosted_team_approval_delivery_outbox
         BEGIN DELETE FROM hosted_team_approval_delivery_outbox WHERE delivery_id = NEW.delivery_id; END;
-        PRAGMA user_version = 21;
       `);
+      before = readApprovalMigrationState(database);
     } finally {
       database.close();
     }
@@ -665,6 +790,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(() => failed.handle('ping', {})).toThrow('internal-storage-v22-approval-schema-invalid');
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
       expect(
         unchanged
@@ -678,11 +804,8 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
 
   it('rejects a v17 to v18 TEMP shadow before mutating main or TEMP', async () => {
     const file = await databasePath('temp-shadow-v17.db');
-    const initialized = track(makeCore(file, Date.now));
-    initialized.handle('ping', {});
-    initialized.close();
     const database = openDatabase(file);
-    dropApprovalV18(database);
+    createReleasedInternalStorageSchema(nonClosingDatabase(database), 17);
     database.exec(`
       PRAGMA case_sensitive_like = ON;
       CREATE TEMP TABLE HOSTED_TEAM_APPROVAL_RECORDS (marker TEXT NOT NULL);
@@ -716,9 +839,6 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('rejects a v20 to v21 TEMP shadow before mutating main or TEMP', async () => {
     const file = await databasePath('temp-shadow-v20.db');
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('ping', {});
-    initialized.close();
     const database = openDatabase(file);
     installPopulatedHistoricalApprovalSchema(database, 20, storageNow);
     database.exec(`
@@ -749,19 +869,69 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('ignores TEMP approval shadows and migrates only main v22 rows', async () => {
     const file = await databasePath('temp-shadow-v22.db');
     const storageNow = Date.now();
-    const core = track(makeCore(file, () => storageNow));
-    core.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
-    core.handle('hostedTeamApprovalAuthority.decide', decision());
     const database = openDatabase(file);
+    installPopulatedCanonicalApprovalSchema(database, 22, storageNow);
+    const sibling = openDatabase(await databasePath('retained-v24-oracle.db'));
+    let retainedInventory: ReturnType<typeof readRawMigrationInventory>;
+    try {
+      installPopulatedCanonicalApprovalSchema(sibling, 22, storageNow);
+      expect(readRawMigrationInventory(sibling, 'main'))
+        .toEqual(readRawMigrationInventory(database, 'main'));
+      migrateThroughApprovalVersion(sibling, 23);
+      expect(readRawMigrationInventory(sibling, 'temp')).toEqual({ objects: [], rows: [] });
+      sibling.transaction(() => {
+        // Execute the actual retained transition, including RENAME, unadapted.
+        for (const statement of HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS) {
+          sibling.exec(statement);
+        }
+        sibling.pragma('user_version = 24');
+      })();
+      expect(sibling.prepare(`SELECT sql FROM main.sqlite_schema
+        WHERE type = 'table' AND name = 'hosted_team_approval_delivery_outbox'`).get())
+        .toEqual({ sql: expect.stringContaining('CREATE TABLE "hosted_team_approval_delivery_outbox" (') });
+      expect(sibling.pragma('main.foreign_key_check')).toEqual([]);
+      // Finish the sibling's later migrations so the original full worker-open
+      // shadow regression still exercises v22 through the current marker.
+      runInternalStorageMigrations(nonClosingDatabase(sibling));
+      retainedInventory = readRawMigrationInventory(sibling, 'main');
+    } finally {
+      sibling.close();
+    }
+    // The historical index belongs to main before any TEMP shadows exist.
+    expect(database.prepare(`SELECT tbl_name FROM main.sqlite_schema
+      WHERE type = 'index' AND name = 'idx_hosted_team_approval_identity'`).get())
+      .toEqual({ tbl_name: 'hosted_team_approval_records' });
+    expect(database.prepare('SELECT name FROM temp.sqlite_schema').all()).toEqual([]);
     database.exec(`
-      PRAGMA user_version = 22;
-      UPDATE main.hosted_team_approval_delivery_outbox SET principal_id = 'actor_alice';
       CREATE TEMP TABLE hosted_team_approval_delivery_outbox (
         delivery_id TEXT PRIMARY KEY, decision TEXT NOT NULL, principal_id TEXT
       );
       INSERT INTO temp.hosted_team_approval_delivery_outbox
         VALUES ('temp_delivery', 'approve', 'not-an-actor');
+      CREATE TEMP TABLE hosted_team_approval_delivery_outbox_v24 (marker TEXT NOT NULL);
+      INSERT INTO temp.hosted_team_approval_delivery_outbox_v24 VALUES ('rebuild-shadow-untouched');
+      CREATE INDEX temp.idx_hosted_team_approval_delivery_pending
+        ON hosted_team_approval_delivery_outbox_v24 (marker);
+      CREATE TEMP TRIGGER outbox_probe AFTER INSERT ON hosted_team_approval_delivery_outbox_v24
+        BEGIN SELECT 1; END;
+      CREATE TEMP TABLE hosted_team_approval_records (marker TEXT NOT NULL);
+      INSERT INTO temp.hosted_team_approval_records VALUES ('parent-shadow-untouched');
+      CREATE TEMP TABLE hosted_team_approval_audit (marker TEXT NOT NULL);
+      INSERT INTO temp.hosted_team_approval_audit VALUES ('audit-shadow-untouched');
     `);
+    const otherTempTables = [
+      'hosted_team_approval_delivery_outbox_v24',
+      'hosted_team_approval_records',
+      'hosted_team_approval_audit',
+    ];
+    const otherTempRowsBefore = otherTempTables.map((table) =>
+      database.prepare(`SELECT * FROM temp.${table} ORDER BY rowid`).all()
+    );
+    const tempSchemaBefore = database.prepare('SELECT type, name, tbl_name, sql FROM temp.sqlite_schema ORDER BY name').all();
+    const tempRowsBefore = database.prepare('SELECT * FROM temp.hosted_team_approval_delivery_outbox').all();
+    const mainRowsBefore = database.prepare('SELECT * FROM main.hosted_team_approval_delivery_outbox').all();
+    const auditBefore = database.prepare('SELECT * FROM main.hosted_team_approval_audit').all();
+    const tempInventoryBefore = readRawMigrationInventory(database, 'temp');
     const shadowedCore = track(
       new InternalStorageWorkerCore({
         databasePath: file,
@@ -770,6 +940,22 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
       })
     );
     expect(shadowedCore.handle('ping', {})).toMatchObject({ integrity: 'ok' });
+    expect(readRawMigrationInventory(database, 'main')).toEqual(retainedInventory);
+    expect(readRawMigrationInventory(database, 'temp')).toEqual(tempInventoryBefore);
+    expect(database.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+    expect(database.prepare('SELECT * FROM main.hosted_team_approval_delivery_outbox').all()).toEqual(
+      mainRowsBefore.map((row) => ({
+        ...row,
+        principal_id: '{"kind":"operator","actorId":"actor_alice"}',
+        reconciliation_ref: null,
+        operator_required_at_ms: null,
+      }))
+    );
+    expect(database.prepare(`SELECT name FROM main.sqlite_schema
+      WHERE name = 'hosted_team_approval_delivery_outbox_v24'`).get()).toBeUndefined();
+    expect(database.prepare(`SELECT tbl_name FROM main.sqlite_schema
+      WHERE type = 'index' AND name = 'idx_hosted_team_approval_delivery_pending'`).get())
+      .toEqual({ tbl_name: 'hosted_team_approval_delivery_outbox' });
     expect(
       database
         .prepare(
@@ -784,21 +970,93 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         )
         .get()
     ).toEqual({ principalId: 'not-an-actor' });
+    expect(database.prepare('SELECT type, name, tbl_name, sql FROM temp.sqlite_schema ORDER BY name').all())
+      .toEqual(tempSchemaBefore);
+    expect(database.prepare('SELECT * FROM temp.hosted_team_approval_delivery_outbox').all())
+      .toEqual(tempRowsBefore);
+    expect(otherTempTables.map((table) =>
+      database.prepare(`SELECT * FROM temp.${table} ORDER BY rowid`).all()
+    )).toEqual(otherTempRowsBefore);
+    expect(database.prepare('SELECT * FROM main.hosted_team_approval_audit').all()).toEqual(auditBefore);
+    expect(database.pragma('main.foreign_key_check')).toEqual([]);
+  });
+
+  it('rejects an attached nonreserved TEMP trigger before v24 effects and preserves its behavior', async () => {
+    const file = await databasePath('temp-trigger-v23.db');
+    const storageNow = Date.now();
+    const database = openDatabase(file);
+    try {
+      installPopulatedCanonicalApprovalSchema(database, 22, storageNow);
+      migrateThroughApprovalVersion(database, 23);
+      database.exec(`
+        CREATE TEMP TABLE outbox_probe_events (delivery_id TEXT NOT NULL);
+        CREATE TEMP TRIGGER outbox_probe AFTER UPDATE ON main.hosted_team_approval_delivery_outbox
+        BEGIN INSERT INTO outbox_probe_events VALUES (NEW.delivery_id); END;
+      `);
+      const probe = () => database.exec(`UPDATE main.hosted_team_approval_delivery_outbox
+        SET created_at_ms = created_at_ms`);
+      probe();
+      expect(database.prepare('SELECT * FROM temp.outbox_probe_events').all())
+        .toEqual([{ delivery_id: 'approval_delivery_historical' }]);
+      const before = {
+        main: readRawMigrationInventory(database, 'main'),
+        temp: readRawMigrationInventory(database, 'temp'),
+        marker: database.pragma('user_version', { simple: true }),
+      };
+      // Establish the original DROP's dependent-object effect, independently of
+      // admission and adapter SQL. Roll back this observation before upgrading.
+      const observationComplete = new Error('retained-drop-observed');
+      expect(() => database.transaction(() => {
+        const drop = HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS
+          .find((statement) => statement.startsWith('DROP TABLE '));
+        expect(drop).toBeDefined();
+        database.exec(drop!);
+        expect(database.prepare(`SELECT name FROM temp.sqlite_schema
+          WHERE type = 'trigger' AND name = 'outbox_probe'`).all()).toEqual([]);
+        throw observationComplete;
+      })()).toThrow(observationComplete);
+      expect(readRawMigrationInventory(database, 'main')).toEqual(before.main);
+      expect(readRawMigrationInventory(database, 'temp')).toEqual(before.temp);
+      const failed = track(new InternalStorageWorkerCore({
+        databasePath: file,
+        createDatabase: () => nonClosingDatabase(database),
+        now: () => new Date(storageNow),
+      }));
+      const exec = vi.spyOn(database, 'exec');
+      expect(() => failed.handle('ping', {})).toThrow('internal-storage-v24-approval-temp-trigger');
+      // Admission must reject before even staging/copying the outbox.
+      expect(exec.mock.calls.some(([sql]) => /^(CREATE|INSERT|DROP|ALTER)\b/i.test(sql.trim())))
+        .toBe(false);
+      exec.mockRestore();
+      expect({
+        main: readRawMigrationInventory(database, 'main'),
+        temp: readRawMigrationInventory(database, 'temp'),
+        marker: database.pragma('user_version', { simple: true }),
+      }).toEqual(before);
+      expect(before.marker).toBe(23);
+      probe();
+      expect(database.prepare('SELECT * FROM temp.outbox_probe_events').all()).toEqual([
+        { delivery_id: 'approval_delivery_historical' },
+        { delivery_id: 'approval_delivery_historical' },
+      ]);
+      expect(readRawMigrationInventory(database, 'main')).toEqual(before.main);
+      expect(database.pragma('main.foreign_key_check')).toEqual([]);
+    } finally {
+      database.close();
+    }
   });
 
   it('rejects a non-canonical v22 ActorId and rolls v23 back atomically', async () => {
     const file = await databasePath('invalid-v22-actor.db');
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
-    initialized.close();
     const database = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
+      installPopulatedCanonicalApprovalSchema(database, 22, storageNow);
       database.exec(`
         UPDATE hosted_team_approval_delivery_outbox SET principal_id = 'not-an-actor';
-        PRAGMA user_version = 22;
       `);
+      before = readApprovalMigrationState(database);
     } finally {
       database.close();
     }
@@ -809,6 +1067,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     );
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(22);
       expect(
         unchanged
@@ -823,39 +1082,12 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('rejects a non-canonical audit ActorId while backfilling v22 atomically', async () => {
     const file = await databasePath('invalid-v21-audit-actor.db');
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.observe', pending(storageNow));
-    initialized.handle('hostedTeamApprovalAuthority.decide', decision());
-    initialized.close();
     const database = openDatabase(file);
+    let before: ReturnType<typeof readApprovalMigrationState>;
     try {
-      installPopulatedHistoricalApprovalSchema(database, 20, storageNow);
-      for (const statement of HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS) {
-        database.exec(statement);
-      }
-      database.exec(`
-        INSERT INTO hosted_team_approval_audit (
-          audit_id, workspace_id, team_id, authority_generation, restore_generation,
-          run_id, request_id, approval_id, approval_generation, decision, payload_hash,
-          actor_id, session_id, occurred_at_ms
-        ) SELECT 'approval_audit_invalid-v21', workspace_id, team_id, authority_generation,
-          restore_generation, run_id, request_id, approval_id, approval_generation,
-          'allow', '${'a'.repeat(64)}', 'actor_alice', 'session_alice', ${storageNow}
-          FROM hosted_team_approval_records;
-        INSERT INTO hosted_team_approval_delivery_outbox (
-          delivery_id, workspace_id, team_id, authority_generation, restore_generation,
-          run_id, request_id, approval_id, approval_generation, decision, payload_hash,
-          delivery_ref, intent_json, state, delivery_generation, delivery_owner_id,
-          delivery_lease_token, delivery_claimed_at_ms, delivery_lease_expires_at_ms,
-          delivered_at_ms, created_at_ms
-        ) SELECT 'approval_delivery_invalid-v21', workspace_id, team_id, authority_generation,
-          restore_generation, run_id, request_id, approval_id, approval_generation,
-          'allow', '${'a'.repeat(64)}', delivery_ref, '{}', 'pending', 0,
-          NULL, NULL, NULL, NULL, NULL, ${storageNow}
-          FROM hosted_team_approval_records;
-      `);
+      installPopulatedCanonicalApprovalSchema(database, 21, storageNow);
       database.exec(`UPDATE hosted_team_approval_audit SET actor_id = 'not-an-actor'`);
-      database.pragma('user_version = 21');
+      before = readApprovalMigrationState(database);
     } finally {
       database.close();
     }
@@ -866,6 +1098,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     );
     const unchanged = openDatabase(file, { readonly: true });
     try {
+      expect(readApprovalMigrationState(unchanged)).toEqual(before!);
       expect(unchanged.pragma('user_version', { simple: true })).toBe(21);
       expect(unchanged.pragma("table_info('hosted_team_approval_delivery_outbox')")).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ name: 'principal_id' })])
@@ -1608,13 +1841,11 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
   it('blocks the genuine v17-to-v18 migration while a backup writer fence is active', async () => {
     const file = await databasePath();
     const storageNow = Date.now();
-    const initialized = track(makeCore(file, () => storageNow));
-    initialized.handle('ping', {});
-    initialized.close();
 
     const database = openDatabase(file);
+    let schemaBefore: unknown;
     try {
-      dropApprovalV18(database);
+      createReleasedInternalStorageSchema(nonClosingDatabase(database), 17);
       database
         .prepare(
           `INSERT INTO coordination_backup_runs (
@@ -1633,6 +1864,7 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
                     '2026-08-04T00:00:00.000Z', NULL)`
         )
         .run();
+      schemaBefore = database.prepare('SELECT type, name, sql FROM main.sqlite_schema ORDER BY name').all();
     } finally {
       database.close();
     }
@@ -1641,6 +1873,14 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(() => blocked.handle('ping', {})).toThrow(
       'internal-storage-v18-migration-backup-fenced'
     );
+    const unchanged = openDatabase(file, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(17);
+      expect(unchanged.prepare('SELECT type, name, sql FROM main.sqlite_schema ORDER BY name').all())
+        .toEqual(schemaBefore);
+    } finally {
+      unchanged.close();
+    }
     expect(INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES).toEqual(
       expect.arrayContaining([
         'hosted_team_approval_audit',

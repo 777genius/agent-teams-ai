@@ -11,6 +11,12 @@ import { InternalStorageWorkerCore } from '@features/internal-storage/main/infra
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import {
+  expectCurrentPublicationRestore,
+  publicationRestoreSnapshot,
+  seedCurrentPublicationRestore,
+} from '../internal-storage/fixtures/currentPublicationRestore';
+
 import type {
   HostedAuthStorageGateway,
   HostedAuthStorageOperation,
@@ -117,6 +123,8 @@ describe('hosted auth internal storage', () => {
     closeCore(harness.core);
 
     const restored = new Database(harness.databasePath);
+    seedCurrentPublicationRestore(restored);
+    const before = publicationRestoreSnapshot(restored);
     restored.pragma('user_version = 15');
     restored.close();
 
@@ -144,7 +152,21 @@ describe('hosted auth internal storage', () => {
       'registered_at',
       'registered_by',
     ]);
+    expectCurrentPublicationRestore(verified);
+    expect(publicationRestoreSnapshot(verified)).toEqual(before);
     verified.close();
+    closeCore(reopened);
+
+    const second = new InternalStorageWorkerCore({
+      databasePath: harness.databasePath,
+      createDatabase: (path, options) => new Database(path, options),
+    });
+    cores.push(second);
+    expect(second.handle('ping', {})).toMatchObject({ schemaVersion: 29 });
+    const idempotent = new Database(harness.databasePath, { readonly: true });
+    expectCurrentPublicationRestore(idempotent);
+    expect(publicationRestoreSnapshot(idempotent)).toEqual(before);
+    idempotent.close();
   });
 
   it('persists the personal authority with a monotonic rollback fence', async () => {

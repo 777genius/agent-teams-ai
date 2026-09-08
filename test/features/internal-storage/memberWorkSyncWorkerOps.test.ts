@@ -7,6 +7,8 @@ import Database from 'better-sqlite3-node';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
+
 import type {
   MemberWorkSyncMetricEventRecord,
   MemberWorkSyncOutboxItemRecord,
@@ -428,7 +430,12 @@ describe('member-work-sync v9 migration', () => {
   it('backfills all four team keys with the shared JavaScript normalizer and recreates indexes', () => {
     const database = new Database(':memory:');
     try {
-      createV8MemberWorkSyncSchema(database);
+      createReleasedInternalStorageSchema(database, 8);
+      database.pragma('foreign_keys = ON');
+      for (const tableName of MEMBER_WORK_SYNC_TABLES) {
+        const columns = database.pragma(`table_info(${tableName})`) as { name: string }[];
+        expect(columns.map(({ name }) => name)).not.toContain('team_key');
+      }
       const legacyTeamNames = ['  ÉQUIPE  ', 'Équipe', 'éQUIPE ', ' ÉQUIPE'];
       database
         .prepare(
@@ -466,10 +473,10 @@ describe('member-work-sync v9 migration', () => {
            ) VALUES (?, 'metric-1', 'bob', 'bob', 'status_evaluated', ?, '{}')`
         )
         .run(legacyTeamNames[3], CREATED_AT);
-      database.pragma('user_version = 8');
 
       runInternalStorageMigrations(database);
 
+      expect(database.pragma('foreign_key_check')).toEqual([]);
       expect(database.pragma('user_version', { simple: true })).toBe(
         INTERNAL_STORAGE_SCHEMA_VERSION
       );
@@ -484,12 +491,18 @@ describe('member-work-sync v9 migration', () => {
         });
       }
       expectMemberWorkSyncTeamKeyIndexes(database);
+      for (const [index, tableName] of MEMBER_WORK_SYNC_TABLES.entries()) {
+        expectQueryPlanToUseIndex(database, tableName, MEMBER_WORK_SYNC_TEAM_KEY_INDEXES[index]);
+      }
 
       for (const indexName of MEMBER_WORK_SYNC_TEAM_KEY_INDEXES) {
         database.exec(`DROP INDEX ${indexName}`);
       }
       runInternalStorageMigrations(database);
       expectMemberWorkSyncTeamKeyIndexes(database);
+      for (const [index, tableName] of MEMBER_WORK_SYNC_TABLES.entries()) {
+        expectQueryPlanToUseIndex(database, tableName, MEMBER_WORK_SYNC_TEAM_KEY_INDEXES[index]);
+      }
     } finally {
       database.close();
     }
@@ -532,90 +545,4 @@ function expectMemberWorkSyncTeamKeyIndexes(database: InstanceType<typeof Databa
   expect(indexes.map((index) => index.name).sort()).toEqual(
     [...MEMBER_WORK_SYNC_TEAM_KEY_INDEXES].sort()
   );
-}
-
-function createV8MemberWorkSyncSchema(database: InstanceType<typeof Database>): void {
-  database.exec(`
-    CREATE TABLE member_work_sync_status (
-      team_name TEXT NOT NULL,
-      member_key TEXT NOT NULL,
-      member_name TEXT NOT NULL,
-      state TEXT NOT NULL,
-      evaluated_at TEXT NOT NULL,
-      provider_id TEXT,
-      status_json TEXT NOT NULL,
-      PRIMARY KEY (team_name, member_key)
-    );
-    CREATE TABLE member_work_sync_report_intents (
-      team_name TEXT NOT NULL,
-      id TEXT NOT NULL,
-      member_key TEXT NOT NULL,
-      member_name TEXT NOT NULL,
-      status TEXT NOT NULL,
-      reason TEXT NOT NULL,
-      recorded_at TEXT NOT NULL,
-      processed_at TEXT,
-      result_code TEXT,
-      request_json TEXT NOT NULL,
-      PRIMARY KEY (team_name, id)
-    );
-    CREATE TABLE member_work_sync_outbox (
-      team_name TEXT NOT NULL,
-      id TEXT NOT NULL,
-      member_key TEXT NOT NULL,
-      member_name TEXT NOT NULL,
-      agenda_fingerprint TEXT NOT NULL,
-      payload_hash TEXT NOT NULL,
-      status TEXT NOT NULL,
-      attempt_generation INTEGER NOT NULL,
-      claimed_by TEXT,
-      claimed_at TEXT,
-      delivered_message_id TEXT,
-      delivery_state TEXT,
-      last_error TEXT,
-      next_attempt_at TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      work_sync_intent TEXT NOT NULL,
-      work_sync_intent_key TEXT,
-      review_request_event_ids_json TEXT,
-      delivery_diagnostics_json TEXT,
-      payload_json TEXT NOT NULL,
-      PRIMARY KEY (team_name, id)
-    );
-    CREATE TABLE member_work_sync_metric_events (
-      team_name TEXT NOT NULL,
-      id TEXT NOT NULL,
-      member_key TEXT NOT NULL,
-      member_name TEXT NOT NULL,
-      kind TEXT NOT NULL,
-      recorded_at TEXT NOT NULL,
-      event_json TEXT NOT NULL,
-      PRIMARY KEY (team_name, id)
-    );
-    CREATE TABLE coordination_backup_runs (
-      backup_run_id TEXT PRIMARY KEY,
-      deployment_id TEXT NOT NULL,
-      state TEXT NOT NULL,
-      revision INTEGER NOT NULL CHECK (revision > 0),
-      fence_completion_status TEXT,
-      record_json TEXT NOT NULL CHECK (json_valid(record_json)),
-      requested_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE coordination_backup_writer_fences (
-      deployment_id TEXT PRIMARY KEY,
-      generation INTEGER NOT NULL CHECK (generation > 0),
-      admitted_run_id TEXT NOT NULL,
-      lease_id TEXT NOT NULL UNIQUE,
-      status TEXT NOT NULL CHECK (status IN ('active', 'released', 'operator_required')),
-      disposition TEXT CHECK (disposition IN ('committed', 'aborted', 'operator_required')),
-      acquired_at TEXT NOT NULL,
-      completed_at TEXT,
-      FOREIGN KEY (admitted_run_id) REFERENCES coordination_backup_runs(backup_run_id)
-        ON DELETE RESTRICT ON UPDATE RESTRICT,
-      CHECK ((status = 'active' AND disposition IS NULL AND completed_at IS NULL)
-        OR (status <> 'active' AND disposition IS NOT NULL AND completed_at IS NOT NULL))
-    );
-  `);
 }

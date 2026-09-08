@@ -63,7 +63,23 @@ describe('hosted approval production admission', () => {
       'dependencies.approvalStorage[method] !== version.approvalStorageMethods[method]'
     );
     expect(production).toContain(
-      'createApprovalRouteMutationLease(\n          route.socketPath,\n          request.ownerBinding,\n          activationLease\n        )'
+      'createApprovalRouteMutationLease(\n          route.socketPath,\n          request.ownerBinding,\n          activationLease,\n          () => !revoked\n        )'
+    );
+    const normalizedProduction = production.replace(/\s+/g, ' ');
+    expect(normalizedProduction).toContain(
+      'const revoke = (): void => { if (revoked) return; revoked = true; operator?.close(); router?.close(); }'
+    );
+    expect(normalizedProduction).toContain(
+      'isReady: () => !revoked && !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady()'
+    );
+    expect(normalizedProduction).toContain(
+      "function createApprovalRouteMutationLease( socketPath: string, binding: HostedApprovalRuntimeActivationBinding['ownerBinding'], activationLease: HostedApprovalRuntimeActivationLease, isCurrent: () => boolean ): TeamLifecycleCommandMutationLease"
+    );
+    expect(normalizedProduction).toContain(
+      'currentBinding: () => invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding'
+    );
+    expect(normalizedProduction).toContain(
+      'invalidate: () => { invalidated = true; activationLease.invalidate(); }'
     );
     expect(production).toContain('ownerGeneration: route.ownerGeneration');
     expect(production).toContain('ownerSessionId: route.ownerSessionId');

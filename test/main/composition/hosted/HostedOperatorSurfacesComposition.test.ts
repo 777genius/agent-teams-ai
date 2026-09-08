@@ -3,6 +3,7 @@
 import { createHostedOperatorSurfacesComposition } from '@main/composition/hosted/hostedOperatorSurfacesComposition';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { HostedProducerProvenance } from '@features/hosted-producer-provenance/main';
 import type { HostedRouteAdmission } from '@main/composition/hosted/application';
 import type { RouteDescriptor } from '@main/composition/hosted/routing';
 import type { FastifyInstance } from 'fastify';
@@ -58,6 +59,18 @@ describe('createHostedOperatorSurfacesComposition', () => {
     const readinessContext = vi.fn();
     const memberContext = vi.fn();
     const approvalContext = vi.fn();
+    const producerProvenance: HostedProducerProvenance = Object.freeze({
+      role: 'product-producer',
+      controllerNonce: 'composition-test-controller',
+      runId: 'run_00000000000000000000000000000000',
+      emit: vi.fn(),
+      poison: (reason: string): never => {
+        throw new Error(reason);
+      },
+      bindInvalidation: vi.fn(),
+      close: vi.fn(),
+    });
+    const acquireApprovalGeneration = vi.fn(() => null);
     const diagnosticsContext = vi.fn();
     const readinessFacade = Object.freeze({ getReadiness: vi.fn() });
     const memberFacade = Object.freeze({ getPage: vi.fn() });
@@ -77,6 +90,7 @@ describe('createHostedOperatorSurfacesComposition', () => {
 
     const composition = createHostedOperatorSurfacesComposition({
       routeAdmission,
+      acquireApprovalGeneration,
       readiness: {
         contribution: Object.freeze({
           id: 'hosted-readiness.projection.hosted.v1',
@@ -95,6 +109,7 @@ describe('createHostedOperatorSurfacesComposition', () => {
       },
       approvals: {
         contribution: approvalContribution,
+        producerProvenance,
         createContext: approvalContext,
       },
       diagnostics: {
@@ -105,7 +120,7 @@ describe('createHostedOperatorSurfacesComposition', () => {
         }),
         createContext: diagnosticsContext,
       },
-    } as never);
+    });
 
     composition.register(app);
 
@@ -120,9 +135,17 @@ describe('createHostedOperatorSurfacesComposition', () => {
       app,
       approvalContribution,
       routeAdmission,
-      undefined,
-      approvalContext
+      producerProvenance,
+      approvalContext,
+      acquireApprovalGeneration
     );
+    expect(registrations.approvals).toHaveBeenCalledOnce();
+    expect(registrations.approvals.mock.calls[0]).toHaveLength(6);
+    expect(registrations.approvals.mock.calls[0]?.[2]).toBe(routeAdmission);
+    expect(registrations.approvals.mock.calls[0]?.[3]).toBe(producerProvenance);
+    expect(registrations.approvals.mock.calls[0]?.[4]).toBe(approvalContext);
+    expect(registrations.approvals.mock.calls[0]?.[5]).toBe(acquireApprovalGeneration);
+    expect(acquireApprovalGeneration).not.toHaveBeenCalled();
     const registeredApprovalContribution = registrations.approvals.mock.calls[0]?.[1];
     expect(registeredApprovalContribution).toBe(approvalContribution);
     expect(registeredApprovalContribution.routes).toBe(approvalRoutes);
