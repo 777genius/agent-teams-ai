@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -18,6 +18,7 @@ import {
   isObject,
   isPositive,
   isPositiveDuration,
+  mountMatches,
   resultFor,
   sameSequence,
   sameValues,
@@ -346,22 +347,6 @@ function caddyMounts(caddyfile, dataVolume, configVolume) {
     { type: 'volume', source: dataVolume, target: '/data' },
     { type: 'volume', source: configVolume, target: '/config' },
   ];
-}
-
-function mountMatches(mount, contract, mounts) {
-  if (mount.type !== contract.type || mount.target !== contract.target) return false;
-  if ((mount.read_only === true) !== (contract.readOnly === true)) return false;
-  if (contract.source && mount.source !== contract.source) return false;
-  if (contract.sourceParentTarget) {
-    const parent = mounts.find((candidate) => candidate?.target === contract.sourceParentTarget);
-    if (typeof parent?.source !== 'string' || !isAbsolute(parent.source)) return false;
-    if (mount.source !== join(parent.source, 'teams')) return false;
-  }
-  if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
-  if (contract.absoluteSource === true && !isAbsolute(String(mount.source))) return false;
-  if (contract.createHostPath === false && mount.bind?.create_host_path !== false) return false;
-  if (contract.copyUpRequired === true && mount.volume?.nocopy === true) return false;
-  return true;
 }
 
 function verifyServiceSecrets(serviceName, service, violations) {

@@ -1,3 +1,5 @@
+import { isAbsolute, join } from 'node:path';
+
 export const RESULT_FORMAT = 'hosted-container-hardening-verifier-result/v2';
 export const COMPOSE_PATH = 'docker/docker-compose.yml';
 export const PROFILES = Object.freeze(['personal', 'keycloak']);
@@ -66,4 +68,20 @@ export function resultFor(checkedServices, checkedProfiles, violations) {
     },
     violations: uniqueViolations,
   };
+}
+
+export function mountMatches(mount, contract, mounts) {
+  if (mount.type !== contract.type || mount.target !== contract.target) return false;
+  if ((mount.read_only === true) !== (contract.readOnly === true)) return false;
+  if (contract.source && mount.source !== contract.source) return false;
+  if (contract.sourceParentTarget) {
+    const parent = mounts.find((candidate) => candidate?.target === contract.sourceParentTarget);
+    if (typeof parent?.source !== 'string' || !isAbsolute(parent.source)) return false;
+    if (mount.source !== join(parent.source, 'teams')) return false;
+  }
+  if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
+  if (contract.absoluteSource === true && !isAbsolute(String(mount.source))) return false;
+  if (contract.createHostPath === false && mount.bind?.create_host_path !== false) return false;
+  if (contract.copyUpRequired === true && mount.volume?.nocopy === true) return false;
+  return true;
 }
