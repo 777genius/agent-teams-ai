@@ -12596,7 +12596,24 @@ describe('TeamProvisioningService', () => {
       const retryText = String(sendMessageToMember.mock.calls[1]?.[0].text ?? '');
       expect(retryText).toContain('relayOfMessageId="msg-visible-required"');
       expect(retryText).toContain('agent-teams_message_send');
-      expect(retryText).toContain('What did you find?');
+      // The runtime accepted the prompt body in this session already, so the
+      // retry names the message instead of asking the question a second time.
+      expect(retryText).toContain('<opencode_delivery_redelivery>');
+      expect(retryText).not.toContain('What did you find?');
+      // The marker has to name the message the runtime already holds, taken from
+      // the ledger record that was written to disk and read back on this second
+      // pass. A marker naming some other id would point the lead at the wrong
+      // message to reconcile against, and dropping the id entirely would leave
+      // it with nothing to look up.
+      const redeliveryOpenIndex = retryText.indexOf('<opencode_delivery_redelivery>');
+      const redeliveryCloseIndex = retryText.indexOf('</opencode_delivery_redelivery>');
+      // Without this, a missing close makes indexOf answer -1, slice() reads it
+      // as "one before the end", and the block below still holds the id.
+      expect(redeliveryCloseIndex).toBeGreaterThan(redeliveryOpenIndex);
+      const redeliveryBlock = retryText.slice(redeliveryOpenIndex, redeliveryCloseIndex);
+      expect(redeliveryBlock).toContain(
+        'The inbound app message "msg-visible-required" is ALREADY in this session'
+      );
     });
 
     it('keeps OpenCode task delivery pending after read-only non-visible tool activity', async () => {

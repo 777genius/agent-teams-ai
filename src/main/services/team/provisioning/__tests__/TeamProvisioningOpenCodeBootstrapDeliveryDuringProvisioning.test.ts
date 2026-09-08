@@ -76,7 +76,7 @@ function createHarness() {
     failed: 0,
     skipped: 0,
   }));
-  const logger = { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+  const logger = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), diagnostic: vi.fn() };
   const scheduler = createOpenCodePromptDeliveryWatchdogSchedulerFromService(
     {
       canDeliverToOpenCodeRuntimeForTeam: (teamName) =>

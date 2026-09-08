@@ -473,7 +473,7 @@ describe('TeamTaskStallPolicy', () => {
 
     expect(
       policy.evaluateWork({
-        now: new Date(touchAtMs + 100_000 - 1),
+        now: new Date(touchAtMs + 300_000 - 1),
         task,
         snapshot,
       })
@@ -484,7 +484,7 @@ describe('TeamTaskStallPolicy', () => {
     });
     expect(
       policy.evaluateWork({
-        now: new Date(touchAtMs + 100_000),
+        now: new Date(touchAtMs + 300_000),
         task,
         snapshot,
       })
@@ -668,6 +668,191 @@ describe('TeamTaskStallPolicy', () => {
     });
   });
 
+  it('treats an OpenCode lane that settled after the touch as a turn end (4 min, not 10)', () => {
+    const task: TeamTask = {
+      id: 'task-open-settled',
+      displayId: 'feed4444',
+      subject: 'OpenCode silent after concrete progress',
+      owner: 'Worker',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+      comments: [
+        {
+          id: 'comment-strong',
+          author: 'Worker',
+          text: 'Found the failing test in src/app.ts and reproduced it with pnpm test.',
+          createdAt: '2026-04-19T12:00:00.000Z',
+          type: 'regular',
+        },
+      ],
+    };
+    const record = createRecord({
+      task: {
+        locator: {
+          ref: 'task-open-settled',
+          refKind: 'canonical',
+          canonicalId: 'task-open-settled',
+        },
+        resolution: 'resolved',
+        taskRef: {
+          taskId: 'task-open-settled',
+          displayId: 'feed4444',
+          teamName: 'demo',
+        },
+      },
+      actor: { memberName: 'Worker', role: 'member', sessionId: 'session-1', isSidechain: true },
+      action: {
+        canonicalToolName: 'task_add_comment',
+        category: 'comment',
+        toolUseId: 'tool-strong',
+        details: { commentId: 'comment-strong' },
+      },
+      source: {
+        messageUuid: 'msg-touch',
+        filePath: 'opencode-runtime:demo:worker',
+        toolUseId: 'tool-strong',
+        sourceOrder: 1,
+      },
+    });
+    // The orchestrator projection has no turn-end row: only the touch and an
+    // empty assistant message after it.
+    const exactRowsByFilePath = new Map([
+      [
+        'opencode-runtime:demo:worker',
+        [
+          createExactRow({
+            messageUuid: 'msg-touch',
+            toolUseIds: ['tool-strong'],
+          }),
+          createExactRow({
+            sourceOrder: 2,
+            messageUuid: 'msg-empty-assistant',
+            parsedMessage: createParsedMessage({ uuid: 'msg-empty-assistant' }),
+          }),
+        ],
+      ],
+    ]);
+    const baseSnapshot = {
+      activeTasks: [task],
+      allTasksById: new Map([[task.id, task]]),
+      inProgressTasks: [task],
+      providerByMemberName: new Map([['worker', 'opencode' as const]]),
+      recordsByTaskId: new Map([[task.id, [record]]]),
+      exactRowsByFilePath,
+    };
+
+    // Without lane state the classifier sees a mid-turn touch: 10-minute threshold.
+    const withoutLaneState = policy.evaluateWork({
+      now: new Date('2026-04-19T12:05:00.000Z'),
+      task,
+      snapshot: createSnapshot(baseSnapshot),
+    });
+    expect(withoutLaneState).toMatchObject({ status: 'skip', skipReason: 'below_threshold' });
+
+    // The lane settled after the touch: the turn ended, 4-minute threshold applies.
+    const settled = policy.evaluateWork({
+      now: new Date('2026-04-19T12:05:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        ...baseSnapshot,
+        openCodeLaneIdleSinceByMemberName: new Map([['worker', '2026-04-19T12:00:30.000Z']]),
+      }),
+    });
+    expect(settled).toMatchObject({
+      status: 'alert',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      memberName: 'Worker',
+    });
+    expect(settled.reason).toContain('OpenCode lane idle since 2026-04-19T12:00:30.000Z');
+
+    // A lane that went idle BEFORE the touch says nothing about this turn.
+    const staleIdle = policy.evaluateWork({
+      now: new Date('2026-04-19T12:05:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        ...baseSnapshot,
+        openCodeLaneIdleSinceByMemberName: new Map([['worker', '2026-04-19T11:59:00.000Z']]),
+      }),
+    });
+    expect(staleIdle).toMatchObject({ status: 'skip', skipReason: 'below_threshold' });
+
+    // A non-OpenCode owner is not reclassified by lane state at all: the very
+    // same settle sample must leave the 10-minute mid-turn threshold in place.
+    const nonOpenCodeOwner = policy.evaluateWork({
+      now: new Date('2026-04-19T12:05:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        ...baseSnapshot,
+        providerByMemberName: new Map([['worker', 'anthropic' as const]]),
+        openCodeLaneIdleSinceByMemberName: new Map([['worker', '2026-04-19T12:00:30.000Z']]),
+      }),
+    });
+    expect(nonOpenCodeOwner).toMatchObject({ status: 'skip', skipReason: 'below_threshold' });
+
+    // A lane still generating is never nudged, even past the 10-minute threshold.
+    const active = policy.evaluateWork({
+      now: new Date('2026-04-19T12:11:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        ...baseSnapshot,
+        openCodeLaneIdleSinceByMemberName: new Map(),
+        openCodeLaneActiveMemberNames: new Set(['worker']),
+      }),
+    });
+    expect(active).toMatchObject({ status: 'skip', skipReason: 'lane_active' });
+  });
+
+  it('leaves a non-OpenCode owner untouched by lane turn state', () => {
+    const task: TeamTask = {
+      id: 'task-anthropic-lane-noise',
+      displayId: 'feed6666',
+      subject: 'Anthropic owner with a same-named OpenCode lane sample',
+      owner: 'worker',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:11:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        activeTasks: [task],
+        allTasksById: new Map([[task.id, task]]),
+        inProgressTasks: [task],
+        providerByMemberName: new Map([['worker', 'anthropic']]),
+        openCodeLaneActiveMemberNames: new Set(['worker']),
+      }),
+    });
+    // The OpenCode-only guards must not swallow a non-OpenCode owner's stall.
+    expect(evaluation).toMatchObject({
+      status: 'skip',
+      skipReason: 'non_instrumented_run',
+    });
+  });
+
+  it('does not nudge an OpenCode owner without progress evidence while its lane is active', () => {
+    const task: TeamTask = {
+      id: 'task-open-active',
+      displayId: 'feed5555',
+      subject: 'OpenCode no evidence, lane busy',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:00:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        activeTasks: [task],
+        allTasksById: new Map([[task.id, task]]),
+        inProgressTasks: [task],
+        providerByMemberName: new Map([['alice', 'opencode']]),
+        openCodeLaneActiveMemberNames: new Set(['alice']),
+      }),
+    });
+    expect(evaluation).toMatchObject({ status: 'skip', skipReason: 'lane_active' });
+  });
+
   it('alerts OpenCode-owned tasks with no instrumented owner progress after threshold', () => {
     const task: TeamTask = {
       id: 'task-open-no-progress',
@@ -699,6 +884,51 @@ describe('TeamTaskStallPolicy', () => {
       reason: 'Potential OpenCode task stall without owner progress evidence.',
     });
     expect(evaluation.epochKey).toContain('opencode_no_owner_progress');
+  });
+
+  it('lets the work branch keep alerting while the pickup gate is off', () => {
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED', '0');
+
+    const inProgress: TeamTask = {
+      id: 'task-open-no-progress',
+      displayId: 'feed4444',
+      subject: 'OpenCode no progress',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T12:00:00.000Z' }],
+    };
+    const pending: TeamTask = {
+      id: 'task-pending',
+      displayId: 'feed5555',
+      subject: 'Never started',
+      owner: 'alice',
+      status: 'pending',
+      createdAt: '2026-04-19T12:00:00.000Z',
+    };
+    const snapshot = createSnapshot({
+      activeTasks: [inProgress, pending],
+      allTasksById: new Map([
+        [inProgress.id, inProgress],
+        [pending.id, pending],
+      ]),
+      inProgressTasks: [inProgress],
+      pendingPickupTasks: [pending],
+      providerByMemberName: new Map([['alice', 'opencode']]),
+    });
+    const now = new Date('2026-04-19T12:07:00.000Z');
+
+    expect(policy.evaluatePendingPickup({ now, task: pending, snapshot })).toMatchObject({
+      status: 'skip',
+      skipReason: 'pickup_remediation_disabled',
+    });
+    expect(policy.evaluateWork({ now, task: inProgress, snapshot })).toMatchObject({
+      status: 'alert',
+      taskId: 'task-open-no-progress',
+      branch: 'work',
+      signal: 'mid_turn_after_touch',
+    });
+
+    vi.unstubAllEnvs();
   });
 
   it('keeps non-OpenCode no-progress tasks on the existing non-instrumented skip path', () => {

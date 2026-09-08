@@ -145,6 +145,110 @@ describe('TeamTaskStallNotifier', () => {
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
   });
 
+  it('sends a start-the-task nudge for pending pickup alerts', async () => {
+    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true, accepted: true } }));
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
+    };
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      { relayOpenCodeMemberInboxMessages: relay } as never,
+      { getMessagesFor: vi.fn(async () => []) } as never,
+      inboxWriter as never
+    );
+    const alert = createAlert({
+      signal: 'pending_pickup_after_unblock',
+      remediationKind: 'pending_pickup',
+      epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
+      reason: 'Potential pickup stall.',
+    });
+    const messageId = `task-stall:demo:task-a:${alert.epochKey}`;
+
+    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
+
+    const request = (inboxWriter.sendMessage.mock.calls as unknown as unknown[][])[0]?.[1] as {
+      messageId: string;
+      messageKind: string;
+      summary: string;
+      actionMode: string;
+      text: string;
+    };
+    expect(request.text).toContain('still pending on the board');
+    expect(request.text).toContain('A direct message to the user does not move the board');
+    expect(request.text).toContain('task_start');
+    expect(request.summary).toBe('Assigned task not started');
+    // Only text and summary change: id, kind and relay metadata stay on the proven path.
+    expect(request.messageId).toBe(messageId);
+    expect(request.messageKind).toBe('task_stall_remediation');
+    expect(request.actionMode).toBe('do');
+    expect(relay).toHaveBeenCalledWith('demo', 'alice', {
+      onlyMessageId: messageId,
+      source: 'watchdog',
+      deliveryMetadata: {
+        replyRecipient: 'user',
+        actionMode: 'do',
+        taskRefs: [alert.taskRef],
+      },
+    });
+  });
+
+  it('does not write a second inbox row for a repeated pending pickup alert', async () => {
+    const alert = createAlert({
+      signal: 'pending_pickup_after_unblock',
+      remediationKind: 'pending_pickup',
+      epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
+    });
+    const messageId = `task-stall:demo:task-a:${alert.epochKey}`;
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId })),
+    };
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
+          lastDelivery: { delivered: true, accepted: true },
+        })),
+      } as never,
+      { getMessagesFor: vi.fn(async () => [{ messageId }]) } as never,
+      inboxWriter as never
+    );
+
+    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['opencode_inbox_message_already_read', { delivered: true }],
+    ['opencode_inbox_read_already_committed', { delivered: true, accepted: true }],
+  ])(
+    'does not count a %s no-op redelivery as remediated so the alert can escalate',
+    async (reason, deliveryShape) => {
+      const notifier = new TeamTaskStallNotifier(
+        { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+        {
+          relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
+            attempted: 1,
+            delivered: 1,
+            lastDelivery: { ...deliveryShape, reason, diagnostics: [reason] },
+            diagnostics: [reason],
+          })),
+        } as never,
+        { getMessagesFor: vi.fn(async () => []) } as never,
+        { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
+      );
+
+      await expect(
+        notifier.notifyOpenCodeOwners('demo', [
+          createAlert({
+            signal: 'pending_pickup_after_unblock',
+            remediationKind: 'pending_pickup',
+            epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
+          }),
+        ])
+      ).resolves.toEqual([]);
+    }
+  );
+
   it('does not mark queued-behind delivery as remediated even when active ledger exists', async () => {
     const notifier = new TeamTaskStallNotifier(
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
@@ -203,7 +307,11 @@ describe('TeamTaskStallNotifier', () => {
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => { throw new Error('disk full'); }) } as never
+      {
+        sendMessage: vi.fn(async () => {
+          throw new Error('disk full');
+        }),
+      } as never
     );
 
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
@@ -220,7 +328,11 @@ describe('TeamTaskStallNotifier', () => {
     const notifier = new TeamTaskStallNotifier(
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
-      { getMessagesFor: vi.fn(async () => { throw new Error('read failed'); }) } as never,
+      {
+        getMessagesFor: vi.fn(async () => {
+          throw new Error('read failed');
+        }),
+      } as never,
       { sendMessage: inboxWrite } as never
     );
 
