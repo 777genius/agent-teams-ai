@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { normalizePersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+
 import {
   buildOpenCodeRuntimeAdapterFinalProgress,
   buildOpenCodeRuntimeAdapterLaunchInput,
@@ -243,6 +245,8 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
               ...failedSnapshot().members.alice,
               name: member.name,
               laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
               runtimeRunId: 'old-run',
               runtimePid: member.name === 'bob' ? 42002 : 42001,
             },
@@ -275,6 +279,40 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
         throw Object.assign(new Error('gone'), { code: 'ESRCH' });
       });
     }
+
+    it('recognizes the complete dead primary after the production snapshot read normalization', async () => {
+      const probe = mockGone();
+      const snapshot = normalizePersistedLaunchSnapshot('team-a', previousSnapshot());
+      expect(snapshot?.expectedMembers).toEqual(['alice', 'bob']);
+      expect(Object.keys(snapshot!.members)).toEqual(['team-lead', 'alice', 'bob']);
+      const ports = previousPorts(snapshot);
+
+      await expect(preflight(ports)).resolves.toBeNull();
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(probe.mock.calls).toEqual([
+        [42001, 0],
+        [42002, 0],
+      ]);
+    });
+
+    it.each(['missing-lead', 'missing-teammate', 'partial-roster', 'unknown-pid', 'live-lead'])(
+      'preserves strict stop for a normalized snapshot with %s',
+      async (failure) => {
+        const probe = mockGone();
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', previousSnapshot())!;
+        if (failure === 'missing-lead') delete snapshot.members['team-lead'];
+        if (failure === 'missing-teammate') delete snapshot.members.bob;
+        if (failure === 'partial-roster') snapshot.expectedMembers = ['alice'];
+        if (failure === 'unknown-pid') delete snapshot.members['team-lead'].runtimePid;
+        if (failure === 'live-lead') probe.mockReturnValue(true);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+        if (failure !== 'live-lead') expect(probe).not.toHaveBeenCalled();
+      }
+    );
 
     it('requires every unique PID to be gone and still invokes the normal new-run launch', async () => {
       const probe = mockGone();
