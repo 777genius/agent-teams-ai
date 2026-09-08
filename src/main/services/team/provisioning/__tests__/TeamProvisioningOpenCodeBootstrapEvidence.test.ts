@@ -6,6 +6,7 @@ import {
   hasMatchingCommittedOpenCodeRuntimeBootstrapSessionEvidence,
   mergeOpenCodeRuntimeSessionRecords,
   parseOpenCodeRuntimeSessionStoreRecords,
+  requireAnsweredOpenCodeCommittedBootstrapSessionEvidence,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotencyFromMember,
 } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 
@@ -289,5 +290,75 @@ describe('TeamProvisioningOpenCodeBootstrapEvidence', () => {
         runtimeSessionId: 'session-2',
       }).state
     ).toBe('new');
+  });
+});
+
+describe('requireAnsweredOpenCodeCommittedBootstrapSessionEvidence', () => {
+  function evidence(
+    overrides: Partial<OpenCodeCommittedBootstrapSessionEvidence>
+  ): OpenCodeCommittedBootstrapSessionEvidence {
+    return {
+      state: 'healthy',
+      committed: true,
+      activeRunId: 'run-1',
+      sessions: [],
+      diagnostics: [],
+      ...overrides,
+    };
+  }
+
+  // A store this reader could not read answers the same shape an empty store
+  // does. The gates that may downgrade a member on a missing record therefore
+  // have to be handed a raise, not a `false`: only an answered store proves
+  // anything, and a manifest lock held by a concurrent bootstrap check-in is
+  // the very contention those gates race.
+  it('raises for every state that is not an answered store', () => {
+    expect(() =>
+      requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+        evidence({
+          state: 'invalid_store',
+          committed: false,
+          diagnostics: ['OpenCode runtime manifest could not be read.'],
+        })
+      )
+    ).toThrow('unavailable (invalid_store): OpenCode runtime manifest could not be read.');
+    expect(() =>
+      requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+        evidence({ state: 'descriptor_missing', committed: false })
+      )
+    ).toThrow('unavailable (descriptor_missing)');
+  });
+
+  // A store mid-write is not an outage either, and it is the one the gates
+  // actually race: the session file lands before its manifest entry does.
+  it('raises for a store that is between its write and its commit', () => {
+    expect(() =>
+      requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+        evidence({ state: 'uncommitted_write', committed: false })
+      )
+    ).toThrow('unavailable (uncommitted_write)');
+    expect(() =>
+      requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+        evidence({ state: 'hash_mismatch', committed: false })
+      )
+    ).toThrow('unavailable (hash_mismatch)');
+    expect(() =>
+      requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+        evidence({ state: 'future_schema', committed: false })
+      )
+    ).toThrow('unavailable (future_schema)');
+  });
+
+  // A lane with no session file at all is the absence these gates exist for,
+  // and a file the app cannot read holds nothing the delivery path could use
+  // either. Both are answers, and both must stay able to disprove.
+  it('passes an answered store through untouched, sessions or none', () => {
+    const answered = evidence({ sessions: [] });
+    const absent = evidence({ state: 'missing', committed: false });
+    const unreadable = evidence({ state: 'quarantined', committed: false });
+
+    expect(requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(answered)).toBe(answered);
+    expect(requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(absent)).toBe(absent);
+    expect(requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(unreadable)).toBe(unreadable);
   });
 });

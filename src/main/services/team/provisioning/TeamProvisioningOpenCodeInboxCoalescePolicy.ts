@@ -12,7 +12,10 @@
  * the relay's ledger and delivery ports.
  */
 
-import { isOpenCodeReplyOptionalDeliveryContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import {
+  isOpenCodeAppAuthoredNoticeContract,
+  isOpenCodeReplyOptionalDeliveryContract,
+} from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 import { hasOpenCodeAcceptedRuntimePrompt } from '../opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
 import {
   OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC,
@@ -104,7 +107,16 @@ export interface OpenCodeQueuedNoticeSelection {
  * and stays unread, so it still gets its own prompt and its own reply contract.
  */
 async function selectQueuedReplyOptionalNotices(
-  input: OpenCodeQueuedNoticeSelection & { limit: number }
+  input: OpenCodeQueuedNoticeSelection & {
+    limit: number;
+    /**
+     * Which reply contracts this walk accepts, for the anchor and for every
+     * follower alike. Batching a message into somebody else's prompt still
+     * delivers its text, so it may take the broad reply-optional set;
+     * absorbing one without a prompt may not (see the settle selector below).
+     */
+    isEligibleContract: (replyRecipient: string) => boolean;
+  }
 ): Promise<RelayInboxMessage[]> {
   const anchor = input.unread[input.index];
   if (
@@ -117,7 +129,7 @@ async function selectQueuedReplyOptionalNotices(
     // whatever it travelled with - and this one is the trigger for a message the
     // lead has to compose on its own.
     isBoardCompletionNotice(anchor) ||
-    !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
+    !input.isEligibleContract(input.anchorReplyRecipient)
   ) {
     return [];
   }
@@ -128,7 +140,7 @@ async function selectQueuedReplyOptionalNotices(
     if (!candidate || candidate.read || !isCoalescableNoticeKind(candidate)) break;
     if (isBoardCompletionNotice(candidate)) break;
     if (typeof candidate.text !== 'string' || candidate.text.trim().length === 0) break;
-    if (!isOpenCodeReplyOptionalDeliveryContract(input.ports.resolveReplyRecipient(candidate))) {
+    if (!input.isEligibleContract(input.ports.resolveReplyRecipient(candidate))) {
       break;
     }
     if (await input.ports.hasExistingRecord(candidate)) break;
@@ -152,6 +164,7 @@ export function selectOpenCodeReplyOptionalCoalescedFollowers(
   return selectQueuedReplyOptionalNotices({
     ...input,
     limit: OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
+    isEligibleContract: isOpenCodeReplyOptionalDeliveryContract,
   });
 }
 
@@ -161,11 +174,23 @@ export function selectOpenCodeReplyOptionalCoalescedFollowers(
  * apply and the whole queued run settles in this one pass; leaving a remainder
  * would only make the next relay pass re-derive the same settlement to finish
  * a job this one could already close.
+ *
+ * Only APP-AUTHORED notices qualify. The reply-optional set used for
+ * coalescing is decided by the sender, so a teammate's ordinary `SendMessage`
+ * falls into it too - and absorbing one would drop a message a teammate wrote
+ * on purpose, with nothing on the recipient's side ever seeing it. Suppression
+ * is only safe for text the app generated, which is what the settlement was
+ * written for in the first place ("task done", comment notifications,
+ * task-state notices).
  */
 export function selectOpenCodeSettleableQueuedNotices(
   input: OpenCodeQueuedNoticeSelection
 ): Promise<RelayInboxMessage[]> {
-  return selectQueuedReplyOptionalNotices({ ...input, limit: input.unread.length });
+  return selectQueuedReplyOptionalNotices({
+    ...input,
+    limit: input.unread.length,
+    isEligibleContract: isOpenCodeAppAuthoredNoticeContract,
+  });
 }
 
 /**

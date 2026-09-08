@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 30_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
@@ -173,64 +173,94 @@ function findExecutable(bundlePath, platform) {
   fail(`Unsupported platform: ${platform}`);
 }
 
-function waitForProcessClose(child, exitPromise, timeoutMs) {
-  if (child.exitCode !== null || child.signalCode !== null) {
-    return Promise.resolve(true);
-  }
-
+function waitForProcessClose(closePromise, timeoutMs) {
   let timeoutId;
   const timeoutPromise = new Promise((resolve) => {
     timeoutId = setTimeout(() => resolve(false), timeoutMs);
   });
-  return Promise.race([exitPromise.then(() => true), timeoutPromise]).finally(() => {
+  return Promise.race([closePromise.then(() => true), timeoutPromise]).finally(() => {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
   });
 }
 
-async function terminateChild(child, exitPromise, platform) {
-  if (child.exitCode !== null || child.signalCode !== null) {
-    return;
+async function waitForOwnedGroupExit(groupId, timeoutMs) {
+  if (!groupId) return; // Failed spawn has no owned process group.
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const result = spawnSync('ps', ['-ax', '-o', 'pgid=,stat='], {
+      encoding: 'utf8',
+      timeout: Math.max(1, deadline - Date.now()),
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error('Unable to verify packaged app process group cleanup');
+    // Orphans may remain as zombies until PID 1 reaps them; they cannot execute
+    // or retain open pipes, so waiting for their PIDs to vanish would hang CI.
+    const running = result.stdout.split('\n').some((line) => {
+      const match = /^\s*(\d+)\s+(\S+)/.exec(line);
+      return match && Number(match[1]) === groupId && !/^[ZX]/.test(match[2]);
+    });
+    if (!running) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(25, deadline - Date.now())));
   }
+}
 
-  if (platform === 'win32' && child.pid) {
-    await new Promise((resolve) => {
+async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOWN_TIMEOUT_MS) {
+  // POSIX callers must spawn detached: only this smoke-owned process group is signalled.
+  // The leader may already have exited while descendants still hold its output pipes.
+  const signalOwnedGroup = (signal) => {
+    if (!child.pid) return; // Failed spawn: no owned process exists.
+    try {
+      process.kill(-child.pid, signal);
+    } catch (error) {
+      if (error.code !== 'ESRCH') throw error;
+    }
+  };
+
+  if (platform === 'win32') {
+    if (child.pid && child.exitCode === null && child.signalCode === null) {
       const killer = spawn('taskkill.exe', ['/pid', String(child.pid), '/T', '/F'], {
         stdio: 'ignore',
       });
-      killer.once('error', resolve);
-      killer.once('close', resolve);
-    });
-  } else {
-    const pid = child.pid;
-    if (pid) {
-      try {
-        process.kill(-pid, 'SIGTERM');
-      } catch {
-        child.kill();
+      const killerDone = new Promise((resolve) => {
+        killer.once('error', resolve);
+        killer.once('close', resolve);
+      });
+      if (!(await waitForProcessClose(killerDone, timeoutMs))) {
+        killer.kill();
+        throw new Error(`Timed out after ${timeoutMs}ms waiting for taskkill.exe`);
       }
-    } else {
-      child.kill();
     }
+  } else {
+    signalOwnedGroup('SIGTERM');
   }
 
-  const closed = await waitForProcessClose(child, exitPromise, SHUTDOWN_TIMEOUT_MS);
-  if (!closed && child.exitCode === null && child.signalCode === null) {
-    if (child.pid && platform !== 'win32') {
-      try {
-        process.kill(-child.pid, 'SIGKILL');
-      } catch {
-        child.kill('SIGKILL');
-      }
-    } else {
-      child.kill('SIGKILL');
+  if (await waitForProcessClose(closePromise, timeoutMs)) {
+    // A descendant with redirected stdio can outlive close. Stop any remaining
+    // members of our group before reporting success, even when no pipes remain.
+    if (platform !== 'win32') {
+      signalOwnedGroup('SIGKILL');
+      await waitForOwnedGroupExit(child.pid, timeoutMs);
     }
-    const killed = await waitForProcessClose(child, exitPromise, SHUTDOWN_TIMEOUT_MS);
-    if (!killed && child.exitCode === null && child.signalCode === null) {
-      throw new Error(`Timed out after ${SHUTDOWN_TIMEOUT_MS}ms waiting for packaged app to exit`);
-    }
+    return;
   }
+  console.error(`[smokePackagedApp] shutdown grace expired: pid=${child.pid}; forcing cleanup`);
+  if (platform === 'win32') {
+    child.kill('SIGKILL');
+  } else {
+    signalOwnedGroup('SIGKILL');
+  }
+  if (!(await waitForProcessClose(closePromise, timeoutMs))) {
+    throw new Error(
+      `Timed out after ${timeoutMs}ms waiting for packaged app stdio to close: ` +
+        `pid=${child.pid} exitCode=${child.exitCode} signal=${child.signalCode}`
+    );
+  }
+  if (platform !== 'win32') await waitForOwnedGroupExit(child.pid, timeoutMs);
 }
 
 async function main() {
@@ -264,48 +294,81 @@ async function main() {
   });
 
   const exitPromise = new Promise((resolve) => {
-    child.on('exit', (code, signal) => resolve({ code, signal }));
+    child.once('error', (error) => resolve({ error }));
+    child.once('exit', (code, signal) => {
+      console.log(`[smokePackagedApp] leader exit: code=${code} signal=${signal}`);
+      resolve({ code, signal });
+    });
   });
+  const closePromise = new Promise((resolve) => {
+    child.once('close', () => {
+      console.log(`[smokePackagedApp] stdio closed: pid=${child.pid}`);
+      resolve();
+    });
+  });
+  child.once('spawn', () => console.log(`[smokePackagedApp] spawned: pid=${child.pid}`));
 
-  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
-  let startupSeenAt = null;
-  let storageVerificationError = null;
-  while (Date.now() < deadline) {
-    if (FAILURE_PATTERNS.some((pattern) => pattern.test(log))) {
-      await terminateChild(child, exitPromise, platform);
-      fail('Detected startup failure pattern', log);
-    }
+  let startupError;
+  try {
+    const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+    let startupSeenAt = null;
+    let storageVerificationError = null;
+    let startupVerified = false;
+    while (Date.now() < deadline) {
+      if (FAILURE_PATTERNS.some((pattern) => pattern.test(log))) {
+        throw new Error('Detected startup failure pattern');
+      }
 
-    if (startupSeenAt === null && REQUIRED_LOG_MARKERS.every((marker) => log.includes(marker))) {
-      startupSeenAt = Date.now();
-    }
+      if (startupSeenAt === null && REQUIRED_LOG_MARKERS.every((marker) => log.includes(marker))) {
+        startupSeenAt = Date.now();
+        console.log('[smokePackagedApp] renderer ready');
+      }
 
-    if (startupSeenAt !== null && Date.now() - startupSeenAt >= POST_STARTUP_STABLE_MS) {
-      storageVerificationError = getInternalStorageVerificationError(userDataDir, log);
-      if (storageVerificationError === null) {
-        await terminateChild(child, exitPromise, platform);
-        console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
-        return;
+      if (startupSeenAt !== null && Date.now() - startupSeenAt >= POST_STARTUP_STABLE_MS) {
+        storageVerificationError = getInternalStorageVerificationError(userDataDir, log);
+        if (storageVerificationError === null) {
+          startupVerified = true;
+          break;
+        }
+      }
+
+      const exit = await Promise.race([
+        exitPromise,
+        new Promise((resolve) => setTimeout(() => resolve(null), 250)),
+      ]);
+      if (exit) {
+        if (exit.error) throw exit.error;
+        throw new Error(
+          `Packaged app exited before startup completed: code=${exit.code} signal=${exit.signal}`
+        );
       }
     }
 
-    const exit = await Promise.race([
-      exitPromise,
-      new Promise((resolve) => setTimeout(() => resolve(null), 250)),
-    ]);
-    if (exit) {
-      fail(
-        `Packaged app exited before startup completed: code=${exit.code} signal=${exit.signal}`,
-        log
+    if (!startupVerified) {
+      throw new Error(
+        storageVerificationError ||
+          `Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`
       );
     }
+  } catch (error) {
+    startupError = error;
+    throw error;
+  } finally {
+    // Every startup outcome must clean up descendants, including early exit or spawn failure.
+    try {
+      await terminateChild(child, closePromise, platform);
+    } catch (cleanupError) {
+      if (startupError) {
+        console.error(
+          `[smokePackagedApp] Startup failed before cleanup: ${startupError.stack || String(startupError)}`
+        );
+      }
+      throw cleanupError;
+    } finally {
+      if (log.trim()) console.log(`--- packaged app log ---\n${log.trim()}`);
+    }
   }
-
-  await terminateChild(child, exitPromise, platform);
-  if (startupSeenAt !== null && storageVerificationError) {
-    fail(storageVerificationError, log);
-  }
-  fail(`Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`, log);
+  console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
 }
 
 if (require.main === module) {

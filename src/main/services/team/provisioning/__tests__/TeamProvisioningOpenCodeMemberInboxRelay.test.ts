@@ -1052,9 +1052,10 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
 
   it('read-commits settled notices without spending a runtime turn on any of them', async () => {
     const anchor = message({
-      messageId: 'scribe-done',
-      from: 'Scribe',
-      text: '#de5126de done.',
+      messageId: 'task-state:de5126de',
+      from: 'system',
+      source: 'system_notification',
+      text: '#de5126de moved to completed.',
       timestamp: '2026-01-01T10:00:10.000Z',
     });
     const follower = message({
@@ -1083,9 +1084,9 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     );
 
     expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
-    // Relay order puts the system notification first; it anchors, the teammate
-    // report rides along, and both are committed in one pass.
-    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [follower, anchor]);
+    // Both rows are app-written, so the first one anchors and the second rides
+    // along; the pair is committed in one pass without a runtime turn.
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [anchor, follower]);
     expect(result).toMatchObject({ attempted: 0, delivered: 0, relayed: 2, failed: 0 });
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
@@ -1096,9 +1097,10 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
 
   it('delivers the anchor as a catch-up when the board moved during the settled read-commit', async () => {
     const anchor = message({
-      messageId: 'scribe-done',
-      from: 'Scribe',
-      text: '#de5126de done.',
+      messageId: 'task-state:de5126de',
+      from: 'system',
+      source: 'system_notification',
+      text: '#de5126de moved to completed.',
       timestamp: '2026-01-01T10:00:10.000Z',
     });
     const reopenedBoard = [
@@ -1137,11 +1139,45 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       })
     );
 
-    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.messageId).toBe('scribe-done');
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.messageId).toBe('task-state:de5126de');
     expect(result).toMatchObject({ attempted: 1, delivered: 1 });
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
         expect.stringContaining('board moved, delivering anchor as catch-up'),
+      ])
+    );
+  });
+
+  it('still delivers a message a teammate wrote on a fully settled board', async () => {
+    // The settled board absorbs app notices, never authored traffic: a teammate
+    // that speaks up after the team finished has to reach the lead's runtime.
+    const written = message({
+      messageId: 'scribe-followup',
+      from: 'Scribe',
+      text: 'The deploy config still points at staging - somebody has to fix that.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [written])
+        ) as never,
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([settledBoardTask()]),
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.messageId).toBe('scribe-followup');
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
       ])
     );
   });

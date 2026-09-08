@@ -19563,7 +19563,13 @@ describe('TeamProvisioningService', () => {
 
       expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterStop).toHaveBeenCalledTimes(1);
-      expect(progress.at(-1)).toMatchObject({ state: 'failed', error: rootCause });
+      // The lead is a veto: the failure artifact now LEADS with the lead reason
+      // and keeps the shared-runtime root cause behind it.
+      expect(progress.at(-1)).toMatchObject({
+        state: 'failed',
+        error: expect.stringContaining(rootCause),
+      });
+      expect(progress.at(-1)?.error).toContain('team-lead');
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.statuses.alice).toMatchObject({
         status: 'error',
@@ -19976,7 +19982,11 @@ describe('TeamProvisioningService', () => {
       expect(svc.isTeamAlive(teamName)).toBe(true);
       expect(progress.at(-1)).toMatchObject({
         state: 'ready',
-        message: 'OpenCode team is running with unavailable members',
+        // The lead is absent from this launch result and holds no committed
+        // session on disk, so the lead gate reports it as pending. The team
+        // still promotes - the side lanes carry it - but the message now names
+        // the actual condition instead of the generic "unavailable members".
+        message: 'OpenCode lead is waiting for its runtime bootstrap evidence',
         error: undefined,
       });
 

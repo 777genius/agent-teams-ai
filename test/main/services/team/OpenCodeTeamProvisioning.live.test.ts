@@ -3,6 +3,9 @@ import {
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { boundedDiagnosticString } from '@shared/utils/diagnosticsRedaction';
+import { redactSentryEvent } from '@shared/utils/sentryConfig';
+import { randomUUID } from 'crypto';
 import { constants as fsConstants, promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -23,11 +26,15 @@ import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
+import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+
+import { assertOpenCodeSmokeCleanup } from './assertOpenCodeSmokeCleanup';
 
 import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
@@ -38,12 +45,12 @@ const liveDescribe =
     : describe.skip;
 
 const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
-const DEFAULT_MODEL = 'opencode/big-pickle';
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_MODEL = process.env.OPENCODE_E2E_MODEL?.trim() || 'opencode/big-pickle';
 
 liveDescribe('OpenCode team provisioning live e2e', () => {
-  const liveDefaultModelIt =
-    process.env.OPENCODE_E2E_DEFAULT_MODEL_LAUNCH === '1' ? it : it.skip;
+  const liveDefaultModelIt = process.env.OPENCODE_E2E_DEFAULT_MODEL_LAUNCH === '1' ? it : it.skip;
   let tempDir: string;
   let tempClaudeRoot: string;
 
@@ -54,12 +61,27 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
     setClaudeBasePathOverride(tempClaudeRoot);
   });
 
-  afterEach(async () => {
+  afterEach(async ({ task }) => {
     setClaudeBasePathOverride(null);
+    if (
+      task.result?.state === 'fail' &&
+      process.env.OPENCODE_E2E_OWNED_PROJECT_PATH === PROJECT_PATH
+    ) {
+      console.info('Preserved failed OpenCode smoke state', { tempDir });
+      return;
+    }
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  it('creates and stops a pure OpenCode team through TeamProvisioningService using the live runtime adapter', async () => {
+  it('creates an OpenCode team, completes an assigned file task, and stops the live runtime', async () => {
+    // This task may write only into the wrapper-owned disposable project.
+    expect(path.isAbsolute(PROJECT_PATH)).toBe(true);
+    expect(process.env.OPENCODE_E2E_OWNED_PROJECT_PATH).toBe(PROJECT_PATH);
+    expect(await fs.realpath(PROJECT_PATH)).not.toBe(await fs.realpath(process.cwd()));
+    const proofToken = randomUUID();
+    const proofPath = path.join(PROJECT_PATH, `task-proof-${proofToken}.txt`);
+    const proofContent = `opencode-task-proof:${proofToken}\n`;
+    await expect(fs.lstat(proofPath)).rejects.toMatchObject({ code: 'ENOENT' });
     const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
     const orchestratorCli =
       process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
@@ -69,7 +91,7 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
     const bridgeEnv = {
       ...createStableBridgeEnv(),
       PATH: withBunOnPath(process.env.PATH ?? ''),
-      XDG_DATA_HOME: path.join(tempDir, 'xdg-data'),
+      XDG_DATA_HOME: process.env.XDG_DATA_HOME ?? path.join(tempDir, 'xdg-data'),
       AGENT_TEAMS_MCP_CLAUDE_DIR: tempClaudeRoot,
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
@@ -128,14 +150,22 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
       );
 
       expect(runId).toBeTruthy();
+      await waitUntil(async () => {
+        const last = progressEvents.at(-1);
+        if (last?.state === 'failed') {
+          throw new Error(
+            `Team ${teamName} run ${runId} provisioning failed: ${JSON.stringify(safeProgress(last))}`
+          );
+        }
+        return last?.state === 'ready';
+      }, 180_000);
       const progressDump = progressEvents
         .map((progress) =>
           [
             progress.state,
-            progress.message,
+            safeProgress(progress).message,
             progress.messageSeverity,
-            progress.error,
-            progress.cliLogsTail,
+            safeProgress(progress).error,
           ]
             .filter(Boolean)
             .join(' | ')
@@ -192,24 +222,92 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
         },
       });
 
+      const taskReader = new TeamTaskReader();
+      const task = await new TeamDataService().createTask(teamName, {
+        subject: `Live file proof ${proofToken}`,
+        owner: 'alice',
+        startImmediately: true,
+        prompt: [
+          `Work only inside ${PROJECT_PATH}.`,
+          `Create the regular file ${proofPath}.`,
+          `Its exact UTF-8 content must be ${JSON.stringify(proofContent)} (including the final newline).`,
+          'Do not modify any other project file. Do not delegate this task.',
+          'After writing and reading back the file, complete this assigned task with task_complete.',
+        ].join('\n'),
+      });
+      expect(task.id).toBeTruthy();
+      expect(task.owner).toBe('alice');
+      // Submit once: after an uncertain delivery result only observe, never redispatch.
+      const relay = await svc.relayInboxFileToLiveRecipient(teamName, 'alice');
+      expect(
+        relay.kind === 'native_member_noop' ||
+          relay.relayed > 0 ||
+          relay.lastDelivery?.accepted === true ||
+          relay.lastDelivery?.delivered === true ||
+          relay.lastDelivery?.responsePending === true
+      ).toBe(true);
+      await waitUntil(
+        async () => {
+          const observed = (await taskReader.getTasks(teamName)).find(({ id }) => id === task.id);
+          if (observed?.status !== 'completed') return false;
+          expect(observed).toMatchObject({ id: task.id, owner: 'alice', status: 'completed' });
+          try {
+            expect((await fs.lstat(proofPath)).isFile()).toBe(true);
+            expect(await fs.readFile(proofPath, 'utf8')).toBe(proofContent);
+            return true;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+            throw error;
+          }
+        },
+        300_000,
+        2_000
+      );
+      console.info('OpenCode live task proof', {
+        teamName,
+        runId,
+        taskId: task.id,
+        owner: 'alice',
+        model: selectedModel,
+        status: 'completed',
+        proofFile: path.basename(proofPath),
+      });
+
       await svc.stopTeam(teamName);
       await waitUntil(async () => {
         const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
         return Object.keys(laneIndex.lanes).length === 0;
       }, 90_000);
+    } catch (error) {
+      const diagnostics = {
+        teamName,
+        error: safeDiagnostic(error instanceof Error ? error.message : String(error)),
+        progress: progressEvents.slice(-30).map(safeProgress),
+      };
+      // Keep bounded, redacted evidence separately from raw runtime state. No env/auth or CLI tail.
+      await fs
+        .writeFile(
+          path.join(tempDir, 'provisioning-failure.json'),
+          `${JSON.stringify(diagnostics, null, 2)}\n`
+        )
+        .catch(() => undefined);
+      console.info('OpenCode smoke failure', JSON.stringify(diagnostics));
+      throw new Error(diagnostics.error ?? 'OpenCode smoke failed; see preserved diagnostics');
     } finally {
       await svc.stopTeam(teamName).catch(() => undefined);
-      await readinessBridge
-        .cleanupOpenCodeHosts({
+      // Only the wrapper's fresh project has exclusive host ownership.
+      if (process.env.OPENCODE_E2E_OWNED_PROJECT_PATH === PROJECT_PATH) {
+        const cleanup = await readinessBridge.cleanupOpenCodeHosts({
           reason: 'opencode-team-provisioning-live-e2e-cleanup',
           mode: 'force',
           projectPath: PROJECT_PATH,
           staleAgeMs: null,
           leaseStaleAgeMs: null,
-        })
-        .catch(() => undefined);
+        });
+        assertOpenCodeSmokeCleanup(cleanup, PROJECT_PATH);
+      }
     }
-  }, 300_000);
+  }, 780_000);
 
   liveDefaultModelIt(
     'creates and stops a pure OpenCode team when all OpenCode model selections are Default',
@@ -217,7 +315,9 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
       const orchestratorCli =
         process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
       await assertExecutable(orchestratorCli);
-      const projectPath = path.join(tempDir, 'default-model-project');
+      const projectPath =
+        process.env.OPENCODE_E2E_DEFAULT_MODEL_PROJECT_PATH ??
+        path.join(tempDir, 'default-model-project');
       await fs.mkdir(projectPath, { recursive: true });
       await fs.writeFile(
         path.join(projectPath, 'opencode.json'),
@@ -228,7 +328,7 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
       const bridgeEnv = {
         ...createStableBridgeEnv(),
         PATH: withBunOnPath(process.env.PATH ?? ''),
-        XDG_DATA_HOME: path.join(tempDir, 'xdg-data-default-model'),
+        XDG_DATA_HOME: process.env.XDG_DATA_HOME ?? path.join(tempDir, 'xdg-data-default-model'),
         AGENT_TEAMS_MCP_CLAUDE_DIR: tempClaudeRoot,
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
@@ -283,10 +383,9 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
           .map((progress) =>
             [
               progress.state,
-              progress.message,
+              safeProgress(progress).message,
               progress.messageSeverity,
-              progress.error,
-              progress.cliLogsTail,
+              safeProgress(progress).error,
             ]
               .filter(Boolean)
               .join(' | ')
@@ -338,10 +437,9 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
           .map((progress) =>
             [
               progress.state,
-              progress.message,
+              safeProgress(progress).message,
               progress.messageSeverity,
-              progress.error,
-              progress.cliLogsTail,
+              safeProgress(progress).error,
             ]
               .filter(Boolean)
               .join(' | ')
@@ -379,15 +477,14 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
         }, 90_000);
       } finally {
         await svc.stopTeam(teamName).catch(() => undefined);
-        await readinessBridge
-          .cleanupOpenCodeHosts({
-            reason: 'opencode-team-default-model-live-e2e-cleanup',
-            mode: 'force',
-            projectPath,
-            staleAgeMs: null,
-            leaseStaleAgeMs: null,
-          })
-          .catch(() => undefined);
+        const cleanup = await readinessBridge.cleanupOpenCodeHosts({
+          reason: 'opencode-team-default-model-live-e2e-cleanup',
+          mode: 'force',
+          projectPath,
+          staleAgeMs: null,
+          leaseStaleAgeMs: null,
+        });
+        assertOpenCodeSmokeCleanup(cleanup, projectPath);
       }
     },
     300_000
@@ -453,12 +550,11 @@ function withBunOnPath(pathValue: string): string {
 }
 
 function createStableBridgeEnv(): NodeJS.ProcessEnv {
-  const realHome = os.userInfo().homedir;
   const env = applyOpenCodeAutoUpdatePolicy({ ...process.env });
   return {
     ...env,
-    HOME: realHome,
-    USERPROFILE: realHome,
+    HOME: process.env.HOME ?? os.homedir(),
+    USERPROFILE: process.env.USERPROFILE ?? os.homedir(),
   };
 }
 
@@ -472,4 +568,18 @@ function hasOpenCodeRuntimeHandle(member: {
     (typeof member.runtimePid === 'number' && member.runtimePid > 0) ||
     (typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.trim().length > 0)
   );
+}
+
+function safeDiagnostic(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return boundedDiagnosticString(String(redactSentryEvent(value)), 2_000);
+}
+
+function safeProgress(progress: TeamProvisioningProgress) {
+  return {
+    state: progress.state,
+    message: safeDiagnostic(progress.message),
+    error: safeDiagnostic(progress.error),
+    messageSeverity: progress.messageSeverity,
+  };
 }

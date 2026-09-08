@@ -27,7 +27,16 @@ import {
   collectRecursiveFiles,
   collectRecursiveFilesSync,
 } from './TeamBackupFileCollection';
+import {
+  type BackupManifest,
+  getBackupManifestPath,
+  readBackupManifest,
+  readBackupManifestSync,
+  writeBackupManifest,
+  writeBackupManifestSync,
+} from './teamBackupManifest';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 
@@ -41,18 +50,6 @@ const logger = createLogger('TeamBackupService');
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface BackupManifest {
-  teamName: string;
-  identityId: string;
-  projectPath?: string;
-  displayName?: string;
-  status: 'active' | 'deleted_by_user';
-  deletedByUserAt?: string;
-  firstBackupAt: string;
-  lastBackupAt: string;
-  fileStats: Record<string, { mtime: number; size: number }>;
-}
 
 interface BackupRegistry {
   version: 1;
@@ -81,6 +78,7 @@ const TEAM_ROOT_FILES = [
   'team.meta.json',
   'launch-state.json',
   'launch-summary.json',
+  TEAM_LAUNCH_STOPPED_MARKER_FILE,
   'kanban-state.json',
   'sentMessages.json',
   'sent-cross-team.json',
@@ -332,7 +330,7 @@ export class TeamBackupService {
           validateDetached: async (detachedPath) => {
             try {
               const manifest = JSON.parse(
-                await fs.promises.readFile(path.join(detachedPath, 'manifest.json'), 'utf8')
+                await fs.promises.readFile(getBackupManifestPath(detachedPath), 'utf8')
               ) as BackupManifest;
               return (
                 manifest.teamName === teamName &&
@@ -542,13 +540,8 @@ export class TeamBackupService {
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
-    let manifest: BackupManifest | null = null;
-    try {
-      const raw = fs.readFileSync(path.join(backupDir, 'manifest.json'), 'utf8');
-      manifest = JSON.parse(raw) as BackupManifest;
-    } catch {
-      // A missing manifest is initialized below after source identity ownership is known.
-    }
+    // A missing manifest is initialized below after source identity ownership is known.
+    let manifest = readBackupManifestSync(backupDir);
 
     if (
       manifest?.status === 'deleted_by_user' ||
@@ -595,6 +588,7 @@ export class TeamBackupService {
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }
+    this.pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
 
     manifest.lastBackupAt = nowIso();
     this.saveManifestSync(teamName, manifest);
@@ -606,6 +600,26 @@ export class TeamBackupService {
       deletedByUserAt: manifest.deletedByUserAt,
       lastBackupAt: manifest.lastBackupAt,
     };
+  }
+
+  /**
+   * The shutdown backup only adds files, so a stop marker the team no longer
+   * has would stay in the backup and freeze every later restore of its launch
+   * state. Only a proven ENOENT drops it: unreadable is not absent.
+   */
+  private pruneStaleStopMarkerBackupSync(
+    teamName: string,
+    backupDir: string,
+    manifest: BackupManifest
+  ): void {
+    try {
+      fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
+      return;
+    } catch (err: unknown) {
+      if (!isEnoent(err)) return;
+    }
+    fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
+    delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
   }
 
   private async backupSingleFile(
@@ -1081,15 +1095,7 @@ export class TeamBackupService {
   }
 
   private async loadManifest(teamName: string): Promise<BackupManifest | null> {
-    try {
-      const raw = await fs.promises.readFile(
-        path.join(this.getBackupDir(teamName), 'manifest.json'),
-        'utf8'
-      );
-      return JSON.parse(raw) as BackupManifest;
-    } catch {
-      return null;
-    }
+    return readBackupManifest(this.getBackupDir(teamName));
   }
 
   private async saveManifest(
@@ -1100,23 +1106,11 @@ export class TeamBackupService {
   ): Promise<void> {
     if (this.isShuttingDown) return;
     await beforeCommit?.();
-    await atomicWriteAsync(
-      path.join(this.getBackupDir(teamName), 'manifest.json'),
-      JSON.stringify(manifest, null, 2),
-      {
-        ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
-        ...(beforeCommit ? { beforeCommit } : {}),
-      }
-    );
+    await writeBackupManifest(this.getBackupDir(teamName), manifest, { strict, beforeCommit });
   }
 
   private saveManifestSync(teamName: string, manifest: BackupManifest): void {
-    try {
-      const manifestPath = path.join(this.getBackupDir(teamName), 'manifest.json');
-      atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
-    } catch {
-      // best-effort
-    }
+    writeBackupManifestSync(this.getBackupDir(teamName), manifest);
   }
 
   // ── Internal: validation ─────────────────────────────────────────────
