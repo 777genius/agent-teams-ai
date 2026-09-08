@@ -142,16 +142,16 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 <table align="center">
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0-arm64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0-x64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI-x64.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI.Setup.2.7.0.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.Setup.exe">
     <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   </a>
   <br />
@@ -160,17 +160,17 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
   <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0.AppImage">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai_2.7.0_amd64.deb">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai-amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai-2.7.0.x86_64.rpm">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai-x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai-2.7.0.pacman">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
   </a>
 </td>
