@@ -10,6 +10,34 @@ import {
 
 import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
 
+/**
+ * Inbox-relay coalesce diagnostics. Both carry message ids, so the
+ * informational allowlist below matches them by prefix; they describe expected
+ * control flow, and classifying them as warnings would file every deferred
+ * rider under the durable error log.
+ */
+export const OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC =
+  'opencode_inbox_relay_coalesce_deferred_dispatched_base';
+
+export const OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC =
+  'opencode_inbox_relay_coalesced_notices_not_dispatched';
+
+/**
+ * The head-of-line diagnostic, and the marker a blocked lane earns once it has
+ * been blocked long enough to stop being ordinary.
+ *
+ * A lane serialises its prompts, so queueing behind the record that holds it is
+ * how the lane is supposed to work: for the first few minutes the line reports
+ * expected control flow and belongs on the durable diagnostic channel, not on
+ * the member card. Past `OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MS` the same lane
+ * is wedged rather than busy, and the marker is what stops the line being
+ * filtered away as informational - the block becomes visible without a second
+ * diagnostic and without a new threshold anything has to act on.
+ */
+export const OPENCODE_HEAD_OF_LINE_BLOCK_DIAGNOSTIC_PREFIX = 'OpenCode delivery is queued behind ';
+
+export const OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MARKER = 'head_of_line_blocked';
+
 export function normalizeOpenCodeRuntimeDeliveryDiagnostic(
   message: string | null | undefined
 ): string | null {
@@ -71,12 +99,52 @@ function stripOpenCodeGenericApiErrorPrefix(message: string): string {
   return message.replace(/^opencode api error(?:[.:\s-]+|$)/i, '');
 }
 
+function isOpenCodeInboxRelayCoalesceDiagnostic(message: string): boolean {
+  return (
+    message.startsWith(OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC) ||
+    message.startsWith(OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC)
+  );
+}
+
+function isOpenCodeBusyHeadOfLineBlockDiagnostic(message: string): boolean {
+  return (
+    message.startsWith(OPENCODE_HEAD_OF_LINE_BLOCK_DIAGNOSTIC_PREFIX.toLowerCase()) &&
+    !message.includes(OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MARKER)
+  );
+}
+
 function isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(message: string): boolean {
   return (
     isOpenCodeRuntimeDeliverySessionRefreshScheduledDiagnostic(message) ||
     isOpenCodeResolvedBehaviorChangedReason(message) ||
     isOpenCodeSessionTransportChangedReason(message)
   );
+}
+
+/**
+ * Wake outcomes that mean the wake had nothing left to do. The delivery
+ * watchdog schedules one wake per inbox row, and by the time it fires the row
+ * may already be gone, already read and committed, or held by a relay pass that
+ * is still running. None of those is a delivery problem, and a busy lane
+ * produces each of them repeatedly, so a relay result that reports one must not
+ * become a warning just because the wake path now reports its diagnostics.
+ * Genuine wake failures (`opencode_inbox_read_failed`,
+ * `opencode_member_inbox_relay_timed_out`, a refused delivery) are deliberately
+ * absent and keep warning.
+ *
+ * Every entry carries a message id or relay key, so the match is by prefix;
+ * `opencode_inbox_message_missing` covers its `_after_inflight_relay` variant.
+ */
+export const OPENCODE_INBOX_RELAY_WAKE_NO_OP_DIAGNOSTICS: readonly string[] = [
+  'opencode_inbox_message_missing',
+  'opencode_inbox_message_already_read',
+  'opencode_inbox_read_already_committed',
+  'opencode_inbox_relay_queued_behind_active_relay',
+  'opencode_work_sync_read_commit_waiting_for_active_relay',
+];
+
+function isOpenCodeInboxRelayWakeNoOpDiagnostic(message: string): boolean {
+  return OPENCODE_INBOX_RELAY_WAKE_NO_OP_DIAGNOSTICS.some((prefix) => message.startsWith(prefix));
 }
 
 export function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
@@ -89,6 +157,9 @@ export function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
       'opencode prompt_async accepted; response observation will continue through durable app-side ledger reconciliation.' ||
     normalized === 'opencode session status busy' ||
     normalized === 'opencode_delivery_response_pending' ||
+    Boolean(normalized && isOpenCodeInboxRelayWakeNoOpDiagnostic(normalized)) ||
+    Boolean(normalized && isOpenCodeInboxRelayCoalesceDiagnostic(normalized)) ||
+    Boolean(normalized && isOpenCodeBusyHeadOfLineBlockDiagnostic(normalized)) ||
     Boolean(normalized && isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(normalized))
   );
 }

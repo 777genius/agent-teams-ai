@@ -8,6 +8,7 @@ export interface TeamProvisioningOpenCodeLaunchPersistenceServiceHost {
 
 export interface TeamProvisioningOpenCodeLaunchPersistencePortsFactoryDeps {
   nowIso: PersistOpenCodeRuntimeAdapterLaunchResultPorts['nowIso'];
+  logDiagnostic?: PersistOpenCodeRuntimeAdapterLaunchResultPorts['logDiagnostic'];
 }
 
 export function createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
@@ -18,6 +19,7 @@ export function createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
     createOpenCodeRuntimeBootstrapEvidencePorts: () =>
       service.createOpenCodeRuntimeBootstrapEvidencePorts(),
     nowIso: deps.nowIso,
+    ...(deps.logDiagnostic ? { logDiagnostic: deps.logDiagnostic } : {}),
     writeLaunchStateSnapshot: (teamName, snapshot, options) =>
       service.writeLaunchStateSnapshot(teamName, snapshot, options),
   };

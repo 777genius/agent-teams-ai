@@ -12596,7 +12596,24 @@ describe('TeamProvisioningService', () => {
       const retryText = String(sendMessageToMember.mock.calls[1]?.[0].text ?? '');
       expect(retryText).toContain('relayOfMessageId="msg-visible-required"');
       expect(retryText).toContain('agent-teams_message_send');
-      expect(retryText).toContain('What did you find?');
+      // The runtime accepted the prompt body in this session already, so the
+      // retry names the message instead of asking the question a second time.
+      expect(retryText).toContain('<opencode_delivery_redelivery>');
+      expect(retryText).not.toContain('What did you find?');
+      // The marker has to name the message the runtime already holds, taken from
+      // the ledger record that was written to disk and read back on this second
+      // pass. A marker naming some other id would point the lead at the wrong
+      // message to reconcile against, and dropping the id entirely would leave
+      // it with nothing to look up.
+      const redeliveryOpenIndex = retryText.indexOf('<opencode_delivery_redelivery>');
+      const redeliveryCloseIndex = retryText.indexOf('</opencode_delivery_redelivery>');
+      // Without this, a missing close makes indexOf answer -1, slice() reads it
+      // as "one before the end", and the block below still holds the id.
+      expect(redeliveryCloseIndex).toBeGreaterThan(redeliveryOpenIndex);
+      const redeliveryBlock = retryText.slice(redeliveryOpenIndex, redeliveryCloseIndex);
+      expect(redeliveryBlock).toContain(
+        'The inbound app message "msg-visible-required" is ALREADY in this session'
+      );
     });
 
     it('keeps OpenCode task delivery pending after read-only non-visible tool activity', async () => {
@@ -19546,7 +19563,13 @@ describe('TeamProvisioningService', () => {
 
       expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterStop).toHaveBeenCalledTimes(1);
-      expect(progress.at(-1)).toMatchObject({ state: 'failed', error: rootCause });
+      // The lead is a veto: the failure artifact now LEADS with the lead reason
+      // and keeps the shared-runtime root cause behind it.
+      expect(progress.at(-1)).toMatchObject({
+        state: 'failed',
+        error: expect.stringContaining(rootCause),
+      });
+      expect(progress.at(-1)?.error).toContain('team-lead');
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.statuses.alice).toMatchObject({
         status: 'error',
@@ -19959,7 +19982,11 @@ describe('TeamProvisioningService', () => {
       expect(svc.isTeamAlive(teamName)).toBe(true);
       expect(progress.at(-1)).toMatchObject({
         state: 'ready',
-        message: 'OpenCode team is running with unavailable members',
+        // The lead is absent from this launch result and holds no committed
+        // session on disk, so the lead gate reports it as pending. The team
+        // still promotes - the side lanes carry it - but the message now names
+        // the actual condition instead of the generic "unavailable members".
+        message: 'OpenCode lead is waiting for its runtime bootstrap evidence',
         error: undefined,
       });
 

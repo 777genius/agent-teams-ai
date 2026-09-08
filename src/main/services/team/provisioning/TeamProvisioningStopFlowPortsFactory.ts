@@ -1,3 +1,5 @@
+import { isProcessAlive } from '@main/utils/processHealth';
+
 import { clearPendingOpenCodePromptDeliveriesForTeam } from '../lifecycle/teamForceStopFlow';
 
 import {
@@ -182,6 +184,7 @@ export function createOpenCodeRuntimeStopFlowPortsFromDeps<TRun extends TeamProv
     stoppingSecondaryRuntimeTeams: deps.stoppingSecondaryRuntimeTeams,
     getOpenCodeRuntimeAdapter: () => deps.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.readLaunchState(teamName),
+    isRuntimeProcessAlive: isProcessAlive,
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       deps.writeLaunchStateSnapshot(teamName, snapshot),
     readPersistedTeamProjectPath: (teamName) => deps.readPersistedTeamProjectPath(teamName),

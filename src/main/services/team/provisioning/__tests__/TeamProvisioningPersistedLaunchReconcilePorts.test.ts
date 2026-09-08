@@ -32,6 +32,7 @@ function createInput(
   overrides: Partial<TeamProvisioningPersistedLaunchReconcilePortsInput> = {}
 ): TeamProvisioningPersistedLaunchReconcilePortsInput {
   return {
+    getTrackedRunId: vi.fn(() => null),
     readLaunchState: vi.fn(async () => null),
     readMembersMeta: vi.fn(async () => []),
     recoverStaleMixedSecondaryLaunchSnapshot: vi.fn(async () => null),
@@ -67,6 +68,9 @@ describe('persisted launch reconcile port factory', () => {
       membersMetaStore: {
         getMembers: vi.fn(async () => []),
       },
+      runTracking: {
+        getTrackedRunId: vi.fn(() => null),
+      },
       recoverStaleMixedSecondaryLaunchSnapshot: vi.fn(async () => persistedSnapshot),
       applyOpenCodeSecondaryEvidenceOverlay: vi.fn(async ({ snapshot }) => snapshot),
       applyOpenCodeSecondaryBootstrapStallOverlay: vi.fn((snapshot) => snapshot),
@@ -99,6 +103,7 @@ describe('persisted launch reconcile port factory', () => {
       persistedSnapshot
     );
     await ports.clearPersistedLaunchState('demo');
+    expect(ports.getTrackedRunId?.('demo')).toBeNull();
     await ports.getLiveTeamAgentRuntimeMetadata('demo');
     expect(
       ports.selectLatestLeadInboxLaunchReconcileMessage({
@@ -123,6 +128,7 @@ describe('persisted launch reconcile port factory', () => {
     expect(service.membersMetaStore.getMembers).toHaveBeenCalledWith('demo');
     expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('demo', persistedSnapshot);
     expect(service.clearPersistedLaunchState).toHaveBeenCalledWith('demo');
+    expect(service.runTracking.getTrackedRunId).toHaveBeenCalledWith('demo');
     expect(service.getLiveTeamAgentRuntimeMetadata).toHaveBeenCalledWith('demo');
     expect(service.resolveExpectedLaunchMemberName).toHaveBeenCalledWith(['Builder'], 'Builder');
     expect(service.findBootstrapRuntimeProofObservedAt).toHaveBeenCalledWith(

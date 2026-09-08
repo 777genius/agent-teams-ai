@@ -88,6 +88,29 @@ describe('TeamProvisioningPromptBuilders', () => {
     );
   });
 
+  it('marks the comment id in the report example as a placeholder in every briefing', () => {
+    const briefings = [
+      buildMemberSpawnPrompt({ name: 'tom', role: 'developer' }, 'Tom', 'signal-ops', 'lead'),
+      buildReconnectMemberSpawnPrompt(
+        { name: 'tom', role: 'developer' },
+        'signal-ops',
+        'lead',
+        true
+      ),
+    ];
+
+    for (const briefing of briefings) {
+      // The example used a made-up eight-character id, and a model that treats
+      // the example as the template sends that literal string to the lead - a
+      // report pointing at a comment that does not exist.
+      expect(briefing).not.toContain('e5f6a7b8');
+      expect(briefing).toContain(
+        'Example visible message (<comment-id> is a placeholder - never send it literally, use the id you saved)'
+      );
+      expect(briefing).toContain('Full details in task comment <comment-id>.');
+    }
+  });
+
   it('allows reconnecting members to self-claim only unassigned tasks', () => {
     const prompt = buildReconnectMemberSpawnPrompt(
       { name: 'tom', role: 'developer' },

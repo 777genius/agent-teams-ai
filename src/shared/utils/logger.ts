@@ -22,7 +22,13 @@ enum LogLevel {
   NONE = 4,
 }
 
-export type LogSinkLevel = 'warn' | 'error';
+/**
+ * `diagnostic` is durable-only: it reaches every registered sink and never the
+ * console. Use it for evidence that has to survive the process (a join key
+ * another log line is correlated against, a decision an operator reconstructs
+ * afterwards) but is not a problem report a developer should be shown.
+ */
+export type LogSinkLevel = 'diagnostic' | 'warn' | 'error';
 
 export interface LogSinkEntry {
   timestamp: string;
@@ -74,6 +80,24 @@ class Logger {
     if (Logger.level <= LogLevel.INFO) {
       console.log(`[${this.namespace}]`, ...args);
     }
+  }
+
+  /**
+   * Durable diagnostic. Written to the log sinks at every log level and never
+   * to the console.
+   *
+   * `info` cannot carry this: it is filtered out at the default level in both
+   * development and production, and it never reaches a sink, so the evidence is
+   * gone by the time anyone looks for it. `warn` can carry it, but only by
+   * telling every developer about a line that is not a warning.
+   */
+  diagnostic(...args: unknown[]): void {
+    emitToLogSinks({
+      timestamp: new Date().toISOString(),
+      level: 'diagnostic',
+      namespace: this.namespace,
+      args,
+    });
   }
 
   warn(...args: unknown[]): void {

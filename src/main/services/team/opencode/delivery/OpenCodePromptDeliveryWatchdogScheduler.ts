@@ -2,11 +2,27 @@ import {
   OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY,
   OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY,
 } from './OpenCodePromptDeliveryWatchdog';
+import { OpenCodeRelayDiagnosticsLogGate } from './OpenCodeRelayDiagnosticsLogGate';
+
+/** What a wake's relay reports back; a port that reports nothing stays valid. */
+export interface OpenCodePromptDeliveryWatchdogRelayOutcome {
+  diagnostics?: readonly string[];
+}
 
 export interface OpenCodePromptDeliveryWatchdogSchedulerDependencies {
   canDeliverToTeamRuntime(teamName: string): boolean;
   recoverBeforeDelivery(input: { teamName: string; memberName: string }): Promise<boolean>;
-  relay(input: { teamName: string; memberName: string; messageId: string }): Promise<void>;
+  /**
+   * The relay's own account of the wake travels back here. Discarding it is
+   * what let a wake that was refused on every attempt write nothing at all:
+   * the only reader of a relay result was the inbox file-change path, so a lane
+   * that never received a new inbox row explained itself nowhere.
+   */
+  relay(input: {
+    teamName: string;
+    memberName: string;
+    messageId: string;
+  }): Promise<OpenCodePromptDeliveryWatchdogRelayOutcome | null | undefined | void>;
   getInboxMessages(input: {
     teamName: string;
     memberName: string;
@@ -20,6 +36,7 @@ export interface OpenCodePromptDeliveryWatchdogSchedulerDependencies {
   info(message: string): void;
   warn(message: string): void;
   debug(message: string): void;
+  diagnostic(message: string): void;
   getErrorMessage(error: unknown): string;
 }
 
@@ -42,6 +59,17 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
   private disabledLogged = false;
   private readonly inFlightByTeam = new Map<string, number>();
   private readonly inFlightByMember = new Set<string>();
+  /**
+   * A lane blocked on one condition reports the same diagnostics for every wake
+   * queued behind it, and a terminal write re-relays the whole lane, so those
+   * wakes arrive in bursts. The operator needs the condition once per lane per
+   * window, not once per wake, and that decision already exists: the FileWatcher
+   * inbox path writes through. Re-deriving it here would give the same
+   * condition two windows that drift apart. The instance is per scheduler so a
+   * wake's window is its own - the watched path reports a different key space
+   * and must not be silenced by a retry that happened to speak first.
+   */
+  private readonly relayDiagnosticsLogGate = new OpenCodeRelayDiagnosticsLogGate();
 
   constructor(private readonly deps: OpenCodePromptDeliveryWatchdogSchedulerDependencies) {}
 
@@ -99,10 +127,15 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
             }
           }
           try {
-            await this.deps.relay({
+            this.logRelayDiagnostics({
               teamName: input.teamName,
               memberName: input.memberName,
               messageId,
+              outcome: await this.deps.relay({
+                teamName: input.teamName,
+                memberName: input.memberName,
+                messageId,
+              }),
             });
           } catch (error) {
             if (
@@ -125,6 +158,41 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     }, delayMs);
     this.timers.set(key, timer);
     this.deadlines.set(key, deadlineMs);
+  }
+
+  /**
+   * Severity follows the diagnostics themselves, and the gate decides it:
+   * anything off the informational allowlist makes the whole line a warning,
+   * so a lane that is genuinely stuck reaches the durable log. The dedup key is
+   * the member lane and the signature is the diagnostics alone - the message id
+   * that happened to hit the condition is presentation only, so a queue of rows
+   * cannot walk past the window one message id at a time.
+   */
+  private logRelayDiagnostics(input: {
+    teamName: string;
+    memberName: string;
+    messageId: string;
+    outcome: OpenCodePromptDeliveryWatchdogRelayOutcome | null | undefined | void;
+  }): void {
+    this.relayDiagnosticsLogGate.log(
+      {
+        warn: (message) => this.deps.warn(message),
+        // The gate calls its non-warning channel `debug`; this path routes that
+        // line to `diagnostic`. Both stay off the console, but a wake that keeps
+        // being refused is expected control flow that still has to leave a
+        // durable trace of why it keeps deferring - and `diagnostic` is the
+        // durable channel that is not an error. The watched inbox path,
+        // which only ever reports a row that just arrived, has nothing to
+        // record between arrivals and keeps `debug`.
+        debug: (message) => this.deps.diagnostic(message),
+      },
+      {
+        dedupKey: this.getMemberKey(input.teamName, input.memberName),
+        prefix: `[${input.teamName}] delivery watchdog relay diagnostics for ${input.memberName}/${input.messageId}`,
+        diagnostics: input.outcome?.diagnostics,
+        nowMs: Date.now(),
+      }
+    );
   }
 
   async isStaleError(input: OpenCodePromptDeliveryWatchdogStaleErrorInput): Promise<boolean> {

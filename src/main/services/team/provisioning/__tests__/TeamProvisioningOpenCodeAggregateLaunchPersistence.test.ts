@@ -297,7 +297,18 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       requireTrackedRun: true,
       runId: 'run-1',
     });
-    expect(persisted.result).toBe(result);
+    // A primary-lane member that claims confirmation without a runtime session
+    // id now carries the reason it could not be committed. Nothing else about
+    // the result changes: same state, same phase, same members.
+    expect(persisted.result).toMatchObject({
+      teamLaunchState: 'clean_success',
+      launchPhase: 'finished',
+      diagnostics: ['opencode_bootstrap_session_not_committed:alice:missing_runtime_session_id'],
+    });
+    expect(persisted.result.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      diagnostics: ['opencode_bootstrap_session_not_committed:alice:missing_runtime_session_id'],
+    });
     expect(persisted.snapshot).toMatchObject({
       teamName: 'team-a',
       expectedMembers: ['alice'],
@@ -614,7 +625,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       throw new Error('cleanup transport failed');
     });
     const logWarning = vi.fn();
-    const laneIndexWrites: Array<{ state: string; diagnostics?: string[] }> = [];
+    const laneIndexWrites: { state: string; diagnostics?: string[] }[] = [];
     let runtimeOwner:
       | Parameters<LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']>[1]
       | undefined;
