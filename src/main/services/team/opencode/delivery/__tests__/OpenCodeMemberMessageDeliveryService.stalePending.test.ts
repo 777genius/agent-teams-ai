@@ -23,6 +23,10 @@ import {
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
   type OpenCodeStalePendingPolicyConfig,
 } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import {
+  OpenCodePromptDeliveryWatchdogCoordinator,
+  type OpenCodePromptDeliveryWatchdogCoordinatorPorts,
+} from '../OpenCodePromptDeliveryWatchdogCoordinator';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 import type { OpenCodeDeliveryResponseObservation } from '../../bridge/OpenCodeBridgeCommandContract';
@@ -178,6 +182,7 @@ interface Harness {
 
 function createHarness(input: {
   ledgerDir: string;
+  runtimeRunId?: () => string;
   observe?: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   send?: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   /** Defaults to the windows the production composition wires in. */
@@ -214,7 +219,7 @@ function createHarness(input: {
       () => ({ sendMessageToMember: send, observeMessageDelivery: observe }) as never
     ),
     readOpenCodeMemberDirectory: vi.fn(async () => ({
-      config: { name: TEAM, projectPath: '/repo', members: [] } as never,
+      config: { name: TEAM, projectPath: input.ledgerDir, members: [] } as never,
       teamMeta: null,
       metaMembers: [{ name: LEAD, providerId: 'opencode' as const }],
     })),
@@ -224,16 +229,16 @@ function createHarness(input: {
       laneId: PRIMARY_LANE.laneId,
       laneIdentity: PRIMARY_LANE,
       metaMember: { name: LEAD, providerId: 'opencode' as const },
-      memberRuntimeCwd: '/repo',
+      memberRuntimeCwd: input.ledgerDir,
     })),
     // Left undefined unless a test wires it, exactly like production today.
     readOpenCodeMemberContextUsage: input.readOpenCodeMemberContextUsage,
     stoppingSecondaryRuntimeTeams: { has: () => false },
-    readPersistedTeamProjectPath: vi.fn(() => '/repo'),
-    resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
+    readPersistedTeamProjectPath: vi.fn(() => input.ledgerDir),
+    resolveDeliverableTrackedRuntimeRunId: vi.fn(() => input.runtimeRunId?.() ?? 'run-1'),
     runs: { get: vi.fn(() => ({ mixedSecondaryLanes: [] })) },
-    getCurrentOpenCodeRuntimeRunId: vi.fn(() => 'run-1'),
-    resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-1'),
+    getCurrentOpenCodeRuntimeRunId: vi.fn(() => input.runtimeRunId?.() ?? 'run-1'),
+    resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => input.runtimeRunId?.() ?? 'run-1'),
     isOpenCodeRuntimeLaneIndexActive: vi.fn(async () => true),
     tryRecoverOpenCodeRuntimeLaneBeforeDelivery: vi.fn(async () => false),
     tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: vi.fn(async () => false),
@@ -752,6 +757,80 @@ describe('combined stale settlement cancellation regression', () => {
       expect((await harness.ledger.list())[0].cancelledAt).toBeTruthy();
       expect(result).toMatchObject({ delivered: false, accepted: false, responsePending: false });
       expect(harness.notify).not.toHaveBeenCalled();
+    } finally {
+      await rm(ledgerDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('responded delivery Force Stop and relaunch', () => {
+  it('does not re-arm or observe an unread visible reply from the cancelled run', async () => {
+    const ledgerDir = await mkdtemp(join(tmpdir(), 'opencode-visible-cancel-relaunch-'));
+    try {
+      let runId = 'run-1';
+      const harness = createHarness({ ledgerDir, runtimeRunId: () => runId });
+      const seeded = await seedAcceptedPendingRecord(harness.ledger, userMessage, {
+        ageMinutes: 1,
+      });
+      await harness.ledger.applyObservation({
+        id: seeded.id,
+        responseObservation: pendingObservation({
+          state: 'responded_visible_message',
+          visibleReplyMessageId: 'vanished-destination-reply',
+          visibleReplyCorrelation: 'direct_child_message_send',
+          toolCallNames: ['message_send'],
+        }),
+        observedAt: new Date().toISOString(),
+      });
+      const schedule = vi.fn();
+      // Both the ledger scan and the unread-inbox recovery scan run against
+      // the real persisted record. The destination reply is no longer present.
+      const coordinator = new OpenCodePromptDeliveryWatchdogCoordinator({
+        watchdogScheduler: { isEnabled: () => true, schedule },
+        schedulePromptDeliveryWatchdog: schedule,
+        createLedger: () =>
+          createOpenCodePromptDeliveryLedgerStore({ filePath: join(ledgerDir, 'primary.json') }),
+        resolveMembersForRuntimeLane: async () => [LEAD],
+        getInboxMessages: async () => [
+          {
+            messageId: userMessage.messageId,
+            from: 'user',
+            text: userMessage.text,
+            timestamp: userMessage.inboxTimestamp,
+            read: false,
+          },
+        ],
+        hasStableInboxMessageId: () => true,
+        warn: vi.fn(),
+        getErrorMessage: String,
+      } as unknown as OpenCodePromptDeliveryWatchdogCoordinatorPorts);
+      expect(await coordinator.scanActiveLanes(TEAM, ['primary'])).toBe(1);
+      expect(schedule).toHaveBeenCalledOnce();
+      schedule.mockClear();
+      await expect(
+        harness.ledger.cancelNonTerminalRecords({
+          now: new Date().toISOString(),
+          reason: 'force_stop_requested: synthetic regression',
+          ownedRunIds: ['run-1'],
+          createdAtOrBeforeMs: Date.now(),
+        })
+      ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
+      runId = 'run-2';
+      expect(await coordinator.scanActiveLanes(TEAM, ['primary'])).toBe(0);
+      expect(schedule).not.toHaveBeenCalled();
+      // A late watcher replay must also be fenced by the actual delivery path.
+      expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
+        delivered: false,
+        accepted: false,
+        responsePending: false,
+      });
+      expect(harness.observe).not.toHaveBeenCalled();
+      expect(harness.send).not.toHaveBeenCalled();
+      expect((await harness.ledger.list())[0]).toMatchObject({
+        runId: 'run-1',
+        status: 'failed_terminal',
+        inboxReadCommittedAt: null,
+      });
     } finally {
       await rm(ledgerDir, { recursive: true, force: true });
     }

@@ -719,7 +719,7 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
-  /** Cancels selectable work within the captured Stop scope; inbox rows are retained. */
+  /** Cancels delivery and watchdog work within the captured Stop scope; inbox rows are retained. */
   async cancelNonTerminalRecords(input: {
     includeRecoverableTerminal?: boolean;
     now: string;
@@ -733,7 +733,7 @@ export class OpenCodePromptDeliveryLedgerStore {
     /**
      * Cancels a record created at or before this moment whatever its run, so a
      * caller that observed no run id still cancels the work that existed when
-     * it asked. Omitted means every selectable record is in scope.
+     * it asked. Omitted means all unfinished delivery and watchdog work is in scope.
      */
     createdAtOrBeforeMs?: number;
   }): Promise<{ cancelled: number; keptForLaterRun: number }> {
@@ -746,7 +746,7 @@ export class OpenCodePromptDeliveryLedgerStore {
         if (
           isOpenCodePromptDeliveryCancelled(record) ||
           record.inboxReadCommittedAt ||
-          (isTerminalForAutomaticSelection(record) && !input.includeRecoverableTerminal)
+          (isOpenCodePromptDeliveryWatchdogTerminal(record) && !input.includeRecoverableTerminal)
         ) {
           return record;
         }
@@ -983,6 +983,17 @@ function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRec
     return false;
   }
   return record.status === 'failed_terminal' || record.status === 'responded';
+}
+
+export function isOpenCodePromptDeliveryWatchdogTerminal(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  if (record.status === 'failed_terminal' || isOpenCodePromptDeliveryCancelled(record)) {
+    return true;
+  }
+  // Every response still owes the durable inbox read commit, regardless of
+  // which channel supplied the reply. Force Stop must fence that remaining work.
+  return record.status === 'responded' && Boolean(record.inboxReadCommittedAt);
 }
 
 /**

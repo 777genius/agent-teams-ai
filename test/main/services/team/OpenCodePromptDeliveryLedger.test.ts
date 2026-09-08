@@ -1541,6 +1541,10 @@ describe('OpenCodePromptDeliveryLedger', () => {
       },
       observedAt: '2026-04-25T10:00:06.000Z',
     });
+    await store.markInboxReadCommitted({
+      id: answered.id,
+      committedAt: '2026-04-25T10:00:07.000Z',
+    });
     const alreadyFailed = await store.ensurePending({
       teamName: 'team-a',
       memberName: 'joe',
@@ -1580,7 +1584,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     });
   });
 
-  it('cancels a responded record the automatic selection can still pick up', async () => {
+  it('cancels both selectable responses and remaining watchdog read-commit work', async () => {
     const store = createStore();
     async function seedResponded(input: {
       memberName: string;
@@ -1651,7 +1655,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
         now: '2026-04-25T10:05:00.000Z',
         reason: 'force_stop_requested: pending delivery cancelled by user force stop',
       })
-    ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
+    ).resolves.toEqual({ cancelled: 2, keptForLaterRun: 0 });
 
     const after = new Map((await store.list()).map((record) => [record.id, record]));
     expect(after.get(stillSelectable)).toMatchObject({
@@ -1662,10 +1666,13 @@ describe('OpenCodePromptDeliveryLedger', () => {
     await expect(
       store.listDue({ now: new Date('2026-04-25T10:06:00.000Z'), limit: 10 })
     ).resolves.toEqual([]);
-    // Negative control: the two records the same predicate calls terminal are
-    // untouched, field for field.
+    // Already-read terminal history stays untouched, field for field.
     expect(after.get(committedRead)).toEqual(before.get(committedRead));
-    expect(after.get(visibleReply)).toEqual(before.get(visibleReply));
+    expect(after.get(visibleReply)).toMatchObject({
+      status: 'failed_terminal',
+      cancelledAt: '2026-04-25T10:05:00.000Z',
+      nextAttemptAt: null,
+    });
   });
 
   it('cancels only the work the stopping run owned', async () => {
