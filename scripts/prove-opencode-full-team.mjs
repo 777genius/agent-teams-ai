@@ -58,39 +58,136 @@ export function preserveSelectedOAuth(initialJson, isolatedAuthPath) {
   return destination;
 }
 
+// These keys are owned by the wrappers, never authorized by manifest contents.
+const OPTIONAL_ENV_KEYS = [
+  'PATH', 'Path', 'SystemRoot', 'WINDIR', 'COMSPEC', 'PATHEXT', 'LANG', 'LC_ALL',
+  'CLAUDE_DEV_RUNTIME_ROOT',
+];
+const BASE_ENV_KEYS = [
+  ...ISOLATED_PATH_KEYS, ...OPTIONAL_ENV_KEYS, 'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+  'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', 'OPENCODE_E2E_OWNED_ROOT', 'OPENCODE_E2E',
+  'OPENCODE_E2E_PROJECT_PATH', 'OPENCODE_E2E_OWNED_PROJECT_PATH',
+  'OPENCODE_E2E_PROOF_DIRECTORY', 'OPENCODE_DISABLE_AUTOUPDATE',
+];
+// Vitest bookkeeping is allowed only at the worker boundary, not in saved.env.
+const VITEST_ENV_VALUES = {
+  NODE_ENV: /^test$/,
+  VITEST: /^true$/,
+  TEST: /^true$/,
+  FORCE_COLOR: /^[0123]$/,
+  FORCE_TTY: /^(?:|1)$/,
+  NO_COLOR: /^1$/,
+  VITEST_MODE: /^RUN$/,
+  VITEST_WORKER_ID: /^\d+$/,
+  VITEST_POOL_ID: /^\d+$/,
+  TINYPOOL_WORKER_ID: /^\d+$/,
+  // Vite supplies these constants inside the Node test worker.
+  PROD: /^(?:|false)$/,
+  DEV: /^(?:1|true)$/,
+  BASE_URL: /^\/$/,
+  MODE: /^test$/,
+  SSR: /^(?:1|true)$/,
+  // CoreFoundation adds this encoding marker when the child starts on macOS.
+  __CF_USER_TEXT_ENCODING: /^(?:0x[\da-f]+:){2}0x[\da-f]+$/i,
+};
+const PROJECT_OWNERSHIP_FILE = '.opencode-proof-project.json';
+
+function allowedEnvKeys(kind) {
+  if (kind !== 'FULL' && kind !== 'MIXED') throw new Error();
+  return new Set([...BASE_ENV_KEYS, ...(kind === 'FULL'
+    ? ['OPENCODE_E2E_FULL_TEAM', 'OPENCODE_E2E_MODEL']
+    : ['OPENCODE_E2E_MIXED_TEAM', 'OPENCODE_E2E_ZAI_MODEL', 'OPENCODE_E2E_SUPERGROK_MODEL'])]);
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function assertPrivatePath(target, directory) {
+  const stat = fs.lstatSync(target);
+  if (directory ? !stat.isDirectory() : !stat.isFile()) throw new Error();
+  if (fs.realpathSync(target) !== target) throw new Error();
+  if (process.getuid && (stat.uid !== process.getuid() || (stat.mode & 0o077) !== 0))
+    throw new Error();
+  return stat;
+}
+
+function assertProjectLayout(root, project, kind) {
+  if (!root || !path.isAbsolute(root) ||
+      !new RegExp(`^opencode-${kind.toLowerCase()}-team-[a-zA-Z0-9]{6}$`).test(path.basename(root)))
+    throw new Error();
+  assertPrivatePath(root, true);
+  if (!project || !path.isAbsolute(project) || project === fs.realpathSync(repoRoot)) throw new Error();
+  assertPrivatePath(project, true);
+  if (project === path.join(root, 'project')) return;
+  // FULL alone supports an explicit marked TEST parent. Never accept the parent itself.
+  if (kind !== 'FULL' || !/^opencode-full-team-[a-zA-Z0-9]{6}$/.test(path.basename(project)))
+    throw new Error();
+  const parentMarker = path.join(path.dirname(project), TEST_PROJECT_MARKER);
+  if (!fs.lstatSync(parentMarker).isFile() ||
+      fs.readFileSync(parentMarker, 'utf8').trim() !== TEST_PROJECT_MARKER_CONTENT) throw new Error();
+}
+
 export function writeSmokeOwnership(env, kind) {
+  const allowed = allowedEnvKeys(kind);
+  if (Object.entries(env).some(([key, value]) => !allowed.has(key) || typeof value !== 'string'))
+    throw new Error('Unexpected proof environment');
+  const root = env.OPENCODE_E2E_OWNED_ROOT;
+  const project = env.OPENCODE_E2E_PROJECT_PATH;
+  assertProjectLayout(root, project, kind);
+  // Called only after the wrapper creates a fresh, empty disposable child.
+  if (fs.readdirSync(project).length !== 0) throw new Error('Proof project must be fresh and empty');
+  const stat = fs.lstatSync(project);
+  fs.writeFileSync(path.join(project, PROJECT_OWNERSHIP_FILE),
+    JSON.stringify({ version: 1, kind, root, project, dev: stat.dev, ino: stat.ino }),
+    { mode: 0o600, flag: 'wx' });
   fs.writeFileSync(
-    path.join(env.OPENCODE_E2E_OWNED_ROOT, OWNERSHIP_FILE),
-    JSON.stringify({ kind, env }),
+    path.join(root, OWNERSHIP_FILE),
+    JSON.stringify({ version: 1, kind, env }),
     { mode: 0o600, flag: 'wx' }
   );
 }
 
-// Validate before any service, socket, credentials or runtime access, including direct Vitest use.
+// A filesystem ownership contract for accidental/direct invocation, not same-user attestation.
+// Validate before any service, socket, credentials or runtime access.
 export function assertOwnedSmokeEnvironment(env, kind) {
   try {
-    if (env.OPENCODE_E2E !== '1' || env[`OPENCODE_E2E_${kind}_TEAM`] !== '1') throw new Error();
-    const root = env.OPENCODE_E2E_OWNED_ROOT;
-    if (!root || !path.isAbsolute(root) || fs.realpathSync(root) !== root) throw new Error();
-    const marker = path.join(root, OWNERSHIP_FILE);
-    if (!fs.lstatSync(marker).isFile()) throw new Error();
-    const saved = JSON.parse(fs.readFileSync(marker, 'utf8'));
-    if (saved.kind !== kind) throw new Error();
-    for (const key of ISOLATED_PATH_KEYS) {
-      if (env[key] !== path.join(root, key.toLowerCase()) || fs.realpathSync(env[key]) !== env[key])
+    const allowed = allowedEnvKeys(kind);
+    if (env.OPENCODE_E2E !== '1' || env[`OPENCODE_E2E_${kind}_TEAM`] !== '1' ||
+        env.OPENCODE_DISABLE_AUTOUPDATE !== '1') throw new Error();
+    for (const key of allowed) {
+      if (!OPTIONAL_ENV_KEYS.includes(key) && (typeof env[key] !== 'string' || !env[key].trim()))
         throw new Error();
     }
-    for (const [key, value] of Object.entries(saved.env)) {
-      if (env[key] !== value) throw new Error();
-    }
-    for (const key of Object.keys(env)) {
-      if (/^(?:OPENCODE|CLAUDE|AGENT_TEAMS|ANTHROPIC|OPENAI|XAI|ZAI|XDG|AWS|AZURE|GOOGLE|GIT|SSH)_|(?:KEY|TOKEN|SECRET|PASSWORD|AUTH)|^NODE_OPTIONS$/i.test(key) &&
-          !Object.hasOwn(saved.env, key)) throw new Error();
-    }
+    const root = env.OPENCODE_E2E_OWNED_ROOT;
     const project = env.OPENCODE_E2E_PROJECT_PATH;
-    if (!project || project !== env.OPENCODE_E2E_OWNED_PROJECT_PATH ||
-        fs.realpathSync(project) !== project || !fs.lstatSync(project).isDirectory() ||
-        project === fs.realpathSync(repoRoot)) throw new Error();
+    assertProjectLayout(root, project, kind);
+    if (project !== env.OPENCODE_E2E_OWNED_PROJECT_PATH) throw new Error();
+    const projectMarker = path.join(project, PROJECT_OWNERSHIP_FILE);
+    assertPrivatePath(projectMarker, false);
+    const ownership = JSON.parse(fs.readFileSync(projectMarker, 'utf8'));
+    const stat = fs.lstatSync(project);
+    if (!isRecord(ownership) || ownership.version !== 1 || ownership.kind !== kind ||
+        ownership.root !== root || ownership.project !== project ||
+        ownership.dev !== stat.dev || ownership.ino !== stat.ino) throw new Error();
+    const marker = path.join(root, OWNERSHIP_FILE);
+    assertPrivatePath(marker, false);
+    const saved = JSON.parse(fs.readFileSync(marker, 'utf8'));
+    if (!isRecord(saved) || saved.version !== 1 || saved.kind !== kind || !isRecord(saved.env))
+      throw new Error();
+    for (const key of ISOLATED_PATH_KEYS) {
+      if (env[key] !== path.join(root, key.toLowerCase()) ||
+          fs.realpathSync(env[key]) !== env[key] || !fs.lstatSync(env[key]).isDirectory()) throw new Error();
+    }
+    for (const [key, value] of Object.entries(saved.env)) {
+      if (!allowed.has(key) || typeof value !== 'string' || env[key] !== value) throw new Error();
+    }
+    for (const [key, value] of Object.entries(env)) {
+      if (allowed.has(key)) {
+        if (!Object.hasOwn(saved.env, key) || saved.env[key] !== value) throw new Error();
+      } else if (!Object.hasOwn(VITEST_ENV_VALUES, key) ||
+                 typeof value !== 'string' || !VITEST_ENV_VALUES[key].test(value)) throw new Error();
+    }
   } catch {
     throw new Error('Live proof requires an intact wrapper-owned isolated environment');
   }
@@ -245,7 +342,7 @@ export async function runFullTeamSmoke({
       ? fs.mkdtempSync(path.join(projectPath, 'opencode-full-team-'))
       : path.join(ownedRoot, 'project');
     projectPath = ownedProject;
-    fs.mkdirSync(projectPath, { recursive: true });
+    fs.mkdirSync(projectPath, { recursive: true, mode: 0o700 });
     projectPath = fs.realpathSync(projectPath);
     ownedProject = projectPath;
     const env = {
@@ -317,6 +414,8 @@ export async function runFullTeamSmoke({
       [
         vitestEntryPath,
         'run',
+        '--config',
+        path.join(repoRoot, 'vitest.opencode-proof.config.ts'),
         '--maxWorkers=1',
         'test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts',
       ],

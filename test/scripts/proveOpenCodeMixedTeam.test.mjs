@@ -108,6 +108,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
           args.at(-1),
           'test/main/services/team/OpenCodeMixedTeamCollaboration.live.test.ts'
         );
+        assert.equal(path.basename(args[args.indexOf('--config') + 1]), 'vitest.opencode-proof.config.ts');
         assert.equal(options.env.OPENCODE_E2E_MIXED_TEAM, '1');
         assert.equal(options.stdio, 'pipe');
         assert.equal(options.timeout, 30 * 60_000);

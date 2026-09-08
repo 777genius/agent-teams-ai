@@ -5,7 +5,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
 
-import { assertOwnedSmokeEnvironment, runFullTeamSmoke } from '../../scripts/prove-opencode-full-team.mjs';
+import { assertOwnedSmokeEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
+  TEST_PROJECT_MARKER_CONTENT, writeSmokeOwnership } from '../../scripts/prove-opencode-full-team.mjs';
+
+import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
 
 function passingProof() {
   return {
@@ -83,6 +86,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
           args.at(-1),
           'test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts'
         );
+        assert.equal(path.basename(args[args.indexOf('--config') + 1]), 'vitest.opencode-proof.config.ts');
         assert.equal(options.env.OPENCODE_E2E_FULL_TEAM, '1');
         assert.equal(options.stdio, 'pipe');
         assert.equal(options.timeout, 30 * 60_000);
@@ -306,4 +310,141 @@ test('uncertain child effects are submitted once, redacted and retained for targ
       assert.ok(fs.existsSync(input.env.HOME)); cleanup(input);
     }
   } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+for (const kind of ['FULL', 'MIXED']) {
+  test(`${kind} rejects hostile and malformed matching manifests independently of saved.env`, async () => {
+    const { root, env } = fixture();
+    const run = kind === 'FULL' ? runFullTeamSmoke : runMixedTeamSmoke;
+    const sourceEnv = kind === 'FULL' ? env : {
+      ...env, OPENCODE_E2E_MIXED_TEAM: '1',
+      OPENCODE_E2E_ZAI_MODEL: 'zai/model', OPENCODE_E2E_SUPERGROK_MODEL: 'xai/model',
+    };
+    if (kind === 'MIXED') fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({
+      zai: { type: 'api', key: 'synthetic' }, xai: { type: 'oauth', refresh: 'synthetic' },
+    }));
+    let input;
+    try {
+      await run({ sourceEnv, vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+        preflight: async (value) => {
+          input = value;
+          const runEnv = value.env;
+          const manifest = path.join(runEnv.OPENCODE_E2E_OWNED_ROOT, '.opencode-proof-owned.json');
+          const original = fs.readFileSync(manifest, 'utf8');
+          const save = (data) => fs.writeFileSync(manifest, JSON.stringify(data));
+          const assertRejected = (candidate = runEnv) => assert.throws(
+            () => assertOwnedSmokeEnvironment(candidate, kind),
+            { message: 'Live proof requires an intact wrapper-owned isolated environment' }
+          );
+          for (const [key, injected] of Object.entries({
+            OPENCODE_CONFIG: '/TEST/ambient-config', OPENCODE_CONFIG_CONTENT: '{"provider":{}}',
+            OPENCODE_CONFIG_DIR: root, OPENCODE_E2E_TEST_AUTH_PATH: env.OPENCODE_E2E_TEST_AUTH_PATH,
+            CLAUDE_CONFIG_DIR: root, CODEX_HOME: root, ZAI_API_KEY: 'synthetic-secret',
+            OPENAI_API_KEY: 'synthetic-secret', AWS_PROFILE: 'synthetic',
+            GOOGLE_APPLICATION_CREDENTIALS: root, NODE_OPTIONS: '--require=/TEST/no-load',
+            NODE_PATH: root, LD_PRELOAD: '/TEST/no-load', HTTP_PROXY: 'http://TEST.invalid',
+            AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE: '1',
+          })) {
+            const candidate = { ...runEnv, [key]: injected };
+            save({ version: 1, kind, env: candidate });
+            assertRejected(candidate);
+          }
+          for (const bad of [null, [], {}, { kind, env: runEnv },
+            { version: 1, kind, env: null }, { version: 1, kind, env: [] },
+            { version: 1, kind, env: {} }, { version: 1, kind, env: 'matching' },
+            { version: 1, kind, env: { ...runEnv, HOME: 42 } },
+          ]) { save(bad); assertRejected(); }
+          for (const key of ['CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+            'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', 'OPENCODE_E2E_PROOF_DIRECTORY',
+            kind === 'FULL' ? 'OPENCODE_E2E_MODEL' : 'OPENCODE_E2E_SUPERGROK_MODEL']) {
+            const candidate = { ...runEnv }; delete candidate[key];
+            save({ version: 1, kind, env: candidate }); assertRejected(candidate);
+          }
+          fs.writeFileSync(manifest, '{malformed'); assertRejected();
+          fs.writeFileSync(manifest, original);
+          // Each shared-setup mutation fails on its own, including a matching changed manifest.
+          assertRejected({ ...runEnv, HOME: root, USERPROFILE: root });
+          save({ version: 1, kind, env: { ...runEnv, HOME: root, USERPROFILE: root } });
+          assertRejected({ ...runEnv, HOME: root, USERPROFILE: root });
+          fs.writeFileSync(manifest, original);
+          assert.doesNotThrow(() => assertOwnedSmokeEnvironment({ ...runEnv,
+            NODE_ENV: 'test', VITEST: 'true', TEST: 'true', VITEST_MODE: 'RUN',
+            VITEST_WORKER_ID: '1', VITEST_POOL_ID: '1',
+          }, kind));
+          assertRejected({ ...runEnv, VITEST_MODE: 'WATCH' });
+
+          // Even matching env AND self-authored project metadata cannot authorize arbitrary layout.
+          const external = fs.mkdtempSync(path.join(root, 'external-TEST-'));
+          const projectMarker = '.opencode-proof-project.json';
+          const externalStat = fs.lstatSync(external);
+          fs.writeFileSync(path.join(external, projectMarker), JSON.stringify({
+            version: 1, kind, root: runEnv.OPENCODE_E2E_OWNED_ROOT, project: external,
+            dev: externalStat.dev, ino: externalStat.ino,
+          }), { mode: 0o600 });
+          const candidate = { ...runEnv, OPENCODE_E2E_PROJECT_PATH: external,
+            OPENCODE_E2E_OWNED_PROJECT_PATH: external };
+          save({ version: 1, kind, env: candidate }); assertRejected(candidate);
+          fs.writeFileSync(manifest, original);
+          const ownershipPath = path.join(value.projectPath, projectMarker);
+          const ownership = fs.readFileSync(ownershipPath, 'utf8');
+          fs.unlinkSync(ownershipPath); assertRejected();
+          fs.writeFileSync(ownershipPath, ownership, { mode: 0o600 });
+          for (const change of [{ root }, { ino: -1 }, { kind: 'invalid' }, { project: external }]) {
+            fs.writeFileSync(ownershipPath, JSON.stringify({ ...JSON.parse(ownership), ...change }));
+            assertRejected();
+          }
+          fs.writeFileSync(ownershipPath, ownership);
+          assert.throws(() => writeSmokeOwnership(runEnv, kind), /fresh and empty/);
+          assert.doesNotThrow(() => assertOwnedSmokeEnvironment(runEnv, kind));
+          return { ok: false };
+        }, spawn: () => assert.fail('no live process'),
+      });
+    } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+  });
+}
+
+test('explicit TEST parent permits only its fresh owned child and survives successful cleanup', async () => {
+  const { root, env } = fixture();
+  const parent = fs.mkdtempSync(path.join(root, 'parent-TEST-'));
+  const marker = path.join(parent, TEST_PROJECT_MARKER);
+  fs.writeFileSync(marker, TEST_PROJECT_MARKER_CONTENT);
+  const sentinel = path.join(parent, 'keep.txt');
+  fs.writeFileSync(sentinel, 'TEST parent content');
+  let input;
+  try {
+    assert.equal(await runFullTeamSmoke({ sourceEnv: { ...env, OPENCODE_E2E_PROJECT_PATH: parent },
+      vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+      preflight: async (value) => {
+        input = value;
+        assert.equal(path.dirname(value.projectPath), fs.realpathSync(parent));
+        assert.notEqual(value.projectPath, parent);
+        assert.deepEqual(fs.readdirSync(value.projectPath), ['.opencode-proof-project.json']);
+        assert.doesNotThrow(() => assertOwnedSmokeEnvironment(value.env, 'FULL'));
+        const manifest = path.join(value.env.OPENCODE_E2E_OWNED_ROOT, '.opencode-proof-owned.json');
+        const original = fs.readFileSync(manifest, 'utf8');
+        const candidate = { ...value.env, OPENCODE_E2E_PROJECT_PATH: parent,
+          OPENCODE_E2E_OWNED_PROJECT_PATH: parent };
+        fs.writeFileSync(manifest, JSON.stringify({ version: 1, kind: 'FULL', env: candidate }));
+        assert.throws(() => assertOwnedSmokeEnvironment(candidate, 'FULL'), /wrapper-owned/);
+        fs.writeFileSync(manifest, original);
+        fs.unlinkSync(marker);
+        assert.throws(() => assertOwnedSmokeEnvironment(value.env, 'FULL'), /wrapper-owned/);
+        fs.writeFileSync(marker, 'incorrect TEST marker');
+        assert.throws(() => assertOwnedSmokeEnvironment(value.env, 'FULL'), /wrapper-owned/);
+        fs.writeFileSync(marker, TEST_PROJECT_MARKER_CONTENT);
+        assert.doesNotThrow(() => assertOwnedSmokeEnvironment(value.env, 'FULL'));
+        return { ok: true };
+      },
+      spawn: (_command, _args, { env: runEnv }) => {
+        fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(passingProof()));
+        return { status: 0 };
+      },
+    }), 0);
+    assert.equal(fs.existsSync(input.projectPath), false);
+    assert.equal(fs.readFileSync(sentinel, 'utf8'), 'TEST parent content');
+    assert.equal(fs.readFileSync(marker, 'utf8'), TEST_PROJECT_MARKER_CONTENT);
+  } finally {
+    if (input) fs.rmSync(input.projectPath, { recursive: true, force: true });
+    cleanup(input); fs.rmSync(root, { recursive: true, force: true });
+  }
 });

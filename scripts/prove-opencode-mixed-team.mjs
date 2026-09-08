@@ -128,7 +128,7 @@ export async function runMixedTeamSmoke({
   try {
     ownedProject = path.join(ownedRoot, 'project');
     projectPath = ownedProject;
-    fs.mkdirSync(projectPath, { recursive: true });
+    fs.mkdirSync(projectPath, { recursive: true, mode: 0o700 });
     projectPath = fs.realpathSync(projectPath);
     ownedProject = projectPath;
     const env = {
@@ -201,6 +201,8 @@ export async function runMixedTeamSmoke({
       [
         vitestEntryPath,
         'run',
+        '--config',
+        path.join(repoRoot, 'vitest.opencode-proof.config.ts'),
         '--maxWorkers=1',
         'test/main/services/team/OpenCodeMixedTeamCollaboration.live.test.ts',
       ],

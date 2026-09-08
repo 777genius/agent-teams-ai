@@ -167,7 +167,7 @@ jobs:
 
       - name: Test OpenCode proof runner safety
         if: matrix.shard == 1
-        run: node --test test/scripts/proveOpenCode*.test.mjs
+        run: node --test test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs
 
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
