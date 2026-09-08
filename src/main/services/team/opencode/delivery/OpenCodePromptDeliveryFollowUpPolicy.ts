@@ -1,6 +1,7 @@
 import { deferOpenCodePromptDeliveryAttempt } from './OpenCodePromptDeliveryDeferral';
 import {
   isOpenCodePromptDeliveryCancelled,
+  isOpenCodePromptDeliveryWatchdogTerminal,
   isOpenCodePromptResponseStateResponded,
   OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -85,23 +86,7 @@ export function getOpenCodeDeliveryNextDelayMs(input: {
 export function isOpenCodePromptDeliveryWatchdogRecordTerminal(
   record: OpenCodePromptDeliveryLedgerRecord
 ): boolean {
-  if (record.status === 'failed_terminal') {
-    return true;
-  }
-  if (record.status !== 'responded') {
-    return false;
-  }
-  // A cancelled record is finished whatever it still owes: its run is gone, so
-  // re-arming a wake for it would ask a runtime that is no longer there.
-  if (isOpenCodePromptDeliveryCancelled(record)) {
-    return true;
-  }
-  // A responded record still owes the inbox read-commit until
-  // `inboxReadCommittedAt` is stamped: the reply proof can land through another
-  // channel after the relay pass that observed the response, and a record the
-  // watchdog treats as terminal is never re-armed - the unread inbox row then
-  // stays unread forever even though the member answered.
-  return Boolean(record.inboxReadCommittedAt);
+  return isOpenCodePromptDeliveryWatchdogTerminal(record);
 }
 
 export function isExplicitOpenCodeSessionRefreshStamp(reason: string | null | undefined): boolean {
@@ -306,8 +291,8 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         retry: true,
         ledgerRecord: input.ledgerRecord,
       });
-      // A 'responded' record keeps its status - it is already excluded from
-      // automatic selection, so only its durable deadline needs to move. Any
+      // A 'responded' record keeps its status: the watchdog can still finish
+      // its read commit without reopening automatic selection. Any
       // other status is parked as 'accepted' so the next wake observes instead
       // of dispatching; 'retry_scheduled' would spend another send.
       const ledgerRecord =
