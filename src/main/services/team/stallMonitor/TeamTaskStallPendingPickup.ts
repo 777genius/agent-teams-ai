@@ -157,7 +157,10 @@ export function evaluatePendingPickupTask(args: {
   if (!task.owner?.trim()) {
     return skip(task.id, 'Task has no owner', 'owner_missing');
   }
-  if (task.owner === snapshot.leadName) {
+  // Normalized, like every other member comparison in this file: an agent that
+  // wrote the owner as "Team-Lead" while the config says "team-lead" would
+  // otherwise take a pickup nudge meant for teammates.
+  if (normalizeMemberKey(task.owner) === normalizeMemberKey(snapshot.leadName)) {
     return skip(task.id, 'Task owner is the lead', 'owner_is_lead');
   }
   if (task.needsClarification) {

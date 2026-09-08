@@ -138,6 +138,70 @@ describe('TeamTaskStallMonitor', () => {
     expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
+  it('journals a lead rung it could not send because lead alerts are disabled', async () => {
+    // Without this, `priorAlertCount` never moves: the pickup ladder stays on
+    // the lead rung for the rest of the run, rebuilding the same alert on every
+    // scan and never reaching `silenced`.
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED', '0');
+
+    const registry = {
+      start: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      noteTeamChange: vi.fn(),
+      listActiveTeams: vi.fn(async () => ['demo']),
+    };
+    const snapshot = {
+      teamName: 'demo',
+      inProgressTasks: [{ id: 'task-a', displayId: 'abcd1234', subject: 'Task A' }],
+      reviewOpenTasks: [],
+      allTasksById: new Map([
+        ['task-a', { id: 'task-a', displayId: 'abcd1234', subject: 'Task A' }],
+      ]),
+    };
+    const alert = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'work-a:epoch',
+      reason: 'Potential work stall.',
+    };
+    const snapshotSource = { getSnapshot: vi.fn(async () => snapshot) };
+    const policy = {
+      evaluateWork: vi.fn(() => alert),
+      evaluateReview: vi.fn(),
+    };
+    const journal = {
+      reconcileScan: vi.fn(async () => [alert]),
+      markAlerted: vi.fn(async () => undefined),
+    };
+    const notifier = {
+      notifyLead: vi.fn(async () => undefined),
+      notifyOpenCodeOwners: vi.fn(async () => []),
+    };
+
+    const monitor = new TeamTaskStallMonitor(
+      registry as never,
+      snapshotSource as never,
+      policy as never,
+      journal as never,
+      notifier as never
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(2_100);
+    await vi.advanceTimersByTimeAsync(2_100);
+
+    expect(snapshotSource.getSnapshot).toHaveBeenCalled();
+    expect(notifier.notifyOpenCodeOwners).toHaveBeenCalled();
+    expect(notifier.notifyLead).not.toHaveBeenCalled();
+    expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
+  });
+
   it('times out a hung scan so later stall scans continue', async () => {
     vi.useFakeTimers();
     vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');

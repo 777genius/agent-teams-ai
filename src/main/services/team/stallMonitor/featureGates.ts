@@ -98,8 +98,17 @@ export function getOpenCodeLaneTurnActivityMaxAgeMs(): number {
   // Ten minutes is the largest of those thresholds
   // (WORK_THRESHOLDS_MS.mid_turn_after_touch in TeamTaskStallPolicy), so a
   // demoted sample can never make a work branch fire earlier than that branch's
-  // own threshold. The cost is paid by the pickup branch, whose clock then
-  // starts at the demotion instead of at the five-minute mark.
+  // own threshold.
+  //
+  // The pickup branch pays the cost, and pays it in full: a demotion publishes
+  // the ORIGINAL observation time as `idleSince` (classifyOpenCodeLaneTurnSample
+  // keeps it there on purpose, so the bound cannot restart the clock), and that
+  // time is already older than the five-minute pickup threshold at the moment
+  // of demotion. A member honestly ten minutes into one turn therefore takes a
+  // pickup nudge for a task still sitting in `pending`. That is the deliberate
+  // trade: the nudge queues behind the turn in flight rather than interrupting
+  // it, while the alternative - trusting the flag indefinitely - is a jammed
+  // lane switching the detector off for as long as the jam lasts.
   //
   // openCodeLaneTurnFreshness.test.ts holds this ordering as a test, so
   // lowering the default below any of those thresholds fails the build. This is

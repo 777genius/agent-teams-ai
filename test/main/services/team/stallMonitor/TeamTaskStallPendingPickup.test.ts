@@ -381,6 +381,8 @@ describe('TeamTaskStallPolicy.evaluatePendingPickup', () => {
       { providerByMemberName: new Map([['worker', 'anthropic' as const]]) },
     ],
     ['owner_is_lead', { owner: 'team-lead' }, {}],
+    // The lead is still the lead when an agent capitalised the owner field.
+    ['owner_is_lead', { owner: 'Team-Lead ' }, {}],
     ['owner_missing', { owner: '  ' }, {}],
     ['needs_clarification', { needsClarification: 'lead' }, {}],
   ] as const)('skips with %s', (skipReason, taskOverrides, snapshotOverrides) => {

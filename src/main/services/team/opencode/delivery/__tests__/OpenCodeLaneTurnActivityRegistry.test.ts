@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   noteOpenCodeLaneTurnActivity,
+  OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES,
   OpenCodeLaneTurnActivityRegistry,
   openCodeLaneTurnActivityRegistry,
 } from '../OpenCodeLaneTurnActivityRegistry';
@@ -192,5 +193,61 @@ describe('noteOpenCodeLaneTurnActivity', () => {
     });
     expect(notifyLeadTurnActivity).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+  it('bounds the map and evicts the least recently written sample', () => {
+    // The default registry is a process-lifetime singleton nothing clears, so
+    // without a bound one entry per member that ever took a turn is retained
+    // for the life of the app.
+    const registry = new OpenCodeLaneTurnActivityRegistry();
+    for (let index = 0; index < OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES; index += 1) {
+      registry.note({
+        teamName: 'team',
+        memberName: `member-${index}`,
+        laneId: 'secondary:opencode:member',
+        state: 'idle',
+        observedAt: '2026-08-23T01:30:00.000Z',
+      });
+    }
+    expect(registry.listTeam('team').size).toBe(OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES);
+
+    // Touching the oldest entry makes it the most recent, so the next insert
+    // must evict the one after it instead.
+    registry.note({
+      teamName: 'team',
+      memberName: 'member-0',
+      laneId: 'secondary:opencode:member',
+      state: 'active',
+      observedAt: '2026-08-23T01:31:00.000Z',
+    });
+    registry.note({
+      teamName: 'team',
+      memberName: 'newcomer',
+      laneId: 'secondary:opencode:newcomer',
+      state: 'active',
+      observedAt: '2026-08-23T01:32:00.000Z',
+    });
+
+    expect(registry.listTeam('team').size).toBe(OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES);
+    expect(registry.get('team', 'newcomer')).not.toBeNull();
+    expect(registry.get('team', 'member-0')).not.toBeNull();
+    expect(registry.get('team', 'member-1')).toBeNull();
+  });
+
+  it('drops one team without touching another', () => {
+    const registry = new OpenCodeLaneTurnActivityRegistry();
+    for (const teamName of ['alpha', 'beta']) {
+      registry.note({
+        teamName,
+        memberName: 'worker',
+        laneId: 'secondary:opencode:worker',
+        state: 'idle',
+        observedAt: '2026-08-23T01:30:00.000Z',
+      });
+    }
+
+    registry.clearTeam('Alpha');
+
+    expect(registry.get('alpha', 'worker')).toBeNull();
+    expect(registry.get('beta', 'worker')).not.toBeNull();
   });
 });

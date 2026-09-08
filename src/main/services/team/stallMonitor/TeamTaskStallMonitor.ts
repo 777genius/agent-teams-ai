@@ -380,10 +380,17 @@ export class TeamTaskStallMonitor {
     const leadFallbackAlerts = routableAlerts.filter(
       (alert) => !alertedEpochKeys.has(alert.epochKey)
     );
-    if (leadFallbackAlerts.length > 0 && isTeamTaskStallAlertsEnabled()) {
-      await this.notifier.notifyLead(teamName, leadFallbackAlerts);
-      if (!this.shouldContinueScan(scanRun)) {
-        return;
+    if (leadFallbackAlerts.length > 0) {
+      // A rung is consumed by REACHING it, not by the notification landing.
+      // With lead alerts switched off, journaling these anyway is what lets the
+      // pickup ladder climb to `silenced`: an unjournaled rung keeps
+      // `priorAlertCount` at the same value, so the same alert would be rebuilt
+      // on every scan for the rest of the run and the ladder would never end.
+      if (isTeamTaskStallAlertsEnabled()) {
+        await this.notifier.notifyLead(teamName, leadFallbackAlerts);
+        if (!this.shouldContinueScan(scanRun)) {
+          return;
+        }
       }
       for (const alert of leadFallbackAlerts) {
         alertedEpochKeys.add(alert.epochKey);

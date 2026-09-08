@@ -28,6 +28,25 @@ function memberKey(teamName: string, memberName: string): string {
   return `${teamName.trim().toLowerCase()}\u0000${memberName.trim().toLowerCase()}`;
 }
 
+/**
+ * How many (team, member) samples the registry keeps at once.
+ *
+ * The default registry is a module singleton in a main process that outlives
+ * every run, and nothing in `src/` calls `clear()`: a stopped team's samples
+ * stay in the map for the life of the app, one entry per member that ever took
+ * a turn. Evicting the least recently written entry costs nothing, because a
+ * member with no sample is judged exactly as it was before the stall monitor
+ * learned to read lanes at all.
+ *
+ * Note what eviction does NOT have to fix: a sample left behind by a previous
+ * run of the same team cannot escalate anything. `evaluatePendingPickupTask`
+ * starts its clock at `Math.max(readyAt, laneIdleSince)`, and a relaunched
+ * team's `readyAt` is always newer than a sample from before the stop, so a
+ * stale entry can only ever delay a nudge (for at most the freshness window),
+ * never bring one forward.
+ */
+export const OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES = 512;
+
 export class OpenCodeLaneTurnActivityRegistry {
   private readonly samples = new Map<string, OpenCodeLaneTurnActivitySample>();
 
@@ -38,11 +57,31 @@ export class OpenCodeLaneTurnActivityRegistry {
     state: OpenCodeLaneTurnState;
     observedAt?: string;
   }): void {
-    this.samples.set(memberKey(input.teamName, input.memberName), {
+    const key = memberKey(input.teamName, input.memberName);
+    // Delete-then-set keeps the Map in write-recency order, so the eviction
+    // below always drops the entry nothing has written to for the longest.
+    this.samples.delete(key);
+    if (this.samples.size >= OPENCODE_LANE_TURN_ACTIVITY_MAX_SAMPLES) {
+      const oldestKey = this.samples.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.samples.delete(oldestKey);
+      }
+    }
+    this.samples.set(key, {
       laneId: input.laneId,
       state: input.state,
       observedAt: input.observedAt ?? new Date().toISOString(),
     });
+  }
+
+  /** Drops every sample of one team, e.g. once that team has stopped. */
+  clearTeam(teamName: string): void {
+    const prefix = `${teamName.trim().toLowerCase()}\u0000`;
+    for (const key of [...this.samples.keys()]) {
+      if (key.startsWith(prefix)) {
+        this.samples.delete(key);
+      }
+    }
   }
 
   get(teamName: string, memberName: string): OpenCodeLaneTurnActivitySample | null {

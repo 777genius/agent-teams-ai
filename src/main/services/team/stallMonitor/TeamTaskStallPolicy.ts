@@ -404,7 +404,10 @@ export class TeamTaskStallPolicy {
     if (!task.owner) {
       return skip(task.id, 'Task has no owner', 'owner_missing');
     }
-    if (task.owner === snapshot.leadName) {
+    // Normalized for the same reason the pickup branch normalizes it: an owner
+    // an agent spelled "Team-Lead" is still the lead, and skipping is the safe
+    // direction (one fewer alert, never one more).
+    if (normalizeMemberKey(task.owner) === normalizeMemberKey(snapshot.leadName)) {
       return skip(task.id, 'Task owner is the lead', 'owner_is_lead');
     }
     if (task.reviewState === 'review') {
