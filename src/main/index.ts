@@ -2103,10 +2103,8 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
-  // Awaited, and before the runtime adapter registry exists: a managed host
-  // orphaned by a previous app instance still holds the fixed loopback ports a
-  // new host needs, and whoever gets there first wins. Reaping afterwards would
-  // mean the first launch of this session races a host it cannot see.
+  // Reap older, profile-owned orphans before adapter initialization so the
+  // first launch cannot race a stale host holding its loopback port.
   publishStartupStatus({
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
