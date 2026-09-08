@@ -18,6 +18,7 @@ export async function preflightOpenCodeLiveEnvironment(input) {
     : [];
   const opencodeBin =
     sourceEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH?.trim() ||
+    sourceEnv.OPENCODE_BIN_PATH?.trim() ||
     sourceEnv.OPENCODE_BIN?.trim() ||
     '/opt/homebrew/bin/opencode';
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-live-preflight-'));
@@ -27,7 +28,9 @@ export async function preflightOpenCodeLiveEnvironment(input) {
     Boolean(sourceEnv.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim());
   const env = {
     ...sourceEnv,
-    ...(useManagedAppCredentials ? {} : { XDG_DATA_HOME: xdgDataHome }),
+    ...(useManagedAppCredentials || shouldPreserveSandboxDataHome(input, sourceEnv)
+      ? {}
+      : { XDG_DATA_HOME: xdgDataHome }),
     OPENCODE_DISABLE_AUTOUPDATE: sourceEnv.OPENCODE_DISABLE_AUTOUPDATE ?? '1',
   };
 
@@ -36,7 +39,13 @@ export async function preflightOpenCodeLiveEnvironment(input) {
       return skip(`OpenCode binary not found at ${opencodeBin}`);
     }
 
-    const models = shouldUseManagedAppCredentials(env)
+    if (
+      input.useManagedRuntimeModels === true &&
+      !env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim()
+    ) {
+      return skip('Managed runtime model preflight requires an explicit runtime CLI');
+    }
+    const models = shouldUseManagedRuntimeModels(input, env)
       ? runManagedOpenCodeModels(requiredModels, projectPath, env)
       : runOpenCodeCommand(opencodeBin, ['models'], projectPath, env);
     if (!models.ok) {
@@ -70,6 +79,14 @@ export async function preflightOpenCodeLiveEnvironment(input) {
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+}
+
+function shouldPreserveSandboxDataHome(input, env) {
+  return input.preserveSandboxDataHome === true && Boolean(env.XDG_DATA_HOME);
+}
+
+function shouldUseManagedRuntimeModels(input, env) {
+  return input.useManagedRuntimeModels === true || shouldUseManagedAppCredentials(env);
 }
 
 function shouldUseManagedAppCredentials(env) {
@@ -380,6 +397,8 @@ function compactOutput(value) {
 }
 
 export const __opencodeLivePreflightTestHooks = {
+  shouldUseManagedRuntimeModels,
+  shouldPreserveSandboxDataHome,
   findMissingOpenCodeModels,
   isHealthyOpenCodeHostResponse,
   parseOpenCodeModels,

@@ -3,8 +3,8 @@
  *
  * Once every live task on the board is completed and the team has already
  * messaged the user after the last structural board event, the app-generated
- * notices that keep trickling in (teammate "done" reports, comment
- * notifications, task-state notices) carry nothing the recipient can act on.
+ * notices that keep trickling in (task "done" notices, comment notifications,
+ * task-state notices) carry nothing the recipient can act on.
  * Each of them still cost a full runtime turn, and because a turn is memoryless
  * the recipient kept re-answering work that was finished before the notice was
  * even written.
@@ -21,7 +21,7 @@
  * neither side has to reach across the process boundary to evaluate it.
  */
 
-import { isOpenCodeReplyOptionalDeliveryContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import { isOpenCodeAppAuthoredNoticeContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 
 import {
   isBoardCompletionNotice,
@@ -215,7 +215,10 @@ export async function settleOpenCodePostCompletionNotices(input: {
     input.anchorHasLedgerRecord ||
     !isCoalescableNoticeKind(anchor) ||
     isBoardCompletionNotice(anchor) ||
-    !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
+    // App-authored ONLY: settlement suppresses a message instead of delivering
+    // it, so the broad reply-optional set (which classifies every teammate
+    // `SendMessage` as a report) would silently drop real teammate traffic.
+    !isOpenCodeAppAuthoredNoticeContract(input.anchorReplyRecipient)
   ) {
     return { kind: 'deliver' };
   }

@@ -338,6 +338,49 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(notDispatched)).toBe(true);
   });
 
+  // Batching keeps a message's text; absorbing throws it away. The two walks
+  // therefore accept different sets, and this is the boundary between them.
+  it('settles app-written notices only, while coalescing still batches teammate messages', async () => {
+    const unread = [message({ messageId: 'anchor' }), ...notices(3)];
+    const teammatePorts = createPorts({ resolveReplyRecipient: () => 'Scribe' });
+
+    // A teammate wrote every row here: reply-optional (so it may ride along in
+    // one prompt), but never absorbable.
+    await expect(
+      selectOpenCodeSettleableQueuedNotices({
+        unread,
+        index: 0,
+        anchorReplyRecipient: 'Scribe',
+        ports: teammatePorts,
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      selectOpenCodeReplyOptionalCoalescedFollowers({
+        unread,
+        index: 0,
+        anchorReplyRecipient: 'Scribe',
+        ports: teammatePorts,
+      })
+    ).resolves.toHaveLength(3);
+
+    // An app-written anchor stops the settlement walk at the first row a
+    // teammate wrote, so that row keeps its own delivery.
+    await expect(
+      selectOpenCodeSettleableQueuedNotices({
+        unread: [
+          message({ messageId: 'anchor', from: 'system' }),
+          message({ messageId: 'app-notice', from: 'system' }),
+          message({ messageId: 'teammate-note' }),
+        ],
+        index: 0,
+        anchorReplyRecipient: 'system',
+        ports: createPorts({
+          resolveReplyRecipient: (candidate) => (candidate.from === 'system' ? 'system' : 'Scribe'),
+        }),
+      })
+    ).resolves.toMatchObject([{ messageId: 'app-notice' }]);
+  });
+
   // The settlement pass read-commits instead of delivering, so the prompt-length
   // cap does not apply to it. Negative control: the same queue through the
   // prompt selector stops at the limit.
@@ -350,8 +393,10 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const settleable = await selectOpenCodeSettleableQueuedNotices({
       unread,
       index: 0,
-      anchorReplyRecipient: 'Scribe',
-      ports: createPorts(),
+      // Settlement only ever sees app-written notices, so the whole queue is
+      // addressed to the informational marker.
+      anchorReplyRecipient: 'system',
+      ports: createPorts({ resolveReplyRecipient: () => 'system' }),
     });
     expect(settleable).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 4);
     expect(settleable.at(-1)?.messageId).toBe(
@@ -380,9 +425,9 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const settleable = await selectOpenCodeSettleableQueuedNotices({
       unread,
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts({
-        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'Scribe'),
+        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'system'),
       }),
     });
     expect(settleable.map((notice) => notice.messageId)).toEqual(['notice-1']);
@@ -390,8 +435,9 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const recorded = await selectOpenCodeSettleableQueuedNotices({
       unread: [message({ messageId: 'anchor' }), ...notices(3)],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts({
+        resolveReplyRecipient: () => 'system',
         hasExistingRecord: (candidate) => Promise.resolve(candidate.messageId === 'notice-2'),
       }),
     });
