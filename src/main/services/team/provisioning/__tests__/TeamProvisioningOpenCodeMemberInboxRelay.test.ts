@@ -154,6 +154,49 @@ function createRelayPorts(
 }
 
 describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
+  it('skips old accepted and recoverable terminal rows without starving a fresh message', async () => {
+    const old = ledgerRecord({ runId: 'old-run', status: 'accepted' });
+    const terminal = ledgerRecord({
+      runId: 'old-run',
+      status: 'failed_terminal',
+      inboxMessageId: 'terminal',
+    });
+    const fresh = message({ messageId: 'fresh', timestamp: '2026-01-01T00:02:00.000Z' });
+    const ports = createRelayPorts({
+      readInboxMessages: vi
+        .fn()
+        .mockResolvedValue([
+          message(),
+          message({ messageId: 'terminal', timestamp: '2026-01-01T00:01:00.000Z' }),
+          fresh,
+        ]),
+      resolveCurrentOpenCodeRuntimeRunId: vi.fn().mockResolvedValue('new-run'),
+      createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+        ensurePending: vi.fn().mockResolvedValue(old),
+        getByInboxMessage: vi
+          .fn()
+          .mockImplementation(async ({ inboxMessageId }) =>
+            inboxMessageId === 'message-1' ? old : inboxMessageId === 'terminal' ? terminal : null
+          ),
+      })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+      deliverOpenCodeMemberMessage: vi
+        .fn()
+        .mockResolvedValue({ delivered: true, accepted: true, responsePending: true }),
+    });
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'opencode:team:worker' },
+      ports
+    );
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'fresh' })
+    );
+    expect(ports.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded).not.toHaveBeenCalled();
+    expect(ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+  });
+
   it('sanitizes and schedules OpenCode member inbox delivery wakes', () => {
     const scheduleWake = vi.fn();
 

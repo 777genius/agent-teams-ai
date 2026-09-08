@@ -173,13 +173,18 @@ describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
 
     await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
       appStartedAtMs: 7_000,
+      requiredProfileScope: 'test-profile',
       sweepManagedHosts,
       logSweepResult,
       logWarning: vi.fn(),
       logError: vi.fn(),
     });
 
-    expect(sweepManagedHosts).toHaveBeenCalledWith({ mode: 'orphaned', startedBeforeMs: 7_000 });
+    expect(sweepManagedHosts).toHaveBeenCalledWith({
+      mode: 'orphaned',
+      startedBeforeMs: 7_000,
+      requiredProfileScope: 'test-profile',
+    });
     expect(logSweepResult).toHaveBeenCalledWith(
       'opencode_managed_hosts_killed sweep=startup_preflight count=1 scanned=2'
     );
@@ -196,6 +201,7 @@ describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
     await expect(
       reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
         appStartedAtMs: 7_000,
+        requiredProfileScope: 'test-profile',
         sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
         logSweepResult,
         logWarning,

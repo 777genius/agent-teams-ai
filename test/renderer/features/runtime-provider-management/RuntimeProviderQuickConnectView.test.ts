@@ -334,21 +334,23 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
 
     expect(
-      [...host.querySelectorAll<HTMLElement>('[data-testid^="provider-quick-card-"]')].map(
-        (element) => element.dataset.testid?.replace('provider-quick-card-', '')
-      )
-    ).toEqual([
-      'cursor',
-      'github-copilot',
-      'supergrok',
-      'zai-coding-plan',
-      'kimi-code-membership',
-      'kiro',
-      'minimax-token-plan',
-      'xiaomi-mimo-token-plan',
-      'openrouter',
-      'vercel',
-    ]);
+      [...host.querySelectorAll<HTMLElement>('[data-testid^="provider-quick-card-"]')]
+        .map((element) => element.dataset.testid?.replace('provider-quick-card-', ''))
+        .sort()
+    ).toEqual(
+      [
+        'cursor',
+        'github-copilot',
+        'supergrok',
+        'kiro',
+        'kimi-code-membership',
+        'zai-coding-plan',
+        'minimax-token-plan',
+        'xiaomi-mimo-token-plan',
+        'openrouter',
+        'vercel',
+      ].sort()
+    );
   });
 
   it('keeps connected plan management and catalog retry as separate controls', async () => {

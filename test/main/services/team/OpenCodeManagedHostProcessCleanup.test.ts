@@ -49,6 +49,177 @@ function resolved<T>(value: T): Promise<T> {
 }
 
 describe('OpenCodeManagedHostProcessCleanup', () => {
+  it.each(['darwin', 'linux', 'win32'] as const)(
+    'startup cleans only old orphaned hosts in the same profile on %s',
+    async (platform) => {
+      const killProcess = vi.fn();
+      const disposeServeHost = vi.fn(async () => undefined);
+      const alive = new Set([801, 802, 803, 804]);
+      const scopes = ['profile-own', 'profile-foreign', 'profile-own-extra', null];
+      const result = await cleanupManagedOpenCodeServeProcesses({
+        mode: 'orphaned',
+        platform,
+        requiredProfileScope: 'profile-own',
+        startedBeforeMs: 20_000,
+        listProcessRows: async () =>
+          scopes.map((_, index) => ({
+            pid: 801 + index,
+            ppid: 1,
+            command:
+              platform === 'win32'
+                ? `"C:\\test\\runtimes\\opencode\\versions\\1.0\\opencode-windows-x64\\opencode.exe" serve --port ${5001 + index}`
+                : `/test/opencode serve --port ${5001 + index}`,
+          })),
+        readProcessDetails: async (pid) =>
+          platform === 'win32'
+            ? null
+            : `${MANAGED_DETAILS} CLAUDE_TEAM_APP_INSTANCE_ID=previous-instance` +
+              (scopes[pid - 801] ? ` CLAUDE_TEAM_APP_PROFILE_SCOPE=${scopes[pid - 801]}` : ''),
+        readServeHostConfig: async (baseUrl) =>
+          JSON.stringify({
+            mcp: {
+              'agent-teams': {
+                url: `http://127.0.0.1:41001/mcp#agent-teams-app-instance=previous-instance&agent-teams-app-profile=${scopes[Number(new URL(baseUrl).port) - 5001]}`,
+              },
+            },
+          }),
+        readProcessStartTimeMs: async () => 10_000,
+        disposeServeHost,
+        isProcessAlive: (pid) => alive.has(pid),
+        killProcess: (pid) => {
+          killProcess(pid);
+          alive.delete(pid);
+        },
+      });
+      expect(killProcess.mock.calls).toEqual([[801]]);
+      expect(disposeServeHost.mock.calls).toEqual([['http://127.0.0.1:5001']]);
+      expect([...alive]).toEqual([802, 803, 804]);
+      expect(result.candidates.map(({ action }) => action)).toEqual([
+        'killed',
+        'kept_unmanaged',
+        'kept_unmanaged',
+        'kept_unmanaged',
+      ]);
+    }
+  );
+
+  it.each([
+    [
+      'local',
+      { mcp: { 'agent-teams': { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own' } } } },
+      true,
+    ],
+    [
+      'unrelated config',
+      { note: 'own', mcp: { other: { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own' } } } },
+      false,
+    ],
+    [
+      'foreign local',
+      { mcp: { 'agent-teams': { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own-extra' } } } },
+      false,
+    ],
+    [
+      'legacy HTTP',
+      { mcp: { 'agent-teams': { url: 'http://127.0.0.1:4000/mcp#agent-teams-app-instance=old' } } },
+      false,
+    ],
+  ])('requires exact Windows profile ownership in %s config', async (_, config, expectedKill) => {
+    const killProcess = vi.fn();
+    let alive = true;
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'orphaned',
+      platform: 'win32',
+      requiredProfileScope: 'own',
+      startedBeforeMs: 20_000,
+      listProcessRows: async () => [
+        {
+          pid: 900,
+          ppid: 1,
+          command:
+            '"C:\\test\\runtimes\\opencode\\versions\\1.0\\opencode-windows-x64\\opencode.exe" serve --port 5000',
+        },
+      ],
+      readProcessStartTimeMs: async () => 10_000,
+      readServeHostConfig: async () => JSON.stringify(config),
+      disposeServeHost: async () => undefined,
+      isProcessAlive: (pid) => pid === 900 && alive,
+      killProcess: (pid) => {
+        killProcess(pid);
+        alive = false;
+      },
+    });
+    expect(killProcess).toHaveBeenCalledTimes(expectedKill ? 1 : 0);
+    expect(result.killed).toBe(expectedKill ? 1 : 0);
+  });
+
+  it.each([true, false])(
+    'handles Windows config disappearing before dispose=%s',
+    async (beforeDispose) => {
+      let alive = true;
+      const config = JSON.stringify({
+        mcp: { 'agent-teams': { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own' } } },
+      });
+      const readServeHostConfig = vi
+        .fn<() => Promise<string | null>>()
+        .mockResolvedValueOnce(config);
+      if (!beforeDispose) readServeHostConfig.mockResolvedValueOnce(config);
+      readServeHostConfig.mockResolvedValue(null);
+      const disposeServeHost = vi.fn(async () => undefined);
+      const killProcess = vi.fn(() => {
+        alive = false;
+      });
+      const result = await cleanupManagedOpenCodeServeProcesses({
+        mode: 'orphaned',
+        platform: 'win32',
+        requiredProfileScope: 'own',
+        startedBeforeMs: 20_000,
+        listProcessRows: async () => [
+          {
+            pid: 900,
+            ppid: 1,
+            command:
+              '"C:\\test\\runtimes\\opencode\\versions\\1.0\\opencode-windows-x64\\opencode.exe" serve --port 5000',
+          },
+        ],
+        readProcessStartTimeMs: async () => 10_000,
+        readServeHostConfig,
+        disposeServeHost,
+        isProcessAlive: (pid) => pid === 900 && alive,
+        killProcess,
+      });
+      expect(disposeServeHost).toHaveBeenCalledTimes(beforeDispose ? 0 : 1);
+      expect(killProcess).toHaveBeenCalledTimes(beforeDispose ? 0 : 1);
+      expect(result.killed).toBe(beforeDispose ? 0 : 1);
+    }
+  );
+
+  it('rechecks profile ownership before disposing a host', async () => {
+    const disposeServeHost = vi.fn(async () => undefined);
+    const killProcess = vi.fn();
+    const readProcessDetails = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(`${MANAGED_DETAILS} CLAUDE_TEAM_APP_PROFILE_SCOPE=own`)
+      .mockResolvedValue(`${MANAGED_DETAILS} CLAUDE_TEAM_APP_PROFILE_SCOPE=foreign`);
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'orphaned',
+      platform: 'darwin',
+      requiredProfileScope: 'own',
+      startedBeforeMs: 20_000,
+      listProcessRows: async () => [
+        { pid: 900, ppid: 1, command: '/test/opencode serve --port 5000' },
+      ],
+      readProcessStartTimeMs: async () => 10_000,
+      readProcessDetails,
+      disposeServeHost,
+      isProcessAlive: () => true,
+      killProcess,
+    });
+    expect(disposeServeHost).not.toHaveBeenCalled();
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.candidates[0].action).toBe('kept_unmanaged');
+  });
+
   it('bypasses the shared Windows process cache for default cleanup scans', async () => {
     await cleanupManagedOpenCodeServeProcesses({ mode: 'force', platform: 'win32' });
 

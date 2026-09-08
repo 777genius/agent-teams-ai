@@ -457,7 +457,11 @@ function bindLifecycleManifest<TBody>(
   },
   manifest: RuntimeStoreManifestEvidence
 ): { capabilitySnapshotId: string | null; body: TBody } {
-  if (input.command !== 'opencode.stopTeam' && input.command !== 'opencode.reconcileTeam') {
+  if (
+    input.command !== 'opencode.stopTeam' &&
+    input.command !== 'opencode.reconcileTeam' &&
+    input.command !== 'opencode.sendMessage'
+  ) {
     return { capabilitySnapshotId: input.capabilitySnapshotId, body: input.body };
   }
   const emptyStop =
@@ -593,8 +597,10 @@ function commandRequiresRuntimeStoreManifestPrecondition(
 ): boolean {
   // App metadata and runtime stores own independent watermarks. Lifecycle commands
   // are fenced by exact lane/run/capability authority, not cross-domain counters.
-  // Message delivery has its own durable acceptance evidence.
+  // Launch binds fresh capability/behavior proof and owned session materialization;
+  // message delivery has its own durable acceptance evidence.
   return (
+    command !== 'opencode.launchTeam' &&
     command !== 'opencode.sendMessage' &&
     command !== 'opencode.stopTeam' &&
     command !== 'opencode.reconcileTeam'

@@ -516,6 +516,7 @@ export class OpenCodeMemberMessageDeliveryService {
     const now = nowIso();
     let active = ledger
       ? await ledger.getActiveForMember({
+          runId: runtimeRunId,
           teamName,
           memberName: canonicalMemberName,
           laneId: laneIdentity.laneId,
@@ -534,6 +535,14 @@ export class OpenCodeMemberMessageDeliveryService {
 
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
+      // Settling the blocker updates the ledger, which need not emit an inbox event.
+      // Keep the waiting row scheduled too; its normal ledger guards prevent redispatch.
+      this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+        teamName,
+        memberName: canonicalMemberName,
+        messageId,
+        delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+      });
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
         teamName,
         memberName: canonicalMemberName,

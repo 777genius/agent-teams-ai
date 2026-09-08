@@ -16,6 +16,7 @@ import {
   PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
   purgeStaleOpenCodeHostStartupLocks,
 } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+import { reportUnattributedLoopbackRuntimeRelease } from '../opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
@@ -102,6 +103,21 @@ export interface TeamForceStopFlowPorts {
    * caller knows whether anything else still needs them.
    */
   releaseSharedRuntimeResources?(teamName: string): Promise<{ diagnostics: string[] }>;
+  /**
+   * Ends the external lead process trees this stop can prove it owns. Separate
+   * from `killRetainedRuntimeProcesses` because it answers a different
+   * question: that step is about shared runtime hosts, which this app may not
+   * signal at all, while a `cursor-agent --print` lead names the team's own
+   * workspace on its command line and is attributable to a single stop.
+   *
+   * A port with no default, like the release below it: everywhere it is not
+   * handed in, the step does not exist rather than becoming a no-op branch the
+   * flow carries around.
+   */
+  reapOwnedLeadProcessTrees?(
+    teamName: string,
+    context: { requestedAtMs: number }
+  ): Promise<{ killedPids: number[]; incomplete?: boolean; diagnostics: string[] }>;
 }
 
 /**
@@ -404,6 +420,21 @@ async function runTeamStopFlow(
     : stopOutcome !== 'stopped';
   if (cancelAfterStop) await cancelOwnedDeliveries();
 
+  // Runs on both paths, unlike the host kill above it. A scoped stop that
+  // confirmed has released the team's sessions and never touched the external
+  // lead: the tree is not a shared host and not something the orchestrator
+  // stops, so a confirmed stop is exactly the case where it is left behind.
+  const reapedTrees = await reapOwnedLeadProcessTrees(
+    teamName,
+    ports,
+    stopStartedAtMs,
+    diagnostics
+  );
+  for (const pid of reapedTrees.killedPids) {
+    if (!killedRuntimePids.includes(pid)) killedRuntimePids.push(pid);
+  }
+  cleanupIncomplete ||= reapedTrees.incomplete;
+
   // After the kills, never before them: a startup lock a live host still holds
   // open cannot be unlinked, so it is the kill that turns it into an orphan.
   await releaseSharedRuntimeResources(teamName, ports, diagnostics);
@@ -415,6 +446,36 @@ async function runTeamStopFlow(
     clearedPendingDeliveries,
     diagnostics,
   };
+}
+
+/**
+ * A reap that throws leaves a tree standing, which is the definition of an
+ * incomplete cleanup - but it never fails the stop, which by this point has
+ * already done everything else it owed the user.
+ */
+async function reapOwnedLeadProcessTrees(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  requestedAtMs: number,
+  diagnostics: string[]
+): Promise<{ killedPids: number[]; incomplete: boolean }> {
+  if (!ports.reapOwnedLeadProcessTrees) {
+    return { killedPids: [], incomplete: false };
+  }
+  try {
+    const reaped = await ports.reapOwnedLeadProcessTrees(teamName, { requestedAtMs });
+    diagnostics.push(...reaped.diagnostics);
+    // A reap that resolved still leaves the cleanup incomplete when a tree it
+    // targeted refused to die: the sweep reports that per tree and carries on,
+    // and a stop that called itself completed over it would be claiming a
+    // workspace is free while the process holding it is still running.
+    return { killedPids: reaped.killedPids, incomplete: reaped.incomplete === true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Lead process tree reap failed: ${message}`);
+    diagnostics.push(`Lead process tree reap failed: ${message}`);
+    return { killedPids: [], incomplete: true };
+  }
 }
 
 async function releaseSharedRuntimeResources(
@@ -473,6 +534,18 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
 }
 
 /**
+ * A configured provider/model does not identify a launch-owned reservation:
+ * project overrides may select another endpoint, and models may be shared.
+ * Keep the production cleanup port, but never infer ownership from config.
+ */
+export async function releaseLoopbackRuntimesReservedByTeam(
+  _teamsBasePath: string,
+  _teamName: string
+): Promise<void> {
+  reportUnattributedLoopbackRuntimeRelease('team_stop');
+}
+
+/**
  * Releases what a stopped team still holds beyond its own processes. It
  * signals nothing and kills nothing: by the time it runs, the runtime has
  * either confirmed the stop or been killed, and what is left are the shared
@@ -524,7 +597,7 @@ export async function releaseSharedRuntimeResourcesAfterStop(input: {
   if (input.releaseSharedLocalRuntime) {
     try {
       await input.releaseSharedLocalRuntime();
-      diagnostics.push('Released the shared runtime held for this team');
+      diagnostics.push('Shared runtime cleanup completed');
     } catch (error) {
       diagnostics.push(
         `Shared runtime release failed: ${error instanceof Error ? error.message : String(error)}`
@@ -590,6 +663,9 @@ export async function readOwnedOpenCodeRuntimeRunIdsForTeam(input: {
  */
 export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   teamName: string;
+  includeRecoverableTerminal?: boolean;
+  reason?: string;
+  throwOnError?: boolean;
   teamsBasePath?: string;
   now?: () => Date;
   ownedRunIds?: readonly string[];
@@ -603,6 +679,7 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
 
   let cleared = 0;
   let keptForLaterRun = 0;
+  const laneErrors: unknown[] = [];
   for (const laneId of laneIds) {
     const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath,
@@ -617,19 +694,24 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
       const result = await ledger.cancelNonTerminalRecords({
         now: (input.now?.() ?? new Date()).toISOString(),
-        reason: FORCE_STOP_DELIVERY_CANCEL_REASON,
+        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+        includeRecoverableTerminal: input.includeRecoverableTerminal,
         ownedRunIds: input.ownedRunIds,
         createdAtOrBeforeMs: input.requestedAtMs,
       });
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {
+      laneErrors.push(error);
       diagnostics.push(
         `Failed to cancel pending deliveries for lane ${laneId}: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
     }
+  }
+  if (input.throwOnError && laneErrors.length > 0) {
+    throw laneErrors[0];
   }
   if (cleared > 0) {
     diagnostics.push(`Cancelled ${cleared} pending prompt delivery record(s)`);

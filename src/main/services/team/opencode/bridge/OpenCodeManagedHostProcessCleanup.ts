@@ -7,6 +7,11 @@ import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
+import {
+  OPENCODE_APP_PROFILE_FRAGMENT_KEY,
+  OPENCODE_APP_PROFILE_SCOPE_ENV,
+} from './OpenCodeMcpBridgeEnv';
+
 export type OpenCodeManagedHostCleanupMode = 'orphaned' | 'force';
 
 export interface OpenCodeManagedHostCleanupCandidate {
@@ -27,6 +32,7 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
   mode: OpenCodeManagedHostCleanupMode;
   excludePids?: ReadonlySet<number>;
   requiredDetailsMarkers?: readonly string[];
+  requiredProfileScope?: string;
   requiredServeConfigMarkersAny?: readonly string[];
   startedBeforeMs?: number | null;
   platform?: NodeJS.Platform;
@@ -184,13 +190,26 @@ export async function cleanupManagedOpenCodeServeProcesses(
     const hasRequiredDetailsMarkers =
       requiredDetailsMarkers.length === 0 ||
       Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
-    if (requiredServeConfigMarkersAny.length > 0 && baseUrl && serveConfig === null) {
+    if (
+      (requiredServeConfigMarkersAny.length > 0 ||
+        (platform === 'win32' && options.requiredProfileScope !== undefined)) &&
+      baseUrl &&
+      serveConfig === null
+    ) {
       serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
     }
     const hasRequiredServeConfigMarker =
       requiredServeConfigMarkersAny.length === 0 ||
       Boolean(serveConfig && stringIncludesAnyMarker(serveConfig, requiredServeConfigMarkersAny));
-    if (!isManaged || !hasRequiredDetailsMarkers || !hasRequiredServeConfigMarker) {
+    const hasRequiredProfileScope =
+      options.requiredProfileScope === undefined ||
+      hasProfileOwnership(platform, details, serveConfig, options.requiredProfileScope);
+    if (
+      !isManaged ||
+      !hasRequiredDetailsMarkers ||
+      !hasRequiredServeConfigMarker ||
+      !hasRequiredProfileScope
+    ) {
       result.candidates.push({
         pid: row.pid,
         ppid: row.ppid,
@@ -199,13 +218,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
           ? platform === 'win32'
             ? 'process is not an app-managed Windows OpenCode serve command'
             : 'process does not carry Agent Teams managed OpenCode environment markers'
-          : 'process ownership markers do not match the current app instance',
+          : 'process ownership markers do not match the required app instance or profile',
       });
       continue;
     }
 
     const shouldTrackStartTime =
       platform === 'win32' ||
+      options.requiredProfileScope !== undefined ||
       typeof options.startedBeforeMs === 'number' ||
       requiredDetailsMarkers.length > 0 ||
       requiredServeConfigMarkersAny.length > 0;
@@ -269,7 +289,9 @@ export async function cleanupManagedOpenCodeServeProcesses(
     }
 
     try {
-      const confirmCandidateIdentity = async (): Promise<'confirmed' | 'gone' | 'changed'> => {
+      const confirmCandidateIdentity = async (
+        allowUnavailableProfileProof = false
+      ): Promise<'confirmed' | 'gone' | 'changed'> => {
         let startTimeMatches = false;
         let ownershipMarkerMatches = false;
         if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
@@ -297,6 +319,28 @@ export async function cleanupManagedOpenCodeServeProcesses(
               return isProcessAlive(row.pid) ? 'changed' : 'gone';
             }
             ownershipMarkerMatches = true;
+          }
+        }
+        if (options.requiredProfileScope !== undefined) {
+          const currentDetails = platform === 'win32' ? null : await readDetails(row.pid);
+          const currentConfig =
+            platform === 'win32' && baseUrl
+              ? await readServeHostConfig(baseUrl).catch(() => null)
+              : null;
+          if (currentDetails || currentConfig) {
+            if (
+              !hasProfileOwnership(
+                platform,
+                currentDetails,
+                currentConfig,
+                options.requiredProfileScope
+              )
+            ) {
+              return isProcessAlive(row.pid) ? 'changed' : 'gone';
+            }
+            ownershipMarkerMatches = true;
+          } else if (!allowUnavailableProfileProof) {
+            return isProcessAlive(row.pid) ? 'changed' : 'gone';
           }
         }
         if (startTimeMatches) {
@@ -340,7 +384,8 @@ export async function cleanupManagedOpenCodeServeProcesses(
         await disposeServeHost(baseUrl).catch(() => undefined);
       }
 
-      const identityBeforeKill = await confirmCandidateIdentity();
+      // Graceful dispose can stop /config; an unchanged PID/start time still identifies the host.
+      const identityBeforeKill = await confirmCandidateIdentity(true);
       if (identityBeforeKill === 'gone') {
         result.killed += 1;
         result.candidates.push({
@@ -383,7 +428,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
       if (options.mode === 'force' && isProcessAlive(row.pid)) {
         await sleepMs(250);
         if (isProcessAlive(row.pid)) {
-          const identityBeforeForceKill = await confirmCandidateIdentity();
+          const identityBeforeForceKill = await confirmCandidateIdentity(true);
           if (identityBeforeForceKill === 'confirmed') {
             try {
               await forceKillProcess(row.pid);
@@ -487,6 +532,39 @@ function processDetailsIncludeMarker(details: string, marker: string): boolean {
   return new RegExp(`(^|\\s)${escapeRegExp(marker)}${valueBoundary}`).test(details);
 }
 
+function hasProfileOwnership(
+  platform: NodeJS.Platform,
+  details: string | null,
+  serveConfig: string | null,
+  profileScope: string
+): boolean {
+  if (!profileScope.trim()) return false;
+  if (platform !== 'win32') {
+    return Boolean(
+      details &&
+      processDetailsIncludeMarker(details, `${OPENCODE_APP_PROFILE_SCOPE_ENV}=${profileScope}`)
+    );
+  }
+  if (!serveConfig) return false;
+  try {
+    const config = JSON.parse(serveConfig) as { mcp?: Record<string, unknown> };
+    return Object.entries(config.mcp ?? {}).some(([name, value]) => {
+      if (!/^agent-teams(?:-runtime-\d+)?$/.test(name) || !value || typeof value !== 'object')
+        return false;
+      const entry = value as { environment?: Record<string, unknown>; url?: unknown };
+      if (entry.environment?.[OPENCODE_APP_PROFILE_SCOPE_ENV] === profileScope) return true;
+      if (typeof entry.url !== 'string') return false;
+      const url = new URL(entry.url);
+      return (
+        new URLSearchParams(url.hash.slice(1)).get(OPENCODE_APP_PROFILE_FRAGMENT_KEY) ===
+        profileScope
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
 function stringIncludesAnyMarker(value: string, markers: readonly string[]): boolean {
   return markers.some((marker) => marker.length > 0 && value.includes(marker));
 }
@@ -533,7 +611,17 @@ async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | nu
   }
 }
 
-async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
+/**
+ * A process's command line WITH its environment, which is the only ownership
+ * signal available for a process this app did not spawn and never recorded a
+ * pid for. Exported because the cursor-agent lead sweep needs exactly the same
+ * answer about exactly the same kind of process, and a second `ps eww` spelling
+ * would be a second thing to keep correct.
+ *
+ * POSIX only: Windows does not let one process read another's environment, so
+ * callers there have to prove ownership some other way.
+ */
+export async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
 }
 

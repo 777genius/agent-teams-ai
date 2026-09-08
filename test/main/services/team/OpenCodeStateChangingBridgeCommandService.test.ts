@@ -288,7 +288,10 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     async (capabilitySnapshotId) => {
       handshakePort.nextHandshake = buildHandshake({
         client: clientIdentity,
-        server: peerIdentity('agent_teams_orchestrator', { capabilitySnapshotId }),
+        server: peerIdentity('agent_teams_orchestrator', {
+          capabilitySnapshotId,
+          runtimeStoreManifestHighWatermark: 0,
+        }),
       });
       const input = buildLaunchInput();
       input.body = {
@@ -567,7 +570,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         data: {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
-          runtimeStoreManifestHighWatermark: 10,
+          runtimeStoreManifestHighWatermark: 0,
           expectedBehaviorFingerprint: 'f'.repeat(64),
         },
       });
@@ -599,22 +602,103 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
-  it('rejects state-changing command when bridge handshake has stale manifest high watermark', async () => {
+  it('launches with independent app/runtime watermarks while preserving launch authority', async () => {
+    manifestReader.manifest.highWatermark = 41;
     handshakePort.nextHandshake = buildHandshake({
       client: clientIdentity,
       server: peerIdentity('agent_teams_orchestrator', {
-        runtimeStoreManifestHighWatermark: 9,
+        runtimeStoreManifestHighWatermark: 0,
+        activeRunId: null,
+      }),
+    });
+    bridge.resultFactory = ({ body, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+          expectedBehaviorFingerprint: body.preconditions.expectedBehaviorFingerprint,
+        },
+      });
+    const input = buildLaunchInput();
+    input.laneId = 'primary';
+    input.body = { ...(input.body as object), manifestHighWatermark: null };
+
+    await expect(createService().execute(input)).resolves.toMatchObject({ ok: true });
+
+    expect(handshakePort.calls[0]).toMatchObject({
+      expectedRunId: 'run-1',
+      expectedCapabilitySnapshotId: 'cap-1',
+      expectedManifestHighWatermark: null,
+      teamId: 'team-a',
+      laneId: 'primary',
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body).toMatchObject({
+      manifestHighWatermark: null,
+      preconditions: {
+        laneId: 'primary',
+        expectedRunId: 'run-1',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
+        expectedManifestHighWatermark: null,
+        commandLeaseId: 'lease-1',
+      },
+    });
+    expect(launchAuthorityWriter.publish).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      laneId: 'primary',
+      runId: 'run-1',
+      capabilitySnapshotId: 'cap-1',
+      behaviorFingerprint: 'a'.repeat(64),
+    });
+    await expect(ledger.list()).resolves.toMatchObject([{ status: 'completed' }]);
+    expect(manifestReader.manifest.highWatermark).toBe(41);
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('rejects launch when the bridge reports another active run despite independent watermarks', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+        activeRunId: 'run-2',
       }),
     });
     const service = createService();
 
     await expect(service.execute(buildLaunchInput())).rejects.toThrow(
-      'Bridge server runtime manifest high watermark is stale'
+      'Bridge server active run mismatch'
     );
 
     expect(bridge.calls).toHaveLength(0);
     await expect(ledger.list()).resolves.toEqual([]);
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('keeps an active command lease fenced before launch despite independent watermarks', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+      }),
+    });
+    const activeLease = await leaseStore.acquire({
+      teamName: 'team-a',
+      runId: 'run-1',
+      command: 'opencode.launchTeam',
+      ttlMs: 10_000,
+    });
+
+    await expect(
+      createService({ leaseAcquireTimeoutMs: 0 }).execute(buildLaunchInput())
+    ).rejects.toThrow(OpenCodeBridgeCommandLeaseError);
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+    await expect(leaseStore.getActive('team-a')).resolves.toMatchObject({
+      leaseId: activeLease.leaseId,
+    });
   });
 
   it('requires delivery acceptance contract only for acceptance-mode sendMessage', async () => {
@@ -706,6 +790,35 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
   });
 
+  it.each([
+    'missing-run',
+    'stale-run',
+    'missing-manifest-run',
+    'missing-snapshot',
+    'stale-caller-snapshot',
+    'stale-body-snapshot',
+    'missing-body-run',
+    'wrong-body-team',
+    'wrong-body-lane',
+  ])('rejects sendMessage %s before handshake or mutation', async (failure) => {
+    const input = buildSendInput('acceptance');
+    if (failure === 'missing-run') input.runId = null;
+    if (failure === 'stale-run') input.runId = 'old-run';
+    if (failure === 'missing-manifest-run') manifestReader.manifest.activeRunId = null;
+    if (failure === 'missing-snapshot') manifestReader.manifest.capabilitySnapshotId = null;
+    if (failure === 'stale-caller-snapshot') input.capabilitySnapshotId = 'old-cap';
+    if (failure === 'stale-body-snapshot')
+      input.body = { ...(input.body as object), expectedCapabilitySnapshotId: 'old-cap' };
+    if (failure === 'missing-body-run') input.body = { ...(input.body as object), runId: null };
+    if (failure === 'wrong-body-team') input.body = { ...(input.body as object), teamId: 'other' };
+    if (failure === 'wrong-body-lane') input.body = { ...(input.body as object), laneId: 'other' };
+
+    await expect(createService().execute(input)).rejects.toThrow(/persisted lane/);
+    expect(handshakePort.calls).toHaveLength(0);
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+  });
+
   it('does not apply runtime-store high watermark preconditions to sendMessage delivery', async () => {
     clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
     const server = peerIdentity('agent_teams_orchestrator', {
@@ -733,9 +846,16 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
       ok: true,
     });
+    expect(handshakePort.calls[0]).toMatchObject({
+      expectedRunId: 'run-1',
+      expectedCapabilitySnapshotId: 'cap-1',
+      expectedManifestHighWatermark: null,
+    });
     expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body).toMatchObject({ expectedCapabilitySnapshotId: 'cap-1' });
     expect(bridge.calls[0].body.preconditions).toMatchObject({
       expectedManifestHighWatermark: null,
+      expectedCapabilitySnapshotId: 'cap-1',
       idempotencyKey: expect.stringMatching(
         /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
       ),
@@ -837,7 +957,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         expectedRunId: 'run-1',
         expectedCapabilitySnapshotId: 'cap-1',
         expectedBehaviorFingerprint: 'a'.repeat(64),
-        expectedManifestHighWatermark: 10,
+        expectedManifestHighWatermark: null,
         commandLeaseId: 'lease-1',
         idempotencyKey: expect.stringMatching(
           /^opencode:opencode\.launchTeam:team-a:no-lane:run-1:/
@@ -1091,27 +1211,27 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
-  it('marks result precondition mismatch as failed and does not leave active lease', async () => {
+  it('rejects another run in the launch result despite independent watermarks and releases the lease', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({
         requestId: options.requestId,
         data: {
-          runId: 'run-1',
+          runId: 'run-2',
           idempotencyKey: body.preconditions.idempotencyKey,
-          runtimeStoreManifestHighWatermark: 9,
+          runtimeStoreManifestHighWatermark: 0,
         },
       });
     const service = createService();
 
     await expect(service.execute(buildLaunchInput())).rejects.toThrow(
-      'Bridge result manifest high watermark is stale'
+      'OpenCode bridge runId mismatch'
     );
 
     const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
     await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
       status: 'failed',
       retryable: false,
-      lastError: 'Bridge result manifest high watermark is stale',
+      lastError: 'OpenCode bridge runId mismatch',
     });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });

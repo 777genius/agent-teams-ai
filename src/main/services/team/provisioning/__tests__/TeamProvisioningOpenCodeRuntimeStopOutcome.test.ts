@@ -53,6 +53,18 @@ describe('collectOpenCodeLaneRuntimePids', () => {
 });
 
 describe('describeOpenCodeRuntimeStopResult', () => {
+  it('preserves failed member diagnostics after stop outcome resolution', () => {
+    expect(
+      describeOpenCodeRuntimeStopResult({
+        members: {
+          alice: { stopped: false, diagnostics: ['host identity changed'] },
+          bob: { stopped: true, diagnostics: ['already stopped'] },
+          lead: { stopped: false },
+        },
+      })
+    ).toBe('alice: host identity changed; lead: stop unconfirmed');
+  });
+
   it('joins the diagnostics and warnings the orchestrator reported', () => {
     expect(
       describeOpenCodeRuntimeStopResult({

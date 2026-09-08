@@ -994,6 +994,39 @@ describe('OpenCode runtime stop flow', () => {
     expect(ports.clearOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
   });
 
+  it('reports a failed member when aggregate stop diagnostics are empty', async () => {
+    const ports = makePorts({
+      adapter: makeAdapter(
+        vi.fn(async (input) => ({
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: false,
+          members: {
+            'team-lead': {
+              memberName: 'team-lead',
+              providerId: 'opencode' as const,
+              stopped: false,
+              diagnostics: ['session identity changed'],
+            },
+            alice: {
+              memberName: 'alice',
+              providerId: 'opencode' as const,
+              stopped: true,
+              diagnostics: [],
+            },
+          },
+          warnings: [],
+          diagnostics: [],
+        }))
+      ),
+    });
+    await expect(stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports)).rejects.toThrow(
+      'OpenCode team did not confirm stop: team-lead: session identity changed'
+    );
+    expect(ports.clearCalls).toEqual([]);
+    expect(ports.emittedEvents).toEqual([]);
+  });
+
   it('preserves newer primary storage and alive ownership installed during the first clear await', async () => {
     const firstClearRelease = createDeferred<void>();
     const firstClearStarted = createDeferred<void>();

@@ -143,7 +143,7 @@ import {
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
 import {
-  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildOpenCodeAppProfileScope,
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
@@ -249,16 +249,15 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
-  purgeStaleOpenCodeHostStartupLocks,
-  resolveStartupStaleLockMinAgeMs,
-  startPeriodicOpenCodeHostStartupLockPurge,
-} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
-import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import {
-  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
-  runOpenCodeStartupRuntimeSweepTail,
-} from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+  buildOpenCodeProcessOwnershipMarkers,
+  cleanupOpenCodeHostProcessFallback,
+  runOpenCodeLifecycleCleanupTail,
+  type OpenCodeLifecycleCleanupTailPorts,
+} from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
+import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -502,9 +501,12 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
+  const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
     CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+    CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
@@ -533,6 +535,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
       mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
         CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
       });
     }
   };
@@ -590,7 +593,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
@@ -622,7 +626,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
@@ -678,9 +683,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
     appVersion: clientIdentity.appVersion,
-    // Refresh the live endpoint before Cursor MCP registration, including after server restart.
-    resolveAgentTeamsMcpUrl: async () =>
-      (await resolveBridgeCommandEnv()).CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
   });
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([
@@ -690,6 +692,12 @@ async function createOpenCodeRuntimeAdapterRegistry(
   ]);
 }
 let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
+const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
+  logSweepResult: (message) => logger.diagnostic(message),
+  logWarning: (message) => logger.warn(message),
+  logError: (message) => logger.error(message),
+};
 
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
@@ -726,77 +734,17 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   // reap.
   const sweepCommandSettledAtMs = Date.now();
 
-  if (reason === 'startup' && !registryCleanupAvailable) {
-    logger.warn(
-      '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
-    );
-    return;
-  }
-
-  await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
-    mode: reason === 'shutdown' ? 'force' : 'orphaned',
-    excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeProcessOwnershipMarkers() : {}),
-    startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
+  await runOpenCodeLifecycleCleanupTail({
+    reason,
+    registryHostPids,
+    registryCleanupAvailable,
+    appStartedAtMs,
+    sweepCommandSettledAtMs,
+    managedHostInstanceId: openCodeManagedHostInstanceId,
+    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+    ports: openCodeLifecycleCleanupTailPorts,
   });
-
-  if (reason === 'startup') {
-    await runOpenCodeStartupRuntimeSweepTail({
-      sweepCommandSettledAtMs,
-      ownershipMarkers: getOpenCodeProcessOwnershipMarkers(),
-      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
-      logWarning: (message) => logger.warn(message),
-      logError: (message) => logger.error(message),
-    });
-    // A host that was killed never released its orchestrator startup lock, and
-    // the next launch readiness probe waits on every leftover in turn. The
-    // reap above has just run, so a lock still held open belongs to a live
-    // host: on Windows its unlink fails harmlessly, and where the OS unlinks
-    // an open file instead the floor alone has to keep a host that is starting
-    // right now out of scope.
-    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
-      minAgeMs: resolveStartupStaleLockMinAgeMs(),
-    });
-    if (lockPurge.removed > 0) {
-      logger.diagnostic(
-        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
-      );
-    }
-    for (const diagnostic of lockPurge.diagnostics) {
-      logger.warn(`[OpenCode] startup lock purge: ${diagnostic}`);
-    }
-  }
-}
-
-function getOpenCodeProcessOwnershipMarkers(): Pick<
-  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
-> {
-  return process.platform === 'win32'
-    ? {
-        requiredServeConfigMarkersAny: [
-          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
-        ],
-      }
-    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
-}
-
-async function cleanupOpenCodeHostProcessFallback(
-  label: string,
-  options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
-): Promise<void> {
-  const fallback = await cleanupManagedOpenCodeServeProcesses(options);
-  if (fallback.killed > 0) {
-    // Durable, not a warning: this is the app's most destructive lifecycle
-    // action, and the count has to still be readable when someone asks why a
-    // host they expected is gone. `info` never reaches a sink at all.
-    logger.diagnostic(
-      `[OpenCode] opencode_managed_hosts_killed sweep=${label} count=${fallback.killed}`
-    );
-  }
-  for (const diagnostic of fallback.diagnostics) {
-    logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
-  }
 }
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
@@ -2099,16 +2047,18 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
-  // Awaited, and before the runtime adapter registry exists: a managed host
-  // orphaned by a previous app instance still holds the fixed loopback ports a
-  // new host needs, and whoever gets there first wins. Reaping afterwards would
-  // mean the first launch of this session races a host it cannot see.
+  // Reap older, profile-owned orphans before adapter initialization so the
+  // first launch cannot race a stale host holding its loopback port.
   publishStartupStatus({
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
   });
   await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
     appStartedAtMs,
+    requiredProfileScope: buildOpenCodeAppProfileScope(
+      app.getPath('userData'),
+      getClaudeBasePath()
+    ),
     logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
     logWarning: (message) => logger.warn(message),
     logError: (message) => logger.error(message),
@@ -2129,7 +2079,7 @@ async function initializeServices(): Promise<void> {
   scheduleStartupTask(() => {
     void cleanupOpenCodeHostsForLifecycle('startup')
       .catch((error: unknown) =>
-        logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
       )
       .finally(settleStartupRuntimeSweep);
   }, STARTUP_RECOVERY_DELAY_MS);
@@ -3110,10 +3060,14 @@ async function shutdownServices(): Promise<void> {
     await runShutdownStep(
       'OpenCode post-subprocess fallback cleanup',
       () =>
-        cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
-          mode: 'force',
-          ...getOpenCodeProcessOwnershipMarkers(),
-        }),
+        cleanupOpenCodeHostProcessFallback(
+          'post-subprocess shutdown fallback',
+          {
+            mode: 'force',
+            ...buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          },
+          openCodeLifecycleCleanupTailPorts
+        ),
       5_000
     );
 
