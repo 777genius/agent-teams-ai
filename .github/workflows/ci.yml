@@ -165,6 +165,10 @@ jobs:
         if: matrix.shard == 1
         run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
 
+      - name: Test OpenCode proof runner safety
+        if: matrix.shard == 1
+        run: node --test test/scripts/proveOpenCode*.test.mjs
+
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
 
