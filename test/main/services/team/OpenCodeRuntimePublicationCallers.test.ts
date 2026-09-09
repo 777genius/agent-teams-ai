@@ -134,7 +134,7 @@ describe('real OpenCode liveness publication callers', () => {
     const delivery = createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost(host, {
       getTeamsBasePath,
       nowIso: () => after,
-      logger: { warn: vi.fn(), error: vi.fn() },
+      logger: { warn: vi.fn() },
     });
     const pid = createRememberOpenCodeRuntimePidFromBridgePortsFromService(service, {
       nowIso: () => after,
