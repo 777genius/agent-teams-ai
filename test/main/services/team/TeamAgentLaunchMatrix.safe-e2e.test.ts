@@ -101,6 +101,7 @@ import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
 } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
@@ -597,8 +598,19 @@ describe(
             await cleanupEntered;
             expect(lifecycle.runTracking.getTrackedRunId(teamName)).toBeNull();
             const successorRunId = `${candidateRunId}-successor`;
+            // A fresh successor must acquire publication authority after Stop.
+            // A late snapshot write alone must never resurrect the stopped run.
+            await expect(
+              new TeamLaunchStateStore().beginLaunch(
+                teamName,
+                successorRunId,
+                publishedSnapshot.expectedMembers,
+                () => true
+              )
+            ).resolves.toBe(true);
             successorSnapshot = {
               ...publishedSnapshot,
+              publicationRunId: successorRunId,
               members: Object.fromEntries(
                 Object.entries(publishedSnapshot.members).map(([name, member]) => [
                   name,
