@@ -48,6 +48,7 @@ import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type {
   AgentChangeSet,
   ChangeStats,
+  TaskChangeRequestOptions,
   TaskChangeReviewability,
   TaskChangeSetV2,
   TeamConfig,
@@ -109,16 +110,6 @@ interface CacheEntry {
 interface TaskChangeSummaryCacheEntry {
   data: TaskChangeSetV2;
   expiresAt: number;
-}
-
-interface TaskChangeRequestOptions {
-  owner?: string;
-  status?: string;
-  intervals?: { startedAt: string; completedAt?: string }[];
-  since?: string;
-  stateBucket?: TaskChangeStateBucket;
-  summaryOnly?: boolean;
-  forceFresh?: boolean;
 }
 
 interface LogFileRef {
@@ -242,7 +233,7 @@ export class ChangeExtractorService {
     options?: TaskChangeRequestOptions
   ): Promise<TaskChangeSetV2> {
     const includeDetails = options?.summaryOnly !== true;
-    if (!includeDetails && options?.forceFresh !== true) {
+    if (!includeDetails && options?.forceFresh !== true && options?.retryBackfill !== true) {
       const earlyInFlightKey = this.buildEarlyTaskChangeSummaryInFlightKey(
         teamName,
         taskId,
@@ -297,7 +288,9 @@ export class ChangeExtractorService {
     const summaryCacheableState = isTaskChangeSummaryCacheable(effectiveStateBucket);
     const shouldUseSummaryCache = !includeDetails && summaryCacheableState;
 
-    if (options?.forceFresh) this.openCodeBackfillRetry.reset(JSON.stringify([teamName, taskId]));
+    if (options?.retryBackfill === true) {
+      this.openCodeBackfillRetry.reset(JSON.stringify([teamName, taskId]));
+    }
     let version = initialVersion;
     if (!summaryCacheableState || options?.forceFresh === true) {
       await this.invalidateTaskChangeSummaries(teamName, [taskId], {
@@ -822,6 +815,13 @@ export class ChangeExtractorService {
     sourceGeneration: string | null,
     backfillMemberName?: string
   ): Promise<OpenCodeBackfillAttempt> {
+    const cacheAtStart = this.openCodeBackfillCache.get(cacheKey);
+    const clearOwnedCache = (): void => {
+      // A replaced runtime may have published a successful entry while this attempt awaited.
+      if (this.openCodeBackfillCache.get(cacheKey) === cacheAtStart) {
+        this.openCodeBackfillCache.delete(cacheKey);
+      }
+    };
     const deliveryContext = await this.createOpenCodeDeliveryContextTempFile(
       input.teamName,
       input.taskId,
@@ -906,7 +906,7 @@ export class ChangeExtractorService {
           expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
         });
       } else {
-        this.openCodeBackfillCache.delete(cacheKey);
+        clearOwnedCache();
       }
 
       if (diagnostics.length > 0 && result.outcome !== 'no-history') {
@@ -933,7 +933,7 @@ export class ChangeExtractorService {
         evidencePipeline: OPEN_CODE_AUTO_BACKFILL_EVIDENCE_PIPELINE,
         error: error instanceof Error ? error.message : String(error),
       }).catch(() => undefined);
-      this.openCodeBackfillCache.delete(cacheKey);
+      clearOwnedCache();
       return { attempted: true, backfilled: false };
     } finally {
       await deliveryContext.cleanup();
