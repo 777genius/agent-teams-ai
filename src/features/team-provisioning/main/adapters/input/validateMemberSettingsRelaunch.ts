@@ -44,7 +44,7 @@ export function validateMemberSettingsRelaunch(
     expectedFingerprint: input.expectedFingerprint,
     expectedTeamSettingsFingerprint: input.expectedTeamSettingsFingerprint,
     baseline,
-    model: input.model as string | null,
-    effort: input.effort as import('@shared/types').EffortLevel | null,
+    model: input.model,
+    effort: input.effort,
   };
 }

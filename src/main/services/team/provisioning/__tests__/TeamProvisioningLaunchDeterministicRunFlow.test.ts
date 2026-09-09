@@ -295,8 +295,7 @@ describe('TeamProvisioningLaunchDeterministicRunFlow', () => {
           setup,
           stopAllGenerationAtStart: 7,
           onProgress,
-          configuredMemberSpecs: setup.configuredMemberSpecs,
-        teammateRuntimeDisallowedTools: 'Bash(rm:*)',
+          teammateRuntimeDisallowedTools: 'Bash(rm:*)',
         },
         ports
       )
