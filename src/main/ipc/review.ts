@@ -1055,6 +1055,7 @@ function sanitizeTaskChangeOptions(options?: unknown): TaskChangeRequestOptions 
         : undefined,
     summaryOnly: raw.summaryOnly === true,
     forceFresh: raw.forceFresh === true,
+    retryBackfill: raw.retryBackfill === true,
   };
 }
 
@@ -1096,7 +1097,6 @@ async function handleGetTaskChanges(
   options?: unknown
 ): Promise<IpcResult<TaskChangeSetV2>> {
   const opts = sanitizeTaskChangeOptions(options);
-
   return wrapReviewHandler('getTaskChanges', () =>
     getChangeExtractor().getTaskChanges(teamName, taskId, opts)
   );
