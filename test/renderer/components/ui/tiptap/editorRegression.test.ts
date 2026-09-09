@@ -101,7 +101,7 @@ describe('Tiptap Markdown editor regression', () => {
     );
     expect(editor.state.selection).toBeInstanceOf(TextSelection);
     // Exercise pm/model with nodes returned by the editor's actual schema.
-    expect(Fragment.from(editor.state.doc.firstChild!).size).toBe(13);
+    expect(Fragment.from(editor.state.doc.firstChild).size).toBe(13);
     expect(editor.chain().toggleBold().insertContent('Hi').run()).toBe(true);
     expect(editor.getMarkdown()).toBe('**Hi** world');
     const edited = editor.getJSON();
