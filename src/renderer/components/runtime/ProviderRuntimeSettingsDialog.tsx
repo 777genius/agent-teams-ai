@@ -53,6 +53,7 @@ import {
   isCodexProviderRuntimeMissing,
   shouldOfferCodexRuntimeInstall,
 } from './codexRuntimeInstallAction';
+import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
 import {
   formatProviderAuthMethodLabelForProvider,
   formatProviderAuthModeLabelForProvider,
@@ -967,7 +968,6 @@ export const ProviderRuntimeSettingsDialog = ({
     void fetchApiKeys();
     void fetchApiKeyStorageStatus();
   }, [fetchApiKeyStorageStatus, fetchApiKeys, initialProviderId, open]);
-
   useEffect(() => {
     if (open) {
       return;
@@ -993,7 +993,6 @@ export const ProviderRuntimeSettingsDialog = ({
     setCodexCustomProviderError(null);
     setCodexCustomProviderStatus(null);
   }, [open]);
-
   useEffect(() => {
     setConnectionError(null);
     setRuntimeError(null);
@@ -1002,7 +1001,6 @@ export const ProviderRuntimeSettingsDialog = ({
     setCodexCustomProviderError(null);
     setCodexCustomProviderStatus(null);
   }, [selectedProviderId]);
-
   useEffect(() => {
     if (selectedProviderId === 'codex' && codexAccount.error) {
       setConnectionError(codexAccount.error);
@@ -1199,9 +1197,12 @@ export const ProviderRuntimeSettingsDialog = ({
     codexConnection?.login.status === 'starting' || codexConnection?.login.status === 'pending';
   const codexLoginAuthUrl = codexConnection?.login.authUrl ?? null;
   const codexLoginUserCode = codexConnection?.login.userCode ?? null;
-  const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
-  const configuredAuthMode: CliProviderAuthMode | undefined =
-    selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
+  const { configurableAuthModes, configuredAuthMode, anthropicCompatibleEndpointEnabled } =
+    resolveProviderAuthModeUiState(
+      selectedProvider,
+      appConfig?.providerConnections?.anthropic.authMode,
+      anthropicCompatibleConfig.enabled
+    );
   const connectionMethodCardOptions = selectedProvider
     ? getConnectionMethodCardOptions(selectedProvider, t, runtimeBackendSummaryText)
     : null;
@@ -1320,8 +1321,8 @@ export const ProviderRuntimeSettingsDialog = ({
       : false;
   const canRequestSubscriptionLogin =
     selectedProvider?.providerId === 'anthropic' &&
-    Boolean(selectedProvider.connection?.supportsOAuth && onRequestLogin) &&
-    selectedProvider.connection?.compatibleEndpoint?.enabled !== true &&
+    Boolean((selectedProvider.connection?.supportsOAuth ?? true) && onRequestLogin) &&
+    !anthropicCompatibleEndpointEnabled &&
     configuredAuthMode !== 'api_key' &&
     selectedProvider.statusMessage !== 'Checking...' &&
     (!selectedProvider?.authenticated || hasSubscriptionSession || configuredAuthMode === 'oauth');
@@ -1329,7 +1330,6 @@ export const ProviderRuntimeSettingsDialog = ({
     selectedProvider?.providerId === 'anthropic'
       ? (selectedProvider.connection?.compatibleEndpoint ?? null)
       : null;
-  const anthropicCompatibleEndpointEnabled = anthropicCompatibleEndpoint?.enabled === true;
   const anthropicCompatibleTokenConfigured = Boolean(
     selectedCompatibleToken || anthropicCompatibleEndpoint?.tokenConfigured
   );
