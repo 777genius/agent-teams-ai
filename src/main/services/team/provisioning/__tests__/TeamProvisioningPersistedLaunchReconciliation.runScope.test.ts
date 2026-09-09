@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -269,7 +270,7 @@ describe('untracked persisted launch cleanup with the real publication store', (
     'freshness-successor',
     'unreadable-freshness',
   ])('clears only the observed publication: %s', async (transition) => {
-    const temp = await mkdtemp('/tmp/untracked-launch-clear-');
+    const temp = await mkdtemp(path.join(tmpdir(), 'untracked-launch-clear-'));
     setClaudeBasePathOverride(temp);
     let release: (() => void) | undefined;
     let publication: Promise<unknown> | undefined;

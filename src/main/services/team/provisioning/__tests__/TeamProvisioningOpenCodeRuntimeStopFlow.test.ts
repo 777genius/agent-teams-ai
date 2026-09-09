@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -314,7 +315,7 @@ function expectFinalSingleLaneState(lane: MixedSecondaryRuntimeLaneState): void 
 
 describe('OpenCode runtime stop flow', () => {
   it('waits for other lanes and preserves diagnostics when session identity is malformed', async () => {
-    const temp = await mkdtemp('/tmp/stop-lane-identity-');
+    const temp = await mkdtemp(path.join(tmpdir(), 'stop-lane-identity-'));
     const release = createDeferred<void>();
     const stop = vi.fn<TeamLaunchRuntimeAdapter['stop']>(async (input) => {
       if (input.laneId === 'lane-b') throw new Error('lane-b adapter failed');

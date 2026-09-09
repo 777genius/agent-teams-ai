@@ -267,7 +267,7 @@ describe('permission publication results and reopened observation', () => {
         runId: 'run-1',
         laneId: 'primary',
         memberName: 'Builder',
-        cwd: '/tmp/permission-publication-test',
+        cwd: path.dirname(getTeamLaunchStatePath(teamName)),
         sessionId: 'session-1',
         responseState: 'permission_blocked',
       },
