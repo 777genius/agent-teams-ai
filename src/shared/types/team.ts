@@ -1041,6 +1041,8 @@ export interface PersistedTeamLaunchSummary {
 }
 
 export interface PersistedTeamLaunchSnapshot {
+  /** App publication authority; independent of per-lane runtime run IDs. */
+  publicationRunId?: string;
   version: 2;
   teamName: string;
   updatedAt: string;

@@ -341,14 +341,22 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     const boundary = new TeamProvisioningLaunchStateStoreBoundary({
       launchStateStore: {
         read: async () => persistedSnapshot,
-        write: async (_teamName, snapshot) => {
+        write: async (_teamName, snapshot, options) => {
           writeCount += 1;
           storeEvents.push(`write:${snapshot.members.alice?.model}`);
           if (writeCount === 1) {
             staleWriteStarted.resolve();
             await staleWriteGate.promise;
           }
+          // The store owns the final authority check inside its publication queue.
+          if (options?.isAuthorized?.() === false) {
+            storeEvents.push(`reject:${snapshot.members.alice?.model}`);
+            expect(persistedSnapshot).toBeNull();
+            return false;
+          }
+          expect(options?.runId).toBe(trackedRunId);
           persistedSnapshot = snapshot;
+          return true;
         },
         clear: async () => {
           storeEvents.push('clear');
@@ -401,7 +409,11 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     staleWriteGate.resolve();
 
     const [, successor] = await Promise.all([stalePersistence, successorPersistence]);
-    expect(storeEvents).toEqual(['write:stale-model', 'clear', 'write:successor-model']);
+    expect(storeEvents).toEqual([
+      'write:stale-model',
+      'reject:stale-model',
+      'write:successor-model',
+    ]);
     expect(persistedSnapshot).toEqual(successor.snapshot);
     expect((persistedSnapshot as PersistedTeamLaunchSnapshot | null)?.members.alice?.model).toBe(
       'successor-model'

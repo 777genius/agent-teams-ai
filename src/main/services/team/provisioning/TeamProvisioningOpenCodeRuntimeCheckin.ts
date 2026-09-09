@@ -564,6 +564,7 @@ function buildOpenCodeRuntimeMemberLivenessSnapshot<Run extends OpenCodeRuntimeC
     },
     updatedAt: input.observedAt,
   });
+  snapshot.publicationRunId = previous?.publicationRunId;
   return { snapshot, shouldEmitMemberSpawnChange };
 }
 

@@ -330,6 +330,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
 
     await expect(reader.read(teamName, laneId)).resolves.toEqual({
+      behaviorFingerprint: null,
       highWatermark: 0,
       activeRunId: null,
       capabilitySnapshotId: null,
@@ -366,6 +367,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     );
 
     await expect(reader.read(teamName, laneId)).resolves.toEqual({
+      behaviorFingerprint: null,
       highWatermark: 11,
       activeRunId: 'legacy-run',
       capabilitySnapshotId: 'cap-1',

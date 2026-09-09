@@ -1,6 +1,18 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+
+import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { describe, expect, it, vi } from 'vitest';
 
+import { getTeamLaunchFreshnessPath } from '../../TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import {
+  getTeamLaunchStatePath,
+  getTeamLaunchSummaryPath,
+  TeamLaunchStateStore,
+  withTeamLaunchStatePublicationLock,
+} from '../../TeamLaunchStateStore';
 import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
 import {
   type ReconcilePersistedLaunchStatePorts,
@@ -38,11 +50,12 @@ function cleanSnapshot(): PersistedTeamLaunchSnapshot {
 function createBoundary(input: {
   trackedRunId: string | null;
   stored: PersistedTeamLaunchSnapshot | null;
+  store?: TeamLaunchStateStore;
 }) {
   const state = { snapshot: input.stored };
   const clearBootstrapState = vi.fn(async () => undefined);
   const boundary = new TeamProvisioningLaunchStateStoreBoundary({
-    launchStateStore: {
+    launchStateStore: input.store ?? {
       read: async () => state.snapshot,
       write: async (_teamName, snapshot) => {
         state.snapshot = snapshot;
@@ -245,5 +258,116 @@ describe('persisted launch reconcile run scope', () => {
 
     expect(written).toBe(stored);
     expect(state.snapshot).toBe(stored);
+  });
+});
+
+describe('untracked persisted launch cleanup with the real publication store', () => {
+  it.each([
+    'unchanged',
+    'successor',
+    'admitted-successor',
+    'queued-successor',
+    'freshness-successor',
+    'unreadable-freshness',
+  ])('clears only the observed publication: %s', async (transition) => {
+    const temp = await mkdtemp(path.join(tmpdir(), 'untracked-launch-clear-'));
+    setClaudeBasePathOverride(temp);
+    let release: (() => void) | undefined;
+    let publication: Promise<unknown> | undefined;
+    try {
+      await mkdir(path.join(getTeamsBasePath(), 'demo'), { recursive: true });
+      const original = {
+        ...cleanSnapshot(),
+        publicationRunId: 'persisted-run',
+      };
+      let store = new TeamLaunchStateStore();
+      await store.beginLaunch('demo', 'persisted-run', ['Builder'], () => true);
+      await store.write('demo', original, { runId: 'persisted-run' });
+      store = new TeamLaunchStateStore(); // Simulate restart with no in-memory run tracking.
+      const { boundary, clearBootstrapState } = createBoundary({
+        trackedRunId: null,
+        stored: null,
+        store,
+      });
+      const successor = { ...original, publicationRunId: 'successor-run' };
+      const ports = createReconcilePorts({
+        getTrackedRunId: () => null,
+        readLaunchState: () => store.read('demo'),
+        clearPersistedLaunchState: async (teamName, options) => {
+          if (transition === 'successor' || transition === 'admitted-successor') {
+            await store.beginLaunch('demo', 'successor-run', ['Builder'], () => true);
+            if (transition === 'successor')
+              await store.write('demo', successor, { runId: 'successor-run' });
+          }
+          if (transition === 'freshness-successor')
+            await writeFile(
+              getTeamLaunchFreshnessPath('demo'),
+              JSON.stringify({
+                version: 1,
+                teamName: 'demo',
+                kind: 'launch',
+                runId: 'successor-run',
+              })
+            );
+          if (transition === 'unreadable-freshness')
+            await writeFile(getTeamLaunchFreshnessPath('demo'), '{broken');
+          if (transition === 'queued-successor') {
+            let entered!: () => void;
+            const started = new Promise<void>((resolve) => {
+              entered = resolve;
+            });
+            const gate = new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            publication = withTeamLaunchStatePublicationLock('demo', async () => {
+              entered();
+              await gate;
+              // Simulate a publication already ahead of the cleanup in the shared queue.
+              await writeFile(getTeamLaunchStatePath('demo'), JSON.stringify(successor));
+              await writeFile(getTeamLaunchSummaryPath('demo'), JSON.stringify(successor.summary));
+              await writeFile(
+                getTeamLaunchFreshnessPath('demo'),
+                JSON.stringify({
+                  version: 1,
+                  teamName: 'demo',
+                  kind: 'launch',
+                  runId: 'successor-run',
+                })
+              );
+            });
+            await started;
+          }
+          const clearing = boundary.clearPersistedLaunchState(teamName, options);
+          // Let the boundary admit the clear before the queued publication completes.
+          await Promise.resolve();
+          await Promise.resolve();
+          release?.();
+          await clearing;
+        },
+      });
+      const reconcile = reconcilePersistedLaunchStateWithPorts('demo', ports);
+      if (transition === 'unreadable-freshness') await expect(reconcile).rejects.toThrow();
+      else await reconcile;
+      if (transition === 'unchanged') {
+        expect(await store.read('demo')).toBeNull();
+        await expect(readFile(getTeamLaunchSummaryPath('demo'))).rejects.toMatchObject({
+          code: 'ENOENT',
+        });
+      } else {
+        expect(await store.read('demo')).toMatchObject({
+          publicationRunId:
+            transition.includes('successor') && transition !== 'freshness-successor'
+              ? 'successor-run'
+              : 'persisted-run',
+        });
+        await expect(readFile(getTeamLaunchSummaryPath('demo'))).resolves.toBeDefined();
+      }
+      expect(clearBootstrapState).not.toHaveBeenCalled();
+    } finally {
+      release?.();
+      await publication;
+      setClaudeBasePathOverride(null);
+      await rm(temp, { recursive: true, force: true });
+    }
   });
 });

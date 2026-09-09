@@ -4253,7 +4253,7 @@ async function handleStopTeam(
       logWarning: (message) => logger.warn(message),
       stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
       countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
-      markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      markTeamStopped: (name, authority) => new TeamLaunchStateStore().markStopped(name, authority),
       reapOwnedLeadProcessTrees: (name, context) =>
         reapCursorAgentLeadTreesForStoppedTeam({
           teamName: name,
@@ -4317,7 +4317,7 @@ async function handleForceStopTeam(
           requestedAtMs: context.requestedAtMs,
         }),
       logWarning: (message) => logger.warn(message),
-      markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      markTeamStopped: (name, authority) => new TeamLaunchStateStore().markStopped(name, authority),
       reapOwnedLeadProcessTrees: (name, context) =>
         reapCursorAgentLeadTreesForStoppedTeam({
           teamName: name,

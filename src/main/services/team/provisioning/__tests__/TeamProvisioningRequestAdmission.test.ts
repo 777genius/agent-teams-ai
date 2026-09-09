@@ -1,5 +1,11 @@
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningRequestAdmissionBoundary,
@@ -8,6 +14,8 @@ import {
 } from '../TeamProvisioningRequestAdmission';
 
 import type { TeamCreateRequest, TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';
+
+vi.mock('electron', () => ({ app: { getPath: () => '/tmp', isPackaged: false } }));
 
 const createRequest: TeamCreateRequest = {
   teamName: 'alpha',
@@ -74,6 +82,61 @@ function createHost(
 }
 
 describe('TeamProvisioningRequestAdmission', () => {
+  it.each(['team-lock', 'preparation'])(
+    'keeps original launch admission across %s awaits',
+    async (barrier) => {
+      const temp = await mkdtemp(join(tmpdir(), 'request-publication-admission-'));
+      setClaudeBasePathOverride(temp);
+      await mkdir(join(getTeamsBasePath(), 'alpha'), { recursive: true });
+      const store = new TeamLaunchStateStore();
+      let entered!: () => void, release!: () => void;
+      const entering = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let wrote: boolean | undefined;
+      const host = createHost({
+        withTeamLock: async (_team, fn) => {
+          if (barrier === 'team-lock') {
+            entered();
+            await gate;
+          }
+          return fn();
+        },
+        runTracking: { getResolvableProvisioningRunId: () => null },
+        shouldRouteOpenCodeToRuntimeAdapter: () => true,
+        launchOpenCodeTeamThroughRuntimeAdapter: async () => {
+          if (barrier === 'preparation') {
+            entered();
+            await gate;
+          }
+          wrote = await store.beginLaunch('alpha', 'old-admitted-launch', [], () => true);
+          return { runId: 'old-admitted-launch' };
+        },
+      });
+      try {
+        const launch = createTeamProvisioningRequestAdmissionBoundary(host).launchTeam(
+          launchRequest,
+          vi.fn()
+        );
+        const checked =
+          barrier === 'team-lock' ? expect(launch).rejects.toThrow(/superseded/) : launch;
+        await entering;
+        const stop = await store.beginStop('alpha');
+        release();
+        await checked;
+        expect(wrote).toBe(barrier === 'team-lock' ? undefined : false);
+        await store.markStopped('alpha', stop);
+        expect(await store.isStopped('alpha')).toBe(true);
+      } finally {
+        setClaudeBasePathOverride(null);
+        await rm(temp, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('rejects missing or blank team names before admission', () => {
     expect(() => getTeamProvisioningRequestLockKey({})).toThrow('Team name is required');
     expect(() => getTeamProvisioningRequestLockKey({ teamName: '   ' })).toThrow(

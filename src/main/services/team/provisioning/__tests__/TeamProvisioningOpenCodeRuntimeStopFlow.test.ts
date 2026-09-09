@@ -1,5 +1,10 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
+import { getOpenCodeRuntimeManifestPath } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   type OpenCodeRuntimeStopFlowPorts,
   type SingleMixedSecondaryRuntimeLaneStopPorts,
@@ -309,6 +314,72 @@ function expectFinalSingleLaneState(lane: MixedSecondaryRuntimeLaneState): void 
 }
 
 describe('OpenCode runtime stop flow', () => {
+  it('waits for other lanes and preserves diagnostics when session identity is malformed', async () => {
+    const temp = await mkdtemp(path.join(tmpdir(), 'stop-lane-identity-'));
+    const release = createDeferred<void>();
+    const stop = vi.fn<TeamLaunchRuntimeAdapter['stop']>(async (input) => {
+      if (input.laneId === 'lane-b') throw new Error('lane-b adapter failed');
+      await release.promise;
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const ports = makePorts({
+      adapter: makeAdapter(stop),
+      secondaryRuns: ['a', 'b', 'c'].map((id) => ({
+        runId: `run-${id}`,
+        providerId: 'opencode',
+        laneId: `lane-${id}`,
+        memberName: id,
+      })),
+    });
+    ports.teamsBasePath = temp;
+    const sessions = path.join(
+      path.dirname(getOpenCodeRuntimeManifestPath(temp, 'team-a', 'lane-a')),
+      'opencode-sessions.json'
+    );
+    await mkdir(path.dirname(sessions), { recursive: true });
+    await writeFile(sessions, '{"sessions": "invalid"}');
+    const stopping = stopMixedSecondaryRuntimeLanes('team-a', ports).catch((error: unknown) => error);
+    try {
+      await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(2));
+      expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(true);
+      release.resolve();
+      expect(await stopping).toBeInstanceOf(Error);
+      expect(stop).not.toHaveBeenCalledWith(expect.objectContaining({ laneId: 'lane-a' }));
+      expect(ports.clearCalls).toEqual([
+        { teamName: 'team-a', laneId: 'lane-c', expectedRunId: 'run-c' },
+      ]);
+      expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledExactlyOnceWith('team-a', 'lane-c');
+      expect(ports.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'secondary lane lane-a: Cannot establish OpenCode Stop session identity'
+        )
+      );
+      expect(ports.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('secondary lane lane-b: lane-b adapter failed')
+      );
+      for (const timing of [
+        /3 secondary lane/,
+        /lane-a=\d+ms\(failed\)/,
+        /lane-b=\d+ms\(failed\)/,
+        /lane-c=\d+ms/,
+      ]) {
+        expect(ports.logger.info).toHaveBeenCalledWith(expect.stringMatching(timing));
+      }
+      expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
+    } finally {
+      release.resolve();
+      await stopping;
+      await rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('clears exact lane storage only after a single mixed secondary lane confirms stop', async () => {
     const stop = vi.fn(async (input) => ({
       runId: input.runId,
@@ -620,7 +691,7 @@ describe('OpenCode runtime stop flow', () => {
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
   });
 
-  it('treats an unconfirmed secondary lane stop with no live host as already stopped', async () => {
+  it('retains an unconfirmed secondary lane despite absent recorded host', async () => {
     const stop = vi.fn(async (input) => ({
       runId: input.runId,
       teamName: input.teamName,
@@ -635,12 +706,10 @@ describe('OpenCode runtime stop flow', () => {
       isRuntimeProcessAlive: () => false,
     });
 
-    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).resolves.toBeUndefined();
+    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow('session abort not confirmed');
 
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledTimes(1);
-    expect(ports.logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('treating the runtime as already stopped')
-    );
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.clearCalls).toEqual([]);
   });
 
   it('still fails an unconfirmed secondary lane stop while its recorded host is alive', async () => {

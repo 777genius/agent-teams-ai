@@ -7,6 +7,7 @@ import {
   stableHash,
 } from './OpenCodeBridgeCommandContract';
 
+import type { OpenCodeStopRecovery, OpenCodeStopTarget } from './OpenCodeStopOutcomeRecovery';
 export const OPEN_CODE_BRIDGE_COMMAND_LEDGER_SCHEMA_VERSION = 1;
 export const OPEN_CODE_BRIDGE_COMMAND_LEASE_SCHEMA_VERSION = 1;
 
@@ -25,6 +26,8 @@ export interface OpenCodeBridgeCommandLedgerEntry {
   runId: string | null;
   requestHash: string;
   responseHash: string | null;
+  stopTarget?: OpenCodeStopTarget;
+  stopRecovery?: OpenCodeStopRecovery;
   status: OpenCodeBridgeCommandLedgerStatus;
   retryable: boolean;
   startedAt: string;
@@ -74,6 +77,7 @@ export class OpenCodeBridgeCommandLedger {
     laneId?: string | null;
     runId: string | null;
     requestHash: string;
+    stopTarget?: OpenCodeStopTarget;
   }): Promise<OpenCodeBridgeLedgerBeginResult> {
     let outcome: OpenCodeBridgeLedgerBeginResult = 'started';
 
@@ -118,6 +122,7 @@ export class OpenCodeBridgeCommandLedger {
           runId: input.runId,
           requestHash: input.requestHash,
           responseHash: null,
+          ...(input.stopTarget ? { stopTarget: structuredClone(input.stopTarget) } : {}),
           status: 'started',
           retryable: false,
           startedAt: now,
@@ -133,11 +138,13 @@ export class OpenCodeBridgeCommandLedger {
   async markCompleted(input: {
     idempotencyKey: string;
     response: unknown;
+    stopRecovery?: OpenCodeStopRecovery;
     completedAt?: Date;
   }): Promise<void> {
     await this.updateExisting(input.idempotencyKey, (entry) => ({
       ...entry,
       responseHash: stableHash(input.response),
+      ...(input.stopRecovery ? { stopRecovery: input.stopRecovery } : {}),
       status: 'completed',
       retryable: false,
       completedAt: (input.completedAt ?? this.clock()).toISOString(),

@@ -23,6 +23,8 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.launchTeam'
   | 'opencode.reconcileTeam'
   | 'opencode.stopTeam'
+  | 'opencode.stopOutcome'
+  | 'opencode.reconcileStop'
   | 'opencode.sendMessage'
   | 'opencode.observeMessageDelivery'
   | 'opencode.answerPermission'
@@ -119,28 +121,7 @@ export interface OpenCodeReconcileTeamCommandBody {
   reason: string;
 }
 
-export interface OpenCodeStopTeamCommandBody {
-  runId: string;
-  laneId: string;
-  teamId: string;
-  teamName: string;
-  projectPath?: string;
-  expectedCapabilitySnapshotId?: string | null;
-  manifestHighWatermark?: number | null;
-  reason: string;
-  force?: boolean;
-  allowEmptyLaneStop?: boolean;
-}
-export interface OpenCodeStopTeamCommandData {
-  runId: string;
-  stopped: boolean;
-  members: Record<string, { sessionId?: string; stopped: boolean; diagnostics: string[] }>;
-  warnings: OpenCodeTeamBridgeWarning[];
-  diagnostics: OpenCodeTeamBridgeDiagnostic[];
-  idempotencyKey?: string;
-  manifestHighWatermark?: number | null;
-  runtimeStoreManifestHighWatermark?: number | null;
-}
+export type { OpenCodeStopTeamCommandBody, OpenCodeStopTeamCommandData } from './OpenCodeRuntimeStopProtocol';
 
 export interface OpenCodeAnswerPermissionCommandBody {
   runId: string;
@@ -510,6 +491,7 @@ export interface OpenCodeBridgeHandshake {
   acceptedCommands: OpenCodeBridgeCommandName[];
   serverTime: string;
   identityHash: string;
+  stopRecoveryContractVersion?: number;
 }
 export interface OpenCodeBridgeCommandPreconditions {
   handshakeIdentityHash: string;
@@ -531,10 +513,12 @@ export interface OpenCodeStateChangingBridgeEnvelope<
 
 export interface RuntimeStoreManifestEvidence {
   highWatermark: number;
+  sessionIdentityHash?: string;
+  stopSessions?: { teamName: string; laneId: string; runId: string | null; memberName: string; sessionId: string }[];
+  behaviorFingerprint?: string | null;
   activeRunId?: string | null;
   capabilitySnapshotId?: string | null;
 }
-
 const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.handshake',
   'opencode.commandStatus',
@@ -543,6 +527,8 @@ const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.launchTeam',
   'opencode.reconcileTeam',
   'opencode.stopTeam',
+  'opencode.stopOutcome',
+  'opencode.reconcileStop',
   'opencode.sendMessage',
   'opencode.observeMessageDelivery',
   'opencode.answerPermission',

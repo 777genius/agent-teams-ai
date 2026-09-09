@@ -488,7 +488,7 @@ function createService(options: {
     openCodeRuntimeRecoveryIdentity: host.openCodeRuntimeRecoveryIdentity,
     launchStateStore: host.launchStateStore,
     writeLaunchStateSnapshot: host.writeLaunchStateSnapshot,
-    writeLaunchStateSnapshotNow: vi.fn(async (_teamName, snapshot) => ({ snapshot })),
+    writeLaunchStateSnapshotNow: vi.fn(async (_teamName, snapshot) => ({ snapshot, wrote: true })),
     enqueueLaunchStateStoreOperation: vi.fn(async (_teamName, operation) => operation()),
     withTeamLock: host.withTeamLock,
     readConfigForStrictDecision: host.readConfigForStrictDecision,

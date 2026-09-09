@@ -186,7 +186,11 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       // that was just stopped; without countLiveRuntimeHosts the stop cannot
       // finish when the hosts are gone and spends the whole budget instead.
       expect(ports.markTeamStopped).toBeTypeOf('function');
-      await ports.markTeamStopped?.('fixteam');
+      await ports.markTeamStopped?.('fixteam', {
+        teamName: 'fixteam',
+        stopIntent: 1,
+        freshness: null,
+      });
       expect(ports.countLiveRuntimeHosts).toBeTypeOf('function');
       await expect(ports.countLiveRuntimeHosts?.('fixteam')).resolves.toBe(0);
       // The release runs only when this was the last team standing, so the
@@ -206,7 +210,10 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
     }
 
     // Both reach the real collaborators, scoped to the team being stopped.
-    expect(launchStateMocks.markStopped.mock.calls).toEqual([['fixteam'], ['fixteam']]);
+    expect(launchStateMocks.markStopped.mock.calls).toEqual([
+      ['fixteam', { teamName: 'fixteam', stopIntent: 1, freshness: null }],
+      ['fixteam', { teamName: 'fixteam', stopIntent: 1, freshness: null }],
+    ]);
     expect(stopFlowMocks.countLiveRecordedRuntimeHostsForTeam.mock.calls).toEqual([
       [{ teamName: 'fixteam' }],
       [{ teamName: 'fixteam' }],
