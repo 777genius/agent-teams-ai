@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -84,7 +85,7 @@ describe('TeamProvisioningRequestAdmission', () => {
   it.each(['team-lock', 'preparation'])(
     'keeps original launch admission across %s awaits',
     async (barrier) => {
-      const temp = await mkdtemp('/tmp/request-publication-admission-');
+      const temp = await mkdtemp(join(tmpdir(), 'request-publication-admission-'));
       setClaudeBasePathOverride(temp);
       await mkdir(join(getTeamsBasePath(), 'alpha'), { recursive: true });
       const store = new TeamLaunchStateStore();

@@ -14,7 +14,7 @@ const request = parseRuntimeStopRequest({
     teamId: 'test-team',
     laneId: 'primary',
     runId: 'run',
-    projectPath: '/tmp/test-only',
+    projectPath: '/test-only/opencode-stop-protocol',
     capabilitySnapshotId: `opencode:${'a'.repeat(32)}`,
     expectedBehaviorFingerprint: 'b'.repeat(64),
     members: [{ memberName: 'alice', sessionId: 'session' }],

@@ -26,7 +26,7 @@ export async function readOpenCodeStopSessions(manifestPath: string) {
     return {
       teamName: entry.teamName as string,
       laneId: entry.laneId as string,
-      runId: (entry.runId ?? null) as string | null,
+      runId: entry.runId ?? null,
       memberName: entry.memberName as string,
       sessionId: entry.id as string,
     };

@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { setOpenCodeRuntimeActiveRunManifest } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -44,7 +45,7 @@ function deferred() {
 describe('real OpenCode liveness publication callers', () => {
   let temp: string;
   beforeEach(async () => {
-    temp = await mkdtemp('/tmp/opencode-publication-callers-');
+    temp = await mkdtemp(path.join(tmpdir(), 'opencode-publication-callers-'));
     setClaudeBasePathOverride(temp);
     await mkdir(path.join(getTeamsBasePath(), team), { recursive: true });
   });
@@ -133,7 +134,7 @@ describe('real OpenCode liveness publication callers', () => {
     const delivery = createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost(host, {
       getTeamsBasePath,
       nowIso: () => after,
-      logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      logger: { warn: vi.fn(), error: vi.fn() },
     });
     const pid = createRememberOpenCodeRuntimePidFromBridgePortsFromService(service, {
       nowIso: () => after,
