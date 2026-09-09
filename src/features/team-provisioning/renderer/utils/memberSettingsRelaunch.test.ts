@@ -16,6 +16,7 @@ const sibling = { ...member, name: 'bob', agentId: 'bob-1', configuredRuntimeSet
 const draft: MemberSettingsRelaunchDraft = {
   teamName: 'test-team', memberName: 'alice', targetKind: 'member',
   expectedFingerprint: fingerprintResolvedMember(member),
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
   settings: { ...memberToEditableSettings(member), model: 'glm-5.3-flash' },
 };
 

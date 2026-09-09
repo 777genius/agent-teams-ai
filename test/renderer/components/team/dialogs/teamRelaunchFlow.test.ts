@@ -157,6 +157,7 @@ it('passes the target guard into persistence and does not launch after a write c
     memberName: 'worker',
     targetKind: 'member' as const,
     expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
     baseline: [{ memberName: 'worker', expectedFingerprint: 'original' }],
     model: 'glm-5.3-flash',
     effort: null,

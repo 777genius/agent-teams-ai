@@ -4699,7 +4699,7 @@ async function handleReplaceMembers(
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
       if (payload.memberSettingsRelaunch !== undefined) {
         await persistNodeMemberSettingsRelaunch(tn, members, payload.memberSettingsRelaunch, {
-          isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name),
+          isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name), hasProvisioningRun: (name) => getTeamProvisioningRunApi().hasProvisioningRun(name),
           invalidateWorkerCache: invalidateTeamRosterSnapshotCaches,
         });
         return;

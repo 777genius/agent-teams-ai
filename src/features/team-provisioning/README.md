@@ -54,3 +54,20 @@ lead model/effort also update saved launch defaults and launch identity. This
 bounded path keeps the roster identity unchanged; add/remove members separately.
 Ordinary replace-members requests retain their existing behavior. HTTP mode
 already rejects replace-members and gains no new support in this repair.
+
+The settings editor captures the opaque `getSavedRequest().savedSettingsFingerprint`
+when it opens. The relaunch intent carries that token unchanged, alongside member
+fingerprints. Persistence compares saved model, effort, provider, launch identity
+and inherited launch defaults before writes, then rechecks defaults inside the
+lead metadata update. Missing tokens fail closed. The mutation boundary also
+checks the existing `hasProvisioningRun` query, because a configuring successor
+has not yet become an alive team.
+
+Settings roster projection uses the same canonical legacy-lead classification as
+member settings. Canonical metadata launch discovery also excludes those leads.
+Native launch setup carries `configuredMemberSpecs` separately through run and
+spawn orchestration to `persistDeterministicLaunchMetadata`. The synthetic request
+and effective specs still construct runtime behavior; the writer uses configured
+model/effort/provider/backend/fast-mode fields while retaining effective workspace
+materialization and existing tombstone handling. Metadata discovery carries backend
+and fast-mode selections so explicit siblings survive the same round trip.

@@ -11,13 +11,16 @@ export async function persistNodeMemberSettingsRelaunch(
   teamName: string,
   members: ReplaceMembersRequest['members'],
   intent: unknown,
-  options: NodeLegacyMemberSettingsRepositoryOptions
+  options: NodeLegacyMemberSettingsRepositoryOptions & {
+    hasProvisioningRun(teamName: string): boolean | Promise<boolean>;
+  }
 ): Promise<void> {
   const memberSettingsRelaunch = validateMemberSettingsRelaunch(intent);
   await persistMemberSettingsRelaunch(
     teamName,
     { members, memberSettingsRelaunch },
-    createNodeLegacyMemberSettingsRepositoryDependencies(options),
+    { ...createNodeLegacyMemberSettingsRepositoryDependencies(options),
+      hasProvisioningRun: options.hasProvisioningRun },
     new TeamMetaStore()
   );
 }

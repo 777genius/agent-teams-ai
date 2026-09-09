@@ -16,7 +16,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
+import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchControl,
@@ -915,8 +915,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     ): void => {
       const inputs =
         members.length > 0
-          ? filterEditableMemberInputs(members)
-          : filterEditableMemberInputs(savedMembers ?? []);
+          ? memberSettingsDraft ? filterMemberSettingsRelaunchInputs(members) : filterEditableMemberInputs(members)
+          : memberSettingsDraft ? filterMemberSettingsRelaunchInputs(savedMembers ?? []) : filterEditableMemberInputs(savedMembers ?? []);
       setMembersDrafts(
         createMemberDraftsFromInputs(inputs).map((member) =>
           normalizeMemberDraftForProviderMode(member, multimodelEnabled)
@@ -941,7 +941,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         );
       }
     };
-    if (filterEditableMemberInputs(members).length > 0) applyEditableRoster();
+    if (memberSettingsDraft ? members.length > 0 : filterEditableMemberInputs(members).length > 0) applyEditableRoster();
 
     let cancelled = false;
     void (async () => {

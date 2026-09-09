@@ -112,6 +112,8 @@ export interface RunDeterministicLaunchSpawnFlowInput<
   launchIdentity: ProviderModelLaunchIdentity | null;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Configured settings captured before runtime default materialization. */
+  configuredMemberSpecs: TeamCreateRequest['members'];
   teammateRuntimeDisallowedTools: string;
 }
 
@@ -219,13 +221,14 @@ export async function persistDeterministicLaunchMetadata<
     syntheticRequest: TeamCreateRequest;
     launchIdentity: ProviderModelLaunchIdentity | null;
     allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    configuredMemberSpecs: TeamCreateRequest['members'];
   },
   ports: Pick<
     RunDeterministicLaunchSpawnFlowPorts<TRun>,
     'teamMetaStore' | 'membersMetaStore' | 'nowMs'
   >
 ): Promise<void> {
-  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs } = input;
+  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs } = input;
   await ports.teamMetaStore.writeMeta(
     request.teamName,
     buildLaunchTeamMetaPayload({
@@ -236,10 +239,25 @@ export async function persistDeterministicLaunchMetadata<
     })
   );
   const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
+  // Runtime materialization supplies workspaces, but never configured model authority.
+  const configuredByName = new Map(
+    configuredMemberSpecs.map((member) => [member.name.trim().toLowerCase(), member])
+  );
+  const membersForPersistence = allEffectiveMemberSpecs.map((member) => {
+    const configured = configuredByName.get(member.name.trim().toLowerCase());
+    return {
+      ...member,
+      providerId: configured?.providerId,
+      providerBackendId: configured?.providerBackendId,
+      model: configured?.model,
+      effort: configured?.effort,
+      fastMode: configured?.fastMode,
+    };
+  });
   await ports.membersMetaStore.writeMembers(
     request.teamName,
     mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+      buildMembersMetaWritePayload(selectMembersMetaTeammates(membersForPersistence)),
       existingMembers
     ),
     {
@@ -492,6 +510,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     launchIdentity,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
+    configuredMemberSpecs,
     teammateRuntimeDisallowedTools,
   } = input;
 
@@ -614,7 +633,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
   try {
     await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
+      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs },
       ports
     );
   } catch (error) {

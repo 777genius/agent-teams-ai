@@ -1,3 +1,5 @@
+import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
+
 import {
   fingerprintResolvedMember,
   isCanonicalSettingsLead,
@@ -13,6 +15,7 @@ export interface MemberSettingsRelaunchDraft {
   memberName: string;
   targetKind: 'lead' | 'member';
   expectedFingerprint: string;
+  expectedTeamSettingsFingerprint: string;
   settings: EditableMemberSettings;
 }
 
@@ -102,6 +105,7 @@ export function buildMemberSettingsRelaunchIntent(
     memberName: draft.memberName,
     targetKind: draft.targetKind,
     expectedFingerprint: draft.expectedFingerprint,
+    expectedTeamSettingsFingerprint: draft.expectedTeamSettingsFingerprint,
     baseline: baseline
       .filter((member) => member.removedAt == null)
       .map((member) => ({
@@ -111,4 +115,9 @@ export function buildMemberSettingsRelaunchIntent(
     model: draft.targetKind === 'member' ? member?.model ?? null : model,
     effort: draft.targetKind === 'member' ? member?.effort ?? null : effort,
   };
+}
+
+/** Canonical leads belong to the separate settings intent, never the teammate roster. */
+export function filterMemberSettingsRelaunchInputs<T extends { name: string; agentType?: unknown; role?: unknown; removedAt?: number }>(members: readonly T[]): T[] {
+  return members.filter(member => !member.removedAt && !isCanonicalSettingsLeadMember(member));
 }

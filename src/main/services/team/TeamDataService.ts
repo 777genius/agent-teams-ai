@@ -1,5 +1,6 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
+import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -1094,6 +1095,7 @@ export class TeamDataService {
       color: meta.color,
       cwd: meta.cwd,
       prompt: meta.prompt,
+      savedSettingsFingerprint: fingerprintSavedLaunchSettings(meta),
       providerId: resolvedProviderId,
       providerBackendId: migrateProviderBackendId(
         resolvedProviderId,

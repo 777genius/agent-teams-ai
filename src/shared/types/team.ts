@@ -1314,6 +1314,8 @@ export interface TeamWorktreeGitStatus {
 }
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** Read-only saved defaults token returned by getSavedRequest. */
+  savedSettingsFingerprint?: string;
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1592,6 +1594,7 @@ export interface ReplaceMembersRequest {
     memberName: string;
     targetKind: 'lead' | 'member';
     expectedFingerprint: string;
+    expectedTeamSettingsFingerprint: string;
     baseline: { memberName: string; expectedFingerprint: string }[];
     model: string | null;
     effort: EffortLevel | null;

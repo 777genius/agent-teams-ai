@@ -14,6 +14,7 @@ export function validateMemberSettingsRelaunch(
   if (
     !text(input.memberName) ||
     !text(input.expectedFingerprint) ||
+    !text(input.expectedTeamSettingsFingerprint) ||
     (input.targetKind !== 'lead' && input.targetKind !== 'member') ||
     (input.model !== null && !text(input.model)) ||
     (input.effort !== null && !isTeamEffortLevel(input.effort)) ||
@@ -41,6 +42,7 @@ export function validateMemberSettingsRelaunch(
     memberName: input.memberName,
     targetKind: input.targetKind,
     expectedFingerprint: input.expectedFingerprint,
+    expectedTeamSettingsFingerprint: input.expectedTeamSettingsFingerprint,
     baseline,
     model: input.model as string | null,
     effort: input.effort as import('@shared/types').EffortLevel | null,

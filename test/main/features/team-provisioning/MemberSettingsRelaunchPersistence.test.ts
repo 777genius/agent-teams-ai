@@ -1,3 +1,6 @@
+import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
+import { TeamProvisioningRuntimeStateProjection } from '@main/services/team/provisioning/TeamProvisioningRuntimeStateProjection';
+import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
 import { validateMemberSettingsRelaunch } from '@features/team-provisioning/main/adapters/input/validateMemberSettingsRelaunch';
 import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsRepositoryAdapter';
@@ -34,12 +37,13 @@ function fixture() {
   const writeConfig = vi.fn(async (_name: string, value: string) => {
     config = value;
   });
-  const deps: LegacyMemberSettingsRepositoryDependencies = {
+  const deps: LegacyMemberSettingsRepositoryDependencies & { hasProvisioningRun: (name: string) => boolean } = {
+    hasProvisioningRun: () => false,
     membersMetaStore: {
       getMeta: async () => structuredClone(meta),
-      writeMembers: async (_name, members) => {
+      writeMembers: vi.fn(async (_name, members) => {
         meta = { ...meta, members: structuredClone(members) };
-      },
+      }),
     },
     readConfigJson: async () => config,
     writeConfigJsonAtomic: writeConfig,
@@ -77,6 +81,7 @@ function fixture() {
     );
     return {
       memberName,
+      expectedTeamSettingsFingerprint: fingerprintSavedLaunchSettings(team),
       targetKind: memberName === 'team-lead' ? ('lead' as const) : ('member' as const),
       expectedFingerprint: createMemberSettingsFingerprint(
         snapshots.find((s) => s?.name === memberName)!
@@ -259,6 +264,7 @@ it('validates optional relaunch IPC intent and rejects malformed or duplicate ba
   for (const invalid of [
     null,
     {},
+    { ...valid, expectedTeamSettingsFingerprint: undefined },
     { ...valid, effort: 'bogus' },
     { ...valid, model: 3 },
     { ...valid, baseline: [...valid.baseline, valid.baseline[0]] },
@@ -295,3 +301,66 @@ it('clears lead defaults without materializing them into inherited siblings', as
   expect(f.meta.members[1].model).toBe('glm-5.3');
   expect(f.meta.members[2]).not.toHaveProperty('model');
 });
+
+// A successor can release launch admission while configuring, before alive promotion.
+it('rejects a lead-only configuring successor under the existing mutation gate with zero writes', async () => {
+  const f = fixture();
+  f.meta.members.splice(1);
+  f.deps.readConfigJson = async () => JSON.stringify({ members: f.meta.members });
+  const intent = await f.intent('team-lead');
+  const provisioningRunByTeam = new Map<string, string>();
+  const run = { runId: 'successor', child: {}, processKilled: false, cancelRequested: false,
+    progress: { runId: 'successor', teamName: 'sandbox', state: 'configuring' as const, message: '', startedAt: '', updatedAt: '' } };
+  const projection = new TeamProvisioningRuntimeStateProjection({
+    state: { provisioningRunByTeam, runs: new Map([['successor', run]]), runtimeAdapterRunByTeam: new Map(),
+      runtimeAdapterProgressByRunId: new Map(), getRetainedProvisioningProgressMap: () => new Map() },
+    ports: { getAliveRunId: () => null, getTrackedRunId: () => provisioningRunByTeam.get('sandbox') ?? null,
+      getAliveTeamNames: () => [], hasSecondaryRuntimeRuns: () => false, readBootstrapRuntimeState: async () => null },
+  });
+  f.deps.isTeamAlive = name => projection.isTeamAlive(name);
+  const launchTeam = vi.fn();
+  let mutationLocked = false;
+  const gate = f.deps.withConfigLock;
+  f.deps.withConfigLock = (name, operation) => gate(name, async () => {
+    mutationLocked = true;
+    try { return await operation(); } finally { mutationLocked = false; }
+  });
+  f.deps.hasProvisioningRun = name => { expect(mutationLocked).toBe(true); return projection.hasProvisioningRun(name); };
+  await expect(executeTeamRelaunch({
+    teamName: 'sandbox', isTeamAlive: true, request: { teamName: 'sandbox', cwd: '/sandbox/test-only' },
+    members: [], memberSettingsRelaunch: intent,
+    stopTeam: async () => {
+      // Competing admission captures old settings, then releases the same gate.
+      await f.deps.withConfigLock('sandbox', async () => { provisioningRunByTeam.set('sandbox', run.runId); });
+      expect(projection.isTeamAlive('sandbox')).toBe(false);
+      expect(projection.hasProvisioningRun('sandbox')).toBe(true);
+      expect(run.progress.state).toBe('configuring');
+    },
+    replaceMembers: (name, request) => persistMemberSettingsRelaunch(name, request, f.deps, f.teamMetaStore), launchTeam,
+  })).rejects.toThrow(/Stop the team/);
+  expect(f.writeConfig).not.toHaveBeenCalled();
+  expect(f.deps.membersMetaStore.writeMembers).not.toHaveBeenCalled();
+  expect(f.teamMetaStore.updateMeta).not.toHaveBeenCalled();
+  expect(launchTeam).not.toHaveBeenCalled();
+});
+
+it.each(['model', 'effort', 'syncModelsWithLead', 'fastMode', 'skipPermissions', 'worktree', 'extraCliArgs', 'limitContext', 'providerId', 'launchIdentity'] as const)(
+  'rejects teammeta-only stale %s from the editor baseline with zero writes', async key => {
+    const f = fixture();
+    const intent = await f.intent('team-lead');
+    const changes = {
+      model: 'newer-external-default', effort: 'high', syncModelsWithLead: false, fastMode: 'on',
+      skipPermissions: true, worktree: 'external-branch', extraCliArgs: '--max-turns 5', limitContext: true,
+      providerId: 'codex', launchIdentity: {
+        providerId: 'opencode', providerBackendId: 'opencode-cli', selectedModel: 'newer-external-default',
+        selectedModelKind: 'explicit', resolvedLaunchModel: 'newer-external-default', catalogId: null,
+        catalogSource: 'runtime', catalogFetchedAt: null, selectedEffort: null, resolvedEffort: null,
+      },
+    };
+    Object.assign(f.team, { [key]: changes[key] });
+    await expect(persistMemberSettingsRelaunch('sandbox', { members: f.meta.members.slice(1), memberSettingsRelaunch: intent }, f.deps, f.teamMetaStore)).rejects.toThrow(/launch settings changed/);
+    expect(f.writeConfig).not.toHaveBeenCalled();
+    expect(f.deps.membersMetaStore.writeMembers).not.toHaveBeenCalled();
+    expect(f.teamMetaStore.updateMeta).not.toHaveBeenCalled();
+  }
+);

@@ -170,6 +170,7 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       expectedMembers: string[];
       effectiveMemberSpecs: TeamCreateRequest['members'];
       allEffectiveMemberSpecs: TeamCreateRequest['members'];
+      configuredMemberSpecs: TeamCreateRequest['members'];
       launchIdentity: ProviderModelLaunchIdentity;
       syntheticRequest: TeamCreateRequest;
       mixedSecondaryLanes: TMixedSecondaryLane[];
@@ -438,6 +439,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       expectedMembers,
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
+      configuredMemberSpecs: expectedMemberSpecs,
       launchIdentity,
       syntheticRequest,
       mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),

@@ -1,6 +1,7 @@
 import { fromProvisioningMembers } from '@features/team-runtime-lanes';
 import { applyLeadRuntimeSettingsToTeamMeta } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeRestart';
 
+import { fingerprintSavedLaunchSettings } from '../../../contracts/savedLaunchSettings';
 import {
   createMemberSettingsFingerprint,
   isCanonicalLeadTarget,
@@ -17,14 +18,19 @@ import type { ReplaceMembersRequest } from '@shared/types';
 export async function persistMemberSettingsRelaunch(
   teamName: string,
   request: ReplaceMembersRequest,
-  dependencies: LegacyMemberSettingsRepositoryDependencies,
+  dependencies: LegacyMemberSettingsRepositoryDependencies & {
+    hasProvisioningRun(teamName: string): boolean | Promise<boolean>;
+  },
   teamMetaStore: Pick<TeamMetaStore, 'getMeta' | 'updateMeta'>
 ): Promise<void> {
   const intent = request.memberSettingsRelaunch;
   if (!intent) throw new Error('Missing member settings relaunch intent');
   await dependencies.withConfigLock(teamName, async () => {
-    if (await dependencies.isTeamAlive(teamName))
+    if (await dependencies.isTeamAlive(teamName) || await dependencies.hasProvisioningRun(teamName))
       throw new Error('Stop the team before saving relaunch settings');
+    const previousTeamMeta = await teamMetaStore.getMeta(teamName);
+    if (fingerprintSavedLaunchSettings(previousTeamMeta) !== intent.expectedTeamSettingsFingerprint)
+      throw new Error('Team launch settings changed. Reopen member settings.');
     // The outer lock covers validation, every target write and rollback.
     const repository = new LegacyMemberSettingsRepositoryAdapter({
       ...dependencies,
@@ -77,8 +83,6 @@ export async function persistMemberSettingsRelaunch(
     ) {
       throw new Error('Save member settings before changing the team roster.');
     }
-    const previousTeamMeta =
-      intent.targetKind === 'lead' ? await teamMetaStore.getMeta(teamName) : null;
     if (intent.targetKind === 'lead' && !previousTeamMeta) throw new Error('Team metadata missing');
     const applied: {
       previous: NonNullable<typeof target>;
@@ -121,14 +125,11 @@ export async function persistMemberSettingsRelaunch(
           rollbackToken: result.rollbackToken,
         });
       }
-      if (previousTeamMeta) {
+      if (intent.targetKind === 'lead' && previousTeamMeta) {
         await teamMetaStore.updateMeta(teamName, (current) => {
           if (
             !current ||
-            current.model !== previousTeamMeta.model ||
-            current.effort !== previousTeamMeta.effort ||
-            JSON.stringify(current.launchIdentity) !==
-              JSON.stringify(previousTeamMeta.launchIdentity)
+            fingerprintSavedLaunchSettings(current) !== fingerprintSavedLaunchSettings(previousTeamMeta)
           ) {
             throw new Error('Team launch settings changed during relaunch');
           }

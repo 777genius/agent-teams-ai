@@ -3316,6 +3316,7 @@ describe('LaunchTeamDialog', () => {
                     memberName: target.name,
                     targetKind,
                     expectedFingerprint: 'editor-fingerprint',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
                     settings: {
                       role: null,
                       workflow: null,
@@ -3399,6 +3400,7 @@ describe('LaunchTeamDialog', () => {
             memberName: 'alice',
             targetKind: 'member',
             expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
             settings: {
               role: 'Reviewer',
               workflow: null,
@@ -3454,6 +3456,7 @@ describe('LaunchTeamDialog', () => {
     expect(request.syncModelsWithLead).toBe(true);
     expect((onRelaunch.mock.calls[0] as unknown[])[2]).toMatchObject({
       memberName: 'alice', targetKind: 'member', expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
       model: 'gpt-5.4', effort: 'medium',
       baseline: [{ memberName: 'alice', expectedFingerprint: expect.any(String) }],
     });
@@ -5048,4 +5051,37 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
   });
+
+it('submits a role-only legacy lead separately from the settings teammate roster', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+    teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus', members: [],
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onRelaunch = vi.fn(async () => {});
+  await act(async () => {
+    root.render(React.createElement(LaunchTeamDialog, {
+      mode: 'relaunch', open: true, teamName: 'team-alpha', defaultProjectPath: '/tmp/project',
+      members: [{ name: 'lead', role: 'Lead', model: 'opus' }, { name: 'alice', role: 'Reviewer' }] as any,
+      memberSettingsDraft: { teamName: 'team-alpha', memberName: 'lead', targetKind: 'lead',
+        expectedFingerprint: 'legacy-lead', expectedTeamSettingsFingerprint: 'editor-defaults',
+        settings: { role: 'Lead', workflow: null, isolation: null, providerId: null, providerBackendId: null,
+          model: 'sonnet', effort: null, fastMode: null, mcpPolicy: null } },
+      provisioningError: null, clearProvisioningError: vi.fn(), activeTeams: [], onClose: vi.fn(), onRelaunch,
+    }));
+    await flush();
+  });
+  expect(teamRosterEditorSectionMock.lastProps.members.map((member: any) => member.name)).toEqual(['alice']);
+  await confirmLaunchPreflight(host, 'Relaunch team');
+  await act(async () => {
+    Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Relaunch team')!.click();
+    await flush();
+  });
+  expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ model: 'sonnet' }),
+    [expect.objectContaining({ name: 'alice' })], expect.objectContaining({ memberName: 'lead', targetKind: 'lead', expectedTeamSettingsFingerprint: 'editor-defaults' }));
+  await act(async () => root.unmount());
+});
+
 });

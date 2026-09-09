@@ -16,6 +16,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
 
+import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -84,6 +85,7 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
+  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName);
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
@@ -131,12 +133,14 @@ export const EditTeamMemberDialog = ({
     }
     setError(null);
     if (impact === 'relaunch') {
+      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
       resetIdentity();
       onRelaunchRequired({
         teamName,
         memberName: baseline.name,
         targetKind: isLead ? 'lead' : 'member',
         expectedFingerprint: fingerprint,
+        expectedTeamSettingsFingerprint: teamSettingsFingerprint,
         settings,
       });
       return;
@@ -195,12 +199,14 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'team_relaunch_required') {
+      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
       resetIdentity();
       onRelaunchRequired({
         teamName,
         memberName: baseline.name,
         targetKind: isLead ? 'lead' : 'member',
         expectedFingerprint: fingerprint,
+        expectedTeamSettingsFingerprint: teamSettingsFingerprint,
         settings,
       });
       return;
@@ -280,7 +286,8 @@ export const EditTeamMemberDialog = ({
           </Button>
           <Button
             disabled={
-              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole
+              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole ||
+              (impact === 'relaunch' && !teamSettingsFingerprint)
             }
             onClick={() => void handleSave()}
           >

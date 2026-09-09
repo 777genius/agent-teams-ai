@@ -8,3 +8,4 @@ export {
   assertMemberSettingsRelaunchRoster,
   buildMemberSettingsRelaunchIntent,
 } from './utils/memberSettingsRelaunch';
+export { filterMemberSettingsRelaunchInputs } from './utils/memberSettingsRelaunch';
