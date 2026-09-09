@@ -8,7 +8,7 @@
     "landing/assets/styles/cyberpunk-hero.scss": 2343,
     "landing/components/layout/AppHeader.vue": 949,
     "landing/components/sections/ComparisonSection.vue": 1168,
-    "landing/components/sections/DownloadSection.vue": 1110,
+    "landing/components/sections/DownloadSection.vue": 1024,
     "landing/product-docs/.vitepress/config.ts": 829,
     "packages/agent-graph/src/canvas/draw-agents.ts": 1201,
     "packages/agent-graph/src/layout/stableSlots.ts": 2963,

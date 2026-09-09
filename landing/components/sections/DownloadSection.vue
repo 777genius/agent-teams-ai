@@ -322,52 +322,10 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           <div class="download-section__card-info">
             <h3 class="download-section__card-label">{{ asset.label }}</h3>
             <span class="download-section__card-arch">{{ asset.archLabel }}</span>
-            <div
+            <DownloadArchitectureToggle
               v-if="(asset.os === 'macos' || asset.os === 'windows') && downloadStore.selectedId === asset.id"
-              class="download-section__arch-toggle"
-              :aria-label="`${asset.label} architecture`"
-            >
-              <template v-if="asset.os === 'macos'">
-                <button
-                  type="button"
-                  class="download-section__arch-option"
-                  :class="{ 'download-section__arch-option--active': downloadStore.macArch === 'arm64' }"
-                  :aria-pressed="downloadStore.macArch === 'arm64'"
-                  @click.stop="downloadStore.setMacArch('arm64')"
-                >
-                  Apple Silicon
-                </button>
-                <button
-                  type="button"
-                  class="download-section__arch-option"
-                  :class="{ 'download-section__arch-option--active': downloadStore.macArch === 'x64' }"
-                  :aria-pressed="downloadStore.macArch === 'x64'"
-                  @click.stop="downloadStore.setMacArch('x64')"
-                >
-                  Intel
-                </button>
-              </template>
-              <template v-else>
-                <button
-                  type="button"
-                  class="download-section__arch-option"
-                  :class="{ 'download-section__arch-option--active': downloadStore.windowsArch === 'x64' }"
-                  :aria-pressed="downloadStore.windowsArch === 'x64'"
-                  @click.stop="downloadStore.setWindowsArch('x64')"
-                >
-                  64-bit
-                </button>
-                <button
-                  type="button"
-                  class="download-section__arch-option"
-                  :class="{ 'download-section__arch-option--active': downloadStore.windowsArch === 'arm64' }"
-                  :aria-pressed="downloadStore.windowsArch === 'arm64'"
-                  @click.stop="downloadStore.setWindowsArch('arm64')"
-                >
-                  ARM64
-                </button>
-              </template>
-            </div>
+              :os="asset.os"
+            />
           </div>
 
           <!-- Download button -->
@@ -809,43 +767,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
   opacity: 0.7;
 }
 
-.download-section__arch-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 10px;
-  padding: 3px;
-  max-width: 100%;
-  border: 1px solid rgba(0, 240, 255, 0.14);
-  border-radius: 10px;
-  background: rgba(0, 240, 255, 0.05);
-}
-
-.download-section__arch-option {
-  min-width: 0;
-  padding: 5px 8px;
-  border: 0;
-  border-radius: 7px;
-  color: #8892b0;
-  background: transparent;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.62rem;
-  font-weight: 700;
-  line-height: 1.15;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.download-section__arch-option:hover,
-.download-section__arch-option--active {
-  color: #0a0a0f;
-  background: linear-gradient(135deg, #00f0ff, #39ff14);
-  box-shadow: 0 4px 14px rgba(0, 240, 255, 0.22);
-}
-
 /* Download button */
 .download-section__btn {
   display: inline-flex;
@@ -952,21 +873,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
   color: #64748b;
 }
 
-.v-theme--light .download-section__arch-toggle {
-  border-color: rgba(8, 145, 178, 0.16);
-  background: rgba(8, 145, 178, 0.06);
-}
-
-.v-theme--light .download-section__arch-option {
-  color: #64748b;
-}
-
-.v-theme--light .download-section__arch-option:hover,
-.v-theme--light .download-section__arch-option--active {
-  color: #f8fbff;
-  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.22);
-}
-
 .v-theme--light .download-section__btn {
   color: #f8fbff;
   text-shadow: 0 1px 8px rgba(15, 23, 42, 0.34);
@@ -1043,10 +949,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
     min-width: 0;
   }
 
-  .download-section__arch-toggle {
-    width: fit-content;
-  }
-
   .download-section__card-indicator {
     justify-content: center;
     width: 100%;
@@ -1097,16 +999,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
 
   .download-section__card-info {
     min-width: 0;
-  }
-
-  .download-section__arch-toggle {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-
-  .download-section__arch-option {
-    flex: 1;
-    padding-inline: 6px;
   }
 
   .download-section__card-label {
