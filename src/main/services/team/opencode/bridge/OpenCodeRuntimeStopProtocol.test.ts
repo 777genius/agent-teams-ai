@@ -52,6 +52,30 @@ const receipt = {
 };
 
 describe('runtime Stop nested contract validation', () => {
+  it.each([
+    ['manifestHighWatermark'],
+    ['runtimeStoreManifestHighWatermark'],
+    ['manifestHighWatermark', 'runtimeStoreManifestHighWatermark'],
+  ])('accepts omitted optional watermarks %j in results and receipts', (...omitted) => {
+    const value: Record<string, unknown> = { ...data };
+    for (const field of omitted) delete value[field];
+    expect(validateRuntimeStopData(value, request)).toEqual(value);
+    expect(validateRuntimeStopReceipt({ ...receipt, data: value }, request).data).toEqual(value);
+  });
+
+  it.each(['manifestHighWatermark', 'runtimeStoreManifestHighWatermark'])(
+    'rejects malformed optional %s',
+    (field) => {
+      for (const invalid of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity, '0', {}, false]) {
+        expect(() => validateRuntimeStopData({ ...data, [field]: invalid }, request)).toThrow();
+      }
+      for (const valid of [undefined, null, 0, Number.MAX_SAFE_INTEGER]) {
+        const value = { ...data, [field]: valid };
+        expect(validateRuntimeStopData(value, request)).toEqual(value);
+      }
+    }
+  );
+
   it.each(['info', 'warning', 'error'])(
     'accepts string severity %s and string warning lists',
     (severity) => {
@@ -72,7 +96,6 @@ describe('runtime Stop nested contract validation', () => {
     { members: { alice: { sessionId: 'session', stopped: false, diagnostics: [7] } } },
     { manifestHighWatermark: -1 },
     { runtimeStoreManifestHighWatermark: 0.5 },
-    { manifestHighWatermark: undefined },
   ])('rejects malformed nested domain fields %j', (patch) => {
     expect(() => validateRuntimeStopData({ ...data, ...patch }, request)).toThrow();
     expect(() =>

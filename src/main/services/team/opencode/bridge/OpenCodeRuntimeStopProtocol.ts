@@ -136,7 +136,7 @@ export function validateRuntimeStopData(
     }) ||
     (data.idempotencyKey !== undefined && data.idempotencyKey !== request.idempotencyKey) ||
     ![data.manifestHighWatermark, data.runtimeStoreManifestHighWatermark].every(
-      (v) => v === null || (Number.isSafeInteger(v) && Number(v) >= 0)
+      (v) => v === undefined || v === null || (Number.isSafeInteger(v) && Number(v) >= 0)
     ) ||
     Object.keys(members).length !== request.target.members.length ||
     !request.target.members.every((target) => {

@@ -291,6 +291,7 @@ async function runTeamStopFlow(
   const stopStartedAtMs = Date.now();
   const publicationAuthority = ports.markTeamStopped
     ? await new TeamLaunchStateStore().beginStop(teamName).catch((error: unknown) => {
+        ports.logWarning(`[${teamName}] Stopped-state admission failed: ${String(error)}`);
         diagnostics.push(`Stopped-state admission failed: ${String(error)}`);
         return undefined;
       })

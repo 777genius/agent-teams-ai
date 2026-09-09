@@ -27,6 +27,8 @@ vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', ()
   reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
+import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
 import type { TeamLaunchStateReadResult } from '@main/services/team/TeamLaunchStateStore';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -81,6 +83,31 @@ function launchStateStore(result: TeamLaunchStateReadResult): {
 }
 
 describe('runTeamForceStopFlow', () => {
+  it.each([stopTeamWithEscalation, runTeamForceStopFlow])(
+    'logs failed stopped-state admission while continuing scoped runtime Stop',
+    async (runStop) => {
+      const admission = vi
+        .spyOn(TeamLaunchStateStore.prototype, 'beginStop')
+        .mockRejectedValue(new Error('freshness unreadable'));
+      const markTeamStopped = vi.fn(async () => undefined);
+      const ports = createPorts({ markTeamStopped });
+      try {
+        const result = await runStop('admission-test', ports);
+        expect(result.stopOutcome).toBe('stopped');
+        expect(ports.stopTeam).toHaveBeenCalledWith('admission-test');
+        expect(markTeamStopped).not.toHaveBeenCalled();
+        expect(ports.logWarning).toHaveBeenCalledWith(
+          '[admission-test] Stopped-state admission failed: Error: freshness unreadable'
+        );
+        expect(result.diagnostics).toContain(
+          'Stopped-state admission failed: Error: freshness unreadable'
+        );
+      } finally {
+        admission.mockRestore();
+      }
+    }
+  );
+
   it('completes confirmed scoped stop and cancels deliveries without hard cleanup', async () => {
     const ports = createPorts();
 
