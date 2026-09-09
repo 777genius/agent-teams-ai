@@ -37,7 +37,7 @@ jobs:
       # keep cleanup mandatory and update this pin after the fix is reviewed/proven.
       WINDOWS_BACKFILL_SUPPORT_SHA: 'ab8464013fd21b53ba8cb4cd1063184e878d2a31'
       WINDOWS_BACKFILL_SUPPORT_ROOT: ${{ github.workspace }}/backfill-test-support
-      WINDOWS_BACKFILL_EVIDENCE_DIR: ${{ runner.temp }}/windows-app-backfill-evidence
+      WINDOWS_BACKFILL_EVIDENCE_DIR: ${{ github.workspace }}/../windows-app-backfill-evidence
     defaults:
       run:
         shell: pwsh
