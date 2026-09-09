@@ -282,6 +282,7 @@ describe('taskStore validated scan snapshots', () => {
   it('invalidates after a failed write attempt that may already have changed storage', () => {
     const paths = makePaths();
     const taskId = makeTaskId(1);
+    const taskPath = path.join(paths.tasksDir, `${taskId}.json`);
     writeTaskRow(paths, taskId);
     const counts = instrumentTaskScans(paths);
     const originalRenameSync = fs.renameSync;
@@ -289,7 +290,8 @@ describe('taskStore validated scan snapshots', () => {
 
     vi.spyOn(fs, 'renameSync').mockImplementation(function publishThenFail(source, target) {
       originalRenameSync.call(this, source, target);
-      if (failAfterPublishing) {
+      // Lock candidates also use rename; fail only after publishing this task's data.
+      if (failAfterPublishing && path.resolve(String(target)) === taskPath) {
         failAfterPublishing = false;
         throw new Error('injected failure after publishing task row');
       }
@@ -300,6 +302,7 @@ describe('taskStore validated scan snapshots', () => {
       expect(() =>
         taskStore.updateTaskFields(paths, taskId, { description: 'Published before failure' })
       ).toThrow('injected failure after publishing task row');
+      expect(failAfterPublishing).toBe(false);
       expect(taskStore.readTask(paths, taskId).description).toBe('Published before failure');
     });
 
