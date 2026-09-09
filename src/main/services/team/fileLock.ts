@@ -1,4 +1,4 @@
-import { createHash,randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -8,50 +8,51 @@ const RETRY_INTERVAL_MS = 20;
 
 export interface FileLockOptions {
   acquireTimeoutMs?: number;
+  /** Compatibility only: expiry of legacy runtime directories, never PID owners. */
   staleTimeoutMs?: number;
   retryIntervalMs?: number;
 }
 
-interface LockInfo {
-  pid: number | null;
-  ageMs: number | null;
-  content: string | null;
-  identity: string | null;
+// Protocol must stay equivalent to agent-teams-controller/src/internal/fileLock.js.
+// New gates are NEVER published empty. Private candidates may survive a crash but
+// are not acquisition blockers. This is process-crash safety, not fsync durability.
+function codeOf(error: unknown): string | undefined {
+  return (error as NodeJS.ErrnoException).code;
 }
 
-function readLockInfo(lockPath: string): LockInfo {
-  let pid: number | null = null;
-  let content: string | null = null;
-  let identity: string | null = null;
-  let ageMs: number | null = null;
+function statOrMissing(name: string): fs.Stats | null {
   try {
-    content = fs.readFileSync(lockPath, 'utf8');
-    const lines = content.split('\n');
-    const parsedPid = parseInt(lines[0] ?? '', 10);
-    if (Number.isFinite(parsedPid) && parsedPid > 0) {
-      pid = parsedPid;
-    }
-    const ts = parseInt(lines[1] ?? '', 10);
-    if (Number.isFinite(ts)) {
-      ageMs = Date.now() - ts;
-    }
-  } catch {
-    /* lock may have been released concurrently */
+    return fs.lstatSync(name);
+  } catch (error) {
+    if (codeOf(error) === 'ENOENT') return null;
+    throw error;
   }
-  if (ageMs === null) {
-    try {
-      ageMs = Date.now() - fs.statSync(lockPath).mtimeMs;
-    } catch {
-      /* lock may have been released concurrently */
-    }
-  }
+}
+
+function readOrMissing(name: string): string | null {
   try {
-    const stat = fs.lstatSync(lockPath);
-    identity = `${stat.dev}:${stat.ino}:${stat.birthtimeMs}`;
-  } catch {
-    /* concurrently released */
+    return fs.readFileSync(name, 'utf8');
+  } catch (error) {
+    if (codeOf(error) === 'ENOENT') return null;
+    throw error;
   }
-  return { pid, ageMs, content, identity };
+}
+
+function unlinkOrMissing(name: string): void {
+  try {
+    fs.unlinkSync(name);
+  } catch (error) {
+    if (codeOf(error) !== 'ENOENT') throw error;
+  }
+}
+
+function removeEmptyGate(gate: string): void {
+  try {
+    fs.rmdirSync(gate);
+  } catch (error) {
+    // A successor's nonempty gate must survive delayed cleanup of an old token.
+    if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(codeOf(error) ?? '')) throw error;
+  }
 }
 
 function isProcessAlive(pid: number): boolean {
@@ -59,121 +60,183 @@ function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    return code !== 'ESRCH';
+    return codeOf(error) !== 'ESRCH';
   }
 }
 
-function sameLock(left: LockInfo, right: LockInfo): boolean {
+function parsePid(value: string): number | null {
+  if (!/^[1-9][0-9]*$/.test(value)) return null;
+  const pid = Number(value);
+  return Number.isSafeInteger(pid) ? pid : null;
+}
+
+function writeComplete(name: string, content: string): void {
+  const fd = fs.openSync(name, 'wx');
+  try {
+    const bytes = Buffer.from(content, 'utf8');
+    let offset = 0;
+    while (offset < bytes.length) {
+      const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
+      if (written <= 0) throw new Error(`Unable to complete file lock candidate: ${name}`);
+      offset += written;
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function recoverGate(gate: string): void {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(gate);
+  } catch (error) {
+    if (codeOf(error) === 'ENOENT') return;
+    throw error;
+  }
+  if (entries.length === 0) {
+    removeEmptyGate(gate);
+    return;
+  }
+  if (entries.length !== 1) return; // Unknown state fails closed.
+  const entry = entries[0];
+  const match = /^owner-([1-9][0-9]*)-([a-f0-9-]{36})$/.exec(entry);
+  if (!match) return;
+  const pid = parsePid(match[1]);
+  if (pid === null) return;
+  const ownerPath = path.join(gate, entry);
+  const stat = statOrMissing(ownerPath);
+  if (!stat?.isFile()) return;
+  if (readOrMissing(ownerPath) !== `file-lock-transition-v2\n${pid}\n${match[2]}\n`) return;
+  if (isProcessAlive(pid)) return;
+  // No claim on a claim: a delayed remover can address only this dead token.
+  // Its rmdir cannot remove any nonempty successor, even after PID-probe pauses.
+  unlinkOrMissing(ownerPath);
+  removeEmptyGate(gate);
+}
+
+function acquireGate(gate: string, token: string): string | null {
+  if (statOrMissing(gate)?.isDirectory()) {
+    recoverGate(gate);
+    return null;
+  }
+  const candidate = `${gate}.candidate-${process.pid}-${randomUUID()}`;
+  const entry = `owner-${process.pid}-${token}`;
+  fs.mkdirSync(candidate);
+  let published = false;
+  try {
+    writeComplete(
+      path.join(candidate, entry),
+      `file-lock-transition-v2\n${process.pid}\n${token}\n`
+    );
+    try {
+      fs.renameSync(candidate, gate);
+      published = true;
+      return entry;
+    } catch (error) {
+      const code = codeOf(error);
+      // Windows reports EPERM for rename onto an occupied directory. Only an
+      // observed destination directory qualifies; absent/other errors surface.
+      // Windows may also reject rename onto an empty gate left by a dead releaser.
+      const windowsOccupied =
+        process.platform === 'win32' && code === 'EPERM' && statOrMissing(gate)?.isDirectory();
+      if (code !== 'EEXIST' && code !== 'ENOTEMPTY' && !windowsOccupied) throw error;
+      recoverGate(gate);
+      return null;
+    }
+  } finally {
+    if (!published) {
+      unlinkOrMissing(path.join(candidate, entry));
+      fs.rmdirSync(candidate);
+    }
+  }
+}
+
+interface LockInfo {
+  stat: fs.Stats;
+  content: string | null;
+}
+
+function readLockInfo(lockPath: string): LockInfo | null {
+  const stat = statOrMissing(lockPath);
+  if (!stat) return null;
+  return { stat, content: stat.isFile() ? readOrMissing(lockPath) : null };
+}
+
+function sameLock(left: LockInfo, right: LockInfo | null): boolean {
   return (
-    left.identity !== null && left.identity === right.identity && left.content === right.content
+    right !== null &&
+    left.stat.dev === right.stat.dev &&
+    left.stat.ino === right.stat.ino &&
+    left.stat.birthtimeMs === right.stat.birthtimeMs &&
+    left.content === right.content
   );
 }
 
-function recoverAbandonedLock(lockPath: string, staleTimeoutMs: number): void {
+function recoverDataLock(lockPath: string, staleTimeoutMs: number): void {
   const observed = readLockInfo(lockPath);
-  // A live (or permission-inaccessible) owner retains exclusion regardless of age.
-  if (
-    observed.pid !== null
-      ? isProcessAlive(observed.pid)
-      : observed.ageMs === null || observed.ageMs <= staleTimeoutMs
-  )
-    return;
-  if (!observed.identity) return;
-  if (observed.pid === null) {
-    try {
-      if (!fs.lstatSync(lockPath).isDirectory()) return;
-    } catch {
-      return;
-    }
-  }
-  // Serialize reclaimers of THIS abandoned acquisition. Another generation has a
-  // different identity/token and cannot be unlinked by an old reclaimer. A crash
-  // during this short synchronous claim fails closed, rather than stealing a lock.
-  const key = createHash('sha256').update(`${observed.identity}:${observed.content}`).digest('hex');
-  const claim = `${lockPath}.reclaim-${key}`;
-  let fd: number;
-  try {
-    fd = fs.openSync(claim, 'wx');
-  } catch (error) {
+  if (!observed) return;
+  if (observed.stat.isDirectory()) {
+    // BASELINE compatibility with proper-lockfile's empty directory protocol.
+    // Its age policy does NOT protect indefinitely paused runtime holders.
+    // Never extend this policy to anonymous regular locks or new PID gates.
     if (
-      (error as NodeJS.ErrnoException).code === 'EEXIST' ||
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
+      Date.now() - observed.stat.mtimeMs > staleTimeoutMs &&
+      sameLock(observed, readLockInfo(lockPath))
     )
-      return;
-    throw error;
+      removeEmptyGate(lockPath);
+    return;
   }
-  try {
-    if (sameLock(observed, readLockInfo(lockPath)))
-      fs.rmSync(lockPath, { recursive: true, force: true });
-  } finally {
-    fs.closeSync(fd);
-    fs.unlinkSync(claim);
-  }
-}
-
-function writeLockFile(lockPath: string, token: string): void {
-  const fd = fs.openSync(lockPath, 'wx');
-  let closeError: unknown = null;
-  try {
-    fs.writeSync(fd, `${process.pid}\n${Date.now()}\n${token}\n`);
-  } finally {
-    try {
-      fs.closeSync(fd);
-    } catch (err) {
-      closeError = err;
-    }
-  }
-  if (closeError) {
-    throw closeError instanceof Error ? closeError : new Error('Failed to close file lock');
-  }
-}
-
-function isExistingLockError(code: string | undefined): boolean {
-  return code === 'EEXIST' || code === 'EISDIR';
-}
-
-function tryAcquire(lockPath: string, options: Required<FileLockOptions>, token: string): boolean {
-  try {
-    // Fast path: assume the lock directory already exists (the common case once a
-    // team dir is created). This drops an existsSync(dir) stat from EVERY acquire,
-    // which adds up across the many lock cycles during a team launch.
-    writeLockFile(lockPath, token);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      // Lock directory missing - create it lazily and acquire in the same call, so
-      // first-acquire latency in a fresh dir is unchanged.
-      try {
-        fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-        writeLockFile(lockPath, token);
-        return true;
-      } catch (retryError) {
-        const retryCode = (retryError as NodeJS.ErrnoException).code;
-        if (retryCode === 'ENOENT') {
-          return false;
-        }
-        if (isExistingLockError(retryCode)) {
-          recoverAbandonedLock(lockPath, options.staleTimeoutMs);
-          return false;
-        }
-        throw retryError;
-      }
-    }
-    if (isExistingLockError(code)) {
-      recoverAbandonedLock(lockPath, options.staleTimeoutMs);
-      return false;
-    }
-    throw err;
-  }
+  if (!observed.stat.isFile() || observed.content === null) return;
+  // Accept complete legacy PID/time records as well as PID/time/token records.
+  // A partial numeric prefix is not evidence of the initializer's full PID.
+  const record = /^([1-9][0-9]*)\n[0-9]+\n(?:[^\n]+\n)?$/.exec(observed.content);
+  const pid = record ? parsePid(record[1]) : null;
+  // Anonymous/malformed legacy files remain explicitly unknown, even if old.
+  if (pid === null || isProcessAlive(pid)) return;
+  if (sameLock(observed, readLockInfo(lockPath))) unlinkOrMissing(lockPath);
 }
 
 function releaseLock(lockPath: string, token: string): void {
+  const observed = readLockInfo(lockPath);
+  const lines = observed?.content?.split('\n');
+  if (lines?.[0] === String(process.pid) && lines[2] === token) unlinkOrMissing(lockPath);
+}
+
+function tryAcquire(lockPath: string, options: Required<FileLockOptions>, token: string): boolean {
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  const gate = `${lockPath}-transition-v2`;
+  const entry = acquireGate(gate, token);
+  if (entry === null) return false;
+  let published = false;
   try {
-    if (readLockInfo(lockPath).content?.split('\n')[2] === token) fs.unlinkSync(lockPath);
-  } catch {
-    /* already released or cleaned up */
+    try {
+      recoverDataLock(lockPath, options.staleTimeoutMs);
+      if (statOrMissing(lockPath)) return false;
+      const candidate = `${lockPath}.candidate-${process.pid}-${randomUUID()}`;
+      try {
+        writeComplete(candidate, `${process.pid}\n${Date.now()}\n${token}\n`);
+        try {
+          // Hard link is no-replace publication of complete bytes, including on
+          // Windows. Unsupported filesystems fail; never fall back to canonical wx.
+          fs.linkSync(candidate, lockPath);
+          published = true;
+        } catch (error) {
+          if (codeOf(error) !== 'EEXIST') throw error;
+        }
+      } finally {
+        unlinkOrMissing(candidate);
+      }
+      return published;
+    } finally {
+      // All protected mutations have ended BEFORE making the gate empty.
+      unlinkOrMissing(path.join(gate, entry));
+      removeEmptyGate(gate);
+    }
+  } catch (error) {
+    // A cleanup error after publication must not strand a live owner whose
+    // callback was never entered. Release needs no gate: live PIDs cannot be stolen.
+    if (published) releaseLock(lockPath, token);
+    throw error;
   }
 }
 

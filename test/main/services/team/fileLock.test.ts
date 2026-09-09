@@ -4,6 +4,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Keep real filesystem behavior while allowing fault injection into the app's
+// fs import; native ESM namespace exports themselves are not configurable.
+vi.mock('fs', async () => ({ ...(await vi.importActual<typeof import('fs')>('fs')) }));
+
 const canAssertPosixPermissions = process.platform !== 'win32' && process.getuid?.() !== 0;
 
 describe('withFileLock', () => {
@@ -242,4 +246,149 @@ describe('withFileLock', () => {
       }
     }
   );
+});
+
+// Error and compatibility cases for the publication protocol. Filesystem faults
+// are injected at real operation boundaries; no fake-dead PID authorizes a live owner.
+describe('file lock publication invariants', () => {
+  let dir: string;
+  let resource: string;
+  const options = { acquireTimeoutMs: 5, retryIntervalMs: 1, staleTimeoutMs: 1 };
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publication-unit-'));
+    resource = path.join(dir, 'data');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it.each(['EPERM', 'EACCES', 'EINVAL'])('keeps unknown PID status %s exclusive', async (code) => {
+    fs.writeFileSync(`${resource}.lock`, '424242\n0\nold-token\n');
+    vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error(code), { code });
+    });
+    await expect(withFileLock(resource, async () => {}, options)).rejects.toThrow(
+      'File lock timeout'
+    );
+    expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toBe('424242\n0\nold-token\n');
+  });
+
+  it.each(['', 'garbage\n0\n', '123oops\n0\n', '0\n0\n', '424242', '424242\n', '424242\n0'])(
+    'never expires anonymous/malformed legacy bytes %j',
+    (content) => {
+      fs.writeFileSync(`${resource}.lock`, content);
+      fs.utimesSync(`${resource}.lock`, new Date(0), new Date(0));
+      expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+      expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toBe(content);
+    }
+  );
+
+  it('keeps fresh runtime directories and nonempty old directories intact', () => {
+    const lock = `${resource}.lock`;
+    fs.mkdirSync(lock);
+    expect(() =>
+      withFileLockSync(resource, () => {}, { ...options, staleTimeoutMs: 60000 })
+    ).toThrow('File lock timeout');
+    fs.writeFileSync(path.join(lock, 'unknown'), 'keep');
+    fs.utimesSync(lock, new Date(0), new Date(0));
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+    expect(fs.readFileSync(path.join(lock, 'unknown'), 'utf8')).toBe('keep');
+  });
+
+  it('supports nested different resources across async and sync APIs', async () => {
+    expect(
+      await withFileLock(resource, async () => {
+        return withFileLockSync(path.join(dir, 'second'), () => {
+          expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+          return 73;
+        });
+      })
+    ).toBe(73);
+  });
+
+  it.each(['ENOTSUP', 'EXDEV', 'EPERM', 'EACCES', 'EIO', 'ENOSPC'])(
+    'propagates hardlink %s without a canonical wx fallback',
+    (code) => {
+      const open = vi.spyOn(fs, 'openSync');
+      vi.spyOn(fs, 'linkSync').mockImplementation(() => {
+        throw Object.assign(new Error(code), { code });
+      });
+      expect(() => withFileLockSync(resource, () => {}, options)).toThrow(code);
+      expect(open.mock.calls.some(([name]) => name === `${resource}.lock`)).toBe(false);
+      expect(fs.existsSync(`${resource}.lock`)).toBe(false);
+      expect(fs.existsSync(`${resource}.lock-transition-v2`)).toBe(false);
+    }
+  );
+
+  it.each(['EACCES', 'EPERM', 'EIO'])('propagates gate rename failure %s', (code) => {
+    vi.spyOn(fs, 'renameSync').mockImplementation(() => {
+      throw Object.assign(new Error(code), { code });
+    });
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow(code);
+    expect(fs.readdirSync(dir)).toEqual([]);
+  });
+
+  it('fails a zero-byte write without publishing anonymous ownership', () => {
+    vi.spyOn(fs, 'writeSync').mockReturnValue(0);
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('Unable to complete');
+    expect(fs.readdirSync(dir)).toEqual([]);
+  });
+
+  it('does not replace data that appears immediately before hardlink publication', () => {
+    const link = fs.linkSync;
+    const successor = `${process.pid}\n0\nsuccessor\n`;
+    vi.spyOn(fs, 'linkSync').mockImplementation((from, to) => {
+      fs.writeFileSync(to, successor, { flag: 'wx' });
+      link(from, to);
+    });
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+    expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toBe(successor);
+  });
+
+  it.each(['EPERM', 'EACCES', 'EINVAL'])(
+    'keeps a complete gate with unknown PID status %s',
+    (code) => {
+      const gate = `${resource}.lock-transition-v2`;
+      const token = '00000000-0000-4000-8000-000000000001';
+      const entry = `owner-424242-${token}`;
+      fs.mkdirSync(gate);
+      fs.writeFileSync(path.join(gate, entry), `file-lock-transition-v2\n424242\n${token}\n`);
+      vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error(code), { code });
+      });
+      expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+      expect(fs.readdirSync(gate)).toEqual([entry]);
+    }
+  );
+
+  it('does not turn lock read permissions into contention', () => {
+    fs.writeFileSync(`${resource}.lock`, `${process.pid}\n0\nlive\n`);
+    const read = fs.readFileSync;
+    vi.spyOn(fs, 'readFileSync').mockImplementation(((
+      name: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ) => {
+      if (name === `${resource}.lock`)
+        throw Object.assign(new Error('read denied'), { code: 'EACCES' });
+      return Reflect.apply(read, fs, [name, ...args]);
+    }) as typeof fs.readFileSync);
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('read denied');
+  });
+
+  it('rolls back its data publication if gate cleanup fails before callback', () => {
+    const unlink = fs.unlinkSync;
+    let failed = false;
+    vi.spyOn(fs, 'unlinkSync').mockImplementation((name) => {
+      if (!failed && String(name).includes(`.lock-transition-v2${path.sep}owner-`)) {
+        failed = true;
+        throw Object.assign(new Error('cleanup denied'), { code: 'EACCES' });
+      }
+      return unlink(name);
+    });
+    const callback = vi.fn();
+    expect(() => withFileLockSync(resource, callback, options)).toThrow('cleanup denied');
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.existsSync(`${resource}.lock`)).toBe(false);
+  });
 });
