@@ -24,6 +24,7 @@ import {
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
 
+import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
 
@@ -45,7 +46,7 @@ export interface EditTeamMemberDialogProps {
     model: string | null;
     effort: EffortLevel | null;
   }) => Promise<void> | void;
-  onRelaunchRequired: () => void;
+  onRelaunchRequired: (draft: MemberSettingsRelaunchDraft) => void;
 }
 
 function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
@@ -124,10 +125,20 @@ export const EditTeamMemberDialog = ({
 
   const handleSave = async (): Promise<void> => {
     if (!targetAvailable) return;
+    if (incomingFingerprint !== fingerprint) {
+      setError(t('editTeam.errors.settingsChanged'));
+      return;
+    }
     setError(null);
     if (impact === 'relaunch') {
       resetIdentity();
-      onRelaunchRequired();
+      onRelaunchRequired({
+        teamName,
+        memberName: baseline.name,
+        targetKind: isLead ? 'lead' : 'member',
+        expectedFingerprint: fingerprint,
+        settings,
+      });
       return;
     }
     let result: Awaited<ReturnType<typeof save>>;
@@ -185,7 +196,13 @@ export const EditTeamMemberDialog = ({
     }
     if (result.effect === 'team_relaunch_required') {
       resetIdentity();
-      onRelaunchRequired();
+      onRelaunchRequired({
+        teamName,
+        memberName: baseline.name,
+        targetKind: isLead ? 'lead' : 'member',
+        expectedFingerprint: fingerprint,
+        settings,
+      });
       return;
     }
     if (result.effect === 'recovery_required') {

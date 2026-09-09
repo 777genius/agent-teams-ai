@@ -4,6 +4,7 @@ import { isCanonicalSettingsLead } from '../utils/memberSettingsPresentation';
 
 import { EditTeamMemberDialog } from './EditTeamMemberDialog';
 
+import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { EffortLevel, ResolvedTeamMember } from '@shared/types';
 
 interface TeamMemberSettingsDialogBridgeProps {
@@ -18,7 +19,7 @@ interface TeamMemberSettingsDialogBridgeProps {
     model: string | null;
     effort: EffortLevel | null;
   }) => Promise<void> | void;
-  onRelaunchRequired: () => void;
+  onRelaunchRequired: (draft: MemberSettingsRelaunchDraft) => void;
 }
 
 export const TeamMemberSettingsDialogBridge = ({

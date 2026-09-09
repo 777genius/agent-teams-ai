@@ -16,6 +16,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchControl,
@@ -213,16 +214,15 @@ function alignProvisioningChecks(
   );
 }
 
-// =============================================================================
 // Props — discriminated union
-// =============================================================================
 
 interface LaunchDialogBase {
+  memberSettingsDraft?: MemberSettingsRelaunchDraft;
+  validateMemberSettings?: () => Promise<void>;
   open: boolean;
   teamName: string;
   onClose: () => void;
 }
-
 export type TeamLaunchDialogMode = 'launch' | 'relaunch';
 
 interface LaunchDialogLaunchMode extends LaunchDialogBase {
@@ -242,7 +242,7 @@ interface LaunchDialogRelaunchMode extends LaunchDialogBase {
   provisioningError: string | null;
   clearProvisioningError?: (teamName?: string) => void;
   activeTeams?: ActiveTeamRef[];
-  onRelaunch: (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => Promise<void>;
+  onRelaunch: (request: TeamLaunchRequest, members: TeamCreateRequest['members'], intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']) => Promise<void>;
 }
 
 interface LaunchDialogScheduleMode {
@@ -265,10 +265,7 @@ const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
   'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
 
-// =============================================================================
 // Component
-// =============================================================================
-
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
   const { open, onClose } = props;
   const { isLight } = useTheme();
@@ -314,7 +311,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isSchedule = props.mode === 'schedule';
   const schedule = isSchedule ? (props.schedule ?? null) : null;
   const isEditing = isSchedule && !!schedule;
-
   // Team name: always present for launch mode, may be absent in schedule mode (standalone page)
   const propsTeamName = props.teamName ?? '';
   const [selectedTeamName, setSelectedTeamName] = useState('');
@@ -337,16 +333,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         })),
     [teamByName]
   );
-
   // Effective team name: from props if provided, otherwise from local selection
   const effectiveTeamName = propsTeamName || selectedTeamName;
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
-
-  // ---------------------------------------------------------------------------
   // Shared form state
-  // ---------------------------------------------------------------------------
 
   const [cwdMode, setCwdMode] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPath] = useState('');
@@ -380,6 +372,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [membersDrafts, setMembersDrafts] = useState<MemberDraft[]>([]);
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(false);
   const [syncModelsWithLead, setSyncModelsWithLead] = useState(false);
+  // Unlock explicit drafts without changing the persisted default of inherited siblings.
+  const relaunchInheritedSyncRef = useRef<boolean | undefined>(undefined);
+  const relaunchSyncEditedRef = useRef(false);
   const [skipPermissions, setSkipPermissionsRaw] = useState(
     () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
   );
@@ -414,7 +409,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const previousLaunchParams = useStore((s) =>
     effectiveTeamName ? s.launchParamsByTeam[effectiveTeamName] : undefined
   );
-  const members = isLaunchMode ? props.members : storeMembers;
+  const sourceMembers = isLaunchMode ? props.members : storeMembers;
+  const memberSettingsDraft = isLaunchMode ? props.memberSettingsDraft : undefined;
+  const members = useMemo(() => memberSettingsDraft
+    ? applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft)
+    : sourceMembers, [sourceMembers, memberSettingsDraft]);
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -423,6 +422,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!open) {
       setProviderSettingsProviderId(null);
       hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
+    relaunchSyncEditedRef.current = false; relaunchInheritedSyncRef.current = undefined;
       setLaunchHydratedTeamName(null);
     }
   }, [open]);
@@ -688,13 +688,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     },
     [codexAccount]
   );
-
   // Schedule store actions
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
-  // ---------------------------------------------------------------------------
   // localStorage persistence wrappers
-  // ---------------------------------------------------------------------------
 
   const setWorktreeEnabled = (value: boolean): void => {
     setWorktreeEnabledRaw(value);
@@ -788,6 +785,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSyncModelsWithLeadFromUser = (value: boolean): void => {
+    relaunchInheritedSyncRef.current = value;
+    relaunchSyncEditedRef.current = true;
     hydrationRef.current.dirty = true;
     setSyncModelsWithLead(value);
   };
@@ -800,10 +799,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     migrateLegacyLaunchDialogStorage();
   }, []);
-
-  // ---------------------------------------------------------------------------
   // Form reset / populate
-  // ---------------------------------------------------------------------------
 
   const resetFormState = (): void => {
     hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
@@ -909,6 +905,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
+    if (memberSettingsDraft?.targetKind === 'lead') {
+      setSelectedModelRaw(memberSettingsDraft.settings.model ?? '');
+      setSelectedEffortRaw(memberSettingsDraft.settings.effort ?? '');
+    }
     const applyEditableRoster = (
       savedMembers?: TeamCreateRequest['members'],
       savedSyncModelsWithLead?: boolean
@@ -927,8 +927,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // Roster-derived toggle defaults must not clobber a user toggle made mid-request.
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
+        relaunchInheritedSyncRef.current = savedSyncModelsWithLead;
         setSyncModelsWithLead(
-          savedSyncModelsWithLead ??
+          (memberSettingsDraft ? false : savedSyncModelsWithLead) ??
             !inputs.some(
               (member) =>
                 member.providerId ||
@@ -956,6 +957,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
       setLaunchHydratedTeamName(effectiveTeamName);
+      if (memberSettingsDraft && !relaunchSyncEditedRef.current) {
+        relaunchInheritedSyncRef.current = savedRequest?.syncModelsWithLead;
+      }
       if (!hydrationRef.current.rosterDirty) {
         applyEditableRoster(savedRequest?.members, savedRequest?.syncModelsWithLead);
       }
@@ -982,8 +986,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         multimodelEnabled
       );
       setSelectedProviderIdRaw(leadProviderId);
-      setSelectedModelRaw(leadProviderId === launchPrefill.providerId ? launchPrefill.model : '');
-      setSelectedEffortRaw(launchPrefill.effort);
+      setSelectedModelRaw(memberSettingsDraft?.targetKind === 'lead'
+        ? memberSettingsDraft.settings.model ?? ''
+        : leadProviderId === launchPrefill.providerId ? launchPrefill.model : '');
+      setSelectedEffortRaw(memberSettingsDraft?.targetKind === 'lead'
+        ? memberSettingsDraft.settings.effort ?? '' : launchPrefill.effort);
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
       const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
@@ -994,7 +1001,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, isLaunchMode, effectiveTeamName, members, multimodelEnabled, previousLaunchParams]);
+  }, [open, isLaunchMode, effectiveTeamName, members, multimodelEnabled, previousLaunchParams, memberSettingsDraft]);
   const previousProviderId = useMemo<TeamProviderId | null>(() => {
     if (!isLaunchMode) {
       return null;
@@ -1527,9 +1534,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     hasLeadWorktree: worktreeEnabled && Boolean(worktreeName.trim()),
   });
 
-  // ---------------------------------------------------------------------------
   // Launch-only effects
-  // ---------------------------------------------------------------------------
 
   const hasSelectedWorktreeIsolation =
     isLaunchMode &&
@@ -1974,9 +1979,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
 
-  // ---------------------------------------------------------------------------
   // Launch-only: conflict detection
-  // ---------------------------------------------------------------------------
 
   const activeTeams = isLaunchMode ? props.activeTeams : undefined;
 
@@ -1994,9 +1997,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
-  // ---------------------------------------------------------------------------
   // Mention suggestions (shared — from props in launch, from store in schedule)
-  // ---------------------------------------------------------------------------
 
   const { suggestions: taskSuggestions } = useTaskSuggestions(null);
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null);
@@ -2009,9 +2010,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [memberColorMap, membersDrafts]
   );
 
-  // ---------------------------------------------------------------------------
   // Launch-only: internal args preview
-  // ---------------------------------------------------------------------------
 
   const internalArgs = useMemo(() => {
     if (!isLaunchMode) return [];
@@ -2103,9 +2102,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     customArgs,
   ]);
 
-  // ---------------------------------------------------------------------------
   // Validation
-  // ---------------------------------------------------------------------------
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -2349,18 +2346,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
                 ? selectedFastMode
                 : undefined,
-            syncModelsWithLead,
+            syncModelsWithLead: memberSettingsDraft ? relaunchInheritedSyncRef.current : syncModelsWithLead,
             limitContext: effectiveAnthropicRuntimeLimitContext,
             skipPermissions,
             allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,
             worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
             extraCliArgs: customArgs.trim() || undefined,
           };
+          const intent = buildMemberSettingsRelaunchIntent(memberSettingsDraft, sourceMembers,
+            selectedModel || null, (selectedEffortForCurrentSelection as EffortLevel) || null, nextMembers);
           if (isRelaunch) {
-            await props.onRelaunch(launchRequest, nextMembers);
+            await props.onRelaunch(launchRequest, nextMembers, intent);
           } else {
+            await props.validateMemberSettings?.();
             await api.teams.replaceMembers(effectiveTeamName, {
-              members: nextMembers,
+              members: nextMembers, memberSettingsRelaunch: intent,
             });
             await props.onLaunch(launchRequest);
           }

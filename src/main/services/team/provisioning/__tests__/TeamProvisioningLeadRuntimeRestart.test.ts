@@ -2,6 +2,10 @@ import { EventEmitter } from 'node:events';
 
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('electron', () => ({
+  app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
+}));
+
 import { resolveExistingLaunchRunReuse } from '../TeamProvisioningLaunchTeamFlow';
 import {
   applyLeadRuntimeSettingsToTeamMeta,
@@ -211,6 +215,23 @@ describe('lead runtime restart', () => {
         resolvedFastMode: false,
       },
     });
+  });
+
+  it('persists OpenCode model intent without requiring a native restart provider', () => {
+    const meta = applyLeadRuntimeSettingsToTeamMeta(
+      {
+        version: 1,
+        cwd: '/sandbox/team',
+        createdAt: 1,
+        providerId: 'opencode',
+        model: 'glm-5.3',
+      },
+      { model: 'glm-5.3-flash', effort: null },
+      null
+    );
+
+    expect(meta).toMatchObject({ providerId: 'opencode', model: 'glm-5.3-flash' });
+    expect(meta.effort).toBeUndefined();
   });
 
   it('preserves a resolved default model identity during an effort-only update', () => {

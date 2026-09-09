@@ -14,6 +14,8 @@ import {
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  assertMemberSettingsRelaunchRoster,
+  type MemberSettingsRelaunchDraft,
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
@@ -1309,6 +1311,8 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [launchDialogState, setLaunchDialogState] = useState<{
     open: boolean;
     mode: TeamLaunchDialogMode;
+    memberSettingsDraft?: MemberSettingsRelaunchDraft;
+    baselineMembers?: ResolvedTeamMember[];
   }>({
     open: false,
     mode: 'launch',
@@ -2126,16 +2130,30 @@ export const TeamDetailView = memo(function TeamDetailView({
     [launchTeam]
   );
 
+  const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
+    const { memberSettingsDraft, baselineMembers } = launchDialogState;
+    if (!memberSettingsDraft || !baselineMembers) return;
+    const current = await api.teams.getData(teamName, { includeMemberBranches: false });
+    assertMemberSettingsRelaunchRoster(
+      current.teamName,
+      current.members,
+      baselineMembers,
+      memberSettingsDraft
+    );
+  }, [launchDialogState, teamName]);
+
   const handleRelaunchDialogSubmit = useCallback(
     async (
       request: TeamLaunchRequest,
-      nextMembers: TeamCreateRequest['members']
+      nextMembers: TeamCreateRequest['members'],
+      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']
     ): Promise<void> => {
       await executeTeamRelaunch({
         teamName,
         isTeamAlive: data?.isAlive === true,
         request,
-        members: nextMembers,
+        members: nextMembers, memberSettingsRelaunch,
+        validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
             await api.teams.stop(nextTeamName);
@@ -2166,13 +2184,21 @@ export const TeamDetailView = memo(function TeamDetailView({
         launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName]
+    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName, validateMemberSettingsRelaunch]
   );
 
-  const handleChangeLeadRuntime = useCallback(() => {
-    setEditTarget(null);
-    openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch');
-  }, [data?.isAlive, isTeamProvisioning, openLaunchDialog]);
+  const handleChangeLeadRuntime = useCallback(
+    (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
+      setEditTarget(null);
+      setLaunchDialogState({
+        open: true,
+        mode: data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch',
+        memberSettingsDraft,
+        baselineMembers: membersWithLiveBranches,
+      });
+    },
+    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches]
+  );
   const handleRestartMember = useCallback(
     async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
       await restartMember(
@@ -3691,6 +3717,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             onClose={closeLaunchDialog}
             onLaunch={handleLaunchDialogSubmit}
             onRelaunch={handleRelaunchDialogSubmit}
+            memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            validateMemberSettings={validateMemberSettingsRelaunch}
           />
         </Suspense>
       )}

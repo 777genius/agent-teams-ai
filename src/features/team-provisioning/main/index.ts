@@ -17,3 +17,4 @@ export {
   createTeamProvisioningStatusFeature,
   type TeamProvisioningStatusFeatureDeps,
 } from './composition/createTeamProvisioningStatusFeature';
+export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';

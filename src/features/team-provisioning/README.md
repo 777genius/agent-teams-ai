@@ -37,3 +37,20 @@ For the next slice:
 Do not add empty folders or speculative abstractions. See
 `docs/team-management/team-provisioning-target-architecture.md` for the complete
 migration standard.
+
+The renderer entrypoint also exposes `MemberSettingsRelaunchDraft` and its draft
+projection/validation helpers. Member settings pass configured intent and the
+original target fingerprint through `TeamMemberSettingsDialogBridge` to the
+existing launch dialog. These helpers do not persist settings; submission uses
+the existing replace-members/launch sequence, with fresh roster checks before
+replacement (and before stopping a live team).
+
+For a settings-originated relaunch, the optional `memberSettingsRelaunch` field on
+`ReplaceMembersRequest` carries the target and roster fingerprints into the
+existing IPC mutation gate. `persistNodeMemberSettingsRelaunch` validates this
+intent and composes the existing member repository and team metadata store.
+The config lock covers conflict checks, configured member writes and rollback;
+lead model/effort also update saved launch defaults and launch identity. This
+bounded path keeps the roster identity unchanged; add/remove members separately.
+Ordinary replace-members requests retain their existing behavior. HTTP mode
+already rejects replace-members and gains no new support in this repair.

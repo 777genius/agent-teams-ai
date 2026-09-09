@@ -1587,6 +1587,15 @@ export interface UpdateMemberRoleRequest {
 
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
+  /** Optional compare-and-swap intent from the member settings relaunch dialog. */
+  memberSettingsRelaunch?: {
+    memberName: string;
+    targetKind: 'lead' | 'member';
+    expectedFingerprint: string;
+    baseline: { memberName: string; expectedFingerprint: string }[];
+    model: string | null;
+    effort: EffortLevel | null;
+  };
 }
 
 /** Data sent from renderer to main for native OS team message notification. */

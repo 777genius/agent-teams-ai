@@ -118,6 +118,8 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     ),
 }));
 
+import { fingerprintResolvedMember } from '../utils/memberSettingsPresentation';
+
 import { EditTeamMemberDialog } from './EditTeamMemberDialog';
 
 import type { ResolvedTeamMember } from '@shared/types';
@@ -410,12 +412,43 @@ describe('EditTeamMemberDialog', () => {
   it('switches unsafe live edits to the existing relaunch action without mutation', () => {
     act(() => render({ isTeamAlive: true, isMixedTeam: true }));
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
     const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('activity.actions.restartTeam')
     )!;
     act(() => relaunch.click());
     expect(updateMemberSettings).not.toHaveBeenCalled();
-    expect(onRelaunchRequired).toHaveBeenCalledOnce();
+    expect(onRelaunchRequired).toHaveBeenCalledWith({
+      teamName: 'alpha',
+      memberName: 'alice',
+      targetKind: 'member',
+      expectedFingerprint: fingerprintResolvedMember(member),
+      settings: expect.objectContaining({ role: 'reviewer', model: 'claude-opus-4-1' }),
+    });
+  });
+
+  it('carries the draft when backend admission requires relaunch without persisting', async () => {
+    updateMemberSettings.mockResolvedValue({ outcome: 'completed', effect: 'team_relaunch_required' });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({
+      expectedFingerprint: fingerprintResolvedMember(member),
+      settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
+    }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('refuses a stale target before handing a draft to relaunch', () => {
+    act(() => render({ isTeamAlive: true, isMixedTeam: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    act(() => render({ isTeamAlive: true, isMixedTeam: true, member: { ...member, agentId: 'replacement' } }));
+    const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('activity.actions.restartTeam'))!;
+    act(() => relaunch.click());
+    expect(onRelaunchRequired).not.toHaveBeenCalled();
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.settingsChanged');
   });
 
   it('blocks close while saving', async () => {

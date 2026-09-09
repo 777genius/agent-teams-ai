@@ -7,6 +7,7 @@ import {
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
+import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -4602,7 +4603,7 @@ async function handleReplaceMembers(
   if (!request || typeof request !== 'object') {
     return { success: false, error: 'request must be an object' };
   }
-  const payload = request as { members?: unknown };
+  const payload = request as { members?: unknown; memberSettingsRelaunch?: unknown };
   if (!Array.isArray(payload.members)) {
     return { success: false, error: 'members must be an array' };
   }
@@ -4696,12 +4697,18 @@ async function handleReplaceMembers(
       const teamDataService = getTeamDataService();
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
+      if (payload.memberSettingsRelaunch !== undefined) {
+        await persistNodeMemberSettingsRelaunch(tn, members, payload.memberSettingsRelaunch, {
+          isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name),
+          invalidateWorkerCache: invalidateTeamRosterSnapshotCaches,
+        });
+        return;
+      }
       if (!isTeamAlive) {
         await teamDataService.replaceMembers(tn, { members });
         invalidateTeamRosterSnapshotCaches(tn);
         return;
       }
-
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
       const previousTeamData = await teamDataService.getTeamData(tn);
       const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
