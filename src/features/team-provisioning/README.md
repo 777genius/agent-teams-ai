@@ -71,3 +71,20 @@ and effective specs still construct runtime behavior; the writer uses configured
 model/effort/provider/backend/fast-mode fields while retaining effective workspace
 materialization and existing tombstone handling. Metadata discovery carries backend
 and fast-mode selections so explicit siblings survive the same round trip.
+
+After completion, `config.json` retains effective provider/model/effort for runtime
+consumers. `TeamMemberResolver.configuredRuntimeSettings` and
+`LegacyMemberSettingsRepositoryAdapter` instead read provider/model/effort/backend/
+fast-mode from the matching canonical `members.meta.json` row. An absent field on
+that row means inheritance; it must not fall back to effective config. For legacy
+members with no matching metadata row, config remains the configured source
+(including its legacy `provider` alias). Metadata for another member does not
+change that compatibility policy. The resolver keeps configured backend selections
+separate from effective backend resolution.
+
+`MemberSettingsRelaunchFiles.test.ts` executes completion's real
+`applyEffectiveLaunchStateToConfig`, reopens files with fresh stores and the actual
+member resolver/editor projection, and resubmits settings with a changed lead
+default through persistence and launch setup again. It checks both effective
+runtime values and durable absence of cleared/inherited overrides alongside an
+explicit mixed-provider/backend/fast-mode sibling.

@@ -138,15 +138,18 @@ function preferred(meta: TeamMember | null, config: JsonMember | null, field: st
 
 function readSettings(meta: TeamMember | null, config: JsonMember | null): EditableMemberSettings {
   const rawPolicy = preferred(meta, config, 'mcpPolicy');
+  // A canonical row owns configured runtime settings, including absent overrides.
+  // Only config-only legacy members use config, which completion materializes.
+  const configured = meta ?? config;
   return {
     role: optionalText(preferred(meta, config, 'role')),
     workflow: optionalText(preferred(meta, config, 'workflow')),
     isolation: preferred(meta, config, 'isolation') === 'worktree' ? 'worktree' : null,
-    providerId: providerId(config?.providerId ?? config?.provider ?? meta?.providerId),
-    providerBackendId: backendId(preferred(meta, config, 'providerBackendId')),
-    model: optionalText(preferred(meta, config, 'model')),
-    effort: effort(preferred(meta, config, 'effort')),
-    fastMode: fastMode(preferred(meta, config, 'fastMode')),
+    providerId: providerId(meta ? meta.providerId : (config?.providerId ?? config?.provider)),
+    providerBackendId: backendId(configured?.providerBackendId),
+    model: optionalText(configured?.model),
+    effort: effort(configured?.effort),
+    fastMode: fastMode(configured?.fastMode),
     mcpPolicy:
       rawPolicy && typeof rawPolicy === 'object'
         ? (normalizeTeamMemberMcpPolicy(rawPolicy) ?? null)

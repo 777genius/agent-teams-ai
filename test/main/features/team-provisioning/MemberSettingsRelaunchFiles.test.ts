@@ -6,6 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp', isPackaged: false } }));
 
+import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
+import { applyEffectiveLaunchStateToConfig } from '@main/services/team/provisioning/TeamProvisioningConfigMaterialization';
+import {
+  fingerprintResolvedMember,
+  memberToEditableSettings,
+} from '@features/team-provisioning/renderer/utils/memberSettingsPresentation';
+import type { TeamConfig } from '@shared/types';
+
 import { prepareModelLaunchFixture } from './prepareModelLaunchFixture';
 
 const sandbox = vi.hoisted(() => ({ root: '' }));
@@ -14,8 +22,15 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
   getTeamsBasePath: () => sandbox.root,
 }));
 
-import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs } from '@features/team-provisioning/renderer/utils/memberSettingsRelaunch';
-import { buildMembersFromDrafts, createMemberDraftsFromInputs } from '@renderer/components/team/members/membersEditorUtils';
+import {
+  applyMemberSettingsRelaunch,
+  buildMemberSettingsRelaunchIntent,
+  filterMemberSettingsRelaunchInputs,
+} from '@features/team-provisioning/renderer/utils/memberSettingsRelaunch';
+import {
+  buildMembersFromDrafts,
+  createMemberDraftsFromInputs,
+} from '@renderer/components/team/members/membersEditorUtils';
 import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { persistDeterministicLaunchMetadata } from '@main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow';
@@ -85,16 +100,16 @@ describe('model relaunch file round trip', () => {
         expectedFingerprint: baseline.find((row) => row.memberName === memberName)!
           .expectedFingerprint,
         baseline,
-        expectedTeamSettingsFingerprint: fingerprintSavedLaunchSettings(await new TeamMetaStore().getMeta('test-team')),
+        expectedTeamSettingsFingerprint: fingerprintSavedLaunchSettings(
+          await new TeamMetaStore().getMeta('test-team')
+        ),
         model: 'glm-5.3-flash',
         effort: null,
       };
-      const nextMembers = members
-        .slice(1)
-        .map((member) => ({
-          ...member,
-          ...(member.name === memberName ? { model: intent.model } : {}),
-        }));
+      const nextMembers = members.slice(1).map((member) => ({
+        ...member,
+        ...(member.name === memberName ? { model: intent.model } : {}),
+      }));
       await persistNodeMemberSettingsRelaunch('test-team', nextMembers, intent, {
         hasProvisioningRun: () => false,
         isTeamAlive: () => false,
@@ -129,13 +144,31 @@ describe('model relaunch file round trip', () => {
         model: saved.model,
         syncModelsWithLead: saved.syncModelsWithLead,
       });
-      const launchRequest = { teamName: 'test-team', cwd: sandbox.root, providerId: saved.providerId,
-        model: saved.model, syncModelsWithLead: saved.syncModelsWithLead };
-      await persistDeterministicLaunchMetadata({
-        request: launchRequest,
-        syntheticRequest: buildLaunchSyntheticRequest({ request: launchRequest, members: resolution.members, configRaw }),
-        launchIdentity: null, allEffectiveMemberSpecs: effective, configuredMemberSpecs: resolution.members,
-      }, { teamMetaStore: new TeamMetaStore(), membersMetaStore: new TeamMembersMetaStore(), nowMs: () => 2 });
+      const launchRequest = {
+        teamName: 'test-team',
+        cwd: sandbox.root,
+        providerId: saved.providerId,
+        model: saved.model,
+        syncModelsWithLead: saved.syncModelsWithLead,
+      };
+      await persistDeterministicLaunchMetadata(
+        {
+          request: launchRequest,
+          syntheticRequest: buildLaunchSyntheticRequest({
+            request: launchRequest,
+            members: resolution.members,
+            configRaw,
+          }),
+          launchIdentity: null,
+          allEffectiveMemberSpecs: effective,
+          configuredMemberSpecs: resolution.members,
+        },
+        {
+          teamMetaStore: new TeamMetaStore(),
+          membersMetaStore: new TeamMembersMetaStore(),
+          nowMs: () => 2,
+        }
+      );
       expect((await reopened.findTarget('test-team', 'inherited'))?.settings.model).toBeNull();
       expect(effective.find((member) => member.name === 'worker')?.model).toBe(
         targetKind === 'member' ? 'glm-5.3-flash' : 'glm-5.3'
@@ -154,69 +187,260 @@ describe('model relaunch file round trip', () => {
   );
 });
 
-it.each([false, true])('clears through settings trigger, real launch writer and next lead inheritance (legacy lead=%s)', async legacyLead => {
-  sandbox.root = await mkdtemp(join(tmpdir(), 'ariel-model-relaunch-'));
-  const teamName = 'test-team';
-  const dir = join(sandbox.root, teamName);
-  await mkdir(dir);
-  const membersStore = new TeamMembersMetaStore();
-  const teamStore = new TeamMetaStore();
-  const lead = legacyLead ? { name: 'lead', role: 'Lead', model: 'lead-one' }
-    : { name: 'team-lead', agentType: 'team-lead', model: 'lead-one' };
-  const rows = [lead, { name: 'cleared', model: 'old-override' }, { name: 'inherited' },
-    { name: 'explicit', providerId: 'codex' as const, providerBackendId: 'codex-native' as const,
-      model: 'explicit-model', effort: 'high' as const, fastMode: 'off' as const }];
-  await writeFile(join(dir, 'config.json'), JSON.stringify({ members: rows }));
-  await membersStore.writeMembers(teamName, rows);
-  await teamStore.writeMeta(teamName, { cwd: sandbox.root, providerId: 'anthropic', model: 'lead-one', effort: 'medium', syncModelsWithLead: true, createdAt: 1 });
-  const options = { isTeamAlive: () => false, hasProvisioningRun: () => false, invalidateWorkerCache: vi.fn() };
-  const repository = new LegacyMemberSettingsRepositoryAdapter(createNodeLegacyMemberSettingsRepositoryDependencies(options));
-  const snapshots = await Promise.all(rows.map(row => repository.findTarget(teamName, row.name)));
-  const projected = snapshots.map(snapshot => ({
-    name: snapshot!.name, agentType: snapshot!.agentType ?? undefined,
-    role: snapshot!.settings.role ?? undefined, model: 'runtime-observation',
-    configuredRuntimeSettings: Object.fromEntries(Object.entries(snapshot!.settings).filter(([, value]) => value != null)),
-    status: 'idle' as const, currentTaskId: null, taskCount: 0, messageCount: 0, lastActiveAt: null,
-  }));
-  const draft = {
-    teamName, memberName: legacyLead ? 'lead' : 'cleared', targetKind: legacyLead ? 'lead' as const : 'member' as const,
-    expectedFingerprint: createMemberSettingsFingerprint(snapshots[legacyLead ? 0 : 1]!),
-    expectedTeamSettingsFingerprint: (await new TeamDataService().getSavedRequest(teamName))!.savedSettingsFingerprint!,
-    settings: { ...snapshots[legacyLead ? 0 : 1]!.settings, model: legacyLead ? 'lead-two' : null },
-  };
-  const inputs = filterMemberSettingsRelaunchInputs(applyMemberSettingsRelaunch(projected, draft));
-  expect(inputs.map(row => row.name)).toEqual(['cleared', 'inherited', 'explicit']);
-  // The real dialog's member draft projection and submit builder.
-  const submitted = buildMembersFromDrafts(createMemberDraftsFromInputs(inputs));
-  const intent = buildMemberSettingsRelaunchIntent(draft, projected, draft.settings.model, null, submitted);
-  const request = { teamName, cwd: sandbox.root, providerId: 'anthropic' as const, model: legacyLead ? 'lead-two' : 'lead-one', effort: 'medium' as const, syncModelsWithLead: true };
-  const launch = async () => {
-    const setup = await prepareModelLaunchFixture(request, sandbox.root);
-    expect(setup.configuredMemberSpecs.map(row => row.name)).not.toContain('lead');
-    // The actual setup's synthetic request is EFFECTIVE; only the separate configured
-    // channel is allowed to write settings authority.
-    expect(setup.syntheticRequest.members.find(row => row.name === 'inherited')?.model).toBe(request.model);
-    await persistDeterministicLaunchMetadata({ request, ...setup },
-      { teamMetaStore: teamStore, membersMetaStore: membersStore, nowMs: () => 2 });
-    return setup.allEffectiveMemberSpecs;
-  };
-  await executeTeamRelaunch({ teamName, isTeamAlive: true, request, members: submitted, memberSettingsRelaunch: intent,
-    stopTeam: vi.fn(), replaceMembers: (name, replacement) => persistNodeMemberSettingsRelaunch(name, replacement.members, replacement.memberSettingsRelaunch, options),
-    launchTeam: launch,
-  });
-  const stored = JSON.parse(await readFile(join(dir, 'members.meta.json'), 'utf8'));
-  for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
-    const row = stored.members.find((row: { name: string }) => row.name === name);
-    for (const key of ['model', 'effort', 'providerId', 'providerBackendId', 'fastMode']) expect(row).not.toHaveProperty(key);
-    expect((await repository.findTarget(teamName, name))?.settings.model).toBeNull();
+it.each([false, true])(
+  'clears through settings trigger, real launch writer and next lead inheritance (legacy lead=%s)',
+  async (legacyLead) => {
+    sandbox.root = await mkdtemp(join(tmpdir(), 'ariel-model-relaunch-'));
+    const teamName = 'test-team';
+    const dir = join(sandbox.root, teamName);
+    await mkdir(dir);
+    const membersStore = new TeamMembersMetaStore();
+    const teamStore = new TeamMetaStore();
+    const lead = legacyLead
+      ? { name: 'lead', role: 'Lead', model: 'lead-one' }
+      : { name: 'team-lead', agentType: 'team-lead', model: 'lead-one' };
+    const rows = [
+      lead,
+      { name: 'cleared', model: 'old-override' },
+      { name: 'inherited' },
+      {
+        name: 'explicit',
+        providerId: 'codex' as const,
+        providerBackendId: 'codex-native' as const,
+        model: 'explicit-model',
+        effort: 'high' as const,
+        fastMode: 'off' as const,
+      },
+    ];
+    await writeFile(join(dir, 'config.json'), JSON.stringify({ members: rows }));
+    await membersStore.writeMembers(teamName, rows);
+    await teamStore.writeMeta(teamName, {
+      cwd: sandbox.root,
+      providerId: 'anthropic',
+      model: 'lead-one',
+      effort: 'medium',
+      syncModelsWithLead: true,
+      createdAt: 1,
+    });
+    const options = {
+      isTeamAlive: () => false,
+      hasProvisioningRun: () => false,
+      invalidateWorkerCache: vi.fn(),
+    };
+    const repository = new LegacyMemberSettingsRepositoryAdapter(
+      createNodeLegacyMemberSettingsRepositoryDependencies(options)
+    );
+    const snapshots = await Promise.all(
+      rows.map((row) => repository.findTarget(teamName, row.name))
+    );
+    // Reopening uses fresh stores and the production resolver, then the actual editor projection.
+    const reopen = async () => {
+      const config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf8')) as TeamConfig;
+      const meta = await new TeamMembersMetaStore().getMeta(teamName);
+      return new TeamMemberResolver()
+        .resolveMembers(config, meta?.members ?? [], [], [], {
+          leadProviderId: 'anthropic',
+        })
+        .map((member) => ({
+          ...member,
+          status: 'idle' as const,
+          messageCount: 0,
+          lastActiveAt: null,
+        }));
+    };
+    const projected = await reopen();
+    const draft = {
+      teamName,
+      memberName: legacyLead ? 'lead' : 'cleared',
+      targetKind: legacyLead ? ('lead' as const) : ('member' as const),
+      expectedFingerprint: createMemberSettingsFingerprint(snapshots[legacyLead ? 0 : 1]!),
+      expectedTeamSettingsFingerprint: (await new TeamDataService().getSavedRequest(teamName))!
+        .savedSettingsFingerprint!,
+      settings: {
+        ...snapshots[legacyLead ? 0 : 1]!.settings,
+        model: legacyLead ? 'lead-two' : null,
+      },
+    };
+    const inputs = filterMemberSettingsRelaunchInputs(
+      applyMemberSettingsRelaunch(projected, draft)
+    );
+    expect(inputs.map((row) => row.name)).toEqual(['cleared', 'inherited', 'explicit']);
+    // The real dialog's member draft projection and submit builder.
+    const submitted = buildMembersFromDrafts(createMemberDraftsFromInputs(inputs));
+    const intent = buildMemberSettingsRelaunchIntent(
+      draft,
+      projected,
+      draft.settings.model,
+      null,
+      submitted
+    );
+    const request = {
+      teamName,
+      cwd: sandbox.root,
+      providerId: 'anthropic' as const,
+      model: legacyLead ? 'lead-two' : 'lead-one',
+      effort: 'medium' as const,
+      syncModelsWithLead: true,
+    };
+    const launch = async () => {
+      expect((await new TeamDataService().getSavedRequest(teamName))?.model).toBe(request.model);
+      const setup = await prepareModelLaunchFixture(request, sandbox.root);
+      expect(setup.configuredMemberSpecs.map((row) => row.name)).not.toContain('lead');
+      // The actual setup's synthetic request is EFFECTIVE; only the separate configured
+      // channel is allowed to write settings authority.
+      expect(setup.syntheticRequest.members.find((row) => row.name === 'inherited')?.model).toBe(
+        request.model
+      );
+      await persistDeterministicLaunchMetadata(
+        { request, ...setup },
+        { teamMetaStore: teamStore, membersMetaStore: membersStore, nowMs: () => 2 }
+      );
+      // Completion persists run.allEffectiveMembers, just as TeamProvisioningTurnComplete does.
+      const config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf8'));
+      applyEffectiveLaunchStateToConfig(teamName, config, {
+        providerId: request.providerId,
+        model: request.model,
+        effort: request.effort,
+        members: setup.allEffectiveMemberSpecs,
+      });
+      await writeFile(join(dir, 'config.json'), JSON.stringify(config));
+      return setup.allEffectiveMemberSpecs;
+    };
+    await executeTeamRelaunch({
+      teamName,
+      isTeamAlive: true,
+      request,
+      members: submitted,
+      memberSettingsRelaunch: intent,
+      stopTeam: vi.fn(),
+      replaceMembers: (name, replacement) =>
+        persistNodeMemberSettingsRelaunch(
+          name,
+          replacement.members,
+          replacement.memberSettingsRelaunch,
+          options
+        ),
+      launchTeam: launch,
+    });
+    const stored = JSON.parse(await readFile(join(dir, 'members.meta.json'), 'utf8'));
+    for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
+      const row = stored.members.find((row: { name: string }) => row.name === name);
+      for (const key of ['model', 'effort', 'providerId', 'providerBackendId', 'fastMode'])
+        expect(row).not.toHaveProperty(key);
+      expect((await repository.findTarget(teamName, name))?.settings.model).toBeNull();
+    }
+    expect(stored.members.find((row: { name: string }) => row.name === 'explicit')).toMatchObject(
+      rows[3]
+    );
+    const reopened = await reopen();
+    const reopenedRepository = new LegacyMemberSettingsRepositoryAdapter(
+      createNodeLegacyMemberSettingsRepositoryDependencies(options)
+    );
+    for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
+      const member = reopened.find((row) => row.name === name)!;
+      // Runtime consumers must still receive the effective completed-launch settings.
+      expect(member).toMatchObject({
+        providerId: 'anthropic',
+        model: request.model,
+        effort: 'medium',
+      });
+      expect(memberToEditableSettings(member)).toMatchObject({
+        providerId: null,
+        providerBackendId: null,
+        model: null,
+        effort: null,
+        fastMode: null,
+      });
+      expect((await reopenedRepository.findTarget(teamName, name))?.settings).toEqual(
+        memberToEditableSettings(member)
+      );
+    }
+    expect(
+      memberToEditableSettings(reopened.find((row) => row.name === 'explicit')!)
+    ).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'explicit-model',
+      effort: 'high',
+      fastMode: 'off',
+    });
+    // Submit the reopened editor with another lead-default change via the real settings path.
+    const reopenedLead = reopened.find((row) => row.name === lead.name)!;
+    const nextDraft = {
+      teamName,
+      memberName: lead.name,
+      targetKind: 'lead' as const,
+      expectedFingerprint: fingerprintResolvedMember(reopenedLead),
+      expectedTeamSettingsFingerprint: (await new TeamDataService().getSavedRequest(teamName))!
+        .savedSettingsFingerprint!,
+      settings: { ...memberToEditableSettings(reopenedLead), model: 'lead-three' },
+    };
+    const nextSubmitted = buildMembersFromDrafts(
+      createMemberDraftsFromInputs(
+        filterMemberSettingsRelaunchInputs(applyMemberSettingsRelaunch(reopened, nextDraft))
+      )
+    );
+    for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
+      expect(nextSubmitted.find((row) => row.name === name)?.model).toBeUndefined();
+    }
+    const nextIntent = buildMemberSettingsRelaunchIntent(
+      nextDraft,
+      reopened,
+      'lead-three',
+      'medium',
+      nextSubmitted
+    );
+    request.model = 'lead-three';
+    const nextLaunch = vi.fn(launch);
+    await executeTeamRelaunch({
+      teamName,
+      isTeamAlive: false,
+      request,
+      members: nextSubmitted,
+      memberSettingsRelaunch: nextIntent,
+      stopTeam: vi.fn(),
+      replaceMembers: (name, replacement) =>
+        persistNodeMemberSettingsRelaunch(
+          name,
+          replacement.members,
+          replacement.memberSettingsRelaunch,
+          options
+        ),
+      launchTeam: nextLaunch,
+    });
+    const next: Awaited<ReturnType<typeof launch>> = await nextLaunch.mock.results[0].value;
+    expect(next.find((row) => row.name === 'inherited')?.model).toBe('lead-three');
+    if (!legacyLead) expect(next.find((row) => row.name === 'cleared')?.model).toBe('lead-three');
+    expect(next.find((row) => row.name === 'explicit')).toMatchObject(rows[3]);
+    const finalMembers = await reopen();
+    expect(
+      memberToEditableSettings(finalMembers.find((row) => row.name === 'explicit')!)
+    ).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'explicit-model',
+      effort: 'high',
+      fastMode: 'off',
+    });
+    const finalStored = JSON.parse(await readFile(join(dir, 'members.meta.json'), 'utf8')) as {
+      members: { name: string }[];
+    };
+    expect(finalStored.members.find((row) => row.name === 'explicit')).toMatchObject(rows[3]);
+    for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
+      expect(finalMembers.find((row) => row.name === name)?.model).toBe('lead-three');
+      expect(
+        memberToEditableSettings(finalMembers.find((row) => row.name === name)!)
+      ).toMatchObject({
+        providerId: null,
+        providerBackendId: null,
+        model: null,
+        effort: null,
+        fastMode: null,
+      });
+      expect((await reopenedRepository.findTarget(teamName, name))?.settings.model).toBeNull();
+      const row = finalStored.members.find((row) => row.name === name)!;
+      for (const key of ['model', 'effort', 'providerId', 'providerBackendId', 'fastMode'])
+        expect(row).not.toHaveProperty(key);
+    }
   }
-  expect(stored.members.find((row: { name: string }) => row.name === 'explicit')).toMatchObject(rows[3]);
-  // Change the lead default again after the real canonical write, then build AND write another launch.
-  request.model = 'lead-three';
-  await teamStore.updateMeta(teamName, current => ({ ...current!, model: request.model }));
-  const next = await launch();
-  expect(next.find(row => row.name === 'inherited')?.model).toBe('lead-three');
-  if (!legacyLead) expect(next.find(row => row.name === 'cleared')?.model).toBe('lead-three');
-  expect(next.find(row => row.name === 'explicit')?.model).toBe('explicit-model');
-  expect((await repository.findTarget(teamName, 'inherited'))?.settings.model).toBeNull();
-});
+);
