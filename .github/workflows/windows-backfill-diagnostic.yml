@@ -2,6 +2,19 @@ name: Windows packaged backfill diagnostic
 
 on:
   workflow_dispatch:
+    inputs:
+      runtime_version:
+        description: 'Manual qualification: exact X.Y.Z (no v); leave all three blank for shipped 0.0.87'
+        type: string
+        required: false
+      runtime_archive_sha256:
+        description: 'Required with runtime_version: exact Windows x64 ZIP SHA256 (64 hex)'
+        type: string
+        required: false
+      runtime_source_sha:
+        description: 'Required with runtime_version: exact embedded COMMIT_SHA (40 hex)'
+        type: string
+        required: false
   pull_request:
     paths:
       - 'test/main/services/team/OpenCodePackagedBackfill.windows.test.ts'
@@ -50,6 +63,37 @@ jobs:
             ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/preflight.json" -Encoding utf8
           if (-not $IsWindows) { throw 'Actual Windows is mandatory' }
 
+      - name: Validate runtime qualification tuple before downloads
+        id: runtime
+        env:
+          INPUT_RUNTIME_VERSION: ${{ inputs.runtime_version }}
+          INPUT_RUNTIME_ARCHIVE_SHA256: ${{ inputs.runtime_archive_sha256 }}
+          INPUT_RUNTIME_SOURCE_SHA: ${{ inputs.runtime_source_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:INPUT_RUNTIME_VERSION
+          $digest = $env:INPUT_RUNTIME_ARCHIVE_SHA256
+          $source = $env:INPUT_RUNTIME_SOURCE_SHA
+          $custom = ($version -ne '' -and $null -ne $version) -or ($digest -ne '' -and $null -ne $digest) -or ($source -ne '' -and $null -ne $source)
+          if ($custom) {
+            if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') { throw 'Custom runtime requires workflow_dispatch' }
+            if ($version -cnotmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z' -or
+                $digest -notmatch '\A[a-fA-F0-9]{64}\z' -or $source -notmatch '\A[a-fA-F0-9]{40}\z') {
+              throw 'Supply all three: exact X.Y.Z version, 64-hex archive SHA256, and 40-hex source SHA'
+            }
+            $digest = $digest.ToLowerInvariant()
+            $source = $source.ToLowerInvariant()
+          } else {
+            # Immutable original PR/manual defaults; custom qualification never updates these pins.
+            $version = '0.0.87'
+            $digest = 'f4f36d3f3697fcb3208e7bfc784829a447d8c7faf65570479fa0b4a92ed1ef5d'
+            $source = ''
+          }
+          "custom=$($custom.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "WINDOWS_BACKFILL_RUNTIME_VERSION=$version" >> $env:GITHUB_ENV
+          "WINDOWS_BACKFILL_RUNTIME_ARCHIVE_SHA256=$digest" >> $env:GITHUB_ENV
+          "WINDOWS_BACKFILL_RUNTIME_SOURCE_SHA=$source" >> $env:GITHUB_ENV
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -94,19 +138,29 @@ jobs:
         timeout-minutes: 6
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Download and verify the exact public shipped archive before extraction
+      - name: Download and verify the selected archive before extraction
         timeout-minutes: 4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Additional credential only for validated manual qualification; never for PR downloads.
+          GH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && steps.runtime.outputs.custom == 'true' && secrets.RUNTIME_BUILD_DISPATCH_TOKEN || '' }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = Join-Path $env:RUNNER_TEMP 'agent-teams-runtime-win32-x64-v0.0.87.zip'
-          $url = 'https://github.com/777genius/agent_teams_orchestrator_binaries/releases/download/runtime-v0.0.87/agent-teams-runtime-win32-x64-v0.0.87.zip'
-          $expected = 'f4f36d3f3697fcb3208e7bfc784829a447d8c7faf65570479fa0b4a92ed1ef5d'
-          $provenance = @{ status = 'downloading'; url = $url; expectedArchiveSha256 = $expected; appSourceSha = (git rev-parse HEAD); supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA; runtimeBuildSourceSha = $null }
+          $requestedVersion = $env:WINDOWS_BACKFILL_RUNTIME_VERSION
+          $expectedSource = $env:WINDOWS_BACKFILL_RUNTIME_SOURCE_SHA
+          $custom = -not [string]::IsNullOrEmpty($expectedSource)
+          if ($custom -and [string]::IsNullOrEmpty($env:GH_TOKEN)) { throw 'Manual qualification requires RUNTIME_BUILD_DISPATCH_TOKEN' }
+          $tag = "runtime-v$requestedVersion"
+          $asset = "agent-teams-runtime-win32-x64-v$requestedVersion.zip"
+          $archive = Join-Path $env:RUNNER_TEMP $asset
+          $url = "https://github.com/777genius/agent_teams_orchestrator_binaries/releases/download/$tag/$asset"
+          $expected = $env:WINDOWS_BACKFILL_RUNTIME_ARCHIVE_SHA256
+          $mode = if ($custom) { 'manual-qualification' } else { 'shipped-default' }
+          $provenance = @{ status = 'downloading'; mode = $mode; runtimeVersion = $requestedVersion; expectedRuntimeSourceSha = $expectedSource; url = $url; expectedArchiveSha256 = $expected; appSourceSha = (git rev-parse HEAD); supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA; runtimeBuildSourceSha = $null }
           $provenance | ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/release.json" -Encoding utf8
-          gh release download runtime-v0.0.87 --repo 777genius/agent_teams_orchestrator_binaries --pattern agent-teams-runtime-win32-x64-v0.0.87.zip --dir $env:RUNNER_TEMP --clobber
-          if ($LASTEXITCODE -ne 0) { throw 'Shipped release download failed' }
+          # gh supports authenticated draft assets; repository, tag prefix and asset shape are fixed.
+          gh release download $tag --repo 777genius/agent_teams_orchestrator_binaries --pattern $asset --dir $env:RUNNER_TEMP --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime release download failed' }
           $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
           $provenance.archiveSha256 = $actual
           $provenance.status = 'archive-downloaded'
@@ -121,7 +175,8 @@ jobs:
           $runtimeDir = Split-Path -Parent $binary
           $runtimeSha = (Get-Content -Raw -LiteralPath (Join-Path $runtimeDir 'COMMIT_SHA')).Trim()
           $version = (Get-Content -Raw -LiteralPath (Join-Path $runtimeDir 'VERSION')).Trim()
-          if ($runtimeSha -notmatch '^[a-f0-9]{40}$' -or $version -ne '0.0.87') { throw 'Release metadata mismatch' }
+          if ($runtimeSha -cnotmatch '\A[a-f0-9]{40}\z' -or $version -cne $requestedVersion) { throw 'Release metadata mismatch' }
+          if ($custom -and $runtimeSha -cne $expectedSource) { throw 'Runtime COMMIT_SHA mismatch' }
           $provenance.runtimeBuildSourceSha = $runtimeSha
           $provenance.executableSha256 = $exeHash
           $provenance.executableArchiveMember = [IO.Path]::GetRelativePath($extract, $binary).Replace('\', '/')

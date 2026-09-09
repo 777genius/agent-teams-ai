@@ -26,6 +26,11 @@ import {
 import { describe, expect, it } from 'vitest';
 
 const ARCHIVE_SHA256 = 'f4f36d3f3697fcb3208e7bfc784829a447d8c7faf65570479fa0b4a92ed1ef5d';
+// Workflow validates the all-or-none tuple before downloading. Retain the original
+// standalone defaults and recheck the selected archive/metadata before any invocation.
+const runtimeVersion = process.env.WINDOWS_BACKFILL_RUNTIME_VERSION ?? '0.0.87';
+const runtimeArchiveSha256 = process.env.WINDOWS_BACKFILL_RUNTIME_ARCHIVE_SHA256 ?? ARCHIVE_SHA256;
+const runtimeSourceSha = process.env.WINDOWS_BACKFILL_RUNTIME_SOURCE_SHA;
 const binaryInput = process.env.WINDOWS_BACKFILL_EXE;
 const evidenceDir = process.env.WINDOWS_BACKFILL_EVIDENCE_DIR;
 const supportRoot = process.env.WINDOWS_BACKFILL_SUPPORT_ROOT;
@@ -132,8 +137,10 @@ describe('Windows packaged backfill eligibility', () => {
   });
 });
 
+const suiteName = 'actual app client / packaged Windows runtime';
+
 describe.skipIf(Boolean(unavailable))(
-  `actual app client / shipped Windows runtime${unavailable ? ` (${unavailable})` : ''}`,
+  unavailable ? `${suiteName} (${unavailable})` : suiteName,
   () => {
     for (const [id, shape] of [
       ['ascii', 'ascii'],
@@ -148,7 +155,8 @@ describe.skipIf(Boolean(unavailable))(
           arch: process.arch,
           nodeVersion: process.version,
           referenceAppSha: 'e413d5420625a21f3c78f883e1b45f414f474f61',
-          runtimeRelease: 'runtime-v0.0.87',
+          runtimeRelease: `runtime-v${runtimeVersion}`,
+          qualificationMode: runtimeSourceSha ? 'manual-qualification' : 'shipped-default',
           // Populated from COMMIT_SHA inside the hash-verified release archive.
           runtimeBuildSourceSha: null,
           shape,
@@ -225,7 +233,8 @@ describe.skipIf(Boolean(unavailable))(
           const archive = process.env.WINDOWS_BACKFILL_ARCHIVE;
           expect(archive, 'Set WINDOWS_BACKFILL_ARCHIVE to the verified release zip').toBeTruthy();
           report.archiveSha256 = sha256(readFileSync(archive!));
-          expect(report.archiveSha256).toBe(ARCHIVE_SHA256);
+          expect(runtimeArchiveSha256).toMatch(/^[a-f0-9]{64}$/);
+          expect(report.archiveSha256).toBe(runtimeArchiveSha256);
           expect(path.isAbsolute(binaryInput!)).toBe(true);
           expect(path.extname(binaryInput!).toLowerCase()).toBe('.exe');
           report.executableSha256 = sha256(readFileSync(binaryInput!));
@@ -239,7 +248,13 @@ describe.skipIf(Boolean(unavailable))(
             'utf8'
           ).trim();
           expect(report.runtimeBuildSourceSha).toMatch(/^[a-f0-9]{40}$/);
-          expect(readFileSync(path.join(runtimeDir, 'VERSION'), 'utf8').trim()).toBe('0.0.87');
+          if (runtimeSourceSha) {
+            expect(runtimeSourceSha).toMatch(/^[a-f0-9]{40}$/);
+            expect(report.runtimeBuildSourceSha).toBe(runtimeSourceSha);
+          }
+          expect(readFileSync(path.join(runtimeDir, 'VERSION'), 'utf8').trim()).toBe(
+            runtimeVersion
+          );
           root = mkdtempSync(path.join(os.tmpdir(), 'app-backfill-'));
           const caseRoot = path.join(root, shape);
           const binDir = path.join(caseRoot, 'bin');
