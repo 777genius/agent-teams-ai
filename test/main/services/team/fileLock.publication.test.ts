@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -130,6 +131,86 @@ const phases = [
   'data-unlink-before',
   'data-unlink-after',
 ];
+
+it('publishes child control records only after their complete write and close', async () => {
+  const control = fs.mkdtempSync(path.join(dir, 'control records '));
+  fs.writeFileSync(path.join(control, 'resume'), '');
+  const records = ['entered', 'paused.json', 'error.json'];
+  const observations: { record: string; visibleAtOpen: boolean; visibleDuringWrite: boolean }[] =
+    [];
+  const nativeRequire = createRequire(import.meta.url);
+  const fixtureFs = {
+    ...nativeRequire('node:fs'),
+    writeFileSync: (name: string, data: string, options?: { flag?: string }) => {
+      const record = records.find(
+        (entry) =>
+          name === path.join(control, entry) || name.startsWith(`${path.join(control, entry)}.`)
+      );
+      if (!record) throw new Error(`Unexpected fixture write: ${name}`);
+      const canonical = path.join(control, record);
+      // Observe the native open/truncate and incomplete-write windows. This
+      // rejects direct canonical writes deterministically, without parse retries.
+      const fd = fs.openSync(name, options?.flag ?? 'w');
+      try {
+        const visibleAtOpen = fs.existsSync(canonical);
+        fs.writeSync(fd, data.slice(0, 1));
+        observations.push({
+          record,
+          visibleAtOpen,
+          visibleDuringWrite: fs.existsSync(canonical),
+        });
+        fs.writeSync(fd, data.slice(1));
+      } finally {
+        fs.closeSync(fd);
+      }
+    },
+    renameSync: (from: string, to: string) => {
+      // A canonical record becomes observable only with all bytes already present.
+      const complete = fs.readFileSync(from, 'utf8');
+      if (to.endsWith('.json')) JSON.parse(complete);
+      else expect(complete).toBe('yes');
+      fs.renameSync(from, to);
+    },
+  };
+  const childProcess = {
+    argv: ['', '', 'fixture-module', resource, control, 'controller', 'callback'],
+    pid: process.pid,
+    exitCode: 0,
+  };
+  await runInNewContext(fs.readFileSync(fixture, 'utf8'), {
+    require: (name: string) => {
+      if (name === 'node:fs') return fixtureFs;
+      if (name === 'node:module') return { syncBuiltinESMExports: () => {} };
+      if (name === 'fixture-module')
+        return {
+          withFileLockSync: (_resource: string, callback: () => void) => {
+            callback();
+            throw new Error('fixture failure');
+          },
+        };
+      return nativeRequire(name);
+    },
+    process: childProcess,
+    Buffer,
+  });
+  expect(observations).toEqual(
+    records.map((record) => ({
+      record,
+      visibleAtOpen: false,
+      visibleDuringWrite: false,
+    }))
+  );
+  expect(fs.readFileSync(path.join(control, 'entered'), 'utf8')).toBe('yes');
+  expect(JSON.parse(fs.readFileSync(path.join(control, 'paused.json'), 'utf8'))).toEqual({
+    point: 'callback',
+    pid: process.pid,
+  });
+  expect(JSON.parse(fs.readFileSync(path.join(control, 'error.json'), 'utf8'))).toEqual({
+    message: 'fixture failure',
+  });
+  expect(childProcess.exitCode).toBe(1);
+  expect(fs.readdirSync(control).sort()).toEqual([...records, 'resume'].sort());
+});
 
 describe.each(['sync', 'async', 'controller'])('%s process publication', (implementation) => {
   it.each(phases)('recovers after actual kill at %s, without wiping candidates', async (phase) => {

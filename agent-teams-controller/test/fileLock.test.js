@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const proper = require('proper-lockfile');
 const { withFileLockSync } = require('../src/internal/fileLock');
 
 const options = { acquireTimeoutMs: 5, retryIntervalMs: 1, staleTimeoutMs: 1 };
@@ -50,6 +51,66 @@ it('keeps legacy anonymous locks unknown regardless of age', () => {
   expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
   expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toBe('');
 });
+
+it.each([false, true])(
+  'fails closed on actual proper-lockfile ownership (swap at pending rmdir: %s)',
+  (swapAtRmdir) => {
+    const lock = `${resource}.lock`;
+    // Keep the real runtime participant independent of the controller syscall hook.
+    const nativeFs = { ...fs };
+    const runtimeOptions = { realpath: false, lockfilePath: lock, fs: nativeFs };
+    fs.writeFileSync(resource, '[]');
+    let release = proper.lockSync(resource, runtimeOptions);
+    fs.utimesSync(lock, new Date(0), new Date(0));
+    let swaps = 0;
+    let successorAge;
+    let entered = false;
+    let error;
+    const rmdir = vi.spyOn(fs, 'rmdirSync').mockImplementation((name, ...args) => {
+      if (name === lock && swapAtRmdir && swaps === 0) {
+        // Reviewer runtime-directory-probe.cjs schedule: deschedule AFTER the
+        // final identity check, release the old runtime and acquire a fresh one.
+        // A second stat/mtime check merely moves this same pending-rmdir window.
+        release();
+        release = proper.lockSync(resource, runtimeOptions);
+        swaps++;
+        successorAge = Date.now() - fs.statSync(lock).mtimeMs;
+      }
+      return nativeFs.rmdirSync(name, ...args);
+    });
+    try {
+      try {
+        withFileLockSync(
+          resource,
+          () => {
+            entered = true;
+          },
+          {
+            ...options,
+            staleTimeoutMs: 30_000,
+          }
+        );
+      } catch (caught) {
+        error = caught.message;
+      }
+      expect({ entered, error, swaps, successorAge }).toEqual({
+        entered: false,
+        error: `File lock timeout: ${resource}`,
+        swaps: 0,
+        successorAge: undefined,
+      });
+      expect(rmdir.mock.calls.some(([name]) => name === lock)).toBe(false);
+      expect(fs.statSync(lock).isDirectory()).toBe(true);
+      expect(fs.statSync(lock).mtimeMs).toBe(0);
+    } finally {
+      rmdir.mockRestore();
+      release();
+    }
+    expect(withFileLockSync(resource, () => 'after runtime release', options)).toBe(
+      'after runtime release'
+    );
+  }
+);
 
 it('surfaces unsupported hardlinks without publishing a partial lock', () => {
   vi.spyOn(fs, 'linkSync').mockImplementation(() => {

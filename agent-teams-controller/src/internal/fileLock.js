@@ -2,11 +2,12 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const STALE_TIMEOUT_MS = 30_000;
 const ACQUIRE_TIMEOUT_MS = 5_000;
 const RETRY_INTERVAL_MS = 20;
 
-// Protocol must stay equivalent to src/main/services/team/fileLock.ts in the app.
+// PID/token publication must stay equivalent to src/main/services/team/fileLock.ts.
+// Directory policy intentionally differs: the controller retains its baseline
+// fail-closed treatment of runtime directories, regardless of their age.
 // New gates are NEVER published empty. Private candidates may survive a crash but
 // are not acquisition blockers. This is process-crash safety, not fsync durability.
 function codeOf(error) {
@@ -160,18 +161,13 @@ function sameLock(left, right) {
   );
 }
 
-function recoverDataLock(lockPath, staleTimeoutMs) {
+function recoverDataLock(lockPath) {
   const observed = readLockInfo(lockPath);
   if (!observed) return;
   if (observed.stat.isDirectory()) {
-    // BASELINE compatibility with proper-lockfile's empty directory protocol.
-    // Its age policy does NOT protect indefinitely paused runtime holders.
-    // Never extend this policy to anonymous regular locks or new PID gates.
-    if (
-      Date.now() - observed.stat.mtimeMs > staleTimeoutMs &&
-      sameLock(observed, readLockInfo(lockPath))
-    )
-      removeEmptyGate(lockPath);
+    // proper-lockfile owners do not participate in our transition gate. Age
+    // cannot prove release, and even a final stat cannot fence a fresh successor
+    // arriving before rmdir. Only the runtime may release its canonical directory.
     return;
   }
   if (!observed.stat.isFile() || observed.content === null) return;
@@ -190,7 +186,7 @@ function releaseLock(lockPath, token) {
   if (lines?.[0] === String(process.pid) && lines[2] === token) unlinkOrMissing(lockPath);
 }
 
-function tryAcquire(lockPath, options, token) {
+function tryAcquire(lockPath, token) {
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   const gate = `${lockPath}-transition-v2`;
   const entry = acquireGate(gate, token);
@@ -198,7 +194,7 @@ function tryAcquire(lockPath, options, token) {
   let published = false;
   try {
     try {
-      recoverDataLock(lockPath, options.staleTimeoutMs);
+      recoverDataLock(lockPath);
       if (statOrMissing(lockPath)) return false;
       const candidate = `${lockPath}.candidate-${process.pid}-${randomUUID()}`;
       try {
@@ -238,7 +234,6 @@ function sleepSync(ms) {
 function resolveLockOptions(options) {
   return {
     acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
-    staleTimeoutMs: options.staleTimeoutMs ?? STALE_TIMEOUT_MS,
     retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
   };
 }
@@ -249,7 +244,7 @@ function withFileLockSync(filePath, fn, options = {}) {
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
   const token = randomUUID();
 
-  while (!tryAcquire(lockPath, resolvedOptions, token)) {
+  while (!tryAcquire(lockPath, token)) {
     if (Date.now() >= deadline) {
       throw new Error(`File lock timeout: ${filePath}`);
     }

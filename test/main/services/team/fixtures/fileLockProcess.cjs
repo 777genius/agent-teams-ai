@@ -1,5 +1,6 @@
 // Native Node child used by both protocol suites. No runtime/provider state.
 const fs = require('node:fs');
+const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { syncBuiltinESMExports } = require('node:module');
@@ -21,13 +22,18 @@ const original = Object.fromEntries(
 );
 const fds = new Map();
 let stopped = false;
+function publishRecord(name, content) {
+  const canonical = path.join(controlDir, name);
+  const candidate = `${canonical}.${process.pid}.${randomUUID()}.tmp`;
+  // Parents read these while the child is alive. Existence must mean a complete,
+  // closed record, including at the actual syscall-boundary kill barriers.
+  fs.writeFileSync(candidate, content, { flag: 'wx' });
+  fs.renameSync(candidate, canonical);
+}
 function barrier(point) {
   if (stopped || point !== phase) return;
   stopped = true;
-  fs.writeFileSync(
-    path.join(controlDir, 'paused.json'),
-    JSON.stringify({ point, pid: process.pid })
-  );
+  publishRecord('paused.json', JSON.stringify({ point, pid: process.pid }));
   const deadline = Date.now() + 20000;
   while (!fs.existsSync(path.join(controlDir, 'resume'))) {
     if (Date.now() > deadline) throw new Error(`Barrier expired: ${point}`);
@@ -97,7 +103,7 @@ syncBuiltinESMExports();
       ? require(modulePath)
       : await import(pathToFileURL(modulePath).href);
   const callback = () => {
-    fs.writeFileSync(path.join(controlDir, 'entered'), 'yes');
+    publishRecord('entered', 'yes');
     barrier('callback');
     return 'ok';
   };
@@ -105,9 +111,6 @@ syncBuiltinESMExports();
   if (implementation === 'async') await mod.withFileLock(resource, async () => callback(), options);
   else mod.withFileLockSync(resource, callback, options);
 })().catch((error) => {
-  fs.writeFileSync(
-    path.join(controlDir, 'error.json'),
-    JSON.stringify({ message: error.message, code: error.code })
-  );
+  publishRecord('error.json', JSON.stringify({ message: error.message, code: error.code }));
   process.exitCode = 1;
 });
