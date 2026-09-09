@@ -15,7 +15,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 
 import {
   ExecCliOpenCodeBridgeProcessRunner,
@@ -220,7 +220,8 @@ describe.skipIf(Boolean(unavailable))(
           }
           report.supportHelperSha256 = sha256(readFileSync(supportFile));
           report.supportFixtureSha256 = sha256(readFileSync(fixtureFile));
-          support = (await import(/* @vite-ignore */ pathToFileURL(supportFile).href)) as Support;
+          // Use Node 24 ESM loading; Vite transforms this external Windows file incorrectly.
+          support = createRequire(import.meta.url)(supportFile) as Support;
           const archive = process.env.WINDOWS_BACKFILL_ARCHIVE;
           expect(archive, 'Set WINDOWS_BACKFILL_ARCHIVE to the verified release zip').toBeTruthy();
           report.archiveSha256 = sha256(readFileSync(archive!));
