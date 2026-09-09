@@ -1,10 +1,14 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
 import {
   createTeamInnerWithService,
   launchTeamInnerWithService,
   type TeamProvisioningCreateLaunchOrchestrationServiceHost,
 } from './TeamProvisioningCreateLaunchOrchestration';
+import {
+  type TeamProvisioningRequestAdmissionContext,
+  teamProvisioningRequestAdmissionContext,
+} from './TeamProvisioningRequestAdmissionContext';
 
 import type {
   TeamCreateRequest,
@@ -13,15 +17,10 @@ import type {
   TeamLaunchResponse,
   TeamProvisioningProgress,
 } from '@shared/types';
+import type { AsyncLocalStorage } from 'node:async_hooks';
 
 interface TeamProvisioningRequestWithTeamName {
   teamName?: unknown;
-}
-
-interface TeamProvisioningRequestAdmissionContext {
-  active: boolean;
-  lockKey: string;
-  parent: TeamProvisioningRequestAdmissionContext | undefined;
 }
 
 export interface TeamProvisioningRequestAdmissionServiceHost extends TeamProvisioningCreateLaunchOrchestrationServiceHost {
@@ -66,10 +65,13 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
     }
   }
 
+  const publicationIsAuthorized = captureTeamLaunchPublicationAuthority(lockKey);
   return service.withTeamLock(lockKey, async () => {
+    if (!publicationIsAuthorized()) throw new Error('Launch admission superseded by Stop');
     const context: TeamProvisioningRequestAdmissionContext = {
       active: true,
       lockKey,
+      publicationIsAuthorized,
       parent: parentContext,
     };
     try {
@@ -83,7 +85,7 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
 export function createTeamProvisioningRequestAdmissionBoundary(
   service: TeamProvisioningRequestAdmissionServiceHost
 ): TeamProvisioningRequestAdmissionBoundary {
-  const admissionContext = new AsyncLocalStorage<TeamProvisioningRequestAdmissionContext>();
+  const admissionContext = teamProvisioningRequestAdmissionContext;
   return {
     createTeam: (request, onProgress) =>
       runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>

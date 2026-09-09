@@ -36,6 +36,7 @@ import {
   type OpenCodeBridgeResult,
   type OpenCodeBridgeSuccess,
   type RuntimeStoreManifestEvidence,
+  stableHash,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -471,35 +472,89 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
   });
 
-  it('marks an empty persisted-lane stop explicitly on handshake and dispatch', async () => {
-    manifestReader.manifest = { highWatermark: 0, activeRunId: null, capabilitySnapshotId: null };
-    const input = buildStopInput();
-    input.capabilitySnapshotId = null;
-    input.body = { ...(input.body as object), expectedCapabilitySnapshotId: null };
-    bridge.resultFactory = ({ command, body, options }) =>
-      bridgeSuccess({
-        command,
-        requestId: options.requestId,
-        data: {
-          runId: 'run-1',
-          stopped: true,
-          members: {},
-          warnings: [],
-          diagnostics: [],
-          idempotencyKey: body.preconditions.idempotencyKey,
-          runtimeStoreManifestHighWatermark: 0,
-        },
+  it.each([false, true])(
+    'marks an empty persisted-lane stop explicitly with v1=%s',
+    async (modern) => {
+      if (modern) enableRuntimeStop();
+      manifestReader.manifest = {
+        highWatermark: 0,
+        activeRunId: null,
+        capabilitySnapshotId: null,
+        stopSessions: [],
+        sessionIdentityHash: stableHash([]),
+      };
+      const input = buildStopInput();
+      input.capabilitySnapshotId = null;
+      input.body = { ...(input.body as object), expectedCapabilitySnapshotId: null };
+      bridge.resultFactory = ({ command, body, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 0,
+          },
+        });
+      await createService().execute(input);
+      expect(handshakePort.calls[0]).toMatchObject({
+        allowEmptyLaneStop: true,
+        expectedCapabilitySnapshotId: null,
       });
-    await createService().execute(input);
-    expect(handshakePort.calls[0]).toMatchObject({
-      allowEmptyLaneStop: true,
-      expectedCapabilitySnapshotId: null,
-    });
-    expect(bridge.calls[0].body).toMatchObject({
-      allowEmptyLaneStop: true,
-      expectedCapabilitySnapshotId: null,
-    });
-  });
+      expect(bridge.calls[0].body).not.toHaveProperty('stopRecovery');
+      expect(bridge.calls[0].body).toMatchObject({
+        allowEmptyLaneStop: true,
+        expectedCapabilitySnapshotId: null,
+      });
+    }
+  );
+
+  it.each(['missing-sessions', 'missing-hash', 'populated', 'changed-after-handshake'])(
+    'rejects ambiguous empty v1 Stop evidence: %s',
+    async (kind) => {
+      enableRuntimeStop();
+      manifestReader.manifest = {
+        highWatermark: 0,
+        activeRunId: null,
+        capabilitySnapshotId: null,
+        stopSessions: [],
+        sessionIdentityHash: stableHash([]),
+      };
+      const input = { ...buildStopInput(), capabilitySnapshotId: null };
+      input.body = { ...(input.body as object), expectedCapabilitySnapshotId: null };
+      if (kind === 'missing-sessions') delete manifestReader.manifest.stopSessions;
+      if (kind === 'missing-hash') delete manifestReader.manifest.sessionIdentityHash;
+      if (kind === 'populated')
+        manifestReader.manifest.stopSessions = [
+          {
+            teamName: 'team-a',
+            laneId: 'primary',
+            runId: 'successor',
+            memberName: 'alice',
+            sessionId: 'new-session',
+          },
+        ];
+      if (kind === 'changed-after-handshake') {
+        const originalRead = manifestReader.read.bind(manifestReader);
+        let reads = 0;
+        manifestReader.read = async () =>
+          ++reads === 1
+            ? originalRead()
+            : {
+                ...(await originalRead()),
+                activeRunId: 'successor',
+                sessionIdentityHash: 'new-session',
+              };
+      }
+      await expect(createService().execute(input)).rejects.toThrow(/persisted lane|target changed/);
+      expect(bridge.calls).toHaveLength(0);
+      expect(await ledger.list()).toEqual([]);
+    }
+  );
 
   it.each([
     'wrong-run',

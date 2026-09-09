@@ -18,6 +18,7 @@ import {
   validateOpenCodeBridgeHandshake,
 } from './OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
+import { bindLifecycleManifest } from './OpenCodeLifecycleManifestBinding';
 import { validateRuntimeStopData } from './OpenCodeRuntimeStopProtocol';
 import {
   createStopTarget,
@@ -293,8 +294,12 @@ export class OpenCodeStateChangingBridgeCommandService {
           stopManifest.sessionIdentityHash !== manifest.sessionIdentityHash)
       )
         throw new Error('Stop target changed before dispatch; reconciliation required');
+      // Runtime v1 retains its explicit empty-lane command. It rechecks absence
+      // before effects; empty lanes have no versioned session receipt target.
       const stopRequest =
-        stopTarget && handshake.stopRecoveryContractVersion === 1
+        stopTarget &&
+        handshake.stopRecoveryContractVersion === 1 &&
+        !(isRecord(commandBody) && commandBody.allowEmptyLaneStop === true)
           ? runtimeStopRequest({ requestId: commandRequestId, idempotencyKey }, stopTarget)
           : null;
       const bodyWithPreconditions = attachBridgePreconditions(
@@ -551,69 +556,6 @@ export class OpenCodeStateChangingBridgeCommandService {
       createdAt: completedAt,
     });
   }
-}
-
-function bindLifecycleManifest<TBody>(
-  input: {
-    command: OpenCodeBridgeCommandName;
-    runId: string | null;
-    teamName: string;
-    laneId?: string | null;
-    capabilitySnapshotId: string | null;
-    body: TBody;
-  },
-  manifest: RuntimeStoreManifestEvidence
-): { capabilitySnapshotId: string | null; body: TBody } {
-  if (
-    input.command !== 'opencode.stopTeam' &&
-    input.command !== 'opencode.reconcileTeam' &&
-    input.command !== 'opencode.sendMessage'
-  ) {
-    return { capabilitySnapshotId: input.capabilitySnapshotId, body: input.body };
-  }
-  const emptyStop =
-    input.command === 'opencode.stopTeam' &&
-    manifest.activeRunId === null &&
-    manifest.capabilitySnapshotId === null &&
-    input.capabilitySnapshotId === null;
-  if (
-    !emptyStop &&
-    (!input.runId || manifest.activeRunId !== input.runId || !manifest.capabilitySnapshotId)
-  ) {
-    throw new Error(
-      'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot'
-    );
-  }
-  const capabilitySnapshotId = manifest.capabilitySnapshotId;
-  if (capabilitySnapshotId === undefined) {
-    throw new Error('OpenCode lifecycle command requires a persisted lane capability snapshot');
-  }
-  const bodySnapshotId = isRecord(input.body) ? input.body.expectedCapabilitySnapshotId : null;
-  if (
-    (input.capabilitySnapshotId !== null && input.capabilitySnapshotId !== capabilitySnapshotId) ||
-    (bodySnapshotId != null && bodySnapshotId !== capabilitySnapshotId)
-  ) {
-    throw new Error(
-      'OpenCode lifecycle capability snapshot does not match the persisted lane manifest'
-    );
-  }
-  if (
-    !isRecord(input.body) ||
-    input.body.runId !== input.runId ||
-    input.body.teamId !== input.teamName ||
-    input.body.laneId !== (input.laneId ?? 'primary') ||
-    (input.body.allowEmptyLaneStop === true && !emptyStop)
-  ) {
-    throw new Error('OpenCode lifecycle command body does not match its persisted lane identity');
-  }
-  return {
-    capabilitySnapshotId,
-    body: {
-      ...input.body,
-      expectedCapabilitySnapshotId: capabilitySnapshotId,
-      ...(emptyStop ? { allowEmptyLaneStop: true } : {}),
-    },
-  };
 }
 
 function assertLaunchBehaviorFingerprint(

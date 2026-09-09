@@ -102,6 +102,47 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     }
   });
 
+  it('retains original admission when wrapper Stop arrives during launch preflight', async () => {
+    const temp = await fs.mkdtemp(join(os.tmpdir(), 'stop-admission-preflight-'));
+    setClaudeBasePathOverride(temp);
+    const store = new TeamLaunchStateStore();
+    await fs.mkdir(join(getTeamsBasePath(), 'team-a'), { recursive: true });
+    let entered!: () => void, release!: () => void;
+    const entering = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const launch = vi.fn(async () => runtimeResult());
+    const beginLaunchPublication = vi.fn(store.beginLaunch.bind(store));
+    const owned = ownedPorts([], {
+      getRuntimeAdapterRun: () => ({ runId: 'old', providerId: 'opencode' }),
+      readLaunchState: async () => {
+        entered();
+        await gate;
+        return null;
+      },
+      beginLaunchPublication,
+    });
+    try {
+      const pending = runOpenCodeTeamRuntimeAdapterLaunch(launchParams(launch), owned.ports);
+      await entering;
+      // The outer wrapper has admitted Stop but its runtime stopTeam call has
+      // not incremented the provisioning generation yet.
+      const authority = await store.beginStop('team-a');
+      release();
+      await pending;
+      expect(beginLaunchPublication).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+      await store.markStopped('team-a', authority);
+      expect(await store.isStopped('team-a')).toBe(true);
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('builds primary OpenCode runtime launch input without changing member defaults', () => {
     const previousLaunchState = {
       teamName: 'team-a',

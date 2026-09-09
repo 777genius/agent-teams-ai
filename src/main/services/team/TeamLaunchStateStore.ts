@@ -6,6 +6,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
 import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
 import {
@@ -17,6 +18,7 @@ import {
   TEAM_LAUNCH_SUMMARY_FILE,
 } from './TeamLaunchSummaryProjection';
 
+import type { TeamLaunchFreshness } from './TeamLaunchFreshness';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
@@ -24,6 +26,19 @@ const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
+
+/** Capture before any caller queue/await; a later Stop revokes this request. */
+export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
+  const intent = stopIntentByTeam.get(teamName);
+  const admitted = getAdmittedTeamPublicationAuthority(teamName);
+  return () => admitted?.() !== false && stopIntentByTeam.get(teamName) === intent;
+}
+
+export interface TeamLaunchStopAuthority {
+  teamName: string;
+  stopIntent: number;
+  freshness: TeamLaunchFreshness | null;
+}
 
 export function getTeamLaunchStatePath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STATE_FILE);
@@ -215,7 +230,7 @@ export class TeamLaunchStateStore {
     isAuthorized: () => boolean
   ): Promise<boolean> {
     if (!runId.trim()) throw new Error('Launch publication requires a run identity');
-    const stopIntent = stopIntentByTeam.get(teamName);
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
     return enqueuePublication(teamName, () =>
       this.writeNow(
         teamName,
@@ -227,7 +242,7 @@ export class TeamLaunchStateStore {
         }),
         {
           runId,
-          isAuthorized: () => isAuthorized() && stopIntentByTeam.get(teamName) === stopIntent,
+          isAuthorized: () => isAuthorized() && publicationIsCurrent(),
         },
         true
       )
@@ -239,13 +254,12 @@ export class TeamLaunchStateStore {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: TeamLaunchStatePublicationOptions
   ): Promise<boolean> {
-    const stopIntent = stopIntentByTeam.get(teamName);
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
     return enqueuePublication(teamName, () =>
       this.writeNow(teamName, snapshot, {
         ...options,
         runId: options?.runId ?? snapshot.publicationRunId,
-        isAuthorized: () =>
-          options?.isAuthorized?.() !== false && stopIntentByTeam.get(teamName) === stopIntent,
+        isAuthorized: () => options?.isAuthorized?.() !== false && publicationIsCurrent(),
       })
     );
   }
@@ -360,17 +374,36 @@ export class TeamLaunchStateStore {
     }
   }
 
-  /** Stopped team: no launch state, and reconciliation stays off until the next launch. */
-  async markStopped(teamName: string): Promise<void> {
-    stopIntentByTeam.set(teamName, (stopIntentByTeam.get(teamName) ?? 0) + 1);
+  /** Admit before runtime/cleanup awaits, revoking pending earlier publications. */
+  beginStop(teamName: string): Promise<TeamLaunchStopAuthority> {
+    const stopIntent = (stopIntentByTeam.get(teamName) ?? 0) + 1;
+    stopIntentByTeam.set(teamName, stopIntent);
+    return enqueuePublication(teamName, async () => ({
+      teamName,
+      stopIntent,
+      freshness: await readTeamLaunchFreshness(teamName),
+    }));
+  }
+
+  /** A cleanup tail retains its admission; it cannot stop a successor publication. */
+  async markStopped(teamName: string, authority?: TeamLaunchStopAuthority): Promise<void> {
+    const stopIntent = authority?.stopIntent ?? (stopIntentByTeam.get(teamName) ?? 0) + 1;
+    if (!authority) stopIntentByTeam.set(teamName, stopIntent);
     await enqueuePublication(teamName, async () => {
+      const previous = await readTeamLaunchFreshness(teamName);
+      const admitted = authority ?? { teamName, stopIntent, freshness: previous };
+      if (
+        admitted.teamName !== teamName ||
+        admitted.stopIntent !== stopIntentByTeam.get(teamName) ||
+        JSON.stringify(previous) !== JSON.stringify(admitted.freshness)
+      )
+        return;
       const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
       const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
       const stopId = randomUUID();
-      const previous = await readTeamLaunchFreshness(teamName).catch(() => null);
       try {
         await atomicWriteAsync(
           getTeamLaunchFreshnessPath(teamName),

@@ -1,3 +1,5 @@
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
 
 const DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
@@ -8,6 +10,7 @@ export interface LaunchStateWriteResult {
 }
 
 export interface LaunchStateWriteOptions {
+  isAuthorized?: () => boolean;
   allowNoopSkip?: boolean;
   requireTrackedRun?: boolean;
   runId?: string;
@@ -160,8 +163,17 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<PersistedTeamLaunchSnapshot> {
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    const admittedOptions = {
+      ...options,
+      isAuthorized: () => publicationIsCurrent() && options?.isAuthorized?.() !== false,
+    };
     const result = await this.enqueue(teamName, async () => {
-      const writeResult = await this.writeLaunchStateSnapshotNow(teamName, snapshot, options);
+      const writeResult = await this.writeLaunchStateSnapshotNow(
+        teamName,
+        snapshot,
+        admittedOptions
+      );
       if (writeResult.wrote) {
         this.ports.invalidateRuntimeSnapshotCaches(teamName);
       }
@@ -175,6 +187,7 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult> {
+    if (options?.isAuthorized?.() === false) return { snapshot, wrote: false };
     if (!options?.runId && snapshot.publicationRunId)
       options = { ...options, runId: snapshot.publicationRunId };
     const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
@@ -223,6 +236,7 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       authorizesNewRun: () =>
         !!options?.runId && this.ports.getTrackedRunId(teamName) === options.runId,
       isAuthorized: () => {
+        if (options?.isAuthorized?.() === false) return false;
         if (!options?.runId) return true;
         const tracked = this.ports.getTrackedRunId(teamName);
         return (

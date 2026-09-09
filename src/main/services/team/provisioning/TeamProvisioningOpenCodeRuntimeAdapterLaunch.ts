@@ -2,6 +2,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import * as path from 'path';
 
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
 import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
@@ -87,7 +88,12 @@ export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapte
     onProgress?: (progress: TeamProvisioningProgress) => void
   ): TeamProvisioningProgress;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
-  beginLaunchPublication(teamName: string, runId: string, members: string[], isAuthorized: () => boolean): Promise<boolean>;
+  beginLaunchPublication(
+    teamName: string,
+    runId: string,
+    members: string[],
+    isAuthorized: () => boolean
+  ): Promise<boolean>;
   clearPersistedLaunchState(teamName: string, options: { expectedRunId: string }): Promise<void>;
   getTeamsBasePath(): string;
   migrateLegacyOpenCodeRuntimeState(input: {
@@ -457,8 +463,10 @@ export async function prepareOpenCodeRuntimeAdapterLaunchPreflight(
   ) {
     await ports.cancelRuntimeAdapterProvisioning(previousPendingRunId, previousRuntimeProgress);
   }
-  if (ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
-      ports.getStopTeamGeneration(input.teamName) !== stopTeamGenerationAtStart) {
+  if (
+    ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
+    ports.getStopTeamGeneration(input.teamName) !== stopTeamGenerationAtStart
+  ) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       input.teamName,
       input.sourceWarning,
@@ -473,9 +481,11 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   ports: OpenCodeRuntimeAdapterLaunchPorts
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
+  const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
   const stopGeneration = ports.getStopTeamGeneration(teamName);
   const stopAllGeneration = ports.getStopAllTeamsGeneration();
   const hasLaunchAuthority = (runId: string): boolean =>
+    publicationIsCurrent() &&
     hasOpenCodeLaunchAuthority(ports, teamName, runId) &&
     ports.getStopTeamGeneration(teamName) === stopGeneration &&
     ports.getStopAllTeamsGeneration() === stopAllGeneration;
@@ -531,8 +541,14 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
     if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
-    if (!(await ports.beginLaunchPublication(teamName, runId, input.members.map((member) => member.name),
-      () => hasLaunchAuthority(runId)))) {
+    if (
+      !(await ports.beginLaunchPublication(
+        teamName,
+        runId,
+        input.members.map((member) => member.name),
+        () => hasLaunchAuthority(runId)
+      ))
+    ) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     if (!hasLaunchAuthority(runId)) {
