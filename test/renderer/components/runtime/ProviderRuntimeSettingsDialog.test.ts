@@ -691,6 +691,80 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
   });
 
+  it('keeps anthropic connection cards available when authoritative status omits connection metadata', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.anthropic.authMode = 'oauth';
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [{ ...createAnthropicProvider(), connection: null }],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Connection method');
+    expect(host.textContent).toContain('Auto');
+    expect(host.textContent).toContain('Anthropic subscription');
+    expect(host.textContent).toContain('API key');
+    expect(findButtonByText(host, 'Anthropic subscription').textContent).toContain('Selected');
+
+    await act(async () => {
+      findButtonByText(host, 'API key').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: { authMode: 'api_key' },
+    });
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
+  });
+
+  it('disables a persisted compatible endpoint when selecting an auth card without connection metadata', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    storeState.appConfig.providerConnections.anthropic.authMode = 'oauth';
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint.enabled = true;
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [{ ...createAnthropicProvider(), connection: null }],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(findButtonByText(host, 'Anthropic subscription').textContent).not.toContain('Selected');
+
+    await act(async () => {
+      findButtonByText(host, 'Anthropic subscription').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        authMode: 'oauth',
+        compatibleEndpoint: { enabled: false, baseUrl: '' },
+      },
+    });
+  });
+
   it('keeps a previously detected Bedrock route visible while switching back to Auto', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
