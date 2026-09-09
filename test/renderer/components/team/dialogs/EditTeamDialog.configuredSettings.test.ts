@@ -152,6 +152,12 @@ const sourceMembers = () =>
     { name: 'legacy', providerId: 'opencode', model: 'legacy/model', effort: 'high' },
   ] as ResolvedTeamMember[];
 
+function readDrafts(host: HTMLElement) {
+  const text = host.querySelector('[data-testid="drafts"]')?.textContent;
+  if (typeof text !== 'string') throw new Error('Expected rendered drafts');
+  return JSON.parse(text);
+}
+
 describe('EditTeamDialog canonical settings', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -198,7 +204,7 @@ describe('EditTeamDialog canonical settings', () => {
   it('shows canonical 5.3, inherited blanks and legacy fallback without changing effective display data', async () => {
     const { host, root, members } = await setup();
     try {
-      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent);
+      const drafts = readDrafts(host);
       expect(drafts[1].model).toBe('zai-coding-plan/glm-5.3');
       expect(drafts[2]).toMatchObject({ model: '' });
       for (const key of ['providerId', 'effort', 'providerBackendId', 'fastMode']) {
@@ -258,7 +264,7 @@ describe('EditTeamDialog canonical settings', () => {
       expect(api.teams.replaceMembers).not.toHaveBeenCalled();
       await render(members, false);
       await render();
-      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent);
+      const drafts = readDrafts(host);
       expect(drafts[0].model).toBe('');
       expect(drafts[1].model).toBe('zai-coding-plan/glm-5.3');
     } finally {
