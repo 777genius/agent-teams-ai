@@ -259,10 +259,11 @@ export async function stopMixedSecondaryRuntimeLanes(
       secondaryRun: (typeof secondaryRuns)[number]
     ): Promise<void> => {
       const laneStartedAtMs = Date.now();
-      const targetSessionIdentity = await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(
-        ports.teamsBasePath, teamName, secondaryRun.laneId
-      ));
+      let targetSessionIdentity: string;
       try {
+        targetSessionIdentity = await readOpenCodeStopSessionIdentity(
+          getOpenCodeRuntimeManifestPath(ports.teamsBasePath, teamName, secondaryRun.laneId)
+        );
         const result = await adapter.stop({
           runId: secondaryRun.runId,
           laneId: secondaryRun.laneId,

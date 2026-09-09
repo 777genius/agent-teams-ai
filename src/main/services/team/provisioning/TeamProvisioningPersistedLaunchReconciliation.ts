@@ -128,8 +128,10 @@ export interface ReconcilePersistedLaunchStatePorts {
 /**
  * Reconcile the persisted launch state of a team.
  *
- * Every write and clear is scoped to `expectedRunId` - the caller's, or the
- * tracked run when the port supplies one. Unscoped,
+ * Every write and clear is scoped to `expectedRunId` - the caller's, the tracked
+ * run, or the persisted publication identity after restart. The store checks
+ * that persisted identity inside publication serialization for untracked clears.
+ * Unscoped,
  * `writeLaunchStateSnapshotNow` skips its stale-run guards and
  * `clearPersistedLaunchStateNow` takes the branch that also wipes bootstrap
  * state, which lets a reconcile started for one run delete the launch state a

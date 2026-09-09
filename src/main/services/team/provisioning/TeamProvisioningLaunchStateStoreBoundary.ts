@@ -38,7 +38,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
       snapshot: PersistedTeamLaunchSnapshot,
       options?: LaunchStatePublicationOptions
     ): Promise<boolean | void>;
-    clear(teamName: string, isAuthorized?: () => boolean): Promise<void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   membersMetaStore: {
     getMembers(teamName: string): Promise<TeamMember[]>;
@@ -73,7 +73,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
       snapshot: PersistedTeamLaunchSnapshot,
       options?: LaunchStatePublicationOptions
     ): Promise<boolean | void>;
-    clear?(teamName: string, isAuthorized?: () => boolean): Promise<void>;
+    clear?(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   defaultLaunchStateStore: {
     write(
@@ -81,7 +81,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
       snapshot: PersistedTeamLaunchSnapshot,
       options?: LaunchStatePublicationOptions
     ): Promise<boolean | void>;
-    clear(teamName: string, isAuthorized?: () => boolean): Promise<void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   membersMetaStore: TeamProvisioningLaunchStateStoreBoundaryPorts['membersMetaStore'];
   getTrackedRunId(teamName: string): string | null | undefined;
@@ -118,12 +118,23 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     await this.enqueue(teamName, () => this.clearPersistedLaunchStateNow(teamName, options));
   }
 
-  canClearPersistedLaunchStateForRun(teamName: string, expectedRunId: string | undefined): boolean {
+  canClearPersistedLaunchStateForRun(
+    teamName: string,
+    expectedRunId: string | undefined,
+    allowUntracked = false
+  ): boolean {
     if (!expectedRunId) {
       return true;
     }
     const trackedRunId = this.ports.getTrackedRunId(teamName);
-    if (trackedRunId !== expectedRunId) {
+    if (
+      trackedRunId !== expectedRunId &&
+      !(
+        allowUntracked &&
+        trackedRunId == null &&
+        this.observedTrackedRunIdByTeam.get(teamName) !== expectedRunId
+      )
+    ) {
       return false;
     }
     const lastWrittenRunId = this.writtenRunIdByTeam.get(teamName);
@@ -137,16 +148,24 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     teamName: string,
     options?: { expectedRunId?: string }
   ): Promise<void> {
-    if (!this.canClearPersistedLaunchStateForRun(teamName, options?.expectedRunId)) {
+    // Reopened teams have no tracked run. Their persisted identity must be checked
+    // by the store inside publication serialization, never by an unscoped clear.
+    const persistedRunId =
+      this.ports.getTrackedRunId(teamName) == null ? options?.expectedRunId : undefined;
+    const canClear = (): boolean =>
+      this.canClearPersistedLaunchStateForRun(
+        teamName,
+        options?.expectedRunId,
+        persistedRunId !== undefined
+      );
+    if (!canClear()) {
       this.ports.logDebug(
         `[${teamName}] Skipping stale launch-state clear for run ${options?.expectedRunId}`
       );
       return;
     }
     const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
-    await this.ports.launchStateStore.clear(teamName, () =>
-      this.canClearPersistedLaunchStateForRun(teamName, options?.expectedRunId)
-    );
+    await this.ports.launchStateStore.clear(teamName, canClear, persistedRunId);
     if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
       this.writtenRunIdByTeam.delete(teamName);
     }
@@ -323,18 +342,18 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
         }
         return persisted;
       },
-      clear: async (teamName, isAuthorized) => {
+      clear: async (teamName, isAuthorized, persistedRunId) => {
         const errors: unknown[] = [];
         if (typeof service.launchStateStore.clear === 'function') {
           try {
-            await service.launchStateStore.clear(teamName, isAuthorized);
+            await service.launchStateStore.clear(teamName, isAuthorized, persistedRunId);
           } catch (error) {
             errors.push(error);
           }
         }
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
           try {
-            await service.defaultLaunchStateStore.clear(teamName, isAuthorized);
+            await service.defaultLaunchStateStore.clear(teamName, isAuthorized, persistedRunId);
           } catch (error) {
             errors.push(error);
           }

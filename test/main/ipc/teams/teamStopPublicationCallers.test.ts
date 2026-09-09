@@ -178,14 +178,27 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
     });
   });
 
-  it('still attempts scoped Stop when publication admission is unreadable, without unscoped cleanup', async () => {
-    const freshnessPath = path.join(getTeamsBasePath(), team, 'launch-freshness.json');
-    await writeFile(freshnessPath, '{corrupt');
-    await invoke('ipc', true);
-    expect(runtime.stopTeam).toHaveBeenCalledOnce();
-    expect(await readFile(freshnessPath, 'utf8')).toBe('{corrupt');
-    expect((await store.read(team))?.publicationRunId).toBe('original');
-  });
+  it.each([
+    ['ipc', false],
+    ['ipc', true],
+    ['http', false],
+    ['http', true],
+  ] as const)(
+    '%s force=%s: logs unreadable admission and attempts scoped Stop without unscoped cleanup',
+    async (surface, force) => {
+      const freshnessPath = path.join(getTeamsBasePath(), team, 'launch-freshness.json');
+      await writeFile(freshnessPath, '{corrupt');
+      await invoke(surface, force);
+      expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+        surface === 'ipc' ? '[IPC:teams]' : '[HTTP:teams]',
+        expect.stringContaining(`[${team}] Stopped-state admission failed:`)
+      );
+      vi.mocked(console.warn).mockClear();
+      expect(runtime.stopTeam).toHaveBeenCalledOnce();
+      expect(await readFile(freshnessPath, 'utf8')).toBe('{corrupt');
+      expect((await store.read(team))?.publicationRunId).toBe('original');
+    }
+  );
 
   it('an older Stop cannot acquire a newer Stop admission by finishing late', async () => {
     const old = await store.beginStop(team);

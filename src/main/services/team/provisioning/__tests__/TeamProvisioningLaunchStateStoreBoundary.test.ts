@@ -132,7 +132,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       membersMetaStore: {
         getMembers: vi.fn(async () => [{ name: 'Builder', joinedAt: 1 }]),
       },
-      getTrackedRunId: vi.fn(() => 'run-1'),
+      getTrackedRunId: vi.fn<() => string | null>(() => 'run-1'),
       applyOpenCodeSecondaryEvidenceOverlay: vi.fn(
         async ({ snapshot: inputSnapshot }) => inputSnapshot
       ),
@@ -160,10 +160,31 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       expect.objectContaining(nextSnapshot),
       expect.objectContaining({ isAuthorized: expect.any(Function) })
     );
-    expect(launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function));
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function));
+    expect(launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(clearBootstrapState).toHaveBeenCalledWith('demo');
     expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+
+    service.getTrackedRunId.mockReturnValue(null);
+    clearBootstrapState.mockClear();
+    const reopenedBoundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(service, {
+      areSnapshotsSemanticallyEqual: () => false,
+      clearBootstrapState,
+      logDebug: vi.fn(),
+      nowMs: Date.now,
+    });
+    await reopenedBoundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'persisted-run' });
+    expect(launchStateStore.clear).toHaveBeenLastCalledWith(
+      'demo',
+      expect.any(Function),
+      'persisted-run'
+    );
+    expect(defaultLaunchStateStore.clear).toHaveBeenLastCalledWith(
+      'demo',
+      expect.any(Function),
+      'persisted-run'
+    );
+    expect(clearBootstrapState).not.toHaveBeenCalled();
   });
 
   it('notifies readers only after both service stores confirm the publication', async () => {
@@ -264,7 +285,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await expect(boundary.clearPersistedLaunchStateNow('demo')).rejects.toBe(clearError);
 
     expect(clearOrder).toEqual(['injected', 'default']);
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function));
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(clearBootstrapState).not.toHaveBeenCalled();
     expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
@@ -289,7 +310,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
 
-    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function));
+    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(ports.clearBootstrapState).not.toHaveBeenCalled();
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
 

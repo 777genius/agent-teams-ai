@@ -446,11 +446,27 @@ export class TeamLaunchStateStore {
    * Removes the launch publication only. The stop marker survives a clear:
    * stop flows and stale-write cleanups clear the publication after the team
    * was marked stopped, and only a real launch (an 'active' write) may lift
-   * the marker again.
+   * the marker again. Recovery clears additionally compare the persisted run and
+   * live freshness inside the publication queue before deleting either file.
    */
-  async clear(teamName: string, isAuthorized?: () => boolean): Promise<void> {
+  async clear(
+    teamName: string,
+    isAuthorized?: () => boolean,
+    persistedRunId?: string
+  ): Promise<void> {
     await enqueuePublication(teamName, async () => {
       if (isAuthorized?.() === false) return;
+      if (persistedRunId !== undefined) {
+        const current = await this.read(teamName);
+        const freshness = await readTeamLaunchFreshness(teamName);
+        if (
+          current?.publicationRunId !== persistedRunId ||
+          (freshness !== null &&
+            (freshness.kind !== 'launch' || freshness.runId !== persistedRunId)) ||
+          isAuthorized?.() === false
+        )
+          return;
+      }
       throwPublicationRevocationFailure(
         teamName,
         await Promise.allSettled([
