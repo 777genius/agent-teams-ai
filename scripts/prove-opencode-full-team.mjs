@@ -37,33 +37,6 @@ export function allocateSmokeOwnedRoot(prefix, platform = process.platform, temp
   return fs.realpathSync(fs.mkdtempSync(path.join(parent, prefix)));
 }
 
-export function preserveSelectedOAuth(initialJson, isolatedAuthPath) {
-  const initial = JSON.parse(initialJson);
-  const current = JSON.parse(fs.readFileSync(isolatedAuthPath, 'utf8'));
-  let rotated = false;
-  const nonempty = (value) => typeof value === 'string' && value.trim().length > 0;
-  const selected = {};
-  for (const [provider, before] of Object.entries(initial)) {
-    const after = current?.[provider];
-    if (!after || after.type !== before.type ||
-        (before.type === 'api' && !nonempty(after.key)) ||
-        (before.type === 'oauth' &&
-          ((!nonempty(after.access) && !nonempty(after.refresh)) ||
-           (nonempty(before.refresh) && !nonempty(after.refresh))))) {
-      throw new Error('Selected auth recovery unavailable');
-    }
-    selected[provider] = after;
-    if (before.type === 'oauth' &&
-        (before.access !== after.access || before.refresh !== after.refresh)) rotated = true;
-  }
-  if (!rotated) return null;
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-team-auth-handoff-'));
-  fs.chmodSync(directory, 0o700);
-  const destination = path.join(directory, 'auth.json');
-  fs.writeFileSync(destination, JSON.stringify(selected), { mode: 0o600, flag: 'wx' });
-  return destination;
-}
-
 // These keys are owned by the wrappers, never authorized by manifest contents.
 const OPTIONAL_ENV_KEYS = [
   'PATH', 'Path', 'SystemRoot', 'WINDIR', 'COMSPEC', 'PATHEXT', 'LANG', 'LC_ALL',
@@ -303,6 +276,7 @@ export async function runFullTeamSmoke({
   fs.accessSync(runtimeCli, fs.constants.X_OK);
   fs.accessSync(binaryPath, fs.constants.X_OK);
   let selectedAuth;
+  let hasSelectedOAuth = false;
   if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined) {
     try {
       const sourcePath = sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH.trim();
@@ -328,6 +302,7 @@ export async function runFullTeamSmoke({
         )
       )
         throw new Error();
+      hasSelectedOAuth = entry.type === 'oauth';
       selectedAuth = JSON.stringify({ [provider]: entry });
     } catch {
       // Never attach filesystem/JSON errors: they can contain the source path or token text.
@@ -338,7 +313,6 @@ export async function runFullTeamSmoke({
   }
   const ownedRoot = allocateSmokeOwnedRoot('opencode-full-team-');
   let ownedProject;
-  let isolatedAuthPath;
   let exitStatus = 1;
   const proofDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-full-team-proof-'));
   let completedSuccessfully = false;
@@ -386,7 +360,7 @@ export async function runFullTeamSmoke({
     if (selectedAuth !== undefined) {
       const authDirectory = path.join(env.XDG_DATA_HOME, 'opencode');
       fs.mkdirSync(authDirectory, { recursive: true, mode: 0o700 });
-      isolatedAuthPath = path.join(authDirectory, 'auth.json');
+      const isolatedAuthPath = path.join(authDirectory, 'auth.json');
       fs.writeFileSync(isolatedAuthPath, selectedAuth, {
         mode: 0o600,
         flag: 'wx',
@@ -447,20 +421,16 @@ export async function runFullTeamSmoke({
     }
     exitStatus = result.status ?? 1;
   } finally {
-    if (isolatedAuthPath) {
-      try {
-        const handoff = preserveSelectedOAuth(selectedAuth, isolatedAuthPath);
-        if (handoff) log(`Rotated selected auth retained privately: ${handoff}`);
-      } catch {
-        completedSuccessfully = false;
-        log(`Auth handoff not confirmed; retaining owned state for recovery: ${ownedRoot}`);
-      }
-    }
     // The caller's marked project is never owned by this wrapper.
     // Preflight can already start managed hosts; retain their state until success is proven.
     if (!completedSuccessfully) {
       log(
         `Smoke failed; preserving owned state for targeted cleanup: ${ownedRoot}, project ${ownedProject}`
+      );
+    } else if (hasSelectedOAuth) {
+      // Custody is based on selected inputs, not raw token changes or runtime authority.
+      log(
+        `Smoke passed; owned OAuth state retained: ${ownedRoot}, project ${ownedProject}. No credential export performed; reuse requires normal runtime admission.`
       );
     } else {
       if (ownedProject) fs.rmSync(ownedProject, { recursive: true, force: true });
