@@ -61,7 +61,7 @@ function required(key: string): string {
 // Retry assertions only; transport/API failures still fail immediately. Never retry a command.
 async function waitForEvidence<T>(observe: () => Promise<T>, timeoutMs: number): Promise<T> {
   const deadline = Date.now() + timeoutMs;
-  let lastAssertion: unknown;
+  let lastAssertion: Error | undefined;
   while (Date.now() < deadline) {
     try {
       return await observe();
@@ -427,6 +427,7 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
         expect(relaunch.runId).not.toBe(runId);
         await waitUntil(
           async () => {
+            await checkpoint('relaunch');
             if (
               ['failed', 'cancelled', 'disconnected'].includes(relaunchProgress.at(-1)?.state ?? '')
             )
@@ -451,7 +452,8 @@ liveDescribe('OpenCode mixed provider paid team collaboration', () => {
           expect(launch?.teamName).toBe(teamName);
           const current = await recoveredSvc.getTeamAgentRuntimeSnapshot(teamName);
           expect(current.runId).toBe(authority.runId);
-          expect(Object.keys(current.members).sort()).toEqual([...runtimeNames].sort());
+          const byName = (a: string, b: string) => a.localeCompare(b);
+          expect(Object.keys(current.members).sort(byName)).toEqual([...runtimeNames].sort(byName));
           for (const name of runtimeNames) {
             const model =
               members.find((item) => item.name === name)?.model ??
