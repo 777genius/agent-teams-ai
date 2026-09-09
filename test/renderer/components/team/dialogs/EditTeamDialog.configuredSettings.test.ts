@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@renderer/api', () => ({
   api: {
     teams: {
-      updateConfig: vi.fn(async () => {}),
-      replaceMembers: vi.fn(async () => {}),
-      removeMember: vi.fn(async () => {}),
-      restartMember: vi.fn(async () => {}),
+      updateConfig: vi.fn(() => Promise.resolve()),
+      replaceMembers: vi.fn(() => Promise.resolve()),
+      removeMember: vi.fn(() => Promise.resolve()),
+      restartMember: vi.fn(() => Promise.resolve()),
     },
   },
 }));
@@ -121,7 +121,7 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 vi.mock('@renderer/hooks/useFileListCacheWarmer', () => ({
-  useFileListCacheWarmer: () => {},
+  useFileListCacheWarmer: () => undefined,
 }));
 
 vi.mock('@renderer/constants/teamColors', () => ({
@@ -149,8 +149,7 @@ const sourceMembers = () =>
       model: 'gpt-5.2',
       effort: 'high',
       providerBackendId: 'codex-native',
-      fastMode: 'on',
-      runtimeModel: 'observed-model',
+      selectedFastMode: 'on',
       configuredRuntimeSettings: {},
     },
     { name: 'legacy', providerId: 'opencode', model: 'legacy/model', effort: 'high' },
@@ -171,7 +170,7 @@ describe('EditTeamDialog canonical settings', () => {
     const onClose = vi.fn();
     const members = sourceMembers();
     const render = async (currentMembers = members, open = true) => {
-      await act(async () => {
+      await act(() => {
         root.render(
           React.createElement(EditTeamDialog, {
             open,
@@ -192,7 +191,7 @@ describe('EditTeamDialog canonical settings', () => {
     const click = async (text: string) => {
       const button = Array.from(host.querySelectorAll('button')).find((b) => b.textContent === text);
       expect(button).toBeTruthy();
-      await act(async () => button!.click());
+      await act(() => button!.click());
     };
     await render();
     return { host, root, render, click, members, onClose };
@@ -214,7 +213,7 @@ describe('EditTeamDialog canonical settings', () => {
       });
       expect(members[1].model).toBe('zai-coding-plan/glm-5.2');
     } finally {
-      await act(async () => root.unmount());
+      await act(() => root.unmount());
     }
   });
 
@@ -236,7 +235,7 @@ describe('EditTeamDialog canonical settings', () => {
       });
       expect(api.teams.restartMember).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      await act(() => root.unmount());
     }
   });
 
@@ -247,7 +246,7 @@ describe('EditTeamDialog canonical settings', () => {
       expect(api.teams.updateConfig).toHaveBeenCalledOnce();
       expect(api.teams.replaceMembers).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      await act(() => root.unmount());
     }
   });
 
@@ -265,7 +264,7 @@ describe('EditTeamDialog canonical settings', () => {
       expect(drafts[0].model).toBe('');
       expect(drafts[1].model).toBe('zai-coding-plan/glm-5.3');
     } finally {
-      await act(async () => root.unmount());
+      await act(() => root.unmount());
     }
   });
 
@@ -287,7 +286,7 @@ describe('EditTeamDialog canonical settings', () => {
                         model: 'new/canonical',
                       },
                     }
-                  : { model: 'new/effective', runtimeModel: 'new/observed' }),
+                  : { model: 'new/effective' }),
               }
         );
         await render(refreshed);
@@ -303,7 +302,7 @@ describe('EditTeamDialog canonical settings', () => {
           );
         }
       } finally {
-        await act(async () => root.unmount());
+        await act(() => root.unmount());
       }
     }
   );
