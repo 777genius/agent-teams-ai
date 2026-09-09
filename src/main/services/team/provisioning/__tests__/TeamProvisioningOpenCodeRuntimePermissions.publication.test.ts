@@ -274,11 +274,24 @@ describe('permission publication results and reopened observation', () => {
       {
         getTrackedRunId: () => 'run-1',
         getPermissionListingAdapter: () => ({
+          providerId: 'opencode',
+          prepare: async () => {
+            throw new Error('Unexpected prepare');
+          },
+          launch: async () => {
+            throw new Error('Unexpected launch');
+          },
+          reconcile: async () => {
+            throw new Error('Unexpected reconcile');
+          },
+          stop: async () => {
+            throw new Error('Unexpected stop');
+          },
           listRuntimePermissions: async () => ({
             permissions: permissionsByMember.get('Builder')!,
             diagnostics: [],
           }),
-        } as OpenCodeRuntimePermissionListingAdapter),
+        } satisfies OpenCodeRuntimePermissionListingAdapter),
         readLaunchState: async () => previous(),
         getTrackedRun: () => null,
         getRuntimeAdapterRun: () => null,
