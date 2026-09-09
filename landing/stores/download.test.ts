@@ -25,7 +25,7 @@ describe("landing download store", () => {
     platformMocks.detectPlatform.mockReturnValue("windows");
   });
 
-  it.each(["windows-x64", "linux-appimage"])(
+  it.each(["windows", "linux-appimage"])(
     "preserves a manual %s selection while Windows architecture detection is pending",
     async (selectedId) => {
       const detection = deferred<"arm64">();
@@ -55,5 +55,32 @@ describe("landing download store", () => {
     expect(store.os).toBe("macos");
     expect(store.arch).toBe("x64");
     expect(store.selectedId).toBe("macos");
+  });
+
+  it("selects the unified Windows card and preserves a manual Windows architecture", () => {
+    const store = useDownloadStore();
+
+    store.setWindowsArch("arm64");
+
+    expect(store.os).toBe("windows");
+    expect(store.arch).toBe("arm64");
+    expect(store.windowsArch).toBe("arm64");
+    expect(store.selectedId).toBe("windows");
+  });
+
+  it("preserves a manual Windows architecture while macOS detection is pending", async () => {
+    platformMocks.detectPlatform.mockReturnValue("macos");
+    const detection = deferred<"x64">();
+    platformMocks.detectMacArchFromNavigator.mockReturnValue(detection.promise);
+    const store = useDownloadStore();
+
+    const initialization = store.init();
+    store.setWindowsArch("arm64");
+    detection.resolve("x64");
+    await initialization;
+
+    expect(store.os).toBe("windows");
+    expect(store.windowsArch).toBe("arm64");
+    expect(store.selectedId).toBe("windows");
   });
 });

@@ -323,28 +323,50 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
             <h3 class="download-section__card-label">{{ asset.label }}</h3>
             <span class="download-section__card-arch">{{ asset.archLabel }}</span>
             <div
-              v-if="asset.os === 'macos' && downloadStore.selectedId === asset.id"
-              class="download-section__mac-arch-toggle"
-              aria-label="macOS chip"
+              v-if="(asset.os === 'macos' || asset.os === 'windows') && downloadStore.selectedId === asset.id"
+              class="download-section__arch-toggle"
+              :aria-label="`${asset.label} architecture`"
             >
-              <button
-                type="button"
-                class="download-section__mac-arch-option"
-                :class="{ 'download-section__mac-arch-option--active': downloadStore.macArch === 'arm64' }"
-                :aria-pressed="downloadStore.macArch === 'arm64'"
-                @click.stop="downloadStore.setMacArch('arm64')"
-              >
-                Apple Silicon
-              </button>
-              <button
-                type="button"
-                class="download-section__mac-arch-option"
-                :class="{ 'download-section__mac-arch-option--active': downloadStore.macArch === 'x64' }"
-                :aria-pressed="downloadStore.macArch === 'x64'"
-                @click.stop="downloadStore.setMacArch('x64')"
-              >
-                Intel
-              </button>
+              <template v-if="asset.os === 'macos'">
+                <button
+                  type="button"
+                  class="download-section__arch-option"
+                  :class="{ 'download-section__arch-option--active': downloadStore.macArch === 'arm64' }"
+                  :aria-pressed="downloadStore.macArch === 'arm64'"
+                  @click.stop="downloadStore.setMacArch('arm64')"
+                >
+                  Apple Silicon
+                </button>
+                <button
+                  type="button"
+                  class="download-section__arch-option"
+                  :class="{ 'download-section__arch-option--active': downloadStore.macArch === 'x64' }"
+                  :aria-pressed="downloadStore.macArch === 'x64'"
+                  @click.stop="downloadStore.setMacArch('x64')"
+                >
+                  Intel
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  type="button"
+                  class="download-section__arch-option"
+                  :class="{ 'download-section__arch-option--active': downloadStore.windowsArch === 'x64' }"
+                  :aria-pressed="downloadStore.windowsArch === 'x64'"
+                  @click.stop="downloadStore.setWindowsArch('x64')"
+                >
+                  64-bit
+                </button>
+                <button
+                  type="button"
+                  class="download-section__arch-option"
+                  :class="{ 'download-section__arch-option--active': downloadStore.windowsArch === 'arm64' }"
+                  :aria-pressed="downloadStore.windowsArch === 'arm64'"
+                  @click.stop="downloadStore.setWindowsArch('arm64')"
+                >
+                  ARM64
+                </button>
+              </template>
             </div>
           </div>
 
@@ -787,7 +809,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
   opacity: 0.7;
 }
 
-.download-section__mac-arch-toggle {
+.download-section__arch-toggle {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -799,7 +821,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
   background: rgba(0, 240, 255, 0.05);
 }
 
-.download-section__mac-arch-option {
+.download-section__arch-option {
   min-width: 0;
   padding: 5px 8px;
   border: 0;
@@ -817,8 +839,8 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
     box-shadow 0.2s ease;
 }
 
-.download-section__mac-arch-option:hover,
-.download-section__mac-arch-option--active {
+.download-section__arch-option:hover,
+.download-section__arch-option--active {
   color: #0a0a0f;
   background: linear-gradient(135deg, #00f0ff, #39ff14);
   box-shadow: 0 4px 14px rgba(0, 240, 255, 0.22);
@@ -930,17 +952,17 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
   color: #64748b;
 }
 
-.v-theme--light .download-section__mac-arch-toggle {
+.v-theme--light .download-section__arch-toggle {
   border-color: rgba(8, 145, 178, 0.16);
   background: rgba(8, 145, 178, 0.06);
 }
 
-.v-theme--light .download-section__mac-arch-option {
+.v-theme--light .download-section__arch-option {
   color: #64748b;
 }
 
-.v-theme--light .download-section__mac-arch-option:hover,
-.v-theme--light .download-section__mac-arch-option--active {
+.v-theme--light .download-section__arch-option:hover,
+.v-theme--light .download-section__arch-option--active {
   color: #f8fbff;
   text-shadow: 0 1px 8px rgba(15, 23, 42, 0.22);
 }
@@ -1021,7 +1043,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
     min-width: 0;
   }
 
-  .download-section__mac-arch-toggle {
+  .download-section__arch-toggle {
     width: fit-content;
   }
 
@@ -1077,12 +1099,12 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
     min-width: 0;
   }
 
-  .download-section__mac-arch-toggle {
+  .download-section__arch-toggle {
     grid-column: 1 / -1;
     width: 100%;
   }
 
-  .download-section__mac-arch-option {
+  .download-section__arch-option {
     flex: 1;
     padding-inline: 6px;
   }

@@ -11,20 +11,12 @@ export const downloadAssets = [
     fileName: 'Agent.Teams.AI-arm64.dmg',
   },
   {
-    id: 'windows-x64',
+    id: 'windows',
     os: 'windows',
-    arch: 'x64',
+    arch: 'universal',
     label: 'Windows',
-    archLabel: '64-bit',
+    archLabel: '64-bit / ARM64',
     fileName: 'Agent.Teams.AI.Setup.exe',
-  },
-  {
-    id: 'windows-arm64',
-    os: 'windows',
-    arch: 'arm64',
-    label: 'Windows',
-    archLabel: 'ARM64',
-    fileName: 'Agent.Teams.AI.Setup-arm64.exe',
   },
   {
     id: 'linux-appimage',
