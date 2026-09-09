@@ -56,12 +56,14 @@ import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
+  getRuntimeIdentity?(): Promise<string | null>;
   backfillOpenCodeTaskLedger(
     input: OpenCodeBackfillTaskLedgerCommandBody
   ): Promise<OpenCodeBackfillTaskLedgerCommandData>;
 }
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
+  getRuntimeIdentity?(): Promise<string | null>;
   execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
@@ -109,6 +111,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     private readonly bridge: OpenCodeReadinessBridgeCommandExecutor,
     private readonly options: OpenCodeReadinessBridgeOptions = {}
   ) {}
+
+  getRuntimeIdentity(): Promise<string | null> {
+    return this.bridge.getRuntimeIdentity?.() ?? Promise.resolve(null);
+  }
 
   async checkOpenCodeTeamLaunchReadiness(
     input: OpenCodeReadinessBridgeCommandBody
