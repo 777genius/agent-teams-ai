@@ -15,7 +15,6 @@ import {
   assertOwnedSmokeEnvironment,
   isCompleteSmokeProof,
   ISOLATED_PATH_KEYS,
-  preserveSelectedOAuth,
   writeSmokeOwnership,
 } from './prove-opencode-full-team.mjs';
 
@@ -82,6 +81,7 @@ export async function runMixedTeamSmoke({
   fs.accessSync(runtimeCli, fs.constants.X_OK);
   fs.accessSync(binaryPath, fs.constants.X_OK);
   let selectedAuth;
+  let hasSelectedOAuth = false;
   if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined) {
     try {
       const sourcePath = sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH.trim();
@@ -110,6 +110,7 @@ export async function runMixedTeamSmoke({
         )
           throw new Error();
         if (provider === 'xai' && entry.type !== 'oauth') throw new Error();
+        if (entry.type === 'oauth') hasSelectedOAuth = true;
         selected[provider] = entry;
       }
       selectedAuth = JSON.stringify(selected);
@@ -122,7 +123,6 @@ export async function runMixedTeamSmoke({
   }
   const ownedRoot = allocateSmokeOwnedRoot('opencode-mixed-team-');
   let ownedProject;
-  let isolatedAuthPath;
   const proofDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-mixed-team-proof-'));
   let completedSuccessfully = false;
   let exitStatus = 1;
@@ -168,7 +168,7 @@ export async function runMixedTeamSmoke({
     if (selectedAuth !== undefined) {
       const authDirectory = path.join(env.XDG_DATA_HOME, 'opencode');
       fs.mkdirSync(authDirectory, { recursive: true, mode: 0o700 });
-      isolatedAuthPath = path.join(authDirectory, 'auth.json');
+      const isolatedAuthPath = path.join(authDirectory, 'auth.json');
       fs.writeFileSync(isolatedAuthPath, selectedAuth, {
         mode: 0o600,
         flag: 'wx',
@@ -229,21 +229,15 @@ export async function runMixedTeamSmoke({
     }
     exitStatus = result.status ?? 1;
   } finally {
-    // A provider may rotate single-use OAuth refresh tokens during this one run.
-    // Preserve only selected credentials privately before deleting the isolated home.
-    if (isolatedAuthPath) {
-      try {
-        const handoff = preserveRotatedSelectedOAuth(selectedAuth, isolatedAuthPath);
-        if (handoff) log(`Rotated selected auth retained privately: ${handoff}`);
-      } catch {
-        completedSuccessfully = false;
-        log(`Auth handoff not confirmed; retaining owned state for recovery: ${ownedRoot}`);
-      }
-    }
     // Preflight can already start managed hosts; retain their state until success is proven.
     if (!completedSuccessfully) {
       log(
         `Smoke failed; preserving owned state for targeted cleanup: ${ownedRoot}, project ${ownedProject}`
+      );
+    } else if (hasSelectedOAuth) {
+      // Custody is based on selected inputs, not raw token changes or runtime authority.
+      log(
+        `Smoke passed; owned OAuth state retained: ${ownedRoot}, project ${ownedProject}. No credential export performed; reuse requires normal runtime admission.`
       );
     } else {
       if (ownedProject) fs.rmSync(ownedProject, { recursive: true, force: true });
@@ -251,10 +245,6 @@ export async function runMixedTeamSmoke({
     }
   }
   return completedSuccessfully ? 0 : exitStatus || 1;
-}
-
-export function preserveRotatedSelectedOAuth(initialJson, isolatedAuthPath) {
-  return preserveSelectedOAuth(initialJson, isolatedAuthPath);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

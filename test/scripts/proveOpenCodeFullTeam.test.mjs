@@ -68,7 +68,7 @@ function fixture() {
     auth,
     JSON.stringify({
       selected: { type: 'api', key: 'synthetic-secret' },
-      unrelated: { type: 'api', key: 'unrelated-synthetic-secret' },
+      unrelated: { type: 'oauth', access: 'unrelated-synthetic-secret' },
     })
   );
   fs.writeFileSync(path.join(root, 'vitest.mjs'), '// synthetic entry; never executed');
@@ -277,54 +277,6 @@ test('incomplete full proof cannot authorize state deletion', async () => {
   } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('full runner preserves rotated selected OAuth before deleting successful state', async () => {
-  const { root, env } = fixture();
-  let input, handoff;
-  const selected = { type: 'oauth', access: 'synthetic-access', refresh: 'synthetic-refresh' };
-  fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({ selected }));
-  try {
-    const status = await runFullTeamSmoke({
-      vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: env,
-      log(message) { if (message.startsWith('Rotated selected auth retained privately: ')) handoff = message.slice(message.indexOf(': ') + 2); },
-      preflight: async (value) => { input = value; return { ok: true }; },
-      spawn: (_command, _args, { env: runEnv }) => {
-        fs.writeFileSync(path.join(runEnv.XDG_DATA_HOME, 'opencode/auth.json'),
-          JSON.stringify({ selected: { ...selected, refresh: 'synthetic-rotated' } }));
-        fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(passingProof()));
-        return { status: 0 };
-      },
-    });
-    assert.equal(status, 0);
-    assert.equal(fs.existsSync(input.env.HOME), false);
-    assert.equal(JSON.parse(fs.readFileSync(handoff, 'utf8')).selected.refresh, 'synthetic-rotated');
-    if (process.platform !== 'win32') assert.equal(fs.statSync(handoff).mode & 0o777, 0o600);
-    assert.equal(fs.readFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, 'utf8'), JSON.stringify({ selected }));
-  } finally {
-    if (handoff) fs.rmSync(path.dirname(handoff), { recursive: true, force: true });
-    cleanup(input); fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('full runner retains state and fails if OAuth recovery is incomplete', async () => {
-  const { root, env } = fixture();
-  let input;
-  fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({ selected:
-    { type: 'oauth', access: 'synthetic-access', refresh: 'synthetic-refresh' } }));
-  try {
-    const status = await runFullTeamSmoke({
-      vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: env, log() {},
-      preflight: async (value) => { input = value; return { ok: true }; },
-      spawn: (_command, _args, { env: runEnv }) => {
-        fs.writeFileSync(path.join(runEnv.XDG_DATA_HOME, 'opencode/auth.json'), JSON.stringify({ selected: { type: 'oauth' } }));
-        fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(passingProof()));
-        return { status: 0 };
-      },
-    });
-    assert.equal(status, 1);
-    assert.ok(fs.existsSync(input.env.HOME));
-  } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
-});
-
 test('uncertain child effects are submitted once, redacted and retained for targeted cleanup', async () => {
   const { root, env } = fixture();
   let input;
@@ -486,3 +438,95 @@ test('explicit TEST parent permits only its fresh owned child and survives succe
     cleanup(input); fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// Opaque custody fixtures deliberately model no runtime authority or admission rules.
+function custodySnapshot(target) {
+  const stat = fs.lstatSync(target);
+  return { mode: stat.mode, ino: stat.ino, dev: stat.dev,
+    contents: stat.isDirectory()
+      ? Object.fromEntries(fs.readdirSync(target).sort().map((name) => [name, custodySnapshot(path.join(target, name))]))
+      : fs.readFileSync(target).toString('base64') };
+}
+
+for (const raw of ['unchanged', 'unchanged-internal', 'rotated', 'missing', 'malformed', 'empty']) {
+  for (const outcome of ['passed', 'preflight-failed', 'preflight-threw', 'child-failed', 'child-threw',
+    'terminated', 'missing-proof', 'cleanup-missing', 'stop-missing']) {
+    test(`Full OAuth custody: ${raw}, ${outcome}`, async () => {
+      const { root, env } = fixture();
+      const store = JSON.parse(fs.readFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, 'utf8'));
+      store.selected = { type: 'oauth', access: 'synthetic-C0', refresh: 'synthetic-refresh' };
+      const original = JSON.stringify(store);
+      fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, original);
+      fs.writeFileSync(path.join(root, TEST_PROJECT_MARKER), TEST_PROJECT_MARKER_CONTENT);
+      if (raw !== 'unchanged-internal') env.OPENCODE_E2E_PROJECT_PATH = root;
+      let input, before, projectBefore, spawns = 0;
+      const logs = [];
+      const handoffsBefore = fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('opencode-team-auth-handoff-'));
+      const stage = (value) => {
+        input = value;
+        const runEnv = value.env;
+        for (const [key, name] of [
+          ['XDG_DATA_HOME', 'sidecar'], ['XDG_STATE_HOME', 'receipt'], ['HOME', 'nativehistory'],
+          ['CLAUDE_MULTIMODEL_DATA_HOME', 'fence'], ['CLAUDE_MULTIMODEL_CACHE_HOME', 'ledger'],
+          ['TMPDIR', 'profiles'],
+        ]) fs.writeFileSync(path.join(runEnv[key], name), `opaque-synthetic-${name}\0`, { mode: 0o600 });
+        fs.writeFileSync(path.join(value.projectPath, 'identity'), 'synthetic-project', { mode: 0o600 });
+        const auth = path.join(runEnv.XDG_DATA_HOME, 'opencode/auth.json');
+        if (raw === 'missing') fs.unlinkSync(auth);
+        if (raw === 'malformed') fs.writeFileSync(auth, '{synthetic-invalid');
+        if (raw === 'empty') fs.writeFileSync(auth, '{}');
+        if (raw === 'rotated') {
+          const selected = JSON.parse(fs.readFileSync(auth, 'utf8'));
+          selected.selected.refresh = 'synthetic-rotated';
+          fs.writeFileSync(auth, JSON.stringify(selected));
+        }
+        before = custodySnapshot(runEnv.OPENCODE_E2E_OWNED_ROOT);
+        projectBefore = custodySnapshot(value.projectPath);
+      };
+      try {
+        const run = runFullTeamSmoke({ sourceEnv: env, vitestEntryPath: path.join(root, 'vitest.mjs'),
+          log: (message) => logs.push(message),
+          preflight: async (value) => {
+            stage(value);
+            if (outcome === 'preflight-threw') throw new Error('synthetic-preflight-error');
+            return { ok: outcome !== 'preflight-failed' };
+          },
+          spawn: () => {
+            spawns++;
+            if (outcome === 'child-threw') throw new Error('synthetic-child-error');
+            if (outcome !== 'missing-proof') {
+              const proof = passingProof();
+              if (outcome === 'cleanup-missing') delete proof.cleanupConfirmed;
+              if (outcome === 'stop-missing') delete proof.finalStopConfirmed;
+              fs.writeFileSync(path.join(input.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(proof));
+            }
+            return { status: outcome === 'child-failed' ? 7 : outcome === 'terminated' ? null : 0,
+              stderr: 'synthetic-provider-error' };
+          },
+        });
+        if (['preflight-threw', 'child-threw', 'missing-proof', 'cleanup-missing', 'stop-missing'].includes(outcome))
+          await assert.rejects(run);
+        else assert.equal(await run, outcome === 'passed' ? 0 : outcome === 'child-failed' ? 7 : 1);
+        assert.equal(spawns, outcome.startsWith('preflight-') ? 0 : 1);
+        assert.deepEqual(custodySnapshot(input.env.OPENCODE_E2E_OWNED_ROOT), before);
+        assert.deepEqual(custodySnapshot(input.projectPath), projectBefore);
+        if (process.platform !== 'win32') {
+          assert.equal(before.mode & 0o777, 0o700);
+          assert.equal(before.contents['.opencode-proof-owned.json'].mode & 0o777, 0o600);
+          assert.equal(projectBefore.mode & 0o777, 0o700);
+          assert.equal(projectBefore.contents['.opencode-proof-project.json'].mode & 0o777, 0o600);
+        }
+        assert.equal(fs.readFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, 'utf8'), original);
+        assert.deepEqual(fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('opencode-team-auth-handoff-')), handoffsBefore);
+        assert.doesNotMatch(logs.join('\n'), /synthetic|handoff|exported|valid|reusable|Rotated selected auth/i);
+        if (outcome === 'passed') {
+          assert.ok(logs.some((line) => line.includes(`owned OAuth state retained: ${input.env.OPENCODE_E2E_OWNED_ROOT}, project ${input.projectPath}`)));
+        } else assert.ok(logs.some((line) => line.startsWith('Smoke failed;')));
+        assert.equal(fs.readFileSync(path.join(root, TEST_PROJECT_MARKER), 'utf8'), TEST_PROJECT_MARKER_CONTENT);
+      } finally {
+        if (input) fs.rmSync(input.projectPath, { recursive: true, force: true });
+        cleanup(input); fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
+}
