@@ -16,6 +16,7 @@ import * as path from 'path';
 
 import { JsonTaskChangeSummaryCacheRepository } from './cache/JsonTaskChangeSummaryCacheRepository';
 import { OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION } from './opencode/bridge/OpenCodeBridgeCommandContract';
+import { OpenCodeBackfillRetry } from './opencode/OpenCodeBackfillRetry';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeTeamRuntimeDirectory,
@@ -167,7 +168,7 @@ export class ChangeExtractorService {
   private taskChangeSummaryInFlight = new Map<string, Promise<TaskChangeSetV2>>();
   private taskChangeSummaryVersionByTask = new Map<string, number>();
   private taskChangeSummaryValidationInFlight = new Set<string>();
-  private openCodeBackfillInFlight = new Map<string, Promise<OpenCodeBackfillAttempt>>();
+  private readonly openCodeBackfillRetry = new OpenCodeBackfillRetry();
   private openCodeBackfillCache = new Map<string, OpenCodeBackfillCacheEntry>();
   private openCodeTeamEligibilityCache = new Map<string, { value: boolean; expiresAt: number }>();
   private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
@@ -296,6 +297,7 @@ export class ChangeExtractorService {
     const summaryCacheableState = isTaskChangeSummaryCacheable(effectiveStateBucket);
     const shouldUseSummaryCache = !includeDetails && summaryCacheableState;
 
+    if (options?.forceFresh) this.openCodeBackfillRetry.reset(JSON.stringify([teamName, taskId]));
     let version = initialVersion;
     if (!summaryCacheableState || options?.forceFresh === true) {
       await this.invalidateTaskChangeSummaries(teamName, [taskId], {
@@ -785,25 +787,27 @@ export class ChangeExtractorService {
       return { attempted: false, backfilled: false };
     }
 
-    const existing = this.openCodeBackfillInFlight.get(cacheKey);
-    if (existing) {
-      return existing;
+    const runtimeIdentity = await this.openCodeLedgerBackfillPort.getRuntimeIdentity?.().catch(() => null);
+    // Another refresh may finish successfully while runtime metadata is being read.
+    const refreshed = this.openCodeBackfillCache.get(cacheKey);
+    if (refreshed && refreshed.expiresAt > Date.now()) {
+      return { attempted: false, backfilled: refreshed.backfilledAt > 0 };
     }
-
-    const promise = this.runOpenCodeBackfill(
-      input,
-      projectDir,
-      workspaceRoot,
-      cacheKey,
-      deliveryContextRecords,
-      deliveryContextPayload,
-      sourceGeneration,
-      backfillMemberName
-    ).finally(() => {
-      this.openCodeBackfillInFlight.delete(cacheKey);
-    });
-    this.openCodeBackfillInFlight.set(cacheKey, promise);
-    return promise;
+    return this.openCodeBackfillRetry.run(
+      JSON.stringify([input.teamName, input.taskId]),
+      JSON.stringify([cacheKey, runtimeIdentity ?? null]),
+      () =>
+        this.runOpenCodeBackfill(
+          input,
+          projectDir,
+          workspaceRoot,
+          cacheKey,
+          deliveryContextRecords,
+          deliveryContextPayload,
+          sourceGeneration,
+          backfillMemberName
+        )
+    );
   }
 
   private async runOpenCodeBackfill(
@@ -929,14 +933,7 @@ export class ChangeExtractorService {
         evidencePipeline: OPEN_CODE_AUTO_BACKFILL_EVIDENCE_PIPELINE,
         error: error instanceof Error ? error.message : String(error),
       }).catch(() => undefined);
-      if (deliveryContextRecords.length === 0) {
-        this.openCodeBackfillCache.set(cacheKey, {
-          backfilledAt: 0,
-          expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
-        });
-      } else {
-        this.openCodeBackfillCache.delete(cacheKey);
-      }
+      this.openCodeBackfillCache.delete(cacheKey);
       return { attempted: true, backfilled: false };
     } finally {
       await deliveryContext.cleanup();
