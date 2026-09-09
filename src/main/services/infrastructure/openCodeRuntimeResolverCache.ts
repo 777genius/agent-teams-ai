@@ -1,8 +1,8 @@
 import { isAbsoluteExistingFile } from '@main/utils/runtimePathBinaryResolver';
 
 import type {
-  OpenCodeBinaryVersionProbe,
   OpenCodeBinaryCandidateFailure,
+  OpenCodeBinaryVersionProbe,
 } from '@features/runtime-provider-management/main';
 export type { OpenCodeBinaryVersionProbe } from '@features/runtime-provider-management/main';
 
