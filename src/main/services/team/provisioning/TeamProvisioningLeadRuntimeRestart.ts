@@ -97,9 +97,11 @@ export function buildLeadRuntimeResumeArgs(input: {
   ];
 }
 
-export function applyLeadRuntimeSettingsToLaunchIdentity(
+export function applyLeadRuntimeSettingsToLaunchIdentity<
+  Settings extends Pick<LeadRuntimeSettings, 'model' | 'effort'>,
+>(
   identity: ProviderModelLaunchIdentity | null | undefined,
-  settings: LeadRuntimeSettings
+  settings: Settings
 ): ProviderModelLaunchIdentity | null {
   if (!identity) return null;
   const preservesResolvedDefault =
@@ -117,9 +119,11 @@ export function applyLeadRuntimeSettingsToLaunchIdentity(
   };
 }
 
-export function applyLeadRuntimeSettingsToTeamMeta(
+export function applyLeadRuntimeSettingsToTeamMeta<
+  Settings extends Pick<LeadRuntimeSettings, 'model' | 'effort'>,
+>(
   meta: TeamMetaFile,
-  settings: LeadRuntimeSettings,
+  settings: Settings,
   fallbackLaunchIdentity: ProviderModelLaunchIdentity | null
 ): Omit<TeamMetaFile, 'version'> {
   const { version, ...persisted } = meta;

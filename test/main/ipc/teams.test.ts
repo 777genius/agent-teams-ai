@@ -22,6 +22,11 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types/team';
 
+const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
+vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
+  persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
+}));
+
 vi.mock('electron', () => ({
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
   Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
@@ -5657,6 +5662,29 @@ describe('ipc teams handlers', () => {
   });
 
   describe('replaceMembers', () => {
+    it.each([false, true])('routes guarded model relaunch persistence without unguarded fallback (conflict=%s)', async (conflict) => {
+      teamHandlerMocks.isTeamAlive.mockReturnValue(false);
+      modelRelaunchPersistence.mockReset();
+      if (conflict) modelRelaunchPersistence.mockRejectedValueOnce(new Error('target conflict'));
+      else modelRelaunchPersistence.mockResolvedValueOnce(undefined);
+      const intent = { memberName: 'alice', targetKind: 'member', expectedFingerprint: 'original',
+        baseline: [{ memberName: 'alice', expectedFingerprint: 'original' }], model: 'glm-5.3-flash', effort: null };
+      const result = await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'draft-team', {
+        members: [{ name: 'alice', model: 'glm-5.3-flash' }], memberSettingsRelaunch: intent,
+      }) as { success: boolean; error?: string };
+      expect(result.success).toBe(!conflict);
+      if (conflict) {
+        expect(result.error).toContain('target conflict');
+        expect(console.error).toHaveBeenCalledWith('[IPC:teams]', expect.stringContaining('target conflict'));
+        vi.mocked(console.error).mockClear();
+      }
+      expect(modelRelaunchPersistence).toHaveBeenCalledWith('draft-team',
+        [expect.objectContaining({ name: 'alice', model: 'glm-5.3-flash' })], intent,
+        expect.objectContaining({ isTeamAlive: expect.any(Function), invalidateWorkerCache: expect.any(Function) }));
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+    });
+
     it('updates non-live draft members without requiring a full team snapshot', async () => {
       teamHandlerMocks.isTeamAlive.mockReturnValue(false);
       service.getTeamData.mockRejectedValueOnce(new Error('Team not found: draft-team'));

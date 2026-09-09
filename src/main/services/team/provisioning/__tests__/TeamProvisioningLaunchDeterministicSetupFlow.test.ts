@@ -20,6 +20,8 @@ import type {
   TeamLaunchRequest,
 } from '@shared/types';
 
+vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+
 const request: TeamLaunchRequest = {
   teamName: 'demo',
   cwd: '/tmp',
@@ -64,7 +66,7 @@ const anthropicApiKeyHelper = {
 
 function createMembers(): TeamCreateRequest['members'] {
   return [
-    { name: 'Lead', role: 'Lead', providerId: 'codex' },
+    { name: 'Planner', role: 'Planner', providerId: 'codex' },
     { name: 'Reviewer', role: 'Review', providerId: 'anthropic' },
   ];
 }
@@ -203,7 +205,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       startedAt: '2026-01-01T00:00:00.000Z',
       claudePath: '/usr/local/bin/claude',
       resolvedProviderId: 'codex',
-      expectedMembers: ['Lead'],
+      expectedMembers: ['Planner'],
       providerArgsForLaunch: ['--primary-provider-arg'],
       crossProviderMemberArgsForLaunch: {
         args: ['--member-provider', 'anthropic'],
@@ -218,10 +220,10 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       },
     });
     expect(result.allEffectiveMemberSpecs.map((member) => member.name)).toEqual([
-      'Lead',
+      'Planner',
       'Reviewer',
     ]);
-    expect(result.effectiveMemberSpecs.map((member) => member.name)).toEqual(['Lead']);
+    expect(result.effectiveMemberSpecs.map((member) => member.name)).toEqual(['Planner']);
     expect(result.shellEnv).toMatchObject({
       BASE_ENV: '1',
       CODEX_TURN_SETTLED: '1',

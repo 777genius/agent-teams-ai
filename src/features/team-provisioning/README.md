@@ -37,3 +37,54 @@ For the next slice:
 Do not add empty folders or speculative abstractions. See
 `docs/team-management/team-provisioning-target-architecture.md` for the complete
 migration standard.
+
+The renderer entrypoint also exposes `MemberSettingsRelaunchDraft` and its draft
+projection/validation helpers. Member settings pass configured intent and the
+original target fingerprint through `TeamMemberSettingsDialogBridge` to the
+existing launch dialog. These helpers do not persist settings; submission uses
+the existing replace-members/launch sequence, with fresh roster checks before
+replacement (and before stopping a live team).
+
+For a settings-originated relaunch, the optional `memberSettingsRelaunch` field on
+`ReplaceMembersRequest` carries the target and roster fingerprints into the
+existing IPC mutation gate. `persistNodeMemberSettingsRelaunch` validates this
+intent and composes the existing member repository and team metadata store.
+The config lock covers conflict checks, configured member writes and rollback;
+lead model/effort also update saved launch defaults and launch identity. This
+bounded path keeps the roster identity unchanged; add/remove members separately.
+Ordinary replace-members requests retain their existing behavior. HTTP mode
+already rejects replace-members and gains no new support in this repair.
+
+The settings editor captures the opaque `getSavedRequest().savedSettingsFingerprint`
+when it opens. The relaunch intent carries that token unchanged, alongside member
+fingerprints. Persistence compares saved model, effort, provider, launch identity
+and inherited launch defaults before writes, then rechecks defaults inside the
+lead metadata update. Missing tokens fail closed. The mutation boundary also
+checks the existing `hasProvisioningRun` query, because a configuring successor
+has not yet become an alive team.
+
+Settings roster projection uses the same canonical legacy-lead classification as
+member settings. Canonical metadata launch discovery also excludes those leads.
+Native launch setup carries `configuredMemberSpecs` separately through run and
+spawn orchestration to `persistDeterministicLaunchMetadata`. The synthetic request
+and effective specs still construct runtime behavior; the writer uses configured
+model/effort/provider/backend/fast-mode fields while retaining effective workspace
+materialization and existing tombstone handling. Metadata discovery carries backend
+and fast-mode selections so explicit siblings survive the same round trip.
+
+After completion, `config.json` retains effective provider/model/effort for runtime
+consumers. `TeamMemberResolver.configuredRuntimeSettings` and
+`LegacyMemberSettingsRepositoryAdapter` instead read provider/model/effort/backend/
+fast-mode from the matching canonical `members.meta.json` row. An absent field on
+that row means inheritance; it must not fall back to effective config. For legacy
+members with no matching metadata row, config remains the configured source
+(including its legacy `provider` alias). Metadata for another member does not
+change that compatibility policy. The resolver keeps configured backend selections
+separate from effective backend resolution.
+
+`MemberSettingsRelaunchFiles.test.ts` executes completion's real
+`applyEffectiveLaunchStateToConfig`, reopens files with fresh stores and the actual
+member resolver/editor projection, and resubmits settings with a changed lead
+default through persistence and launch setup again. It checks both effective
+runtime values and durable absence of cleared/inherited overrides alongside an
+explicit mixed-provider/backend/fast-mode sibling.

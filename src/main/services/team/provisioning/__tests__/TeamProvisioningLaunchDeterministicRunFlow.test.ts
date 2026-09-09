@@ -117,6 +117,7 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
     usesAnthropicApiKeyHelper: false,
     ...({ anthropicApiKeyHelper: null } as const),
   },
+  configuredMemberSpecs: [{ name: 'Lead', role: 'Lead' }, { name: 'Builder', role: 'Build' }],
   expectedMembers: ['Lead', 'Builder'],
   effectiveMemberSpecs: [
     { name: 'Lead', role: 'Lead' },
@@ -234,6 +235,7 @@ describe('TeamProvisioningLaunchDeterministicRunFlow', () => {
         launchIdentity: setup.launchIdentity,
         effectiveMemberSpecs: setup.effectiveMemberSpecs,
         allEffectiveMemberSpecs: setup.allEffectiveMemberSpecs,
+        configuredMemberSpecs: setup.configuredMemberSpecs,
         teammateRuntimeDisallowedTools: 'Bash(rm:*)',
       });
       ports.deleteRun('run-1');
