@@ -13,6 +13,7 @@ import type {
   CodexManagedAccountDto,
   CodexRateLimitSnapshotDto,
 } from '@features/codex-account/contracts';
+import type { RuntimeProviderManagementErrorDiagnosticsDto } from '@features/runtime-provider-management/contracts';
 
 // =============================================================================
 // Platform Detection
@@ -456,6 +457,7 @@ export interface OpenCodeRuntimeStatus {
   state: OpenCodeRuntimeInstallerState;
   progress?: OpenCodeRuntimeInstallProgress;
   error?: string;
+  diagnostics?: RuntimeProviderManagementErrorDiagnosticsDto;
 }
 
 export interface OpenCodeRuntimeAPI {

@@ -42,3 +42,4 @@ export { RuntimeProviderOnboardingDialog } from './RuntimeProviderOnboardingDial
 export { RuntimeProviderQuickConnect } from './RuntimeProviderQuickConnect';
 export { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 export { ProviderBrandIcon } from './ui/providerBrandIcons';
+export { RuntimeProviderErrorAlert } from './ui/RuntimeProviderErrorAlert';

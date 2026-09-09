@@ -1,3 +1,14 @@
+vi.mock('@shared/utils/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/utils/logger')>();
+  return {
+    ...actual,
+    createLogger: (name: string) => {
+      const logger = actual.createLogger(name);
+      return name === 'OpenCodeVersionDiagnostics' ? { ...logger, warn: vi.fn() } : logger;
+    },
+  };
+});
+
 import { createHash } from 'crypto';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import os from 'os';

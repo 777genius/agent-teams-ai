@@ -1,12 +1,14 @@
 import { isAbsoluteExistingFile } from '@main/utils/runtimePathBinaryResolver';
 
-export type OpenCodeBinaryVersionProbe =
-  | { ok: true; version: string | null }
-  | { ok: false; error: string };
+import type {
+  OpenCodeBinaryVersionProbe,
+  OpenCodeBinaryCandidateFailure,
+} from '@features/runtime-provider-management/main';
+export type { OpenCodeBinaryVersionProbe } from '@features/runtime-provider-management/main';
 
 export type VerifiedOpenCodeBinaryProbe =
   | { ok: true; binaryPath: string; version: string | null }
-  | { ok: false; firstFailure: { binaryPath: string; error: string } | null };
+  | { ok: false; firstFailure: OpenCodeBinaryCandidateFailure | null };
 
 interface CachedResult<T> {
   result: T;
