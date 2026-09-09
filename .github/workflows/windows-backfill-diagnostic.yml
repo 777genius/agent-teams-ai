@@ -1,0 +1,173 @@
+name: Windows packaged backfill diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'test/main/services/team/OpenCodePackagedBackfill.windows.test.ts'
+      - '.github/workflows/windows-backfill-diagnostic.yml'
+      - 'src/main/services/team/opencode/bridge/**'
+      - 'src/main/utils/childProcess.ts'
+      - 'src/main/utils/cliProcessDefaults.ts'
+      - 'src/main/utils/openCodeNodeModulesJunction.ts'
+      - 'src/main/services/runtime/openCodeAutoUpdatePolicy.ts'
+      - 'vitest.config.ts'
+      - 'test/setup.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.node-version'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-backfill-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packaged-backfill:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      WINDOWS_BACKFILL_REQUIRED: '1'
+      WINDOWS_BACKFILL_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Reviewed identity/PATH support. Native cleanup still times out at 30s;
+      # keep cleanup mandatory and update this pin after the fix is reviewed/proven.
+      WINDOWS_BACKFILL_SUPPORT_SHA: 'ab8464013fd21b53ba8cb4cd1063184e878d2a31'
+      WINDOWS_BACKFILL_SUPPORT_ROOT: ${{ github.workspace }}/backfill-test-support
+      WINDOWS_BACKFILL_EVIDENCE_DIR: ${{ runner.temp }}/windows-app-backfill-evidence
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Initialize failure evidence
+        run: |
+          New-Item -ItemType Directory -Force $env:WINDOWS_BACKFILL_EVIDENCE_DIR | Out-Null
+          @{ status = 'preflight-pending'; platform = $env:RUNNER_OS; runId = '${{ github.run_id }}'; appEventSha = '${{ github.sha }}'; supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA } |
+            ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/preflight.json" -Encoding utf8
+          if (-not $IsWindows) { throw 'Actual Windows is mandatory' }
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Record and verify exact application checkout
+        run: |
+          $actual = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $env:WINDOWS_BACKFILL_APP_SHA) { throw 'Application SHA mismatch' }
+          @{ appSourceSha = $actual; expectedAppSourceSha = $env:WINDOWS_BACKFILL_APP_SHA } |
+            ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/app-source.json" -Encoding utf8
+
+      - name: Fetch immutable runtime test support only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: ${{ env.WINDOWS_BACKFILL_SUPPORT_SHA }}
+          path: backfill-test-support
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          persist-credentials: false
+          sparse-checkout: scripts/smoke
+
+      - name: Verify support availability before installing dependencies
+        run: |
+          $actual = git -C $env:WINDOWS_BACKFILL_SUPPORT_ROOT rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $env:WINDOWS_BACKFILL_SUPPORT_SHA) { throw 'Support SHA mismatch' }
+          foreach ($file in @('windows-runtime-opencode-backfill.mjs', 'windows-runtime-opencode-fixture.cjs')) {
+            if (-not (Test-Path "$env:WINDOWS_BACKFILL_SUPPORT_ROOT/scripts/smoke/$file" -PathType Leaf)) {
+              throw "Pinned support lacks $file; coordinator must pin the reviewed helper commit"
+            }
+          }
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.22.0'
+          run_install: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install locked test dependencies without builds or lifecycle scripts
+        timeout-minutes: 6
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Download and verify the exact public shipped archive before extraction
+        timeout-minutes: 4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'agent-teams-runtime-win32-x64-v0.0.87.zip'
+          $url = 'https://github.com/777genius/agent_teams_orchestrator_binaries/releases/download/runtime-v0.0.87/agent-teams-runtime-win32-x64-v0.0.87.zip'
+          $expected = 'f4f36d3f3697fcb3208e7bfc784829a447d8c7faf65570479fa0b4a92ed1ef5d'
+          $provenance = @{ status = 'downloading'; url = $url; expectedArchiveSha256 = $expected; appSourceSha = (git rev-parse HEAD); supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA; runtimeBuildSourceSha = $null }
+          $provenance | ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/release.json" -Encoding utf8
+          gh release download runtime-v0.0.87 --repo 777genius/agent_teams_orchestrator_binaries --pattern agent-teams-runtime-win32-x64-v0.0.87.zip --dir $env:RUNNER_TEMP --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Shipped release download failed' }
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $provenance.archiveSha256 = $actual
+          $provenance.status = 'archive-downloaded'
+          $provenance | ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/release.json" -Encoding utf8
+          if ($actual -ne $expected) { throw 'Archive SHA256 mismatch; refusing extraction/execution' }
+          $extract = Join-Path $env:RUNNER_TEMP 'windows-backfill-shipped-runtime'
+          Expand-Archive -LiteralPath $archive -DestinationPath $extract -Force
+          $executables = @(Get-ChildItem -LiteralPath $extract -Recurse -Filter claude-multimodel.exe -File)
+          if ($executables.Count -ne 1) { throw 'Expected exactly one shipped claude-multimodel.exe' }
+          $binary = $executables[0].FullName
+          $exeHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
+          $runtimeDir = Split-Path -Parent $binary
+          $runtimeSha = (Get-Content -Raw -LiteralPath (Join-Path $runtimeDir 'COMMIT_SHA')).Trim()
+          $version = (Get-Content -Raw -LiteralPath (Join-Path $runtimeDir 'VERSION')).Trim()
+          if ($runtimeSha -notmatch '^[a-f0-9]{40}$' -or $version -ne '0.0.87') { throw 'Release metadata mismatch' }
+          $provenance.runtimeBuildSourceSha = $runtimeSha
+          $provenance.executableSha256 = $exeHash
+          $provenance.executableArchiveMember = [IO.Path]::GetRelativePath($extract, $binary).Replace('\', '/')
+          $provenance.status = 'verified-archive-and-executable'
+          $provenance | ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/release.json" -Encoding utf8
+          "WINDOWS_BACKFILL_ARCHIVE=$archive" >> $env:GITHUB_ENV
+          "WINDOWS_BACKFILL_EXE=$binary" >> $env:GITHUB_ENV
+          "WINDOWS_BACKFILL_EXE_SHA256=$exeHash" >> $env:GITHUB_ENV
+
+      - name: Require actual Windows, binary, and trusted PowerShell fixture PATH
+        run: |
+          if (-not $IsWindows -or -not (Test-Path -LiteralPath $env:WINDOWS_BACKFILL_EXE -PathType Leaf)) { throw 'Windows packaged test cannot run' }
+          @'
+          const path = require('node:path');
+          const { pathToFileURL } = require('node:url');
+          const fs = require('node:fs');
+          (async () => {
+            const support = await import(pathToFileURL(path.join(process.env.WINDOWS_BACKFILL_SUPPORT_ROOT, 'scripts/smoke/windows-runtime-opencode-backfill.mjs')));
+            const root = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'backfill-preflight-'));
+            try {
+              const env = support.sandboxEnvironment(root, path.join(root, 'opencode.cmd'));
+              const dir = path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0');
+              if (!env.PATH.toLowerCase().split(';').includes(dir.toLowerCase()) || !fs.existsSync(path.join(dir, 'powershell.exe'))) throw Error('Pinned helper must include trusted WindowsPowerShell/v1.0');
+            } finally { fs.rmSync(root, { recursive: true, force: true }); }
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          '@ | node
+          if ($LASTEXITCODE -ne 0) { throw 'Support sandbox preflight failed' }
+          @{ status = 'ready'; platform = 'win32'; appSourceSha = (git rev-parse HEAD); supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA } |
+            ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/preflight.json" -Encoding utf8
+
+      - name: Run only the actual application packaged backfill integration
+        timeout-minutes: 19
+        run: pnpm exec vitest run test/main/services/team/OpenCodePackagedBackfill.windows.test.ts --maxWorkers=1 --no-file-parallelism --reporter=verbose --reporter=json --outputFile.json="$env:WINDOWS_BACKFILL_EVIDENCE_DIR/vitest.json"
+
+      - name: Record job outcome even when preflight fails
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force $env:WINDOWS_BACKFILL_EVIDENCE_DIR | Out-Null
+          @{ jobStatus = '${{ job.status }}'; platform = $env:RUNNER_OS; supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA; packagedEvidencePresent = (Test-Path "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/ascii.json") } |
+            ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/job-outcome.json" -Encoding utf8
+
+      - name: Upload diagnostic evidence on success and failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app-backfill-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.WINDOWS_BACKFILL_EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 14
