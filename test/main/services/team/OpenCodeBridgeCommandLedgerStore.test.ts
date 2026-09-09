@@ -95,13 +95,13 @@ describe('OpenCodeBridgeCommandLedgerStore', () => {
       expect(sideEffectDispatches).toBe(1);
       expect((await fs.stat(ledgerPath)).isFile()).toBe(true);
 
-      await (async () => {
-        const serviceAfterRestart = createService();
-        await expect(serviceAfterRestart.execute(restartLaunchInput())).rejects.toThrow(
-          expectedError
-        );
-      })();
+      const serviceAfterRestart = createService();
+      const restartOutcome = await serviceAfterRestart.execute(restartLaunchInput()).then(
+        (result) => ({ result }),
+        (error: unknown) => ({ error })
+      );
 
+      // Prove durable non-redispatch independently of the recovery error contract.
       expect(sideEffectDispatches).toBe(1);
       const ledgerAfterRestart = createOpenCodeBridgeCommandLedgerStore({
         filePath: ledgerPath,
@@ -114,6 +114,11 @@ describe('OpenCodeBridgeCommandLedgerStore', () => {
           requestId: 'restart-request-1',
         }),
       ]);
+      expect(restartOutcome).toHaveProperty('error', expect.any(Error));
+      expect(restartOutcome).toHaveProperty(
+        'error.message',
+        expect.stringContaining(expectedError)
+      );
     }
   );
 
