@@ -235,26 +235,28 @@ export const CommandPalette = (): React.JSX.Element | null => {
     fetchRepositoryGroups,
   ]);
 
+  const resetSessionSearchState = useCallback(() => {
+    setSessionResults([]);
+    setTotalMatches(0);
+    setSearchIsPartial(false);
+  }, []);
+
   // Focus input when palette opens
   useEffect(() => {
     if (commandPaletteOpen && inputRef.current) {
       inputRef.current.focus();
       setQuery('');
-      setSessionResults([]);
+      resetSessionSearchState();
       setSelectedIndex(0);
-      setTotalMatches(0);
-      setSearchIsPartial(false);
       setGlobalSearchEnabled(false);
       setBrowsingProjects(false);
     }
-  }, [commandPaletteOpen]);
+  }, [commandPaletteOpen, resetSessionSearchState]);
 
   // Search sessions with debounce (only in session mode)
   useEffect(() => {
     // Results and loading belong to this query, scope, and palette lifetime.
-    setSessionResults([]);
-    setTotalMatches(0);
-    setSearchIsPartial(false);
+    resetSessionSearchState();
     if (
       !commandPaletteOpen ||
       query.trim().length < 2 ||
@@ -284,9 +286,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
           return;
         }
         logger.error('Search error:', error);
-        setSessionResults([]);
-        setTotalMatches(0);
-        setSearchIsPartial(false);
+        resetSessionSearchState();
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -298,7 +298,14 @@ export const CommandPalette = (): React.JSX.Element | null => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [query, selectedProjectId, commandPaletteOpen, searchMode, globalSearchEnabled]);
+  }, [
+    query,
+    selectedProjectId,
+    commandPaletteOpen,
+    searchMode,
+    globalSearchEnabled,
+    resetSessionSearchState,
+  ]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -311,25 +318,21 @@ export const CommandPalette = (): React.JSX.Element | null => {
       selectRepository(repo.id);
       setBrowsingProjects(false);
       setQuery('');
-      setSessionResults([]);
+      resetSessionSearchState();
       setSelectedIndex(0);
-      setTotalMatches(0);
-      setSearchIsPartial(false);
       inputRef.current?.focus();
     },
-    [selectRepository]
+    [resetSessionSearchState, selectRepository]
   );
 
   // Handle clearing project filter — go back to project browsing
   const handleClearProject = useCallback(() => {
     setBrowsingProjects(true);
     setQuery('');
-    setSessionResults([]);
+    resetSessionSearchState();
     setSelectedIndex(0);
-    setTotalMatches(0);
-    setSearchIsPartial(false);
     inputRef.current?.focus();
-  }, []);
+  }, [resetSessionSearchState]);
 
   // Handle session result click
   const handleSessionResultClick = useCallback(
