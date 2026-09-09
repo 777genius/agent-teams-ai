@@ -34,16 +34,13 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', async () => ({
             key: field,
             onClick: () =>
               onChange(
-                members.map((member, index) =>
-                  index !== 0
-                    ? member
-                    : {
-                        ...member,
-                        ...(field === 'role'
-                          ? { roleSelection: 'Developer' }
-                          : { model: 'edited/model' }),
-                      }
-                )
+                [
+                  {
+                    ...members[0],
+                    ...(field === 'role' ? { roleSelection: 'Developer' } : { model: 'edited/model' }),
+                  },
+                  ...members.slice(1),
+                ]
               ),
           },
           `change-member-${field}`
@@ -186,12 +183,13 @@ describe('EditTeamDialog canonical settings', () => {
             leadMember: { name: 'team-lead', providerId: 'opencode' } as ResolvedTeamMember,
           })
         );
+        return Promise.resolve();
       });
     };
     const click = async (text: string) => {
       const button = Array.from(host.querySelectorAll('button')).find((b) => b.textContent === text);
       expect(button).toBeTruthy();
-      await act(() => button!.click());
+      await act(() => Promise.resolve(button!.click()));
     };
     await render();
     return { host, root, render, click, members, onClose };
@@ -200,7 +198,7 @@ describe('EditTeamDialog canonical settings', () => {
   it('shows canonical 5.3, inherited blanks and legacy fallback without changing effective display data', async () => {
     const { host, root, members } = await setup();
     try {
-      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent!);
+      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent);
       expect(drafts[1].model).toBe('zai-coding-plan/glm-5.3');
       expect(drafts[2]).toMatchObject({ model: '' });
       for (const key of ['providerId', 'effort', 'providerBackendId', 'fastMode']) {
@@ -213,7 +211,7 @@ describe('EditTeamDialog canonical settings', () => {
       });
       expect(members[1].model).toBe('zai-coding-plan/glm-5.2');
     } finally {
-      await act(() => root.unmount());
+      await act(() => Promise.resolve(root.unmount()));
     }
   });
 
@@ -235,7 +233,7 @@ describe('EditTeamDialog canonical settings', () => {
       });
       expect(api.teams.restartMember).not.toHaveBeenCalled();
     } finally {
-      await act(() => root.unmount());
+      await act(() => Promise.resolve(root.unmount()));
     }
   });
 
@@ -246,7 +244,7 @@ describe('EditTeamDialog canonical settings', () => {
       expect(api.teams.updateConfig).toHaveBeenCalledOnce();
       expect(api.teams.replaceMembers).not.toHaveBeenCalled();
     } finally {
-      await act(() => root.unmount());
+      await act(() => Promise.resolve(root.unmount()));
     }
   });
 
@@ -260,11 +258,11 @@ describe('EditTeamDialog canonical settings', () => {
       expect(api.teams.replaceMembers).not.toHaveBeenCalled();
       await render(members, false);
       await render();
-      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent!);
+      const drafts = JSON.parse(host.querySelector('[data-testid="drafts"]')!.textContent);
       expect(drafts[0].model).toBe('');
       expect(drafts[1].model).toBe('zai-coding-plan/glm-5.3');
     } finally {
-      await act(() => root.unmount());
+      await act(() => Promise.resolve(root.unmount()));
     }
   });
 
@@ -302,7 +300,7 @@ describe('EditTeamDialog canonical settings', () => {
           );
         }
       } finally {
-        await act(() => root.unmount());
+        await act(() => Promise.resolve(root.unmount()));
       }
     }
   );
