@@ -13,6 +13,7 @@ import {
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_GET_TASK_CHANGES,
   REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
@@ -41,6 +42,11 @@ import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services
 
 import type { IpcResult } from '@shared/types/ipc';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+
+vi.mock('electron', () => ({
+  app: { getPath: () => os.tmpdir(), getLocale: () => 'en' },
+  BrowserWindow: { getAllWindows: () => [] },
+}));
 
 let decisionTeamsBasePath: string;
 
@@ -307,6 +313,27 @@ describe('review IPC path confinement', () => {
     if (!token) throw new Error('Review snapshot token was not returned');
     return token;
   }
+
+  it.each([undefined, false, true, 'true', 1, {}])(
+    'sanitizes explicit backfill retry intent %j independently from forceFresh',
+    async (retryBackfill) => {
+      const result = await ipcMain.invoke(REVIEW_GET_TASK_CHANGES, 'safe-team', 'task-1', {
+        summaryOnly: true,
+        forceFresh: true,
+        retryBackfill,
+      });
+      expect(result.success).toBe(true);
+      expect(extractor.getTaskChanges).toHaveBeenLastCalledWith(
+        'safe-team',
+        'task-1',
+        expect.objectContaining({
+          summaryOnly: true,
+          forceFresh: true,
+          retryBackfill: retryBackfill === true,
+        })
+      );
+    }
+  );
 
   it('ignores a late watch request after unwatch and a newer project subscription', async () => {
     let resolveOldProject!: (projectPath: string) => void;

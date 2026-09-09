@@ -1478,6 +1478,12 @@ describe('useTeamChangesSummaries', () => {
       firstRequests.map((request) => request.taskId)
     );
     expect(refreshRequests.every((request) => request.options?.forceFresh === true)).toBe(true);
+    expect(refreshRequests.every((request) => request.options?.retryBackfill === true)).toBe(true);
+    expect(
+      [...firstRequests, ...secondRequests, ...thirdRequests].every(
+        (request) => request.options?.retryBackfill !== true
+      )
+    ).toBe(true);
 
     await act(async () => {
       fourth.resolve(responseForRequests(refreshRequests));

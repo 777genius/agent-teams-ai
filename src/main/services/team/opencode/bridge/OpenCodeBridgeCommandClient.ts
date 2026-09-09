@@ -212,6 +212,15 @@ export class OpenCodeBridgeCommandClient {
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
   }
 
+  /** Replacement-sensitive identity without launching the runtime or reading binary contents. */
+  async getRuntimeIdentity(): Promise<string | null> {
+    const metadata = await fs.stat(this.binaryPath).catch(() => null);
+    return JSON.stringify([
+      this.binaryPath,
+      metadata && [metadata.dev, metadata.ino, metadata.size, metadata.mtimeMs, metadata.ctimeMs],
+    ]);
+  }
+
   async execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
