@@ -28,6 +28,13 @@ services:
         condition: service_completed_successfully
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
+      # Publish into the same canonical teams subtree; keep the Claude parent read-only.
+      - type: bind
+        source: ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}/teams
+        target: /data/.claude/teams
+        read_only: false
+        bind:
+          create_host_path: false
       - agent-teams-data:/data/.agent-teams
       - agent-teams-application-data:/data/.agent-teams/data
       - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
@@ -113,6 +120,13 @@ services:
         condition: service_completed_successfully
     volumes:
       - ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}:/data/.claude:ro
+      # Publish into the same canonical teams subtree; keep the Claude parent read-only.
+      - type: bind
+        source: ${CLAUDE_DIR:?Set CLAUDE_DIR to a dedicated hosted sandbox directory}/teams
+        target: /data/.claude/teams
+        read_only: false
+        bind:
+          create_host_path: false
       - agent-teams-data:/data/.agent-teams
       - agent-teams-application-data:/data/.agent-teams/data
       - agent-teams-keycloak-trust:/caddy-trust:ro

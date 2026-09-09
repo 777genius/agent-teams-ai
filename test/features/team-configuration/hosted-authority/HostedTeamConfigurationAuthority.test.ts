@@ -7,6 +7,8 @@ import {
 } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
+import { canonicalHostedTeamConfigurationCreate } from '../../../../src/features/team-configuration/core/application/hosted-authority/canonicalHostedTeamConfigurationCreate';
+
 import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
 
 const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
@@ -55,6 +57,9 @@ describe('hosted team configuration application authority', () => {
       members: [{ name: 'lead' }],
       context,
     };
+    expect(canonicalHostedTeamConfigurationCreate(request)).toBe(JSON.stringify({
+      schemaVersion: 1, workspaceId, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+    }));
     await authority.createDraft(request);
     await authority.createDraft(request);
     expect(gateway.createHostedTeamConfiguration).toHaveBeenNthCalledWith(
@@ -87,6 +92,38 @@ describe('hosted team configuration application authority', () => {
       .mocked(gateway.createHostedTeamConfiguration)
       .mock.calls.at(-1)?.[0].payloadHash;
     expect(orderedHash).not.toBe(reversedHash);
+  });
+
+  it('hashes every configuration selection and preserves ordered, property-order-independent replay identity', async () => {
+    const gateway = storage();
+    const authority = createHostedTeamConfigurationAuthority(gateway);
+    const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+      { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
+        members: [{ name: 'lead', prompt: 'Coordinate.' }, { name: 'reviewer', prompt: 'Review.' }] },
+    ] } as const;
+    const request = { workspaceId, idempotencyKey: 'idempotency_configuration-0001' as never,
+      name: 'Alpha', members: [{ name: 'lead' }, { name: 'reviewer' }], configuration, context };
+    await authority.createDraft(request);
+    const initial = vi.mocked(gateway.createHostedTeamConfiguration).mock.calls[0][0];
+    expect(initial.configuration).toEqual(configuration);
+    await authority.createDraft({ ...request, configuration: {
+      lanes: configuration.lanes, toolApprovalMode: 'manual', schemaVersion: 1,
+    } });
+    expect(vi.mocked(gateway.createHostedTeamConfiguration).mock.calls.at(-1)?.[0].payloadHash).toBe(initial.payloadHash);
+    for (const changed of [
+      { ...configuration, toolApprovalMode: 'auto' as const },
+      { ...configuration, lanes: [{ ...configuration.lanes[0], selectedModel: 'openai/gpt-6' }] },
+      { ...configuration, lanes: [{ ...configuration.lanes[0], effort: 'low' as const }] },
+      { ...configuration, lanes: [{ ...configuration.lanes[0], members: [{ name: 'lead', prompt: 'Changed.' }, configuration.lanes[0].members[1]] }] },
+      { ...configuration, lanes: [{ ...configuration.lanes[0], members: [...configuration.lanes[0].members].reverse() }] },
+    ]) {
+      await authority.createDraft({ ...request, configuration: changed });
+      expect(vi.mocked(gateway.createHostedTeamConfiguration).mock.calls.at(-1)?.[0].payloadHash).not.toBe(initial.payloadHash);
+    }
+    await authority.updateDraft({ workspaceId, teamId }, revision, { configuration }, context);
+    expect(gateway.updateHostedTeamConfiguration).toHaveBeenCalledWith({ workspaceId, teamId,
+      expectedRevision: revision, updates: { configuration }, deadlineAtMs: context.deadlineAtMs,
+    }, { signal: context.signal });
   });
 
   it('maps storage CAS and absence outcomes to the existing application contract', async () => {

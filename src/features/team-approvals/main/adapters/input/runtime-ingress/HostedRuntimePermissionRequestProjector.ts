@@ -171,7 +171,8 @@ export class HostedRuntimePermissionRequestProjector {
           observed.runId !== pending.runId ||
           observed.requestId !== pending.requestId ||
           observed.approvalId !== pending.approvalId ||
-          observed.approvalGeneration !== pending.approvalGeneration
+          observed.approvalGeneration !== pending.approvalGeneration ||
+          observed.deliveryRef !== pending.deliveryRef
         ) {
           continue;
         }

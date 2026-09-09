@@ -1,5 +1,6 @@
 import {
   parseHostedTeamApprovalDeliveryRecord,
+  parseHostedTeamApprovalObservationReceipt,
   parseHostedTeamApprovalPendingReadRecord,
   parseHostedTeamApprovalPreviewStorageRecord,
 } from '../../application/hostedTeamApprovalAuthorityStorage';
@@ -7,6 +8,7 @@ import {
 import type {
   HostedTeamApprovalAuthorityScope,
   HostedTeamApprovalDeliveryRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPreviewReadResult,
   HostedTeamApprovalStorageDecision,
@@ -67,6 +69,13 @@ export function pendingRecordFromRow(row: UnknownRow): HostedTeamApprovalPending
     requestedAtMs: row.requested_at_ms,
     expiresAtMs: row.expires_at_ms,
     previewRef: row.preview_ref,
+  });
+}
+
+export function observationReceiptFromRow(row: UnknownRow): HostedTeamApprovalObservationReceipt {
+  return parseHostedTeamApprovalObservationReceipt({
+    ...pendingRecordFromRow(row),
+    deliveryRef: row.delivery_ref,
   });
 }
 

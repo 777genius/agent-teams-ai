@@ -171,7 +171,8 @@ export function backupManifest(): BackupManifest {
       eventCursor: 'cursor-fixture',
     },
     entries: [checksum()],
-    sqliteIntegrity: { integrityCheck: 'ok' },
+    sqliteSnapshot: { userVersion: 27, entry: { schemaVersion: 27 } },
+    sqliteIntegrity: { integrityCheck: 'ok', userVersion: 27 },
   } as unknown as BackupManifest;
 }
 

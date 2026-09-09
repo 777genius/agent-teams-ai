@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
+import { hostedRosterMembers } from '@features/team-configuration/contracts';
 import { sql } from 'drizzle-orm';
 import {
   check,
@@ -23,6 +24,7 @@ import {
   parseHostedTeamConfigurationStorageUpdateRequest,
 } from '../../../contracts/hostedTeamConfigurationStorageContracts';
 
+import type { TeamDraftPublicationBinding } from '../../../contracts/teamDraftPublicationContracts';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
@@ -94,12 +96,25 @@ function revision(): string {
 }
 
 function draft(row: DraftRow) {
+  const stored: unknown = JSON.parse(row.members_json);
+  // Released records are arrays. New records use a strict versioned envelope in the same JSON column.
+  let roster: { members: unknown; configuration?: unknown };
+  if (Array.isArray(stored)) roster = { members: stored };
+  else {
+    if (!stored || typeof stored !== 'object' ||
+        Object.keys(stored).sort().join(',') !== 'configuration,members,schemaVersion' ||
+        (stored as { schemaVersion?: unknown }).schemaVersion !== 1) {
+      throw new TypeError('hosted-team-configuration-stored-roster-invalid');
+    }
+    roster = stored as { members: unknown; configuration: unknown };
+  }
   return parseHostedTeamConfigurationStorageDraft({
     workspaceId: row.workspace_id,
     teamId: row.team_id,
     revision: row.revision_token,
     metadata: JSON.parse(row.metadata_json),
-    members: JSON.parse(row.members_json),
+    members: roster.members,
+    ...(Object.hasOwn(roster, 'configuration') ? { configuration: roster.configuration } : {}),
   });
 }
 
@@ -141,6 +156,7 @@ export class HostedTeamConfigurationStorageOps {
           | { payload_hash: string; team_id: string; initial_revision: string }
           | undefined;
         if (replay) {
+          this.assertPublicationActor(input.workspaceId, replay.team_id, input.publicationBinding);
           return replay.payload_hash === input.payloadHash
             ? {
                 kind: 'created',
@@ -170,7 +186,7 @@ export class HostedTeamConfigurationStorageOps {
           reservedTeamId,
           initialRevision,
           JSON.stringify(input.metadata),
-          JSON.stringify(input.members),
+          JSON.stringify(input.configuration ? { schemaVersion: 1, members: input.members, configuration: input.configuration } : input.members),
           admittedAtMs,
           admittedAtMs
         );
@@ -186,6 +202,17 @@ export class HostedTeamConfigurationStorageOps {
           initialRevision,
           admittedAtMs
         );
+        if (input.publicationBinding) {
+          const operationId = `adoption_${randomBytes(16).toString('hex')}`;
+          const binding = input.publicationBinding;
+          db.prepare(`INSERT INTO hosted_team_configuration_publications
+            (operation_id, workspace_id, team_id, actor_id, deployment_id, runtime_workspace_id,
+             binding_generation, legacy_key, created_at, initial_revision, directory_fingerprint, state)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending')`).run(
+            operationId, input.workspaceId, reservedTeamId, binding.actorId, binding.deploymentId,
+            binding.runtimeWorkspaceId, binding.bindingGeneration, `draft-${operationId.slice(9)}`,
+            new Date(admittedAtMs).toISOString(), initialRevision);
+        }
         return {
           kind: 'created',
           teamId: reservedTeamId as never,
@@ -227,18 +254,25 @@ export class HostedTeamConfigurationStorageOps {
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
+        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
         const nextRevision = revision();
-        const nextMetadata = { ...(JSON.parse(row.metadata_json) as object), ...input.updates };
+        const current = draft(row);
+        const { configuration, ...metadataUpdates } = input.updates;
+        const nextMetadata = { ...current.metadata, ...metadataUpdates };
+        const nextMembersJson = configuration
+          ? JSON.stringify({ schemaVersion: 1, members: hostedRosterMembers(configuration), configuration })
+          : row.members_json;
         const changed = db
           .prepare(
             `UPDATE hosted_team_configuration_drafts
               SET revision_ordinal = revision_ordinal + 1,
-                  revision_token = ?, metadata_json = ?, updated_at_ms = ?
+                  revision_token = ?, metadata_json = ?, members_json = ?, updated_at_ms = ?
             WHERE workspace_id = ? AND team_id = ? AND state = 'active' AND revision_token = ?`
           )
           .run(
             nextRevision,
             JSON.stringify(nextMetadata),
+            nextMembersJson,
             admittedAtMs,
             input.workspaceId,
             input.teamId,
@@ -252,6 +286,7 @@ export class HostedTeamConfigurationStorageOps {
             revision_ordinal: row.revision_ordinal + 1,
             revision_token: nextRevision,
             metadata_json: JSON.stringify(nextMetadata),
+            members_json: nextMembersJson,
           }),
         };
       })
@@ -273,11 +308,13 @@ export class HostedTeamConfigurationStorageOps {
           .get(input.workspaceId, input.teamId) as
           | { state: 'active' | 'deleted'; revision_token: string; revision_ordinal: number }
           | undefined;
+        this.assertPublicationActor(input.workspaceId, input.teamId, input.publicationBinding);
         // Absence and tombstones deliberately have the same response, including wrong-workspace IDs.
         if (!row || row.state === 'deleted') return { kind: 'deleted', outcome: 'already_absent' };
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
+        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
         const changed = db
           .prepare(
             `UPDATE hosted_team_configuration_drafts
@@ -286,11 +323,35 @@ export class HostedTeamConfigurationStorageOps {
             WHERE workspace_id = ? AND team_id = ? AND state = 'active' AND revision_token = ?`
           )
           .run(revision(), admittedAtMs, input.workspaceId, input.teamId, input.expectedRevision);
+        if (changed.changes === 1) {
+          db.prepare(`UPDATE hosted_team_configuration_publications SET state = 'tombstoned'
+            WHERE workspace_id = ? AND team_id = ?`).run(input.workspaceId, input.teamId);
+        }
         return changed.changes === 1
           ? { kind: 'deleted', outcome: 'deleted' }
           : { kind: 'conflict', reason: 'revision_mismatch' };
       })
       .immediate();
+  }
+
+  /** Publication absence is legacy; another actor's immutable operation is never absence.
+   * Runs inside the create replay/delete transaction, before mutation or replay success.
+   */
+  private assertPublicationActor(workspaceId: string, teamId: string,
+    binding: TeamDraftPublicationBinding | undefined): void {
+    const row = this.getDatabase().prepare(`SELECT actor_id, deployment_id, runtime_workspace_id, binding_generation
+      FROM hosted_team_configuration_publications WHERE workspace_id = ? AND team_id = ?`)
+      .get(workspaceId, teamId) as { actor_id: string; deployment_id: string;
+        runtime_workspace_id: string; binding_generation: number } | undefined;
+    if (row && (!binding || row.actor_id !== binding.actorId || row.deployment_id !== binding.deploymentId ||
+        row.runtime_workspace_id !== binding.runtimeWorkspaceId || row.binding_generation !== binding.bindingGeneration)) {
+      throw new Error('draft-publication-actor-binding-mismatch');
+    }
+  }
+
+  private isFrozen(workspaceId: string, teamId: string): boolean {
+    return !!this.getDatabase().prepare(`SELECT 1 FROM hosted_team_configuration_promotions
+      WHERE workspace_id = ? AND team_id = ?`).get(workspaceId, teamId);
   }
 
   private requireMutationAdmission(deadlineAtMs: number): number {

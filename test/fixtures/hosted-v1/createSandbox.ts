@@ -577,6 +577,8 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
 
   await Promise.all([
     chmod(appDataDir, 0o770),
+    chmod(claudeDir, 0o700),
+    chmod(join(claudeDir, 'teams'), 0o700),
     chmod(storageDir, 0o770),
     chmod(join(appDataDir, 'logs'), 0o770),
     chmod(oidcAppDataDir, 0o770),

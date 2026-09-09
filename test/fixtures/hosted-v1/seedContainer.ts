@@ -65,8 +65,7 @@ const AUTH_DRAIN_EVIDENCE_PATH = `${AUTH_DRAIN_ROOT}/drain-proof.json`;
 const LIFECYCLE_OWNER_MANIFEST_PATH = `${LIFECYCLE_RUN_ROOT}/lifecycle-owner-admission.json`;
 const LIFECYCLE_TRUST_ANCHOR_PATH = `${LIFECYCLE_TRUST_ROOT}/trust-anchor`;
 const LIFECYCLE_RELEASE_PIN_PATH = `${LIFECYCLE_TRUST_ROOT}/release-owner-pin.json`;
-const LIFECYCLE_LAUNCHER_PRIVATE_KEY_PATH =
-  `${LIFECYCLE_LAUNCHER_ROOT}/owner-admission-private-key.pem`;
+const LIFECYCLE_LAUNCHER_PRIVATE_KEY_PATH = `${LIFECYCLE_LAUNCHER_ROOT}/owner-admission-private-key.pem`;
 const LIFECYCLE_OWNER_ADMISSION_DOMAIN = 'agent-teams.hosted-lifecycle-owner-admission/v2';
 
 export interface FakeRuntimeLifecycleOwnerArtifact {
@@ -756,7 +755,10 @@ export function createFakeRuntimeOwnerMutationErrorTrace(
   });
 }
 
-function parseFakeRuntimeLifecycleCommand(value: unknown): Record<string, unknown> {
+function parseFakeRuntimeLifecycleCommand(
+  value: unknown,
+  expectedTeamId: string = TEAM_ID
+): Record<string, unknown> {
   if (
     !isRecord(value) ||
     value.schemaVersion !== 1 ||
@@ -766,7 +768,7 @@ function parseFakeRuntimeLifecycleCommand(value: unknown): Record<string, unknow
     typeof value.idempotencyKey !== 'string' ||
     !/^idempotency_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(value.idempotencyKey) ||
     value.workspaceId !== PUBLIC_WORKSPACE_ID ||
-    value.teamId !== TEAM_ID ||
+    value.teamId !== expectedTeamId ||
     typeof value.expectedRevision !== 'string' ||
     !/^revision_[A-Za-z0-9_-]{32,128}$/u.test(value.expectedRevision) ||
     !hasExactKeys(
@@ -1692,12 +1694,10 @@ export function createFakeRuntimeAuthDrainCoordinator(input: {
   handle(request: FakeRuntimeAuthDrainRequest): Promise<Readonly<Record<string, unknown>>>;
   isDrained(): boolean;
 } {
-  let state:
-    | Readonly<{
-        resetGeneration: number;
-        publication: 'indeterminate' | 'confirmed';
-      }>
-    | null = null;
+  let state: Readonly<{
+    resetGeneration: number;
+    publication: 'indeterminate' | 'confirmed';
+  }> | null = null;
   const confirm = async (resetGeneration: number): Promise<Readonly<Record<string, unknown>>> => {
     try {
       await input.publish(resetGeneration);
@@ -1827,8 +1827,7 @@ export async function startFakeRuntimeAuthDrainServer(input: {
               `${JSON.stringify({
                 ok: false,
                 code:
-                  error instanceof Error &&
-                  error.message === 'hosted_e2e_auth_drain_unconfirmed'
+                  error instanceof Error && error.message === 'hosted_e2e_auth_drain_unconfirmed'
                     ? 'drain_unconfirmed'
                     : 'request_invalid',
               })}\n`
@@ -5783,6 +5782,20 @@ async function serveFakeRuntime(): Promise<void> {
     );
     return lifecycleTraceWrite;
   };
+  // Separate, bounded denial evidence: seeded UI health polls never write this file.
+  // Publish complete snapshots by same-directory rename; readers never see truncation.
+  const denialEvidencePath = `${FAKE_RUNTIME_LIFECYCLE_TRACE_PATH}.denials.json`;
+  const denialEvidence: Array<Readonly<Record<string, unknown>>> = [];
+  let denialEvidenceWrite = Promise.resolve();
+  const publishDenialEvidence = (): Promise<void> => {
+    const snapshot = `${JSON.stringify(denialEvidence)}\n`;
+    denialEvidenceWrite = denialEvidenceWrite.then(async () => {
+      await writeFile(`${denialEvidencePath}.tmp`, snapshot, { mode: 0o600 });
+      await rename(`${denialEvidencePath}.tmp`, denialEvidencePath);
+    });
+    return denialEvidenceWrite;
+  };
+  await publishDenialEvidence();
   const ownerMutationErrorTrace = createFakeRuntimeOwnerMutationErrorTrace(
     FAKE_RUNTIME_OWNER_MUTATION_ERROR_TRACE_PATH
   );
@@ -5911,8 +5924,7 @@ async function serveFakeRuntime(): Promise<void> {
           : left[key] === right[key])
     );
   const connectedSockets = new Set<Socket>();
-  let failNextAuthDrainPublication =
-    process.env.E2E_AUTH_DRAIN_INDETERMINATE_ONCE === '1';
+  let failNextAuthDrainPublication = process.env.E2E_AUTH_DRAIN_INDETERMINATE_ONCE === '1';
   let failNextAuthDrainInvalidation = failNextAuthDrainPublication;
   const authDrainCoordinator = createFakeRuntimeAuthDrainCoordinator({
     publish: async (resetGeneration) => {
@@ -6336,6 +6348,26 @@ async function serveFakeRuntime(): Promise<void> {
           throw new Error('fake_runtime_owner_proof_invalid');
         }
         await traceLifecycle({ operation: request.operation, stage: 'proof_valid' });
+        // Correlate every signed non-seeded attempt, including unexpected operations.
+        // Malformed authority still cannot produce a causal rejection record below.
+        const signedAuthority = request.payload.authority;
+        if (
+          isRecord(signedAuthority) &&
+          typeof signedAuthority.teamId === 'string' &&
+          /^team_[0-9a-f]{32}$/u.test(signedAuthority.teamId) &&
+          signedAuthority.teamId !== TEAM_ID
+        ) {
+          if (denialEvidence.length >= 32) throw new Error('fake_runtime_denial_evidence_full');
+          denialEvidence.push(
+            Object.freeze({
+              exchangeId: request.exchangeId,
+              operation: request.operation,
+              teamId: signedAuthority.teamId,
+              stage: 'signed_request',
+            })
+          );
+          await publishDenialEvidence();
+        }
         const operationOwnerBinding = owner.binding;
         const payload = request.payload;
         const payloadKeys =
@@ -6389,7 +6421,6 @@ async function serveFakeRuntime(): Promise<void> {
           Date.now() >= Number(context.deadlineAtMs) ||
           authority.deploymentId !== DEPLOYMENT_ID ||
           authority.workspaceId !== PUBLIC_WORKSPACE_ID ||
-          authority.teamId !== TEAM_ID ||
           authority.restoreGeneration !== 0 ||
           authority.mountGeneration !== mountGeneration ||
           canonicalJson(request.ownerEffectFence) !== canonicalJson(authority.ownerEffectFence)
@@ -6440,7 +6471,6 @@ async function serveFakeRuntime(): Promise<void> {
           throw new Error('fake_runtime_provenance_invalid');
         }
         assertOwnerEffectFenceCurrent(authority);
-        await traceLifecycle({ operation: request.operation, stage: 'authority_valid' });
         const respond = (responsePayload: unknown, resourceRevision: unknown): void => {
           // Every owner result, including one emitted after an asynchronous trace write, must be
           // fenced at the final synchronous response boundary.
@@ -6464,6 +6494,65 @@ async function serveFakeRuntime(): Promise<void> {
           };
           writeFakeRuntimeLifecycleSignedFrame(socket, trustAnchor, 'response', envelope);
         };
+        if (authority.teamId !== TEAM_ID) {
+          // Preserve seeded-only admission. Attribute this refusal only after the signed
+          // envelope, payload, context, provenance and live authority fence all pass.
+          // Validate the actual public request too, including prepare's projection shape.
+          if (
+            typeof authority.teamId !== 'string' ||
+            !/^team_[0-9a-f]{32}$/u.test(authority.teamId)
+          ) {
+            throw new Error('fake_runtime_authority_invalid');
+          }
+          const projection = [
+            'control_state',
+            'prepare_provisioning',
+            'get_provisioning_status',
+          ].includes(String(request.operation));
+          const publicRequest = projection
+            ? payload.request
+            : parseFakeRuntimeLifecycleCommand(command, authority.teamId);
+          if (
+            !isRecord(publicRequest) ||
+            publicRequest.workspaceId !== authority.workspaceId ||
+            publicRequest.teamId !== authority.teamId ||
+            (projection
+              ? !hasExactKeys(publicRequest, ['schemaVersion', 'workspaceId', 'teamId']) ||
+                publicRequest.schemaVersion !== 1 ||
+                authority.resourceRevision !== null
+              : authority.resourceRevision !== publicRequest.expectedRevision)
+          ) {
+            throw new Error('fake_runtime_denial_request_invalid');
+          }
+          assertLifecycleEffectFence(operationOwnerBinding, context, authority);
+          if (denialEvidence.length >= 32) throw new Error('fake_runtime_denial_evidence_full');
+          // Only bounded public identity/command fields and a validated exchange ID;
+          // never serialize context, session, proof, authorization, or HMAC material.
+          denialEvidence.push(
+            Object.freeze({
+              exchangeId: request.exchangeId,
+              operation: request.operation,
+              workspaceId: authority.workspaceId,
+              teamId: authority.teamId,
+              request: publicRequest,
+              signedProofValid: true,
+              nonTeamAuthorityValid: true,
+              stage: 'rejected',
+              reason: 'nonseeded_team',
+            })
+          );
+          await publishDenialEvidence();
+          respond(
+            {
+              schemaVersion: request.operation === 'authorize' ? 2 : 1,
+              kind: 'unavailable',
+              retryAfterMs: null,
+            },
+            null
+          );
+          return;
+        }
+        await traceLifecycle({ operation: request.operation, stage: 'authority_valid' });
         if (
           request.operation === 'control_state' ||
           request.operation === 'prepare_provisioning' ||

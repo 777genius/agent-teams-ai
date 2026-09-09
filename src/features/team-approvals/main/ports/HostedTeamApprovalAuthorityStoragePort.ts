@@ -7,7 +7,7 @@ import type {
   HostedTeamApprovalDeliveryReconciliationRequest,
   HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
-  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingStorageRecord,
 } from '@features/internal-storage/contracts';
 import type { QueryContext, TeamId } from '@shared/contracts/hosted';
@@ -27,7 +27,7 @@ export interface HostedTeamApprovalAuthorityScopeResolverPort {
 export interface HostedTeamApprovalPendingIngressPort {
   observePending(
     record: HostedTeamApprovalPendingStorageRecord
-  ): Promise<HostedTeamApprovalPendingReadRecord>;
+  ): Promise<HostedTeamApprovalObservationReceipt>;
 }
 
 /**

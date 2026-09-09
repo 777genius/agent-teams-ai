@@ -1,10 +1,12 @@
 import type {
+  HostedCreateDraftTeamRequest,
   HostedSavedTeamRequest,
   HostedTeamConfigurationIdempotencyKey,
   HostedTeamConfigurationIdentity,
   HostedTeamConfigurationMember,
   HostedUpdateDraftTeamRequest,
 } from '../../contracts/hosted';
+import type { HostedDraftPublicationLookup, HostedDraftPublicationStatus } from '../../contracts/hostedDraftPublication';
 import type {
   ActorId,
   QueryContext,
@@ -15,6 +17,8 @@ import type {
 } from '@shared/contracts/hosted';
 
 export const HOSTED_TEAM_CONFIGURATION_OPERATIONS = Object.freeze([
+  'get_publication',
+  'recover_publication',
   'get_saved_request',
   'create_draft',
   'update_draft',
@@ -56,6 +60,9 @@ export interface HostedTeamConfigurationApplicationError {
 }
 
 export interface HostedTeamConfigurationApplicationPort {
+  publicationStatus?(request: HostedDraftPublicationLookup, context: QueryContext, recover: boolean): Promise<
+    { readonly kind: 'publication'; readonly teamId: TeamId; readonly publication: HostedDraftPublicationStatus } | HostedTeamConfigurationApplicationError>;
+
   createDraft(request: {
     readonly workspaceId: WorkspaceId;
     /**
@@ -66,10 +73,12 @@ export interface HostedTeamConfigurationApplicationPort {
     readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
     readonly name: string;
     readonly members: readonly HostedTeamConfigurationMember[];
+    readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
     readonly context: QueryContext;
   }): Promise<
     | Readonly<{
         kind: 'created';
+        publication?: HostedDraftPublicationStatus;
         teamId: TeamId;
         revision: Revision;
         outcome: 'created' | 'idempotent_replay';

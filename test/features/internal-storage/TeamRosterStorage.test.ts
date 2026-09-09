@@ -18,6 +18,8 @@ import {
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
+
 function makeCore(databasePath: string, onSql?: (sql: string) => void): InternalStorageWorkerCore {
   return new InternalStorageWorkerCore({
     databasePath,
@@ -90,22 +92,16 @@ function insertActiveTeamIdentity(databasePath: string, teamId: TeamId, key: str
   }
 }
 
-function prepareHistoricalV9Database(databasePath: string, malformedRosterMetadata = false): void {
-  const current = makeCore(databasePath);
-  current.handle('ping', {});
-  current.close();
-
+async function prepareHistoricalV9Database(
+  databasePath: string,
+  malformedRosterMetadata = false
+): Promise<void> {
+  await fs.mkdir(path.dirname(databasePath), { recursive: true });
   const database = new Database(databasePath);
   try {
-    database.exec(
-      `DROP TRIGGER trg_team_roster_metadata_no_update;
-       DROP TRIGGER trg_team_roster_metadata_no_delete;
-       DROP TABLE team_roster_members;
-       DROP TABLE team_rosters;
-       DROP TABLE team_roster_storage_metadata;
-       DROP TABLE hosted_workspace_grants;
-       DROP TABLE hosted_workspaces`
-    );
+    createReleasedInternalStorageSchema(database, 9);
+    database.prepare(`INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
+      VALUES ('v9-proof', 'historical-roster', '2026-08-04T00:00:00.000Z', 3)`).run();
     if (malformedRosterMetadata) {
       database.exec(
         `CREATE TABLE team_roster_storage_metadata (
@@ -115,7 +111,6 @@ function prepareHistoricalV9Database(databasePath: string, malformedRosterMetada
          INSERT INTO team_roster_storage_metadata VALUES ('team-roster', 2)`
       );
     }
-    database.pragma('user_version = 9');
   } finally {
     database.close();
   }
@@ -276,16 +271,24 @@ describe('TeamRoster internal storage', () => {
 
   it('migrates a historical schema in one transaction and refuses a malformed preexisting component', async () => {
     const target = await databasePath();
-    prepareHistoricalV9Database(target);
+    await prepareHistoricalV9Database(target);
 
     const migrated = track(makeCore(target));
     expect(migrated.handle('ping', {})).toMatchObject({
       schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
     });
     migrated.close();
+    const inspection = new Database(target, { readonly: true });
+    try {
+      expect(inspection.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v9-proof'").get())
+        .toEqual({ entry_count: 3 });
+      expect(inspection.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      inspection.close();
+    }
 
     const malformedPath = path.join(temporaryDirectory!, 'storage', 'malformed.db');
-    prepareHistoricalV9Database(malformedPath, true);
+    await prepareHistoricalV9Database(malformedPath, true);
 
     const rejected = track(makeCore(malformedPath));
     expect(() => rejected.handle('ping', {})).toThrow(

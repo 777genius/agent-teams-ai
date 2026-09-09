@@ -19,6 +19,7 @@ export {
 export {
   type HostedTeamApprovalsContextFactory,
   type HostedTeamApprovalsHttpFacade,
+  type HostedTeamApprovalsHttpGeneration,
   registerHostedTeamApprovalsHttp,
 } from './adapters/input/http/registerHostedTeamApprovalsHttp';
 export {

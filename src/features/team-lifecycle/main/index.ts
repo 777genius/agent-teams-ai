@@ -225,3 +225,17 @@ export class LegacyTeamLifecycleReadSource
     return Promise.resolve(this.source.listAliveTeamProjections(request, context));
   }
 }
+
+export type {
+  HostedDraftPublicationFeature,
+  HostedDraftPublicationRequest,
+  HostedDraftPublicationResult,
+} from '../core/application/ports/HostedDraftPublicationFeature';
+
+// Construction accepts admitted ports; concrete filesystem admission stays in host composition.
+export { createHostedDraftPublicationFeature } from './composition/createHostedDraftPublicationFeature';
+export type {
+  HostedDraftDirectoryLease,
+  HostedDraftDirectoryPublicationPort,
+  HostedDraftPublicationDependencies,
+} from './ports/HostedDraftPublicationDependencies';

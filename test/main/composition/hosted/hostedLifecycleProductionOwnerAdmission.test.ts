@@ -27,6 +27,7 @@ import {
   type HostedLifecycleReleaseOwnerPin,
 } from '../../../../src/main/composition/hosted/hostedLifecycleProductionOwnerAdmission';
 import {
+  HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256,
   HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
   HOSTED_APPROVAL_ACTIVATION_MANIFEST_FORMAT,
   serializeHostedApprovalRuntimeActivationPublication,
@@ -598,7 +599,7 @@ describe('hosted lifecycle production owner admission', () => {
             credentialId: authority.credentialId,
             runtimeInstanceId: authority.runtimeInstanceId,
             deliveryOwnerId: authority.deliveryOwnerId,
-            openCodeArtifactDigest: ARTIFACT_DIGEST,
+            openCodeArtifactDigest: `sha256:${HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256}`,
             sessionRecordFingerprint: `${index + 1}`.repeat(64),
             liveEffectFingerprint: `${index + 3}`.repeat(64),
           },
@@ -628,6 +629,11 @@ describe('hosted lifecycle production owner admission', () => {
         13
       );
       const admissionDocumentDigest = `sha256:${sha256(admissionDocument)}` as const;
+      expect(admitted.bootstrapBinding.ownerArtifactDigest).toBe(ARTIFACT_DIGEST);
+      expect(admitted.approvalRoutes.every((item) => item.artifactDigest === ARTIFACT_DIGEST)).toBe(
+        true
+      );
+      expect(`sha256:${HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256}`).not.toBe(ARTIFACT_DIGEST);
       const activationKeys = generateKeyPairSync('ed25519');
       const publicKeySpkiDer = createPublicKey(activationKeys.privateKey).export({
         format: 'der',

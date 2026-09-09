@@ -1,4 +1,8 @@
-import { readdir } from 'node:fs/promises';
+import { parseHttpObservationEnvelope } from './http-observation-envelope';
+import { privateHttpPairReader } from './private-http-pairs';
+import { PRIVATE_HTTP_KIND, type ParsedPrivateHttpRawRecord, type LocatedPrivateHttpRawRecord, type LocatedHttpObservation, type PrivateHttpRecord } from './private-http-types';
+import { decodePrivateHttpRecord, assertPrivateHttpOuterBinding } from './private-http';
+import { readdir, rename } from 'node:fs/promises';
 
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
@@ -6,6 +10,7 @@ import {
   P3C_LANE,
   RAW_ORIGINS,
   RAW_RECORD_PURPOSE,
+  RUNTIME_CAPTURE_NAMES,
   canonicalJson,
   exactRecord,
   sha256,
@@ -15,10 +20,40 @@ import {
   type MatrixRow,
   type RawOrigin,
   type RawRecord,
+  type RuntimeCaptureName,
 } from './contracts';
-import type { ProcessStartEvidence, SupervisorOutcome } from './processes';
+import {
+  assertEvidenceCleanup,
+  type EvidencePreparationInput,
+  prepareNativeEvidence,
+} from './evidence-preparation';
+import type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
+import { correlateOpenCodeHttpEvidence } from './native-http-join';
+import { P1AdmissionUnverified } from './p1-admission';
+import { assertRawRecordWriters } from './raw-writer-binding';
+import type {
+  ProducerCaptureFileEvidence,
+  SupervisorOutcome,
+} from './processes';
+import {
+  assertHttpOuterBinding,
+  decodeHttpBase64,
+  decodeSupportedHttpRecord,
+  parseHttpCanonical,
+} from './raw-http';
+import {
+  HTTP_LIMITS,
+  HTTP_OBSERVATION_KIND,
+  HTTP_OBSERVATION_KIND_V2,
+  type SupportedHostedHttpRecord,
+  type LocatedHttpRawRecord,
+  type ParsedHttpRawRecord,
+} from './raw-http-types';
 import type { CleanupResult } from './sandbox';
 import { assertNoSecretLikeBytes, writeExclusive } from './secure-files';
+
+export { parseNativeRuntimeCapture } from './native-captures';
+export type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
 
 type Requirement = readonly [RawOrigin, string, number];
 
@@ -79,8 +114,11 @@ export const EVIDENCE_REQUIREMENTS: Readonly<Record<MatrixRow, readonly Requirem
     '06_ambiguity_reconciliation': [
       ['owner-wal', 'operator_required_fsynced', 2],
       ['owner-wal', 'automatic_retry_absent', 2],
+      ['owner-wal', 'reconciliation_lease_fenced', 2],
       ['opencode', 'reconcile_delivered_no_effect', 2],
-      ['opencode', 'reconcile_not_delivered_one_retry', 3],
+      ['opencode', 'reconcile_not_delivered_retry_effect', 3],
+      ['owner-wal', 'reconcile_retry_terminal_fsynced', 3],
+      ['opencode', 'effect_total_three', 3],
       ['owner-wal', 'reconcile_unknown_held', 3],
       ['product-http', 'reconcile_while_lease_open_rejected', 3],
       ['product-http', 'reconcile_identity_mismatch_rejected', 3],
@@ -183,17 +221,26 @@ interface CausalEvidence {
   readonly effectSetSha256s: readonly string[] | null;
 }
 
-interface ParsedRawRecord extends RawRecord {
+interface ParsedLegacyRawRecord extends RawRecord {
+  readonly kind: 'legacy';
   readonly semanticIdentity: SemanticIdentity;
+  readonly nativeRecord: Readonly<Record<string, unknown>>;
   readonly ownerGeneration: number;
   readonly processEvidenceSetId: string | null;
   readonly causal: CausalEvidence;
 }
 
-interface LocatedRawRecord extends ParsedRawRecord {
+interface LocatedLegacyRawRecord extends ParsedLegacyRawRecord {
   readonly byteStart: number;
   readonly byteEnd: number;
   readonly lineSha256: string;
+}
+
+type ParsedRawRecord = ParsedLegacyRawRecord | ParsedHttpRawRecord | ParsedPrivateHttpRawRecord;
+export type LocatedRawRecord = LocatedLegacyRawRecord | LocatedHttpRawRecord | LocatedPrivateHttpRawRecord;
+
+function isLegacyRecord(record: LocatedRawRecord): record is LocatedLegacyRawRecord {
+  return record.kind === 'legacy';
 }
 
 export interface EvidenceDocument {
@@ -203,11 +250,169 @@ export interface EvidenceDocument {
   readonly runId: string;
   readonly result: 'verified';
   readonly raw: Readonly<Record<RawOrigin, OriginEvidence>>;
+  readonly captures: Readonly<
+    Record<
+      RuntimeCaptureName,
+      {
+        sha256: string;
+        size: number;
+        shardCount: number;
+        shardSha256s: readonly string[];
+        producerRole: string;
+        semanticRecordCount: number;
+      }
+    >
+  >;
   readonly rows: readonly RowEvidence[];
   readonly exactlyOnce: ExactlyOnceEvidence;
   readonly supervisorTranscriptSha256: string;
   readonly cleanup: CleanupResult;
   readonly evidenceDigest: string;
+}
+
+export function assertNativeSemanticCrossJoin(
+  name: RuntimeCaptureName,
+  parsedShards: readonly ParsedNativeCapture[],
+  raw: Readonly<Record<RawOrigin, Buffer>>,
+  controllerNonce: string,
+  expected: ProducerCaptureFileEvidence
+): void {
+  if (
+    name === 'openCodeTimelinePath' ||
+    name === 'protectedEffectLedgerPath' ||
+    name === 'ownerWalTimelinePath'
+  ) {
+    throw new Error(`p3c_runtime_capture_semantic_mapping_unavailable:${name}`);
+  }
+  const origins: readonly RawOrigin[] =
+    name === 'negativeResultsPath'
+      ? ['browser', 'product-http']
+      : name === 'conditionalPostLedgerPath'
+        ? ['product-http']
+        : ['product-http', 'product-sse'];
+  const rawRecords = origins.flatMap((origin) =>
+    parseRawOrigin(raw[origin], origin, controllerNonce).filter(isLegacyRecord)
+  );
+  const consumed = new Set<string>();
+  const semanticRecords = parsedShards.flatMap((shard, shardIndex) =>
+    shard.records.slice(1, -1).map((record) => Object.freeze({ record, shardIndex }))
+  );
+  const shardTokens = new Set(expected.shards.map(({ producerStartToken }) => producerStartToken));
+  const candidates = rawRecords.filter((record) =>
+    shardTokens.has(record.processStartToken) ||
+    (name === 'negativeResultsPath' && record.origin === 'product-http' &&
+      /^cross_team_(?:list|preview|decide)_rejected$/u.test(record.event))
+  );
+  const fail = (label: string): never => {
+    throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
+  };
+  const retain = (value: unknown, label: string): { readonly bytes: number; readonly sha256: string } => {
+    const structure = exactRecord(value, ['schemaVersion', 'bodyBase64', 'sha256', 'redacted'], label);
+    if (structure.schemaVersion !== 1 || structure.redacted !== true ||
+      typeof structure.bodyBase64 !== 'string' || typeof structure.sha256 !== 'string') fail('wire');
+    const bytes = Buffer.from(structure.bodyBase64 as string, 'base64');
+    if (bytes.toString('base64') !== structure.bodyBase64 || sha256(bytes) !== structure.sha256) {
+      fail('wire');
+    }
+    return Object.freeze({ bytes: bytes.length, sha256: structure.sha256 as string });
+  };
+  const matches = (nativeRecord: NativeCaptureRecord, rawRecord: LocatedLegacyRawRecord): boolean => {
+    const native = nativeRecord.native;
+    const semantic = rawRecord.nativeRecord;
+    const transport = semantic.transport as Record<string, unknown>;
+    const identity = rawRecord.semanticIdentity;
+    if (name === 'negativeResultsPath') {
+      return rawRecord.origin === 'browser' && native.harnessRunId === identity.harnessRunId &&
+        native.processStartToken === rawRecord.processStartToken &&
+        native.actorTeamId === identity.authenticatedActorTeamId &&
+        native.targetTeamId === identity.targetTeamId &&
+        native.targetTeamRunId === identity.targetTeamRunId.replace(/^run_/u, 'team-run_') &&
+        native.httpStatus === transport.status && native.observedOutcome === rawRecord.event;
+    }
+    if (name === 'conditionalPostLedgerPath') {
+      const response = validateRedactedStructure(transport.response, 'decision_response').value;
+      return rawRecord.origin === 'product-http' &&
+        ['allow_accepted', 'deny_accepted'].includes(rawRecord.event) &&
+        native.approvalId === identity.approvalId && native.generationId === identity.generationId &&
+        native.targetTeamId === identity.targetTeamId &&
+        native.targetTeamRunId === identity.targetTeamRunId.replace(/^run_/u, 'team-run_') &&
+        native.decision === identity.decision &&
+        native.idempotencyKeySha256 === sha256(identity.idempotencyKey) &&
+        native.outcome === response.outcome;
+    }
+    if (nativeRecord.recordType === 'coordination-sse-write-succeeded') {
+      if (rawRecord.origin !== 'product-sse') return false;
+      const data = retain(transport.data, 'sse_data');
+      if (typeof transport.eventId !== 'string' || typeof transport.eventType !== 'string') {
+        fail('wire');
+      }
+      const dataBytes = Buffer.from(
+        (transport.data as Record<string, unknown>).bodyBase64 as string,
+        'base64'
+      );
+      const frame = `id: ${transport.eventId}\nevent: ${transport.eventType}\ndata: ${dataBytes.toString('utf8')}\n\n`;
+      return native.frameKind === 'coordination_event' && native.eventId === transport.eventId &&
+        native.eventType === transport.eventType && native.frameBytes === Buffer.byteLength(frame) &&
+        native.frameSha256 === sha256(frame) && data.bytes > 0;
+    }
+    if (rawRecord.origin !== 'product-http') return false;
+    const request = retain(transport.request, 'http_request');
+    const response = retain(transport.response, 'http_response');
+    const routeIds: Readonly<Record<string, string>> = Object.freeze({
+      page: 'team-approvals.page.v1',
+      preview: 'team-approvals.preview.v1',
+      decisions: 'team-approvals.decision.v1',
+    });
+    return native.routeId === routeIds[transport.endpointFamily as string] &&
+      native.status === transport.status && native.method === transport.method &&
+      native.requestBodyBytes === request.bytes && native.requestBodySha256 === request.sha256 &&
+      native.responseBodyBytes === response.bytes && native.responseBodySha256 === response.sha256;
+  };
+  let previousMonotonicNs = -1n;
+  const captureOccurrences = new Map<string, number>();
+  for (const { record: nativeRecord, shardIndex } of semanticRecords) {
+    const shardToken = expected.shards[shardIndex]?.producerStartToken;
+    if (shardToken === undefined) fail('shard_identity');
+    const occurrenceIdentity = `${shardToken}\0${nativeRecord.recordType}\0${JSON.stringify(
+      nativeRecord.native
+    )}`;
+    const occurrence = captureOccurrences.get(occurrenceIdentity) ?? 0;
+    const found = candidates
+      .filter(
+        (candidate) =>
+          candidate.processStartToken === shardToken && matches(nativeRecord, candidate)
+      )
+      .sort((left, right) => {
+        const leftNs = BigInt(left.monotonicNs);
+        const rightNs = BigInt(right.monotonicNs);
+        if (leftNs !== rightNs) return leftNs < rightNs ? -1 : 1;
+        if (left.origin !== right.origin) return left.origin < right.origin ? -1 : 1;
+        return left.byteStart - right.byteStart;
+      });
+    const selected = found[occurrence];
+    if (selected === undefined || consumed.has(selected.recordId)) fail('unmatched_native');
+    captureOccurrences.set(occurrenceIdentity, occurrence + 1);
+    const monotonicNs = BigInt(selected.monotonicNs);
+    if (monotonicNs <= previousMonotonicNs) fail('order');
+    previousMonotonicNs = monotonicNs;
+    consumed.add(selected.recordId);
+    if (name === 'negativeResultsPath') {
+      const browserRecord = selected;
+      const wire = rawRecords.filter((candidate) =>
+        candidate.origin === 'product-http' && candidate.event === browserRecord.event &&
+        canonicalJson(candidate.semanticIdentity) === canonicalJson(browserRecord.semanticIdentity)
+      );
+      if (wire.length !== 1) fail(wire.length === 0 ? 'unmatched_wire' : 'ambiguous_wire');
+      const transport = wire[0]!.nativeRecord.transport as Record<string, unknown>;
+      const request = retain(transport.request, 'browser_http_request');
+      const response = retain(transport.response, 'browser_http_response');
+      if (nativeRecord.native.requestBodySha256 !== request.sha256 ||
+        nativeRecord.native.responseBodySha256 !== response.sha256 ||
+        nativeRecord.native.httpStatus !== transport.status) fail('wire');
+      consumed.add(wire[0]!.recordId);
+    }
+  }
+  if (consumed.size !== candidates.length) fail('unconsumed_raw');
 }
 
 export interface ExactlyOnceEvidence {
@@ -221,6 +426,14 @@ export interface ExactlyOnceEvidence {
   }[];
   readonly globallyUniqueProviderEffectIds: true;
   readonly observedNormalRetryCount: 0;
+  readonly reconciledProviderEffect: {
+    readonly chainId: string;
+    readonly providerEffectId: string;
+    readonly providerEffectRecordId: string;
+    readonly attempt: 2;
+    readonly retryObserved: true;
+  };
+  readonly globalProviderEffectCount: 3;
 }
 
 function parseRecord(
@@ -255,26 +468,22 @@ function parseRecord(
     item.controllerNonce !== controllerNonce ||
     item.origin !== origin ||
     item.sequence !== sequence ||
+    typeof item.event !== 'string' ||
     !MATRIX_ROWS.includes(item.row as MatrixRow) ||
     !Number.isSafeInteger(item.effectCount) ||
     (item.effectCount as number) < 0 ||
     (item.effectCount as number) > 16 ||
-    typeof item.payloadBase64 !== 'string' ||
-    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(item.payloadBase64)
+    typeof item.payloadBase64 !== 'string'
   )
     throw new Error('p3c_raw_record_value');
-  const payload = Buffer.from(item.payloadBase64, 'base64');
-  if (
-    payload.length < 2 ||
-    payload.length > 1024 * 1024 ||
-    payload.toString('base64') !== item.payloadBase64
-  )
+  const payload = decodeHttpBase64(item.payloadBase64, HTTP_LIMITS.payload, 'outer_base64');
+  if (payload.length < 2 || payload.toString('base64') !== item.payloadBase64)
     throw new Error('p3c_raw_payload_frame');
   assertNoSecretLikeBytes(payload);
   const semantic = validateStructuralPayload(
     origin,
     item.row as MatrixRow,
-    String(item.event),
+    item.event,
     controllerNonce,
     payload
   );
@@ -285,7 +494,7 @@ function parseRecord(
   const recordId = validateRecordId(item.recordId, 'raw_record_id');
   if (sha256(`agent-teams.p3c.raw-record-id/v1\0${canonicalJson(unsigned)}`) !== recordId)
     throw new Error('p3c_raw_record_identity');
-  return Object.freeze({
+  const outer: RawRecord = Object.freeze({
     schemaVersion: 1,
     purpose: RAW_RECORD_PURPOSE,
     controllerNonce,
@@ -300,7 +509,20 @@ function parseRecord(
     effectCount: item.effectCount as number,
     payloadBase64: item.payloadBase64,
     payloadSha256,
+  });
+  if (semantic.kind === PRIVATE_HTTP_KIND) {
+    assertPrivateHttpOuterBinding(outer, semantic.http);
+    return Object.freeze({ ...outer, kind: semantic.kind, http: semantic.http });
+  }
+  if (semantic.kind !== 'legacy') {
+    assertHttpOuterBinding(outer, semantic.http);
+    return Object.freeze({ ...outer, kind: semantic.kind, http: semantic.http }) as ParsedHttpRawRecord;
+  }
+  return Object.freeze({
+    ...outer,
+    kind: 'legacy',
     semanticIdentity: semantic.identity,
+    nativeRecord: semantic.nativeRecord,
     ownerGeneration: semantic.ownerGeneration,
     processEvidenceSetId: semantic.processEvidenceSetId,
     causal: semantic.causal,
@@ -402,7 +624,12 @@ function validateRedactedStructure(value: unknown, label: string): RetainedObser
 }
 
 function ownerGenerationForEvent(event: string): number {
-  if (/boundary_three|after_effect|truth_reconstructed|stale_sockets/u.test(event)) return 4;
+  if (
+    /boundary_three|after_effect|truth_reconstructed|stale_sockets|reconcile|reconciliation|operator_required|automatic_retry/u.test(
+      event
+    )
+  )
+    return 4;
   if (/boundary_two|after_decision|stale_generations/u.test(event)) return 3;
   if (/restart|restored|boundary_one/u.test(event)) return 2;
   return 1;
@@ -411,6 +638,8 @@ function ownerGenerationForEvent(event: string): number {
 export function semanticScopeForEvent(row: MatrixRow, event: string): string {
   if (/^allow_|allow_terminal/u.test(event)) return 'decision:allow';
   if (/^deny_|deny_terminal/u.test(event)) return 'decision:deny';
+  if (row === '04_auth_replay_rejections') return 'decision:allow';
+  if (row === '06_ambiguity_reconciliation') return 'ambiguity:reconciliation';
   if (row === '08_cross_team_isolation') return 'cross-team:team-b-request';
   return `${row}:${event}`;
 }
@@ -421,15 +650,12 @@ export function semanticDecisionForEvent(
 ): SemanticIdentity['decision'] {
   if (/^allow_|allow_terminal/u.test(event)) return 'allow';
   if (/^deny_|deny_terminal/u.test(event)) return 'deny';
-  if (row === '08_cross_team_isolation' && event === 'cross_team_decide_rejected')
-    return 'deny';
+  if (row === '04_auth_replay_rejections') return 'allow';
+  if (row === '08_cross_team_isolation' && event === 'cross_team_decide_rejected') return 'deny';
   return 'none';
 }
 
-export function canonicalRowIdentity(
-  row: MatrixRow,
-  identity: SemanticIdentity
-): unknown {
+export function canonicalRowIdentity(row: MatrixRow, identity: SemanticIdentity): unknown {
   if (row !== '08_cross_team_isolation') return identity;
   return Object.freeze({
     lane: identity.lane,
@@ -460,14 +686,32 @@ function causalPhaseForEvent(event: string): number {
     allow_terminal_fsynced: 60,
     deny_terminal_fsynced: 60,
   });
-  return normalDecisionPhases[event] ?? 1;
+  const reconciliationPhases: Readonly<Record<string, number>> = Object.freeze({
+    operator_required_fsynced: 10,
+    automatic_retry_absent: 20,
+    reconciliation_lease_fenced: 30,
+    reconcile_delivered_no_effect: 35,
+    reconcile_not_delivered_retry_effect: 40,
+    reconcile_retry_terminal_fsynced: 60,
+    effect_total_three: 70,
+    reconcile_unknown_held: 80,
+    reconcile_while_lease_open_rejected: 90,
+    reconcile_identity_mismatch_rejected: 90,
+  });
+  if (
+    /^(?:missing_session_rejected|invalid_session_rejected|origin_rejected|csrf_rejected|stale_revision_rejected|wrong_team_rejected|wrong_run_rejected|wrong_provider_rejected|non_owner_browser_rejected|duplicate_post_rejected|nonce_replay_rejected|owner_response_replay_rejected|duplicate_suppressed|gap_reconnected|negative_effect_delta_zero)$/u.test(
+      event
+    )
+  )
+    return 80;
+  return normalDecisionPhases[event] ?? reconciliationPhases[event] ?? 1;
 }
 
 function causalAttempt(
   event: string,
   origin: RawOrigin
 ): { attempt: number; retryObserved: boolean } {
-  if (event === 'reconcile_not_delivered_one_retry') {
+  if (event === 'reconcile_not_delivered_retry_effect') {
     return { attempt: 2, retryObserved: true };
   }
   if (
@@ -541,14 +785,39 @@ function expectedHttpRequestHeaders(event: string): Record<string, string> {
 const APPROVAL_PAGE_PATH = '/api/hosted/v1/team-approvals/page' as const;
 const APPROVAL_PREVIEW_PATH = '/api/hosted/v1/team-approvals/preview' as const;
 const APPROVAL_DECISIONS_PATH = '/api/hosted/v1/team-approvals/decisions' as const;
+const APPROVAL_RECONCILIATION_PATH = '/api/hosted/v1/team-approvals/reconcile' as const;
+
+function reconciliationRef(identity: SemanticIdentity): string {
+  return `reconciliation_${sha256(
+    `agent-teams.p3c.reconciliation-ref/v1\0${canonicalJson(identity)}`
+  ).slice(0, 32)}`;
+}
+
+function reconciliationLeaseId(identity: SemanticIdentity): string {
+  return `lease_${sha256(
+    `agent-teams.p3c.reconciliation-lease/v1\0${canonicalJson(identity)}`
+  ).slice(0, 32)}`;
+}
+
+function writerFence(identity: SemanticIdentity, ownerGeneration: number): Record<string, unknown> {
+  return Object.freeze({
+    ownerGeneration,
+    fenceDigest: sha256(
+      `agent-teams.p3c.owner-writer-fence/v1\0${ownerGeneration}\0${canonicalJson(identity)}`
+    ),
+  });
+}
 
 function httpEndpointForEvent(event: string): {
-  readonly family: 'page' | 'preview' | 'decisions';
+  readonly family: 'page' | 'preview' | 'decisions' | 'reconcile';
   readonly path:
     | typeof APPROVAL_PAGE_PATH
     | typeof APPROVAL_PREVIEW_PATH
-    | typeof APPROVAL_DECISIONS_PATH;
+    | typeof APPROVAL_DECISIONS_PATH
+    | typeof APPROVAL_RECONCILIATION_PATH;
 } {
+  if (/^reconcile_/u.test(event))
+    return Object.freeze({ family: 'reconcile', path: APPROVAL_RECONCILIATION_PATH });
   if (
     event === 'approval_preview_observed' ||
     event === 'team_b_preview_request_observed' ||
@@ -593,6 +862,17 @@ function expectedHttpRequestBody(
       approvalId: identity.approvalId,
       expectedGeneration: identity.generationId,
       previewRef: identity.previewRef,
+    });
+  }
+  if (endpoint.family === 'reconcile') {
+    return Object.freeze({
+      schemaVersion: 1,
+      teamId: identity.targetTeamId,
+      expectedRunId: identity.targetTeamRunId,
+      approvalId: identity.approvalId,
+      expectedGeneration: identity.generationId,
+      idempotencyKey: identity.idempotencyKey,
+      reconciliationRef: reconciliationRef(identity),
     });
   }
   return Object.freeze({
@@ -946,13 +1226,7 @@ function validateTransport(
       throw new Error('p3c_semantic_http_body_binding');
     const rejected = /rejected|routes_absent/u.test(event);
     if (endpoint.family === 'page' && !rejected) {
-      validateApprovalPageExchanges(
-        item.pageExchanges,
-        requestBody,
-        responseBody,
-        event,
-        identity
-      );
+      validateApprovalPageExchanges(item.pageExchanges, requestBody, responseBody, event, identity);
     } else {
       if (item.pageExchanges !== null) throw new Error('p3c_semantic_http_page_unexpected');
       validateHttpResponseBody(event, responseBody.value, identity);
@@ -976,19 +1250,52 @@ function validateTransport(
     return ownerGenerationForEvent(event);
   }
   if (origin === 'product-sse') {
+    const reconnect = event === 'duplicate_suppressed' || event === 'gap_reconnected';
+    const disposition =
+      event === 'duplicate_suppressed'
+        ? 'duplicate-suppressed'
+        : event === 'gap_reconnected'
+          ? 'gap-replay-applied'
+          : 'live-applied';
     const item = exactRecord(
       transport,
-      ['kind', 'eventId', 'eventType', 'reconnectAttempt', 'data'],
+      [
+        'kind',
+        'consumer',
+        'eventId',
+        'eventType',
+        'reconnectAttempt',
+        'lastEventIdHeader',
+        'deliveryDisposition',
+        'domObservation',
+        'data',
+      ],
       'semantic_sse'
+    );
+    const dom = exactRecord(
+      item.domObservation,
+      ['renderedBefore', 'renderedAfter', 'duplicateCount', 'gapDetected'],
+      'semantic_sse_dom'
     );
     if (
       item.kind !== 'sse' ||
+      item.consumer !== 'rendered-ui-eventsource' ||
       typeof item.eventId !== 'string' ||
       !/^[1-9]\d*$/u.test(item.eventId) ||
+      item.eventId !== (event === 'gap_reconnected' ? '3' : '1') ||
       typeof item.eventType !== 'string' ||
       !/^[a-z][a-z0-9_-]{0,127}$/u.test(item.eventType) ||
       !Number.isSafeInteger(item.reconnectAttempt) ||
-      (item.reconnectAttempt as number) < 0
+      item.reconnectAttempt !== (reconnect ? 1 : 0) ||
+      item.lastEventIdHeader !== (reconnect ? '1' : null) ||
+      item.deliveryDisposition !== disposition ||
+      !Number.isSafeInteger(dom.renderedBefore) ||
+      !Number.isSafeInteger(dom.renderedAfter) ||
+      !Number.isSafeInteger(dom.duplicateCount) ||
+      dom.renderedBefore !== 1 ||
+      dom.renderedAfter !== (event === 'duplicate_suppressed' ? 1 : 2) ||
+      dom.duplicateCount !== (event === 'duplicate_suppressed' ? 1 : 0) ||
+      dom.gapDetected !== (event === 'gap_reconnected')
     )
       throw new Error('p3c_semantic_sse');
     const data = validateRedactedStructure(item.data, 'sse_data').value;
@@ -1024,6 +1331,9 @@ function validateTransport(
         'providerEffectId',
         'attempt',
         'retryObserved',
+        'reconciliationRef',
+        'leaseId',
+        'writerFence',
         'record',
       ],
       'semantic_wal'
@@ -1040,6 +1350,9 @@ function validateTransport(
         'decision',
         'ownerGeneration',
         'providerEffectId',
+        'reconciliationRef',
+        'leaseId',
+        'writerFence',
         'identity',
       ],
       'wal_record_body'
@@ -1064,9 +1377,17 @@ function validateTransport(
       record.decision !== identity.decision ||
       record.ownerGeneration !== expectedGeneration ||
       record.providerEffectId !== providerEffectId ||
+      record.reconciliationRef !== reconciliationRef(identity) ||
+      record.leaseId !== reconciliationLeaseId(identity) ||
+      canonicalJson(record.writerFence) !==
+        canonicalJson(writerFence(identity, expectedGeneration)) ||
       canonicalJson(record.identity) !== canonicalJson(identity) ||
       item.ownerGeneration !== expectedGeneration ||
       item.providerEffectId !== providerEffectId ||
+      item.reconciliationRef !== reconciliationRef(identity) ||
+      item.leaseId !== reconciliationLeaseId(identity) ||
+      canonicalJson(item.writerFence) !==
+        canonicalJson(writerFence(identity, expectedGeneration)) ||
       item.attempt !== causalAttempt(event, origin).attempt ||
       item.retryObserved !== causalAttempt(event, origin).retryObserved
     )
@@ -1095,8 +1416,11 @@ function validateTransport(
     );
     const expectedGeneration = ownerGenerationForEvent(event);
     const expectedAttempt = causalAttempt(event, origin);
-    const isProviderEffect = /_effect$/u.test(event);
-    const isEffectTotal = event === 'effect_total_two';
+    const isProviderEffect =
+      /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event);
+    const effectTotalCount =
+      event === 'effect_total_two' ? 2 : event === 'effect_total_three' ? 3 : null;
+    const isEffectTotal = effectTotalCount !== null;
     if (
       item.kind !== 'opencode' ||
       !['request', 'response', 'effect', 'observation'].includes(item.direction as string) ||
@@ -1119,7 +1443,7 @@ function validateTransport(
           ? typeof item.effectSetDigest !== 'string' ||
             !/^[0-9a-f]{64}$/u.test(item.effectSetDigest) ||
             !Array.isArray(item.effectSetSha256s) ||
-            item.effectSetSha256s.length !== 2 ||
+            item.effectSetSha256s.length !== effectTotalCount ||
             item.effectSetSha256s.some(
               (digest) => typeof digest !== 'string' || !/^[0-9a-f]{64}$/u.test(digest)
             )
@@ -1184,12 +1508,17 @@ export function validateStructuralPayload(
   event: string,
   controllerNonce: string,
   payload: Buffer
-): {
-  readonly identity: SemanticIdentity;
-  readonly ownerGeneration: number;
-  readonly processEvidenceSetId: string | null;
-  readonly causal: CausalEvidence;
-} {
+):
+  | { readonly kind: typeof PRIVATE_HTTP_KIND; readonly http: PrivateHttpRecord }
+  | { readonly kind: typeof HTTP_OBSERVATION_KIND | typeof HTTP_OBSERVATION_KIND_V2; readonly http: SupportedHostedHttpRecord }
+  | {
+      readonly kind: 'legacy';
+      readonly identity: SemanticIdentity;
+      readonly nativeRecord: Readonly<Record<string, unknown>>;
+      readonly ownerGeneration: number;
+      readonly processEvidenceSetId: string | null;
+      readonly causal: CausalEvidence;
+    } {
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payload));
@@ -1199,6 +1528,23 @@ export function validateStructuralPayload(
   if (canonicalJson(value) !== payload.toString('utf8'))
     throw new Error('p3c_raw_payload_noncanonical');
   const item = exactRecord(value, ['kind', 'recordBase64', 'recordSha256'], 'raw_payload');
+  if (item.kind === PRIVATE_HTTP_KIND) {
+    if (origin !== 'opencode' || payload.length > HTTP_LIMITS.payload) throw new Error('p3c_raw_payload_structure');
+    parseHttpCanonical(payload, 'payload');
+    const http = decodePrivateHttpRecord(item);
+    if (http.context.row !== row || http.context.activation.controllerNonce !== controllerNonce) throw new Error('p3c_http_payload_binding');
+    return Object.freeze({ kind: PRIVATE_HTTP_KIND, http });
+  }
+  if (item.kind === HTTP_OBSERVATION_KIND || item.kind === HTTP_OBSERVATION_KIND_V2) {
+    if (origin !== 'opencode' || payload.length > HTTP_LIMITS.payload)
+      throw new Error('p3c_raw_payload_structure');
+    parseHttpCanonical(payload, 'payload');
+    const http = decodeSupportedHttpRecord(item);
+    if (http.context.row !== row || http.context.activation.controllerNonce !== controllerNonce)
+      throw new Error('p3c_http_payload_binding');
+    return Object.freeze({ kind: item.kind, http });
+  }
+  if (payload.length > 1024 * 1024) throw new Error('p3c_raw_payload_frame');
   const kinds: Readonly<Record<RawOrigin, string>> = Object.freeze({
     browser: 'browser-observation',
     'product-http': 'http-structure',
@@ -1269,7 +1615,9 @@ export function validateStructuralPayload(
   )
     throw new Error('p3c_semantic_causal_binding');
   return Object.freeze({
+    kind: 'legacy',
     identity,
+    nativeRecord: Object.freeze({ ...semantic }),
     ownerGeneration: validateTransport(
       origin,
       row,
@@ -1289,7 +1637,8 @@ export function validateStructuralPayload(
       attempt: causal.attempt as number,
       retryObserved: causal.retryObserved as boolean,
       providerEffectSha256:
-        origin === 'opencode' && /_effect$/u.test(event)
+        origin === 'opencode' &&
+        /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
           ? validateRedactedStructure(
               (semantic.transport as Record<string, unknown>).response,
               'opencode_response'
@@ -1311,7 +1660,7 @@ export function validateStructuralPayload(
   });
 }
 
-function parseOrigin(
+export function parseRawOrigin(
   bytes: Buffer,
   origin: RawOrigin,
   controllerNonce: string
@@ -1322,12 +1671,19 @@ function parseOrigin(
   const lines = new TextDecoder('utf-8', { fatal: true }).decode(bytes).slice(0, -1).split('\n');
   let previous = -1n;
   let byteStart = 0;
+  const pair = privateHttpPairReader(bytes.length);
   const records = lines.map((line, index) => {
-    if (!line || line.includes('\r') || line.length > 2 * 1024 * 1024)
+    if (!line || line.includes('\r') || Buffer.byteLength(line) + 1 > HTTP_LIMITS.line)
       throw new Error('p3c_raw_origin_line');
     const value = JSON.parse(line) as unknown;
     if (canonicalJson(value) !== line) throw new Error('p3c_raw_origin_noncanonical');
     const record = parseRecord(value, origin, index + 1, controllerNonce);
+    if (record.kind === 'legacy' && line.length > 2 * 1024 * 1024)
+      throw new Error('p3c_raw_origin_line');
+    if (record.kind === PRIVATE_HTTP_KIND)
+      parseHttpObservationEnvelope(Buffer.from(line), index + 1, controllerNonce);
+    else if (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2)
+      parseHttpCanonical(Buffer.from(line), 'outer');
     const current = BigInt(record.monotonicNs);
     if (current <= previous) throw new Error('p3c_raw_origin_clock');
     previous = current;
@@ -1336,31 +1692,14 @@ function parseOrigin(
       ...record,
       byteStart,
       byteEnd: byteStart + lineBytes.length,
-      lineSha256: sha256(lineBytes),
+      lineSha256: sha256(Buffer.concat([lineBytes, Buffer.from('\n')])),
     });
     byteStart += lineBytes.length + 1;
+    if (located.kind !== 'legacy') pair(located);
     return located;
   });
   if (byteStart !== bytes.length) throw new Error('p3c_raw_origin_range');
   return Object.freeze(records);
-}
-
-function expectedStarts(
-  outcome: SupervisorOutcome
-): Readonly<Record<RawOrigin, readonly ProcessStartEvidence[]>> {
-  const find = (role: string) => {
-    const value = outcome.starts.filter((start) => start.role === role);
-    if (value.length < 1) throw new Error('p3c_evidence_process_start_missing');
-    return Object.freeze(value);
-  };
-  return Object.freeze({
-    browser: find('browser'),
-    'product-http': find('product'),
-    'product-sse': find('product'),
-    'owner-wal': find('owner'),
-    opencode: find('opencode'),
-    supervisor: Object.freeze([outcome.supervisorStart]),
-  });
 }
 
 export function deriveEvidence(
@@ -1375,7 +1714,6 @@ export function deriveEvidence(
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_evidence_survivors');
   if (outcome.controllerNonce !== controllerNonce)
     throw new Error('p3c_evidence_controller_disagreement');
-  const starts = expectedStarts(outcome);
   const parsed = {} as Record<RawOrigin, readonly LocatedRawRecord[]>;
   const origins = {} as Record<RawOrigin, OriginEvidence>;
   for (const origin of RAW_ORIGINS) {
@@ -1385,23 +1723,8 @@ export function deriveEvidence(
       bytes.length !== outcome.rawFiles[origin].size
     )
       throw new Error('p3c_evidence_supervisor_raw_disagreement');
-    const records = parseOrigin(bytes, origin, controllerNonce);
-    if (
-      records.some(({ processStartToken, monotonicNs, ownerGeneration, semanticIdentity }) => {
-        const start = starts[origin].find(({ startToken }) => startToken === processStartToken);
-        return (
-          !start ||
-          BigInt(monotonicNs) <= BigInt(start.observedMonotonicNs) ||
-          semanticIdentity.harnessRunId !== outcome.runId ||
-          (origin === 'owner-wal' && start.generation !== ownerGeneration)
-        );
-      }) ||
-      (origin === 'supervisor' &&
-        records.some(
-          ({ processEvidenceSetId }) => processEvidenceSetId !== outcome.processEvidenceSetId
-        ))
-    )
-      throw new Error('p3c_evidence_process_start_disagreement');
+    const records = parseRawOrigin(bytes, origin, controllerNonce);
+    assertRawRecordWriters(origin, records, outcome);
     parsed[origin] = records;
     origins[origin] = Object.freeze({
       sha256: sha256(bytes),
@@ -1411,7 +1734,10 @@ export function deriveEvidence(
       lastMonotonicNs: records.at(-1)!.monotonicNs,
     });
   }
-  const all = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
+  const decoded = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
+  if (decoded.some((record) => (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2 || record.kind === PRIVATE_HTTP_KIND)))
+    throw new P1AdmissionUnverified();
+  const all = decoded.filter(isLegacyRecord);
   if (new Set(all.map(({ recordId }) => recordId)).size !== all.length)
     throw new Error('p3c_evidence_duplicate_record');
   const globallyOrdered = [...all].sort((left, right) =>
@@ -1425,7 +1751,7 @@ export function deriveEvidence(
     )
   )
     throw new Error('p3c_evidence_global_causal_order');
-  const byChain = new Map<string, LocatedRawRecord[]>();
+  const byChain = new Map<string, LocatedLegacyRawRecord[]>();
   for (const record of globallyOrdered) {
     const records = byChain.get(record.causal.chainId) ?? [];
     if (records.length > 0 && record.causal.phase < records.at(-1)!.causal.phase)
@@ -1597,10 +1923,39 @@ export function deriveEvidence(
       retryObserved: false as const,
     });
   });
+  const canonicalAllowIdentity = all.find(
+    ({ row, event }) => row === '02_browser_allow_deny' && event === 'allow_submitted'
+  )?.semanticIdentity;
+  const negativeRecords = all.filter(({ row }) => row === '04_auth_replay_rejections');
+  if (
+    canonicalAllowIdentity === undefined ||
+    negativeRecords.length !== EVIDENCE_REQUIREMENTS['04_auth_replay_rejections'].length ||
+    negativeRecords.some(
+      ({ semanticIdentity, effectCount, causal }) =>
+        canonicalJson(semanticIdentity) !== canonicalJson(canonicalAllowIdentity) ||
+        effectCount !== 2 ||
+        causal.providerEffectSha256 !== null
+    ) ||
+    all.filter(
+      ({ semanticIdentity, event }) =>
+        canonicalJson(semanticIdentity) === canonicalJson(canonicalAllowIdentity) &&
+        event === 'allow_effect'
+    ).length !== 1
+  )
+    throw new Error('p3c_negative_canonical_request_exactly_one_mutation');
   const providerEffectRecords = all.filter(
     (record) => record.origin === 'opencode' && record.causal.phase === 40
   );
+  const normalProviderEffectRecords = providerEffectRecords.filter(
+    ({ event }) => event === 'allow_effect' || event === 'deny_effect'
+  );
+  const reconciledProviderEffectRecords = providerEffectRecords.filter(
+    ({ event }) => event === 'reconcile_not_delivered_retry_effect'
+  );
   if (
+    providerEffectRecords.length !== 3 ||
+    normalProviderEffectRecords.length !== 2 ||
+    reconciledProviderEffectRecords.length !== 1 ||
     new Set(normalEffects.map(({ providerEffectId }) => providerEffectId)).size !==
       normalEffects.length ||
     new Set(providerEffectRecords.map(({ causal }) => causal.providerEffectId)).size !==
@@ -1610,7 +1965,7 @@ export function deriveEvidence(
   const effectTotalRecords = all.filter(
     (record) => record.origin === 'opencode' && record.event === 'effect_total_two'
   );
-  const normalEffectSha256s = providerEffectRecords
+  const normalEffectSha256s = normalProviderEffectRecords
     .map(({ causal }) => causal.providerEffectSha256)
     .filter((digest): digest is string => digest !== null)
     .sort();
@@ -1619,7 +1974,7 @@ export function deriveEvidence(
   );
   if (
     effectTotalRecords.length === 1 &&
-    providerEffectRecords.some(
+    normalProviderEffectRecords.some(
       (record) => BigInt(record.monotonicNs) >= BigInt(effectTotalRecords[0].monotonicNs)
     )
   )
@@ -1633,10 +1988,47 @@ export function deriveEvidence(
     effectTotalRecords[0].causal.effectSetDigest !== expectedEffectSetDigest
   )
     throw new Error('p3c_provider_effect_total_join');
+  const reconciledProviderEffect = reconciledProviderEffectRecords[0];
+  if (
+    reconciledProviderEffect.causal.providerEffectId === null ||
+    reconciledProviderEffect.causal.attempt !== 2 ||
+    reconciledProviderEffect.causal.retryObserved !== true
+  )
+    throw new Error('p3c_reconciled_provider_effect_attempt');
+  const globalEffectSha256s = providerEffectRecords
+    .map(({ causal }) => causal.providerEffectSha256)
+    .filter((digest): digest is string => digest !== null)
+    .sort();
+  const globalEffectTotal = all.filter(
+    (record) => record.origin === 'opencode' && record.event === 'effect_total_three'
+  );
+  const expectedGlobalEffectSetDigest = sha256(
+    `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(globalEffectSha256s)}`
+  );
+  if (
+    globalEffectTotal.length !== 1 ||
+    globalEffectSha256s.length !== 3 ||
+    new Set(globalEffectSha256s).size !== 3 ||
+    providerEffectRecords.some(
+      (record) => BigInt(record.monotonicNs) >= BigInt(globalEffectTotal[0].monotonicNs)
+    ) ||
+    canonicalJson([...(globalEffectTotal[0].causal.effectSetSha256s ?? [])].sort()) !==
+      canonicalJson(globalEffectSha256s) ||
+    globalEffectTotal[0].causal.effectSetDigest !== expectedGlobalEffectSetDigest
+  )
+    throw new Error('p3c_global_provider_effect_total_join');
   const exactlyOnce = Object.freeze({
     normalProviderEffects: Object.freeze(normalEffects),
     globallyUniqueProviderEffectIds: true as const,
     observedNormalRetryCount: 0 as const,
+    reconciledProviderEffect: Object.freeze({
+      chainId: reconciledProviderEffect.causal.chainId,
+      providerEffectId: reconciledProviderEffect.causal.providerEffectId,
+      providerEffectRecordId: reconciledProviderEffect.recordId,
+      attempt: 2 as const,
+      retryObserved: true as const,
+    }),
+    globalProviderEffectCount: 3 as const,
   });
   return Object.freeze({
     origins: Object.freeze(origins),
@@ -1645,42 +2037,90 @@ export function deriveEvidence(
   });
 }
 
-export function assembleEvidence(input: {
-  readonly raw: Readonly<Record<RawOrigin, Buffer>>;
-  readonly controllerNonce: string;
-  readonly runId: string;
-  readonly outcome: SupervisorOutcome;
-  readonly cleanup: CleanupResult;
-}): EvidenceDocument {
+/** Complete all native/P1 and semantic validation while the sandbox still exists.
+ * Only closures over this validated snapshot reach cleanup/retention; no caller can supply
+ * a prepared object or a fixture callback to bypass this boundary. */
+export function prepareEvidence(input: EvidencePreparationInput) {
+  const { raw, captures, outcome, native, shards, correlations, controllerNonce, runId } =
+    prepareNativeEvidence(input);
+  const opencode = parseRawOrigin(raw.opencode, 'opencode', controllerNonce);
   if (
-    input.cleanup.disposition !== 'removed' ||
-    !input.cleanup.markerVerified ||
-    !input.cleanup.zeroOwnedSurvivors ||
-    input.cleanup.runId !== input.runId
+    raw.opencode.length !== outcome.rawFiles.opencode.size ||
+    sha256(raw.opencode) !== outcome.rawFiles.opencode.sha256
   )
-    throw new Error('p3c_evidence_cleanup_unproven');
-  const derived = deriveEvidence(input.raw, input.controllerNonce, input.outcome);
-  const unsigned = {
-    schemaVersion: 1,
-    purpose: 'agent-teams.p3c.evidence/v1',
-    controllerNonce: input.controllerNonce,
-    runId: input.runId,
-    result: 'verified',
-    raw: derived.origins,
-    rows: derived.rows,
-    exactlyOnce: derived.exactlyOnce,
-    supervisorTranscriptSha256: input.outcome.transcriptSha256,
-    cleanup: input.cleanup,
-  } as const;
+    throw new Error('p3c_evidence_supervisor_raw_disagreement');
+  assertRawRecordWriters('opencode', opencode, outcome);
+  const httpRecords = opencode.filter(
+    (record): record is LocatedHttpObservation => (record.kind === HTTP_OBSERVATION_KIND || record.kind === HTTP_OBSERVATION_KIND_V2 || record.kind === PRIVATE_HTTP_KIND)
+  );
+  if (httpRecords.length > 0) {
+    const correlation = correlations?.length
+      ? correlateOpenCodeHttpEvidence({
+          records: httpRecords,
+          ledger: raw.opencode,
+          shards,
+          correlations,
+          outcome,
+        })
+      : null;
+    // No publication bytes, signature verifier or retained launch/readiness/route source is
+    // composed into this driver yet. Never promote a matching caller object into P1 evidence.
+    throw new P1AdmissionUnverified(correlation);
+  }
+
+  const derived = deriveEvidence(raw, controllerNonce, outcome);
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    if (native.summaries[name].semanticRecordCount === 0)
+      throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
+    assertNativeSemanticCrossJoin(
+      name,
+      native.shards[name].map(({ parsed }) => parsed),
+      raw,
+      controllerNonce,
+      outcome.captureFiles[name]
+    );
+  }
+  let assembled: EvidenceDocument | undefined;
   return Object.freeze({
-    ...unsigned,
-    evidenceDigest: sha256(`agent-teams.p3c.evidence-document/v1\0${canonicalJson(unsigned)}`),
+    assemble(cleanup: CleanupResult): EvidenceDocument {
+      assertEvidenceCleanup(cleanup, runId);
+      const unsigned = {
+        schemaVersion: 1,
+        purpose: 'agent-teams.p3c.evidence/v1',
+        controllerNonce,
+        runId,
+        result: 'verified',
+        raw: derived.origins,
+        captures: native.summaries,
+        rows: derived.rows,
+        exactlyOnce: derived.exactlyOnce,
+        supervisorTranscriptSha256: outcome.transcriptSha256,
+        cleanup: Object.freeze({ ...cleanup }),
+      } as const;
+      assembled = Object.freeze({
+        ...unsigned,
+        evidenceDigest: sha256(`agent-teams.p3c.evidence-document/v1\0${canonicalJson(unsigned)}`),
+      });
+      return assembled;
+    },
+    async retain(evidenceRoot: RootAnchor, document: EvidenceDocument) {
+      if (document !== assembled) throw new Error('p3c_evidence_preparation_document_disagreement');
+      return retainEvidence(evidenceRoot, raw, captures, document, outcome.transcript);
+    },
   });
+}
+
+export function assembleEvidence(
+  input: EvidencePreparationInput & { readonly cleanup: CleanupResult }
+): EvidenceDocument {
+  assertEvidenceCleanup(input.cleanup, input.runId);
+  return prepareEvidence(input).assemble(input.cleanup);
 }
 
 export async function retainEvidence(
   evidenceRoot: RootAnchor,
   raw: Readonly<Record<RawOrigin, Buffer>>,
+  captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>,
   document: EvidenceDocument,
   supervisorTranscript: Buffer
 ): Promise<Readonly<Record<string, string>>> {
@@ -1689,37 +2129,81 @@ export async function retainEvidence(
   if ((await readdir(procFdPath(evidenceRoot.handle))).length !== 0)
     throw new Error('p3c_evidence_root_not_empty');
   const digests: Record<string, string> = {};
+  const staged: { readonly stage: string; readonly final: string; readonly sha256: string }[] = [];
+  const stage = async (final: string, bytes: Buffer, expectedSha256?: string): Promise<void> => {
+    const stageName = `.stage-${final}`;
+    const pin = await writeExclusive(evidenceRoot, stageName, bytes, 0o400);
+    if (expectedSha256 !== undefined && pin.sha256 !== expectedSha256)
+      throw new Error('p3c_evidence_publish_digest');
+    staged.push(Object.freeze({ stage: stageName, final, sha256: pin.sha256 }));
+  };
   for (const origin of RAW_ORIGINS) {
     assertNoSecretLikeBytes(raw[origin]);
-    const pin = await writeExclusive(evidenceRoot, `raw-${origin}.ndjson`, raw[origin], 0o400);
-    if (pin.sha256 !== document.raw[origin].sha256) throw new Error('p3c_evidence_publish_digest');
-    digests[pin.relativePath] = pin.sha256;
+    await stage(`raw-${origin}.ndjson`, raw[origin], document.raw[origin].sha256);
+  }
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    if (captures[name].length !== document.captures[name].shardCount) {
+      throw new Error('p3c_evidence_publish_shard_count');
+    }
+    for (const [index, bytes] of captures[name].entries()) {
+      assertNoSecretLikeBytes(bytes);
+      await stage(
+        `capture-${name}-shard-${String(index + 1).padStart(2, '0')}.ndjson`,
+        bytes,
+        document.captures[name].shardSha256s[index]
+      );
+    }
   }
   assertNoSecretLikeBytes(supervisorTranscript);
   if (sha256(supervisorTranscript) !== document.supervisorTranscriptSha256)
     throw new Error('p3c_evidence_supervisor_transcript_digest');
-  const transcript = await writeExclusive(
-    evidenceRoot,
-    'supervisor-transcript.ndjson',
-    supervisorTranscript,
-    0o400
-  );
-  digests[transcript.relativePath] = transcript.sha256;
+  await stage('supervisor-transcript.ndjson', supervisorTranscript);
   const bytes = Buffer.from(canonicalJson(document));
-  const pin = await writeExclusive(evidenceRoot, 'evidence.json', bytes, 0o400);
-  digests[pin.relativePath] = pin.sha256;
+  await stage('evidence.json', bytes);
+  for (const item of staged) {
+    await rename(
+      `${procFdPath(evidenceRoot.handle)}/${item.stage}`,
+      `${procFdPath(evidenceRoot.handle)}/${item.final}`
+    );
+    digests[item.final] = item.sha256;
+  }
   await evidenceRoot.handle.sync();
   await assertRootCurrent(evidenceRoot);
+  const readyBytes = Buffer.from(
+    canonicalJson({
+      schemaVersion: 1,
+      purpose: 'agent-teams.p3c.evidence-ready/v1',
+      evidenceDigest: document.evidenceDigest,
+      files: Object.fromEntries(
+        Object.entries(digests).sort(([left], [right]) =>
+          Buffer.from(left).compare(Buffer.from(right))
+        )
+      ),
+    })
+  );
+  const ready = await writeExclusive(evidenceRoot, 'READY.json', readyBytes, 0o400);
+  digests[ready.relativePath] = ready.sha256;
+  await evidenceRoot.handle.sync();
   const expectedNames = [
     ...RAW_ORIGINS.map((origin) => `raw-${origin}.ndjson`),
+    ...RUNTIME_CAPTURE_NAMES.flatMap((name) =>
+      captures[name].map(
+        (_bytes, index) => `capture-${name}-shard-${String(index + 1).padStart(2, '0')}.ndjson`
+      )
+    ),
     'supervisor-transcript.ndjson',
     'evidence.json',
+    'READY.json',
   ].sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   const names = (await readdir(procFdPath(evidenceRoot.handle))).sort((left, right) =>
     Buffer.from(left).compare(Buffer.from(right))
   );
   if (canonicalJson(names) !== canonicalJson(expectedNames))
     throw new Error('p3c_evidence_root_changed');
+  await evidenceRoot.handle.chmod(0o500);
+  await evidenceRoot.handle.sync();
+  const final = await evidenceRoot.handle.stat({ bigint: true });
+  if (Number(final.mode & 0o777n) !== 0o500) throw new Error('p3c_evidence_root_not_sealed');
   return Object.freeze(digests);
 }
 
@@ -1850,9 +2334,25 @@ export function makeSemanticPayload(input: {
     case 'product-sse':
       transport = {
         kind: 'sse',
-        eventId: '1',
+        consumer: 'rendered-ui-eventsource',
+        eventId: input.event === 'gap_reconnected' ? '3' : '1',
         eventType: input.event,
-        reconnectAttempt: input.event.includes('reconnect') ? 1 : 0,
+        reconnectAttempt:
+          input.event === 'duplicate_suppressed' || input.event === 'gap_reconnected' ? 1 : 0,
+        lastEventIdHeader:
+          input.event === 'duplicate_suppressed' || input.event === 'gap_reconnected' ? '1' : null,
+        deliveryDisposition:
+          input.event === 'duplicate_suppressed'
+            ? 'duplicate-suppressed'
+            : input.event === 'gap_reconnected'
+              ? 'gap-replay-applied'
+              : 'live-applied',
+        domObservation: {
+          renderedBefore: 1,
+          renderedAfter: input.event === 'duplicate_suppressed' ? 1 : 2,
+          duplicateCount: input.event === 'duplicate_suppressed' ? 1 : 0,
+          gapDetected: input.event === 'gap_reconnected',
+        },
         data: redactedStructure(
           Buffer.from(
             canonicalJson({
@@ -1877,6 +2377,9 @@ export function makeSemanticPayload(input: {
           decision: input.identity.decision,
           ownerGeneration: generation,
           providerEffectId: input.providerEffectId ?? null,
+          reconciliationRef: reconciliationRef(input.identity),
+          leaseId: reconciliationLeaseId(input.identity),
+          writerFence: writerFence(input.identity, generation),
           identity: input.identity,
         })
       );
@@ -1889,6 +2392,9 @@ export function makeSemanticPayload(input: {
         state: input.event,
         ownerGeneration: generation,
         providerEffectId: input.providerEffectId ?? null,
+        reconciliationRef: reconciliationRef(input.identity),
+        leaseId: reconciliationLeaseId(input.identity),
+        writerFence: writerFence(input.identity, generation),
         ...causalAttempt(input.event, input.origin),
         record: redactedStructure(record),
       };
@@ -1910,18 +2416,16 @@ export function makeSemanticPayload(input: {
         ownerGeneration: generation,
         providerEffectId: input.providerEffectId ?? null,
         ...causalAttempt(input.event, input.origin),
-        effectSetSha256s:
-          input.event === 'effect_total_two'
-            ? Object.freeze([...(input.effectSetSha256s ?? [])])
-            : null,
-        effectSetDigest:
-          input.event === 'effect_total_two'
-            ? sha256(
-                `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(
-                  [...(input.effectSetSha256s ?? [])].sort()
-                )}`
-              )
-            : null,
+        effectSetSha256s: /^effect_total_(?:two|three)$/u.test(input.event)
+          ? Object.freeze([...(input.effectSetSha256s ?? [])])
+          : null,
+        effectSetDigest: /^effect_total_(?:two|three)$/u.test(input.event)
+          ? sha256(
+              `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(
+                [...(input.effectSetSha256s ?? [])].sort()
+              )}`
+            )
+          : null,
         request: redactedStructure(
           requiredObservedBody(input.observedRequestBody, 'opencode_request')
         ),

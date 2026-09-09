@@ -14,11 +14,14 @@ P3.B2 result, and all OpenCode identity layers separate. It must explicitly set
 false.
 
 Admission also requires a content-addressed P3.C1 freeze, an Ed25519-verified independent harness
-review with P0/P1/P2 `0/0/0`, and an Ed25519-verified controller one-run authorization. The freeze
-binds its controller authority key and the exact device/inode/mount identity of a new empty attempt
-ledger. Before sandbox creation or any spawn, the harness atomically creates and fsyncs one
-authorization-ID-named consumed-attempt record. Any non-empty ledger fails admission, including a
-fresh descriptor that tries to replay or replace the authorization.
+review with P0/P1/P2 `0/0/0`, and an Ed25519-verified controller one-run authorization. A canonical
+controller trust anchor is supplied separately in `AGENT_TEAMS_P3C_CONTROLLER_TRUST_ANCHOR`; it
+pins the reviewer and authorizer public-key digests, authority epoch, and revoked signer IDs. The
+descriptor cannot select its own trust root. The signed freeze covers the complete roles,
+revocations, and authority policy. Before sandbox creation or any spawn, the harness atomically
+creates and fsyncs one fixed-name consumed-run record in the controller-owned sandbox parent. The
+supervisor receives only the sandbox descriptor, so worker deletion, crash, restart, a different
+authorization document, or concurrent nonces cannot make that global one-run identity reusable.
 
 Every root is an absolute, canonical, private `0700` directory with a pinned device, inode, and mount
 ID. Roots are pairwise disjoint and no two roots may have the same backing device/inode through bind
@@ -63,18 +66,59 @@ signal-eligible. Once the direct child reports exit, even an exact reused numeri
 authorize TERM or KILL; absence instead requires two consecutive empty group censuses, reset by any
 nonempty observation. A verified live leader may receive bounded group TERM/KILL and must leave zero
 survivors. ENOENT/ESRCH never falls back to a leader-only kill. If drain or identity proof is missing,
-cleanup preserves the sandbox and evidence; it never broadens the kill or deletion scope. This proof
-explicitly excludes descendants that deliberately escape the admitted group without separate PID
-namespace proof.
+cleanup preserves the sandbox and evidence; it never broadens the kill or deletion scope. Owner
+replacement evidence orders the prior exit, zero-survivor drain, and socket invalidation before the
+next generation and proves exactly one current owner and socket owner. A separate `/proc` census
+injects setsid and double-fork descendants at owner and OpenCode boundaries, binds TERM-to-KILL
+escalation and exit cause, requires an empty post-drain census, and proves an outside-sandbox
+sentinel was unchanged.
+
+The owner wrapper accepts only `--runtime-manifest /sandbox/runtime-manifest.json`; its sealed child
+receives the fixed FD3 launcher lease, one-use FD4 bootstrap stream, and retained authenticated FD5
+ActivationV2 connection. Arbitrary distinct parent descriptors may be remapped to those child-local
+numbers, but the supervisor result is accepted only when the production wrapper records, for every
+observed wrapper PID/start token, the exact pre-spawn `/proc/<pid>/fd/<fd>` identity and post-spawn
+`fstat` `EBADF` result for each launcher-lease, bootstrap, and ActivationV2 parent copy, ordered on
+the same monotonic clock around the recorded spawn boundary. The child publication repeats the
+wrapper PID/start token and a fresh 256-bit pre-spawn nonce, and final acceptance joins all three to
+that exact lifecycle record. A plan flag or cleanup boolean is not
+evidence. Missing, partial, reordered, identity-detached, temporally invalid, or non-`EBADF` records
+fail final acceptance before evidence is retained.
 
 ## Raw evidence
 
-Six independently produced canonical NDJSON streams (`browser`, `product-http`, `product-sse`,
-`owner-wal`, `opencode`, and `supervisor`) are authoritative. Each record binds the controller nonce,
+Six independently collected raw canonical NDJSON streams (`browser`, `product-http`, `product-sse`,
+`owner-wal`, `opencode`, and `supervisor`) remain one side of the comparison. Each record binds the controller nonce,
 matrix row, monotonic sequence, verified replacement-aware process-start token, raw semantic payload
 digest, and the joined authenticated-actor/target-team/run/approval/generation/preview/idempotency/
 decision identity that the pinned product contract exposes, plus separately observed provider-effect
 identity captured from retained provider bytes. The harness never synthesizes product API fields.
+The verify-only overlay parses the independent r307
+`claude-team/hosted-producer-provenance/v1` envelope, its exact contract digest, producer nonce,
+per-shard sequence/hash chain, and stream-specific semantic joins. It accepts multiple physical
+owner shards as one logical `ownerWalTimeline`. Acceptance additionally requires supervisor-observed
+FD 9/10 device/inode identity, producer PID/start ticks/executable and module identity, parent-copy
+`EBADF`, producer descriptor disappearance or exact pidfd exit, a zero-retained-writer descendant
+census, and a stable read-only seal manifest. `runDriver()` only reopens those sealed shard inodes
+read-only. No verifier function constructs expected native bytes.
+
+Producer-open and semantic records use exact capture-specific native schemas bound to that shared
+contract digest. Each native semantic record and digest must equal the independently parsed raw
+record. Cross-joins are exact and ordered within the kernel-bound producer shard, rejecting
+resequencing, rehashing, owner substitution, duplicate or missing joins, and cross-owner mixing.
+Emission nonces are unique across every FD stream, owner generation, and shard in the run. A live
+capture mode must exactly equal its authoritative sealed mode (`0400`); stable `0600` captures are
+rejected.
+
+This repository does not yet contain composed successor P3.B2/OpenCode/Product/browser producer
+identities. The frozen OpenCode artifact predates the native writer contract and is rejected before
+launch. Therefore `productionEligible=false`, fixture proofs cannot satisfy acceptance, and the
+README does not claim producer-native readiness. Fixed hand-authored parser goldens are explicitly
+`nonAuthoritative`; they exercise framing and tamper rejection only.
+
+The current hand-written contract digest is
+`f83678990876983c839f32d3c5f0413a2df4a681cfb278a646d3e192b69d13d3`; the parser rejects any
+other value.
 Cross-team evidence binds the authenticated Team A actor from the successful browser decisions to
 the browser's retained rejected Team B page, preview, and decision calls, and then to a distinct
 Team B item, preview, and result first observed under Team B authority. HTTP, SSE,
@@ -98,7 +142,16 @@ semantic decision. WAL state binds to the outer event, and the WAL record SHA-25
 recomputed from the exact retained record. Prompt/provider bodies, generic
 credential fields, authorization/cookie/CSRF material,
 action proof, decision bearer, and other secret-like material are rejected from retained evidence;
-only exact schema-allowed redacted structures survive.
+only exact schema-allowed redacted structures survive. The browser row uses the rendered product UI
+and native `EventSource`, verifies reconnect carries the last event cursor, and proves gap recovery
+and duplicate delivery do not duplicate rendered approvals. Ambiguous delivery is reconciled
+through the real product endpoint with a WAL reference, lease, writer fence, retry effect, and a
+global no-duplicate join. Stale, wrong-target, duplicate, and replay negatives reuse the canonical
+successful request identity and remain bound to exactly one global mutation.
+
+Successful evidence is first written under exclusive staging names. All retained files are renamed
+and fsynced, `READY.json` is created last with their hashes, and the evidence root is then sealed
+`0500`; no staging entry or writable publication parent is accepted as final evidence.
 
 ## Implementation-lane checks
 

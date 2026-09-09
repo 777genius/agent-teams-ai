@@ -6,6 +6,8 @@ import type {
   HostedCoordinationEventStorage,
   HostedCoordinationEventStream,
   HostedCoordinationEventStreamAuthorizer,
+  HostedCoordinationEventStreamIdentityFactory,
+  HostedCoordinationEventStreamWriteObserver,
 } from '@features/coordination-events/main';
 
 describe('hosted coordination event entrypoint', () => {
@@ -28,6 +30,12 @@ describe('hosted coordination event entrypoint', () => {
     expectTypeOf<
       CreateHostedCoordinationEventStreamOptions['storage']
     >().toEqualTypeOf<HostedCoordinationEventStorage>();
+    expectTypeOf<
+      CreateHostedCoordinationEventStreamOptions['streamIdentityFactory']
+    >().toEqualTypeOf<HostedCoordinationEventStreamIdentityFactory>();
+    expectTypeOf<
+      CreateHostedCoordinationEventStreamOptions['diagnosticObserver']
+    >().toEqualTypeOf<HostedCoordinationEventStreamWriteObserver | undefined>();
     expectTypeOf<HostedCoordinationEventStream['handoff']['replay']>().toBeFunction();
   });
 });

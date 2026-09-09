@@ -9,8 +9,11 @@ import type {
 } from '../../contracts/externalWriterObservationStorageContracts';
 import type { ExternalWriterReconciliationStorageGateway } from '../../contracts/externalWriterReconciliationStorageContracts';
 import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
+import type { HostedPromotionStorageGateway } from '../../contracts/hostedPromotionStorageContracts';
 import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { HostedTeamConfigurationStorageGateway } from '../../contracts/hostedTeamConfigurationStorageContracts';
+import type { TeamDraftPublicationStorageGateway } from '../../contracts/teamDraftPublicationContracts';
+import type { TeamIdentityPublicationGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
 
@@ -24,7 +27,13 @@ export type HostedCoordinationEventStorageGateway = Pick<
 >;
 
 export interface HostedAuthStorageBackend {
+  readonly databasePath: string;
+  initialize(requireExistingCanonical?: boolean): Promise<string>;
+  captureIdentitySnapshot(): Promise<Uint8Array>;
   readonly gateway: HostedAuthStorageGateway;
+  readonly identityPublication: TeamIdentityPublicationGateway;
+  readonly promotions: HostedPromotionStorageGateway;
+  readonly draftPublications: TeamDraftPublicationStorageGateway;
   /** Live canonical identities served by this same serialized hosted worker. */
   readonly teamIdentities: TeamIdentityReadGateway;
   /** Durable team-configuration operations on the same hosted-only worker. */
@@ -110,7 +119,17 @@ export function createHostedAuthStorageBackend(databasePath: string): HostedAuth
   });
   let disposal: Promise<void> | null = null;
   return Object.freeze({
+    databasePath,
+    initialize: async (requireExistingCanonical = false) => {
+      const info = await client.ping(requireExistingCanonical);
+      if (!info.connectionFileIdentity) throw new Error('hosted-storage-connection-identity-unavailable');
+      return info.connectionFileIdentity;
+    },
     gateway: client,
+    captureIdentitySnapshot: () => client.captureIdentitySnapshot(),
+    identityPublication: client.identityPublication,
+    promotions: client.promotions,
+    draftPublications: client.draftPublications,
     teamIdentities: client,
     coordinationEvents,
     teamConfigurations,

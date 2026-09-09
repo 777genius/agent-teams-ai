@@ -28,3 +28,13 @@ export {
   parseHostedTeamConfigurationIdentity,
   parseHostedUpdateDraftTeamRequest,
 } from './hosted';
+export * from './hostedDraftPublication';
+export {
+  assertHostedRosterMatches,
+  type HostedInitialLane,
+  type HostedInitialMember,
+  type HostedRosterConfiguration,
+  hostedRosterMembers,
+  isHostedInitialMemberName,
+  parseHostedRosterConfiguration,
+} from './hostedRosterConfiguration';

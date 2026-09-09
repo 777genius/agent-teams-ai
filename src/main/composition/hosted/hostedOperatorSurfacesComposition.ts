@@ -21,10 +21,12 @@ import {
 import {
   type HostedTeamApprovalsContextFactory,
   type HostedTeamApprovalsHttpFacade,
+  type HostedTeamApprovalsHttpGeneration,
   registerHostedTeamApprovalsHttp,
 } from '@features/team-approvals/main/hosted';
 
 import type { HostedRouteAdmission, HostedRouteContribution } from './application';
+import type { HostedProducerProvenance } from '@features/hosted-producer-provenance/main';
 import type { FastifyInstance } from 'fastify';
 
 interface OperatorRoute<TFacade, TContextFactory> {
@@ -34,13 +36,15 @@ interface OperatorRoute<TFacade, TContextFactory> {
 
 export interface CreateHostedOperatorSurfacesCompositionDependencies {
   readonly routeAdmission: HostedRouteAdmission;
+  readonly acquireApprovalGeneration?: () => HostedTeamApprovalsHttpGeneration | null;
   /** Readiness reports admission state, so it must remain callable without self-admission. */
   readonly readiness?: OperatorRoute<HostedReadinessHttpFacade, HostedReadinessContextFactory>;
   readonly memberLog?: OperatorRoute<HostedMemberLogHttpFacade, HostedMemberLogContextFactory>;
   readonly approvals?: OperatorRoute<
     HostedTeamApprovalsHttpFacade,
     HostedTeamApprovalsContextFactory
-  >;
+  > &
+    Readonly<{ producerProvenance: HostedProducerProvenance }>;
   readonly diagnostics?: OperatorRoute<
     HostedDiagnosticsHttpFacade,
     HostedDiagnosticsContextFactory
@@ -87,7 +91,9 @@ export function createHostedOperatorSurfacesComposition(
           app,
           dependencies.approvals.contribution,
           dependencies.routeAdmission,
-          dependencies.approvals.createContext
+          dependencies.approvals.producerProvenance,
+          dependencies.approvals.createContext,
+          dependencies.acquireApprovalGeneration
         );
       }
       if (dependencies.diagnostics !== undefined) {

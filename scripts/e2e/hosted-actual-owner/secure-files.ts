@@ -11,7 +11,7 @@ import {
   type FileAnchor,
   type RootAnchor,
 } from './anchors';
-import { canonicalJson, safeRelativePath, sha256, type ClosurePin } from './contracts';
+import { canonicalJson, safeRelativePath, sha256, type ClosurePin, type FilePin } from './contracts';
 
 const LEAF_DOMAIN = Buffer.from('p3c-closure-leaf-v1\0');
 const NODE_DOMAIN = Buffer.from('p3c-closure-node-v1\0');
@@ -19,7 +19,7 @@ const MAX_FILE_BYTES = 1024 ** 3;
 
 export interface ClosureEntry {
   readonly path: string;
-  readonly mode: 292 | 365;
+  readonly mode: 256 | 292 | 320 | 365;
   readonly size: number;
   readonly sha256: string;
 }
@@ -120,7 +120,7 @@ function closureMerkle(entries: readonly ClosureEntry[]): string {
   return level[0].toString('hex');
 }
 
-function parseClosureManifest(bytes: Buffer): readonly ClosureEntry[] {
+function parseClosureManifest(bytes: Buffer, privateImageModes: ReadonlyMap<string, FilePin['mode']>): readonly ClosureEntry[] {
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
@@ -139,7 +139,7 @@ function parseClosureManifest(bytes: Buffer): readonly ClosureEntry[] {
       throw new Error('p3c_closure_entry_keys');
     const path = safeRelativePath(item.path, 'closure_path');
     if (
-      ![0o444, 0o555].includes(item.mode as number) ||
+      !(privateImageModes.has(path) ? item.mode === privateImageModes.get(path) : [0o444, 0o555].includes(item.mode as number)) ||
       !Number.isSafeInteger(item.size) ||
       (item.size as number) < 1 ||
       typeof item.sha256 !== 'string' ||
@@ -148,7 +148,7 @@ function parseClosureManifest(bytes: Buffer): readonly ClosureEntry[] {
       throw new Error('p3c_closure_entry_value');
     return Object.freeze({
       path,
-      mode: item.mode as 292 | 365,
+      mode: item.mode as ClosureEntry['mode'],
       size: item.size as number,
       sha256: item.sha256,
     });
@@ -169,7 +169,8 @@ async function walkDirectory(
   directory: FileHandle,
   prefix: string,
   manifestPath: string,
-  output: ClosureEntry[]
+  output: ClosureEntry[],
+  privateImageModes: ReadonlyMap<string, FilePin['mode']>
 ): Promise<void> {
   const beforeDirectory = await directory.stat({ bigint: true });
   const expectedUid = process.getuid?.();
@@ -212,7 +213,7 @@ async function walkDirectory(
           (await descriptorMountId(childDirectory)) !== root.pin.mountId
         )
           throw new Error('p3c_closure_directory_metadata');
-        await walkDirectory(root, childDirectory, path, manifestPath, output);
+        await walkDirectory(root, childDirectory, path, manifestPath, output, privateImageModes);
       } finally {
         await childDirectory.close();
       }
@@ -225,11 +226,11 @@ async function walkDirectory(
     );
     try {
       const before = await handle.stat({ bigint: true });
-      const mode = Number(before.mode & 0o777n);
+      const mode = Number(before.mode & 0o7777n);
       if (
         !before.isFile() ||
         before.nlink !== 1n ||
-        ![0o444, 0o555].includes(mode) ||
+        !(privateImageModes.has(path) ? mode === privateImageModes.get(path) : [0o444, 0o555].includes(mode)) ||
         before.size < 1n ||
         before.size > BigInt(MAX_FILE_BYTES) ||
         expectedUid === undefined ||
@@ -257,7 +258,7 @@ async function walkDirectory(
       output.push(
         Object.freeze({
           path,
-          mode: mode as 292 | 365,
+          mode: mode as ClosureEntry['mode'],
           size: Number(before.size),
           sha256: hash.digest('hex'),
         })
@@ -271,7 +272,17 @@ async function walkDirectory(
     throw new Error('p3c_closure_directory_changed');
 }
 
-export async function verifyClosure(root: RootAnchor, pin: ClosurePin): Promise<ClosureEvidence> {
+export async function verifyClosure(
+  root: RootAnchor, pin: ClosurePin, privateImages: readonly FilePin[] = []
+): Promise<ClosureEvidence> {
+  // Keep private permissions limited to exact recipe selections: executables
+  // retain 0500; selected Node CJS/native modules retain their required 0400.
+  // Unselected files still require the unchanged public closure permissions.
+  if (privateImages.some(p => root.name !== 'p3b2' || p.root !== root.name ||
+    !(p.mode === 0o500 || (p.mode === 0o400 && /\.(?:cjs|node)$/u.test(p.relativePath)))))
+    throw new Error('p3c_closure_private_image_selection');
+  const privateImageModes = new Map(privateImages.map(p => [p.relativePath, p.mode]));
+  if (privateImageModes.size !== privateImages.length) throw new Error('p3c_closure_private_image_alias');
   if (pin.manifest.root !== root.name) throw new Error('p3c_closure_wrong_root');
   await assertRootCurrent(root);
   const manifestAnchor = await openFileAnchor(root, pin.manifest);
@@ -281,9 +292,17 @@ export async function verifyClosure(root: RootAnchor, pin: ClosurePin): Promise<
   } finally {
     await manifestAnchor.handle.close();
   }
-  const declared = parseClosureManifest(manifestBytes);
+  const declared = parseClosureManifest(manifestBytes, privateImageModes);
   const actual: ClosureEntry[] = [];
-  await walkDirectory(root, root.handle, '', pin.manifest.relativePath, actual);
+  await walkDirectory(root, root.handle, '', pin.manifest.relativePath, actual, privateImageModes);
+  for (const image of privateImages) {
+    // Bind device/inode and exact permissions too, not merely the manifest path/hash.
+    const anchor = await openFileAnchor(root, image);
+    try { await verifyStableDigest(anchor); } finally { await anchor.handle.close(); }
+    const entry = actual.find(e => e.path === image.relativePath);
+    if (!entry || entry.sha256 !== image.sha256 || entry.size !== image.size || entry.mode !== image.mode)
+      throw new Error('p3c_closure_private_image_binding');
+  }
   actual.sort((left, right) => Buffer.from(left.path).compare(Buffer.from(right.path)));
   const totalBytes = actual.reduce((total, entry) => total + entry.size, 0);
   const merkleRoot = closureMerkle(actual);

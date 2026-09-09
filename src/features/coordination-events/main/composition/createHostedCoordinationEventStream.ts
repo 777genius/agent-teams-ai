@@ -9,7 +9,11 @@ import type {
   CoordinationEventHandoff,
   ReplayCoordinationEventsInput,
 } from '../../core/application';
-import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
+import type {
+  HostedCoordinationEventStreamAuthorizer,
+  HostedCoordinationEventStreamIdentityFactory,
+  HostedCoordinationEventStreamWriteObserver,
+} from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -43,11 +47,17 @@ export interface CreateHostedCoordinationEventStreamOptions {
   readonly storage: HostedCoordinationEventStorage;
   readonly deploymentId: string;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
+  readonly streamIdentityFactory: HostedCoordinationEventStreamIdentityFactory;
   readonly scheduler?: HostedCoordinationEventStreamScheduler;
   readonly replayBatchSize?: number;
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
+  /**
+   * Payload-free transport observations; observer failures are isolated from
+   * stream correctness.
+   */
+  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteObserver;
   readonly retentionScheduler?: HostedCoordinationEventStreamScheduler;
   readonly retentionPolicy?: {
     readonly intervalMs: number;
@@ -60,6 +70,7 @@ export interface HostedCoordinationEventStream {
   /** Lossy latency hint after an atomic commit through the shared storage worker. */
   notifyDurableCommit(): Promise<void>;
   register(app: unknown): void;
+  runWithStreamsDrained<T>(operation: () => Promise<T>): Promise<T>;
   close(): void;
 }
 
@@ -141,6 +152,7 @@ export function createHostedCoordinationEventStream(
     authorizer: presentationAuthorizer({ authorizer: options.authorizer, sourceEvents }),
     wakeups: wakeupHub,
     scheduler: options.scheduler ?? NODE_STREAM_SCHEDULER,
+    streamIdentityFactory: options.streamIdentityFactory,
     ...(options.replayBatchSize === undefined ? {} : { replayBatchSize: options.replayBatchSize }),
     ...(options.heartbeatIntervalMs === undefined
       ? {}
@@ -149,6 +161,9 @@ export function createHostedCoordinationEventStream(
       ? {}
       : { slowConsumerTimeoutMs: options.slowConsumerTimeoutMs }),
     ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
+    ...(options.diagnosticObserver === undefined
+      ? {}
+      : { diagnosticObserver: options.diagnosticObserver }),
   });
   const bootstrapController = new HostedCoordinationEventBootstrapController({
     handoff,
@@ -157,6 +172,7 @@ export function createHostedCoordinationEventStream(
   let closed = false;
   return Object.freeze({
     handoff,
+    runWithStreamsDrained: <T>(operation: () => Promise<T>) => controller.runWithStreamsDrained(operation),
     notifyDurableCommit: () => wakeupHub.notifyCommittedEvent({} as CoordinationEventEnvelope),
     register: (app: unknown) => {
       controller.register(app);

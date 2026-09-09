@@ -116,6 +116,52 @@ describe('HostedTeamConfigurationAdapter', () => {
     });
   });
 
+  it('forwards complete configuration and preserves it in saved and updated responses', async () => {
+    const principal = context();
+    const useCases = application();
+    const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+      { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
+        members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+    ] } as const;
+    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }], configuration };
+    vi.mocked(useCases.getSavedRequest).mockResolvedValue({ kind: 'found', draft });
+    vi.mocked(useCases.updateDraft).mockResolvedValue({ kind: 'updated', draft: { ...draft, revision: nextRevision } });
+    const adapter = createHostedTeamConfigurationFeature(useCases, authority(principal));
+    const created = await adapter.createDraft({
+      schemaVersion: 1, workspaceId, idempotencyKey, name: 'Alpha', members: draft.members, configuration,
+    }, principal);
+    expect(created).toMatchObject({ kind: 'created', identity: { workspaceId, teamId } });
+    expect(useCases.createDraft).toHaveBeenCalledWith({ workspaceId, idempotencyKey, name: 'Alpha',
+      members: draft.members, configuration, context: principal });
+    await expect(adapter.getSavedRequest(identified(), principal)).resolves.toEqual({
+      schemaVersion: 1, kind: 'found', draft,
+    });
+    await expect(adapter.updateDraft({ ...identified(), expectedRevision: revision, updates: { configuration } }, principal)).resolves.toEqual({
+      schemaVersion: 1, kind: 'updated', draft: { ...draft, revision: nextRevision },
+    });
+    expect(useCases.updateDraft).toHaveBeenCalledWith({ workspaceId, teamId }, revision, { configuration }, principal);
+  });
+
+  it('rejects inconsistent configured response projections instead of dropping configuration', async () => {
+    const principal = context();
+    const useCases = application();
+    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+      configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+        { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'other', prompt: 'Review.' }] },
+      ] },
+    } as const;
+    vi.mocked(useCases.getSavedRequest).mockResolvedValue({ kind: 'found', draft });
+    vi.mocked(useCases.updateDraft).mockResolvedValue({ kind: 'updated', draft });
+    const adapter = createHostedTeamConfigurationFeature(useCases, authority(principal));
+    for (const result of [
+      await adapter.getSavedRequest(identified(), principal),
+      await adapter.updateDraft({ ...identified(), expectedRevision: revision, updates: { name: 'Renamed' } }, principal),
+    ]) {
+      expect(result).toMatchObject({ kind: 'error' });
+      expect(result).not.toHaveProperty('draft');
+    }
+  });
+
   it('passes WorkspaceId and TeamId as one identity and never calls by mutable name', async () => {
     const principal = context();
     const useCases = application();

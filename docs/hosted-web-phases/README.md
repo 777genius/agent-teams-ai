@@ -1,76 +1,68 @@
 # Hosted-web execution packets
 
-Current authority is [Phase 03 P3.C0 input repacket](phase-03/README.md), revision
-`phase-03-p3-c0-input-repacket-r5`. Start with [START_HERE.md](START_HERE.md) and use
-[EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the machine-readable source of truth.
+Current authority is [Phase 03 P3.C0A source-lane admission](phase-03/README.md), revision
+`phase-03-p3-c0a-source-lane-admission-r6`, at `P3.C0A.SOURCE_LANE_ADMISSION`. Start with
+[START_HERE.md](START_HERE.md) and use [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the
+machine-readable source of truth.
 
-## Current route
+## Exact authority
 
-Only the zero-code `P3.C0.INPUT_REPACKET` node is active. It may edit exactly seven documentation and
-authority paths. It does not authorize product, harness, orchestrator or OpenCode implementation and
-does not authorize any process, runtime, terminal, browser or final E2E execution.
+The source packet base is `cf3694f42f91795db4be0e564ed6eea11040768a`, tree
+`ca0ad7002439212788da12989c9abb150036b847`, for Product repository
+`777genius/agent-teams-ai` PR #503. Historical `pr252` job prefixes do not identify the PR. The r6
+result/phase-start commit is `UNSET`; no packet document predicts it. `ProjectScopedControl` injects
+the exact `phaseStartSha` and diff SHA-256 atomically only after independent review and CAS adoption.
 
-The repacket freezes this exact future DAG:
+Once adopted, r6 authorizes only isolated source implementation and independent source review in the
+registered writable closures. It does not authorize a candidate build, `P3.C1` freeze, `P3.C2` run,
+publication, release, deployment or production activation. All corresponding gates are false,
+`authorizedRunsNow=0`, `maximumAuthorizedRuns=0`, and terminal state is `HOLD`.
+
+## Active route
 
 ```text
-P3.C0.INPUT_REPACKET
-  -> parallel OC.PROVENANCE.V1
-              + P3.B2.BUILT_ACTUAL_OWNER_ENTRY
-              + P3.C.HARNESS_IMPLEMENTATION
-  -> P3.C1.EXACT_INPUT_FREEZE
-  -> P3.C2.FINAL_NO_FAKE_RUN (exactly one fresh sandbox/test-project run)
-  -> P3.RC.INDEPENDENT_ACCEPTANCE
-  -> HOLD
+P3.C0A.SOURCE_LANE_ADMISSION
+  +-> P3.D1.OPENCODE_SCHEDULE_ADJUDICATION --------------------------+
+  +-> P3.S0.PROVENANCE_GOLDEN -> P3.R0.PROVENANCE_CONTRACT_REVIEW --+
+  +-> P3.S1.PRODUCT_SEMANTICS_AND_HARNESS -> P3.R1.PRODUCT_SOURCE_REVIEW
+  +-> P3.S2.OWNER_RUNTIME_AND_SEMANTICS -> P3.R2.OWNER_RUNTIME_REVIEW
+  |                                            -> P3.S3.OWNER_RELEASE_ISOLATION
+  |                                            -> P3.R3.OWNER_RELEASE_REVIEW
+  +-> P3.S4.OPENCODE_LIFECYCLE_AND_SEMANTICS -> P3.R4.OPENCODE_SOURCE_REVIEW
+  +-> P3.S5.PRODUCT_LOCK_PARSER -> P3.R5.PRODUCT_LOCK_PARSER_REVIEW
+                     accepted R0, R1, R2, R3, R4 and R5
+                                         |
+                                         v
+                              P3.SR.SOURCE_ADOPTION
+                                         |
+                                       HOLD
 ```
 
-P3.C execution authority must pass through independently accepted P3.B2, never directly through
-P3.B. `P3.F.COORDINATED_ACTIVATION` remains controller-only and unmaterialized.
+The exact machine edge set is in the index and repeated in the DAG. Product, Owner and OpenCode
+reviews depend on accepted provenance contract review. Owner and OpenCode final review also depend on
+the r431 schedule adjudication. `P3.S3` begins only after `P3.R2` because `P3.S2` and `P3.S3` have
+serialized epochs over `scripts/build.test.ts`.
 
-## Independent identities
+Future controller packets may separately materialize Owner, OpenCode and Product candidate builds,
+then exact-lock materialization, `P3.C1`, `P3.C2`, and independent acceptance. Those future nodes are
+not in the active edge set. `P3.F.COORDINATED_ACTIVATION` remains controller-only and unmaterialized.
 
-The packet/future-harness base is `720fc62768341e1c2960cfaf4ad2496dd008291e` (tree
-`d055bb5c362082a3b721d04ff1c44d8711d8d208`). The exact audited runtime source is the distinct
-historical commit `d71671599c062244767494d392575cfacba5e1ff` (tree
-`af7fa38ec50893550ce14026c39b428f8dbfd1f2`). The future reviewed harness implementation/final-run
-commit is unset and unavailable; a controller may inject it only after independent review.
+## Evidence disposition
 
-Accepted orchestrator PR #44 source `06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7` is the P3.B base for
-P3.B2. It is not itself an accepted runnable built actual-owner entry. P3.B2 must provide a new exact
-result commit, fixed built-entry identity and complete reproducible build/toolchain recipe before
-P3.C1 can freeze inputs.
+- READY: exact source topology/base `cf3694f42f91795db4be0e564ed6eea11040768a` and tree
+  `ca0ad7002439212788da12989c9abb150036b847`; r409 normative roles `opencode`, `owner`,
+  `product-producer` and `browser` only; exact accepted
+  schema bytes 54,393 / `acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498`;
+  r423 salvage handoff 297,769 / `157d30b91f26a9bd2f65f49ecbaf882d6a72948b703f5ccbf8589bd1148ae5b7`;
+  r425 salvage handoff 420,353 / `84b07730e02f800b115df0b3dff256b57b1d69a496538cb34126395213df38e6`;
+  and the r431 one-OpenCode-process, seven-launch normative decision.
+- REJECTED/currently inadmissible: r421 golden/test as audit evidence; schema digest `3f5ad0…`; old
+  Product packet base; old PR44 source-as-runnable claim; the old OpenCode artifact tuple; and split
+  `opencode-handler`/`opencode-effect` roles. Historical facts remain recorded, never current inputs.
+- `UNSET/PENDING`: r429 Product result, r433 release-isolation result, r435 replacement golden/test,
+  all reviewed source result commits/trees, candidate builds, exact locks, P3.C1 manifest,
+  authorization/nonce/sandbox/evidence root, run evidence, release and production identities.
 
-OpenCode keeps every identity layer separate:
-
-- PR head `fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f`;
-- workflow merge `2cbaa3f8d7f130ba41f07aab114a76f08cc311f1`;
-- release source `3186244c3103eb02d95a255b593847b14488b070`, tree
-  `8fba45aecd63ec61f334a856694cbd3da037df90`, base
-  `47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7`;
-- run `32784750815`, attempt `1`, ref `refs/pull/4/merge`, artifact `9541196940`;
-- Actions ZIP `601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c`;
-- release manifest `076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd`;
-- Linux x64 tar `fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308`;
-  and
-- Linux x64 binary `4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e`.
-
-## Provenance and proof boundary
-
-Product policy requires the exact audited runtime-source descriptor plus a clean controller-bound
-reviewed harness worktree, pinned toolchain and fresh isolated build. Orchestrator policy requires a
-fresh isolated build from an independently accepted P3.B2 result; current P3.B source/build status is
-not a runnable-artifact claim. OpenCode policy admits only an immutable receipt and exact digest
-binding for a future sandbox behavior run. The receipt and release manifest are not signed build
-attestations.
-
-The current OpenCode candidate has no signed build attestation. `unsignedProvenanceAccepted=false`,
-`productionEligible=false`, and `releaseEligible=false`. Signed provenance remains required for any
-production or release decision, but that policy is outside `productionGates`; every actual activation
-boolean there is false.
-
-Any future run uses one new marker-owned sandbox/test project, never a real project runtime or
-terminal. Pass/fail derives from raw HTTP/SSE, built-owner WAL/journal, OpenCode effect and supervisor
-records joined to the controller nonce and verified process starts. Ambiguous external effects become
-`operator_required` and are never automatically retried.
-
-This packet performs no final E2E and no production enablement. No worker may materialize P3.F or
-launch a successor. End `HOLD`.
+Pre-r6 drafts require exact-identity relaunch or salvage into r6-anchored workspaces after adoption;
+none is retroactively accepted. No real-project runtime/terminal use, code execution or E2E is
+authorized. End `HOLD`.

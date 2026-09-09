@@ -1,3 +1,5 @@
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/contracts';
+
 import {
   type ArchiveEntryChecksum,
   HOSTED_STATE_RESTORE_SET_FORMAT,
@@ -52,6 +54,20 @@ export class AdmitOfflineRestore {
       this.dependencies.artifactIntegrityProbe.verify(artifact),
       this.dependencies.archiveIntegrityProbe.verify(archive),
     ]);
+    // The hosted header versions its own metadata. SQLite owns row-format admission;
+    // a matching header and valid archive checksum cannot substitute for this gate.
+    const manifest = immutableVerification.status === 'verified'
+      ? immutableVerification.inspection.manifest
+      : archive.verificationPlan.manifest;
+    const sqliteVersion = manifest.sqliteSnapshot?.userVersion;
+    if (
+      typeof sqliteVersion !== 'number' || !Number.isSafeInteger(sqliteVersion) || sqliteVersion < 1 ||
+      sqliteVersion > INTERNAL_STORAGE_SCHEMA_VERSION ||
+      manifest.sqliteIntegrity?.userVersion !== sqliteVersion ||
+      manifest.sqliteSnapshot?.entry?.schemaVersion !== sqliteVersion
+    ) {
+      return { status: 'refused', reasons: ['sqlite_schema_unsupported'] };
+    }
     const stateAdmission = evaluateHostedStateAdmission({
       artifactManifest: artifact.manifest,
       artifactIntegrity: artifactIntegrity.status === 'verified' ? 'verified' : 'failed',

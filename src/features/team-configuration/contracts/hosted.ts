@@ -9,10 +9,19 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
+import {
+  assertHostedRosterMatches,
+  type HostedRosterConfiguration,
+  isHostedInitialMemberName,
+  parseHostedRosterConfiguration,
+} from './hostedRosterConfiguration';
+
 export const HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
 
 export const HOSTED_TEAM_CONFIGURATION_ROUTES = Object.freeze({
   getSavedRequest: '/api/hosted/v1/team-configuration/saved-request',
+  getPublication: '/api/hosted/v1/team-configuration/draft/publication',
+  recoverPublication: '/api/hosted/v1/team-configuration/draft/publication/recover',
   createDraft: '/api/hosted/v1/team-configuration/draft/create',
   updateDraft: '/api/hosted/v1/team-configuration/draft/update',
   deleteDraft: '/api/hosted/v1/team-configuration/draft/delete',
@@ -44,6 +53,8 @@ export interface HostedSavedTeamRequest extends HostedTeamConfigurationIdentity 
   readonly revision: Revision;
   readonly metadata: HostedTeamConfigurationDraftMetadata;
   readonly members: readonly HostedTeamConfigurationMember[];
+  /** Absent means incomplete names-only draft; present does not mean launch-ready. */
+  readonly configuration?: HostedRosterConfiguration;
 }
 
 export interface HostedGetSavedTeamRequest extends HostedTeamConfigurationIdentity {
@@ -56,6 +67,8 @@ export interface HostedCreateDraftTeamRequest {
   readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
   readonly name: string;
   readonly members: readonly HostedTeamConfigurationMember[];
+  /** Absent means incomplete names-only draft; present does not mean launch-ready. */
+  readonly configuration?: HostedRosterConfiguration;
 }
 
 export interface HostedUpdateDraftTeamRequest extends HostedGetSavedTeamRequest {
@@ -65,6 +78,7 @@ export interface HostedUpdateDraftTeamRequest extends HostedGetSavedTeamRequest 
     description?: string;
     color?: string;
     language?: string;
+    configuration?: HostedRosterConfiguration;
   }>;
 }
 
@@ -209,8 +223,8 @@ function parseMembers(value: unknown): readonly HostedTeamConfigurationMember[] 
   for (const candidate of value) {
     if (!isRecord(candidate) || !hasExactKeys(candidate, ['name'])) return null;
     const name = parseName(candidate.name, 64);
-    if (name === null || !MEMBER_NAME_PATTERN.test(name) || names.has(name)) return null;
-    names.add(name);
+    if (name === null || !MEMBER_NAME_PATTERN.test(name) || !isHostedInitialMemberName(name) || names.has(name.toLowerCase())) return null;
+    names.add(name.toLowerCase());
     members.push(Object.freeze({ name }));
   }
   return Object.freeze(members);
@@ -251,7 +265,7 @@ export function parseHostedCreateDraftTeamRequest(
   try {
     if (
       !isRecord(value) ||
-      !hasExactKeys(value, ['schemaVersion', 'workspaceId', 'idempotencyKey', 'name', 'members']) ||
+      !hasExactKeys(value, ['schemaVersion', 'workspaceId', 'idempotencyKey', 'name', 'members', ...(Object.hasOwn(value, 'configuration') ? ['configuration'] : [])]) ||
       value.schemaVersion !== HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION
     ) {
       return failure();
@@ -260,6 +274,8 @@ export function parseHostedCreateDraftTeamRequest(
     const name = parseName(value.name);
     const members = parseMembers(value.members);
     if (name === null || members === null) return failure();
+    const configuration = Object.hasOwn(value, 'configuration') ? parseHostedRosterConfiguration(value.configuration) : undefined;
+    if (configuration) assertHostedRosterMatches(configuration, members);
     return Object.freeze({
       ok: true,
       value: Object.freeze({
@@ -268,6 +284,7 @@ export function parseHostedCreateDraftTeamRequest(
         idempotencyKey: parseHostedTeamConfigurationIdempotencyKey(value.idempotencyKey),
         name,
         members,
+        ...(configuration ? { configuration } : {}),
       }),
     });
   } catch {
@@ -289,12 +306,16 @@ export function parseHostedUpdateDraftTeamRequest(
     const updateKeys = Reflect.ownKeys(value.updates);
     if (
       updateKeys.length < 1 ||
-      updateKeys.some((key) => typeof key !== 'string' || !Object.hasOwn(UPDATE_LIMITS, key))
+      updateKeys.some((key) => typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(UPDATE_LIMITS, key)))
     ) {
       return failure();
     }
-    const updates: Record<string, string> = {};
-    for (const key of updateKeys as (keyof typeof UPDATE_LIMITS)[]) {
+    const updates: Record<string, string | HostedRosterConfiguration> = {};
+    for (const key of updateKeys as (keyof typeof UPDATE_LIMITS | 'configuration')[]) {
+      if (key === 'configuration') {
+        updates.configuration = parseHostedRosterConfiguration(value.updates.configuration);
+        continue;
+      }
       const normalized = parseName(value.updates[key], UPDATE_LIMITS[key]);
       if (normalized === null) return failure();
       updates[key] = normalized;

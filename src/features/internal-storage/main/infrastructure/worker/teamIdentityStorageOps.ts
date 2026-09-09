@@ -7,6 +7,7 @@ import {
   TeamIdentityStorageErrorCode,
 } from '../../../contracts/teamIdentityStorageContracts';
 
+import { RESERVED_TEAM_IDENTITY_TRANSITION } from './teamDraftPublicationMigration';
 import { fail } from './teamIdentityStorageErrors';
 import { type TeamIdentityRow, TeamIdentityStorageSupport } from './teamIdentityStorageSupport';
 
@@ -187,7 +188,20 @@ export class TeamIdentityStorageOps {
     );
   }
 
+  prepareReservedAdoption(input: PrepareTeamAdoptionInput): TeamAdoptionPrepareResult {
+    // The server operation is allocated once in the draft database. Its exact compatibility key
+    // binds the reservation before an adoption intent exists; a different operation cannot adopt it.
+    if (input.legacyKey !== `draft-${parseTeamAdoptionIntentId(input.intentId).slice(9)}`) {
+      fail(TeamIdentityStorageErrorCode.AdoptionIntentMismatch);
+    }
+    return this.prepare(input, true);
+  }
+
   prepareAdoption(input: PrepareTeamAdoptionInput): TeamAdoptionPrepareResult {
+    return this.prepare(input, false);
+  }
+
+  private prepare(input: PrepareTeamAdoptionInput, reserved: boolean): TeamAdoptionPrepareResult {
     const normalized = this.support.normalizePrepareInput(input);
     const intentChecksum = this.support.computeIntentChecksum(normalized);
     const db = this.database();
@@ -197,6 +211,9 @@ export class TeamIdentityStorageOps {
       TeamIdentityStorageErrorCode.DuplicateIdentity,
       () =>
         db.transaction((): TeamAdoptionPrepareResult => {
+          if (reserved && this.support.readIdentityByTeamId(db, normalized.teamId)?.state === 'tombstoned') {
+            fail(TeamIdentityStorageErrorCode.LegacyKeyTombstoned);
+          }
           const existingIntent = this.support.readIntentById(db, normalized.intentId);
           if (existingIntent) {
             if (!this.support.isSameIntentRequest(existingIntent, normalized, intentChecksum)) {
@@ -222,28 +239,40 @@ export class TeamIdentityStorageOps {
           if (intentForTeam) {
             fail(TeamIdentityStorageErrorCode.AdoptionIntentMismatch);
           }
-          this.support.assertIdentitySlotsAvailable(
-            db,
-            normalized.teamId,
-            normalized.legacyKey,
-            normalized.directoryFingerprint
-          );
+          if (reserved) {
+            const identity = this.support.requireIdentity(db, normalized.teamId);
+            if (identity.state === 'tombstoned') fail(TeamIdentityStorageErrorCode.LegacyKeyTombstoned);
+            if (!this.support.isSameReservedIdentity(identity, {
+              ...normalized, createdAt: normalized.preparedAt,
+            })) fail(TeamIdentityStorageErrorCode.AdoptionIntentMismatch);
+            const reservation = this.support.requireConsistentReservation(db, identity);
+            if (reservation.state !== 'active' || reservation.reservedAt !== normalized.preparedAt) {
+              fail(TeamIdentityStorageErrorCode.AdoptionIntentMismatch);
+            }
+          } else {
+            this.support.assertIdentitySlotsAvailable(
+              db,
+              normalized.teamId,
+              normalized.legacyKey,
+              normalized.directoryFingerprint
+            );
 
-          this.support.insertIdentity(db, {
-            teamId: normalized.teamId,
-            legacyKey: normalized.legacyKey,
-            directoryFingerprint: normalized.directoryFingerprint,
-            workspaceBinding: normalized.workspaceBinding,
-            createdAt: normalized.preparedAt,
-            state: 'adoption_prepared',
-            adoptionIntentId: normalized.intentId,
-          });
-          this.support.insertReservation(
-            db,
-            normalized.legacyKey,
-            normalized.teamId,
-            normalized.preparedAt
-          );
+            this.support.insertIdentity(db, {
+              teamId: normalized.teamId,
+              legacyKey: normalized.legacyKey,
+              directoryFingerprint: normalized.directoryFingerprint,
+              workspaceBinding: normalized.workspaceBinding,
+              createdAt: normalized.preparedAt,
+              state: 'adoption_prepared',
+              adoptionIntentId: normalized.intentId,
+            });
+            this.support.insertReservation(
+              db,
+              normalized.legacyKey,
+              normalized.teamId,
+              normalized.preparedAt
+            );
+          }
           db.prepare(
             `INSERT INTO team_adoption_intents (
             intent_id, team_id, state, legacy_key, directory_fingerprint,
@@ -262,6 +291,14 @@ export class TeamIdentityStorageOps {
             intentChecksum,
             normalized.preparedAt
           );
+
+          if (reserved) {
+            const changed = db.prepare(`UPDATE team_identity_records
+              SET state = 'adoption_prepared', adoption_intent_id = ?
+              WHERE team_id = ? AND state = 'reserved'`)
+              .run(normalized.intentId, normalized.teamId);
+            if (changed.changes !== 1) fail(TeamIdentityStorageErrorCode.IllegalTransition);
+          }
 
           const identity = this.support.requireIdentity(db, normalized.teamId);
           const reservation = this.support.requireConsistentReservation(db, identity);
@@ -605,7 +642,10 @@ export class TeamIdentityStorageOps {
         const observed = observedObjects.get(
           `${expected.type}:${expected.name}:${expected.tableName}`
         );
-        return observed?.sql === expected.sql;
+        const expectedSql = expected.name === 'trg_team_identity_transition' &&
+          Number(db.pragma('user_version', { simple: true })) >= 29
+          ? RESERVED_TEAM_IDENTITY_TRANSITION : expected.sql;
+        return observed?.sql === expectedSql;
       })
     ) {
       fail(TeamIdentityStorageErrorCode.UnknownSchema);

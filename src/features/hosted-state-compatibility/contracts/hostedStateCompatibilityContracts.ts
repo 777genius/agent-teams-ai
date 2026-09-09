@@ -161,7 +161,8 @@ export type OfflineRestoreRefusalReason =
   | 'restore_mode_unsupported'
   | 'target_not_empty'
   | 'target_unavailable'
-  | 'source_migration_interrupted';
+  | 'source_migration_interrupted'
+  | 'sqlite_schema_unsupported';
 
 export interface OfflineRestoreAdmissionInput {
   readonly mode: 'replace_deployment' | 'fork_deployment';

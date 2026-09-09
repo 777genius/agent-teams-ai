@@ -11,6 +11,7 @@ import {
   createHostedTeamConfigurationAuthority,
   createHostedTeamConfigurationFeature,
   createHostedTeamConfigurationRouteContribution,
+  createReservedDraftConfigurationAttribution,
   HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS,
   type HostedTeamConfigurationAuthorizationPort,
   type HostedTeamConfigurationAuthorizationRequest,
@@ -33,6 +34,7 @@ import {
   type HostedRouteAdmissionBinding,
 } from './application';
 
+import type { HostedDraftPublicationComposition } from './hostedDraftPublicationComposition';
 import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -41,6 +43,7 @@ const MUTATIONS = new Set<HostedTeamConfigurationOperation>([
   'create_draft',
   'update_draft',
   'delete_draft',
+  'recover_publication',
 ]);
 
 const AUTHORIZATION_BY_ROUTE = new Map(
@@ -89,6 +92,8 @@ export interface HostedTeamConfigurationComposition {
 }
 
 export interface CreateHostedTeamConfigurationCompositionDependencies {
+  readonly publication?: HostedDraftPublicationComposition | null;
+  readonly restoreGeneration?: number;
   readonly authentication: HostedTeamConfigurationAuthenticationPort;
   readonly storage: HostedTeamConfigurationStorageGateway;
   readonly runtimeInstance: RuntimeInstanceContext;
@@ -156,6 +161,30 @@ export function createHostedTeamConfigurationComposition(
   }
   const requests = new WeakMap<QueryContext, FastifyRequest>();
   const authorizationUnavailable = new WeakSet<QueryContext>();
+  const mutations = new WeakMap<QueryContext, boolean>();
+  const publication = dependencies.publication;
+  const captureWorkspace = async (workspaceId: WorkspaceId, context: QueryContext) => {
+    const request = requests.get(context);
+    const principal = request && dependencies.authentication.authenticatedPrincipalFor(request);
+    if (!request || !principal || !publication || dependencies.restoreGeneration === undefined) {
+      throw new Error('draft-publication-authority-unavailable');
+    }
+    const authorizeWorkspace = async () => {
+      const fresh = dependencies.authentication.authenticatedPrincipalFor(request);
+      if (!fresh || fresh.principal.userId !== principal.principal.userId ||
+          fresh.authenticatedSessionId !== principal.authenticatedSessionId ||
+          await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+            request, { workspaceId }, mutations.get(context) === true) !== 'authorized') {
+        throw new Error('draft-publication-authorization-changed');
+      }
+    };
+    await authorizeWorkspace();
+    const fence = await publication.captureWorkspace(workspaceId, principal, context, dependencies.restoreGeneration);
+    return { ...fence, assertCurrent: async () => { await authorizeWorkspace(); await fence.assertCurrent(); } };
+  };
+  const reservedAttribution = publication ? createReservedDraftConfigurationAttribution({
+    publications: publication.journal, identities: publication.identities,
+  }) : null;
   const contexts = createAuthenticatedHostedQueryContextFactory({
     authentication: dependencies.authentication,
     runtimeInstance: dependencies.runtimeInstance,
@@ -169,11 +198,20 @@ export function createHostedTeamConfigurationComposition(
     }: HostedTeamConfigurationAuthorizationRequest) => {
       const request = requests.get(principal);
       if (request === undefined) return Object.freeze({ kind: 'denied' as const });
-      const decision = await dependencies.authentication.isTeamConfigurationScopeAuthorized(
-        request,
-        authorizationScope(scope),
-        MUTATIONS.has(operation)
-      );
+      let decision: 'authorized' | 'denied' | 'unavailable';
+      try {
+        if (publication && scope.kind === 'team' && reservedAttribution) {
+          const fence = await captureWorkspace(scope.identity.workspaceId, principal);
+          const attribution = await reservedAttribution({ ...scope.identity,
+            actorId: principal.actorId, deploymentId: principal.deploymentId }, fence.runtimeWorkspaceId);
+          await fence.assertCurrent();
+          decision = attribution.kind === 'found' ? 'authorized'
+            : attribution.kind === 'unavailable' ? 'unavailable'
+            : await dependencies.authentication.isTeamConfigurationScopeAuthorized(request, authorizationScope(scope), MUTATIONS.has(operation));
+        } else {
+          decision = await dependencies.authentication.isTeamConfigurationScopeAuthorized(request, authorizationScope(scope), MUTATIONS.has(operation));
+        }
+      } catch { decision = 'unavailable'; }
       if (decision === 'authorized') {
         return Object.freeze({
           kind: 'authorized' as const,
@@ -186,7 +224,9 @@ export function createHostedTeamConfigurationComposition(
     },
   });
   const feature = createHostedTeamConfigurationFeature(
-    createHostedTeamConfigurationAuthority(dependencies.storage),
+    createHostedTeamConfigurationAuthority(dependencies.storage, publication ? {
+      journal: publication.journal, publisher: publication.publisher, captureWorkspace,
+    } : undefined),
     authorization
   );
   const preserveAuthorizationAvailability = async <Result>(
@@ -202,6 +242,10 @@ export function createHostedTeamConfigurationComposition(
   };
   const httpFeature = Object.freeze({
     routes: feature.routes,
+    getPublication: (body: unknown, principal: QueryContext) =>
+      preserveAuthorizationAvailability(principal, () => feature.getPublication!(body, principal)),
+    recoverPublication: (body: unknown, principal: QueryContext) =>
+      preserveAuthorizationAvailability(principal, () => feature.recoverPublication!(body, principal)),
     getSavedRequest: (body: unknown, principal: QueryContext) =>
       preserveAuthorizationAvailability(principal, () => feature.getSavedRequest(body, principal)),
     createDraft: (body: unknown, principal: QueryContext) =>
@@ -228,10 +272,11 @@ export function createHostedTeamConfigurationComposition(
             throw new Error(`hosted-team-configuration-context-${result.code}`);
           }
           requests.set(result.context, request);
+          mutations.set(result.context, _descriptor.authPolicyId === 'hosted.browser.session.csrf');
           return result.context;
         }
       );
     },
-    isReady: () => true,
+    isReady: () => dependencies.publication !== null,
   });
 }

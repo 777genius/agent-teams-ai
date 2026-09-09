@@ -16,6 +16,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   activateHostedApprovalRuntime,
+  activateHostedApprovalRuntimeOverConnectedTransport,
+  HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256,
   HOSTED_APPROVAL_ACTIVATION_ADMISSION_FILE_ENV,
   HOSTED_APPROVAL_ACTIVATION_CAPABILITY,
   HOSTED_APPROVAL_ACTIVATION_CONTRACT_DIGEST_ENV,
@@ -23,6 +25,7 @@ import {
   HOSTED_APPROVAL_ACTIVATION_PUBLIC_KEY_DIGEST_ENV,
   HOSTED_APPROVAL_ACTIVATION_SIGNING_KEY_FILE_ENV,
   type HostedApprovalRuntimeActivationBinding,
+  type HostedApprovalRuntimeActivationOptions,
   readHostedApprovalRuntimeActivationPublicationContract,
   readHostedApprovalRuntimeActivationSigningIdentity,
   serializeHostedApprovalRuntimeActivationEnvelope,
@@ -91,6 +94,28 @@ interface GoldenProofVector {
 
 async function golden(): Promise<Golden> {
   return JSON.parse(await readFile(GOLDEN_PATH, 'utf8')) as Golden;
+}
+
+function candidateActivationInput(fixture: Golden): Readonly<{
+  binding: HostedApprovalRuntimeActivationBinding;
+  admissionDocument: string;
+}> {
+  const admission = JSON.parse(fixture.admissionDocument) as {
+    routes: Array<{ openCodeBinding: Record<string, unknown> }>;
+  };
+  for (const route of admission.routes) {
+    route.openCodeBinding.openCodeArtifactDigest = `sha256:${HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256}`;
+  }
+  const admissionDocument = `${JSON.stringify(admission)}\n`;
+  return Object.freeze({
+    binding: Object.freeze({
+      ...fixture.binding,
+      admissionDocumentDigest: `sha256:${createHash('sha256')
+        .update(admissionDocument)
+        .digest('hex')}` as `sha256:${string}`,
+    }),
+    admissionDocument,
+  });
 }
 
 describe('hosted approval activation-v2', () => {
@@ -463,7 +488,7 @@ describe('hosted approval activation-v2', () => {
       approvalDigest: canonicalApprovalDigest,
       admissionDocumentDigest: `sha256:${createHash('sha256')
         .update(admissionDocument)
-        .digest('hex')}` as const,
+        .digest('hex')}` as `sha256:${string}`,
     };
     const unsignedEnvelope = JSON.stringify({
       schemaVersion: 2,
@@ -565,7 +590,7 @@ describe('hosted approval activation-v2', () => {
     second.scope.teamId = secondTeamId;
     document.routes.push(second);
     document.routes.sort((left, right) =>
-      String(left.routeId).localeCompare(String(right.routeId))
+      Buffer.from(String(left.routeId), 'utf8').compare(Buffer.from(String(right.routeId), 'utf8'))
     );
     const admissionDocument = `${JSON.stringify(document)}\n`;
     const authorities = document.routes.map((route) => route.authority);
@@ -760,6 +785,363 @@ describe('hosted approval activation-v2', () => {
     expect(onOwnerLoss).toHaveBeenCalledOnce();
   });
 
+  it('retains the complete activation authority snapshot while socket inspection is suspended', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key);
+    const replacementSocket = new ActivationPeerSocket(
+      'f'.repeat(64) as OrchestratorLifecycleOwnerProofKey
+    );
+    const originalOwnerLoss = vi.fn();
+    const replacementOwnerLoss = vi.fn();
+    const originalConnect = vi.fn(() => socket as unknown as Socket);
+    const replacementConnect = vi.fn(() => replacementSocket as unknown as Socket);
+    let releaseInspection!: (identity: typeof fixture.binding.ownerBinding.socketIdentity) => void;
+    const inspection = new Promise<typeof fixture.binding.ownerBinding.socketIdentity>(
+      (resolve) => {
+        releaseInspection = resolve;
+      }
+    );
+    const options: HostedApprovalRuntimeActivationOptions = {
+      binding: fixture.binding,
+      admissionDocument: fixture.admissionDocument,
+      proofKey: key,
+      signingIdentity: ephemeralSigningIdentity(fixture),
+      generateChallenge: () => CHALLENGE,
+      inspectSocketIdentity: vi.fn(() => inspection),
+      connect: originalConnect,
+      onOwnerLoss: originalOwnerLoss,
+    };
+
+    const activation = activateHostedApprovalRuntime(options);
+    await vi.waitFor(() => expect(options.inspectSocketIdentity).toHaveBeenCalledOnce());
+    const mutable = options as {
+      proofKey: OrchestratorLifecycleOwnerProofKey;
+      connect: NonNullable<HostedApprovalRuntimeActivationOptions['connect']>;
+      onOwnerLoss: () => void;
+    };
+    mutable.proofKey = 'f'.repeat(64) as OrchestratorLifecycleOwnerProofKey;
+    mutable.connect = replacementConnect;
+    mutable.onOwnerLoss = replacementOwnerLoss;
+    releaseInspection(fixture.binding.ownerBinding.socketIdentity);
+
+    const lease = await activation;
+    expect(originalConnect).toHaveBeenCalledOnce();
+    expect(replacementConnect).not.toHaveBeenCalled();
+    expect(lease.isReady()).toBe(true);
+    socket.loseOwner();
+    expect(originalOwnerLoss).toHaveBeenCalledOnce();
+    expect(replacementOwnerLoss).not.toHaveBeenCalled();
+  });
+
+  it('buffers retained peer bytes and EOF until resumed, preserving order across pauses', () => {
+    const socket = new ActivationPeerSocket('00'.repeat(32) as OrchestratorLifecycleOwnerProofKey);
+    const observed: string[] = [];
+    socket.on('data', (chunk: Buffer) => {
+      observed.push(chunk.toString());
+      if (observed.length === 1) socket.pause();
+    });
+    socket.on('end', () => observed.push('EOF'));
+    socket.receivePeerData(Buffer.from('first'));
+    socket.receivePeerData(Buffer.from('second'));
+    socket.endPeerStream();
+    expect(observed).toEqual([]);
+    expect(socket.resumeCalls).toBe(0);
+    expect(socket.resume()).toBe(socket);
+    expect(observed).toEqual(['first']);
+    expect(socket.resume()).toBe(socket);
+    expect(observed).toEqual(['first', 'second', 'EOF']);
+    expect(socket.resumeCalls).toBe(2);
+    socket.resume();
+    expect(observed).toEqual(['first', 'second', 'EOF']);
+    const closed = new ActivationPeerSocket('00'.repeat(32) as OrchestratorLifecycleOwnerProofKey);
+    const data = vi.fn();
+    closed.on('data', data);
+    closed.receivePeerData(Buffer.from('discarded-on-destroy'));
+    closed.destroy();
+    closed.resume();
+    expect(data).not.toHaveBeenCalled();
+  });
+
+  it('runs the unchanged golden exchange on an already-connected retained FD5 transport', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const candidate = candidateActivationInput(fixture);
+    const socket = new ActivationPeerSocket(key);
+    const inspectSocketIdentity = vi.fn();
+    const connect = vi.fn();
+    const signingIdentity = ephemeralSigningIdentity(fixture);
+    const lease = await activateHostedApprovalRuntimeOverConnectedTransport(
+      {
+        binding: candidate.binding,
+        admissionDocument: candidate.admissionDocument,
+        proofKey: key,
+        signingIdentity,
+        generateChallenge: () => CHALLENGE,
+        inspectSocketIdentity,
+        connect,
+        onOwnerLoss: vi.fn(),
+      },
+      { socket: socket as unknown as Socket },
+      HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+    );
+
+    expect(socket.writes).toHaveLength(2);
+    const prepare = independentVerify(socket.writes[0]!, key, 'owner-ready-request');
+    expect(prepare.value.binding).toEqual(candidate.binding);
+    expect(prepare.value.challenge).toBe(CHALLENGE);
+    expect(prepare.value.operation).toBe('approval_activation_prepare');
+    expect(socket.writes[1]).toBe(
+      serializeHostedApprovalRuntimeActivationPublication(
+        key, signingIdentity, candidate.binding, candidate.admissionDocument
+      )
+    );
+    expect(socket.resumeCalls).toBe(1);
+    expect(socket.connectSubscriptions).toBe(0);
+    expect(inspectSocketIdentity).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+    expect(lease.isReady()).toBe(true);
+    expect(lease.currentBinding()).toEqual(candidate.binding.ownerBinding);
+    lease.invalidate();
+    expect(lease.isReady()).toBe(false);
+    expect(lease.currentBinding()).toBeNull();
+  });
+
+  it('finishes every synchronous validation and publication check before normal socket creation', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const base: HostedApprovalRuntimeActivationOptions = {
+      binding: fixture.binding,
+      admissionDocument: fixture.admissionDocument,
+      proofKey: key,
+      signingIdentity: ephemeralSigningIdentity(fixture),
+      generateChallenge: () => CHALLENGE,
+      onOwnerLoss: vi.fn(),
+    };
+    const invalidInputs: readonly HostedApprovalRuntimeActivationOptions[] = [
+      { ...base, timeoutMs: 0 },
+      { ...base, generateChallenge: () => 'invalid' },
+      { ...base, admissionDocument: '{}\n' },
+      {
+        ...base,
+        signingIdentity: {
+          ...base.signingIdentity,
+          publicKeyDigest: 'sha256:invalid' as never,
+        },
+      },
+    ];
+
+    for (const options of invalidInputs) {
+      const inspectSocketIdentity = vi.fn();
+      const connect = vi.fn();
+      await expect(
+        activateHostedApprovalRuntime({
+          ...options,
+          inspectSocketIdentity,
+          connect,
+        })
+      ).rejects.toThrow();
+      expect(inspectSocketIdentity).not.toHaveBeenCalled();
+      expect(connect).not.toHaveBeenCalled();
+    }
+  });
+
+  it('destroys inherited FD5 for every synchronous activation rejection and drains later errors', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const candidate = candidateActivationInput(fixture);
+    const base: HostedApprovalRuntimeActivationOptions = {
+      binding: candidate.binding,
+      admissionDocument: candidate.admissionDocument,
+      proofKey: key,
+      signingIdentity: ephemeralSigningIdentity(fixture),
+      generateChallenge: () => CHALLENGE,
+      onOwnerLoss: vi.fn(),
+    };
+    const invalidInputs: readonly HostedApprovalRuntimeActivationOptions[] = [
+      { ...base, timeoutMs: 0 },
+      { ...base, generateChallenge: () => 'invalid' },
+      { ...base, admissionDocument: '{}\n' },
+      {
+        ...base,
+        signingIdentity: {
+          ...base.signingIdentity,
+          publicKeyDigest: 'sha256:invalid' as never,
+        },
+      },
+    ];
+
+    for (const options of invalidInputs) {
+      const socket = new ActivationPeerSocket(key);
+      await expect(
+        activateHostedApprovalRuntimeOverConnectedTransport(
+          options,
+          { socket: socket as unknown as Socket },
+          HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+        )
+      ).rejects.toThrow();
+      expect(socket.destroyed).toBe(true);
+      expect(socket.writes).toHaveLength(0);
+      expect(() => socket.emit('error', new Error('queued-after-rejection'))).not.toThrow();
+    }
+  });
+
+  it.each(['extra-frame', 'eof', 'owner-loss'] as const)(
+    'synchronously revokes a retained FD5 lease on %s',
+    async (loss) => {
+      const fixture = await golden();
+      const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+      const candidate = candidateActivationInput(fixture);
+      const socket = new ActivationPeerSocket(key);
+      const onOwnerLoss = vi.fn();
+      const lease = await activateHostedApprovalRuntimeOverConnectedTransport(
+        {
+          binding: candidate.binding,
+          admissionDocument: candidate.admissionDocument,
+          proofKey: key,
+          signingIdentity: ephemeralSigningIdentity(fixture),
+          generateChallenge: () => CHALLENGE,
+          onOwnerLoss,
+        },
+        { socket: socket as unknown as Socket },
+        HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+      );
+
+      expect(socket.resumeCalls).toBe(1);
+      expect(lease.isReady()).toBe(true);
+      expect(lease.currentBinding()).toEqual(candidate.binding.ownerBinding);
+      if (loss === 'extra-frame') socket.receivePeerData(Buffer.from('{}\n'));
+      else if (loss === 'eof') socket.endPeerStream();
+      else socket.loseOwner();
+      expect(lease.isReady()).toBe(false);
+      expect(lease.currentBinding()).toBeNull();
+      expect(onOwnerLoss).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('keeps inherited FD5 activation unavailable until authenticated ready', async () => {
+    const fixture = await golden();
+    const candidate = candidateActivationInput(fixture);
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key, 'pause-before-ready');
+    let exposed = false;
+    const activating = activateHostedApprovalRuntimeOverConnectedTransport(
+      {
+        binding: candidate.binding,
+        admissionDocument: candidate.admissionDocument,
+        proofKey: key,
+        signingIdentity: ephemeralSigningIdentity(fixture),
+        generateChallenge: () => CHALLENGE,
+        onOwnerLoss: vi.fn(),
+      },
+      { socket: socket as unknown as Socket },
+      HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+    ).then((lease) => {
+      exposed = true;
+      return lease;
+    });
+    await vi.waitFor(() => expect(socket.writes).toHaveLength(2));
+    expect(exposed).toBe(false);
+    expect(socket.resumeCalls).toBe(1);
+    socket.endPeerStream();
+    await expect(activating).rejects.toThrow(/owner-lost/u);
+    expect(exposed).toBe(false);
+  });
+
+  it.each([
+    ['legacy-ready', 1],
+    ['stale-owner-ready', 1],
+    ['forged-final-ready', 2],
+  ] as const)('rejects retained FD5 %s without exposing a ready lease', async (behavior, writes) => {
+    const fixture = await golden();
+    const candidate = candidateActivationInput(fixture);
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key, behavior);
+    const connect = vi.fn();
+    const inspectSocketIdentity = vi.fn();
+    await expect(
+      activateHostedApprovalRuntimeOverConnectedTransport(
+        {
+          binding: candidate.binding,
+          admissionDocument: candidate.admissionDocument,
+          proofKey: key,
+          signingIdentity: ephemeralSigningIdentity(fixture),
+          generateChallenge: () => CHALLENGE,
+          connect,
+          inspectSocketIdentity,
+          onOwnerLoss: vi.fn(),
+        },
+        { socket: socket as unknown as Socket },
+        HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+      )
+    ).rejects.toThrow(/response-invalid/u);
+    expect(socket.resumeCalls).toBe(1);
+    expect(socket.writes).toHaveLength(writes);
+    expect(socket.destroyed).toBe(true);
+    expect(socket.connectSubscriptions).toBe(0);
+    expect(connect).not.toHaveBeenCalled();
+    expect(inspectSocketIdentity).not.toHaveBeenCalled();
+  });
+
+  it('rejects a replaced path socket during final verification without exposing a lease', async () => {
+    const fixture = await golden();
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key);
+    const inspectSocketIdentity = vi
+      .fn()
+      .mockResolvedValueOnce(fixture.binding.ownerBinding.socketIdentity)
+      .mockResolvedValueOnce({ ...fixture.binding.ownerBinding.socketIdentity, inode: '999' });
+    await expect(
+      activateHostedApprovalRuntime({
+        binding: fixture.binding,
+        admissionDocument: fixture.admissionDocument,
+        proofKey: key,
+        signingIdentity: ephemeralSigningIdentity(fixture),
+        generateChallenge: () => CHALLENGE,
+        inspectSocketIdentity,
+        connect: () => socket as unknown as Socket,
+        onOwnerLoss: vi.fn(),
+      })
+    ).rejects.toThrow(/socket-changed/u);
+    expect(socket.destroyed).toBe(true);
+    expect(() => socket.emit('error', new Error('queued-after-rejection'))).not.toThrow();
+  });
+
+  it('rejects the candidate pin before writing when any signed route has another digest', async () => {
+    const fixture = await golden();
+    const candidate = candidateActivationInput(fixture);
+    const admission = JSON.parse(candidate.admissionDocument) as {
+      routes: Array<{ openCodeBinding: Record<string, unknown> }>;
+    };
+    admission.routes.at(-1)!.openCodeBinding.openCodeArtifactDigest = `sha256:${'9'.repeat(64)}`;
+    const admissionDocument = `${JSON.stringify(admission)}\n`;
+    const binding = {
+      ...candidate.binding,
+      admissionDocumentDigest: `sha256:${createHash('sha256')
+        .update(admissionDocument)
+        .digest('hex')}` as const,
+    };
+    const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
+    const socket = new ActivationPeerSocket(key);
+    await expect(
+      activateHostedApprovalRuntimeOverConnectedTransport(
+        {
+          binding,
+          admissionDocument,
+          proofKey: key,
+          signingIdentity: ephemeralSigningIdentity(fixture),
+          generateChallenge: () => CHALLENGE,
+          onOwnerLoss: vi.fn(),
+        },
+        { socket: socket as unknown as Socket },
+        HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256
+      )
+    ).rejects.toThrow(/candidate-digest-mismatch/u);
+    expect(socket.writes).toHaveLength(0);
+    expect(socket.destroyed).toBe(true);
+    expect(() => socket.emit('error', new Error('queued-after-rejection'))).not.toThrow();
+  });
+
   it('does not fall back to a raw legacy-ready peer after activation-v2 negotiation', async () => {
     const fixture = await golden();
     const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
@@ -820,6 +1202,49 @@ interface ActivationDocument {
 class ActivationPeerSocket extends EventEmitter {
   destroyed = false;
   readonly writes: string[] = [];
+  connectSubscriptions = 0;
+  resumeCalls = 0;
+  private flowing = false;
+  private peerEnded = false;
+  private readonly pending: Array<Buffer | null> = [];
+
+  pause(): this {
+    this.flowing = false;
+    return this;
+  }
+
+  resume(): this {
+    this.resumeCalls += 1;
+    if (this.destroyed) return this;
+    this.flowing = true;
+    this.flushPending();
+    return this;
+  }
+
+  receivePeerData(chunk: Buffer): void {
+    if (this.destroyed || this.peerEnded) return;
+    this.pending.push(chunk);
+    this.flushPending();
+  }
+
+  endPeerStream(): void {
+    if (this.destroyed || this.peerEnded) return;
+    this.peerEnded = true;
+    this.pending.push(null);
+    this.flushPending();
+  }
+
+  private flushPending(): void {
+    while (this.flowing && !this.destroyed && this.pending.length > 0) {
+      const chunk = this.pending.shift()!;
+      if (chunk === null) {
+        this.flowing = false;
+        this.emit('end');
+      } else {
+        this.emit('data', chunk);
+      }
+    }
+  }
 
   constructor(
     private readonly proofKey: OrchestratorLifecycleOwnerProofKey,
@@ -827,14 +1252,23 @@ class ActivationPeerSocket extends EventEmitter {
       | 'activation-v2'
       | 'legacy-ready'
       | 'stale-owner-ready'
-      | 'forged-final-ready' = 'activation-v2'
+      | 'forged-final-ready'
+      | 'pause-before-ready' = 'activation-v2'
   ) {
     super();
   }
 
   override once(event: string | symbol, listener: (...args: unknown[]) => void): this {
     super.once(event, listener);
-    if (event === 'connect') queueMicrotask(() => this.emit('connect'));
+    if (event === 'connect') {
+      this.connectSubscriptions += 1;
+      queueMicrotask(() => {
+        // Fresh connections begin flowing on connect; retained FD5 starts paused
+        // and depends on the production connected-transport resume call.
+        this.resume();
+        this.emit('connect');
+      });
+    }
     return this;
   }
 
@@ -863,11 +1297,12 @@ class ActivationPeerSocket extends EventEmitter {
         binding,
       });
       queueMicrotask(() =>
-        this.emit('data', Buffer.from(`${sign(unsigned, this.proofKey, 'owner-ready')}\n`))
+        this.receivePeerData(Buffer.from(`${sign(unsigned, this.proofKey, 'owner-ready')}\n`))
       );
       return true;
     }
     const publication = JSON.parse(frame) as { envelope: Record<string, unknown> };
+    if (this.behavior === 'pause-before-ready') return true;
     const envelope = JSON.stringify(publication.envelope);
     const activation = independentVerify(envelope, this.proofKey, 'admission').value;
     const unsigned = JSON.stringify({
@@ -882,17 +1317,19 @@ class ActivationPeerSocket extends EventEmitter {
       this.behavior === 'forged-final-ready'
         ? sign(unsigned, 'ff'.repeat(32), 'ready')
         : sign(unsigned, this.proofKey, 'ready');
-    queueMicrotask(() => this.emit('data', Buffer.from(`${response}\n`)));
+    queueMicrotask(() => this.receivePeerData(Buffer.from(`${response}\n`)));
     return true;
   }
 
   destroy(): this {
     this.destroyed = true;
+    this.flowing = false;
+    this.pending.length = 0;
     return this;
   }
 
   loseOwner(): void {
-    this.destroyed = true;
+    this.destroy();
     this.emit('close');
   }
 }

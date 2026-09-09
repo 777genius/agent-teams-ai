@@ -68,6 +68,12 @@ export interface HostedTeamApprovalPendingReadRecord {
   readonly previewRef: string | null;
 }
 
+/** Internal receipt proving the delivery binding persisted by observation. */
+export interface HostedTeamApprovalObservationReceipt
+  extends HostedTeamApprovalPendingReadRecord {
+  readonly deliveryRef: string;
+}
+
 export interface HostedTeamApprovalPendingReadResult {
   readonly records: readonly HostedTeamApprovalPendingReadRecord[];
   readonly hasMore: boolean;
@@ -233,7 +239,7 @@ export interface HostedTeamApprovalTimeoutAuditResult {
 export interface HostedTeamApprovalAuthorityStorageGateway {
   hostedTeamApprovalObserve(
     record: HostedTeamApprovalPendingStorageRecord
-  ): Promise<HostedTeamApprovalPendingReadRecord>;
+  ): Promise<HostedTeamApprovalObservationReceipt>;
   hostedTeamApprovalReadPending(
     request: HostedTeamApprovalPendingReadRequest
   ): Promise<HostedTeamApprovalPendingReadResult>;

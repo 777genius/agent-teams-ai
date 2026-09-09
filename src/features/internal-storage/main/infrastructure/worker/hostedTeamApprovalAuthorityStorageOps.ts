@@ -22,6 +22,7 @@ import {
   isNonNegativeInteger,
   isPositiveInteger,
   nextAuditTime,
+  observationReceiptFromRow,
   pendingRecordFromRow,
   previewFromRow,
   readRecord,
@@ -41,7 +42,7 @@ import { expireHostedTeamApprovals } from './hostedTeamApprovalTimeoutStorageOps
 import type {
   HostedTeamApprovalDecisionStorageResult,
   HostedTeamApprovalDeliveryRecord,
-  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPreviewReadResult,
 } from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 
@@ -103,7 +104,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
     }
   }
 
-  private observe(value: unknown): HostedTeamApprovalPendingReadRecord {
+  private observe(value: unknown): HostedTeamApprovalObservationReceipt {
     const input = parseHostedTeamApprovalPendingStorageRecord(value);
     assertDeadlineOpen(input.deadlineAtMs);
     const db = this.getDatabase();
@@ -138,7 +139,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
           if (existing.payload_hash !== identityHash) {
             throw new Error('hosted-team-approval-storage-observation-identity-conflict');
           }
-          return pendingRecordFromRow(existing);
+          return observationReceiptFromRow(existing);
         }
         const derivedIdentity = db
           .prepare(
@@ -194,7 +195,7 @@ export class HostedTeamApprovalAuthorityStorageOps {
           | UnknownRow
           | undefined;
         if (!row) throw new Error('hosted-team-approval-storage-observe-missing');
-        return pendingRecordFromRow(row);
+        return observationReceiptFromRow(row);
       })
       .immediate();
   }

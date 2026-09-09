@@ -1,3 +1,4 @@
+import { isHostedProducerProvenanceFatalError } from '@features/hosted-producer-provenance/main';
 import { parseCursor, parseRunId, parseTeamId } from '@shared/contracts/hosted';
 
 import {
@@ -374,7 +375,8 @@ export class HostedTeamApprovalAuthorityAdapter
       return this.isActive(context, request.deadlineAtMs)
         ? normalizePageResult(result, request)
         : unavailable();
-    } catch {
+    } catch (error) {
+      if (isHostedProducerProvenanceFatalError(error)) throw error;
       return unavailable();
     }
   }
@@ -392,7 +394,8 @@ export class HostedTeamApprovalAuthorityAdapter
       return this.isActive(context, request.deadlineAtMs)
         ? normalizePreviewResult(result, request)
         : unavailable();
-    } catch {
+    } catch (error) {
+      if (isHostedProducerProvenanceFatalError(error)) throw error;
       return unavailable();
     }
   }
@@ -410,7 +413,8 @@ export class HostedTeamApprovalAuthorityAdapter
       return this.isActive(context, context.deadlineAtMs)
         ? normalizeDecisionResult(result, command)
         : unavailable();
-    } catch {
+    } catch (error) {
+      if (isHostedProducerProvenanceFatalError(error)) throw error;
       return unavailable();
     }
   }

@@ -1,3 +1,12 @@
+import { createHash } from 'node:crypto';
+import { Readable } from 'node:stream';
+
+import {
+  bindProductHostedProducerInstance,
+  clearProductHostedProducerProvenance,
+  type HostedProducerProvenance,
+  installProductHostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main/hosted';
 import {
   HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
   parseHostedTeamApprovalGeneration,
@@ -118,9 +127,25 @@ async function createApp(
   feature = facade(),
   createContext: HostedTeamApprovalsContextFactory = (_descriptor, _request, signal) =>
     makeContext(signal),
-  routeAdmission: HostedRouteAdmission = readyAdmission()
+  routeAdmission: HostedRouteAdmission = readyAdmission(),
+  provenance: HostedProducerProvenance = {
+    role: 'product-producer',
+    controllerNonce: 'c'.repeat(64),
+    runId: 'd'.repeat(64),
+    emit: vi.fn(),
+    bindInvalidation: vi.fn(),
+    poison: vi.fn((reason: string) => { throw new Error(reason); }),
+    close: vi.fn(),
+  }
 ) {
   const app = Fastify();
+  bindProductHostedProducerInstance(provenance, {
+    deploymentId: 'deployment_approval-http',
+    bootId: 'boot_approval-http',
+    ownerAuthority: 'owner-authority_http',
+    ownerGeneration: 7,
+    ownerSessionId: 'owner-session_http',
+  });
   const contextFactory = vi.fn(createContext);
   registerHostedTeamApprovalsHttp(
     app,
@@ -130,6 +155,7 @@ async function createApp(
       routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
     }),
     routeAdmission,
+    provenance,
     contextFactory
   );
   await app.ready();
@@ -186,6 +212,15 @@ describe('hosted team approvals HTTP contribution', () => {
           routes: Object.freeze([...HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS].reverse()),
         }),
         readyAdmission(),
+        {
+          role: 'product-producer',
+          controllerNonce: 'c'.repeat(64),
+          runId: 'd'.repeat(64),
+          emit: vi.fn(),
+          bindInvalidation: vi.fn(),
+          poison: vi.fn((reason: string) => { throw new Error(reason); }),
+          close: vi.fn(),
+        },
         (_descriptor, _request, signal) => makeContext(signal)
       )
     ).toThrow('hosted-team-approvals-route-contribution-invalid');
@@ -239,6 +274,55 @@ describe('hosted team approvals HTTP contribution', () => {
       });
       expect(response.statusCode).toBe(503);
       expect(observedSignal?.aborted).toBe(true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects an oversized request before context creation or body parsing', async () => {
+    const feature = facade();
+    const contextFactory = vi.fn<HostedTeamApprovalsContextFactory>(
+      (_descriptor, _request, signal) => makeContext(signal)
+    );
+    const { app } = await createApp(feature, contextFactory);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        headers: { 'content-type': 'application/json' },
+        payload: Buffer.alloc(256 * 1024 + 1, 0x20),
+      });
+      expect(response.statusCode).toBe(413);
+      expect(contextFactory).not.toHaveBeenCalled();
+      expect(feature.getPage).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stops buffering a chunked request as soon as the streaming limit is exceeded', async () => {
+    const feature = facade();
+    const contextFactory = vi.fn<HostedTeamApprovalsContextFactory>(
+      (_descriptor, _request, signal) => makeContext(signal)
+    );
+    const { app } = await createApp(feature, contextFactory);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        headers: {
+          'content-type': 'application/json',
+          'transfer-encoding': 'chunked',
+        },
+        payload: Readable.from([
+          Buffer.alloc(128 * 1024, 0x20),
+          Buffer.alloc(128 * 1024, 0x20),
+          Buffer.from('x'),
+        ]),
+      });
+      expect(response.statusCode).toBe(413);
+      expect(contextFactory).not.toHaveBeenCalled();
+      expect(feature.getPage).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
@@ -392,6 +476,49 @@ describe('hosted team approvals HTTP contribution', () => {
       expect(feature.getPage).toHaveBeenCalledOnce();
       expect(feature.decide).not.toHaveBeenCalled();
     } finally {
+      await app.close();
+    }
+  });
+
+  it('emits the finalized status and body digest before dispatch without retaining body text', async () => {
+    const emit = vi.fn();
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit,
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => { throw new Error(reason); }),
+      close: vi.fn(),
+    };
+    installProductHostedProducerProvenance(provenance);
+    const { app } = await createApp(facade(), undefined, undefined, provenance);
+    try {
+      const rawRequest = '{ "page" : true }';
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        headers: { 'content-type': 'application/json' },
+        payload: rawRequest,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(emit).toHaveBeenCalledWith('productTimeline', {
+        recordType: 'approval-http-response-finalized',
+        operationNonce: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        native: expect.objectContaining({
+          method: 'POST',
+          outcome: 'success',
+          requestBodyBytes: Buffer.byteLength(rawRequest),
+          requestBodySha256: createHash('sha256').update(rawRequest).digest('hex'),
+          responseBodyBytes: Buffer.byteLength(JSON.stringify(page())),
+          responseBodySha256: createHash('sha256').update(JSON.stringify(page())).digest('hex'),
+          routeId: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS[0].id,
+          status: 200,
+        }),
+      });
+      expect(JSON.stringify(emit.mock.calls)).not.toContain('Review a bounded file change');
+    } finally {
+      clearProductHostedProducerProvenance(provenance);
       await app.close();
     }
   });

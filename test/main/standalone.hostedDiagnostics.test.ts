@@ -295,13 +295,33 @@ describe('standalone hosted diagnostics', () => {
     expect(source).toContain('authentication: hostedAccessFeature.http');
     expect(source).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
     expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
-    expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(1);
+    const catalogs = [
+      ...source.matchAll(
+        /createHostedRouteAdmissionBinding\(\{\s*routes:\s*(\[[\s\S]*?\]|HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS),/g
+      ),
+    ].map((match) => match[1]!.replace(/\s+/g, ' '));
+    expect(catalogs).toEqual([
+      '[ ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS, ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission), ]',
+      'HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS',
+    ]);
+    expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(2);
+    expect(source).toMatch(
+      /hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding\(\{\s*routes: \[[\s\S]*?\],\s*readiness: \{ readiness: async \(\) => hostedRouteReadiness\(\) \},\s*routeScope: 'production',\s*\}\)/
+    );
+    expect(source).toMatch(
+      /hostedDiagnostics = createHostedDiagnosticsComposition\(\{\s*authentication: hostedAccessFeature\.http,\s*runtimeInstance: hostedDiagnosticsRuntimeInstance,\s*expectedDeploymentId: hostedAccessFeature\.deploymentId,\s*routeAdmissionBinding: hostedRouteAdmissionBinding,\s*\}\)/
+    );
+    expect(source).toMatch(
+      /createRouteAdmission: isReady => createHostedRouteAdmissionBinding\(\{\s*routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,\s*routeScope: 'production',\s*readiness: \{ readiness: async \(\) => createStandaloneHostedRouteReadiness\(\{[\s\S]*?lifecycleOwnerAvailable: isReady\(\),\s*\}\)/
+    );
     expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
     expect(source).toContain('hostedProductionOwnerRouteDescriptors(productionOwnerAdmission)');
     expect(source).toContain('createHostedApprovalProductionCompositionFromEnvironment(');
     expect(source).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(source).toContain('hostedDiagnosticsRoutes: hostedDiagnostics');
     expect(source).toContain('hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance');
+    expect(shutdown.indexOf('hostedDiagnostics?.close()')).toBeGreaterThan(-1);
+    expect(shutdown.indexOf('httpServer.stop()')).toBeGreaterThan(-1);
     expect(shutdown.indexOf('hostedDiagnostics?.close()')).toBeLessThan(
       shutdown.indexOf('httpServer.stop()')
     );

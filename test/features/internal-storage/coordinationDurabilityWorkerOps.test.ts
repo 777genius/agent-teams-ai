@@ -10,6 +10,8 @@ import { parseDeploymentId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
+
 import type { DurableApplicationCommandPersistClaimRequest } from '@features/application-command-ledger/core/application';
 import type { BackupRunRecord } from '@features/coordination-backup/contracts';
 import type { CoordinationEventDraft } from '@features/coordination-events/contracts';
@@ -168,50 +170,44 @@ describe('coordination durability worker operations', () => {
   });
 
   it('migrates a populated historical v7 database through the v8 journal and v9 team keys', async () => {
-    const first = await makeCore();
-    initializeJournal(first.core);
-    prepareCommittableCommand(first.core, {
-      actor: { kind: 'verified_runtime', actorRef: 'runtime-before-v8', runId: 'run-before-v8' },
-      runId: 'run-before-v8',
-      provenance: 'trusted_context_v1',
-    });
-    first.core.handle('appCommandLedger.durable.commit', makeCommitRequest());
-    first.core.close();
-
-    const v7 = new Database(first.databasePath);
-    v7.pragma('foreign_keys = OFF');
+    const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'durability-v7-'));
+    temporaryDirectories.push(directory);
+    const databasePath = path.join(directory, 'internal.db');
+    const v7 = new Database(databasePath);
+    createReleasedInternalStorageSchema(v7, 7);
+    v7.pragma('foreign_keys = ON');
+    v7.prepare(`INSERT INTO durable_application_commands (
+      command_id, deployment_id, stable_actor_id, command_kind, idempotency_key,
+      descriptor_id, descriptor_version, input_schema_version, fingerprint_version,
+      effect_plan_version, fingerprint_key_version, fingerprint_digest,
+      attempt_generation, attempt_id, attempt_owner_id, attempt_lease_token,
+      attempt_claimed_at, attempt_lease_expires_at, state, retention_class,
+      created_at, updated_at, committed_at, outcome_json
+    ) VALUES ('command-1', ?, 'stable-actor-a', 'legacy_recovery', 'idempotency-1',
+      'legacy-recovery-v1', 1, 1, 'hmac-sha256-ld-v1', 1, 'legacy-unavailable', ?,
+      1, 'attempt-1', 'legacy-recovery', 'lease-1', ?, '9999-12-31T23:59:59.999Z',
+      'committed', 'legacy_recovery', ?, ?, ?, '{}')`)
+      .run(DEPLOYMENT_ID, 'a'.repeat(64), NOW_ISO, NOW_ISO, NOW_ISO, NOW_ISO);
+    // v7 already renamed publication_* to delivery_*; attribution arrives in v8.
+    v7.prepare(`INSERT INTO durable_application_command_outbox (
+      event_id, command_id, deployment_id, event_type, scope_kind, scope_id,
+      schema_version, payload_json, created_at, delivery_generation, semantic_revision
+    ) VALUES ('event-v7', 'command-1', ?, 'task.created', 'team', 'team-a',
+      1, '{"taskId":"task-a"}', ?, 0, 1)`).run(DEPLOYMENT_ID, NOW_ISO);
     v7.prepare(
       `INSERT INTO member_work_sync_status (
-           team_name, team_key, member_key, member_name, state, evaluated_at,
-           provider_id, status_json
-         ) VALUES (?, ?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
-    ).run(' TEAM-A ', 'team-a', NOW_ISO);
-    v7.exec(`
-      DROP TABLE hosted_workspace_grants;
-      DROP TABLE hosted_workspaces;
-      DROP TABLE coordination_event_journal;
-      DROP TABLE coordination_event_journal_metadata;
-      DROP TABLE coordination_backup_writer_fences;
-      DROP TABLE coordination_backup_runs;
-      DROP INDEX idx_mws_status_team_key;
-      DROP INDEX idx_mws_report_intents_team_key;
-      DROP INDEX idx_mws_outbox_team_key;
-      DROP INDEX idx_mws_metric_events_team_key;
-      ALTER TABLE member_work_sync_status DROP COLUMN team_key;
-      ALTER TABLE member_work_sync_report_intents DROP COLUMN team_key;
-      ALTER TABLE member_work_sync_outbox DROP COLUMN team_key;
-      ALTER TABLE member_work_sync_metric_events DROP COLUMN team_key;
-      ALTER TABLE durable_application_commands DROP COLUMN coordination_attribution_json;
-    `);
+           team_name, member_key, member_name, state, evaluated_at, provider_id, status_json
+         ) VALUES (?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
+    ).run(' TEAM-A ', NOW_ISO);
     for (const tableName of MEMBER_WORK_SYNC_TABLES) {
       const columns = v7.pragma(`table_info(${tableName})`) as { name: string }[];
       expect(columns.map(({ name }) => name)).not.toContain('team_key');
     }
     v7.pragma('application_id = 0');
-    v7.pragma('user_version = 7');
+    expect(v7.pragma('foreign_key_check')).toEqual([]);
     v7.close();
 
-    const migrated = track(makeCoreAt(first.databasePath));
+    const migrated = track(makeCoreAt(databasePath));
     expect(migrated.handle('ping', {})).toMatchObject({
       schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
     });
@@ -230,9 +226,15 @@ describe('coordination durability worker operations', () => {
       },
       scope: { kind: 'team', scopeId: 'team-a' },
       teamId: 'team-a',
+      payload: { taskId: 'task-a' },
     });
-    const current = new Database(first.databasePath, { readonly: true });
+    const current = new Database(databasePath, { readonly: true });
     try {
+      expect(current.pragma('foreign_key_check')).toEqual([]);
+      expect(current.prepare('SELECT state, stable_actor_id FROM durable_application_commands').get())
+        .toEqual({ state: 'committed', stable_actor_id: 'stable-actor-a' });
+      expect(current.prepare('SELECT delivery_generation, semantic_revision FROM durable_application_command_outbox').get())
+        .toEqual({ delivery_generation: 0, semantic_revision: 1 });
       expect(
         current
           .prepare(

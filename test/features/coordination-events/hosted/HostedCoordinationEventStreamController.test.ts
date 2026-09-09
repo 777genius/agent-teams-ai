@@ -1,10 +1,22 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
+import { CoordinationEventHandoff } from '@features/coordination-events/core/application/CoordinationEventHandoff';
+import { encodeReplayCursor } from '@features/coordination-events/core/domain';
 import {
   HostedCoordinationEventStreamController,
   type HostedCoordinationEventStreamScheduler,
 } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController';
-import { describe, expect, it, vi } from 'vitest';
+import { SqliteCoordinationEventJournal } from '@features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal';
+import {
+  bindProductHostedProducerInstance,
+  clearProductHostedProducerProvenance,
+  type HostedProducerProvenance,
+  installProductHostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main/hosted';
+import { resetProductHostedProducerProvenanceForTests } from '@features/hosted-producer-provenance/main/HostedProducerProvenanceRegistry';
+import { createProductHostedProducerSseWriteEmitter } from '@main/composition/hosted/hostedProducerProvenanceNodeOperations';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   CoordinationEventEnvelope,
@@ -12,9 +24,13 @@ import type {
   CoordinationReplayBatch,
   ReplayCursor,
 } from '@features/coordination-events/contracts';
+import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const cursor = (value: string): ReplayCursor => value as ReplayCursor;
+const streamIdentityFactory = Object.freeze({ createStreamId: randomUUID });
+
+afterEach(() => resetProductHostedProducerProvenanceForTests());
 
 function deferred<T>(): {
   readonly promise: Promise<T>;
@@ -50,6 +66,7 @@ class FakeRawReply extends EventEmitter {
   destroyed = false;
   writableEnded = false;
   flushes = 0;
+  destroyCalls = 0;
   readonly frames: string[] = [];
   readonly headers: Array<{ status: number; headers: Record<string, string> }> = [];
   writeResult = true;
@@ -72,6 +89,12 @@ class FakeRawReply extends EventEmitter {
   end(): void {
     if (this.writableEnded) return;
     this.writableEnded = true;
+  }
+
+  destroy(): void {
+    this.destroyCalls += 1;
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.emit('close');
   }
 }
@@ -225,6 +248,92 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('rejects gap admission and never resumes a predecessor replay after drain reopens', async () => {
+    const pending = deferred<CoordinationReplayBatch>();
+    const entered = deferred<void>();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: () => { entered.resolve(); return pending.promise; } },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: async () => ({
+        isCurrent: () => true,
+        projectEvent: (committed: CoordinationEventEnvelope) => ({
+          scope: committed.scope, eventType: committed.eventType, publicPayload: {},
+        }),
+      }) },
+      wakeups: createWakeups().source, streamIdentityFactory, scheduler: new ManualScheduler(),
+    });
+    const handler = registerHandler(controller), old = createReply();
+    const serving = handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), old.reply);
+    await entered.promise;
+    const gap = deferred<void>(), release = deferred<void>();
+    const draining = controller.runWithStreamsDrained(async () => { gap.resolve(); await release.promise; });
+    await gap.promise;
+    const rejected = createReply();
+    await handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), rejected.reply);
+    expect(rejected.statusCode).toBe(503);
+    release.resolve();
+    await draining;
+    pending.resolve(batch({ from: 'cursor-0', next: 'cursor-1', events: [event({ sequence: 1 })], hasMore: false }));
+    await serving;
+    expect(old.raw.frames).toEqual([]);
+    controller.close();
+  });
+
+  it('fails closed without a raw write after the installed product emitter is cleared', async () => {
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: vi.fn(),
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    };
+    const emitter = vi.fn(() => true);
+    installProductHostedProducerProvenance(provenance, emitter);
+    clearProductHostedProducerProvenance(provenance);
+
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: vi.fn(async () =>
+          batch({
+            from: 'cursor-0',
+            next: 'cursor-1',
+            events: [event({ sequence: 1 })],
+            hasMore: false,
+          })
+        ),
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(async (committed: CoordinationEventEnvelope) => ({
+            scope: committed.scope,
+            eventType: committed.eventType,
+            publicPayload: { publicValue: committed.eventSequence },
+          })),
+        })),
+      },
+      wakeups: wakeups.source,
+      streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+
+    await registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+
+    expect(reply.raw.frames).toEqual([]);
+    expect(emitter).not.toHaveBeenCalled();
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('flushes an authorized empty stream before the first event or heartbeat', async () => {
     const wakeups = createWakeups();
     const controller = new HostedCoordinationEventStreamController({
@@ -247,6 +356,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({
@@ -289,6 +399,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       heartbeatIntervalMs: 10,
     });
@@ -324,6 +435,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -373,6 +485,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -396,6 +509,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -434,6 +548,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(() => pendingAuthorization.promise),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -473,6 +588,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -517,6 +633,7 @@ describe('HostedCoordinationEventStreamController', () => {
         }),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -547,6 +664,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -560,6 +678,29 @@ describe('HostedCoordinationEventStreamController', () => {
   });
 
   it('lets Last-Event-ID win, listens before replay, catches up durably, and projects bounded envelopes', async () => {
+    const provenanceEmit = vi.fn();
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: provenanceEmit,
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    };
+    bindProductHostedProducerInstance(provenance, {
+      deploymentId: 'deployment_sse',
+      bootId: 'boot_sse',
+      ownerAuthority: 'owner-authority_sse',
+      ownerGeneration: 7,
+      ownerSessionId: 'owner-session_sse',
+    });
+    installProductHostedProducerProvenance(
+      provenance,
+      createProductHostedProducerSseWriteEmitter(process.env)
+    );
     const order: string[] = [];
     const wakeups = createWakeups();
     wakeups.source.subscribe.mockImplementation((listener: () => void) => {
@@ -604,6 +745,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -619,10 +761,29 @@ describe('HostedCoordinationEventStreamController', () => {
     };
 
     await registerHandler(controller)(request, reply.reply);
+    clearProductHostedProducerProvenance(provenance);
 
     expect(order).toEqual(['subscribe', 'replay:cursor-0', 'replay:cursor-1']);
     const eventFrames = reply.raw.frames.filter((frame) => frame.startsWith('id: '));
     expect(eventFrames).toHaveLength(2);
+    expect(provenanceEmit).toHaveBeenCalledTimes(2);
+    expect(provenanceEmit.mock.calls).toEqual(
+      eventFrames.map((frame) => [
+        'productTimeline',
+        {
+          recordType: 'coordination-sse-write-succeeded',
+          operationNonce: expect.stringMatching(/^[0-9a-f]{64}$/u),
+          native: expect.objectContaining({
+            eventId: expect.stringMatching(/^cursor-/u),
+            eventType: 'coordination_event',
+            frameBytes: Buffer.byteLength(frame),
+            frameKind: 'coordination_event',
+            frameSha256: createHash('sha256').update(frame).digest('hex'),
+          }),
+        },
+      ])
+    );
+    expect(JSON.stringify(provenanceEmit.mock.calls)).not.toContain('private-owner');
     expect(eventFrames[0]).toContain('id: cursor-1\nevent: coordination_event\n');
     expect(eventFrames[1]).toContain('id: cursor-3\nevent: coordination_event\n');
     const envelopes = eventFrames.map((frame) =>
@@ -667,6 +828,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -704,6 +866,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -755,6 +918,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -802,6 +966,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -840,6 +1005,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -880,6 +1046,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       slowConsumerTimeoutMs: 10,
     });
@@ -896,9 +1063,93 @@ describe('HostedCoordinationEventStreamController', () => {
     await handling;
 
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(reply.raw.writableEnded).toBe(true);
+    expect(reply.raw.destroyCalls).toBe(1);
+    expect(reply.raw.destroyed).toBe(true);
+    expect(reply.raw.writableEnded).toBe(false);
     controller.close();
     controller.close();
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Exercise the real adapter -> handoff -> SSE mapping, with the worker's exact
+// transported stale outcome injected only after the valid watermark was read.
+describe('SQLite retention race at the SSE boundary', () => {
+  function fixture(initialHigh = 2) {
+    let high = initialHigh;
+    let floor = 0;
+    let pruneOnRead = true;
+    const metadata = () => ({ deploymentId: 'deployment-1', eventEpoch: 'epoch-1',
+      highWatermarkSequence: high, retentionFloorSequence: floor });
+    const position = (eventSequence: number) => encodeReplayCursor({ ...metadata(), eventSequence });
+    const read = vi.fn(async (input: { afterSequence: number }) => {
+      if (pruneOnRead) floor = 1;
+      if (input.afterSequence < floor) throw new Error('coordination-event-journal-cursor-stale');
+      const draft = {
+        actor: { actorRef: 'test-operator', kind: 'operator' }, emittedAt: '2026-08-02T00:00:00.000Z',
+        eventId: 'event-2', eventType: 'team-lifecycle.run-accepted', payload: {},
+        schemaVersion: 1, scope: { kind: 'team', scopeId: 'team-1' }, teamId: 'team-1',
+      };
+      return { watermark: metadata(), rows: [{ deploymentId: 'deployment-1', eventEpoch: 'epoch-1',
+        eventSequence: 2, eventId: 'event-2', bodyJson: JSON.stringify(draft) }] };
+    });
+    const storage = {
+      coordinationEventInitialize: async () => metadata(),
+      coordinationEventGetWatermark: vi.fn(async () => metadata()),
+      coordinationEventRead: read,
+    } as unknown as CoordinationDurabilityStorageGateway;
+    const journal = new SqliteCoordinationEventJournal({ storage, deploymentId: 'deployment-1' });
+    const handoff = new CoordinationEventHandoff({ journal,
+      deadlineScheduler: { scheduleDeadline: () => () => undefined } });
+    return { read, storage, journal, handoff, position,
+      advance: () => { high = 2; },
+      retain: () => { floor = 1; pruneOnRead = false; },
+    };
+  }
+
+  it.each(['initial', 'established'] as const)('emits cursor_expired for %s replay when pruning overtakes row read', async (phase) => {
+    const f = fixture(phase === 'initial' ? 2 : 0);
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: f.handoff, wakeups: wakeups.source, streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+      authorizer: { allowedOrigin: 'https://host.test', authorize: async () => ({
+        isCurrent: async () => true, projectEvent: async () => null,
+      }) },
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(createRequest({ origin: 'https://host.test', after: f.position(0) }), reply.reply);
+    if (phase === 'established') {
+      await vi.waitFor(() => expect(reply.raw.flushes).toBe(1));
+      expect(f.read).not.toHaveBeenCalled();
+      f.advance();
+      wakeups.notify();
+    }
+    await handling;
+    expect(f.read).toHaveBeenCalledWith(expect.objectContaining({ afterSequence: 0, throughSequence: 2 }));
+    expect(reply.statusCode).toBe(200);
+    expect(reply.raw.frames.join('')).toContain('event: resync_required');
+    expect(reply.raw.frames.join('')).toContain('"reason":"cursor_expired"');
+    expect(reply.raw.frames.join('')).not.toContain('coordination-event-journal-cursor-stale');
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects delayed cursor zero after task 1 is pruned, but replays retained launch 2 from floor 1', async () => {
+    const f = fixture();
+    f.retain();
+    await expect(f.handoff.replay({ cursor: f.position(0) })).rejects.toMatchObject({ code: 'replay_cursor_stale' });
+    expect(f.read).not.toHaveBeenCalled();
+    const replay = await f.handoff.replay({ cursor: f.position(1) });
+    expect(replay.events).toHaveLength(1);
+    expect(replay.events[0]).toMatchObject({ eventSequence: 2, eventType: 'team-lifecycle.run-accepted', eventCursor: f.position(2) });
+    expect(replay.nextCursor).toBe(f.position(2));
+  });
+
+  it.each([new Error('database unavailable'), new Error('coordination-event-journal-cursor-stale:other'),
+    { message: 'coordination-event-journal-cursor-stale' }])('preserves unrelated storage rejection identity %#', async (failure) => {
+    const f = fixture();
+    f.read.mockRejectedValueOnce(failure);
+    await expect(f.journal.readCommittedEvents({ afterSequence: 0, throughSequence: 2, limit: 10 })).rejects.toBe(failure);
   });
 });

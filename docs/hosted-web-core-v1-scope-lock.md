@@ -17,11 +17,14 @@ Use these sources for different questions:
 2. `docs/hosted-web-phases/START_HERE.md` and `EXECUTION_INDEX.json` remain authoritative for current
    execution status, ownership, and admission.
 3. This file is authoritative for Core v1 product scope, simplifications, and preservation decisions.
-4. `docs/hosted-web-e2e-completion-plan.md` remains design reference where it does not conflict with
+4. The [Hosted v1 runtime and release topology](hosted-v1-runtime-release-topology.md) records the
+   accepted legacy/Hosted merge, artifact, release, rollback, and future-runtime separation. It is
+   not execution or activation authority.
+5. `docs/hosted-web-e2e-completion-plan.md` remains design reference where it does not conflict with
    this scope lock.
-5. `docs/hosted-opencode-downstream-policy.md` defines why the temporary OpenCode downstream exists,
+6. `docs/hosted-opencode-downstream-policy.md` defines why the temporary OpenCode downstream exists,
    how it follows upstream, and when it must be removed.
-6. Phase packets, `.codex-handoff`, and `docs/research/hosted-web` remain retained evidence. They are
+7. Phase packets, `.codex-handoff`, and `docs/research/hosted-web` remain retained evidence. They are
    not current product scope or execution authority unless the live router explicitly activates them.
 
 If an older table says that full TeamsAPI parity, automatic adoption, browser-local command receipts,

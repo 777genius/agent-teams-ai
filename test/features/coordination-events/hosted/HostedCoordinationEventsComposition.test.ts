@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   encodeReplayCursor,
   HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
@@ -8,6 +10,8 @@ import {
 } from '@features/coordination-events/main';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
+
+const streamIdentityFactory = Object.freeze({ createStreamId: randomUUID });
 
 function storage(overrides: Partial<HostedCoordinationEventStorage> = {}) {
   const metadata = {
@@ -76,6 +80,7 @@ describe('hosted coordination events composition', () => {
       storage: journal,
       deploymentId: 'deployment-live',
       authorizer: authorizer(),
+      streamIdentityFactory,
       retentionPolicy: { intervalMs: 50, maxRetainedEvents: 1 },
       retentionScheduler: { schedule },
     });
@@ -102,6 +107,7 @@ describe('hosted coordination events composition', () => {
       storage: journal,
       deploymentId: 'deployment-live',
       authorizer: authorizer(),
+      streamIdentityFactory,
     });
 
     await expect(stream.handoff.replay({ cursor })).resolves.toMatchObject({
@@ -130,6 +136,7 @@ describe('hosted coordination events composition', () => {
       }),
       deploymentId: 'deployment-live',
       authorizer: streamAuthorizer,
+      streamIdentityFactory,
     });
     const app = Fastify();
     stream.register(app);
@@ -162,6 +169,7 @@ describe('hosted coordination events composition', () => {
       }),
       deploymentId: 'deployment-live',
       authorizer: authorizer(),
+      streamIdentityFactory,
     });
     const app = Fastify();
     stream.register(app);
@@ -185,6 +193,7 @@ describe('hosted coordination events composition', () => {
       storage: journal,
       deploymentId: 'deployment-live',
       authorizer: authorize,
+      streamIdentityFactory,
     });
     const app = Fastify();
     stream.register(app);

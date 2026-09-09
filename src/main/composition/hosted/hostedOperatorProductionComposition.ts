@@ -1,3 +1,4 @@
+import { requireProductHostedProducerInstance } from '@features/hosted-producer-provenance/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted query context exposes a bounded server-only facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
 // eslint-disable-next-line no-restricted-imports -- Production composition consumes bounded hosted facets.
@@ -5,6 +6,7 @@ import {
   createHostedReadinessFeature,
   createHostedReadinessRouteContribution,
 } from '@features/hosted-readiness/main/hosted';
+import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 // eslint-disable-next-line no-restricted-imports -- Production composition consumes bounded hosted facets.
 import {
   createDurableHostedTeamApprovalAuthority,
@@ -19,10 +21,11 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
-import { createHostedOperatorSurfacesComposition } from './hostedOperatorSurfacesComposition';
+import { createHostedOperatorSurfacesComposition,type CreateHostedOperatorSurfacesCompositionDependencies } from './hostedOperatorSurfacesComposition';
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
+import type { HostedProducerProvenance } from '@features/hosted-producer-provenance/main';
 import type {
   HostedTeamApprovalAuthorityStorageGateway,
   TeamIdentityReadGateway,
@@ -43,6 +46,9 @@ const DEFAULT_PUMP_INTERVAL_MS = 1_000;
 const DEFAULT_PUMP_RETRY_MS = 250;
 
 export interface HostedOperatorProductionComposition {
+  readonly surfaceDependencies?: CreateHostedOperatorSurfacesCompositionDependencies;
+  revoke?(): void;
+  drain?(): Promise<void>;
   isReady(): boolean;
   reconcileApprovalDecision(
     request: HostedApprovalDecisionReconciliationRequest
@@ -82,14 +88,62 @@ export interface CreateHostedOperatorProductionCompositionDependencies {
   readonly clearTimer?: (timer: ReturnType<typeof setTimeout>) => void;
   readonly pumpIntervalMs?: number;
   readonly pumpRetryMs?: number;
+  readonly producerProvenance: HostedProducerProvenance;
 }
 
-/** Owns authenticated approval HTTP, durable recovery, delivery drain, and timeout scheduling. */
-export function createHostedOperatorProductionComposition(
-  dependencies: CreateHostedOperatorProductionCompositionDependencies
-): HostedOperatorProductionComposition {
+export interface HostedOperatorProductionCompositionPlan {
+  readonly runtimeInstance: RuntimeInstanceContext;
+  readonly approvalTeamIds: readonly TeamId[];
+  /** Present only after durable team identities were resolved and bound before activation. */
+  readonly identityValidatedTeamIds: readonly TeamId[] | null;
+  readonly recoveryTimeoutMs: number;
+  readonly leaseDurationMs: number;
+  readonly batchSize: number;
+  readonly pumpIntervalMs: number;
+  readonly pumpRetryMs: number;
+}
+
+export interface PlanHostedOperatorProductionCompositionDependencies {
+  readonly runtimeInstance: RuntimeInstanceContext;
+  readonly expectedDeploymentId: string;
+  readonly mountGeneration: number;
+  readonly restoreGeneration: number;
+  readonly teamIds: readonly TeamId[];
+  readonly recoveryTimeoutMs?: number;
+  readonly leaseDurationMs?: number;
+  readonly batchSize?: number;
+  readonly pumpIntervalMs?: number;
+  readonly pumpRetryMs?: number;
+}
+
+export function bindHostedApprovalStorageGateway(
+  storage: HostedTeamApprovalAuthorityStorageGateway
+): HostedTeamApprovalAuthorityStorageGateway {
+  return Object.freeze({
+    hostedTeamApprovalObserve: storage.hostedTeamApprovalObserve.bind(storage),
+    hostedTeamApprovalReadPending: storage.hostedTeamApprovalReadPending.bind(storage),
+    hostedTeamApprovalReadPreview: storage.hostedTeamApprovalReadPreview.bind(storage),
+    hostedTeamApprovalDecide: storage.hostedTeamApprovalDecide.bind(storage),
+    hostedTeamApprovalClaimDeliveries: storage.hostedTeamApprovalClaimDeliveries.bind(storage),
+    hostedTeamApprovalAcknowledgeDelivery:
+      storage.hostedTeamApprovalAcknowledgeDelivery.bind(storage),
+    hostedTeamApprovalMarkDeliveryOperatorRequired:
+      storage.hostedTeamApprovalMarkDeliveryOperatorRequired.bind(storage),
+    hostedTeamApprovalReadDeliveryReconciliation:
+      storage.hostedTeamApprovalReadDeliveryReconciliation.bind(storage),
+    hostedTeamApprovalSettleDeliveryReconciliation:
+      storage.hostedTeamApprovalSettleDeliveryReconciliation.bind(storage),
+    hostedTeamApprovalAuditTimeouts: storage.hostedTeamApprovalAuditTimeouts.bind(storage),
+  });
+}
+
+/** Completes every deterministic operator binding/configuration check before activation. */
+export function planHostedOperatorProductionComposition(
+  dependencies: PlanHostedOperatorProductionCompositionDependencies
+): HostedOperatorProductionCompositionPlan {
+  const runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
   if (
-    dependencies.runtimeInstance.deploymentId !== dependencies.expectedDeploymentId ||
+    runtimeInstance.deploymentId !== dependencies.expectedDeploymentId ||
     !Number.isSafeInteger(dependencies.mountGeneration) ||
     dependencies.mountGeneration < 1 ||
     !Number.isSafeInteger(dependencies.restoreGeneration) ||
@@ -97,9 +151,7 @@ export function createHostedOperatorProductionComposition(
   ) {
     throw new TypeError('hosted-operator-production-binding-invalid');
   }
-  const recoveryTimeoutMs = dependencies.recoveryTimeoutMs ?? DEFAULT_RECOVERY_TIMEOUT_MS;
-  const approvalRuntime = dependencies.approvalRuntime;
-  const approvalTeamIds = Object.freeze(approvalRuntime.teamIds.map(parseTeamId));
+  const approvalTeamIds = Object.freeze(dependencies.teamIds.map(parseTeamId));
   if (
     approvalTeamIds.length === 0 ||
     approvalTeamIds.length > 256 ||
@@ -107,9 +159,9 @@ export function createHostedOperatorProductionComposition(
   ) {
     throw new TypeError('hosted-operator-production-team-routes-invalid');
   }
-  const admittedTeamIds = new Set<TeamId>(approvalTeamIds);
-  const leaseDurationMs = approvalRuntime.leaseDurationMs ?? DEFAULT_DELIVERY_LEASE_MS;
-  const batchSize = approvalRuntime.batchSize ?? DEFAULT_DELIVERY_BATCH_SIZE;
+  const recoveryTimeoutMs = dependencies.recoveryTimeoutMs ?? DEFAULT_RECOVERY_TIMEOUT_MS;
+  const leaseDurationMs = dependencies.leaseDurationMs ?? DEFAULT_DELIVERY_LEASE_MS;
+  const batchSize = dependencies.batchSize ?? DEFAULT_DELIVERY_BATCH_SIZE;
   const pumpIntervalMs = dependencies.pumpIntervalMs ?? DEFAULT_PUMP_INTERVAL_MS;
   const pumpRetryMs = dependencies.pumpRetryMs ?? DEFAULT_PUMP_RETRY_MS;
   if (
@@ -127,42 +179,155 @@ export function createHostedOperatorProductionComposition(
   ) {
     throw new TypeError('hosted-operator-production-recovery-configuration-invalid');
   }
+  return Object.freeze({
+    runtimeInstance,
+    approvalTeamIds,
+    identityValidatedTeamIds: null,
+    recoveryTimeoutMs,
+    leaseDurationMs,
+    batchSize,
+    pumpIntervalMs,
+    pumpRetryMs,
+  });
+}
+
+export async function resolveHostedOperatorProductionCompositionPlan(
+  dependencies: PlanHostedOperatorProductionCompositionDependencies &
+    Readonly<{
+      workspaceId: WorkspaceId;
+      teamIdentities: TeamIdentityReadGateway;
+    }>
+): Promise<HostedOperatorProductionCompositionPlan> {
+  const plan = planHostedOperatorProductionComposition(dependencies);
+  const workspaceId = dependencies.workspaceId;
+  const mountGeneration = dependencies.mountGeneration;
+  const getTeamIdentity = dependencies.teamIdentities.getTeamIdentity.bind(
+    dependencies.teamIdentities
+  );
+  const identities = await Promise.all(
+    plan.approvalTeamIds.map((teamId) => getTeamIdentity(teamId))
+  );
+  if (
+    identities.some(
+      (identity, index) =>
+        identity?.teamId !== plan.approvalTeamIds[index] ||
+        identity.state !== 'active' ||
+        identity.workspaceBinding?.workspaceId !== workspaceId ||
+        identity.workspaceBinding.generation !== mountGeneration
+    )
+  ) {
+    throw new TypeError('hosted-operator-production-team-identity-invalid');
+  }
+  return Object.freeze({
+    ...plan,
+    identityValidatedTeamIds: Object.freeze([...plan.approvalTeamIds]),
+  });
+}
+
+/** Owns authenticated approval HTTP, durable recovery, delivery drain, and timeout scheduling. */
+export function createHostedOperatorProductionComposition(
+  dependencies: CreateHostedOperatorProductionCompositionDependencies
+): HostedOperatorProductionComposition {
+  const approvalRuntime = dependencies.approvalRuntime;
+  return createHostedOperatorProductionCompositionFromPlan(
+    dependencies,
+    planHostedOperatorProductionComposition({
+      runtimeInstance: dependencies.runtimeInstance,
+      expectedDeploymentId: dependencies.expectedDeploymentId,
+      mountGeneration: dependencies.mountGeneration,
+      restoreGeneration: dependencies.restoreGeneration,
+      teamIds: approvalRuntime.teamIds,
+      ...(dependencies.recoveryTimeoutMs === undefined
+        ? {}
+        : { recoveryTimeoutMs: dependencies.recoveryTimeoutMs }),
+      ...(approvalRuntime.leaseDurationMs === undefined
+        ? {}
+        : { leaseDurationMs: approvalRuntime.leaseDurationMs }),
+      ...(approvalRuntime.batchSize === undefined ? {} : { batchSize: approvalRuntime.batchSize }),
+      ...(dependencies.pumpIntervalMs === undefined
+        ? {}
+        : { pumpIntervalMs: dependencies.pumpIntervalMs }),
+      ...(dependencies.pumpRetryMs === undefined ? {} : { pumpRetryMs: dependencies.pumpRetryMs }),
+    })
+  );
+}
+
+/** Materializes an already validated operator plan; callers own pre-activation ordering. */
+export function createHostedOperatorProductionCompositionFromPlan(
+  dependencies: CreateHostedOperatorProductionCompositionDependencies,
+  plan: HostedOperatorProductionCompositionPlan
+): HostedOperatorProductionComposition {
+  requireProductHostedProducerInstance(dependencies.producerProvenance);
+  const authentication = Object.freeze({
+    authenticatedPrincipalFor: dependencies.authentication.authenticatedPrincipalFor.bind(
+      dependencies.authentication
+    ),
+  });
+  const teamIdentities = Object.freeze({
+    getTeamIdentity: dependencies.teamIdentities.getTeamIdentity.bind(dependencies.teamIdentities),
+    listTeamIdentities: dependencies.teamIdentities.listTeamIdentities.bind(
+      dependencies.teamIdentities
+    ),
+  });
+  const approvalStorage = bindHostedApprovalStorageGateway(dependencies.approvalStorage);
+  const workspaceId = dependencies.workspaceId;
+  const mountGeneration = dependencies.mountGeneration;
+  const restoreGeneration = dependencies.restoreGeneration;
+  const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
+  const approvalRuntime = Object.freeze({
+    ...dependencies.approvalRuntime,
+    teamIds: Object.freeze([...dependencies.approvalRuntime.teamIds]),
+  });
+  const {
+    runtimeInstance,
+    approvalTeamIds,
+    recoveryTimeoutMs,
+    leaseDurationMs,
+    batchSize,
+    pumpIntervalMs,
+    pumpRetryMs,
+  } = plan;
+  const admittedTeamIds = new Set<TeamId>(approvalTeamIds);
+  const identityValidatedTeamIds =
+    plan.identityValidatedTeamIds === null ? null : new Set(plan.identityValidatedTeamIds);
 
   const nowMs = dependencies.nowMs ?? Date.now;
   const setTimer = dependencies.setTimer ?? globalThis.setTimeout;
   const clearTimer = dependencies.clearTimer ?? globalThis.clearTimeout;
   const queryContexts = createAuthenticatedHostedQueryContextFactory({
-    authentication: Object.freeze({
-      authenticatedPrincipalFor: (request: object) =>
-        dependencies.authentication.authenticatedPrincipalFor(request),
-    }),
-    runtimeInstance: dependencies.runtimeInstance,
+    authentication,
+    runtimeInstance,
   });
   let wakePump = (): void => {};
   let triggerRecovery = (): void => {};
   const durable = createDurableHostedTeamApprovalAuthority({
-    storage: dependencies.approvalStorage,
+    storage: approvalStorage,
     scopeResolver: {
       async resolveScope(teamId, context) {
         if (!admittedTeamIds.has(teamId)) return null;
-        const identity = await dependencies.teamIdentities.getTeamIdentity(teamId);
-        if (
-          identity?.state !== 'active' ||
-          identity.workspaceBinding?.workspaceId !== dependencies.workspaceId ||
-          identity.workspaceBinding.generation !== dependencies.mountGeneration
-        ) {
+        if (identityValidatedTeamIds === null) {
+          const identity = await teamIdentities.getTeamIdentity(teamId);
+          if (
+            identity?.state !== 'active' ||
+            identity.workspaceBinding?.workspaceId !== workspaceId ||
+            identity.workspaceBinding.generation !== mountGeneration
+          ) {
+            return null;
+          }
+        } else if (!identityValidatedTeamIds.has(teamId)) {
           return null;
         }
         return Object.freeze({
           principalId: context.actorId,
-          workspaceId: dependencies.workspaceId,
+          workspaceId,
           teamId,
-          authorityGeneration: `generation_mount-${dependencies.mountGeneration}`,
-          restoreGeneration: dependencies.restoreGeneration,
+          authorityGeneration: `generation_mount-${mountGeneration}`,
+          restoreGeneration,
         });
       },
     },
     onDecisionCommitted: () => wakePump(),
+    producerProvenance: dependencies.producerProvenance,
   });
   const runtimeBridge = createHostedTeamApprovalRuntimeBridge({
     ingressEffectOutbox: approvalRuntime.ingressEffectOutbox,
@@ -183,6 +348,16 @@ export function createHostedOperatorProductionComposition(
   let pumpRequested = false;
   let deliveryCursor = 0;
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  const pending = new Set<Promise<unknown>>();
+  let drainFailure: unknown;
+  const track = <T>(operation: Promise<T>): Promise<T> => {
+    pending.add(operation);
+    void operation.then(() => pending.delete(operation), error => {
+      drainFailure ??= error;
+      pending.delete(operation);
+    });
+    return operation;
+  };
 
   const schedule = (callback: () => void, delayMs: number): void => {
     const timer = setTimer(() => {
@@ -204,10 +379,10 @@ export function createHostedOperatorProductionComposition(
       for (const teamId of orderedTeams) {
         if (closed || nowMs() >= deadlineAtMs) return false;
         const result = await runtimeBridge.deliverApprovalDecisions({
-          workspaceId: dependencies.workspaceId,
+          workspaceId,
           teamId,
-          authorityGeneration: `generation_mount-${dependencies.mountGeneration}`,
-          restoreGeneration: dependencies.restoreGeneration,
+          authorityGeneration: `generation_mount-${mountGeneration}`,
+          restoreGeneration,
           ownerId: approvalRuntime.ownerId,
           leaseToken: approvalRuntime.leaseToken,
           leaseDurationMs,
@@ -240,7 +415,7 @@ export function createHostedOperatorProductionComposition(
   const schedulePump = (delayMs: number, generation: number): void => {
     schedule(() => {
       if (closed || generation !== recoveryGeneration || !recovered) return;
-      void runPump(generation);
+      void track(runPump(generation));
     }, delayMs);
   };
 
@@ -283,7 +458,7 @@ export function createHostedOperatorProductionComposition(
     schedule(() => {
       if (closed || generation !== recoveryGeneration) return;
       const deadlineAtMs = nowMs() + recoveryTimeoutMs;
-      void dependencies.approvalStorage
+      void track(approvalStorage
         .hostedTeamApprovalAuditTimeouts({ nextAuditTimeMs, deadlineAtMs })
         .then(async (result) => {
           if (closed || generation !== recoveryGeneration) return;
@@ -303,7 +478,7 @@ export function createHostedOperatorProductionComposition(
           recovered = false;
           recoveryGeneration += 1;
           schedule(triggerRecovery, pumpRetryMs);
-        });
+        }));
     }, delay);
   };
 
@@ -324,8 +499,8 @@ export function createHostedOperatorProductionComposition(
       recoveryGeneration += 1;
       schedule(beginRecovery, pumpRetryMs);
     }, recoveryTimeoutMs);
-    void (async () => {
-      const audit = await dependencies.approvalStorage.hostedTeamApprovalAuditTimeouts({
+    void track((async () => {
+      const audit = await approvalStorage.hostedTeamApprovalAuditTimeouts({
         nextAuditTimeMs: recoveryStartedAt,
         deadlineAtMs: recoveryDeadline,
       });
@@ -341,7 +516,7 @@ export function createHostedOperatorProductionComposition(
       recovered = false;
       recoveryGeneration += 1;
       schedule(beginRecovery, pumpRetryMs);
-    });
+    }));
   };
   triggerRecovery = beginRecovery;
   beginRecovery();
@@ -414,8 +589,8 @@ export function createHostedOperatorProductionComposition(
     if (closed || !recovered) throw new Error('hosted-operator-production-recovery-incomplete');
     return authenticatedContext(request as FastifyRequest, signal);
   };
-  const surfaces = createHostedOperatorSurfacesComposition({
-    routeAdmission: dependencies.routeAdmissionBinding.routeAdmission,
+  const surfaceDependencies: CreateHostedOperatorSurfacesCompositionDependencies = {
+    routeAdmission,
     readiness: {
       contribution: createHostedReadinessRouteContribution(readiness),
       createContext: authenticatedContext,
@@ -423,16 +598,26 @@ export function createHostedOperatorProductionComposition(
     approvals: {
       contribution: createHostedTeamApprovalsRouteContribution(approvals),
       createContext: approvalContext,
+      producerProvenance: dependencies.producerProvenance,
     },
-  });
+  };
+  const surfaces = createHostedOperatorSurfacesComposition(surfaceDependencies);
 
   return Object.freeze({
+    surfaceDependencies,
+    async drain(): Promise<void> {
+      while (pending.size) await Promise.allSettled([...pending]);
+      if (drainFailure instanceof Error) throw drainFailure;
+      if (drainFailure !== undefined) {
+        throw new Error('hosted-operator-production-drain-failed', { cause: drainFailure });
+      }
+    },
     isReady: () => !closed && recovered,
     reconcileApprovalDecision(
       request: HostedApprovalDecisionReconciliationRequest
     ): Promise<HostedApprovalDecisionReconciliationResult> {
       if (closed || !recovered) return Promise.resolve(Object.freeze({ status: 'unavailable' }));
-      return runtimeBridge.reconcileApprovalDecision(request);
+      return track(runtimeBridge.reconcileApprovalDecision(request));
     },
     register(app: FastifyInstance): void {
       if (closed || registered) throw new Error('hosted-operator-production-unavailable');

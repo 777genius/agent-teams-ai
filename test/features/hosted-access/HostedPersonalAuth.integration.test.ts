@@ -6,6 +6,7 @@ import {
   createHmac,
   hkdfSync,
   randomBytes,
+  randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
@@ -1226,6 +1227,7 @@ describe('personal hosted authentication synthetic sandbox E2E', () => {
       storage: eventStorage,
       deploymentId: feature.deploymentId,
       authorizer: createHostedCoordinationEventStreamAuthorizer(feature.http),
+      streamIdentityFactory: { createStreamId: randomUUID },
     });
     const app = Fastify();
     apps.push(app);

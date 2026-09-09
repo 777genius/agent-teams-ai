@@ -2,6 +2,7 @@ import { parseActorId } from '@shared/contracts/hosted';
 
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalCanonicalIdentityStorageMigration';
+import { executeHostedTeamApprovalDeliveryReconciliation } from './hostedTeamApprovalDeliveryReconciliationExecution';
 import { HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalDeliveryReconciliationStorageMigration';
 
 import type DatabaseConstructor from 'better-sqlite3';
@@ -619,7 +620,7 @@ function migrateDeliveryReconciliation(db: SqliteDatabase): void {
     throw new Error('internal-storage-v24-approval-schema-invalid');
   }
   const before = rowCounts(db);
-  execute(db, HOSTED_TEAM_APPROVAL_DELIVERY_RECONCILIATION_STORAGE_MIGRATION_STATEMENTS);
+  executeHostedTeamApprovalDeliveryReconciliation(db);
   assertShape(db, 'canonical-v24');
   assertRowCounts(db, before, 'internal-storage-v24-approval-row-count-mismatch');
   assertForeignKeys(db, 'internal-storage-v24-approval-foreign-key-invalid');

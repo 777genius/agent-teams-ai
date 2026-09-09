@@ -44,4 +44,17 @@ export const HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS = Object.freeze([
       testOnly: false,
     });
   }),
+  ...(['getPublication', 'recoverPublication'] as const).map((operation): RouteDescriptor => {
+    const reference = operation === 'getPublication' ? 'publication' : 'publication-recover';
+    return Object.freeze({
+      id: `team-configuration.${reference}.v1`, method: 'POST', path: HOSTED_TEAM_CONFIGURATION_ROUTES[operation],
+      owner: 'team-configuration', trustKind: 'browser',
+      authPolicyId: operation === 'getPublication' ? 'hosted.browser.session' : 'hosted.browser.session.csrf',
+      readiness: operation === 'getPublication' ? READ_READINESS : MUTATION_READINESS,
+      requestSchemaId: `team-configuration.${reference}.request.v1`,
+      responseSchemaId: `team-configuration.${reference}.response.v1`,
+      handlerId: `team-configuration.${reference}.handler.v1`, clientId: `team-configuration.${reference}.client.v1`,
+      semanticTestId: `team-configuration.${reference}.semantic.v1`, testOnly: false,
+    });
+  }),
 ] satisfies readonly RouteDescriptor[]);

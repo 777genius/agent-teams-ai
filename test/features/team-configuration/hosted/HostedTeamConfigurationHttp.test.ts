@@ -17,7 +17,7 @@ import {
   HOSTED_READINESS_DIMENSIONS,
   HostedRouteAdmission,
 } from '../../../../src/main/composition/hosted/application';
-import { createQueryContext, createSafeAppError } from '../../../../src/shared/contracts/hosted';
+import { createQueryContext, createSafeAppError, parseRevision, parseTeamId, parseWorkspaceId } from '../../../../src/shared/contracts/hosted';
 
 const apps: ReturnType<typeof Fastify>[] = [];
 
@@ -36,6 +36,8 @@ function facade(): HostedTeamConfigurationFacade {
     retryable: false,
   });
   return {
+    getPublication: vi.fn(async () => invalid()),
+    recoverPublication: vi.fn(async () => invalid()),
     getSavedRequest: vi.fn(async () => invalid()),
     createDraft: vi.fn(async () => invalid()),
     updateDraft: vi.fn(async () => invalid()),
@@ -143,9 +145,44 @@ describe('hosted team configuration HTTP', () => {
     expect(feature.deleteDraft).toHaveBeenCalledTimes(1);
   });
 
+  it('serializes complete configuration on the existing saved and update routes', async () => {
+    const app = Fastify();
+    apps.push(app);
+    const feature = facade();
+    const draft = {
+      workspaceId: parseWorkspaceId(`workspace_${'1'.repeat(32)}`),
+      teamId: parseTeamId(`team_${'2'.repeat(32)}`),
+      revision: parseRevision('revision_configured'), metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+      configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+        { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
+          members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+      ] },
+    } as const;
+    const found = { schemaVersion: 1, kind: 'found', draft } as const;
+    const updated = { schemaVersion: 1, kind: 'updated', draft } as const;
+    vi.mocked(feature.getSavedRequest).mockResolvedValue(found);
+    vi.mocked(feature.updateDraft).mockResolvedValue(updated);
+    const routeContribution = contribution(feature);
+    registerHostedTeamConfigurationHttp(app, routeContribution, admission(routeContribution), contextFactory([]) as never);
+    const identity = { schemaVersion: 1, workspaceId: draft.workspaceId, teamId: draft.teamId };
+    for (const [operation, payload, expected] of [
+      ['getSavedRequest', identity, found],
+      ['updateDraft', { ...identity, expectedRevision: draft.revision, updates: { configuration: draft.configuration } }, updated],
+    ] as const) {
+      const response = await app.inject({ method: 'POST', url: HOSTED_TEAM_CONFIGURATION_ROUTES[operation], payload,
+        headers: { 'x-test-session': 'authenticated', 'x-agent-teams-csrf': 'valid-csrf' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.json()).toEqual(expected);
+    }
+  });
+
   it('declares read readiness without CSRF and CSRF only for mutations', () => {
-    const [read, ...mutations] = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS;
-    expect(read).toMatchObject({
+    const reads = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.filter((route) => route.authPolicyId === 'hosted.browser.session');
+    const mutations = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.filter((route) => route.authPolicyId === 'hosted.browser.session.csrf');
+    expect(reads).toHaveLength(2);
+    for (const read of reads) expect(read).toMatchObject({
       authPolicyId: 'hosted.browser.session',
       readiness: ['serve', 'auth', 'read'],
     });
@@ -164,7 +201,7 @@ describe('hosted team configuration HTTP', () => {
     expect(assembly.facades).toEqual([
       expect.objectContaining({ id: 'team-configuration.hosted.v1' }),
     ]);
-    expect(assembly.catalog.routes).toHaveLength(4);
+    expect(assembly.catalog.routes).toHaveLength(6);
     for (const route of assembly.catalog.routes) {
       for (const reference of [
         route.id,

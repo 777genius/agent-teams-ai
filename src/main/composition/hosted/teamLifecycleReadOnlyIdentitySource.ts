@@ -11,6 +11,8 @@ import {
   type TeamIdentityReadGateway,
   type TeamIdentityRecord,
 } from '@features/internal-storage/contracts';
+// eslint-disable-next-line no-restricted-imports -- Explicit hosted storage composition boundary.
+import { normalizeCurrentTeamIdentitySchema } from '@features/internal-storage/main/composition';
 import { parseTeamId, parseWorkspaceId, type TeamId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3';
 
@@ -104,6 +106,8 @@ interface ParsedAdoptionIntent {
 
 export interface TeamLifecycleReadOnlyIdentitySourceInput {
   readonly appDataRoot: string;
+  /** Only the retained canonical writer composition supplies this custody-checked SQLite snapshot. */
+  readonly currentWriter?: { readonly appDataRoot: string; readSnapshot(): Promise<Uint8Array> };
 }
 
 export interface ExternalWriterTeamIdentityInventory {
@@ -409,7 +413,8 @@ function validateSchema(database: Database.Database): void {
     readonly tbl_name?: unknown;
     readonly sql?: unknown;
   }>;
-  const schemaDigest = createHash('sha256').update(JSON.stringify(schemaObjects)).digest('hex');
+  const projection = normalizeCurrentTeamIdentitySchema(schemaObjects, database.pragma('user_version', { simple: true }));
+  const schemaDigest = createHash('sha256').update(JSON.stringify(projection)).digest('hex');
   if (
     schemaObjects.length !== EXPECTED_SCHEMA_OBJECT_COUNT ||
     schemaDigest !== EXPECTED_SCHEMA_DIGEST
@@ -684,9 +689,12 @@ function readExternalWriterIdentitySnapshot(
 }
 
 class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdentityGateway {
-  constructor(private readonly binding: IdentityDatabasePathBinding) {}
+  constructor(private readonly binding: IdentityDatabasePathBinding | null,
+    private readonly currentWriter?: { readonly appDataRoot: string; readSnapshot(): Promise<Uint8Array> }) {}
 
   private async readCurrentSnapshot(): Promise<Buffer> {
+    if (this.currentWriter) return Buffer.from(await this.currentWriter.readSnapshot());
+    if (!this.binding) throw new Error('team-lifecycle-read-identity-source-absent');
     for (const delayMs of IMMUTABLE_SNAPSHOT_RETRY_DELAYS_MS) {
       try {
         return await readImmutableDatabaseSnapshot(this.binding);
@@ -736,12 +744,19 @@ class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdent
  * Admits one existing internal-storage database and re-reads a bounded, descriptor-validated
  * snapshot for every gateway call. The admitted root, storage directory, and database inode remain
  * pinned for the gateway lifetime. Missing, live-sidecar, replaced, corrupt, or schema-incompatible
- * storage fails closed; this adapter has no worker, migration, recovery, cleanup, or mutation surface.
+ * storage fails closed. A retained-writer port instead supplies a SQLite-consistent WAL snapshot,
+ * bound to the writer's connection and current path custody; validation and queries remain read-only.
  */
 export async function createTeamLifecycleReadOnlyIdentitySource(
   input: TeamLifecycleReadOnlyIdentitySourceInput
 ): Promise<TeamLifecycleReadOnlyIdentityGateway | null> {
   try {
+    if (input.currentWriter) {
+      if (input.currentWriter.appDataRoot !== input.appDataRoot) throw new Error('canonical-read-source-root-mismatch');
+      const gateway = new DescriptorRevalidatedIdentityGateway(null, input.currentWriter);
+      await gateway.captureExternalWriterTeamIdentities({ retirementCandidates: [] });
+      return gateway;
+    }
     const binding = await admitIdentityDatabasePath(input.appDataRoot);
     const serializedDatabase = await readImmutableDatabaseSnapshot(binding);
     readExternalWriterIdentitySnapshot(serializedDatabase, []);

@@ -3,6 +3,10 @@ import {
   parseHostedSessionId,
   parseUserId,
 } from '@features/hosted-access';
+import {
+  bindProductHostedProducerInstance,
+  type HostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main/hosted';
 import { HOSTED_READINESS_ROUTE } from '@features/hosted-readiness/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
@@ -74,6 +78,22 @@ function dependencies(
   };
   approvalStorage: HostedTeamApprovalAuthorityStorageGateway;
 } {
+  const producerProvenance: HostedProducerProvenance = {
+    role: 'product-producer',
+    controllerNonce: 'controller_operator-production',
+    runId: 'run_operator-production',
+    emit: vi.fn(),
+    bindInvalidation: vi.fn(),
+    poison: vi.fn((reason: string) => { throw new Error(reason); }),
+    close: vi.fn(),
+  };
+  bindProductHostedProducerInstance(producerProvenance, {
+    deploymentId: runtimeInstance.deploymentId,
+    bootId: runtimeInstance.bootId,
+    ownerAuthority: 'owner-authority_operator-production',
+    ownerGeneration: 7,
+    ownerSessionId: 'owner-session_operator-production',
+  });
   return {
     authentication: {
       authenticatedPrincipalFor: vi.fn<(request: object) => HostedAuthenticatedPrincipal | null>(
@@ -100,6 +120,7 @@ function dependencies(
       })),
       hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(),
     } satisfies HostedTeamApprovalAuthorityStorageGateway,
+    producerProvenance,
     approvalRuntime: {
       teamIds: Object.freeze([parseTeamId(`team_${'a'.repeat(32)}`)]),
       ownerId: 'approval-owner-restart',

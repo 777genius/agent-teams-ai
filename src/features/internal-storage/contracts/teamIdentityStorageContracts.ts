@@ -366,3 +366,12 @@ export const TeamIdentityStorageErrorCode = {
 
 export type TeamIdentityStorageErrorCode =
   (typeof TeamIdentityStorageErrorCode)[keyof typeof TeamIdentityStorageErrorCode];
+
+/** Serialized canonical writer. It grants identity publication only, never lifecycle launch. */
+export interface TeamIdentityPublicationGateway extends TeamIdentityReadGateway {
+  reserveTeamIdentity(input: ReserveTeamIdentityInput): Promise<TeamIdentityReservationResult>;
+  prepareReservedTeamAdoption(input: PrepareTeamAdoptionInput): Promise<TeamAdoptionPrepareResult>;
+  recordTeamIdentityFilePublished(input: RecordTeamIdentityFilePublishedInput): Promise<TeamIdentityFilePublishedResult>;
+  commitTeamAdoption(input: CommitTeamAdoptionInput): Promise<TeamAdoptionCommitResult>;
+  tombstoneTeamIdentity(input: TombstoneLegacyTeamKeyInput): Promise<LegacyTeamKeyTombstoneResult>;
+}

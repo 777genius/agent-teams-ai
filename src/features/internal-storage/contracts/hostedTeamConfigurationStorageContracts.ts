@@ -1,4 +1,10 @@
 import {
+  assertHostedRosterMatches,
+  type HostedRosterConfiguration,
+  isHostedInitialMemberName,
+  parseHostedRosterConfiguration,
+} from '@features/team-configuration/contracts';
+import {
   parseRevision,
   parseTeamId,
   parseWorkspaceId,
@@ -6,6 +12,8 @@ import {
   type TeamId,
   type WorkspaceId,
 } from '@shared/contracts/hosted';
+
+import { parseTeamDraftPublicationBinding, type TeamDraftPublicationBinding } from './teamDraftPublicationContracts';
 
 export interface HostedTeamConfigurationStorageDraft {
   readonly workspaceId: WorkspaceId;
@@ -18,14 +26,17 @@ export interface HostedTeamConfigurationStorageDraft {
     language?: string;
   }>;
   readonly members: readonly Readonly<{ name: string }>[];
+  readonly configuration?: HostedRosterConfiguration;
 }
 
 export interface HostedTeamConfigurationStorageCreateRequest {
+  readonly publicationBinding?: TeamDraftPublicationBinding;
   readonly workspaceId: WorkspaceId;
   readonly idempotencyKey: string;
   readonly payloadHash: string;
   readonly metadata: Readonly<{ name: string }>;
   readonly members: readonly Readonly<{ name: string }>[];
+  readonly configuration?: HostedRosterConfiguration;
   readonly deadlineAtMs: number;
 }
 
@@ -51,6 +62,7 @@ export interface HostedTeamConfigurationStorageUpdateRequest {
     description?: string;
     color?: string;
     language?: string;
+    configuration?: HostedRosterConfiguration;
   }>;
   readonly deadlineAtMs: number;
 }
@@ -58,9 +70,10 @@ export interface HostedTeamConfigurationStorageUpdateRequest {
 export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'updated'; draft: HostedTeamConfigurationStorageDraft }>
   | Readonly<{ kind: 'not_found' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export interface HostedTeamConfigurationStorageDeleteRequest {
+  readonly publicationBinding?: TeamDraftPublicationBinding;
   readonly workspaceId: WorkspaceId;
   readonly teamId: TeamId;
   readonly expectedRevision: Revision;
@@ -73,7 +86,7 @@ export interface HostedTeamConfigurationStorageMutationOptions {
 
 export type HostedTeamConfigurationStorageDeleteResult =
   | Readonly<{ kind: 'deleted'; outcome: 'deleted' | 'already_absent' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export interface HostedTeamConfigurationStorageGateway {
   createHostedTeamConfiguration(
@@ -142,7 +155,9 @@ function metadata(
   createOnly = false
 ): HostedTeamConfigurationStorageDraft['metadata'] {
   const input = record(value);
-  const keys = Object.keys(input);
+  const ownKeys = Reflect.ownKeys(input);
+  if (ownKeys.some((key) => typeof key !== 'string')) throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
+  const keys = ownKeys as string[];
   if (
     keys.length < 1 ||
     keys.some((key) => !Object.hasOwn(LIMITS, key)) ||
@@ -155,6 +170,7 @@ function metadata(
   return Object.freeze(output) as HostedTeamConfigurationStorageDraft['metadata'];
 }
 
+/** Compatibility reader for persisted arrays, including historically valid names. */
 function members(value: unknown): HostedTeamConfigurationStorageDraft['members'] {
   if (!Array.isArray(value) || value.length < 1 || value.length > 32) {
     throw new TypeError('hosted-team-configuration-storage-members-invalid');
@@ -171,6 +187,28 @@ function members(value: unknown): HostedTeamConfigurationStorageDraft['members']
   return Object.freeze(output);
 }
 
+/** New worker writes must obey the same pure name contract as hosted creates. */
+function newMembers(value: unknown): HostedTeamConfigurationStorageDraft['members'] {
+  if (
+    !Array.isArray(value) || value.length < 1 || value.length > 32 ||
+    Reflect.ownKeys(value).length !== value.length + 1 ||
+    Array.from({ length: value.length }, (_, index) => index)
+      .some((index) => !Object.hasOwn(value, index))
+  ) {
+    throw new TypeError('hosted-team-configuration-storage-members-invalid');
+  }
+  const names = new Set<string>();
+  const parsed = Array.from({ length: value.length }, (_, index) => {
+    const name = text(exact(value[index], ['name']).name, 64);
+    if (!isHostedInitialMemberName(name) || names.has(name.toLowerCase())) {
+      throw new TypeError('hosted-team-configuration-storage-member-invalid');
+    }
+    names.add(name.toLowerCase());
+    return Object.freeze({ name });
+  });
+  return Object.freeze(parsed);
+}
+
 export function parseHostedTeamConfigurationStorageCreateRequest(
   value: unknown
 ): HostedTeamConfigurationStorageCreateRequest {
@@ -181,6 +219,8 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     'metadata',
     'members',
     'deadlineAtMs',
+    ...(Object.hasOwn(record(value), 'configuration') ? ['configuration'] : []),
+    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : []),
   ]);
   if (
     typeof input.idempotencyKey !== 'string' ||
@@ -194,8 +234,10 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     workspaceId: parseWorkspaceId(input.workspaceId),
     idempotencyKey: input.idempotencyKey,
     payloadHash: input.payloadHash,
+    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
     metadata: metadata(input.metadata, true) as Readonly<{ name: string }>,
-    members: members(input.members),
+    members: newMembers(input.members),
+    ...configurationFields(input),
     deadlineAtMs: deadlineAtMs(input.deadlineAtMs),
   });
 }
@@ -227,7 +269,7 @@ export function parseHostedTeamConfigurationStorageUpdateRequest(
       teamId: input.teamId,
     }),
     expectedRevision: parseRevision(input.expectedRevision),
-    updates: metadata(input.updates),
+    updates: updates(input.updates),
     deadlineAtMs: deadlineAtMs(input.deadlineAtMs),
   });
 }
@@ -235,8 +277,10 @@ export function parseHostedTeamConfigurationStorageUpdateRequest(
 export function parseHostedTeamConfigurationStorageDeleteRequest(
   value: unknown
 ): HostedTeamConfigurationStorageDeleteRequest {
-  const input = exact(value, ['workspaceId', 'teamId', 'expectedRevision', 'deadlineAtMs']);
+  const input = exact(value, ['workspaceId', 'teamId', 'expectedRevision', 'deadlineAtMs',
+    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : [])]);
   return Object.freeze({
+    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
     ...parseHostedTeamConfigurationStorageIdentity({
       workspaceId: input.workspaceId,
       teamId: input.teamId,
@@ -249,7 +293,8 @@ export function parseHostedTeamConfigurationStorageDeleteRequest(
 export function parseHostedTeamConfigurationStorageDraft(
   value: unknown
 ): HostedTeamConfigurationStorageDraft {
-  const input = exact(value, ['workspaceId', 'teamId', 'revision', 'metadata', 'members']);
+  const input = exact(value, ['workspaceId', 'teamId', 'revision', 'metadata', 'members', ...(Object.hasOwn(record(value), 'configuration') ? ['configuration'] : [])]);
+  if (!Object.hasOwn(record(input.metadata), 'name')) throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
   return Object.freeze({
     ...parseHostedTeamConfigurationStorageIdentity({
       workspaceId: input.workspaceId,
@@ -258,5 +303,27 @@ export function parseHostedTeamConfigurationStorageDraft(
     revision: parseRevision(input.revision),
     metadata: metadata(input.metadata),
     members: members(input.members),
+    ...configurationFields(input),
+  });
+}
+
+function configurationFields(input: Record<string, unknown>): { readonly configuration?: HostedRosterConfiguration } {
+  if (!Object.hasOwn(input, 'configuration')) return {};
+  const configuration = parseHostedRosterConfiguration(input.configuration);
+  assertHostedRosterMatches(configuration, members(input.members));
+  return { configuration };
+}
+
+function updates(value: unknown): HostedTeamConfigurationStorageUpdateRequest['updates'] {
+  const input = record(value);
+  const keys = Reflect.ownKeys(input);
+  if (!keys.length || keys.some((key) => typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(LIMITS, key)))) {
+    throw new TypeError('hosted-team-configuration-storage-update-invalid');
+  }
+  const { configuration: ignored, ...rest } = input;
+  void ignored;
+  return Object.freeze({
+    ...(Object.keys(rest).length ? metadata(rest) : {}),
+    ...(Object.hasOwn(input, 'configuration') ? { configuration: parseHostedRosterConfiguration(input.configuration) } : {}),
   });
 }

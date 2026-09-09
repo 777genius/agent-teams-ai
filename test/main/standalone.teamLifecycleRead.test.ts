@@ -34,8 +34,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain(
       'const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode)'
     );
-    expect(source).toContain(
-      'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })'
+    expect(source).toMatch(
+      /const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource\(\{\s*appDataRoot,\s*currentWriter: hostedDraftPublication\?\.identityReadSource,\s*\}\)/
     );
     expect(source).toContain('teamIdentityGrantFenceSource = readPorts.teamIdentities');
     expect(source).toContain(
@@ -63,7 +63,41 @@ describe('standalone team lifecycle read wiring', () => {
       'const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference)'
     );
     expect(source).toContain('admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference)');
-    expect(source).toContain('createTeamLifecycleReadOnlyIdentitySource({ appDataRoot })');
+    const admissionSteps = [
+      'const bootstrap = await new TeamLifecycleReadBootstrapSource({',
+      'const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference)',
+      'hostedDraftPublication = await createHostedDraftPublicationComposition({ bootstrap, drafts: hostedAuthStorageBackend })',
+      'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({',
+      'const readPorts = createMountBindingScopedTeamLifecycleReadPorts({',
+      'await readPorts.teamIdentities.listTeamIdentities()',
+      "import('./services/infrastructure/ServiceContext')",
+    ].map((step) => source.indexOf(step));
+    for (const [index, position] of admissionSteps.entries()) {
+      expect(position).toBeGreaterThan(-1);
+      if (index > 0) expect(position).toBeGreaterThan(admissionSteps[index - 1]!);
+    }
+    const identitySource = (
+      await readFile('src/main/composition/hosted/teamLifecycleReadOnlyIdentitySource.ts', 'utf8')
+    ).replace(/\s+/g, ' ');
+    expect(identitySource).toContain(
+      "if (input.currentWriter) { if (input.currentWriter.appDataRoot !== input.appDataRoot) throw new Error('canonical-read-source-root-mismatch'); const gateway = new DescriptorRevalidatedIdentityGateway(null, input.currentWriter); await gateway.captureExternalWriterTeamIdentities({ retirementCandidates: [] }); return gateway; }"
+    );
+    expect(identitySource).toContain(
+      'if (this.currentWriter) return Buffer.from(await this.currentWriter.readSnapshot());'
+    );
+    expect(identitySource).toContain(
+      'const serializedDatabase = await this.readCurrentSnapshot(); return readExternalWriterIdentitySnapshot(serializedDatabase, input.retirementCandidates);'
+    );
+    expect(identitySource).toContain('validateSchema(database); validateMetadata(database);');
+    const inventorySource = identitySource.slice(
+      identitySource.indexOf('function readExternalWriterIdentitySnapshot('),
+      identitySource.indexOf('class DescriptorRevalidatedIdentityGateway')
+    );
+    expect(inventorySource).toContain('const database = openValidatedSnapshot(serializedDatabase);');
+    expect(inventorySource).toContain('validateGraph(selected, reservations, intents);');
+    expect(identitySource).toContain(
+      'schemaObjects.length !== EXPECTED_SCHEMA_OBJECT_COUNT || schemaDigest !== EXPECTED_SCHEMA_DIGEST'
+    );
     expect(source).toContain('await readPorts.teamIdentities.listTeamIdentities()');
     expect(source).toContain('new TeamLifecycleReadBootstrapSource({');
     expect(source).toContain('readSerializedBootstrap: () => serializedHostedBootstrap');
@@ -97,8 +131,11 @@ describe('standalone team lifecycle read wiring', () => {
     );
     expect(source).toContain('if (hostedMode) localContext.startCacheOnly()');
     expect(source).not.toContain('JSON.parse');
-    expect(source).not.toContain('createInternalStorageFeature');
-    expect(source).not.toContain('InternalStorageFeature');
+    expect(source.match(/createInternalStorageFeature\(\{/g)).toHaveLength(1);
+    expect(source).toContain(
+      "hostedAuthStorageBackend = createInternalStorageFeature({ userDataPath: authDataDirectory, scope: 'hosted-auth' });"
+    );
+    expect(source).not.toContain('hostedAuthStorageBackend.teamIdentities');
     expect(source).not.toContain('teamIdentityReadBackend');
     expect(source).not.toContain('TeamDataService');
     expect(source).not.toContain('TeamProvisioningService');
