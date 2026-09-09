@@ -372,8 +372,27 @@ vi.mock('@renderer/components/ui/combobox', () => ({
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? React.createElement('div', null, children) : null,
+  Dialog: ({
+    open,
+    children,
+    onOpenChange,
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
+  }) =>
+    open
+      ? React.createElement(
+          'div',
+          null,
+          children,
+          React.createElement(
+            'button',
+            { 'data-testid': 'dismiss-dialog', onClick: () => onOpenChange?.(false) },
+            'Close'
+          )
+        )
+      : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
@@ -838,7 +857,9 @@ describe('LaunchTeamDialog', () => {
           ),
         };
         expect(
-          storeState.cliStatus.providers.find((provider) => provider.providerId === refreshProviderId)
+          storeState.cliStatus.providers.find(
+            (provider) => provider.providerId === refreshProviderId
+          )
         ).toMatchObject({
           capabilities: { teamLaunch: false },
           teamLaunchAuthorityRestriction: 'catalog-refresh',
@@ -3242,9 +3263,118 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it.each(['member', 'lead'] as const)(
+    'carries a %s model draft into relaunch and discards it on cancel',
+    async (targetKind) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const onRelaunch = vi.fn(async () => {});
+      const onClose = vi.fn();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const target = {
+        name: targetKind === 'lead' ? 'team-lead' : 'alice',
+        agentType: targetKind === 'lead' ? 'team-lead' : 'general-purpose',
+        agentId: 'original',
+        providerId: 'opencode',
+        model: 'observed-runtime-model',
+        configuredRuntimeSettings: { providerId: 'opencode', model: 'glm-5.3' },
+      };
+      const members = [
+        target,
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'observed-sibling-model',
+          configuredRuntimeSettings: {},
+        },
+      ];
+      const saved = {
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'opencode',
+        model: 'glm-5.3',
+        syncModelsWithLead: true,
+        members: [],
+      };
+      const render = async (withDraft: boolean): Promise<void> => {
+        vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce(saved as any);
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'relaunch',
+              open: true,
+              teamName: 'team-alpha',
+              members: members as any,
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              onClose,
+              onRelaunch,
+              memberSettingsDraft: withDraft
+                ? {
+                    teamName: 'team-alpha',
+                    memberName: target.name,
+                    targetKind,
+                    expectedFingerprint: 'editor-fingerprint',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+                    settings: {
+                      role: null,
+                      workflow: null,
+                      isolation: null,
+                      providerId: 'opencode',
+                      providerBackendId: null,
+                      model: 'glm-5.3-flash',
+                      effort: null,
+                      fastMode: null,
+                      mcpPolicy: null,
+                    },
+                  }
+                : undefined,
+            })
+          );
+          await flush();
+        });
+      };
+      await render(true);
+      const editor = teamRosterEditorSectionMock.lastProps;
+      if (targetKind === 'lead') expect(editor.model).toBe('glm-5.3-flash');
+      else
+        expect(editor.members.find((row: any) => row.name === 'alice').model).toBe('glm-5.3-flash');
+      expect(editor.members.find((row: any) => row.name === 'bob').model).toBe('');
+      expect(editor.syncModelsWithTeammates).toBe(false);
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onRelaunch).not.toHaveBeenCalled();
+      await act(async () => {
+        const cancel = host.querySelector<HTMLButtonElement>('[data-testid="dismiss-dialog"]');
+        expect(cancel).toBeTruthy();
+        cancel?.click();
+        await flush();
+      });
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onRelaunch).not.toHaveBeenCalled();
+      await act(async () => {
+        root.render(null);
+        await flush();
+      });
+      await render(false);
+      expect(host.textContent).not.toContain('glm-5.3-flash');
+      expect(target.configuredRuntimeSettings.model).toBe('glm-5.3');
+      await act(async () => root.unmount());
+    }
+  );
+
   it('submits relaunch through onRelaunch without replacing members in-dialog', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      syncModelsWithLead: true,
+      members: [],
+    });
     const onRelaunch = vi.fn(async () => {});
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -3261,10 +3391,28 @@ describe('LaunchTeamDialog', () => {
               name: 'alice',
               role: 'Reviewer',
               providerId: 'codex',
-              model: 'gpt-5.4',
+              model: 'gpt-5.3',
               effort: 'medium',
             },
           ] as any,
+          memberSettingsDraft: {
+            teamName: 'team-alpha',
+            memberName: 'alice',
+            targetKind: 'member',
+            expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+            settings: {
+              role: 'Reviewer',
+              workflow: null,
+              isolation: null,
+              providerId: 'codex',
+              providerBackendId: null,
+              model: 'gpt-5.4',
+              effort: 'medium',
+              fastMode: null,
+              mcpPolicy: null,
+            },
+          },
           defaultProjectPath: '/tmp/project',
           provisioningError: null,
           clearProvisioningError: vi.fn(),
@@ -3305,7 +3453,13 @@ describe('LaunchTeamDialog', () => {
     expect(request.cwd).toBe('/tmp/project');
     expect(request.providerId).toBe('anthropic');
     expect(request.model).toBe('opus');
-    expect(request.syncModelsWithLead).toBe(false);
+    expect(request.syncModelsWithLead).toBe(true);
+    expect((onRelaunch.mock.calls[0] as unknown[])[2]).toMatchObject({
+      memberName: 'alice', targetKind: 'member', expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+      model: 'gpt-5.4', effort: 'medium',
+      baseline: [{ memberName: 'alice', expectedFingerprint: expect.any(String) }],
+    });
     expect(members).toEqual([
       {
         name: 'alice',
@@ -4897,4 +5051,37 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
   });
+
+it('submits a role-only legacy lead separately from the settings teammate roster', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+    teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus', members: [],
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onRelaunch = vi.fn(async () => {});
+  await act(async () => {
+    root.render(React.createElement(LaunchTeamDialog, {
+      mode: 'relaunch', open: true, teamName: 'team-alpha', defaultProjectPath: '/tmp/project',
+      members: [{ name: 'lead', role: 'Lead', model: 'opus' }, { name: 'alice', role: 'Reviewer' }] as any,
+      memberSettingsDraft: { teamName: 'team-alpha', memberName: 'lead', targetKind: 'lead',
+        expectedFingerprint: 'legacy-lead', expectedTeamSettingsFingerprint: 'editor-defaults',
+        settings: { role: 'Lead', workflow: null, isolation: null, providerId: null, providerBackendId: null,
+          model: 'sonnet', effort: null, fastMode: null, mcpPolicy: null } },
+      provisioningError: null, clearProvisioningError: vi.fn(), activeTeams: [], onClose: vi.fn(), onRelaunch,
+    }));
+    await flush();
+  });
+  expect(teamRosterEditorSectionMock.lastProps.members.map((member: any) => member.name)).toEqual(['alice']);
+  await confirmLaunchPreflight(host, 'Relaunch team');
+  await act(async () => {
+    Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Relaunch team')!.click();
+    await flush();
+  });
+  expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ model: 'sonnet' }),
+    [expect.objectContaining({ name: 'alice' })], expect.objectContaining({ memberName: 'lead', targetKind: 'lead', expectedTeamSettingsFingerprint: 'editor-defaults' }));
+  await act(async () => root.unmount());
+});
+
 });

@@ -1,6 +1,6 @@
 import { fromProvisioningMembers, isOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import {
@@ -431,7 +431,7 @@ export function buildLaunchMembersFromMeta(
   for (const member of metaMembers) {
     const rawName = member.name?.trim() ?? '';
     const lower = rawName.toLowerCase();
-    if (isLeadMember(member) || lower === 'user') {
+    if (isCanonicalSettingsLeadMember(member) || lower === 'user') {
       continue;
     }
     const name = rawName;
@@ -455,6 +455,8 @@ export function buildLaunchMembersFromMeta(
         isolation,
         cwd,
         providerId,
+        providerBackendId: member.providerBackendId,
+        fastMode: member.fastMode,
         model,
         effort,
         mcpPolicy,
@@ -467,6 +469,8 @@ export function buildLaunchMembersFromMeta(
         isolation: prev.isolation || isolation,
         cwd: prev.cwd || cwd,
         providerId: prev.providerId || providerId,
+        providerBackendId: prev.providerBackendId ?? member.providerBackendId,
+        fastMode: prev.fastMode ?? member.fastMode,
         model: prev.model || model,
         effort: prev.effort || effort,
         mcpPolicy: prev.mcpPolicy || mcpPolicy,
@@ -493,7 +497,7 @@ export function extractTeammateSpecsFromConfig(configRaw: string): TeamCreateReq
     for (const member of parsed.members) {
       const rawName = typeof member?.name === 'string' ? member.name.trim() : '';
       const lower = rawName.toLowerCase();
-      if (!member || isLeadMember(member) || lower === 'user') continue;
+      if (!member || isCanonicalSettingsLeadMember(member) || lower === 'user') continue;
       const name = rawName;
       if (!name) continue;
       if (member.removedAt != null) continue;

@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+
 const flowMocks = vi.hoisted(() => ({
   materializeDeterministicLaunchBootstrapFiles: vi.fn(),
   removeDeterministicBootstrapSpecFile: vi.fn<() => Promise<void>>(),
@@ -236,6 +238,7 @@ function runPreSpawnFailureFlow(
       launchIdentity,
       effectiveMemberSpecs: syntheticRequest.members,
       allEffectiveMemberSpecs: syntheticRequest.members,
+      configuredMemberSpecs: syntheticRequest.members,
       teammateRuntimeDisallowedTools: 'TeamDelete',
     },
     ports
@@ -305,6 +308,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         syntheticRequest: normalizedSyntheticRequest,
         launchIdentity,
         allEffectiveMemberSpecs: normalizedSyntheticRequest.members,
+        configuredMemberSpecs: normalizedSyntheticRequest.members,
       },
       {
         teamMetaStore: { writeMeta },
@@ -349,6 +353,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         request,
         syntheticRequest,
         launchIdentity,
+        configuredMemberSpecs: [{ name: 'Builder', role: 'Build' }],
         allEffectiveMemberSpecs: [
           { name: ' team-lead ', role: 'Lead' },
           { name: 'USER', role: 'User' },

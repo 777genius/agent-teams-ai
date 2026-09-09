@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  probeLaunchCompatibility,
   resolveLaunchExpectedMembers,
+  resolveLaunchExpectedMembersFromCompatibility,
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from '../TeamProvisioningLaunchExpectedMembers';
 
@@ -129,6 +131,67 @@ describe('team provisioning launch expected members', () => {
         'Run a fresh team bootstrap to persist stable member metadata.',
     });
   });
+
+  it.each(['missing', 'unreadable'] as const)(
+    'excludes legacy lead from the config repair roster when metadata is %s and inboxes are empty',
+    async (metadataState) => {
+      const ports = makePorts({
+        getMeta: vi.fn(async () => {
+          if (metadataState === 'unreadable') throw new Error('metadata unavailable');
+          return null;
+        }),
+      });
+      const report = await probeLaunchCompatibility(
+        {
+          teamName: 'team-a',
+          configRaw: JSON.stringify({
+            members: [
+              { name: 'lead', role: 'Lead' },
+              { name: 'team-lead', agentType: 'team-lead' },
+              { name: 'user' },
+              { name: 'Removed', removedAt: 123 },
+              { name: 'Alice', role: 'Engineer' },
+              { name: 'Alice-2', role: 'Engineer' },
+              { name: 'Coordinator', role: 'Team Lead', agentType: 'general-purpose' },
+              { name: 'Planner', role: 'Lead' },
+            ],
+          }),
+        },
+        ports
+      );
+
+      const expectedMembers = [
+        { name: 'Alice', role: 'Engineer' },
+        { name: 'Coordinator', role: 'Team Lead' },
+        { name: 'Planner', role: 'Lead' },
+      ];
+      expect(ports.getMeta).toHaveBeenCalledWith('team-a');
+      expect(ports.listInboxNames).toHaveBeenCalledWith('team-a');
+      expect(report).toEqual({
+        level: 'repairable',
+        rosterSource: 'config',
+        members: expectedMembers,
+        warnings: [
+          'members.meta.json and inboxes are empty; launch fell back to config.json members. ' +
+            'Run a fresh team bootstrap to persist stable member metadata.',
+        ],
+        blockers: [],
+        repairAction: 'materialize-members-meta',
+      });
+      expect(resolveLaunchExpectedMembersFromCompatibility(report)).toEqual({
+        source: 'config-fallback',
+        members: expectedMembers,
+        warning: report.warnings[0],
+      });
+      if (metadataState === 'unreadable') {
+        expect(ports.warn).toHaveBeenCalledWith(
+          '[team-a] Failed to read members.meta.json: metadata unavailable'
+        );
+      } else {
+        expect(ports.warn).not.toHaveBeenCalled();
+      }
+    }
+  );
 
   it('warns and continues without explicit members for unparsable empty config fallback', async () => {
     const warn = vi.fn<(message: string) => void>();
