@@ -37,13 +37,14 @@ jobs:
       # keep cleanup mandatory and update this pin after the fix is reviewed/proven.
       WINDOWS_BACKFILL_SUPPORT_SHA: 'ab8464013fd21b53ba8cb4cd1063184e878d2a31'
       WINDOWS_BACKFILL_SUPPORT_ROOT: ${{ github.workspace }}/backfill-test-support
-      WINDOWS_BACKFILL_EVIDENCE_DIR: ${{ github.workspace }}/../windows-app-backfill-evidence
     defaults:
       run:
         shell: pwsh
     steps:
       - name: Initialize failure evidence
         run: |
+          $env:WINDOWS_BACKFILL_EVIDENCE_DIR = Join-Path $env:RUNNER_TEMP 'windows-app-backfill-evidence'
+          "WINDOWS_BACKFILL_EVIDENCE_DIR=$env:WINDOWS_BACKFILL_EVIDENCE_DIR" >> $env:GITHUB_ENV
           New-Item -ItemType Directory -Force $env:WINDOWS_BACKFILL_EVIDENCE_DIR | Out-Null
           @{ status = 'preflight-pending'; platform = $env:RUNNER_OS; runId = '${{ github.run_id }}'; appEventSha = '${{ github.sha }}'; supportSha = $env:WINDOWS_BACKFILL_SUPPORT_SHA } |
             ConvertTo-Json | Set-Content "$env:WINDOWS_BACKFILL_EVIDENCE_DIR/preflight.json" -Encoding utf8
@@ -81,9 +82,8 @@ jobs:
             }
           }
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
-          version: '11.22.0'
           run_install: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
