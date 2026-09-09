@@ -420,6 +420,33 @@ describe('team provisioning config materialization', () => {
     ]);
   });
 
+  it.each([
+    { name: 'lead', role: 'Lead' },
+    { name: ' LEAD ', role: ' Lead ', agentType: ' ' },
+    { name: 'Coordinator', role: ' Team   Lead ' },
+    { name: 'Coordinator', role: 'team-lead' },
+    { name: 'Coordinator', role: 'Orchestrator' },
+  ])('excludes canonical legacy lead $name/$role from config roster', (lead) => {
+    expect(
+      extractTeammateSpecsFromConfig(
+        JSON.stringify({ members: [lead, { name: 'Builder', role: 'Engineer' }] })
+      )
+    ).toEqual([{ name: 'Builder', role: 'Engineer' }]);
+  });
+
+  it.each([
+    { name: 'lead', role: 'Lead', agentType: 'general-purpose' },
+    { name: 'Coordinator', role: 'Team Lead', agentType: 'general-purpose' },
+    { name: 'Coordinator', role: 'Orchestrator', agentType: 'reviewer' },
+    { name: 'Planner', role: 'Lead' },
+    { name: 'lead', role: 'Engineer' },
+    { name: 'lead' },
+  ])('preserves real teammate $name/$role in config roster', (member) => {
+    expect(extractTeammateSpecsFromConfig(JSON.stringify({ members: [member] }))).toEqual([
+      { name: member.name, role: member.role },
+    ]);
+  });
+
   it('builds launch members from metadata without lead, user, removed, or auto-suffixed entries', () => {
     expect(
       buildLaunchMembersFromMeta([

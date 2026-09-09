@@ -497,7 +497,7 @@ export function extractTeammateSpecsFromConfig(configRaw: string): TeamCreateReq
     for (const member of parsed.members) {
       const rawName = typeof member?.name === 'string' ? member.name.trim() : '';
       const lower = rawName.toLowerCase();
-      if (!member || isLeadMember(member) || lower === 'user') continue;
+      if (!member || isCanonicalSettingsLeadMember(member) || lower === 'user') continue;
       const name = rawName;
       if (!name) continue;
       if (member.removedAt != null) continue;
