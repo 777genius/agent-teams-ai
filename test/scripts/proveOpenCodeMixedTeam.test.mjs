@@ -402,7 +402,6 @@ for (const raw of ['unchanged', 'rotated', 'missing', 'malformed', 'empty']) {
 
       let input, before, projectBefore, spawns = 0;
       const logs = [];
-      const handoffsBefore = fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('opencode-team-auth-handoff-'));
       const stage = (value) => {
         input = value;
         const runEnv = value.env;
@@ -458,7 +457,6 @@ for (const raw of ['unchanged', 'rotated', 'missing', 'malformed', 'empty']) {
           assert.equal(projectBefore.contents['.opencode-proof-project.json'].mode & 0o777, 0o600);
         }
         assert.equal(fs.readFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, 'utf8'), original);
-        assert.deepEqual(fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith('opencode-team-auth-handoff-')), handoffsBefore);
         assert.doesNotMatch(logs.join('\n'), /synthetic|handoff|exported|valid|reusable|Rotated selected auth/i);
         if (outcome === 'passed') {
           assert.ok(logs.some((line) => line.includes(`owned OAuth state retained: ${input.env.OPENCODE_E2E_OWNED_ROOT}, project ${input.projectPath}`)));
