@@ -1,3 +1,5 @@
+import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -30,7 +32,40 @@ describe('OpenCodeBridgeCommandClient', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('bounds exit-1 process calls and diagnostics, and observes executable replacement through the port', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const binaryPath = path.join(tempDir, 'runtime.exe');
+    await fs.writeFile(binaryPath, 'old runtime');
+    const client = new OpenCodeBridgeCommandClient({ binaryPath, tempDirectory: tempDir,
+      processRunner: runner, diagnostics });
+    const bridge = new OpenCodeReadinessBridge(client);
+    const retry = new OpenCodeBackfillRetry();
+    runner.nextResult = { stdout: '', stderr: 'expected 1 argument, got 2', exitCode: 1, timedOut: false };
+    const refresh = async () => retry.run('task', await bridge.getRuntimeIdentity() ?? '', async () => {
+      const result = await bridge.backfillOpenCodeTaskLedger({ teamName: 'test-team', teamId: 'test-team',
+        taskId: 'task', projectDir: tempDir, workspaceRoot: tempDir });
+      expect(result.outcome).toBe('transient-error');
+      return { attempted: true, backfilled: false };
+    });
+    const identity = await bridge.getRuntimeIdentity();
+    await Promise.all(Array.from({ length: 20 }, refresh));
+    await refresh();
+    expect(runner.calls).toHaveLength(1);
+    expect(diagnostics.events).toHaveLength(1);
+    expect(JSON.stringify(diagnostics.events[0])).toContain('expected 1 argument, got 2');
+    vi.setSystemTime(Date.now() + 5_000);
+    await refresh();
+    expect(runner.calls).toHaveLength(2);
+    expect(diagnostics.events).toHaveLength(2);
+    await fs.writeFile(binaryPath, 'replacement runtime with different bytes');
+    expect(await bridge.getRuntimeIdentity()).not.toBe(identity);
+    await refresh();
+    expect(runner.calls).toHaveLength(3);
+    expect(diagnostics.events).toHaveLength(3);
   });
 
   it('writes a private input envelope, executes the bridge command, and removes the input file', async () => {
