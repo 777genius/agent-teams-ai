@@ -253,6 +253,12 @@ jobs:
       - name: Test Windows CLI shell fallback
         run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
 
+      - name: Test crash-safe app lock publication
+        run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
+
+      - name: Test controller lock compatibility
+        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+
       - name: Test task change ledger
         run: pnpm test:task-change-ledger
 
