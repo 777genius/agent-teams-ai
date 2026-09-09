@@ -137,8 +137,10 @@ describe('Windows packaged backfill eligibility', () => {
   });
 });
 
+const suiteName = 'actual app client / packaged Windows runtime';
+
 describe.skipIf(Boolean(unavailable))(
-  `actual app client / packaged Windows runtime${unavailable ? ` (${unavailable})` : ''}`,
+  unavailable ? `${suiteName} (${unavailable})` : suiteName,
   () => {
     for (const [id, shape] of [
       ['ascii', 'ascii'],
