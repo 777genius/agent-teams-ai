@@ -620,7 +620,7 @@ describe('OpenCode runtime stop flow', () => {
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
   });
 
-  it('treats an unconfirmed secondary lane stop with no live host as already stopped', async () => {
+  it('retains an unconfirmed secondary lane despite absent recorded host', async () => {
     const stop = vi.fn(async (input) => ({
       runId: input.runId,
       teamName: input.teamName,
@@ -635,12 +635,10 @@ describe('OpenCode runtime stop flow', () => {
       isRuntimeProcessAlive: () => false,
     });
 
-    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).resolves.toBeUndefined();
+    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow('session abort not confirmed');
 
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledTimes(1);
-    expect(ports.logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('treating the runtime as already stopped')
-    );
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.clearCalls).toEqual([]);
   });
 
   it('still fails an unconfirmed secondary lane stop while its recorded host is alive', async () => {

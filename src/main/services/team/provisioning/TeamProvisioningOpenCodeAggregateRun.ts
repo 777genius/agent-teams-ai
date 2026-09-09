@@ -219,7 +219,10 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     return { runId };
   };
 
-  await ports.clearPersistedLaunchState(teamName, { expectedRunId: runId });
+  if (!(await ports.beginLaunchPublication(teamName, runId, run.effectiveMembers.map((member) => member.name),
+    () => !aggregateLaunchNoLongerCurrent()))) {
+    return await finishCancelledAggregateLaunch();
+  }
   if (aggregateLaunchNoLongerCurrent()) {
     return await finishCancelledAggregateLaunch();
   }

@@ -52,6 +52,7 @@ export interface OpenCodeRuntimeAdapterFinalProgressInput {
 
 export interface OpenCodeRuntimeAdapterLaunchPreflightPorts {
   getStopAllTeamsGeneration(): number;
+  getStopTeamGeneration(teamName: string): number;
   getRuntimeAdapterRun(teamName: string): OpenCodeRuntimeAdapterRunEntry | undefined;
   readLaunchState(teamName: string): Promise<TeamRuntimeLaunchInput['previousLaunchState']>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
@@ -86,6 +87,7 @@ export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapte
     onProgress?: (progress: TeamProvisioningProgress) => void
   ): TeamProvisioningProgress;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
+  beginLaunchPublication(teamName: string, runId: string, members: string[], isAuthorized: () => boolean): Promise<boolean>;
   clearPersistedLaunchState(teamName: string, options: { expectedRunId: string }): Promise<void>;
   getTeamsBasePath(): string;
   migrateLegacyOpenCodeRuntimeState(input: {
@@ -428,6 +430,7 @@ export async function prepareOpenCodeRuntimeAdapterLaunchPreflight(
   ports: OpenCodeRuntimeAdapterLaunchPreflightPorts
 ): Promise<TeamLaunchResponse | null> {
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
+  const stopTeamGenerationAtStart = ports.getStopTeamGeneration(input.teamName);
   const previousRuntimeRun = ports.getRuntimeAdapterRun(input.teamName);
   // A proven-dead primary runtime needs no preparatory abort. The following
   // launch still performs the runtime's locked host/run recovery and CAS checks.
@@ -454,7 +457,8 @@ export async function prepareOpenCodeRuntimeAdapterLaunchPreflight(
   ) {
     await ports.cancelRuntimeAdapterProvisioning(previousPendingRunId, previousRuntimeProgress);
   }
-  if (ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart) {
+  if (ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
+      ports.getStopTeamGeneration(input.teamName) !== stopTeamGenerationAtStart) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       input.teamName,
       input.sourceWarning,
@@ -469,6 +473,12 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   ports: OpenCodeRuntimeAdapterLaunchPorts
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
+  const stopGeneration = ports.getStopTeamGeneration(teamName);
+  const stopAllGeneration = ports.getStopAllTeamsGeneration();
+  const hasLaunchAuthority = (runId: string): boolean =>
+    hasOpenCodeLaunchAuthority(ports, teamName, runId) &&
+    ports.getStopTeamGeneration(teamName) === stopGeneration &&
+    ports.getStopAllTeamsGeneration() === stopAllGeneration;
   const previousRuntimeRun = ports.getRuntimeAdapterRun(teamName);
   const preflightCancellation = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
     {
@@ -512,17 +522,20 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
   let launchCwd = input.request.cwd;
   try {
     latestProgress = ports.setRuntimeAdapterProgress(initialProgress, input.onProgress);
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     ports.resetTeamScopedTransientStateForNewRun(teamName);
 
     const previousLaunchState = await ports.readLaunchState(teamName);
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
-    await ports.clearPersistedLaunchState(teamName, { expectedRunId: runId });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!(await ports.beginLaunchPublication(teamName, runId, input.members.map((member) => member.name),
+      () => hasLaunchAuthority(runId)))) {
+      return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
+    }
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     await ports.migrateLegacyOpenCodeRuntimeState({
@@ -530,7 +543,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       teamName,
       laneId: 'primary',
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     await ports.upsertOpenCodeRuntimeLaneIndexEntry({
@@ -539,7 +552,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       laneId: 'primary',
       state: 'active',
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
 
@@ -565,7 +578,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       input.onProgress
     );
     latestProgress = launching;
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
 
@@ -575,7 +588,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       laneId: 'primary',
       runId,
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const launchResult = await launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
@@ -590,10 +603,10 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
         logWarning: (message) => ports.logWarning(message),
         // A relaunch must not race a stop, and the marker stays unconsumed so
         // the authority checks below still observe it.
-        hasLaunchAuthority: () => hasOpenCodeLaunchAuthority(ports, teamName, runId),
+        hasLaunchAuthority: () => hasLaunchAuthority(runId),
       }
     );
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const { result, snapshot } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
@@ -601,7 +614,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       launchInput
     );
     latestPersistedSnapshot = snapshot ?? null;
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const requestTeamColor = 'color' in input.request ? input.request.color : undefined;
@@ -617,7 +630,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       teamColor: requestTeamColor,
       teamDisplayName: requestTeamDisplayName,
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const failed = result.teamLaunchState === 'partial_failure';
@@ -630,7 +643,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       input.onProgress
     );
     latestProgress = finalProgress;
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     if (failed) {
@@ -643,11 +656,11 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
         diagnostics: result.diagnostics,
         launchSnapshot: latestPersistedSnapshot,
       });
-      if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+      if (!hasLaunchAuthority(runId)) {
         return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
       }
       await clearOpenCodeLaunchLaneStorageBestEffort(ports, teamName, runId);
-      if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+      if (!hasLaunchAuthority(runId)) {
         return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
       }
       ports.deleteRuntimeOwnershipIfCurrent(teamName, runId);
@@ -674,7 +687,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
     });
     return { runId };
   } catch (error) {
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const message = error instanceof Error ? error.message : String(error);
@@ -693,7 +706,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       error: message,
       cliLogsTail: message,
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     await writeOpenCodeLaunchFailureArtifact(ports, input, {
@@ -705,11 +718,11 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       diagnostics: [message],
       launchSnapshot: latestPersistedSnapshot,
     });
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     await clearOpenCodeLaunchLaneStorageBestEffort(ports, teamName, runId);
-    if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
+    if (!hasLaunchAuthority(runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     try {

@@ -52,6 +52,7 @@ import type {
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
+import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
@@ -219,11 +220,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
 
-  async stopOpenCodeTeam(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData> {
+  async stopOpenCodeTeam(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
     const cwd = input.projectPath ?? process.cwd();
     const result = await this.executeStateChangingCommand<
       OpenCodeStopTeamCommandBody,
-      OpenCodeStopTeamCommandData
+      OpenCodeStopTeamCommandData | RuntimeStopObservation
     >('opencode.stopTeam', input, {
       teamName: input.teamName,
       laneId: input.laneId,

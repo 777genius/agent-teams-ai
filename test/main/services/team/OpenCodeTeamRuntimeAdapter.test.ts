@@ -112,9 +112,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       readiness({
         state: 'unknown_error',
         launchAllowed: false,
-        diagnostics: [
-          'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
-        ],
+        diagnostics: ['Failed to query OpenCode models: OpenCode command timed out after 10000ms'],
       })
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
@@ -2469,7 +2467,69 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
-  it('acknowledges stop without mutating live OpenCode ownership in the adapter shell', async () => {
+  it('consumes current Stop reconciliation as an observation and preserves the original member identity', async () => {
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      stopOpenCodeTeam: vi.fn(async () => ({
+        status: 'reconciled_stopped' as const,
+        target: {
+          teamId: 'team-a',
+          laneId: 'primary',
+          runId: 'run-1',
+          projectPath: '/tmp/test-only',
+          capabilitySnapshotId: `opencode:${'a'.repeat(32)}`,
+          expectedBehaviorFingerprint: 'b'.repeat(64),
+          members: [{ memberName: 'alice', sessionId: 'original-session' }],
+        },
+        binding: [
+          {
+            memberName: 'alice',
+            sessionId: 'original-session',
+            hostKey: 'original-host',
+            createdAt: 'original-generation',
+          },
+        ],
+        sessionSetToken: 'validated-by-command-service',
+      })),
+    });
+    const result = await new OpenCodeTeamRuntimeAdapter(bridge).stop({
+      runId: 'run-1',
+      teamName: 'team-a',
+      providerId: 'opencode',
+      laneId: 'primary',
+      reason: 'user_requested',
+      previousLaunchState: null,
+    });
+    expect(result).toMatchObject({
+      stopped: true,
+      members: { alice: { sessionId: 'original-session', stopped: true } },
+      diagnostics: ['Original Stop outcome unknown; current exact target reconciled stopped'],
+    });
+  });
+
+  it('preserves runtime Stop warning strings and a false domain outcome', async () => {
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      stopOpenCodeTeam: vi.fn(async () => ({
+        runId: 'run-1',
+        stopped: false,
+        members: {},
+        warnings: ['opencode_stop_status_unconfirmed'],
+        diagnostics: [],
+      })),
+    });
+    const result = await new OpenCodeTeamRuntimeAdapter(bridge).stop({
+      runId: 'run-1',
+      teamName: 'team-a',
+      providerId: 'opencode',
+      reason: 'user_requested',
+      previousLaunchState: null,
+    });
+    expect(result).toMatchObject({
+      stopped: false,
+      warnings: ['opencode_stop_status_unconfirmed'],
+    });
+  });
+
+  it('keeps Stop unknown when the runtime command is unavailable', async () => {
     const adapter = new OpenCodeTeamRuntimeAdapter(
       bridgePort(readiness({ state: 'adapter_disabled', launchAllowed: false }))
     );
@@ -2483,11 +2543,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         previousLaunchState: launchSnapshot(),
       })
     ).resolves.toMatchObject({
-      stopped: true,
+      stopped: false,
       members: {
         alice: {
           providerId: 'opencode',
-          stopped: true,
+          stopped: false,
         },
       },
     });

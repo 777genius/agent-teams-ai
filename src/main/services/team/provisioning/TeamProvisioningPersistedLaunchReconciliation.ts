@@ -140,7 +140,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
   ports: ReconcilePersistedLaunchStatePorts,
   options?: { expectedRunId?: string | null }
 ): Promise<PersistedLaunchReconciliationResult> {
-  const expectedRunId = options?.expectedRunId ?? ports.getTrackedRunId?.(teamName) ?? undefined;
+  let expectedRunId = options?.expectedRunId ?? ports.getTrackedRunId?.(teamName) ?? undefined;
   const writeSnapshot = (
     snapshot: PersistedTeamLaunchSnapshot
   ): Promise<PersistedTeamLaunchSnapshot> =>
@@ -153,6 +153,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
       : ports.clearPersistedLaunchState(teamName);
   const bootstrapSnapshot = await ports.readBootstrapLaunchSnapshot(teamName);
   const persisted = await ports.readLaunchState(teamName);
+  expectedRunId ??= persisted?.publicationRunId;
   const metaMembers = await ports.readMembersMeta(teamName).catch(() => []);
   const recoveredMixedSnapshot = await ports.recoverStaleMixedSecondaryLaunchSnapshot(
     teamName,

@@ -1,4 +1,4 @@
-import { withFileLock } from '@main/services/team/fileLock';
+import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -103,6 +103,116 @@ describe('withFileLock', () => {
     } finally {
       killSpy.mockRestore();
     }
+  });
+
+  it('keeps an aged live owner exclusive across an awaited barrier', async () => {
+    let resume!: () => void;
+    let entered!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const barrier = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const owner = withFileLock(testFile, async () => {
+      entered();
+      await barrier;
+    });
+    await acquired;
+    const lockPath = `${testFile}.lock`;
+    const original = fs.readFileSync(lockPath, 'utf8');
+    fs.writeFileSync(
+      lockPath,
+      original.replace(original.split('\n')[1], String(Date.now() - 100_000))
+    );
+    const critical = vi.fn(async () => {});
+    await expect(
+      withFileLock(testFile, critical, {
+        acquireTimeoutMs: 5,
+        retryIntervalMs: 1,
+        staleTimeoutMs: 1,
+      })
+    ).rejects.toThrow('File lock timeout');
+    expect(critical).not.toHaveBeenCalled();
+    resume();
+    await owner;
+    await withFileLock(testFile, critical);
+    expect(critical).toHaveBeenCalledTimes(1);
+  });
+
+  it('old owner release cannot unlink a replacement acquisition token', async () => {
+    let resume!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const owner = withFileLock(testFile, async () => {
+      await barrier;
+    });
+    const lockPath = `${testFile}.lock`;
+    const successor = `${process.pid}\n${Date.now()}\nsuccessor-token\n`;
+    fs.unlinkSync(lockPath);
+    fs.writeFileSync(lockPath, successor);
+    resume();
+    await owner;
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(successor);
+  });
+
+  it('revalidates dead owner identity after the liveness check before reclaiming', async () => {
+    const lockPath = `${testFile}.lock`;
+    fs.writeFileSync(lockPath, `424242\n${Date.now()}\nold-token\n`);
+    const successor = `${process.pid}\n${Date.now()}\nnew-token\n`;
+    const kill = vi.spyOn(process, 'kill').mockImplementation(((pid: number) => {
+      if (pid === 424242) {
+        fs.unlinkSync(lockPath);
+        fs.writeFileSync(lockPath, successor);
+        throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+      }
+      return true;
+    }) as typeof process.kill);
+    try {
+      await expect(
+        withFileLock(testFile, async () => {}, { acquireTimeoutMs: 5, retryIntervalMs: 1 })
+      ).rejects.toThrow('File lock timeout');
+      expect(fs.readFileSync(lockPath, 'utf8')).toBe(successor);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it('does not mistake an aged partially initialized regular lock for a dead owner', async () => {
+    const lockPath = `${testFile}.lock`;
+    fs.writeFileSync(lockPath, '');
+    fs.utimesSync(lockPath, new Date(0), new Date(0));
+    await expect(
+      withFileLock(testFile, async () => {}, {
+        acquireTimeoutMs: 5,
+        retryIntervalMs: 1,
+        staleTimeoutMs: 1,
+      })
+    ).rejects.toThrow('File lock timeout');
+    expect(fs.existsSync(lockPath)).toBe(true);
+  });
+
+  it('sync callers also preserve an aged live owner and release only their own token', () => {
+    const lockPath = `${testFile}.lock`;
+    const live = `${process.pid}\n0\nlive-token\n`;
+    fs.writeFileSync(lockPath, live);
+    expect(() =>
+      withFileLockSync(
+        testFile,
+        () => {
+          throw new Error('must not enter');
+        },
+        { acquireTimeoutMs: 3, retryIntervalMs: 1, staleTimeoutMs: 1 }
+      )
+    ).toThrow('File lock timeout');
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(live);
+    fs.unlinkSync(lockPath);
+    withFileLockSync(testFile, () => {
+      fs.unlinkSync(lockPath);
+      fs.writeFileSync(lockPath, live);
+    });
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(live);
   });
 
   it('creates parent directories for lock file', async () => {

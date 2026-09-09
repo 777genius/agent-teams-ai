@@ -1,10 +1,17 @@
+import { randomUUID } from 'node:crypto';
+
+import { getDurablePathIdentity, isSameDurablePathIdentity } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
-import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
+import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
+import {
+  createPersistedLaunchSnapshot,
+  normalizePersistedLaunchSnapshot,
+} from './TeamLaunchStateEvaluator';
 import {
   createPersistedLaunchSummaryProjection,
   TEAM_LAUNCH_SUMMARY_FILE,
@@ -15,6 +22,7 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
+const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
 
 export function getTeamLaunchStatePath(teamName: string): string {
@@ -31,8 +39,7 @@ export function getTeamLaunchSummaryPath(teamName: string): string {
  * metadata: a stopped mixed OpenCode team used to come back as "Last launch
  * failed partway - 2/3 teammates did not join", with members reported as
  * never spawned, because the lane metadata of the run that was just stopped
- * was still on disk. Any new active launch-state write (a real launch)
- * removes it.
+ * was still on disk. An explicitly authorized new run removes it.
  */
 export const TEAM_LAUNCH_STOPPED_MARKER_FILE = 'launch-stopped.json';
 
@@ -49,6 +56,9 @@ export interface TeamLaunchStatePublicationOptions {
    * such a write - it is not published, and it never removes the marker.
    */
   republishesExistingLaunch?: boolean;
+  runId?: string;
+  isAuthorized?: () => boolean;
+  authorizesNewRun?: () => boolean;
 }
 
 async function removeStoppedMarkerIfPresent(teamName: string): Promise<void> {
@@ -185,57 +195,166 @@ export class TeamLaunchStateStore {
       }
     }
     const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
+    if (
+      snapshot &&
+      parsed &&
+      typeof parsed === 'object' &&
+      'publicationRunId' in parsed &&
+      typeof parsed.publicationRunId === 'string'
+    )
+      snapshot.publicationRunId = parsed.publicationRunId;
     return snapshot
       ? { status: 'snapshot', snapshot }
       : { status: 'unreadable', reason: 'launch state did not describe a launch' };
+  }
+
+  async beginLaunch(
+    teamName: string,
+    runId: string,
+    expectedMembers: string[],
+    isAuthorized: () => boolean
+  ): Promise<boolean> {
+    if (!runId.trim()) throw new Error('Launch publication requires a run identity');
+    const stopIntent = stopIntentByTeam.get(teamName);
+    return enqueuePublication(teamName, () =>
+      this.writeNow(
+        teamName,
+        createPersistedLaunchSnapshot({
+          teamName,
+          expectedMembers,
+          launchPhase: 'active',
+          members: {},
+        }),
+        {
+          runId,
+          isAuthorized: () => isAuthorized() && stopIntentByTeam.get(teamName) === stopIntent,
+        },
+        true
+      )
+    );
   }
 
   async write(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
     options?: TeamLaunchStatePublicationOptions
-  ): Promise<void> {
-    await enqueuePublication(teamName, () => this.writeNow(teamName, snapshot, options));
+  ): Promise<boolean> {
+    const stopIntent = stopIntentByTeam.get(teamName);
+    return enqueuePublication(teamName, () =>
+      this.writeNow(teamName, snapshot, {
+        ...options,
+        runId: options?.runId ?? snapshot.publicationRunId,
+        isAuthorized: () =>
+          options?.isAuthorized?.() !== false && stopIntentByTeam.get(teamName) === stopIntent,
+      })
+    );
   }
 
   private async writeNow(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options?: TeamLaunchStatePublicationOptions
-  ): Promise<void> {
-    const launchStatePath = getTeamLaunchStatePath(teamName);
-    const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
-    // Only a launch supersedes a stop. An active snapshot that merely
-    // republishes what was already on disk is not one, so it is fenced by the
-    // marker exactly like a reconcile write is.
-    const startsLaunch =
-      snapshot.launchPhase === 'active' && options?.republishesExistingLaunch !== true;
-    try {
-      if (!startsLaunch && (await this.isStopped(teamName))) {
-        // Late reconcile/finish writes from an abandoned stop or a stale run
-        // must not resurrect launch state for a stopped team.
-        logger.debug(
-          `[${teamName}] Ignoring ${snapshot.launchPhase} launch-state write: team is stopped`
-        );
-        return;
-      }
-      await atomicWriteAsync(launchStatePath, `${JSON.stringify(snapshot, null, 2)}\n`);
-      await atomicWriteAsync(
-        launchSummaryPath,
-        `${JSON.stringify(createPersistedLaunchSummaryProjection(snapshot), null, 2)}\n`
+    options: TeamLaunchStatePublicationOptions,
+    beginsLaunch = false
+  ): Promise<boolean> {
+    if (options.isAuthorized?.() === false) return false;
+    const freshness = await readTeamLaunchFreshness(teamName);
+    if (options.isAuthorized?.() === false) return false;
+    // Existing native launch flows publish their first active snapshot through the
+    // boundary. Only their current, explicitly checked new run can begin here.
+    beginsLaunch ||=
+      snapshot.launchPhase === 'active' &&
+      options.republishesExistingLaunch !== true &&
+      !!options.runId &&
+      options.authorizesNewRun?.() === true &&
+      (freshness === null ||
+        (freshness.kind === 'stop' ? freshness.stoppedRunId : freshness.runId) !== options.runId);
+    if (!beginsLaunch && (await this.isStopped(teamName))) return false;
+    if (!beginsLaunch && freshness?.kind === 'launch' && options.runId !== freshness.runId)
+      return false;
+    const statePath = getTeamLaunchStatePath(teamName);
+    const directory = path.dirname(statePath);
+    const directoryIdentity = await fs.promises.stat(directory).catch(() => null);
+    if (!directoryIdentity) return false;
+    const directoryIsCurrent = async (): Promise<boolean> => {
+      const current = await fs.promises.stat(directory).catch(() => null);
+      return (
+        current !== null &&
+        isSameDurablePathIdentity(
+          getDurablePathIdentity(current),
+          getDurablePathIdentity(directoryIdentity)
+        )
       );
-      if (startsLaunch) {
-        // A real launch supersedes any earlier stop.
-        await removeStoppedMarkerIfPresent(teamName);
+    };
+    const beforeCommit = async (): Promise<void> => {
+      if (options.isAuthorized?.() === false || !(await directoryIsCurrent())) {
+        throw new Error('Launch publication authorization changed');
       }
+    };
+    const summaryPath = getTeamLaunchSummaryPath(teamName);
+    const paths = beginsLaunch
+      ? [
+          statePath,
+          summaryPath,
+          getTeamLaunchFreshnessPath(teamName),
+          getTeamLaunchStoppedMarkerPath(teamName),
+        ]
+      : [statePath, summaryPath];
+    const previous = await Promise.all(
+      paths.map(async (file) => {
+        try {
+          return await fs.promises.readFile(file, 'utf8');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+          throw error;
+        }
+      })
+    );
+    const rollback = async (): Promise<void> => {
+      const beforeRollbackCommit = async (): Promise<void> => {
+        if (!(await directoryIsCurrent())) throw new Error('Launch rollback directory changed');
+      };
+      for (let i = 0; i < paths.length; i++) {
+        if (!(await directoryIsCurrent())) return;
+        if (previous[i] === null) await fs.promises.rm(paths[i], { force: true });
+        else await atomicWriteAsync(paths[i], previous[i]!, { beforeCommit: beforeRollbackCommit });
+      }
+    };
+    if (options.isAuthorized?.() === false) return false;
+    try {
+      await atomicWriteAsync(
+        statePath,
+        `${JSON.stringify({ ...snapshot, publicationRunId: options.runId }, null, 2)}\n`,
+        { beforeCommit }
+      );
+      await atomicWriteAsync(
+        summaryPath,
+        `${JSON.stringify({ ...createPersistedLaunchSummaryProjection(snapshot), publicationRunId: options.runId }, null, 2)}\n`,
+        { beforeCommit }
+      );
+      if (beginsLaunch) {
+        await atomicWriteAsync(
+          getTeamLaunchFreshnessPath(teamName),
+          JSON.stringify({
+            version: 1,
+            teamName,
+            kind: 'launch',
+            runId: options.runId,
+          }),
+          { beforeCommit, durability: 'strict', syncDirectory: true }
+        );
+        if (options.isAuthorized?.() !== false) await removeStoppedMarkerIfPresent(teamName);
+      }
+      if (options.isAuthorized?.() === false) {
+        await rollback();
+        return false;
+      }
+      return true;
     } catch (error) {
-      if (await isMissingTeamDirectoryWriteRace(launchStatePath, error)) {
-        return;
-      }
+      if (await isMissingTeamDirectoryWriteRace(statePath, error)) return false;
+      await rollback();
+      if (options.isAuthorized?.() === false || !(await directoryIsCurrent())) return false;
       logger.warn(
-        `[${teamName}] Failed to persist launch-state: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `[${teamName}] Failed to persist launch-state: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
@@ -243,16 +362,30 @@ export class TeamLaunchStateStore {
 
   /** Stopped team: no launch state, and reconciliation stays off until the next launch. */
   async markStopped(teamName: string): Promise<void> {
+    stopIntentByTeam.set(teamName, (stopIntentByTeam.get(teamName) ?? 0) + 1);
     await enqueuePublication(teamName, async () => {
       const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
       const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+      const stopId = randomUUID();
+      const previous = await readTeamLaunchFreshness(teamName).catch(() => null);
       try {
         await atomicWriteAsync(
+          getTeamLaunchFreshnessPath(teamName),
+          JSON.stringify({
+            version: 1,
+            teamName,
+            kind: 'stop',
+            stopId,
+            stoppedRunId: previous?.kind === 'launch' ? previous.runId : previous?.stoppedRunId,
+          }),
+          { durability: 'strict', syncDirectory: true }
+        );
+        await atomicWriteAsync(
           markerPath,
-          `${JSON.stringify({ version: 1, teamName, stoppedAt: new Date().toISOString() }, null, 2)}\n`
+          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString() }, null, 2)}\n`
         );
       } catch (error) {
         if (await isMissingTeamDirectoryWriteRace(markerPath, error)) {
@@ -270,7 +403,10 @@ export class TeamLaunchStateStore {
   }
 
   async isStopped(teamName: string): Promise<boolean> {
-    return fs.existsSync(getTeamLaunchStoppedMarkerPath(teamName));
+    return (
+      fs.existsSync(getTeamLaunchStoppedMarkerPath(teamName)) ||
+      (await readTeamLaunchFreshness(teamName))?.kind === 'stop'
+    );
   }
 
   /**
@@ -279,8 +415,9 @@ export class TeamLaunchStateStore {
    * was marked stopped, and only a real launch (an 'active' write) may lift
    * the marker again.
    */
-  async clear(teamName: string): Promise<void> {
+  async clear(teamName: string, isAuthorized?: () => boolean): Promise<void> {
     await enqueuePublication(teamName, async () => {
+      if (isAuthorized?.() === false) return;
       throwPublicationRevocationFailure(
         teamName,
         await Promise.allSettled([

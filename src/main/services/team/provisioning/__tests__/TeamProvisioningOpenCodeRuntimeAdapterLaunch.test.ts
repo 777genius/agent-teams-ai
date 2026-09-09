@@ -1,6 +1,13 @@
+import { promises as fs } from 'node:fs';
+import * as os from 'node:os';
+import { join } from 'node:path';
+
+import { getTeamsBasePath,setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { normalizePersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
 import {
   buildOpenCodeRuntimeAdapterFinalProgress,
   buildOpenCodeRuntimeAdapterLaunchInput,
@@ -52,6 +59,49 @@ function runtimeResult(overrides: Partial<TeamRuntimeLaunchResult> = {}): TeamRu
 }
 
 describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
+  it('publishes the first finished result after old Stop through the actual store', async () => {
+    const temp = await fs.mkdtemp(join(os.tmpdir(), 'recovery-launch-'));
+    setClaudeBasePathOverride(temp);
+    const store = new TeamLaunchStateStore();
+    const teamName = 'team-a';
+    await fs.mkdir(join(getTeamsBasePath(), teamName), { recursive: true });
+    let stoppedOldRun = false;
+    const calls: string[] = [];
+    const finished = createPersistedLaunchSnapshot({
+      teamName, expectedMembers: ['alice'], launchPhase: 'finished', members: {
+        alice: { name: 'alice', launchState: 'confirmed_alive', agentToolAccepted: true,
+          runtimeAlive: true, bootstrapConfirmed: true, hardFailure: false,
+          runtimeRunId: 'run-1', runtimeSessionId: 'session-a', lastEvaluatedAt: '2026-09-09T00:00:00.000Z' },
+      },
+    });
+    try {
+      await store.markStopped(teamName);
+      const lifecycle = {
+        getRuntimeAdapterRun: () => stoppedOldRun ? undefined : { runId: 'old-run', providerId: 'opencode' as const },
+        stopOpenCodeRuntimeAdapterTeam: async () => { stoppedOldRun = true; },
+        readLaunchState: (team: string) => store.read(team),
+        beginLaunchPublication: async (team: string, run: string, members: string[], isAuthorized: () => boolean) => {
+          expect(stoppedOldRun).toBe(true);
+          return store.beginLaunch(team, run, members, isAuthorized);
+        },
+      };
+      const owned = ownedPorts(calls, {
+        ...lifecycle,
+        persistOpenCodeRuntimeAdapterLaunchResult: async (result, input) => {
+          expect(await store.write(teamName, finished, { runId: input.runId, isAuthorized: () => true })).toBe(true);
+          return { result, snapshot: finished };
+        },
+      });
+      await runOpenCodeTeamRuntimeAdapterLaunch(launchParams(async () => runtimeResult()), owned.ports);
+      expect(await store.isStopped(teamName)).toBe(false);
+      expect(await store.read(teamName)).toMatchObject({ launchPhase: 'finished', summary: { confirmedCount: 1 } });
+      expect(JSON.parse(await fs.readFile(join(getTeamsBasePath(), teamName, 'launch-summary.json'), 'utf8')).publicationRunId).toBe('run-1');
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('builds primary OpenCode runtime launch input without changing member defaults', () => {
     const previousLaunchState = {
       teamName: 'team-a',
@@ -181,9 +231,10 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     });
   });
 
-  it('runs previous OpenCode cleanup and pending cancellation before recording stop-all cancellation', async () => {
+  it.each(['stop-all', 'stop-team'])('runs previous OpenCode cleanup and pending cancellation before recording %s cancellation', async (scope) => {
     const calls: string[] = [];
     let stopAllGeneration = 0;
+    let stopTeamGeneration = 0;
     const previousProgress = progress({ runId: 'pending-run', state: 'spawning' });
 
     const result = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
@@ -195,6 +246,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       },
       {
         getStopAllTeamsGeneration: () => stopAllGeneration,
+        getStopTeamGeneration: () => stopTeamGeneration,
         getRuntimeAdapterRun: () => ({ runId: 'old-run', providerId: 'opencode' }),
         readLaunchState: async () => null,
         stopOpenCodeRuntimeAdapterTeam: async () => {
@@ -205,7 +257,8 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
         isCancellableRuntimeAdapterProgress: () => true,
         cancelRuntimeAdapterProvisioning: async () => {
           calls.push('cancelPreviousPendingRun');
-          stopAllGeneration += 1;
+          if (scope === 'stop-all') stopAllGeneration += 1;
+          else stopTeamGeneration += 1;
         },
         recordCancelledOpenCodeRuntimeAdapterLaunch: (teamName, sourceWarning) => {
           calls.push('recordCancelledLaunch');
@@ -675,7 +728,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       'setProgress:validating',
       'resetTransientState',
       'readLaunchState',
-      'clearPersistedLaunchState',
+      'beginLaunchPublication',
       'getTeamsBasePath',
       'migrateLegacyState',
       'getTeamsBasePath',
@@ -1370,6 +1423,7 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
       calls.push(`logWarning:${message}`);
     },
     getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,
     stopOpenCodeRuntimeAdapterTeam: async () => {
       calls.push('stopPreviousRuntimeRun');
@@ -1391,6 +1445,7 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
       calls.push(`setProgress:${nextProgress.state}`);
       return nextProgress;
     },
+    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
     resetTeamScopedTransientStateForNewRun: () => {
       calls.push('resetTransientState');
     },

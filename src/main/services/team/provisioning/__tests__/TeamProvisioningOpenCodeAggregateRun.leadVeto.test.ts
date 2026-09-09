@@ -88,6 +88,7 @@ function basePorts(
       calls.push(`setProgress:${progress.state}`);
       return progress;
     },
+    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
     resetTeamScopedTransientStateForNewRun: () => undefined,
     readLaunchState: async () => null,
     clearPersistedLaunchState: async () => undefined,

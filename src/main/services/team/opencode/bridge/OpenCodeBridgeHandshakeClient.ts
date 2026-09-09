@@ -115,6 +115,8 @@ export function createOpenCodeBridgeClientIdentity(input: {
         'opencode.launchTeam',
         'opencode.reconcileTeam',
         'opencode.stopTeam',
+        'opencode.stopOutcome',
+        'opencode.reconcileStop',
         'opencode.answerPermission',
         'opencode.listRuntimePermissions',
         'opencode.getRuntimeTranscript',

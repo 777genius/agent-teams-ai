@@ -55,6 +55,7 @@ describe('TeamLaunchStateStore', () => {
   beforeEach(() => {
     mocks.atomicWriteAsync.mockReset();
     fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
+    fs.mkdirSync(path.join(mocks.teamsBasePath, 'demo'), { recursive: true });
   });
 
   afterEach(() => {
@@ -127,7 +128,7 @@ describe('TeamLaunchStateStore', () => {
     });
     await Promise.all([stopping, restoring]);
 
-    expect(order).toEqual(['stop-marker:launch-stopped.json', 'restore-commit']);
+    expect(order).toEqual(['stop-marker:launch-freshness.json', 'stop-marker:launch-stopped.json', 'restore-commit']);
   });
 
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
@@ -143,12 +144,14 @@ describe('TeamLaunchStateStore', () => {
     expect(mocks.atomicWriteAsync).toHaveBeenNthCalledWith(
       1,
       getTeamLaunchStatePath('demo'),
-      expect.any(String)
+      expect.any(String),
+      expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
     expect(mocks.atomicWriteAsync).toHaveBeenNthCalledWith(
       2,
       getTeamLaunchSummaryPath('demo'),
-      expect.any(String)
+      expect.any(String),
+      expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
   });
 
@@ -230,7 +233,7 @@ describe('TeamLaunchStateStore', () => {
 
     await expect(
       new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(true);
 
     expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(4);
     const publications = mocks.atomicWriteAsync.mock.calls.map(([targetPath, payload]) => ({
@@ -288,8 +291,8 @@ describe('TeamLaunchStateStore', () => {
 
     await expect(
       new TeamLaunchStateStore().write('removed-team', snapshot())
-    ).resolves.toBeUndefined();
-    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
+    ).resolves.toBe(false);
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
   it('rejects a missing temporary file when the team directory still exists', async () => {
@@ -363,8 +366,8 @@ describe('TeamLaunchStateStore', () => {
 
       expect(remove).toHaveBeenNthCalledWith(1, getTeamLaunchStatePath('demo'), { force: true });
       expect(remove).toHaveBeenNthCalledWith(2, getTeamLaunchSummaryPath('demo'), { force: true });
-      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
-      const [markerPath, markerPayload] = mocks.atomicWriteAsync.mock.calls[0] as [string, string];
+      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+      const [markerPath, markerPayload] = mocks.atomicWriteAsync.mock.calls[1] as [string, string];
       expect(markerPath).toBe(getTeamLaunchStoppedMarkerPath('demo'));
       expect(JSON.parse(markerPayload)).toMatchObject({ version: 1, teamName: 'demo' });
     } finally {
@@ -397,8 +400,8 @@ describe('TeamLaunchStateStore', () => {
     try {
       await expect(new TeamLaunchStateStore().markStopped('demo')).rejects.toBe(stateRemovalError);
 
-      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
-      expect(mocks.atomicWriteAsync.mock.calls[0]?.[0]).toBe(
+      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+      expect(mocks.atomicWriteAsync.mock.calls[1]?.[0]).toBe(
         getTeamLaunchStoppedMarkerPath('demo')
       );
     } finally {
@@ -419,7 +422,7 @@ describe('TeamLaunchStateStore', () => {
         errors: [stateRemovalError, summaryRemovalError],
         message: '[demo] Failed to clear launch-state publication',
       });
-      expect(mocks.atomicWriteAsync.mock.calls[0]?.[0]).toBe(
+      expect(mocks.atomicWriteAsync.mock.calls[1]?.[0]).toBe(
         getTeamLaunchStoppedMarkerPath('demo')
       );
     } finally {
@@ -431,7 +434,7 @@ describe('TeamLaunchStateStore', () => {
     writeStopMarkerOnDisk('demo');
     const stale = { ...snapshot(), launchPhase: 'reconciled' as const };
 
-    await expect(new TeamLaunchStateStore().write('demo', stale)).resolves.toBeUndefined();
+    await expect(new TeamLaunchStateStore().write('demo', stale)).resolves.toBe(false);
 
     expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
     expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
@@ -441,9 +444,9 @@ describe('TeamLaunchStateStore', () => {
     writeStopMarkerOnDisk('demo');
     mocks.atomicWriteAsync.mockResolvedValue(undefined);
 
-    await new TeamLaunchStateStore().write('demo', snapshot());
+    await new TeamLaunchStateStore().beginLaunch('demo', 'new-run', ['Builder'], () => true);
 
-    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(3);
     expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(false);
   });
 
