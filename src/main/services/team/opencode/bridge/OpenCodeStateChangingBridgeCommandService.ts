@@ -340,7 +340,11 @@ export class OpenCodeStateChangingBridgeCommandService {
       });
 
       if (begin === 'duplicate_same_payload_completed') {
-        throw new Error('OpenCode bridge command completed concurrently; retry recovery');
+        throw new Error(
+          input.command === 'opencode.stopTeam'
+            ? 'OpenCode bridge command completed concurrently; retry recovery'
+            : 'OpenCode bridge command already completed; recover through commandStatus'
+        );
       }
 
       const result = await this.bridge.execute<typeof bodyWithPreconditions, TData>(
