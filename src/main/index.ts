@@ -117,7 +117,10 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
-import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import {
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -149,7 +152,6 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
-  retainOpenCodeHttpMcpBridgeEnv,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -510,6 +512,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
+  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
   if (explicitLocalMcpLaunchEnv) {
@@ -620,6 +624,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     const nextEnv = { ...bridgeEnv };
     await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
     if (!useHttpMcpBridge) {
+      applyAgentTeamsMcpAppContext(nextEnv);
       return nextEnv;
     }
     try {
@@ -635,17 +640,16 @@ async function createOpenCodeRuntimeAdapterRegistry(
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
-      if (!retainOpenCodeHttpMcpBridgeEnv(bridgeEnv, nextEnv)) {
-        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-      }
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
     }
+    applyAgentTeamsMcpAppContext(nextEnv);
     return nextEnv;
   };
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -1024,6 +1028,7 @@ let appStartupHandlersRegistered = false;
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
 let teamChangeCleanup: (() => void) | null = null;
+let revokeMcpAppContext: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -3050,9 +3055,11 @@ async function shutdownServices(): Promise<void> {
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
-      agentTeamsMcpHttpServer.stop({ preventRestart: true })
-    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
+      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
+      revokeMcpAppContext = null;
+      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
+    });
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );

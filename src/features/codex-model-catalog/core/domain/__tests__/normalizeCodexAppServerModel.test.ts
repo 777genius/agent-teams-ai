@@ -39,7 +39,7 @@ describe('normalizeCodexAppServerModels', () => {
     ]);
   });
 
-  it('maps the authoritative availability NUX to a new-model hint and status message', () => {
+  it('maps the availability NUX to a status message without an unbounded freshness hint', () => {
     const result = normalizeCodexAppServerModels([
       {
         id: 'gpt-6-astra',
@@ -50,7 +50,7 @@ describe('normalizeCodexAppServerModels', () => {
     expect(result.models[0]).toMatchObject({
       id: 'gpt-6-astra',
       statusMessage: 'A new generation of intelligence.',
-      metadata: { recentlyReleased: true },
+      metadata: null,
     });
   });
 

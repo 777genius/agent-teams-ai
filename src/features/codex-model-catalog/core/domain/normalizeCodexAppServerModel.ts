@@ -211,7 +211,7 @@ export function normalizeCodexAppServerModels(
       source: 'app-server',
       badgeLabel: asBadgeLabel(id),
       statusMessage: availabilityNuxMessage,
-      metadata: availabilityNuxMessage ? { recentlyReleased: true } : null,
+      metadata: null,
     });
   }
 

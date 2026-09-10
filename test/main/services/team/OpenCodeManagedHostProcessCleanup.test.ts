@@ -1,3 +1,4 @@
+// @vitest-environment node
 import {
   cleanupManagedOpenCodeServeProcesses,
   getOpenCodeServeLoopbackBaseUrl,
@@ -8,7 +9,13 @@ import {
   isOrchestratorServeCommand,
 } from '@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
+import * as childProcess from 'child_process';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return { ...actual, execFile: vi.fn(actual.execFile) };
+});
 
 vi.mock('@main/utils/windowsProcessTable', () => ({
   listWindowsProcessTable: vi.fn(async () => []),
@@ -49,6 +56,43 @@ function resolved<T>(value: T): Promise<T> {
 }
 
 describe('OpenCodeManagedHostProcessCleanup', () => {
+  it('records default identity probe diagnostics and never kills an unreadable Windows identity', async () => {
+    const exec = vi.mocked(childProcess.execFile).mockImplementation((...args: unknown[]) => {
+      const callback = args[3] as (error: Error, stdout: string, stderr: string) => void;
+      callback(
+        Object.assign(new Error('private command'), { code: 5, killed: true }),
+        'private stdout',
+        'denied API_KEY=mock-secret'
+      );
+      return {} as ReturnType<typeof childProcess.execFile>;
+    });
+    const killProcess = vi.fn();
+    const disposeServeHost = vi.fn();
+    try {
+      const result = await cleanupManagedOpenCodeServeProcesses({
+        mode: 'force',
+        platform: 'win32',
+        listProcessRows: async () => [{ pid: 42, ppid: 1, command: 'opencode serve' }],
+        readProcessDetails: async () => MANAGED_DETAILS,
+        killProcess,
+        disposeServeHost,
+        isProcessAlive: () => true,
+      });
+      expect(result.diagnostics.join(' ')).toContain(
+        'pid=42; process_start_time:powershell.exe: probe failed'
+      );
+      expect(result.diagnostics.join(' ')).toContain(
+        'timeoutMs=2000; code=5; killed=true; timedOut=unknown'
+      );
+      expect(result.diagnostics.join(' ')).not.toMatch(/private|mock-secret/);
+      expect(result.killed).toBe(0);
+      expect(killProcess).not.toHaveBeenCalled();
+      expect(disposeServeHost).not.toHaveBeenCalled();
+    } finally {
+      exec.mockRestore();
+    }
+  });
+
   it.each(['darwin', 'linux', 'win32'] as const)(
     'startup cleans only old orphaned hosts in the same profile on %s',
     async (platform) => {
@@ -1263,8 +1307,7 @@ describe('whose orchestrator serve host is it', () => {
       platform: 'win32',
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: ORCHESTRATOR }]),
       readProcessDetails: async () => null,
-      readServeHostConfig: async () =>
-        '{"description":"claude-multimodel runtime orchestration"}',
+      readServeHostConfig: async () => '{"description":"claude-multimodel runtime orchestration"}',
       disposeServeHost: async () => undefined,
       killProcess: vi.fn(),
       // The host is gone by the time the signal would have been sent, so the

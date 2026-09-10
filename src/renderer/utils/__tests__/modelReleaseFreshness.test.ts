@@ -74,24 +74,24 @@ describe('model release freshness', () => {
     ).toBe(false);
   });
 
-  it('honors the runtime hint only when the release date is absent or blank', () => {
+  it('does not show an unbounded New badge when the release date is absent or blank', () => {
     expect(
       isRecentlyReleasedModel(buildModel({ id: 'astra', recentlyReleased: true }), NOW_MS)
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isRecentlyReleasedModel(
         buildModel({ id: 'blank-date', releaseDate: '   ', recentlyReleased: true }),
         NOW_MS
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('sorts recent runtime hints first, then known release dates newest-first', () => {
+  it('sorts known release dates newest-first without promoting undated runtime hints', () => {
     const hinted = buildModel({ id: 'hinted', recentlyReleased: true });
     const newer = buildModel({ id: 'newer', releaseDate: '2026-08-01T00:00:00.000Z' });
     const older = buildModel({ id: 'older', releaseDate: '2026-07-01T00:00:00.000Z' });
 
-    expect(compareModelReleaseFreshness(hinted, newer, NOW_MS)).toBeLessThan(0);
+    expect(compareModelReleaseFreshness(hinted, newer, NOW_MS)).toBeGreaterThan(0);
     expect(compareModelReleaseFreshness(newer, older, NOW_MS)).toBeLessThan(0);
   });
 });

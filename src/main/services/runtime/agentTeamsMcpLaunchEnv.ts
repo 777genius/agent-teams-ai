@@ -1,3 +1,4 @@
+import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import {
   resolveAgentTeamsMcpLaunchSpec,
   resolvePackagedAgentTeamsMcpEntry,
@@ -23,6 +24,15 @@ export function applyAgentTeamsMcpAppContext(
   claudeBasePath: string = getClaudeBasePath(),
   controlApiBaseUrl: string | null | undefined = process.env.CLAUDE_TEAM_CONTROL_URL
 ): void {
+  const current = agentTeamsMcpHttpServer.appContext.read(claudeBasePath);
+  // Only the current Host can select a remote endpoint; never retain shell hints.
+  delete env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+  delete env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+  delete env.CLAUDE_TEAM_APP_INSTANCE_ID;
+  delete env.CLAUDE_TEAM_APP_PROFILE_SCOPE;
+  if (current) {
+    Object.assign(env, current);
+  }
   const rawChildEnv = env[MCP_ENV_JSON_ENV]?.trim();
   const parsed: unknown = rawChildEnv ? JSON.parse(rawChildEnv) : {};
   if (
@@ -34,6 +44,24 @@ export function applyAgentTeamsMcpAppContext(
     throw new Error('Agent Teams MCP child environment must be a JSON object of strings');
   }
   const childEnv = { ...parsed } as Record<string, string>;
+  if (current) {
+    for (const key of ['CLAUDE_TEAM_APP_INSTANCE_ID', 'CLAUDE_TEAM_APP_PROFILE_SCOPE']) {
+      if (childEnv[key] !== undefined && childEnv[key] !== current[key]) {
+        throw new Error('Foreign Host MCP child context');
+      }
+    }
+    if (
+      childEnv.AGENT_TEAMS_MCP_CLAUDE_DIR !== undefined &&
+      childEnv.AGENT_TEAMS_MCP_CLAUDE_DIR !== claudeBasePath
+    ) {
+      throw new Error('Foreign Host MCP child root');
+    }
+    childEnv.CLAUDE_TEAM_APP_INSTANCE_ID = current.CLAUDE_TEAM_APP_INSTANCE_ID!;
+    childEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = current.CLAUDE_TEAM_APP_PROFILE_SCOPE!;
+  } else {
+    delete childEnv.CLAUDE_TEAM_APP_INSTANCE_ID;
+    delete childEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE;
+  }
   env.AGENT_TEAMS_MCP_CLAUDE_DIR = claudeBasePath;
   childEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = claudeBasePath;
   const controlUrl = controlApiBaseUrl?.trim();

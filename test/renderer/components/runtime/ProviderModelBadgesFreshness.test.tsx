@@ -135,12 +135,12 @@ describe('ProviderModelBadges release freshness', () => {
     }
   );
 
-  it('keeps the Codex runtime hint when no release date is supplied', () => {
+  it('does not render a Codex New badge when no release date is supplied', () => {
     const host = renderModel(
       'codex',
       buildCatalogModel('gpt-6-astra', 'GPT-6 Astra', { recentlyReleased: true })
     );
 
-    expect(getNewBadges(host)).toHaveLength(1);
+    expect(getNewBadges(host)).toHaveLength(0);
   });
 });

@@ -1,3 +1,8 @@
+import {
+  observeProcessProbe,
+  processProbeDiagnostic,
+  type ProcessProbeObserver,
+} from '@main/utils/processProbeDiagnostics';
 import { execFile, type ExecFileException } from 'child_process';
 
 const DEFAULT_PROBE_TIMEOUT_MS = 2_000;
@@ -22,11 +27,12 @@ const PROBE_MAX_BUFFER_BYTES = 64 * 1024;
 export async function readProcessStartTimeMs(
   pid: number,
   platform: NodeJS.Platform = process.platform,
-  timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS
+  timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS,
+  onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
   return platform === 'win32'
-    ? readWindowsProcessStartTimeMs(pid, timeoutMs)
-    : readNativeProcessStartTimeMs(pid, timeoutMs);
+    ? readWindowsProcessStartTimeMs(pid, timeoutMs, onDiagnostic)
+    : readNativeProcessStartTimeMs(pid, timeoutMs, onDiagnostic);
 }
 
 /**
@@ -79,24 +85,30 @@ async function readStartTimeOrNull(
 
 async function readNativeProcessStartTimeMs(
   pid: number,
-  timeoutMs: number
+  timeoutMs: number,
+  onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
-  const output = await execProcessProbeText('ps', ['-p', String(pid), '-o', 'lstart='], timeoutMs);
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
+  return execProcessProbeText('ps', ['-p', String(pid), '-o', 'lstart='], timeoutMs, onDiagnostic);
 }
 
 async function readWindowsProcessStartTimeMs(
   pid: number,
-  timeoutMs: number
+  timeoutMs: number,
+  onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
   const normalizedPid = Math.trunc(pid);
   // The pid is interpolated into a PowerShell script, so anything that is not a
   // plain positive integer is refused here rather than quoted downstream.
   if (!Number.isFinite(normalizedPid) || normalizedPid <= 0) {
+    observeProcessProbe(
+      onDiagnostic,
+      processProbeDiagnostic(
+        'process_start_time:powershell.exe',
+        performance.now(),
+        timeoutMs,
+        'invalid pid'
+      )
+    );
     return null;
   }
 
@@ -105,23 +117,21 @@ async function readWindowsProcessStartTimeMs(
     `$process = Get-Process -Id ${normalizedPid} -ErrorAction Stop`,
     '$process.StartTime.ToUniversalTime().ToString("o")',
   ].join('; ');
-  const output = await execProcessProbeText(
+  return execProcessProbeText(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-    timeoutMs
+    timeoutMs,
+    onDiagnostic
   );
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function execProcessProbeText(
   command: string,
   args: string[],
-  timeout: number
-): Promise<string | null> {
+  timeout: number,
+  onDiagnostic?: ProcessProbeObserver
+): Promise<number | null> {
+  const startedAt = performance.now();
   return new Promise((resolve) => {
     execFile(
       command,
@@ -139,8 +149,23 @@ function execProcessProbeText(
         // break the `ps` lookup on some hosts.
         env: { ...process.env, LC_ALL: 'C' },
       },
-      (error: ExecFileException | null, stdout: string | Buffer) => {
-        resolve(error ? null : String(stdout));
+      (error: ExecFileException | null, stdout: string | Buffer, stderr: string | Buffer) => {
+        const output = String(stdout);
+        const parsed = error ? Number.NaN : Date.parse(output.trim());
+        if (!Number.isFinite(parsed)) {
+          observeProcessProbe(
+            onDiagnostic,
+            processProbeDiagnostic(
+              `process_start_time:${command}`,
+              startedAt,
+              timeout,
+              error ? 'probe failed' : output.trim() ? 'invalid start time' : 'empty start time',
+              error,
+              stderr === undefined ? undefined : String(stderr)
+            )
+          );
+        }
+        resolve(Number.isFinite(parsed) ? parsed : null);
       }
     );
   });
