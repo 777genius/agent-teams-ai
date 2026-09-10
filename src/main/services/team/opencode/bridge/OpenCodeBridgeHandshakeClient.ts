@@ -112,6 +112,7 @@ export function createOpenCodeBridgeClientIdentity(input: {
         'opencode.commandStatus',
         'opencode.readiness',
         'opencode.cleanupHosts',
+        'opencode.cleanupStartupHosts',
         'opencode.launchTeam',
         'opencode.reconcileTeam',
         'opencode.stopTeam',
