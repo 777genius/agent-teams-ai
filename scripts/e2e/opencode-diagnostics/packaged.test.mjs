@@ -18,6 +18,7 @@ import {
   waitForPackagedPreload,
   matchesPackagedPreload,
   refreshSettled,
+  qualifySummary,
   qualifyModels,
   collectPages,
   readCommittedCatalog,
@@ -685,4 +686,30 @@ test('fast refresh can settle without a sampled loading state but cannot use cac
     !refreshSettled({ records: [{ completedAt: 123 }], overflow: false }, { state: 'loading' })
   );
   assert(!refreshSettled({ records: [{ completedAt: 123 }], overflow: true }, ready));
+});
+
+test('passive summary permits catalog qualification without claiming auth or launch readiness', () => {
+  const passive = {
+    providerId: 'opencode',
+    supported: true,
+    statusCheckOutcome: 'model_only',
+    statusCheckErrorCode: 'partial_response',
+    statusMessage: 'OpenCode detected (passive)',
+    verificationState: 'unknown',
+    authenticated: false,
+    capabilities: { teamLaunch: false, oneShot: false },
+  };
+  assert.deepEqual(qualifySummary(passive), {
+    kind: 'passive-detection',
+    authenticationProven: false,
+    launchReadinessProven: false,
+  });
+  for (const patch of [
+    { supported: false },
+    { statusCheckErrorCode: 'timeout' },
+    { statusMessage: 'Incomplete response' },
+    { statusCheckOutcome: 'pending' },
+    { providerId: 'codex' },
+  ])
+    assert.throws(() => qualifySummary({ ...passive, ...patch }));
 });

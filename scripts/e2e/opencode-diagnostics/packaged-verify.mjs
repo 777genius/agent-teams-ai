@@ -266,6 +266,30 @@ export async function collectPages(load, kind, source, maxPages = 20) {
   throw new Error('Pagination exceeded bounded page limit');
 }
 
+export function qualifySummary(provider) {
+  assert(provider?.providerId === 'opencode' && provider.supported, 'OpenCode was not detected');
+  const passive =
+    provider.statusCheckOutcome === 'model_only' &&
+    provider.statusCheckErrorCode === 'partial_response' &&
+    provider.statusMessage === 'OpenCode detected (passive)' &&
+    provider.verificationState === 'unknown' &&
+    provider.authenticated === false &&
+    provider.capabilities?.teamLaunch === false &&
+    provider.capabilities?.oneShot === false;
+  assert(
+    passive ||
+      (!provider.statusCheckErrorCode &&
+        !['error', 'offline'].includes(provider.verificationState) &&
+        !['transient_error', 'pending'].includes(provider.statusCheckOutcome)),
+    'OpenCode summary failed'
+  );
+  return {
+    kind: passive ? 'passive-detection' : 'status-response',
+    authenticationProven: false,
+    launchReadinessProven: false,
+  };
+}
+
 export function refreshSettled(observation, current) {
   return (
     !observation.overflow &&
@@ -490,13 +514,7 @@ export async function verifyPackaged({
       'summary',
       'window.electronAPI.cliInstaller.getProviderStatus("opencode")'
     );
-    assert(
-      provider?.supported &&
-        !provider.statusCheckErrorCode &&
-        !['error', 'offline'].includes(provider.verificationState) &&
-        !['transient_error', 'pending'].includes(provider.statusCheckOutcome),
-      'OpenCode summary did not succeed'
-    );
+    evidence.summaryQualification = qualifySummary(provider);
 
     // Wait for bootstrap catalog to settle before starting the measured UI refresh.
     let before;
