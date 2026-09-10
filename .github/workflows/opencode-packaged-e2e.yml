@@ -10,6 +10,7 @@ on:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
       - scripts/e2e/opencode-diagnostics/catalog.mjs
+      - runtime.lock.json
 
 permissions:
   contents: read
@@ -60,6 +61,33 @@ jobs:
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Archive qualified Windows test build
+        shell: pwsh
+        run: |
+          $archive = "AgentTeamsAI-windows-test-$env:GITHUB_SHA.zip"
+          Compress-Archive -Path release/win-unpacked -DestinationPath "release/$archive"
+          $digest = (Get-FileHash "release/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$digest  $archive" | Set-Content release/test-build-SHA256SUMS.txt
+          @"
+          Windows test build, not an installer or an updater release.
+          Source commit: $env:GITHUB_SHA
+          Runtime version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
+          Extract the ZIP. Do not launch AgentTeamsAI.exe directly with your everyday profile.
+          Use the separate disposable-profile instructions supplied with this test build.
+          Do not launch teams in real projects.
+          Qualification reports and screenshots are in opencode-packaged-windows-$env:GITHUB_SHA.
+          "@ | Set-Content release/test-build-README.txt
+      - name: Preserve qualified Windows test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-windows-test-build-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            release/AgentTeamsAI-windows-test-*.zip
+            release/test-build-SHA256SUMS.txt
+            release/test-build-README.txt
       - name: Preserve qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
