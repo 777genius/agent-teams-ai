@@ -197,12 +197,12 @@ describe('OpenCode runtime adapter team flow', () => {
       prepareOpenCodeRuntimeAdapterLaunch: async ({ request: launchRequest, members }) => prepared({
         request: launchRequest,
         effectiveMembers: members.map(member => ({ ...member,
-          providerId: 'opencode', model: member.model ?? model, cwd: '/tmp/synthetic-worktree',
+          providerId: 'opencode', model: member.model ?? model, cwd: '/project/synthetic-worktree',
         })),
       }),
     }));
     expect(writeMembersMeta).toHaveBeenCalledWith('alpha', [
-      expect.objectContaining({ name: 'inherit-one', model: undefined, providerId: undefined, cwd: '/tmp/synthetic-worktree' }),
+      expect.objectContaining({ name: 'inherit-one', model: undefined, providerId: undefined, cwd: '/project/synthetic-worktree' }),
       expect.objectContaining({ name: 'inherit-two', model: undefined }),
       expect.objectContaining({ name: 'explicit-same', model }),
       expect.objectContaining({ name: 'explicit-other', model: 'zai-coding-plan/glm-5.3-flash' }),
