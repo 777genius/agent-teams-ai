@@ -44,6 +44,8 @@ import { RecentProjectsSection } from '@features/recent-projects/renderer/ui/Rec
 describe('RecentProjectsSection', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    hookState.cards = [{ id: 'repo:alpha' }];
+    hookState.isElectron = true;
     hookState.selectProjectFolder.mockClear();
   });
 
@@ -83,6 +85,27 @@ describe('RecentProjectsSection', () => {
       false
     );
 
+    act(() => selectFolder?.click());
+    expect(hookState.selectProjectFolder).toHaveBeenCalledTimes(1);
+
+    act(() => root.unmount());
+  });
+
+  it('offers project selection when there are no recent projects', () => {
+    hookState.cards = [];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => {
+      root.render(<RecentProjectsSection searchQuery="" />);
+    });
+
+    const selectFolder = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('Select Folder')
+    );
+
+    expect(selectFolder).toBeDefined();
     act(() => selectFolder?.click());
     expect(hookState.selectProjectFolder).toHaveBeenCalledTimes(1);
 
