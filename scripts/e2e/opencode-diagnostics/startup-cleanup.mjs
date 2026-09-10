@@ -94,6 +94,13 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
       await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
     return point;
   };
+  const capture = async (state) => {
+    const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+    assert(typeof screenshot.data === 'string', 'Cleanup screenshot unavailable');
+    const filename = `startup-cleanup-${state}.png`;
+    await writeFile(path.join(root, filename), Buffer.from(screenshot.data, 'base64'));
+    (evidence.screenshots ??= []).push(filename);
+  };
   const status = () => evaluate('window.electronAPI.startup.getOpenCodeCleanupStatus()');
   const ui = () => evaluate(`document.querySelector('[role="dialog"]')?.innerText || ''`);
   const count = async (n) =>
@@ -139,6 +146,7 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
       ),
       'OpenCode settings not selected'
     );
+    await capture('pending');
     for (let i = 0; i < 3; i++) {
       await click(button('Check cleanup'));
       await poll(async () => await evaluate(`Boolean(${button('Check cleanup')})`));
@@ -174,6 +182,7 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
     );
     evidence.concurrentPreloadRetries = concurrent.values;
     await observe('partial', first.requestId);
+    await capture('partial');
     await count(1);
     await click(button('Retry OpenCode cleanup'));
     const second = await poll(async () => (await accepted())[1]);
@@ -197,6 +206,7 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
       /OpenCode cleanup finished. You can start the team manually./.test(await ui())
     );
     await observe('complete', second.requestId);
+    await capture('complete');
     assert(Date.now() - secondWritten >= 8000, 'Complete UI preceded tail drainage');
     await count(2);
     evidence.events = await events();
