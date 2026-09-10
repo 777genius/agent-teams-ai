@@ -31,12 +31,14 @@ export const OpenCodeStartupCleanupRecovery = (): React.JSX.Element | null => {
       .then((value) => {
         if (active) setStatus(value);
       })
-      .catch(() => undefined);
+      .catch((cause: unknown) => {
+        if (active) setError(cause instanceof Error ? cause.message : String(cause));
+      });
     return () => {
       active = false;
     };
   }, []);
-  if (status.state === 'unavailable') return null;
+  if (status.state === 'unavailable' && !error) return null;
   const retry = async (): Promise<void> => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -45,7 +47,7 @@ export const OpenCodeStartupCleanupRecovery = (): React.JSX.Element | null => {
     try {
       if (!api.startup) throw new Error('Desktop startup cleanup is unavailable');
       setStatus(
-        await (status.state === 'pending'
+        await (status.state === 'pending' || status.state === 'unavailable'
           ? api.startup.getOpenCodeCleanupStatus()
           : api.startup.retryOpenCodeCleanup())
       );
@@ -73,7 +75,9 @@ export const OpenCodeStartupCleanupRecovery = (): React.JSX.Element | null => {
       >
         {busy
           ? 'Checking cleanup…'
-          : status.state === 'pending' || status.state === 'unknown'
+          : status.state === 'pending' ||
+              status.state === 'unknown' ||
+              status.state === 'unavailable'
             ? 'Check cleanup'
             : 'Retry OpenCode cleanup'}
       </Button>

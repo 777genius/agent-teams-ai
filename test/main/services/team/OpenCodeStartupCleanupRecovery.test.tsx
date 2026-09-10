@@ -274,3 +274,36 @@ it('production recovery consumes a late correlated terminal response without a n
     await fs.rm(tempDirectory, { recursive: true, force: true });
   }
 });
+
+it('initial IPC failure stays visible and Check cleanup only retries status', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const getStatus = vi
+    .fn()
+    .mockRejectedValueOnce(new Error('Status transport unavailable'))
+    .mockResolvedValue({ state: 'partial', requestId: 'observed-request' });
+  const retry = vi.fn();
+  window.electronAPI = {
+    startup: {
+      getOpenCodeCleanupStatus: getStatus,
+      retryOpenCodeCleanup: retry,
+    },
+  } as unknown as ElectronAPI;
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<OpenCodeStartupCleanupRecovery />));
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'Status transport unavailable'
+    );
+    expect(container.querySelector('button')?.textContent).toBe('Check cleanup');
+    await act(async () => container.querySelector('button')!.click());
+    expect(getStatus).toHaveBeenCalledTimes(2);
+    expect(retry).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.textContent).toContain('observed-request');
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
+});
