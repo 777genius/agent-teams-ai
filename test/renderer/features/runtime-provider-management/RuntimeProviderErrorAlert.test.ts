@@ -79,3 +79,12 @@ it('removes bare and named provider keys from clipboard report text', () => {
     expect(formatRuntimeProviderDiagnosticsCopyText(`key="${secret}"`, null)).not.toContain(secret);
   }
 });
+
+it.each(['Error: api_key=custom-private-key-value', '{"auth":{"key":"custom-private-key-value"}}'])(
+  'redacts nested secrets from copy text: %s',
+  (message) => {
+    expect(formatRuntimeProviderDiagnosticsCopyText(message, null)).not.toContain(
+      'custom-private-key-value'
+    );
+  }
+);

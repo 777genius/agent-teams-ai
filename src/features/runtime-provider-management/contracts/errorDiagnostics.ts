@@ -34,19 +34,49 @@ export interface RuntimeErrorDetails {
 export function cleanRuntimeDiagnosticText(value: unknown, limit = 4096): string | null {
   if (typeof value !== 'string') return null;
   // Telemetry redaction hides binary paths and report IDs needed for this opt-in report.
-  const cleaned = value
+  const withoutTokens = value
     .replace(/\b(?:sk|pk|rk|ghp|gho|github_pat|xoxb|xoxp|ya29)[A-Za-z0-9_-]{12,}\b/g, '[redacted]')
     .replace(/\b(?:or-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{20,})\b/g, '[redacted]')
-    .replace(/\b(?:Bearer|Basic)\s+[^\s,"']+/gi, '[redacted]')
-    .replace(
-      /(\b([\w-]+)["']?\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,;]+)/g,
-      (field: string, prefix: string, name: string) =>
-        /(?:authorization|cookie|password|secret|key|token)$/i.test(name)
-          ? `${prefix}[redacted]`
-          : field
-    )
-    .replace(/https?:\/\/[^\s<>"']+/gi, (url) => safeRuntimeEndpoint(url) ?? '[url redacted]');
+    .replace(/\b(?:Bearer|Basic)\s+[^\s,"']+/gi, '[redacted]');
+  const cleaned = redactCredentialFields(withoutTokens).replace(
+    /https?:\/\/[^\s<>"']+/gi,
+    (url) => safeRuntimeEndpoint(url) ?? '[url redacted]'
+  );
   return cleaned.length > limit ? `${cleaned.slice(0, limit - 15)}...[truncated]` : cleaned;
+}
+
+/** Consume a value only for a secret field, so enclosing messages/JSON cannot hide it. */
+function redactCredentialFields(value: string): string {
+  const pieces: string[] = [];
+  let consumed = 0;
+  for (const match of value.matchAll(/\b([\w-]+)["']?\s*[=:]\s*/g)) {
+    if (
+      match.index < consumed ||
+      !/(?:authorization|cookie|password|secret|key|token)$/i.test(match[1] ?? '')
+    )
+      continue;
+    const start = match.index + match[0].length;
+    let end = start;
+    const quote = value.charAt(start);
+    if (quote === '"' || quote === "'") {
+      end += 1;
+      while (end < value.length) {
+        if (value[end] === '\\') {
+          end = Math.min(end + 2, value.length);
+          continue;
+        }
+        if (value[end++] === quote) break;
+      }
+    } else if (/cookie$/i.test(match[1] ?? '')) {
+      while (end < value.length && !/[\r\n]/.test(value.charAt(end))) end += 1;
+    } else {
+      while (end < value.length && !/[\s,;}]/.test(value.charAt(end))) end += 1;
+    }
+    pieces.push(value.slice(consumed, start), '[redacted]');
+    consumed = end;
+  }
+  pieces.push(value.slice(consumed));
+  return pieces.join('');
 }
 
 /** Only catalog routes are safe to retain; other path segments can contain credentials. */

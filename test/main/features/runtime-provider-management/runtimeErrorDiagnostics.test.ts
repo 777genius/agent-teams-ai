@@ -107,6 +107,18 @@ describe('OpenCode diagnostic transport', () => {
   );
 
   it.each([
+    'Error: api_key=custom-private-key-value',
+    'Authorization: Bearer custom-private-key-value',
+    'Cookie: a=public; session=custom-private-key-value',
+    '{"auth":{"key":"custom-private-key-value"}}',
+  ])('redacts credentials nested in diagnostic text: %s', async (stderr) => {
+    execCli.mockRejectedValueOnce(Object.assign(new Error('version failed'), { stderr }));
+    const result = await probeOpenCodeBinaryVersion('/test/opencode');
+    expect(JSON.stringify(result)).not.toContain('custom-private-key-value');
+    expect(JSON.stringify(result)).toContain('[redacted]');
+  });
+
+  it.each([
     [
       'timeout',
       Object.assign(new Error('Command timed out after 30000ms: /tmp/opencode --version'), {
