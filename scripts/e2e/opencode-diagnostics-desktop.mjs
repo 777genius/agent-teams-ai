@@ -22,6 +22,12 @@ import {
   assertLauncherCommand,
 } from './opencode-diagnostics/platform.mjs';
 
+import {
+  cleanupScenario,
+  seedStartupCleanup,
+  verifyStartupCleanup,
+} from './opencode-diagnostics/startup-cleanup.mjs';
+
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const mode = process.argv[2];
 const root = process.argv[3];
@@ -106,6 +112,9 @@ async function assertOwnedDebugEndpoint() {
 }
 
 if (mode === 'seed') {
+  const seededScenario = root || 'version-exit';
+  assert(['version-exit', cleanupScenario].includes(seededScenario), 'Unsupported seed scenario');
+  if (seededScenario === cleanupScenario) assert.equal(process.platform, 'win32');
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
@@ -119,7 +128,8 @@ if (mode === 'seed') {
   };
   for (const value of [data.home, data.userData, data.bin, data.temp])
     await mkdir(value, { recursive: true });
-  await writeFile(path.join(dir, 'scenario'), 'version-exit');
+  await writeFile(path.join(dir, 'scenario'), seededScenario);
+  if (seededScenario === cleanupScenario) await seedStartupCleanup(dir);
   await writeFile(
     data.fixture,
     await readFile(new URL('./opencode-diagnostics/fixture.cjs', import.meta.url))
@@ -168,6 +178,10 @@ if (mode === 'seed') {
   assertNoInstalledOpenCode(data);
   await assertPortAvailable();
   const launch = launchCommand();
+  if ((await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario) {
+    assert.equal(process.platform, 'win32');
+    data.cleanupLaunchStartedAt = Date.now();
+  }
   const child = spawn(launch.command, launch.args, {
     cwd: repo,
     stdio: 'inherit',
@@ -265,7 +279,9 @@ if (mode === 'seed') {
       );
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
-      if (catalogScenarios.includes(scenario)) {
+      if (scenario === cleanupScenario) {
+        await verifyStartupCleanup({ root, evaluate, send });
+      } else if (catalogScenarios.includes(scenario)) {
         await verifyCatalog({ root, scenario, evaluate, send });
       } else {
         let found;
@@ -395,5 +411,5 @@ if (mode === 'seed') {
   }
 } else
   throw new Error(
-    'Usage: seed | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+    'Usage: seed [startup-cleanup] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
   );

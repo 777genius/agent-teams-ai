@@ -82,12 +82,16 @@ test('environment drops inherited provider/config and runtime overrides', () => 
   };
   const env = isolatedEnvironment(data, {
     Path: '/tools',
+    ProgramFiles: 'C:\\Program Files',
+    PSModulePath: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules',
     OPENAI_API_KEY: 'secret',
     OPENCODE_CONFIG: '/real',
     CLAUDE_DEV_RUNTIME_ROOT: '/real',
     NODE_OPTIONS: '--require evil',
     APPDATA: '/real',
   });
+  assert.equal(env.ProgramFiles, 'C:\\Program Files');
+  assert.equal(env.PSModulePath, 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules');
   assert.equal(env.OPENAI_API_KEY, undefined);
   assert.equal(env.OPENCODE_CONFIG, undefined);
   assert.equal(env.NODE_OPTIONS, undefined);

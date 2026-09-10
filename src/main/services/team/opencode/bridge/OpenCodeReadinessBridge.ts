@@ -20,6 +20,7 @@ import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
+import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -53,6 +54,8 @@ import type {
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
 import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
+import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
+import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
@@ -64,6 +67,9 @@ export interface OpenCodeLedgerBackfillPort {
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
   getRuntimeIdentity?(): Promise<string | null>;
+  observeStartupCleanup?(
+    requestId: string
+  ): Promise<OpenCodeBridgeResult<OpenCodeStartupCleanupData> | null>;
   execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
@@ -71,6 +77,7 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -300,6 +307,19 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         ...result.diagnostics.map(formatDiagnosticEvent),
       ],
     };
+  }
+
+  observeOpenCodeStartupCleanup(requestId: string) {
+    return this.bridge.observeStartupCleanup?.(requestId) ?? Promise.resolve(null);
+  }
+
+  cleanupOpenCodeStartupHosts(
+    budget: OpenCodeStartupCleanupBudget,
+    appStartedAtMs = Date.now(),
+    canDispatch?: () => boolean,
+    requestId?: string
+  ) {
+    return executeOpenCodeStartupCleanup(this.bridge, budget, appStartedAtMs, canDispatch, requestId);
   }
 
   async cleanupOpenCodeHosts(

@@ -18,6 +18,7 @@ import type {
   NotificationTrigger,
   TriggerTestResult,
 } from './notifications';
+import type { OpenCodeStartupCleanupRecoveryAPI } from './openCodeStartupCleanup';
 import type {
   AgentChangeSet,
   ApplyReviewRequest,
@@ -390,7 +391,7 @@ export interface AppStartupStep {
   memoryAtEnd?: AppStartupMemorySnapshot;
 }
 
-export interface AppStartupAPI {
+export interface AppStartupAPI extends OpenCodeStartupCleanupRecoveryAPI {
   getStatus: () => Promise<AppStartupStatus>;
   onProgress: (callback: (status: AppStartupStatus) => void) => () => void;
 }

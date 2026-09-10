@@ -40,6 +40,7 @@ export interface OpenCodeLifecycleCleanupTailPorts {
 
 export interface OpenCodeLifecycleCleanupTailInput {
   reason: 'startup' | 'shutdown';
+  canAdmitStartupWork?: () => boolean;
   /** Registry hosts the sweep decided to keep; a startup fallback spares them. */
   registryHostPids: ReadonlySet<number>;
   /** False when the registry sweep itself failed, which voids its keep list. */
@@ -157,29 +158,35 @@ export async function runOpenCodeLifecycleCleanupTail(
         logError: (message) => ports.logError(message),
       })
     );
-    // A host that was killed never released its orchestrator startup lock, and
-    // the next launch readiness probe waits on every leftover in turn. The
-    // reap above has just run, so a lock still held open belongs to a live
-    // host: on Windows its unlink fails harmlessly, and where the OS unlinks
-    // an open file instead the floor alone has to keep a host that is starting
-    // right now out of scope.
-    await runIndependentStep('startup lock purge', ports, async () => {
-      const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
-        minAgeMs: resolveStartupStaleLockMinAgeMs(),
-      });
-      if (lockPurge.removed > 0) {
-        ports.logSweepResult(
-          `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
-        );
-      }
-      for (const diagnostic of lockPurge.diagnostics) {
-        ports.logWarning(`[OpenCode] startup lock purge: ${diagnostic}`);
-      }
-    });
-    await runIndependentStep('startup cursor-agent sweep', ports, () =>
-      reapOrphanedCursorAgentLeadTrees(input)
-    );
+    await runOpenCodeStartupCleanupMaintenance(input);
   }
+}
+
+/** Non-host maintenance shared by both startup paths. */
+export async function runOpenCodeStartupCleanupMaintenance(
+  input: Pick<OpenCodeLifecycleCleanupTailInput,
+    'ports' | 'appStartedAtMs' | 'cursorAgentTreeSweep' | 'listOwnedLeadWorkspaces' | 'canAdmitStartupWork'>
+): Promise<void> {
+  const { ports } = input;
+  if (input.canAdmitStartupWork?.() === false) return;
+  await runIndependentStep('startup lock purge', ports, async () => {
+    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
+      minAgeMs: resolveStartupStaleLockMinAgeMs(),
+      canRemove: input.canAdmitStartupWork,
+    });
+    if (lockPurge.removed > 0) {
+      ports.logSweepResult(
+        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
+      );
+    }
+    for (const diagnostic of lockPurge.diagnostics) {
+      ports.logWarning(`[OpenCode] startup lock purge: ${diagnostic}`);
+    }
+  });
+  if (input.canAdmitStartupWork?.() === false) return;
+  await runIndependentStep('startup cursor-agent sweep', ports, () =>
+    reapOrphanedCursorAgentLeadTrees(input)
+  );
 }
 
 /**
@@ -220,7 +227,8 @@ async function runIndependentStep(
  * It never runs on shutdown, where a running tree may belong to a live team.
  */
 async function reapOrphanedCursorAgentLeadTrees(
-  input: OpenCodeLifecycleCleanupTailInput
+  input: Pick<OpenCodeLifecycleCleanupTailInput,
+    'ports' | 'appStartedAtMs' | 'cursorAgentTreeSweep' | 'listOwnedLeadWorkspaces' | 'canAdmitStartupWork'>
 ): Promise<void> {
   const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
   if (!sweepPort.isEnabled()) {
@@ -232,6 +240,7 @@ async function reapOrphanedCursorAgentLeadTrees(
   const listOwnedLeadWorkspaces =
     input.listOwnedLeadWorkspaces ?? (() => listTeamProjectWorkspaces(getTeamsBasePath()));
   const ownedWorkspaceCwds = await listOwnedLeadWorkspaces();
+  if (input.canAdmitStartupWork?.() === false) return;
   if (ownedWorkspaceCwds.length === 0) {
     input.ports.logSweepResult(
       'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_owned_workspace'
@@ -239,6 +248,7 @@ async function reapOrphanedCursorAgentLeadTrees(
     return;
   }
   const sweep = await sweepPort.sweepCursorAgentTrees({
+    canAdmitStartupWork: input.canAdmitStartupWork,
     ownedWorkspaceCwds,
     startedBeforeMs: input.appStartedAtMs,
     // A startup sweep runs where a SECOND copy of this app may have a live team

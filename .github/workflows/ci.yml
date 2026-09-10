@@ -271,6 +271,18 @@ jobs:
       - name: Test startup cleanup admission and IPC recovery
         run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
 
+      - name: Test startup cleanup budget and recovery payloads
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/main/services/team/OpenCodeStartupCleanupBudget.test.ts
+          test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx
+          test/main/services/team/OpenCodeBridgeCommandClient.test.ts
+          test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts
+          test/main/utils/processKill.test.ts
+
+      - name: Test startup cleanup deadline and late-response lifecycle
+        run: node --experimental-transform-types --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
+
       - name: Test delayed provider summaries through real subprocesses
         run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
 

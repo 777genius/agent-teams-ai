@@ -53,6 +53,7 @@ import {
   isCodexProviderRuntimeMissing,
   shouldOfferCodexRuntimeInstall,
 } from './codexRuntimeInstallAction';
+import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
 import {
   formatProviderAuthMethodLabelForProvider,
@@ -1949,8 +1950,8 @@ export const ProviderRuntimeSettingsDialog = ({
           <DialogTitle>{t('providerRuntime.title')}</DialogTitle>
           <DialogDescription>{t('providerRuntime.description')}</DialogDescription>
         </DialogHeader>
-
         <div className="min-w-0 space-y-4">
+          {selectedProviderId === 'opencode' ? <OpenCodeStartupCleanupRecovery /> : null}
           <div>
             <Tabs
               value={selectedProvider?.providerId ?? selectedProviderId}
@@ -3278,7 +3279,6 @@ export const ProviderRuntimeSettingsDialog = ({
                   void handleRuntimeBackendSelect(providerId, backendId)
                 }
               />
-
               {runtimeSaving ? (
                 <div
                   className="inline-flex items-center gap-1.5 text-[11px]"

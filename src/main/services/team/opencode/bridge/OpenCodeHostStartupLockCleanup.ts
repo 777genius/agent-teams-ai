@@ -51,6 +51,7 @@ export function resolveOpenCodeHostStartupLocksDir(
 }
 
 export interface PurgeOpenCodeHostStartupLocksOptions extends ResolveClaudeMultimodelDataDirOptions {
+  canRemove?: () => boolean;
   /** Lock directory to purge; resolved from the orchestrator data dir when absent. */
   locksDir?: string;
   /** Only remove entries whose mtime is at least this old (0 = everything). */
@@ -113,6 +114,7 @@ export async function purgeStaleOpenCodeHostStartupLocks(
   }
 
   for (const entry of entries) {
+    if (options.canRemove?.() === false) break;
     if (!LOCK_ENTRY_PATTERN.test(entry.name)) {
       continue;
     }
@@ -126,6 +128,7 @@ export async function purgeStaleOpenCodeHostStartupLocks(
           continue;
         }
       }
+      if (options.canRemove?.() === false) break;
       await removeLockEntry({ path: entryPath, isDirectory: entry.isDirectory() });
       result.removed += 1;
     } catch (error) {
