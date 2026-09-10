@@ -1,9 +1,11 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import {
+  type AttributedCursorAgentProcess,
+  type CursorAgentAttributionOwner,
   type CursorAgentAttributionPort,
+  type CursorAgentAttributionRecord,
   DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT,
-  summarizeAttributedCursorAgentProcesses,
 } from '../opencode/bridge/CursorAgentAttributionRecords';
 import {
   CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
@@ -22,14 +24,21 @@ import { readTeamProjectWorkspace } from '../TeamProjectWorkspaces';
  * has to bind.
  *
  * Scope is the whole question, because the sweep kills whole trees, and every
- * branch here narrows it. The stop reaps only trees whose command line names
- * this team's own project path, so a project path this app cannot read means no
- * reap at all rather than a wider one. A still-running team working in the same
+ * branch here narrows it. The stop reaps only trees whose workspace is this
+ * team's own project path, so a project path this app cannot read means no reap
+ * at all rather than a wider one. A still-running team working in the same
  * directory owns lead trees that carry exactly the same `--workspace`, and
- * nothing on a command line tells those two apart, so that case is a skip as
- * well. The time fence is the last one: it is the moment the stop was requested,
- * so a relaunch of this team started inside the stop window keeps the tree it
- * just created.
+ * nothing tells those two apart, so that case is a skip as well. The time fence
+ * is the last one: it is the moment the stop was requested, so a relaunch of
+ * this team started inside the stop window keeps the tree it just created.
+ *
+ * What the runtime recorded about the processes it spawned is now the first
+ * question, ahead of all of them. A record names the pid, the start time and
+ * the exact `--workspace` from inside the spawned process, and its host names
+ * the teams that host holds leases for - so this stop can ask whether a tree is
+ * ITS tree instead of whether a command line could be read as its own. A tree no
+ * record names is still only reachable through the command-line path an operator
+ * has to turn on, which is exactly where that path was before.
  */
 export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   teamName: string;
@@ -38,15 +47,23 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
   cursorAgentAttribution?: CursorAgentAttributionPort;
 }): Promise<{ killedPids: number[]; incomplete: boolean; diagnostics: string[] }> {
-  // Read, reported, and not yet acted upon. The proof path that turns a record
-  // into permission to reap needs a runtime that writes one, and until this app
-  // pins such a runtime the only honest thing a stop can do with a record is
-  // say it saw it - which is also how an operator finds out whether the runtime
-  // in front of them writes records at all. Every branch below decides exactly
-  // what it decides today.
-  const attributionNotes = await describeAttributedCursorAgentProcesses(
-    input.cursorAgentAttribution
-  );
+  const attributed = await (
+    input.cursorAgentAttribution ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT
+  ).readAttributedProcesses();
+  // The records this stop is allowed to decide on, and the count of the ones it
+  // could actually reap. A runtime that writes none leaves both empty, which is
+  // how every branch below stays exactly what it is today.
+  const usableRecords = selectRecordsThisStopMayUse(attributed, input.teamName, [
+    ...input.otherAliveTeams,
+  ]);
+  const reapableRecords = usableRecords.filter((record) => record.kind === 'cursor-agent').length;
+  const attributionNotes =
+    attributed.length === 0
+      ? []
+      : [
+          `cursor-agent attribution: ${attributed.length} runtime process record(s) available, ` +
+            `${reapableRecords} this stop may reap`,
+        ];
 
   const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
   if (!sweepPort.isEnabled()) {
@@ -84,7 +101,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
       confusableWith.push(otherTeam);
     }
   }
-  if (confusableWith.length > 0) {
+  if (confusableWith.length > 0 && reapableRecords === 0) {
     // The independent proof this sweep otherwise lacks.
     //
     // A process table gives a JOINED command line, so `--workspace /work/app -
@@ -98,6 +115,11 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
     // this team's plus arguments, the ambiguity is not hypothetical - it is
     // present right now, on this machine - and the sweep declines rather than
     // resolving it by guesswork.
+    //
+    // A record settles that ambiguity outright, because the workspace in it is
+    // the argument the spawned process was given rather than a substring of a
+    // joined line - so with a record in hand the stop goes on, and reaps
+    // nothing the record does not name.
     return {
       killedPids: [],
       incomplete: false,
@@ -119,9 +141,33 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
     };
   }
 
+  // The command-line path an operator turned on, and never where a confusable
+  // neighbour is live: there the record is the only thing that may decide, and
+  // widening back to the command line would reap exactly the tree the veto
+  // above exists to spare.
+  const allowUnattributedReap = confusableWith.length === 0 && sweepPort.allowsUnattributedReap();
+  if (reapableRecords === 0 && !allowUnattributedReap) {
+    // Nothing to prove and nothing allowed to be assumed, so the process table
+    // is not read at all - the decision this stop made before records existed,
+    // taken for the same reason.
+    return {
+      killedPids: [],
+      incomplete: false,
+      diagnostics: [
+        ...attributionNotes,
+        'Skipped cursor-agent sweep: no runtime record names a tree of this team, and reaping an unattributed tree on its command line alone is off',
+      ],
+    };
+  }
+
   const sweep = await sweepPort.sweepCursorAgentTrees({
     ownedWorkspaceCwds: [workspace],
     startedBeforeMs: input.requestedAtMs ?? Date.now(),
+    // Identity written by the spawned process itself, filtered to the records
+    // whose host holds a lease for no OTHER live team.
+    attributedProcesses: usableRecords,
+    requireAttributionProof: reapableRecords > 0,
+    allowUnattributedReap,
     // The env marker separates this app's lead from a `cursor-agent --print` the
     // user is running themselves in the same directory - the one case the
     // workspace fence above cannot see.
@@ -144,6 +190,13 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
     orphanedOnly: false,
   });
   const diagnostics = [...attributionNotes];
+  if (confusableWith.length > 0) {
+    diagnostics.push(
+      'cursor-agent sweep: a still-running team works in a directory whose command line cannot ' +
+        `be told apart from this team's (${confusableWith.join(', ')}), so only a tree the ` +
+        'runtime recorded for this team is reaped'
+    );
+  }
   if (sweep.killed.length > 0) {
     diagnostics.push(`Reaped ${sweep.killed.length} cursor-agent process tree(s)`);
   }
@@ -152,20 +205,61 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
 }
 
 /**
- * One line when the runtime has recorded processes for this install, and
- * nothing at all when it has not - a stop against a runtime that writes no
- * records reads exactly as it does today. The reader never throws, so an
- * unreadable record directory is already the empty answer.
+ * The records a stop of this team is allowed to put in front of the sweep.
+ *
+ * Two questions about the host's lease set, which is what the record joins to.
+ *
+ * Is every team the recorded host still works for one this stop may clear? It
+ * has to be this team, or a team that is not running any more. One live OTHER
+ * owner is a veto, because the host that spawned the agent is shared and
+ * stopping one of its teams says nothing about the rest. An owner this app
+ * cannot even name is a veto for the same reason - a lease it cannot read is
+ * not a lease it can clear.
+ *
+ * And does anything in that set actually name THIS team? "No other live owner"
+ * is satisfied by a host whose only owner is a team that stopped an hour ago,
+ * and a lead belonging to that team is not this team's to hand to a sweep. So a
+ * named owner set travels only when this team is in it.
+ *
+ * A record with NO owner is the documented exception, and not "unowned,
+ * therefore free": it is a record whose host file is gone or whose last lease
+ * was released, which is what a crashed host leaves behind. It is passed on, and
+ * the fences behind this one - the exact workspace in the record, the live start
+ * time, and the shared-directory veto above - are what decide it.
+ *
+ * A readiness probe is passed on deliberately although nothing may reap it: the
+ * sweep needs the record in hand to recognise the runtime's own probe tree and
+ * decline it by name instead of by timing.
  */
-async function describeAttributedCursorAgentProcesses(
-  port: CursorAgentAttributionPort | undefined
-): Promise<string[]> {
-  const attributed = await (
-    port ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT
-  ).readAttributedProcesses();
-  const { total, withRecordedOwner } = summarizeAttributedCursorAgentProcesses(attributed);
-  if (total === 0) return [];
-  return [
-    `cursor-agent attribution: ${total} runtime process record(s) available, ${withRecordedOwner} with a recorded owner; this stop still decides on the command line`,
-  ];
+function selectRecordsThisStopMayUse(
+  attributed: readonly AttributedCursorAgentProcess[],
+  teamName: string,
+  otherAliveTeams: readonly string[]
+): readonly CursorAgentAttributionRecord[] {
+  const aliveElsewhere = new Set(otherAliveTeams);
+  return attributed
+    .filter((entry) => {
+      if (entry.record.kind === 'readiness-probe') return true;
+      const ownerTeams = entry.owners.map(readOwnerTeam);
+      const noOtherLiveOwner = ownerTeams.every(
+        (ownerTeam) =>
+          ownerTeam !== null && (ownerTeam === teamName || !aliveElsewhere.has(ownerTeam))
+      );
+      if (!noOtherLiveOwner) return false;
+      return ownerTeams.length === 0 || ownerTeams.includes(teamName);
+    })
+    .map((entry) => entry.record);
+}
+
+/**
+ * The team an owner entry names, in the field the writer used.
+ *
+ * The lease set is written by the runtime, which carries ONE team field per
+ * owner - `teamId` - and this app is what fills it, with the team NAME it
+ * launched under. `teamName` is the second spelling of the same thing, read
+ * first so a writer that supplies both is taken at its word rather than by
+ * position.
+ */
+function readOwnerTeam(owner: CursorAgentAttributionOwner): string | null {
+  return owner.teamName ?? owner.teamId;
 }

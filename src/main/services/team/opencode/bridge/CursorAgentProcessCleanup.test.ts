@@ -543,18 +543,18 @@ describe('a sweep that cannot finish still answers', () => {
 });
 
 /**
- * The sweep ships OFF.
+ * Reaping an UNATTRIBUTED tree ships off, and only that.
  *
- * Everything it can observe comes from a joined command line, and joining
- * destroys the argument boundaries - a directory named `/work/app --model auto`
- * is indistinguishable from `/work/app` plus a model argument. The stop path
- * declines when it can SEE a conflicting live team, but that is proof of a
- * conflict, not proof of ownership: it cannot see a team whose config is
- * unreadable right then, a team of another copy of this app, or a
- * `cursor-agent --print` the user started themselves.
+ * Everything a command line can say is beaten by a real directory name -
+ * `/work/app --model auto` is indistinguishable from `/work/app` plus a model
+ * argument - and the stop path's decline proves a conflict, never ownership: it
+ * cannot see a team whose config is unreadable right then, a team of another
+ * copy of this app, or a `cursor-agent --print` the user started themselves.
+ * Reaping on "no known conflict" is the wrong shape for killing process trees.
  *
- * Reaping on "no known conflict" is the wrong shape for killing process trees,
- * so it stays off until a process carries positive attribution to its team.
+ * A tree the runtime RECORDED is a different question, and the answer to it is
+ * evidence rather than a parse, so the sweep itself is available and this switch
+ * keeps exactly the meaning it had.
  */
 describe('DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT', () => {
   const previous = process.env[CURSOR_AGENT_TREE_SWEEP_ENV];
@@ -563,9 +563,13 @@ describe('DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT', () => {
     else process.env[CURSOR_AGENT_TREE_SWEEP_ENV] = previous;
   });
 
-  it('is disabled unless an operator turns it on', () => {
+  it('is available without an operator, and admits an unattributed tree only with one', () => {
     delete process.env[CURSOR_AGENT_TREE_SWEEP_ENV];
-    expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.isEnabled()).toBe(false);
+    expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.isEnabled()).toBe(true);
+    expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.allowsUnattributedReap()).toBe(false);
+    process.env[CURSOR_AGENT_TREE_SWEEP_ENV] = 'true';
+    expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.isEnabled()).toBe(true);
+    expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.allowsUnattributedReap()).toBe(true);
   });
 
   it('turns on for the spellings of yes, and for nothing else', () => {

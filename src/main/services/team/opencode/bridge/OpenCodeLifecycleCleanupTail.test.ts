@@ -125,7 +125,14 @@ function baseInput(
     managedHostInstanceId: '1234-1756803600000',
     // The real port reads the host process table and kills what it finds; every
     // case here hands in a stub so the assertions are about scope, not luck.
-    cursorAgentTreeSweep: { isEnabled: () => true, sweepCursorAgentTrees },
+    // `allowsUnattributedReap` is the operator switch for a tree nothing
+    // recorded. It is on here, so the cases that predate the records assert the
+    // path they were written for; the record cases turn it off explicitly.
+    cursorAgentTreeSweep: {
+      isEnabled: () => true,
+      allowsUnattributedReap: () => true,
+      sweepCursorAgentTrees,
+    },
     // The real port reads this install's record directory off disk; the cases
     // here say what the runtime wrote, so none of them depends on the machine.
     cursorAgentAttribution: { readAttributedProcesses: readAttributedProcesses },
@@ -335,6 +342,12 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
       requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
       requireOwnershipProof: true,
       orphanedOnly: true,
+      // Nothing recorded here, so the sweep is asked for exactly what it was
+      // asked for before records existed: the command-line path this operator
+      // switch admits.
+      attributedProcesses: [],
+      requireAttributionProof: false,
+      allowUnattributedReap: true,
     });
   });
 
@@ -362,57 +375,83 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
   });
 
   /**
-   * Read and reported, not acted upon. The proof path that turns a record into
-   * permission to reap needs a runtime that writes one, and this app pins none
-   * yet - so the startup sweep runs under exactly the fences it runs under
-   * today, and the count is how an operator learns whether the runtime in front
-   * of them records anything at all.
+   * The startup sweep with the operator switch off, which is where this app
+   * ships. Every record the runtime wrote for this install goes to the sweep,
+   * the proof is demanded, and the two fences that were already there stay -
+   * the env marker for a platform that can read one, and the orphan check for
+   * the second live copy of this app.
    */
-  it('reports the attribution records the runtime wrote without widening the sweep', async () => {
+  it('hands the startup sweep the records and demands their proof', async () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
-    readAttributedProcesses.mockResolvedValueOnce([
-      attributedProcess(4321, [
-        {
-          teamId: 'team-1',
-          teamName: 'alpha',
-          laneId: 'primary',
-          memberName: 'lead',
-          runId: 'run-1',
-          sessionId: 'session-1',
-          createdAt: '2026-09-02T08:00:00.000Z',
-          updatedAt: '2026-09-02T08:30:00.000Z',
-        },
-      ]),
-      attributedProcess(4322),
+    const owned = attributedProcess(4321, [
+      {
+        teamId: 'team-1',
+        teamName: 'alpha',
+        laneId: 'primary',
+        memberName: 'lead',
+        runId: 'run-1',
+        sessionId: 'session-1',
+        createdAt: '2026-09-02T08:00:00.000Z',
+        updatedAt: '2026-09-02T08:30:00.000Z',
+      },
     ]);
+    const unowned = attributedProcess(4322);
+    readAttributedProcesses.mockResolvedValueOnce([owned, unowned]);
 
-    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      cursorAgentTreeSweep: {
+        isEnabled: () => true,
+        allowsUnattributedReap: () => false,
+        sweepCursorAgentTrees,
+      },
+      ports,
+    });
 
     expect(ports.sweepResults).toContain(
       'opencode_cursor_agent_attribution_records sweep=startup count=2 owned=1'
     );
     expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      canAdmitStartupWork: undefined,
       ownedWorkspaceCwds: OWNED_WORKSPACES,
       startedBeforeMs: APP_STARTED_AT_MS,
       requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
       requireOwnershipProof: true,
       orphanedOnly: true,
+      // A record whose host is gone still travels: the host file is what a
+      // crashed instance stops writing, and its tree is what this sweep is for.
+      attributedProcesses: [owned.record, unowned.record],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
     });
   });
 
   /**
-   * The control: against a runtime that writes no record - every runtime this
-   * app pins today - the startup tail says exactly what it said before.
+   * The control: against a runtime that writes no record the startup tail says
+   * exactly what it said before, and - with the command-line path off - reads no
+   * process table at all, which is the state this app ships in today.
    */
   it('says nothing about attribution when the runtime recorded none', async () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
 
-    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      cursorAgentTreeSweep: {
+        isEnabled: () => true,
+        allowsUnattributedReap: () => false,
+        sweepCursorAgentTrees,
+      },
+      ports,
+    });
 
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(ports.sweepResults).toContain(
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_attribution_record'
+    );
     expect(ports.sweepResults.filter((entry) => entry.includes('attribution_records'))).toEqual([]);
     expect(ports.warnings).toEqual([]);
   });
@@ -434,7 +473,11 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
 
     await runOpenCodeLifecycleCleanupTail({
       ...baseInput('startup'),
-      cursorAgentTreeSweep: { isEnabled: () => false, sweepCursorAgentTrees: disabledSweep },
+      cursorAgentTreeSweep: {
+        isEnabled: () => false,
+        allowsUnattributedReap: () => true,
+        sweepCursorAgentTrees: disabledSweep,
+      },
       ports,
     });
 

@@ -183,6 +183,12 @@ export interface CursorAgentProcessCleanupResult {
  */
 export interface CursorAgentTreeSweepPort {
   isEnabled(): boolean;
+  /**
+   * Whether a tree nothing has attributed may still be reaped on its command
+   * line. It is a second question from `isEnabled`, because a record-proven
+   * tree needs no operator's permission and an unattributed one still does.
+   */
+  allowsUnattributedReap(): boolean;
   sweepCursorAgentTrees(input: {
     canAdmitStartupWork?: () => boolean;
     ownedWorkspaceCwds: readonly string[];
@@ -210,26 +216,32 @@ export interface CursorAgentTreeSweepPort {
 export const CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER = 'CLAUDE_TEAM_APP_INSTANCE_ID=';
 
 /**
- * Opt-in switch for the whole sweep, and the reason it ships OFF.
+ * Opt-in switch for reaping a tree NOTHING has attributed, and the reason it
+ * still exists.
  *
- * Everything this module can observe about a `cursor-agent` tree comes from a
- * JOINED command line, and joining destroys the argument boundaries. A directory
- * named `/work/app --model auto` renders exactly like `/work/app` followed by a
- * model argument; `/work/app - backup` renders like `/work/app` followed by
- * anything. Three progressively stricter parsers were each beaten by a plausible
- * real directory name.
+ * Everything this module can observe about a `cursor-agent` tree BY ITSELF comes
+ * from a JOINED command line, and joining destroys the argument boundaries. A
+ * directory named `/work/app --model auto` renders exactly like `/work/app`
+ * followed by a model argument; `/work/app - backup` renders like `/work/app`
+ * followed by anything. Three progressively stricter parsers were each beaten by
+ * a plausible real directory name.
  *
  * The stop path compensates by declining when a still-running team sits in a
  * confusable directory - but that is proof of a CONFLICT, not proof of
  * OWNERSHIP. It cannot see a team whose config is unreadable at that moment, a
  * team belonging to another copy of this app, or a `cursor-agent --print` the
  * user started themselves. The env marker separates this app's processes from a
- * stranger's, and nothing available separates one team of this app from another.
+ * stranger's, and nothing on a command line separates one team of this app from
+ * another. Reaping on "no known conflict" is the wrong shape for an operation
+ * that kills whole process trees, so it stays behind this switch.
  *
- * Reaping on "no known conflict" is therefore the wrong shape for an operation
- * that kills whole process trees. The record above is the attribution that
- * settles it, and until both sweeps decide on one this switch still gates every
- * reap.
+ * What is no longer behind it is the sweep itself. The positive attribution the
+ * comment above asked the orchestrator for now exists: a runtime that records
+ * the agent processes it spawns writes the pid, the start time and the exact
+ * `--workspace` from inside the spawned process, and a tree such a record names
+ * is reaped on that evidence by default. This flag keeps its name and its
+ * meaning - whether an UNATTRIBUTED tree may be reaped on a command line - so an
+ * operator who turned it on keeps the behaviour they turned on.
  */
 export const CURSOR_AGENT_TREE_SWEEP_ENV = 'CLAUDE_TEAM_CURSOR_AGENT_TREE_SWEEP_ENABLED';
 
@@ -239,7 +251,11 @@ export function isCursorAgentTreeSweepEnabled(env: NodeJS.ProcessEnv = process.e
 }
 
 export const DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: CursorAgentTreeSweepPort = {
-  isEnabled: () => isCursorAgentTreeSweepEnabled(),
+  // The sweep itself is available again, because a runtime record is the
+  // ownership proof it was waiting for. What still needs an operator behind it
+  // is the tree no record names, and that is a separate question.
+  isEnabled: () => true,
+  allowsUnattributedReap: () => isCursorAgentTreeSweepEnabled(),
   sweepCursorAgentTrees: (input) => cleanupCursorAgentProcessTrees(input),
 };
 
