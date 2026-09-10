@@ -196,3 +196,51 @@ export function clearOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): void 
     delete env[key];
   }
 }
+
+/** A projection owned by the existing Host transport, with identity-checked revocation. */
+export function createOpenCodeMcpAppContext(
+  getCurrentHandle: () => { url: string; port: number; urlHash: string } | null
+): {
+  bind: (env: OpenCodeMcpBridgeEnv, httpEnabled: boolean) => () => void;
+  read: (claudeRoot: string) => OpenCodeMcpBridgeEnv | null;
+} {
+  let current: { env: OpenCodeMcpBridgeEnv; httpEnabled: boolean } | null = null;
+  return {
+    bind(env, httpEnabled) {
+      const owner = { env, httpEnabled };
+      current = owner;
+      return () => {
+        if (current === owner) current = null;
+      };
+    },
+    read(claudeRoot) {
+      if (!current) return null;
+      const { env, httpEnabled } = current;
+      const instance = env.CLAUDE_TEAM_APP_INSTANCE_ID;
+      const profile = env.CLAUDE_TEAM_APP_PROFILE_SCOPE;
+      if (
+        env.AGENT_TEAMS_MCP_CLAUDE_DIR !== claudeRoot ||
+        !instance?.trim() ||
+        !/^[a-f0-9]{64}$/.test(profile ?? '')
+      ) {
+        throw new Error('Invalid current Host MCP app context');
+      }
+      const result: OpenCodeMcpBridgeEnv = {
+        CLAUDE_TEAM_APP_INSTANCE_ID: instance,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profile,
+      };
+      for (const key of [...LOCAL_MCP_LAUNCH_ENV_KEYS, ...OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS]) {
+        if (env[key] !== undefined) result[key] = env[key];
+      }
+      const handle = getCurrentHandle();
+      if (httpEnabled && handle) {
+        if (handle.url !== `http://127.0.0.1:${handle.port}/mcp`) {
+          throw new Error('Invalid current Host MCP transport');
+        }
+        result[HTTP_MCP_URL_ENV] = buildOpenCodeAppScopedMcpUrl(handle.url, instance, profile);
+        result[HTTP_MCP_URL_HASH_ENV] = handle.urlHash;
+      }
+      return result;
+    },
+  };
+}

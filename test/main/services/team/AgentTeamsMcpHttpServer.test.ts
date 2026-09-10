@@ -132,6 +132,96 @@ describe('AgentTeamsMcpHttpServer', () => {
     hoisted.untrackCliProcessMock.mockReset();
   });
 
+  it('publishes only live Host readiness across exit, restart, failure and quit', async () => {
+    const children: FakeChildProcess[] = [];
+    let ready: (() => void) | undefined;
+    const waitForPort = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          ready = resolve;
+        })
+    );
+    let port = 41001;
+    const server = new AgentTeamsMcpHttpServer({
+      statePath: null,
+      resolveLaunchSpec: async () => ({ command: 'node', args: ['/sandbox/mcp.js'] }),
+      allocatePort: async () => port++,
+      spawnProcess: () => {
+        const child = new FakeChildProcess();
+        children.push(child);
+        return child as unknown as ChildProcess;
+      },
+      waitForPort,
+    });
+    const env = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'first',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'a'.repeat(64),
+    };
+    const revokeOld = server.appContext.bind(env, true);
+    const read = () => server.appContext.read(getClaudeBasePath());
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(waitForPort).not.toHaveBeenCalled();
+    const starting = server.ensureStarted();
+    await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    ready!();
+    await starting;
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain('http://127.0.0.1:41001/mcp#');
+    children[0].emit('exit', 1, null);
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    ready = undefined;
+    const restarting = server.ensureStarted();
+    await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
+    const revokeNew = server.appContext.bind(
+      { ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'reopen' },
+      true
+    );
+    revokeOld();
+    ready!();
+    await restarting;
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
+      '41002/mcp#agent-teams-app-instance=reopen'
+    );
+    children[1].emit('exit', 1, null);
+    ready = undefined;
+    const failing = server.ensureStarted();
+    const failed = expect(failing).rejects.toThrow();
+    await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
+    children[2].emit('exit', 1, null);
+    await failed;
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    revokeNew();
+    await server.stop({ preventRestart: true });
+    ready!(); // a delayed readiness completion cannot republish after quit
+    expect(read()).toBeNull();
+    await expect(server.ensureStarted()).rejects.toThrow('shutdown');
+    const reopenedChild = new FakeChildProcess();
+    const reopened = new AgentTeamsMcpHttpServer({
+      statePath: null,
+      resolveLaunchSpec: async () => ({ command: 'node', args: ['/sandbox/mcp.js'] }),
+      allocatePort: async () => 41004,
+      spawnProcess: () => reopenedChild as unknown as ChildProcess,
+      waitForPort: async () => undefined,
+    });
+    const revokeReopened = reopened.appContext.bind(
+      { ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'after-quit' }, true
+    );
+    expect(reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL)
+      .toBeUndefined();
+    await reopened.ensureStarted();
+    revokeOld();
+    revokeNew();
+    expect(reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL)
+      .toContain('41004/mcp#agent-teams-app-instance=after-quit');
+    expect(read()).toBeNull();
+    revokeReopened();
+    reopenedChild.emit('exit', 1, null);
+    await reopened.stop({ preventRestart: true });
+    expect(vi.mocked(console.warn).mock.calls).toHaveLength(4);
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('starts the MCP server over HTTP with hidden app-owned process env', async () => {
     const child = new FakeChildProcess();
     const spawnProcess = vi.fn(() => child as unknown as ChildProcess);

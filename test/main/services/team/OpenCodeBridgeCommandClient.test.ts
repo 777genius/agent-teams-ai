@@ -1,5 +1,5 @@
-import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -745,7 +745,7 @@ describe('OpenCodeBridgeCommandClient', () => {
     });
   });
 
-  it('keeps the sealed HTTP MCP transport when a later env refresh falls back locally', async () => {
+  it('does not revive an initial HTTP MCP endpoint after Host selects local fallback', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
       stderr: '',
@@ -775,14 +775,14 @@ describe('OpenCodeBridgeCommandClient', () => {
       }
     );
 
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
     expect(runner.calls[0].env).toMatchObject({
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     });
   });
 
-  it('retains an HTTP MCP transport first discovered by the lazy env provider', async () => {
+  it('does not revive an HTTP MCP endpoint retired by the lazy Host env provider', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
       stderr: '',
@@ -819,9 +819,12 @@ describe('OpenCodeBridgeCommandClient', () => {
       );
     }
 
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe(
+      'http://127.0.0.1:5001/mcp'
+    );
+    expect(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
     expect(runner.calls[1].env).toMatchObject({
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     });
   });
