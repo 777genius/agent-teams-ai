@@ -128,7 +128,11 @@ export async function cleanupManagedOpenCodeServeProcesses(
     options.readProcessDetails ??
     (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
   const readStartTimeMs =
-    options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform));
+    options.readProcessStartTimeMs ??
+    ((pid: number) =>
+      readProcessStartTimeMs(pid, platform, undefined, (diagnostic) => {
+        result.diagnostics.push(`pid=${pid}; ${diagnostic}`);
+      }));
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
   const killProcess = options.killProcess;
