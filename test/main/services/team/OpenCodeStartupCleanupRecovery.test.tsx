@@ -134,7 +134,7 @@ it('pending recovery observes original late terminal partial response without re
     appStartedAtMs: 100,
     profileScope: 'test-only',
     logWarning: vi.fn(),
-    sweep: async () => empty,
+    sweep: () => Promise.resolve(empty),
     waitMs: () => Promise.resolve(),
   });
   await owner.preflight();
@@ -183,7 +183,7 @@ it('lost runtime evidence remains blocked through the real recovery API and UI',
     appStartedAtMs: 100,
     profileScope: 'test-only',
     logWarning: vi.fn(),
-    sweep: async () => empty,
+    sweep: () => Promise.resolve(empty),
     waitMs: () => Promise.resolve(),
   });
   await owner.preflight();
