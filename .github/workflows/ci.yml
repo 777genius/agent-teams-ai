@@ -264,3 +264,22 @@ jobs:
 
       - name: Test OpenCode nvm-windows runtime resolution
         run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+
+      - name: Test Windows cleanup probe diagnostics
+        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+
+      - name: Test startup cleanup admission and IPC recovery
+        run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
+
+      - name: Test delayed provider summaries through real subprocesses
+        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
+
+      - name: Test OpenCode catalog diagnostic boundaries
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
+          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
+          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts

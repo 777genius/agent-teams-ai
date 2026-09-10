@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
+import {
+  catalogFailure,
+  CatalogFailureError,
+  mainCatalogFailure,
+  type OpenCodeCatalogFailure,
+} from './catalogFailure';
 import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
@@ -37,7 +43,7 @@ interface CatalogState {
   scope: string;
   loading: boolean;
   models: RuntimeProviderModelDto[];
-  errors: string[];
+  errors: OpenCodeCatalogFailure[];
 }
 
 /** Dashboard display only: connected sources, never a full model inventory or launch proof. */
@@ -96,8 +102,12 @@ export function useOpenCodeConnectedModelCatalog(input: {
     const retainedModels = stateRef.current.scope === scope ? stateRef.current.models : [];
     setState({ scope, loading: true, models: retainedModels, errors: [] });
     void (async () => {
+      const validationError = (message: string) =>
+        new CatalogFailureError(
+          catalogFailure('provider_directory', null, 'client_validation', message)
+        );
       const loadedModels: RuntimeProviderModelDto[] = [];
-      const loadErrors: string[] = [];
+      const loadErrors: OpenCodeCatalogFailure[] = [];
       const entries: RuntimeProviderDirectoryEntryDto[] = [];
       const cursors = new Set<string>();
       let cursor: string | null = null;
@@ -115,7 +125,9 @@ export function useOpenCodeConnectedModelCatalog(input: {
           refresh: refreshRequested,
         });
         if (!current()) return;
-        if (response.error) throw new Error(response.error.message);
+        if (response.schemaVersion !== 1 || response.runtimeId !== 'opencode')
+          throw validationError('Invalid provider directory response.');
+        if (response.error) throw mainCatalogFailure('provider_directory', null, response.error);
         const directory = response.directory;
         if (
           response.schemaVersion !== 1 ||
@@ -123,7 +135,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
           !directory ||
           directory.runtimeId !== 'opencode'
         )
-          throw new Error('Invalid provider directory response.');
+          throw validationError('Invalid provider directory response.');
         if (
           directory.cursor !== cursor ||
           directory.returnedCount !== directory.entries.length ||
@@ -131,15 +143,16 @@ export function useOpenCodeConnectedModelCatalog(input: {
           directory.totalCount < 0 ||
           (total !== null && total !== directory.totalCount)
         )
-          throw new Error('Invalid provider directory pagination.');
+          throw validationError('Invalid provider directory pagination.');
         total = directory.totalCount;
         entries.push(...directory.entries);
         cursor = directory.nextCursor;
         if (!cursor) break;
-        if (cursors.has(cursor) || page === 19) throw new Error('Incomplete provider directory.');
+        if (cursors.has(cursor) || page === 19)
+          throw validationError('Incomplete provider directory.');
         cursors.add(cursor);
       }
-      if (entries.length !== total) throw new Error('Incomplete provider directory.');
+      if (entries.length !== total) throw validationError('Incomplete provider directory.');
       const sources = connectedCatalogSourceIds(entries);
       let sourceIndex = 0;
       const loadNext = async () => {
@@ -159,7 +172,9 @@ export function useOpenCodeConnectedModelCatalog(input: {
             if (!current()) return;
             loadedModels.push(...catalog.models);
             if (catalog.catalogState === 'stale') {
-              loadErrors.push(`${source}: cached models are stale.`);
+              loadErrors.push(
+                catalogFailure('provider_models', source, 'stale', 'Cached models are stale.')
+              );
             }
             if (retainedModels.length === 0 && current()) {
               setState({
@@ -171,9 +186,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
             }
           } catch (error) {
             if (!current()) return;
-            loadErrors.push(
-              `${source}: ${error instanceof Error ? error.message : 'Model catalog request failed.'}`
-            );
+            loadErrors.push(catalogFailure('provider_models', source, 'transport', error));
           } finally {
             activeGroups.delete(sourceRequestGroup);
           }
@@ -198,7 +211,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
             ...previous,
             errors: [
               ...previous.errors,
-              error instanceof Error ? error.message : 'Provider directory request failed.',
+              catalogFailure('provider_directory', null, 'transport', error),
             ],
           }));
       })
@@ -255,10 +268,16 @@ export function useOpenCodeConnectedModelCatalog(input: {
         diagnostics: {
           configReadState: 'ready' as const,
           appServerState: 'degraded' as const,
-          message: active.errors.join(' - ') || null,
+          message:
+            active.errors
+              .map(
+                (error) =>
+                  `${error.sourceProviderId ? `${error.sourceProviderId}: ` : ''}${error.message}`
+              )
+              .join(' - ') || null,
         },
       },
     };
   }, [input.enabled, input.passiveProviderStatus, scope, state]);
-  return { providerStatus, refresh };
+  return { providerStatus, refresh, failures: state.scope === scope ? state.errors : [] };
 }

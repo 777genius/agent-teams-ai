@@ -1,9 +1,11 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import {
-  RuntimeProviderErrorAlert,
   formatRuntimeProviderDiagnosticsCopyText,
+  RuntimeProviderErrorAlert,
 } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert';
 
 beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true));
@@ -88,3 +90,12 @@ it.each(['Error: api_key=custom-private-key-value', '{"auth":{"key":"custom-priv
     );
   }
 );
+
+it('preserves the provider settings heading unless catalog context is requested', () => {
+  expect(formatRuntimeProviderDiagnosticsCopyText('failed', null)).toMatch(
+    /^OpenCode provider settings diagnostics/
+  );
+  expect(
+    formatRuntimeProviderDiagnosticsCopyText('failed', null, 'OpenCode catalog diagnostics')
+  ).toMatch(/^OpenCode catalog diagnostics/);
+});

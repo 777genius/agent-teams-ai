@@ -59,9 +59,12 @@
       "testAndUseProject": "Jaribu na utumie kwa mradi huu"
     },
     "diagnostics": {
+      "previousPage": "Ukurasa uliopita",
+      "nextPage": "Ukurasa unaofuata",
       "copied": "Utambuzi umenakiliwa",
       "copiedShort": "Imenakiliwa",
       "copy": "Nakili utambuzi",
+      "copyAll": "Nakili zote",
       "hints": "Vidokezo",
       "likelyCause": "Sababu inayowezekana:",
       "windowsSymlinkAdminHint": "Windows: endesha Agent Teams AI kama Msimamizi"

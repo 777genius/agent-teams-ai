@@ -1,5 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process';
 
+import { processProbeDiagnostic } from '@main/utils/processProbeDiagnostics';
+
 export interface WindowsProcessTableRow {
   pid: number;
   ppid: number;
@@ -75,6 +77,7 @@ export function parseWindowsProcessTableJson(stdout: string): WindowsProcessTabl
 }
 
 function readWindowsProcessTableUncached(timeoutMs: number): Promise<WindowsProcessTableRow[]> {
+  const startedAt = performance.now();
   return new Promise((resolve, reject) => {
     execFile(
       'powershell.exe',
@@ -86,12 +89,19 @@ function readWindowsProcessTableUncached(timeoutMs: number): Promise<WindowsProc
         maxBuffer: 8 * 1024 * 1024,
       },
       (error, stdout, stderr) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        if (stderr?.trim()) {
-          reject(new Error(stderr.trim()));
+        if (error || stderr?.trim()) {
+          reject(
+            new Error(
+              processProbeDiagnostic(
+                'windows_process_enumeration',
+                startedAt,
+                timeoutMs,
+                error ? 'probe failed' : 'stderr received',
+                error,
+                stderr
+              )
+            )
+          );
           return;
         }
         resolve(parseWindowsProcessTableJson(String(stdout)));

@@ -6414,9 +6414,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().provisioningRuns['run-real']).toBeUndefined();
       expect(store.getState().ignoredProvisioningRunIds['run-real']).toBe('my-team');
       expect(store.getState().ignoredRuntimeRunIds['run-real']).toBe('my-team');
-      expect(store.getState().provisioningErrorByTeam['my-team']).toBe(
-        'MCP initialize timed out'
-      );
+      expect(store.getState().provisioningErrorByTeam['my-team']).toBe('MCP initialize timed out');
 
       store.getState().onProvisioningProgress({
         runId: 'run-late',
@@ -6483,6 +6481,64 @@ describe('teamSlice actions', () => {
       await newRejection;
       vi.useRealTimers();
     });
+
+    it.each(['createTeam', 'launchTeam'] as const)(
+      '%s clears cleanup busy pending state and waits for an explicit retry',
+      async (operation) => {
+        vi.useFakeTimers();
+        const store = createSliceStore();
+        store.setState({ selectedTeamName: 'my-team', selectedTeamLoading: true });
+        const response = createDeferredPromise<{ runId: string }>();
+        const message =
+          'OpenCode startup cleanup is still running. Wait for cleanup to finish, then retry starting the team.';
+        hoisted[operation].mockImplementationOnce(() => response.promise);
+        const request = { teamName: 'my-team', cwd: '/tmp/cleanup-store-fixture', members: [] };
+        const attempt = store.getState()[operation](request);
+        const rejection = expect(attempt).rejects.toMatchObject({
+          name: 'IpcError',
+          message,
+        });
+        const pendingRunId = store.getState().currentProvisioningRunIdByTeam['my-team'];
+        expect(pendingRunId).toMatch(/^pending:/);
+        // Admission has not emitted canonical progress; pending run state is enough.
+        // Preload reconstructs a plain Error from the main IpcResult.
+        response.reject(new Error(message));
+        await rejection;
+        expect(store.getState().provisioningErrorByTeam['my-team']).toBe(message);
+        expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+        expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+        expect(store.getState().provisioningRuns).toEqual({});
+        expect(store.getState().provisioningSnapshotByTeam['my-team']).toBeUndefined();
+        expect(store.getState().selectedTeamLoading).toBe(false);
+        expect(store.getState().teamsLoading).toBe(false);
+        expect(store.getState().launchParamsByTeam['my-team']).toBeUndefined();
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(hoisted[operation]).toHaveBeenCalledTimes(1);
+        expect(
+          hoisted.getProvisioningStatus.mock.calls.some(([runId]) => runId === pendingRunId)
+        ).toBe(false);
+        expect(
+          hoisted[operation === 'createTeam' ? 'launchTeam' : 'createTeam']
+        ).not.toHaveBeenCalled();
+
+        // Admission has become available; changing the response alone must not retry.
+        hoisted[operation].mockResolvedValue({ runId: 'retry-run' });
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(hoisted[operation]).toHaveBeenCalledTimes(1);
+        hoisted.getProvisioningStatus.mockResolvedValue({
+          runId: 'retry-run',
+          teamName: 'my-team',
+          state: 'ready',
+          message: 'Ready',
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        await expect(store.getState()[operation](request)).resolves.toBe('retry-run');
+        expect(hoisted[operation]).toHaveBeenCalledTimes(2);
+        expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
+        expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('retry-run');
+      }
+    );
 
     it('rolls back optimistic pending run on early createTeam failure', async () => {
       const store = createSliceStore();

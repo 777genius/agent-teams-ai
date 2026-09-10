@@ -1017,16 +1017,24 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([
       'runtime status --json --provider opencode --summary',
     ]);
-    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5_000);
+    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(30_000);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining('returning scoped degraded status without fallback'),
     ]);
     vi.mocked(console.warn).mockClear();
   });
 
-  it.each(['anthropic', 'codex', 'gemini', 'opencode'] as const)(
-    'allows the dev source runtime enough time to return %s summary status',
-    async (providerId) => {
+  it.each([
+    ['anthropic', '/mock/cli-source', 45_000],
+    ['codex', '/mock/cli-source', 45_000],
+    ['gemini', '/mock/cli-source', 45_000],
+    ['opencode', '/mock/cli-source', 45_000],
+    ['anthropic', '/mock/claude-multimodel', 30_000],
+    ['opencode', '/mock/claude-multimodel', 30_000],
+    ['codex', '/mock/claude-multimodel', 15_000],
+  ] as const)(
+    'gives %s summary through %s a %i ms budget',
+    async (providerId, binaryPath, timeoutMs) => {
       execCliMock.mockImplementation((_binaryPath, args) => {
         const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
         if (normalizedArgs === `runtime status --json --provider ${providerId} --summary`) {
@@ -1063,7 +1071,7 @@ describe('ClaudeMultimodelBridgeService', () => {
         await import('@main/services/runtime/ClaudeMultimodelBridgeService');
       const service = new ClaudeMultimodelBridgeService();
 
-      const provider = await service.getProviderStatus('/mock/cli-source', providerId);
+      const provider = await service.getProviderStatus(binaryPath, providerId);
 
       expect(provider).toMatchObject({
         providerId,
@@ -1072,7 +1080,7 @@ describe('ClaudeMultimodelBridgeService', () => {
         verificationState: 'verified',
         statusCheckOutcome: 'authoritative',
       });
-      expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
+      expect(execCliMock.mock.calls[0][2]?.timeout).toBe(timeoutMs);
     }
   );
 
@@ -1273,8 +1281,8 @@ describe('ClaudeMultimodelBridgeService', () => {
         'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
     });
     expect(provider.detailMessage).not.toContain('/mock/runtime');
-    expect(provider.detailMessage).not.toContain('5000ms');
-    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5_000);
+    expect(provider.detailMessage).not.toContain('30000ms');
+    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(30_000);
     vi.mocked(console.warn).mockClear();
   });
 
@@ -1515,7 +1523,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(execCliMock).toHaveBeenCalledTimes(8);
     expect(
       execCliMock.mock.calls.map((call) => call[2]?.timeout as number).sort((a, b) => a - b)
-    ).toEqual([5000, 5000, 15000, 15000, 15000, 25000, 25000, 25000]);
+    ).toEqual([15000, 15000, 15000, 25000, 25000, 25000, 30000, 30000]);
     expect(calls).toEqual(
       expect.arrayContaining([
         'runtime status --json --provider anthropic --summary',

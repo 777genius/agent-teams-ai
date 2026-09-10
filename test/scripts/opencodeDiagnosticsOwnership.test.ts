@@ -25,18 +25,18 @@ function refusal(root: string): string {
 }
 describe.skipIf(process.platform === 'win32')('OpenCode desktop fixture ownership', () => {
   it('refuses seed-only verification before connecting to CDP', () => {
-    expect(refusal(sandbox())).toContain('launcher.pid');
+    expect(refusal(sandbox())).toContain('No manifest-owned launcher');
   });
   it('refuses an unrelated live process even with a matching birth timestamp', () => {
     const root = sandbox();
-    writeFileSync(path.join(root, 'launcher.pid'), String(process.pid));
+    const birth = execFileSync('ps', ['-p', String(process.pid), '-o', 'lstart='], {
+      encoding: 'utf8',
+      env: { ...process.env, LC_ALL: 'C' },
+    }).trim();
     writeFileSync(
-      path.join(root, 'launcher.birth'),
-      execFileSync('ps', ['-p', String(process.pid), '-o', 'lstart='], {
-        encoding: 'utf8',
-        env: { ...process.env, LC_ALL: 'C' },
-      })
+      path.join(root, 'manifest.json'),
+      JSON.stringify({ root, launcher: { pid: process.pid, parent: process.ppid, birth } })
     );
-    expect(refusal(root)).toContain('Launcher identity changed');
+    expect(refusal(root)).toContain('Launcher command changed; refusing access/cleanup');
   });
 });
