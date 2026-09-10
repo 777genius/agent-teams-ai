@@ -1,3 +1,5 @@
+import type { RuntimeErrorDetails } from './errorDiagnostics';
+
 export type RuntimeProviderManagementRuntimeId = 'opencode';
 
 export const RUNTIME_PROVIDER_COMPANION_IDS = ['kiro-cli', 'cursor-agent'] as const;
@@ -337,7 +339,7 @@ export type RuntimeProviderManagementErrorCodeDto =
   | 'model-test-failed'
   | 'unsupported-auth-method';
 
-export interface RuntimeProviderManagementErrorDiagnosticsDto {
+export interface RuntimeProviderManagementErrorDiagnosticsDto extends RuntimeErrorDetails {
   errorCode?: RuntimeProviderManagementErrorCodeDto | null;
   summary: string | null;
   likelyCause: string | null;

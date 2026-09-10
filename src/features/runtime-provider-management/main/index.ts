@@ -13,3 +13,8 @@ export {
   RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS,
 } from './infrastructure/OpenCodeLocalModelRuntimeInspector';
 export { OpenCodeLocalProviderConnector } from './infrastructure/OpenCodeLocalProviderConnector';
+export {
+  type OpenCodeBinaryCandidateFailure,
+  type OpenCodeBinaryVersionProbe,
+  probeOpenCodeBinaryVersion,
+} from './infrastructure/openCodeVersionDiagnostics';

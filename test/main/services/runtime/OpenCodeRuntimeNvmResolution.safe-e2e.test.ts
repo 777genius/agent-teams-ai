@@ -4,7 +4,7 @@ import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearOpenCodeRuntimeBinaryResolverCache,
@@ -15,6 +15,18 @@ import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '../../../../src/main/servi
 import { execCli } from '../../../../src/main/utils/childProcess';
 import { setAppDataBasePath } from '../../../../src/main/utils/pathDecoder';
 import { clearShellEnvCache } from '../../../../src/main/utils/shellEnv';
+
+const versionWarnings = vi.hoisted(() => vi.fn());
+vi.mock('@shared/utils/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/utils/logger')>();
+  return {
+    ...actual,
+    createLogger: (name: string) => {
+      const logger = actual.createLogger(name);
+      return name === 'OpenCodeVersionDiagnostics' ? { ...logger, warn: versionWarnings } : logger;
+    },
+  };
+});
 
 const describePosix = process.platform === 'win32' ? describe.skip : describe;
 const describeWindows = process.platform === 'win32' ? describe : describe.skip;
@@ -53,7 +65,8 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
   });
 
   it('reports and launches an npm global OpenCode binary installed under nvm when GUI PATH is empty', async () => {
-    await createFakeNvmOpenCodeBinary('v23.0.0', { broken: true });
+    versionWarnings.mockClear();
+    const brokenBinaryPath = await createFakeNvmOpenCodeBinary('v23.0.0', { broken: true });
     const binaryPath = await createFakeNvmOpenCodeBinary('v22.22.1');
     const binDir = path.dirname(binaryPath);
 
@@ -86,6 +99,17 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       windowsHide: true,
     });
     expect(version.stdout.trim()).toBe('opencode 1.18.3');
+    expect(versionWarnings).toHaveBeenCalledTimes(1);
+    expect(versionWarnings).toHaveBeenCalledWith(
+      expect.stringContaining('OpenCode version probe failed, report oc-'),
+      expect.objectContaining({
+        stage: 'version_probe',
+        binaryPath: brokenBinaryPath,
+        exitCode: 2,
+        timedOut: false,
+        stderrPreview: expect.stringContaining('broken opencode'),
+      })
+    );
   });
 
   async function createFakeNvmOpenCodeBinary(

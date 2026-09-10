@@ -22,6 +22,7 @@ import {
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   resolveOpenCodeQuickConnectGate,
+  RuntimeProviderErrorAlert,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
   useOpenCodeConnectedModelCatalog,
@@ -1080,6 +1081,14 @@ const InstalledBanner = ({
       )}
       {cliStatus.flavor === 'agent_teams_orchestrator' ? (
         <div className={showExpandedContent ? undefined : 'hidden'}>
+          {openCodeRuntimeStatus?.diagnostics ? (
+            <RuntimeProviderErrorAlert
+              compact
+              message={openCodeRuntimeStatus.error ?? ''}
+              diagnostics={openCodeRuntimeStatus.diagnostics}
+              testId="opencode-version-diagnostics"
+            />
+          ) : null}
           <RuntimeProviderQuickConnect
             enabled
             cliStatusLoading={cliStatusLoading}

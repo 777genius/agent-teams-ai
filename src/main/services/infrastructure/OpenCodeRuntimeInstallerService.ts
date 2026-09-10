@@ -1,3 +1,8 @@
+import {
+  type OpenCodeBinaryCandidateFailure,
+  type OpenCodeBinaryVersionProbe,
+  probeOpenCodeBinaryVersion,
+} from '@features/runtime-provider-management/main';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
@@ -36,10 +41,7 @@ import {
   versionProbeInFlight,
 } from './openCodeRuntimeResolverCache';
 
-import type {
-  OpenCodeBinaryVersionProbe,
-  VerifiedOpenCodeBinaryProbe,
-} from './openCodeRuntimeResolverCache';
+import type { VerifiedOpenCodeBinaryProbe } from './openCodeRuntimeResolverCache';
 import type { OpenCodeRuntimeInstallProgress, OpenCodeRuntimeStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 export {
@@ -244,18 +246,6 @@ function collectVersionedOpenCodeBinaryCandidates(rootPath: string, binSegment =
     });
 }
 
-async function probeOpenCodeBinaryVersion(binaryPath: string): Promise<OpenCodeBinaryVersionProbe> {
-  try {
-    const { stdout } = await execCli(binaryPath, ['--version'], {
-      timeout: VERSION_TIMEOUT_MS,
-      windowsHide: true,
-    });
-    return { ok: true, version: stdout.trim() || null };
-  } catch (error) {
-    return { ok: false, error: getErrorMessage(error) };
-  }
-}
-
 function normalizeBinaryCandidateForCompare(binaryPath: string): string {
   const normalized = path.resolve(binaryPath);
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
@@ -303,7 +293,7 @@ async function probeOpenCodeBinaryVersionCached(
 async function probeFirstWorkingOpenCodeBinaryCandidate(
   candidates: string[],
   seen: Set<string>,
-  firstFailure: { binaryPath: string; error: string } | null
+  firstFailure: OpenCodeBinaryCandidateFailure | null
 ): Promise<VerifiedOpenCodeBinaryProbe> {
   let nextFirstFailure = firstFailure;
   for (const binaryPath of candidates) {
@@ -322,6 +312,9 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
         };
       }
       nextFirstFailure ??= {
+        ...(!version.ok
+          ? { diagnostics: { ...version.diagnostics, binarySource: 'path' as const } }
+          : {}),
         binaryPath: launchBinaryPath,
         error: version.ok
           ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
@@ -358,7 +351,7 @@ async function probeFirstWorkingPathOpenCodeBinary(
   options: OpenCodeRuntimeBinaryResolveOptions = {}
 ): Promise<VerifiedOpenCodeBinaryProbe> {
   const seenCandidates = new Set<string>();
-  let firstFailure: { binaryPath: string; error: string } | null = null;
+  let firstFailure: OpenCodeBinaryCandidateFailure | null = null;
 
   const cachedProbe = await probeFirstWorkingOpenCodeBinaryCandidate(
     collectPathOpenCodeBinaryCandidates([], {
@@ -840,6 +833,9 @@ export class OpenCodeRuntimeInstallerService {
       version: manifest.version,
       source: 'app-managed',
       state: 'failed',
+      ...(!version.ok
+        ? { diagnostics: { ...version.diagnostics, binarySource: 'app-managed' as const } }
+        : {}),
       error: version.ok
         ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
         : version.error,
@@ -866,6 +862,7 @@ export class OpenCodeRuntimeInstallerService {
       source: 'path',
       state: 'failed',
       error: result.firstFailure.error,
+      diagnostics: result.firstFailure.diagnostics,
     };
   }
 
