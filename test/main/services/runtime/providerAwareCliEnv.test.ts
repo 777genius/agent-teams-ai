@@ -353,8 +353,18 @@ describe('buildProviderAwareCliEnv', () => {
             pid: 123,
             generation: 1,
             diagnostics: [],
-            transportEvidence: {},
-          } as ReturnType<typeof server.getCurrentHandle>);
+            transportEvidence: {
+              schemaVersion: 1,
+              transport: 'httpStream',
+              host: '127.0.0.1',
+              port,
+              endpoint: '/mcp',
+              url: `http://127.0.0.1:${port}/mcp`,
+              urlHash: 'hash',
+              generation: 1,
+              observedAt: '2026-09-10T00:00:00.000Z',
+            },
+          });
           await new AgentTeamsRuntimeProviderManagementCliClient().loadModels({
             runtimeId: 'opencode',
             providerId: 'xai',

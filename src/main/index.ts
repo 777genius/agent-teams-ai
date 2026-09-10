@@ -3026,8 +3026,6 @@ async function shutdownServices(): Promise<void> {
     return shutdownPromise;
   }
 
-  revokeMcpAppContext?.();
-  revokeMcpAppContext = null;
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
@@ -3057,9 +3055,11 @@ async function shutdownServices(): Promise<void> {
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
-      agentTeamsMcpHttpServer.stop({ preventRestart: true })
-    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
+      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
+      revokeMcpAppContext = null;
+      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
+    });
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );
