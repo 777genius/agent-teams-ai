@@ -267,3 +267,6 @@ jobs:
 
       - name: Test Windows cleanup probe diagnostics
         run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+
+      - name: Test delayed provider summaries through real subprocesses
+        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
