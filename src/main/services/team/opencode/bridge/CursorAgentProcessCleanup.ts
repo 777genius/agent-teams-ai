@@ -43,6 +43,7 @@ const logger = createLogger('CursorAgentProcessCleanup');
  */
 
 export interface CursorAgentProcessCleanupOptions {
+  canAdmitStartupWork?: () => boolean;
   /**
    * The workspaces the caller can prove are its own. This is the ownership
    * proof, not a convenience filter: an empty list reaps nothing at all, so a
@@ -137,6 +138,7 @@ export interface CursorAgentProcessCleanupResult {
 export interface CursorAgentTreeSweepPort {
   isEnabled(): boolean;
   sweepCursorAgentTrees(input: {
+    canAdmitStartupWork?: () => boolean;
     ownedWorkspaceCwds: readonly string[];
     startedBeforeMs?: number | null;
     requiredEnvMarkers?: readonly string[];
@@ -454,6 +456,7 @@ export async function cleanupCursorAgentProcessTrees(
   let rows: RuntimeProcessTableRow[];
   try {
     rows = await listProcessRows();
+    if (options.canAdmitStartupWork?.() === false) return result;
   } catch (error) {
     // A process table this app cannot read is not evidence that nothing is
     // running, so the sweep reports and returns rather than guessing - and
@@ -497,6 +500,7 @@ export async function cleanupCursorAgentProcessTrees(
     }
     if (requiredEnvMarkers.length > 0) {
       const details = await readProcessDetails(row.pid);
+      if (options.canAdmitStartupWork?.() === false) break;
       const proven = details !== null && stringIncludesAnyMarker(details, requiredEnvMarkers);
       if (!proven) {
         // Unreadable env is not proof of a foreign process, but it is also not
@@ -521,6 +525,7 @@ export async function cleanupCursorAgentProcessTrees(
     }
     if (startedBeforeMs !== null) {
       const startedAtMs = await readStartTimeMs(row.pid);
+      if (options.canAdmitStartupWork?.() === false) break;
       const verified = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);
       // Unverifiable start time keeps the process. The opposite default reads
       // "cannot prove it is new" as "safe to kill", which is how a live
@@ -548,6 +553,7 @@ export async function cleanupCursorAgentProcessTrees(
     // descendant's identity against the table it just read, so a pid recycled
     // deeper down is skipped rather than signalled.
     try {
+      if (options.canAdmitStartupWork?.() === false) break;
       const reaped = killTree(row.pid);
       // The root counts as killed only if the walk actually reached it. A tree
       // that refused - it contains this app, or the table could not be read -

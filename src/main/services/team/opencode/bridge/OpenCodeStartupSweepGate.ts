@@ -8,16 +8,16 @@
  *
  * Windows rejects such launches for manual retry; Unix waits behind the sweep.
  * This protects admission only while the startup owner marks cleanup pending.
- * Its finally callback does not prove externally dispatched cleanup has drained.
+ * Windows owners settle only after destructive work has drained.
  * It is belt and braces on top of the start-time fence the sweep itself
  * applies, because the sweep is reachable from more than one lifecycle path
  * and a fence can only protect processes that already exist when it is read.
  */
 
 export class OpenCodeStartupCleanupBusyError extends Error {
-  constructor() {
+  constructor(message?: string) {
     super(
-      'OpenCode startup cleanup is still running. Wait for cleanup to finish, then retry starting the team.'
+      message ?? 'OpenCode startup cleanup is still running. Check cleanup in OpenCode runtime settings, then retry starting the team manually.'
     );
     this.name = 'OpenCodeStartupCleanupBusyError';
   }
@@ -32,14 +32,19 @@ interface PendingStartupSweep {
 }
 
 let pendingStartupSweep: PendingStartupSweep | null = null;
+let startupOperationFailure: string | undefined;
+
+export function reportOpenCodeStartupCleanupFailure(message: string): void {
+  startupOperationFailure = message;
+}
+
 
 /**
  * Marks the startup runtime sweep as pending. Call it when the sweep is
  * scheduled, not when it starts running, so a launch requested during the
  * scheduling delay also waits. The returned callback must be invoked from a
- * `finally`: a sweep that throws still has to release the launches waiting on
- * it, and that is the only reason this is a callback rather than a promise the
- * gate awaits itself.
+ * terminal completion path on Windows; read-only failures can also settle.
+ * Unix retains its legacy finally settlement.
  */
 export function beginOpenCodeStartupRuntimeSweep(): () => void {
   if (!pendingStartupSweep) {
@@ -47,6 +52,7 @@ export function beginOpenCodeStartupRuntimeSweep(): () => void {
     const promise = new Promise<void>((resolve) => {
       settle = resolve;
     });
+    startupOperationFailure = undefined;
     pendingStartupSweep = { promise, settle };
   }
   const current = pendingStartupSweep;
@@ -84,7 +90,7 @@ export async function whenOpenCodeStartupRuntimeSweepSettled(
   if (process.platform === 'win32') {
     // No waiter, progress run, or deferred launch survives this refusal.
     // Only the startup completion owner may release the Windows gate.
-    throw new OpenCodeStartupCleanupBusyError();
+    throw new OpenCodeStartupCleanupBusyError(startupOperationFailure);
   }
   options.onWaitStart?.();
   const nowMs = options.nowMs ?? (() => Date.now());

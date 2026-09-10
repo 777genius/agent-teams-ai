@@ -66,6 +66,23 @@ describe('resolveOpenCodeHostStartupLocksDir', () => {
 });
 
 describe('purgeStaleOpenCodeHostStartupLocks', () => {
+  it('rechecks startup admission after the awaited age stat before removing a lock', async () => {
+    const lockPath = writeLock('shutdown.lock', 60_000);
+    let admitted = true;
+    const originalStat = fs.promises.stat.bind(fs.promises);
+    const stat = vi.spyOn(fs.promises, 'stat').mockImplementation(async (...args) => {
+      const value = await originalStat(...args);
+      admitted = false;
+      return value;
+    });
+    const removeLockEntry = vi.fn(async () => {});
+    try {
+      await purgeStaleOpenCodeHostStartupLocks({ locksDir, minAgeMs: 30_000, canRemove: () => admitted, removeLockEntry });
+      expect(removeLockEntry).not.toHaveBeenCalled();
+      expect(fs.existsSync(lockPath)).toBe(true);
+    } finally { stat.mockRestore(); }
+  });
+
   it('removes only lock entries that are at least as old as the threshold', async () => {
     writeLock('old.lock', 20 * 60_000);
     writeLock('fresh.lock', 1_000);

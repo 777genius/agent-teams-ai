@@ -68,6 +68,62 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(diagnostics.events).toHaveLength(3);
   });
 
+  it.each([false, true])('retains correlated startup evidence on unknown drainage (watchdog=%s)', async (timedOut) => {
+    const payload = bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
+      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
+      startupCleanup: { completion: 'unknown', coverage: 'partial', survivingPids: [55] },
+    } });
+    runner.nextResult = { stdout: JSON.stringify(payload), stderr: '', exitCode: timedOut ? null : 0, timedOut };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result.requestId).toBe('req-1');
+    const files = await fs.readdir(tempDir);
+    expect(files.some(name => name.endsWith('.observed-output.json'))).toBe(true);
+    expect(await fs.readFile(path.join(tempDir, files.find(name => name.endsWith('.observed-output.json'))!), 'utf8')).toBe(JSON.stringify(payload));
+    expect(runner.calls).toHaveLength(1);
+    if (timedOut) expect(result).toMatchObject({ ok: false, error: { kind: 'transport_watchdog_timeout' } });
+    else expect(result).toEqual(payload);
+  });
+
+  it('consumes normal drained partial evidence, but never infers it from watchdog exit', async () => {
+    runner.nextResult = { stdout: JSON.stringify(bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
+      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
+      startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [55] },
+    } })), stderr: '', exitCode: 0, timedOut: false };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result.ok).toBe(true);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+    expect(runner.calls).toHaveLength(1);
+  });
+
+  it.each(['req-1', 'different-request'])('trusts only correlated pre-mutation rejection even on abnormal exit (%s)', async (requestId) => {
+    const rejection = { ...bridgeSuccess({ command: 'opencode.cleanupStartupHosts', requestId }), ok: false,
+      error: { kind: 'unsupported_command', message: 'old runtime', retryable: false } };
+    runner.nextResult = { stdout: JSON.stringify(rejection), stderr: '', exitCode: 1, timedOut: true };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result).toMatchObject({ ok: false, error: { kind: requestId === 'req-1' ? 'unsupported_command' : 'transport_watchdog_timeout' } });
+    expect((await fs.readdir(tempDir)).length === 0).toBe(requestId === 'req-1');
+    expect(runner.calls).toHaveLength(1);
+  });
+
+  it('reports preparation rejection as terminal pre-mutation failure', async () => {
+    const client = createClient({ envProvider: async () => { throw new Error('test env unavailable'); } });
+    const result = await client.execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input', details: { mutationStarted: false } } });
+    expect(runner.calls).toHaveLength(0);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+  });
+
+  it('checks shutdown admission after asynchronous environment preparation before CLI dispatch', async () => {
+    let allowed = true;
+    const client = createClient({ envProvider: async () => { allowed = false; return {}; } });
+    const result = await client.execute('opencode.cleanupStartupHosts', {}, {
+      cwd: tempDir, timeoutMs: 100, canDispatch: () => allowed,
+    });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
+    expect(runner.calls).toHaveLength(0);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+  });
+
   it('writes a private input envelope, executes the bridge command, and removes the input file', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,

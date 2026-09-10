@@ -19,6 +19,7 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
   | 'opencode.commandStatus'
   | 'opencode.readiness'
+  | 'opencode.cleanupStartupHosts'
   | 'opencode.cleanupHosts'
   | 'opencode.launchTeam'
   | 'opencode.reconcileTeam'
@@ -158,6 +159,12 @@ export interface OpenCodeCleanupHostsCommandBody {
   staleAgeMs?: number | null;
   leaseStaleAgeMs?: number | null;
   preflightLeaseStaleAgeMs?: number | null;
+}
+
+export interface OpenCodeStartupCleanupStatus {
+  completion: 'drained' | 'unknown';
+  coverage: 'complete' | 'partial';
+  survivingPids: number[];
 }
 
 export interface OpenCodeCleanupHostsCommandData {
@@ -523,6 +530,7 @@ const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.handshake',
   'opencode.commandStatus',
   'opencode.readiness',
+  'opencode.cleanupStartupHosts',
   'opencode.cleanupHosts',
   'opencode.launchTeam',
   'opencode.reconcileTeam',

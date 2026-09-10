@@ -281,6 +281,7 @@ import {
 } from './constants/ipcChannels';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
+import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
@@ -523,6 +524,7 @@ const electronAPI: ElectronAPI = {
     getSentryStatus: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_STATUS),
   },
   startup: {
+    ...createOpenCodeStartupCleanupAPI(ipcRenderer),
     getStatus: () => ipcRenderer.invoke(APP_STARTUP_GET_STATUS) as Promise<AppStartupStatus>,
     onProgress: (callback: (status: AppStartupStatus) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, status: AppStartupStatus): void => {
