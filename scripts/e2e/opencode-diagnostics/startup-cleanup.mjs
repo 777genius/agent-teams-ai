@@ -232,9 +232,23 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
     await count(2);
     assert(await evaluate(`Boolean(${busy}?.disabled)`));
     const secondWritten = await release(second.requestId, 'complete');
-    await poll(async () =>
-      /OpenCode cleanup finished. You can start the team manually./.test(await ui())
-    );
+    await poll(async () => {
+      const current = await status();
+      evidence.lastStatus = current;
+      assert.equal(
+        current.requestId,
+        second.requestId,
+        'Cleanup result belongs to another attempt'
+      );
+      assert(
+        current.state === 'pending' || current.state === 'complete',
+        `Cleanup retry finished with ${current.state}; inspect desktop.log for scan/transport diagnostics`
+      );
+      return (
+        current.state === 'complete' &&
+        /OpenCode cleanup finished. You can start the team manually./.test(await ui())
+      );
+    });
     await observe('complete', second.requestId);
     await capture('complete');
     assert(Date.now() - secondWritten >= 8000, 'Complete UI preceded tail drainage');
