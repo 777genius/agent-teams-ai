@@ -1709,8 +1709,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
                   retryResult.stderr
                 )
               );
-            } catch {
-              // Retry also failed; fall through to return the original error.
+            } catch (retryError) {
+              return (
+                extractJsonObjectFromError<RuntimeProviderManagementDirectoryResponse>(
+                  retryError
+                ) ??
+                commandFailureResponse<RuntimeProviderManagementDirectoryResponse>(
+                  input.runtimeId,
+                  normalizeCommandFailure(retryError, context)
+                )
+              );
             }
           }
         }
