@@ -479,12 +479,17 @@ export async function verifyPackaged({
         evidence.managedRuntime.platformPackage !== 'diagnostics-fixture'
     );
     await probe('invalidateSummary', 'window.electronAPI.cliInstaller.invalidateStatus()');
-    const summary = await probe(
-      'summary',
-      'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"full"})'
+    const statusSnapshot = await probe(
+      'statusSnapshot',
+      'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"defer"})'
     );
-    await runtimeProvenance(summary, data, 'orchestrator');
-    const provider = summary.providers?.find((p) => p.providerId === 'opencode');
+    await runtimeProvenance(statusSnapshot, data, 'orchestrator');
+    // Discovery intentionally returns deferred provider placeholders. Await the same
+    // scoped summary API used by renderer status checks, not the aggregate snapshot.
+    const provider = await probe(
+      'summary',
+      'window.electronAPI.cliInstaller.getProviderStatus("opencode")'
+    );
     assert(
       provider?.supported &&
         !provider.statusCheckErrorCode &&
