@@ -160,6 +160,15 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
         'Successful models missing from real dashboard'
       );
     await screenshot('dashboard');
+    if (expectedFailures) {
+      await click(`${alert}?.querySelector('button[aria-expanded="false"]')`);
+      assert.equal(
+        await evaluate(`${alert}?.querySelector('button[aria-expanded="true"]') !== null`),
+        true,
+        'Diagnostic details did not expand'
+      );
+      await screenshot('details');
+    }
 
     // Independent normal preload IPC probe, explicitly a separate attempt from the UI.
     // Record its own IDs and correlate those to main logs, never substitute it into UI state.

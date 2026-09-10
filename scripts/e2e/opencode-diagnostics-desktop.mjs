@@ -240,6 +240,10 @@ if (mode === 'seed') {
     await send('Runtime.enable');
     await send('Log.enable');
     await send('Page.bringToFront');
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
+    });
+    assert.equal(await evaluate('window.innerWidth'), 1440, 'Unexpected test viewport width');
     if (mode === 'verify')
       await send('Browser.grantPermissions', {
         origin: new URL(target.url).origin,
