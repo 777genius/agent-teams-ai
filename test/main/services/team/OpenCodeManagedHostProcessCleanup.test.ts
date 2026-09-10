@@ -83,12 +83,12 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
         const result = await cleanupManagedOpenCodeServeProcesses({
           mode: 'force',
           platform: 'win32',
-          listProcessRows: async () => [{ pid: 42, ppid: 1, command: 'opencode serve' }],
-          readProcessDetails: async () => MANAGED_DETAILS,
-          readProcessStartTimeMs: async () => birth,
+          listProcessRows: () => resolved([{ pid: 42, ppid: 1, command: 'opencode serve' }]),
+          readProcessDetails: () => resolved(MANAGED_DETAILS),
+          readProcessStartTimeMs: () => resolved(birth),
           killProcess,
           isProcessAlive: () => alive,
-          sleepMs: async () => undefined,
+          sleepMs: () => resolved(undefined),
         });
         expect(killProcess).toHaveBeenCalledWith(42);
         expect(exec).toHaveBeenCalledTimes(1);
@@ -118,13 +118,14 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
         // Admission is the first probe, followed by dispose, kill, and force checks.
         if (++probes === phase + 1) birth = 20_000;
       };
-      const disposeServeHost = vi.fn(async () => undefined);
+      const disposeServeHost = vi.fn(() => resolved(undefined));
       const killProcess = vi.fn();
       const forceKillProcess = vi.fn();
       const result = await cleanupManagedOpenCodeServeProcesses({
         mode: 'force',
         platform: 'win32',
-        listProcessRows: async () => [{ pid: 42, ppid: 1, command: 'opencode serve --port 5001' }],
+        listProcessRows: () =>
+          resolved([{ pid: 42, ppid: 1, command: 'opencode serve --port 5001' }]),
         requiredDetailsMarkers: proof === 'details' ? ['OPENCODE_CONFIG_CONTENT='] : [],
         requiredServeConfigMarkersAny: proof === 'config' ? ['fixture-marker'] : [],
         requiredProfileScope: proof === 'profile' ? 'own' : undefined,
@@ -139,12 +140,12 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
             mcp: { 'agent-teams': { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own' } } },
           });
         },
-        readProcessStartTimeMs: async () => birth,
+        readProcessStartTimeMs: () => resolved(birth),
         disposeServeHost,
         killProcess,
         forceKillProcess,
         isProcessAlive: () => true,
-        sleepMs: async () => undefined,
+        sleepMs: () => resolved(undefined),
       });
       expect(disposeServeHost).toHaveBeenCalledTimes(phase > 1 ? 1 : 0);
       expect(killProcess).toHaveBeenCalledTimes(phase > 2 ? 1 : 0);
