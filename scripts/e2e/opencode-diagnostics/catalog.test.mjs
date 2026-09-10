@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { readPendingArtifact } from './catalog.mjs';
 
 test('catalog fixture subprocess returns four sources, failures, partial models and recovery; refuses mutations', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-catalog-test-'));
@@ -137,6 +138,19 @@ test('delayed summary exercises runtime status budget, not directory latency', a
       .map(JSON.parse);
     assert.equal(events[1].operation, 'status');
     assert(events[1].at - events[0].at >= 7900);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('pending artifacts tolerate absence, preserve content and surface other read errors', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-artifact-test-'));
+  try {
+    const file = path.join(root, 'calls.ndjson');
+    assert.equal(await readPendingArtifact(file), '');
+    await writeFile(file, '{"event":"start"}\n');
+    assert.equal(await readPendingArtifact(file), '{"event":"start"}\n');
+    await assert.rejects(readPendingArtifact(root), { code: 'EISDIR' });
   } finally {
     await rm(root, { recursive: true, force: true });
   }

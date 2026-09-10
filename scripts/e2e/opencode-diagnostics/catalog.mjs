@@ -3,6 +3,15 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { processes } from './platform.mjs';
 
+export async function readPendingArtifact(file) {
+  try {
+    return await readFile(file, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return '';
+    throw error;
+  }
+}
+
 export const catalogScenarios = [
   'delayed8s',
   'directory-error',
@@ -50,7 +59,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     let loadingCaptured = false;
     for (let attempt = 0; attempt < 240; attempt++) {
       await pause(500);
-      calls = (await readFile(path.join(root, 'calls.ndjson'), 'utf8'))
+      calls = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
         .trim()
         .split('\n')
         .filter(Boolean)
@@ -100,7 +109,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     }
     if (expectedFailures)
       assert.notEqual(copied, previousClipboard, 'Copy retained previous scenario report');
-    const logs = await readFile(path.join(root, 'user-data/logs/app-errors.ndjson'), 'utf8');
+    const logs = await readPendingArtifact(path.join(root, 'user-data/logs/app-errors.ndjson'));
     assert(!logs.includes('DO_NOT_COPY_THIS_SECRET'));
     if (expectedFailures) {
       const ids = [...copied.matchAll(/origin=main reportId=(oc-[a-f0-9]{32})/g)].map((m) => m[1]);
@@ -162,11 +171,20 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     await screenshot('dashboard');
     if (expectedFailures) {
       await click(`${alert}?.querySelector('button[aria-expanded="false"]')`);
-      const expanded = await evaluate(`(() => {
+      let expanded = false;
+      for (let attempt = 0; attempt < 20 && !expanded; attempt++) {
+        expanded = await evaluate(`(() => {
         const trigger = ${alert}?.querySelector('button[aria-expanded="true"]');
         const content = trigger && document.getElementById(trigger.getAttribute('aria-controls'));
-        return Boolean(content && content.getClientRects().length && content.innerText.trim());
-      })()`);
+        if (!content || !content.getClientRects().length || !content.innerText.trim()) return false;
+        for (let element = content; element; element = element.parentElement) {
+          const style = getComputedStyle(element);
+          if (style.visibility !== 'visible' || Number(style.opacity) === 0) return false;
+        }
+        return true;
+        })()`);
+        if (!expanded) await pause(50);
+      }
       assert.equal(expanded, true, 'Diagnostic details are missing, collapsed, or empty');
       await screenshot('details');
     }
@@ -207,7 +225,9 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
         assert.equal(result.value.error.diagnostics.timedOut, true);
       if (id)
         assert(
-          (await readFile(path.join(root, 'user-data/logs/app-errors.ndjson'), 'utf8')).includes(id)
+          (await readPendingArtifact(path.join(root, 'user-data/logs/app-errors.ndjson'))).includes(
+            id
+          )
         );
       ipc.push({ input, ...result });
     }
