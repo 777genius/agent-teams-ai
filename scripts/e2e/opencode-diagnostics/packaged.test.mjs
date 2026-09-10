@@ -16,6 +16,7 @@ import {
 } from './packaged.mjs';
 import {
   waitForPackagedPreload,
+  matchesPackagedPreload,
   qualifyModels,
   collectPages,
   readCommittedCatalog,
@@ -662,4 +663,14 @@ test('preload discovery waits for delayed CDP events and rejects missing or ambi
   }
   await assert.rejects(waitForPackagedPreload([], 0), /found 0/);
   await assert.rejects(waitForPackagedPreload([expected, expected], 0), /found 2/);
+});
+
+test('anonymous preload selection requires exact packaged source and bounded wrapper', () => {
+  const expected = 'unique packaged preload source';
+  assert(matchesPackagedPreload(expected, expected));
+  assert(matchesPackagedPreload(`(function(){${expected}})`, expected));
+  assert(!matchesPackagedPreload('other script', expected));
+  assert(!matchesPackagedPreload(expected + expected, expected));
+  assert(!matchesPackagedPreload('x'.repeat(2049) + expected, expected));
+  assert(!matchesPackagedPreload('', ''));
 });

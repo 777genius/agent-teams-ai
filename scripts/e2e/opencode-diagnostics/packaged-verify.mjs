@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { clickControl, correlateReport } from './catalog.mjs';
 import { runtimeProvenance, packagedEnvironment, probeOrchestratorVersion } from './packaged.mjs';
 
@@ -120,22 +121,52 @@ export async function waitForPackagedPreload(preloadScripts, timeoutMs = 5000) {
   return preloadScripts[0];
 }
 
-async function installCatalogObservation(send, preloadScripts) {
+export function matchesPackagedPreload(source, expected) {
+  if (!expected || typeof source !== 'string' || source.length > expected.length + 2048)
+    return false;
+  const offset = source.indexOf(expected);
+  return offset >= 0 && source.indexOf(expected, offset + expected.length) === -1;
+}
+
+async function installCatalogObservation(send, preloadScripts, archivePath) {
+  const require = createRequire(import.meta.url);
+  const builderRequire = createRequire(require.resolve('electron-builder'));
+  const packageRequire = createRequire(builderRequire.resolve('app-builder-lib'));
+  const { extractFile } = packageRequire('@electron/asar');
+  const expected = extractFile(archivePath, 'dist-electron/preload/index.js').toString('utf8');
+  assert(expected.length > 0 && expected.length < 8 * 1024 * 1024, 'Invalid packaged preload size');
   await send('Debugger.enable');
   let breakpointId;
   try {
-    const script = await waitForPackagedPreload(preloadScripts);
-    const { scriptSource } = await send('Debugger.getScriptSource', { scriptId: script.scriptId });
+    await pause(500);
+    const matches = [];
+    assert(preloadScripts.length <= 30, 'Too many preload candidates');
+    for (const candidate of [...preloadScripts]) {
+      const { scriptSource } = await send('Debugger.getScriptSource', {
+        scriptId: candidate.scriptId,
+      });
+      if (matchesPackagedPreload(scriptSource, expected))
+        matches.push({ ...candidate, scriptSource });
+    }
+    assert.equal(matches.length, 1, 'Expected one script containing the exact packaged preload');
+    const script = matches[0];
+    const { scriptSource } = script;
+    assert(
+      typeof script.hash === 'string' && script.hash.length > 0,
+      'Preload script hash unavailable'
+    );
     const location = bridgeObservationLocation(scriptSource);
     ({ breakpointId } = await send('Debugger.setBreakpointByUrl', {
-      url: script.url,
+      scriptHash: script.hash,
       ...location,
     }));
     const oldCount = preloadScripts.length;
     await send('Page.reload');
     for (let i = 0; i < 120; i++) {
-      const current = preloadScripts.at(-1);
-      if (preloadScripts.length > oldCount) {
+      const current = preloadScripts
+        .slice(oldCount)
+        .find((candidate) => candidate.hash === script.hash);
+      if (current) {
         const result = await send('Runtime.evaluate', {
           contextId: current.executionContextId,
           expression: 'Boolean(globalThis.__packagedCatalogObservation)',
@@ -370,7 +401,7 @@ export async function verifyPackaged({
   let observe;
   try {
     try {
-      observe = await installCatalogObservation(send, preloadScripts);
+      observe = await installCatalogObservation(send, preloadScripts, data.artifact.archive.path);
     } finally {
       evidence.scriptMetadata = scriptMetadata;
       evidence.preloadDiscovery = preloadScripts.map(({ scriptId, executionContextId }) => ({

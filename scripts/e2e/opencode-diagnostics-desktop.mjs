@@ -297,7 +297,7 @@ if (mode === 'seed-packaged') {
     if (
       data.packaged &&
       response.method === 'Debugger.scriptParsed' &&
-      /[\\/]preload[\\/]index\.js$/.test(response.params.url)
+      (response.params.url === '' || /[\\/]preload[\\/]index\.js$/.test(response.params.url))
     )
       preloadScripts.push(response.params);
     if (
