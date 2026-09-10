@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
 import {
   processes,
   sameIdentity,
@@ -45,12 +46,37 @@ async function ownedProcesses() {
 }
 
 async function assertOwnedDebugEndpoint() {
-  // A short-lived owned probe can inherit the listener and exit between OS reads.
-  // Retry only that read-only race; missing/reused launcher or foreign listeners fail closed.
+  // Retain the existing bounded recheck, without assuming the cause of snapshot differences.
+  // Missing/reused launcher or foreign listeners still fail closed.
   for (let attempt = 0; attempt < 3; attempt++) {
-    const owned = await ownedProcesses();
+    // Read listeners first so children born during lsof are in the later ancestry snapshot.
     const ids = listeners();
-    assertListenerOwnership(ids, owned);
+    const owned = await ownedProcesses();
+    try {
+      assertListenerOwnership(ids, owned);
+    } catch (error) {
+      // Diagnostic only: a later snapshot never authorizes this failed access.
+      try {
+        await writeFile(
+          path.join(root, 'ownership-failure.json'),
+          JSON.stringify(
+            {
+              timestamp: new Date().toISOString(),
+              attempt,
+              launcher: (await manifest()).launcher,
+              ownedBefore: owned,
+              listenerPids: ids,
+              processesAfter: processes(),
+            },
+            null,
+            2
+          )
+        );
+      } catch {
+        /* Preserve ownership error. */
+      }
+      throw error;
+    }
     const current = processes();
     sameIdentity(
       owned[0],
@@ -221,96 +247,100 @@ if (mode === 'seed') {
       );
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
-      let found;
-      for (let attempt = 0; attempt < 90; attempt++) {
-        if (attempt === 0) {
-          const refresh = await evaluate(
-            `(() => { const button = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Refresh status' && !b.disabled); if (!button) return null; button.scrollIntoView({block:'center'}); const r = button.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
-          );
-          if (refresh) {
-            await send('Input.dispatchMouseEvent', {
-              type: 'mousePressed',
-              button: 'left',
-              clickCount: 1,
-              ...refresh,
-            });
-            await send('Input.dispatchMouseEvent', {
-              type: 'mouseReleased',
-              button: 'left',
-              clickCount: 1,
-              ...refresh,
-            });
+      if (catalogScenarios.includes(scenario)) {
+        await verifyCatalog({ root, scenario, evaluate, send });
+      } else {
+        let found;
+        for (let attempt = 0; attempt < 90; attempt++) {
+          if (attempt === 0) {
+            const refresh = await evaluate(
+              `(() => { const button = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Refresh status' && !b.disabled); if (!button) return null; button.scrollIntoView({block:'center'}); const r = button.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
+            );
+            if (refresh) {
+              await send('Input.dispatchMouseEvent', {
+                type: 'mousePressed',
+                button: 'left',
+                clickCount: 1,
+                ...refresh,
+              });
+              await send('Input.dispatchMouseEvent', {
+                type: 'mouseReleased',
+                button: 'left',
+                clickCount: 1,
+                ...refresh,
+              });
+            }
           }
+          found = await evaluate(
+            `document.querySelector('[data-testid="opencode-version-diagnostics"]')?.innerText`
+          );
+          if (
+            scenario === 'ready'
+              ? !found && attempt >= 5
+              : found && (scenario !== 'version-timeout' || found.includes('timed out'))
+          )
+            break;
+          await delay(1000);
         }
-        found = await evaluate(
-          `document.querySelector('[data-testid="opencode-version-diagnostics"]')?.innerText`
+        if (scenario === 'ready') {
+          assert(!found, 'Successful retry retained stale diagnostics');
+          console.log(JSON.stringify({ passed: true, scenario, platform: process.platform }));
+          const screenshot = await send('Page.captureScreenshot');
+          await writeFile(path.join(root, 'ready.png'), Buffer.from(screenshot.data, 'base64'));
+          ws.close();
+          process.exit(0);
+        }
+        assert(found, 'Version diagnostic alert not visible');
+        assert.match(found, /version_probe/);
+        await evaluate(
+          `document.querySelector('[data-testid="opencode-version-diagnostics"] button').scrollIntoView({block:'center'})`
         );
-        if (
-          scenario === 'ready'
-            ? !found && attempt >= 5
-            : found && (scenario !== 'version-timeout' || found.includes('timed out'))
-        )
-          break;
-        await delay(1000);
+        const point = await evaluate(
+          `(() => { const r = document.querySelector('[data-testid="opencode-version-diagnostics"] button').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
+        );
+        await send('Input.dispatchMouseEvent', {
+          type: 'mousePressed',
+          button: 'left',
+          clickCount: 1,
+          ...point,
+        });
+        await send('Input.dispatchMouseEvent', {
+          type: 'mouseReleased',
+          button: 'left',
+          clickCount: 1,
+          ...point,
+        });
+        for (let attempt = 0; attempt < 30; attempt++) {
+          if (
+            (
+              await evaluate(
+                `document.querySelector('[data-testid="opencode-version-diagnostics"] button').innerText`
+              )
+            ).includes('Copied')
+          )
+            break;
+          await delay(100);
+        }
+        const copied = await evaluate('navigator.clipboard.readText()');
+        assert.match(copied, /version_probe/);
+        assert.match(copied, /reportId: oc-[a-f0-9]{32}/);
+        assert.match(copied, /timeoutMs: 30000/);
+        assert.match(copied, scenario === 'version-timeout' ? /timedOut: true/ : /Exit code: 9/);
+        assert(!copied.includes('DO_NOT_COPY_THIS_SECRET'));
+        const logs = await readFile(path.join(root, 'user-data/logs/app-errors.ndjson'), 'utf8');
+        assert(!logs.includes('DO_NOT_COPY_THIS_SECRET'));
+        const reportId = copied.match(/reportId: (oc-[a-f0-9]{32})/)[1];
+        assert(logs.includes(reportId), 'Log lost the report correlation ID');
+        await writeFile(path.join(root, `copied-report-${scenario}.txt`), copied);
+        await writeFile(path.join(root, 'copied-report.txt'), copied);
+        console.log(
+          JSON.stringify({
+            passed: true,
+            platform: process.platform,
+            reportPath: path.join(root, 'copied-report.txt'),
+          })
+        );
       }
-      if (scenario === 'ready') {
-        assert(!found, 'Successful retry retained stale diagnostics');
-        console.log(JSON.stringify({ passed: true, scenario, platform: process.platform }));
-        const screenshot = await send('Page.captureScreenshot');
-        await writeFile(path.join(root, 'ready.png'), Buffer.from(screenshot.data, 'base64'));
-        ws.close();
-        process.exit(0);
-      }
-      assert(found, 'Version diagnostic alert not visible');
-      assert.match(found, /version_probe/);
-      await evaluate(
-        `document.querySelector('[data-testid="opencode-version-diagnostics"] button').scrollIntoView({block:'center'})`
-      );
-      const point = await evaluate(
-        `(() => { const r = document.querySelector('[data-testid="opencode-version-diagnostics"] button').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
-      );
-      await send('Input.dispatchMouseEvent', {
-        type: 'mousePressed',
-        button: 'left',
-        clickCount: 1,
-        ...point,
-      });
-      await send('Input.dispatchMouseEvent', {
-        type: 'mouseReleased',
-        button: 'left',
-        clickCount: 1,
-        ...point,
-      });
-      for (let attempt = 0; attempt < 30; attempt++) {
-        if (
-          (
-            await evaluate(
-              `document.querySelector('[data-testid="opencode-version-diagnostics"] button').innerText`
-            )
-          ).includes('Copied')
-        )
-          break;
-        await delay(100);
-      }
-      const copied = await evaluate('navigator.clipboard.readText()');
-      assert.match(copied, /version_probe/);
-      assert.match(copied, /reportId: oc-[a-f0-9]{32}/);
-      assert.match(copied, /timeoutMs: 30000/);
-      assert.match(copied, scenario === 'version-timeout' ? /timedOut: true/ : /Exit code: 9/);
-      assert(!copied.includes('DO_NOT_COPY_THIS_SECRET'));
-      const logs = await readFile(path.join(root, 'user-data/logs/app-errors.ndjson'), 'utf8');
-      assert(!logs.includes('DO_NOT_COPY_THIS_SECRET'));
-      const reportId = copied.match(/reportId: (oc-[a-f0-9]{32})/)[1];
-      assert(logs.includes(reportId), 'Log lost the report correlation ID');
-      await writeFile(path.join(root, `copied-report-${scenario}.txt`), copied);
-      await writeFile(path.join(root, 'copied-report.txt'), copied);
-      console.log(
-        JSON.stringify({
-          passed: true,
-          platform: process.platform,
-          reportPath: path.join(root, 'copied-report.txt'),
-        })
-      );
     }
     const screenshot = await send('Page.captureScreenshot');
     await writeFile(path.join(root, `${mode}.png`), Buffer.from(screenshot.data, 'base64'));

@@ -3,6 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { open, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { catalogScenarios } from './catalog.mjs';
 const harness = fileURLToPath(new URL('../opencode-diagnostics-desktop.mjs', import.meta.url));
 const command = (mode, root) =>
   spawnSync(process.execPath, [harness, mode, ...(root ? [root] : [])], { encoding: 'utf8' });
@@ -32,7 +33,7 @@ try {
   }
   if (inspection?.status !== 0) throw new Error(inspection?.stderr || 'Renderer unavailable');
   await writeFile(path.join(root, 'inspect.txt'), inspection.stdout);
-  for (const scenario of ['version-exit', 'version-timeout', 'ready']) {
+  for (const scenario of ['version-exit', 'version-timeout', 'ready', ...catalogScenarios]) {
     await writeFile(path.join(root, 'scenario'), scenario);
     const result = command('verify', root);
     await writeFile(path.join(root, `verify-${scenario}.txt`), result.stdout + result.stderr);
@@ -45,7 +46,12 @@ try {
   throw error;
 } finally {
   const result = command('stop', root);
-  await log.close();
+  try {
+    await log.close();
+  } catch (error) {
+    if (primaryError) console.error(`Log cleanup failed: ${error.message}`);
+    else throw error;
+  }
   if (result.status !== 0) {
     launcher.unref();
     const cleanupError = new Error(

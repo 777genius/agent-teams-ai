@@ -62,3 +62,49 @@ Like the retained Unix ps check, OS query plus signal has a small unavoidable
 PID-check/signal race; Windows uses precise OS creation timestamps, Unix ps
 lstart has second resolution. Port binding is checked before launch and actual
 listener ancestry is checked before CDP HTTP and WebSocket access.
+
+## Catalog extension (desktop catalog PR641)
+
+The runner now retains the three version scenarios and then runs `delayed8s`,
+`directory-error`, `models-four-errors`, `partial-success`, `catalog-retry`, and
+`catalog-timeout` in that order. Sources are opencode, anthropic, google and
+openrouter. Partial success retains the opencode model with three source errors;
+retry requires four successful model responses and disappearance of the alert.
+The delayed summary really sleeps eight seconds in the fixture subprocess. The
+catalog timeout really exceeds the normal 30-second main command deadline.
+
+`catalog.mjs` drives the existing dashboard's OpenCode re-check button via CDP,
+uses its existing error formatter/copy button, reads the actual system clipboard,
+and saves per-scenario UI text, loading/final/failure screenshots, subprocess
+PID/timing/argument evidence, copied reports, and matching persistent main logs.
+A separate normal preload API probe saves `*-ipc.json` with its own main report
+IDs. **Those IPC probes are separate attempts**, not a claim that their IDs are
+identical to the dashboard attempt. UI clipboard IDs correlate to UI main-log
+records; IPC IDs correlate independently. No APIs or clipboard implementations
+are replaced and no test React components are mounted. Only null project scope
+is accepted by the catalog fixture; it refuses project paths and mutation flags.
+Fixture `calls.ndjson` includes intentionally fake secret markers in raw fixture
+responses; actual copied reports and persistent app logs must redact them.
+
+Ownership failures additionally retain `ownership-failure.json`: manifest
+launcher PID/birth, the owned tree before listener lookup, listener PIDs, and a
+subsequent OS process snapshot. The latter is evidence only and cannot authorize
+access after a failed check. The cause of the intermittent ancestry mismatch is
+not established. No ownership predicate or kill scope has been relaxed.
+
+Additional dependency-free worker verification:
+
+```sh
+node --check scripts/e2e/opencode-diagnostics/catalog.mjs
+node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs
+```
+
+External parent verification: run the existing `run.mjs` command above on each
+supported desktop OS and preserve the printed sandbox root. This worker has not
+run Electron, builds, installs, or heavy checks. Catalog UI selectors, timing,
+clipboard behavior, Windows shim subprocess termination and end-to-end results
+remain for the parent to verify. The dashboard must be expanded, in English, and
+expose its normal OpenCode re-check control; unavailable controls fail explicitly.
+The recipe retains `pnpm_config_verify_deps_before_run=false` to protect pinned
+linked dependencies. An ancestry failure is a blocker to that desktop attempt;
+inspect its snapshot instead of bypassing the guard.
