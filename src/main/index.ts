@@ -252,6 +252,7 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { applyCursorAgentAttributionEnv } from './services/team/opencode/bridge/CursorAgentAttributionRecords';
 import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
   buildOpenCodeProcessOwnershipMarkers,
@@ -506,6 +507,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns.
+  await applyCursorAgentAttributionEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;

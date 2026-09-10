@@ -555,7 +555,14 @@ export function setAppDataBasePath(p: string | null | undefined): void {
   appDataBasePathOverride = p ?? null;
 }
 
-function getAppDataBasePath(): string {
+/**
+ * The Electron `userData` root, and the same value `app.getPath('userData')`
+ * answers with: the dev override sets both together. Exported for the services
+ * that have to name a path the entry point derives from that root - a bridge
+ * directory the runtime is told to write into, and the profile scope hashed
+ * over it - without importing Electron to do it.
+ */
+export function getAppDataBasePath(): string {
   if (appDataBasePathOverride) return appDataBasePathOverride;
   // Fallback: resolve lazily from Electron app (safe after app.whenReady)
   try {
