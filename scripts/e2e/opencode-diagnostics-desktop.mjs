@@ -291,6 +291,7 @@ if (mode === 'seed-packaged') {
   let id = 0;
   const pending = new Map();
   const preloadScripts = [];
+  const scriptMetadata = [];
   ws.on('message', (raw) => {
     const response = JSON.parse(String(raw));
     if (
@@ -299,6 +300,19 @@ if (mode === 'seed-packaged') {
       /[\\/]preload[\\/]index\.js$/.test(response.params.url)
     )
       preloadScripts.push(response.params);
+    if (
+      data.packaged &&
+      response.method === 'Debugger.scriptParsed' &&
+      scriptMetadata.length < 200
+    ) {
+      const { scriptId, executionContextId, url } = response.params;
+      // Local disposable test paths only; never retain source or opaque URL payloads.
+      const label =
+        typeof url === 'string' && !/^(data|https?):/i.test(url)
+          ? url.split(/[?#]/, 1)[0].slice(0, 512)
+          : '[opaque URL omitted]';
+      scriptMetadata.push({ scriptId, executionContextId, url: label });
+    }
     if (response.method === 'Log.entryAdded' || response.method === 'Runtime.exceptionThrown')
       console.log(JSON.stringify(response.params));
     const item = pending.get(response.id);
@@ -356,7 +370,7 @@ if (mode === 'seed-packaged') {
         )
       );
     } else if (data.packaged) {
-      await verifyPackaged({ root, data, evaluate, send, preloadScripts });
+      await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
       if (catalogScenarios.includes(scenario)) {

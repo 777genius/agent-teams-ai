@@ -329,7 +329,14 @@ export async function qualifyUIRefresh(records, completed) {
   return { sources, modelIds };
 }
 
-export async function verifyPackaged({ root, data, evaluate, send, preloadScripts }) {
+export async function verifyPackaged({
+  root,
+  data,
+  evaluate,
+  send,
+  preloadScripts,
+  scriptMetadata,
+}) {
   assert(['cold', 'warm-1', 'warm-2'].includes(data.run), 'Use the explicit packaged runner');
   const evidence = {
     passed: false,
@@ -365,6 +372,7 @@ export async function verifyPackaged({ root, data, evaluate, send, preloadScript
     try {
       observe = await installCatalogObservation(send, preloadScripts);
     } finally {
+      evidence.scriptMetadata = scriptMetadata;
       evidence.preloadDiscovery = preloadScripts.map(({ scriptId, executionContextId }) => ({
         scriptId,
         executionContextId,
