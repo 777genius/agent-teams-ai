@@ -17,7 +17,7 @@ function powershell(script) {
       '-EncodedCommand',
       Buffer.from(`$ErrorActionPreference='Stop'; ${script}`, 'utf16le').toString('base64'),
     ],
-    { encoding: 'utf8', windowsHide: true }
+    { encoding: 'utf8', windowsHide: true, timeout: 30000 }
   );
 }
 export function parseWindowsProcesses(output) {
@@ -27,7 +27,12 @@ export function parseWindowsProcesses(output) {
       Number.isInteger(p.pid) && Number.isInteger(p.parent) && p.birth,
       'Invalid OS process identity'
     );
-    return { pid: p.pid, parent: p.parent, birth: p.birth };
+    return {
+      pid: p.pid,
+      parent: p.parent,
+      birth: p.birth,
+      ...(p.executable ? { executable: p.executable } : {}),
+    };
   });
 }
 export function parseUnixProcesses(output) {
@@ -45,7 +50,7 @@ export function processes() {
   if (windows)
     return parseWindowsProcesses(
       powershell(
-        "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o')} }) | ConvertTo-Json -Compress"
+        "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress"
       )
     );
   return parseUnixProcesses(

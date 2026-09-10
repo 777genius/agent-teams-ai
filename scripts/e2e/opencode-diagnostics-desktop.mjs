@@ -7,6 +7,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import {
+  packagedArguments,
+  packagedArtifact,
+  preparePackagedProfile,
+  packagedTarget,
+} from './opencode-diagnostics/packaged.mjs';
+import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
 import {
   processes,
@@ -42,6 +49,20 @@ async function ownedProcesses() {
   assert(data.launcher, 'No manifest-owned launcher');
   const owned = ownedTree(processes(), data.launcher);
   assertLauncherCommand(data.launcher);
+  if (data.packaged) {
+    // Retain previously proven descendants if they are later reparented. A PID
+    // with a different birth never inherits cleanup authority.
+    const snapshot = processes();
+    for (const prior of data.observedProcesses ?? []) {
+      if (
+        !owned.some((entry) => entry.pid === prior.pid) &&
+        snapshot.some((entry) => entry.pid === prior.pid && entry.birth === prior.birth)
+      )
+        owned.push(prior);
+    }
+    data.observedProcesses = owned;
+    await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
+  }
   return owned;
 }
 
@@ -100,12 +121,44 @@ async function assertOwnedDebugEndpoint() {
         entry,
         current.find((p) => p.pid === entry.pid)
       );
+    const data = await manifest();
+    if (data.packaged) {
+      const descendants = ownedTree(current, data.launcher);
+      for (const entry of listenerProcesses) {
+        assert(
+          descendants.some((p) => p.pid === entry.pid && p.birth === entry.birth),
+          'CDP owner is no longer an owned descendant'
+        );
+        assert.equal(
+          entry.executable?.toLowerCase(),
+          data.artifact.app.path.toLowerCase(),
+          'CDP owner is not the selected packaged executable'
+        );
+      }
+    }
     return;
   }
   throw new Error('CDP listener ownership did not stabilize; refusing access');
 }
 
-if (mode === 'seed') {
+if (mode === 'seed-packaged') {
+  const options = packagedArguments(process.argv.slice(3));
+  const artifact = await packagedArtifact(options.executable);
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
+  const data = {
+    root: dir,
+    home: path.join(dir, 'home'),
+    userData: path.join(dir, 'user-data'),
+    temp: path.join(dir, 'tmp'),
+    platform: process.platform,
+    packaged: true,
+    artifact,
+    runtimeSetup: options.runtimeSetup,
+  };
+  await preparePackagedProfile(data);
+  await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
+  console.log(dir);
+} else if (mode === 'seed') {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
@@ -150,6 +203,8 @@ if (mode === 'seed') {
   console.log(dir);
 } else if (mode === 'stop') {
   const owned = await ownedProcesses();
+  if ((await manifest()).packaged)
+    await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
   for (const entry of owned.reverse()) {
     const current = processes().find((p) => p.pid === entry.pid);
@@ -165,33 +220,61 @@ if (mode === 'seed') {
 } else if (mode === 'start') {
   const data = await manifest();
   assert(!data.launcher, 'Sandbox already started; seed a new sandbox');
-  assertNoInstalledOpenCode(data);
+  const env = data.packaged ? await preparePackagedProfile(data) : isolatedEnvironment(data);
+  if (data.packaged) {
+    assert.equal(process.platform, 'win32');
+    assert.deepEqual(
+      await packagedArtifact(data.artifact.app.path),
+      data.artifact,
+      'App artifact changed'
+    );
+  } else assertNoInstalledOpenCode(data);
   await assertPortAvailable();
-  const launch = launchCommand();
+  const launch = data.packaged
+    ? {
+        command: data.artifact.app.path,
+        args: [
+          '--remote-debugging-port=9222',
+          '--remote-debugging-address=127.0.0.1',
+          `--user-data-dir=${data.userData}`,
+        ],
+      }
+    : launchCommand();
+  if (data.packaged) {
+    // The foreground harness is the ancestor; the Electron main process owns CDP.
+    data.launcher = processes().find((p) => p.pid === process.pid);
+    assert(data.launcher?.birth, 'Could not establish launcher birth identity');
+    await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
+  }
+  if (data.packaged) setInterval(() => {}, 1000); // Keep ownership root live until explicit stop.
   const child = spawn(launch.command, launch.args, {
-    cwd: repo,
+    cwd: data.packaged ? data.root : repo,
     stdio: 'inherit',
     shell: false,
-    env: isolatedEnvironment(data),
+    env,
   });
   await new Promise((resolve, reject) => {
     child.once('spawn', resolve);
     child.once('error', reject);
   });
-  data.launcher = processes().find((p) => p.pid === child.pid);
+  if (!data.packaged) data.launcher = processes().find((p) => p.pid === child.pid);
   assert(data.launcher?.birth, 'Could not establish launcher birth identity');
   await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   child.on('exit', (code) => {
     process.exitCode = code ?? 1;
   });
 } else if (mode === 'inspect' || mode === 'verify') {
-  await manifest();
+  const data = await manifest();
   await assertOwnedDebugEndpoint();
-  const targets = await (await fetch('http://127.0.0.1:9222/json/list')).json();
-  const target = targets.find(
-    (entry) => entry.type === 'page' && /^http:\/\/(localhost|127\.0\.0\.1):/.test(entry.url)
-  );
-  assert(target, 'No dev renderer');
+  const targets = await (
+    await fetch('http://127.0.0.1:9222/json/list', { signal: AbortSignal.timeout(10000) })
+  ).json();
+  const target = data.packaged
+    ? packagedTarget(targets, data.artifact.renderer, true, path.win32)
+    : targets.find(
+        (entry) => entry.type === 'page' && /^http:\/\/(localhost|127\.0\.0\.1):/.test(entry.url)
+      );
+  assert(target, data.packaged ? 'No packaged renderer' : 'No dev renderer');
   const endpoint = new URL(target.webSocketDebuggerUrl);
   assert(
     ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) &&
@@ -207,8 +290,15 @@ if (mode === 'seed') {
   });
   let id = 0;
   const pending = new Map();
+  const preloadScripts = [];
   ws.on('message', (raw) => {
     const response = JSON.parse(String(raw));
+    if (
+      data.packaged &&
+      response.method === 'Debugger.scriptParsed' &&
+      /[\\/]preload[\\/]index\.js$/.test(response.params.url)
+    )
+      preloadScripts.push(response.params);
     if (response.method === 'Log.entryAdded' || response.method === 'Runtime.exceptionThrown')
       console.log(JSON.stringify(response.params));
     const item = pending.get(response.id);
@@ -251,9 +341,11 @@ if (mode === 'seed') {
       mobile: false,
     });
     assert.equal(await evaluate('window.innerWidth'), 1440, 'Unexpected test viewport width');
+    if (data.packaged)
+      assert.equal(await evaluate('window.innerHeight'), 1000, 'Unexpected test viewport height');
     if (mode === 'verify')
       await send('Browser.grantPermissions', {
-        origin: new URL(target.url).origin,
+        ...(data.packaged ? {} : { origin: new URL(target.url).origin }),
         permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
       });
     if (mode === 'inspect') {
@@ -263,6 +355,8 @@ if (mode === 'seed') {
           'JSON.stringify({ready:document.readyState,resources:performance.getEntriesByType("resource").slice(-6).map(r=>({name:r.name,duration:r.duration})),scripts:[...document.scripts].map(s=>s.src)})'
         )
       );
+    } else if (data.packaged) {
+      await verifyPackaged({ root, data, evaluate, send, preloadScripts });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
       if (catalogScenarios.includes(scenario)) {
@@ -390,10 +484,23 @@ if (mode === 'seed') {
     }
     const screenshot = await send('Page.captureScreenshot');
     await writeFile(path.join(root, `${mode}.png`), Buffer.from(screenshot.data, 'base64'));
+  } catch (error) {
+    if (data.packaged && ['cold', 'warm-1', 'warm-2'].includes(data.run)) {
+      try {
+        const screenshot = await send('Page.captureScreenshot');
+        await writeFile(
+          path.join(root, data.run, 'failure.png'),
+          Buffer.from(screenshot.data, 'base64')
+        );
+      } catch {
+        /* Preserve the failure; never connect to a different target for evidence. */
+      }
+    }
+    throw error;
   } finally {
     ws.close();
   }
 } else
   throw new Error(
-    'Usage: seed | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+    'Usage: seed | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
   );

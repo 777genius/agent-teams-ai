@@ -23,21 +23,31 @@ export const catalogScenarios = [
 const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export async function clickControl(evaluate, send, expression) {
+  const point = await evaluate(`(() => { const b = ${expression}; if (!b || b.disabled) return null;
+      b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect();
+      return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+  assert(point, 'Required desktop control unavailable');
+  for (const type of ['mousePressed', 'mouseReleased'])
+    await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
+}
+
+export function correlateReport(copied, logs) {
+  const ids = [
+    ...new Set([...copied.matchAll(/reportId[:=]\s*(oc-[a-f0-9]{32})/g)].map((m) => m[1])),
+  ];
+  assert(ids.length, 'No main report IDs in clipboard');
+  for (const id of ids) assert(logs.includes(id), `Persistent main log missing ${id}`);
+  return ids;
+}
+
 export async function verifyCatalog({ root, scenario, evaluate, send }) {
   const save = (name, value) => writeFile(path.join(root, `${scenario}-${name}`), value);
   const screenshot = async (name) => {
     const shot = await send('Page.captureScreenshot');
     await save(`${name}.png`, Buffer.from(shot.data, 'base64'));
   };
-  const click = async (expression) => {
-    const point =
-      await evaluate(`(() => { const b = ${expression}; if (!b || b.disabled) return null;
-      b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect();
-      return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
-    assert(point, 'Required desktop control unavailable');
-    for (const type of ['mousePressed', 'mouseReleased'])
-      await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
-  };
+  const click = (expression) => clickControl(evaluate, send, expression);
   const alert = `document.querySelector('[data-testid="opencode-catalog-error"]')`;
   const started = Date.now();
   try {
@@ -118,7 +128,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
         expectedFailures,
         'Missing distinct main report IDs in actual clipboard'
       );
-      for (const id of ids) assert(logs.includes(id), `Persistent main log missing ${id}`);
+      correlateReport(copied, logs);
       if (scenario === 'models-four-errors' || scenario === 'partial-success') {
         for (const source of sources.filter(
           (s) => scenario !== 'partial-success' || s !== 'opencode'

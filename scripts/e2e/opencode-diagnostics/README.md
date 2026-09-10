@@ -108,3 +108,135 @@ expose its normal OpenCode re-check control; unavailable controls fail explicitl
 The recipe retains `pnpm_config_verify_deps_before_run=false` to protect pinned
 linked dependencies. An ancestry failure is a blocker to that desktop attempt;
 inspect its snapshot instead of bypassing the guard.
+
+## Packaged Windows qualification (future binary execution required)
+
+The fixture recipe above remains the default. The explicit packaged runner accepts
+an **already unpacked** Windows desktop executable, not the NSIS Setup executable:
+
+```powershell
+node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable "C:\test-builds\win-unpacked\Agent Teams AI.exe" --runtime-setup app-install
+```
+
+Run on an isolated Windows desktop runner with the existing harness dependencies
+(including `ws`) already available. No build, dependency installation or release
+workflow is invoked by this recipe. This source-only worker has **not executed a
+packaged binary**. The parent must run the command against the intended release
+artifact and retain its printed sandbox directory before claiming packaged E2E.
+
+The setup option explicitly enables only `electronAPI.openCodeRuntime.install()`
+on the cold run if discovery reports a missing runtime. The current production
+installer selects the registry's OpenCode platform package, verifies its package
+integrity, and writes its normal managed manifest under the disposable userData.
+It is not a pinned/offline installer. Without this option, a missing runtime fails
+qualification; there is no binary-path, URL, cache import, credentials import or
+fixture-manifest option. If release verification needs a pinned/offline OpenCode
+version, the missing contract is an **app-supported version/package selection
+API**: the current `install()` API accepts no version or artifact parameter. Do
+not work around that by writing `current.json` or downloading a runtime yourself.
+No setup command has been executed by this worker.
+
+The runner creates HOME, USERPROFILE, APPDATA, LOCALAPPDATA, XDG config/data/cache/
+state, temp, Claude root and Electron userData before starting the executable.
+It retains that profile for exactly one cold and two warm attempts. Every attempt
+has its own log, manifest snapshot, evidence and 1440×1000 screenshot. Cleanup
+uses only manifest-owned PID/birth identities, including previously observed
+reparented children. A surviving owned process, reused launcher, foreign port
+listener or failed cleanup prevents the next run. Verification failures do not
+qualify, even when their diagnostic capture succeeds. No agents, teams, terminals,
+model execution probes, real projects or credential connections are launched.
+
+Production resolver review behind the guard:
+
+- `ClaudeBinaryResolver.ts` prefers `resources/runtime/claude-multimodel.exe` with
+  no configured override. Packaged preflight requires that file and later matches
+  the actual main API selection and its SHA-256 to it.
+- `OpenCodeRuntimeInstallerService.ts` tries the managed manifest, then Windows
+  PATH/NVM candidates. `cliPathMerge.ts` adds HOME/APPDATA and, when present,
+  ProgramFiles candidates. `shellEnv.ts` skips Windows login-shell discovery.
+  Packaged mode therefore forwards no inherited PATH, ProgramFiles, NVM, Node,
+  shell or runtime overrides; its OS-only PATH is checked for installed runtime
+  candidates before launch. Working directory is the new sandbox. Managed paths
+  are checked by realpath before warm launch and against the main API result.
+- `package.json` uses `asar`, unpacks `out/renderer`, and copies `resources/runtime`
+  through `extraResources`; `docs/RELEASE.md` describes the Windows NSIS release
+  packaging. The expected renderer URL is the virtual
+  `resources/app.asar/out/renderer/index.html`, backed by the unpacked file.
+  Arbitrary `file:` pages are refused. Before attaching, the harness checks port
+  ownership, live PID/birth ancestry, the listener's actual executable path and
+  the exact packaged renderer entrypoint. No release/publish workflow is run.
+
+Evidence separates runtime discovery (`getStatus({providerStatusMode:'defer'})`),
+selected bundled orchestrator execution (`--version`, isolated environment, 10s
+subprocess bound, duration/exit/stdout/stderr/error retained even on failure),
+OpenCode version (`openCodeRuntime.getStatus()` after invalidation; main's separate
+30s version probe), and provider
+summary (`getStatus({providerStatusMode:'full'})`). It records app executable,
+app.asar, renderer and bundled orchestrator hashes, app version, selected runtime
+paths/versions/SHA-256 and the app-generated OpenCode package integrity metadata.
+Deferred discovery intentionally permits a null installedVersion: main skips the
+version probe unless cached evidence is recoverable. Only the separate selected
+binary execution qualifies orchestrator version health (zero exit, nonempty stdout).
+Cold optional app installation follows OpenCode missing-status discovery and
+precedes its recheck, full summary, and measured UI refresh.
+
+The UI must expose the normal English OpenCode re-check button. Qualification
+requires its loading-to-ready transition **and the actual measured UI promise
+completion payloads**, with fresh model pages, correct sources and complete
+pagination. Later independent fresh API models cannot qualify unknown UI freshness.
+
+The dashboard's public DOM retains model badges during warm refreshes and its
+aggregate props discard per-page freshness. A narrow test-only preload observer
+is therefore installed at the existing public `contextBridge.exposeInMainWorld`
+boundary using a CDP source breakpoint and one renderer reload. It observes only
+`loadProviderDirectory` and `loadModels` while the measured refresh is armed;
+wrappers call the original method once and return the identical promise. A side
+branch snapshots completions without changing returned data or failures. No
+packaged files, immutable exposed APIs, stores or credentials are replaced. The
+breakpoint is removed immediately after installation, observation is disarmed
+before independent API probes, and records are bounded. Unsupported preload
+layout/CDP observation fails closed. This reload is part of each run and must be
+accounted for when interpreting cold startup evidence; it does not restart the app.
+
+Read-only React inspection remains necessary for the complete rendered dashboard
+inventory and completion transition: the DOM has no stable signal carrying both,
+and warm badges can hide loading. Lookup discovers the FiberRoot and traverses
+only `FiberRoot.current` child/sibling links, including shared bailout subtrees;
+return ancestry is used only to locate roots, never to choose an alternate.
+
+Separate normal main IPC directory/model requests use `refresh:true` and
+corroborate the measured UI inventory. Directory and model pagination follows at
+most 20 pages, rejecting duplicate IDs, repeated/mismatched cursors, changing
+totals, truncation, errors, and stale/unknown model pages. Successful empty
+inventories in clean authless profiles are permitted but explicitly recorded as
+`transport-only`, with `providerQualified:false` in both run evidence and the
+aggregate runner result. Nonempty directories must still contain the OpenCode
+source; all measured connected sources must match. Fresh individual pages and
+`provider-inventory` evidence do not establish a shared generation, authenticated
+provider execution, or launch authority. No retained UI success qualifies a run.
+
+Managed runtime directories are created/validated with ancestor-aware realpath
+containment before every app launch, even without `current.json`; escaping
+junctions are rejected before directory creation or optional app installation.
+
+On failure the harness attempts the actual diagnostic Copy control, reads the
+clipboard and matches report IDs against disposable `logs/app-errors.ndjson`.
+Absent controls, unavailable clipboard access or missing correlation are recorded
+as capture limitations, never successful qualification. Startup/ownership failures
+may prevent safe renderer access entirely; only launch/ownership logs are then
+available. `packaged-runs.json` is successful only when all three runs qualify and
+all three owned cleanups succeed. Keep the disposable profile for review; the
+runner does not broadly remove processes or directories.
+
+Lightweight source verification only:
+
+```sh
+node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs
+node --check scripts/e2e/opencode-diagnostics-desktop.mjs
+node --check scripts/e2e/opencode-diagnostics/run-packaged.mjs
+```
+
+Actual Windows executable startup, runtime installation, preload observer support,
+fresh UI/IPC results, clipboard permissions, process cleanup and cold/warm behavior
+remain unverified until the parent executes the packaged runner. No heavy pnpm
+checks are appropriate on this disk-constrained worker.
