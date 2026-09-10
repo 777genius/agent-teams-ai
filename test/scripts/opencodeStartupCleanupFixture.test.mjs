@@ -283,3 +283,19 @@ test('empty team creation and linked state ancestors fail isolation proof', asyn
   );
   await assert.rejects(assertEmptyCleanupState(f.root), /Unexpected team\/task\/session/);
 });
+
+test('allows empty global hook infrastructure but rejects hook events and unknown files', async (t) => {
+  const f = await setup(t);
+  const hooks = path.join(f.root, 'home/.claude/teams/.member-work-sync/runtime-hooks');
+  for (const name of ['incoming', 'processing', 'processed', 'invalid', 'bin']) {
+    await mkdir(path.join(hooks, name), { recursive: true });
+  }
+  await writeFile(path.join(hooks, 'bin/turn-settled-hook-v1.sh'), '# fixture hook');
+  await assertEmptyCleanupState(f.root);
+  for (const name of ['incoming/event.json', 'processed/event.json', 'unknown']) {
+    const file = path.join(hooks, name);
+    await writeFile(file, '{}');
+    await assert.rejects(assertEmptyCleanupState(f.root), /Unexpected hook state/);
+    await rm(file);
+  }
+});

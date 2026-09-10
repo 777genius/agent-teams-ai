@@ -5,7 +5,31 @@ import path from 'node:path';
 export const cleanupScenario = 'startup-cleanup';
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Empty state only. Treat unexpected links/files as failure, never follow them.
+// Startup may create empty global hook queues, but never team or event state.
+async function assertEmptyHookInfrastructure(dir, relative = '') {
+  const directories = new Set([
+    '',
+    'runtime-hooks',
+    ...['incoming', 'processing', 'processed', 'invalid', 'bin'].map(
+      (name) => `runtime-hooks/${name}`
+    ),
+  ]);
+  const info = await lstat(dir);
+  assert(!info.isSymbolicLink(), `Linked hook infrastructure: ${dir}`);
+  if (relative === 'runtime-hooks/bin/turn-settled-hook-v1.sh') {
+    assert(info.isFile(), `Invalid installed hook: ${dir}`);
+    return;
+  }
+  assert(info.isDirectory() && directories.has(relative), `Unexpected hook state: ${dir}`);
+  for (const entry of await readdir(dir)) {
+    await assertEmptyHookInfrastructure(
+      path.join(dir, entry),
+      relative ? `${relative}/${entry}` : entry
+    );
+  }
+}
+
+// Treat unexpected links/files as failure, never follow them.
 export async function assertEmptyCleanupState(root) {
   const homes = [
     'home/.claude/teams',
@@ -34,8 +58,14 @@ export async function assertEmptyCleanupState(root) {
         `Unexpected team/task/session state: ${dir}`
       );
     }
-    if (!missing)
-      assert.deepEqual(await readdir(dir), [], `Unexpected team/task/session state: ${dir}`);
+    if (!missing) {
+      const entries = await readdir(dir);
+      if (relative === 'home/.claude/teams' && entries.includes('.member-work-sync')) {
+        await assertEmptyHookInfrastructure(path.join(dir, '.member-work-sync'));
+        entries.splice(entries.indexOf('.member-work-sync'), 1);
+      }
+      assert.deepEqual(entries, [], `Unexpected team/task/session state: ${dir}`);
+    }
   }
   return homes;
 }
