@@ -3243,6 +3243,8 @@ export default interface Resources {
         copyAll: 'Copy all diagnostics';
         hints: 'Hints';
         likelyCause: 'Likely cause:';
+        nextPage: 'Next page';
+        previousPage: 'Previous page';
         windowsSymlinkAdminHint: 'Windows: run Agent Teams AI as Administrator';
       };
       modelRoutes: {
