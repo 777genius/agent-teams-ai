@@ -15,6 +15,7 @@ import {
   probeOrchestratorVersion,
 } from './packaged.mjs';
 import {
+  waitForPackagedPreload,
   qualifyModels,
   collectPages,
   readCommittedCatalog,
@@ -648,4 +649,17 @@ test('observation resolves only the single public bridge exposure, including min
   assert.match(location.condition, /\(a,globalThis\)/);
   assert.throws(() => bridgeObservationLocation('no exposure'));
   assert.throws(() => bridgeObservationLocation(source + source));
+});
+
+test('preload discovery waits for delayed CDP events and rejects missing or ambiguous targets', async () => {
+  const scripts = [];
+  const expected = { scriptId: 'owned', executionContextId: 7 };
+  const timer = setTimeout(() => scripts.push(expected), 20);
+  try {
+    assert.equal(await waitForPackagedPreload(scripts, 1000), expected);
+  } finally {
+    clearTimeout(timer);
+  }
+  await assert.rejects(waitForPackagedPreload([], 0), /found 0/);
+  await assert.rejects(waitForPackagedPreload([expected, expected], 0), /found 2/);
 });

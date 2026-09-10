@@ -109,12 +109,22 @@ export function bridgeObservationLocation(source) {
 
 // Install only in the selected packaged preload; reload is required to observe the
 // bridge before it is frozen. No source file or packaged artifact is rewritten.
+export async function waitForPackagedPreload(preloadScripts, timeoutMs = 5000) {
+  const deadline = performance.now() + timeoutMs;
+  while (!preloadScripts.length && performance.now() < deadline) await pause(50);
+  assert.equal(
+    preloadScripts.length,
+    1,
+    `Expected one packaged preload script, found ${preloadScripts.length}`
+  );
+  return preloadScripts[0];
+}
+
 async function installCatalogObservation(send, preloadScripts) {
   await send('Debugger.enable');
   let breakpointId;
   try {
-    const script = preloadScripts.at(-1);
-    assert(script, 'Packaged preload script unavailable for read-only observation');
+    const script = await waitForPackagedPreload(preloadScripts);
     const { scriptSource } = await send('Debugger.getScriptSource', { scriptId: script.scriptId });
     const location = bridgeObservationLocation(scriptSource);
     ({ breakpointId } = await send('Debugger.setBreakpointByUrl', {
@@ -352,7 +362,14 @@ export async function verifyPackaged({ root, data, evaluate, send, preloadScript
   };
   let observe;
   try {
-    observe = await installCatalogObservation(send, preloadScripts);
+    try {
+      observe = await installCatalogObservation(send, preloadScripts);
+    } finally {
+      evidence.preloadDiscovery = preloadScripts.map(({ scriptId, executionContextId }) => ({
+        scriptId,
+        executionContextId,
+      }));
+    }
     evidence.appVersion = await evaluate('window.electronAPI.getAppVersion()');
     await probe('invalidateDiscovery', 'window.electronAPI.cliInstaller.invalidateStatus()');
     const discovery = await probe(
@@ -397,6 +414,7 @@ export async function verifyPackaged({ root, data, evaluate, send, preloadScript
       version.installed && version.version && version.state === 'ready' && !version.error,
       'OpenCode version failed/missing; cold setup requires explicit --runtime-setup app-install'
     );
+    assert(evidence.opencode, 'Managed OpenCode binary path missing from runtime status');
     evidence.managedRuntime = JSON.parse(
       await readFile(path.join(data.userData, 'data/runtimes/opencode/current.json'), 'utf8')
     );

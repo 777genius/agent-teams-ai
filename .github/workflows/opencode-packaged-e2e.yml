@@ -7,6 +7,9 @@ on:
       - .github/workflows/opencode-packaged-e2e.yml
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
+      - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - scripts/e2e/opencode-diagnostics/platform.mjs
+      - scripts/e2e/opencode-diagnostics/catalog.mjs
 
 permissions:
   contents: read
