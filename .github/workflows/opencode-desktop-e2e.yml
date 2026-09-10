@@ -1,0 +1,65 @@
+name: OpenCode diagnostics desktop E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - scripts/e2e/opencode-diagnostics/**
+      - .github/workflows/opencode-desktop-e2e.yml
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify harness safety
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+      - name: Configure disposable artifact directory
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Verify Linux desktop
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs
+      - name: Verify Windows desktop
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-desktop-${{ runner.os }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson
