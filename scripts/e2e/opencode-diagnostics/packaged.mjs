@@ -93,7 +93,15 @@ export function packagedEnvironment(data, inherited = process.env, paths = path)
     'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT',
   ])
     env[key] = base[key];
-  // No inherited PATH, ProgramFiles, NVM, shell, provider keys, Node or CLI overrides.
+  // Preserve OS/module plumbing already allowed by the shared sandbox environment.
+  for (const [key, value] of Object.entries(base))
+    if (
+      /^(ProgramFiles(?:\(x86\))?|ProgramW6432|CommonProgramFiles(?:\(x86\))?|CommonProgramW6432|PSModulePath)$/i.test(
+        key
+      )
+    )
+      env[key] = value;
+  // No inherited PATH, NVM, shell, provider keys, Node or CLI overrides.
   env.SystemRoot = systemRoot;
   env.WINDIR = systemRoot;
   env.ComSpec = paths.join(systemRoot, 'System32/cmd.exe');
