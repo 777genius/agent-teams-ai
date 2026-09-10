@@ -20,6 +20,22 @@ let appDataRoot = '';
 // data home; keep those writes inside a temp dir instead of the real profile.
 let dataHomeRoot = '';
 
+function expectCatalogWarnings(
+  operation: 'provider_directory' | 'provider_models',
+  errors: { message: string; diagnostics?: unknown }[]
+): void {
+  expect(vi.mocked(console.warn).mock.calls).toEqual(
+    errors.map((error) => [
+      '[OpenCodeCatalog]',
+      expect.stringMatching(
+        new RegExp(`^OpenCode catalog ${operation} failed, report oc-[a-f0-9]{32}$`)
+      ),
+      expect.objectContaining({ message: error.message, diagnostics: error.diagnostics }),
+    ])
+  );
+  vi.mocked(console.warn).mockClear();
+}
+
 function createSpawnProcess(
   stdoutPayload: unknown,
   exitCode = 0
@@ -175,6 +191,134 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     });
     getAppDataPathMock.mockReturnValue(path.join(appDataRoot, 'data'));
   });
+
+  it('assigns directory correlation after seed-only timeout normalization and does not cache that failure', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          entries: [],
+          diagnostics: ['OpenCode inventory probe timed out after 5000ms'],
+          totalCount: 0,
+          returnedCount: 0,
+          cursor: null,
+          nextCursor: null,
+          query: null,
+          filter: 'all',
+          limit: 100,
+          fetchedAt: '2026-09-10T00:00:00.000Z',
+        },
+      }),
+      stderr: '',
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      summary: true,
+      projectPath: '/sandbox/catalog',
+    };
+    const [first, joined] = await Promise.all([
+      client.loadProviderDirectory(request),
+      client.loadProviderDirectory(request),
+    ]);
+    expect(first.error?.diagnostics).toMatchObject({
+      exitCode: 0,
+      timedOut: false,
+      stage: 'runtime_command',
+    });
+    expect(first.error?.message).toContain('inventory probe timed out');
+    expect(first.error?.diagnostics?.reportId).toMatch(/^oc-[a-f0-9]{32}$/);
+    expect(joined.error?.diagnostics?.reportId).toBe(first.error?.diagnostics?.reportId);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    const retry = await client.loadProviderDirectory(request);
+    expect(retry.error?.diagnostics?.reportId).not.toBe(first.error?.diagnostics?.reportId);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+    expectCatalogWarnings('provider_directory', [first.error!, retry.error!]);
+  });
+
+  it.each(['directory', 'models'] as const)(
+    'preserves normalized %s failures for joined subscribers and gives retries new IDs',
+    async (operation) => {
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const request = { runtimeId: 'opencode' as const, projectPath: '/sandbox/catalog' };
+      const load = () =>
+        operation === 'directory'
+          ? client.loadProviderDirectory({ ...request, summary: true })
+          : client.loadModels({ ...request, providerId: 'openrouter' });
+      const payload = JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-unhealthy',
+          recoverable: true,
+          message: 'api_key=private-value',
+          diagnostics: {
+            reportId: 'upstream-fixed',
+            stage: 'catalog_http',
+            summary: 'Catalog unavailable token=private-value',
+            binaryPath: '/inner/http-client',
+            durationMs: 987654321,
+            timeoutMs: 5000,
+            exitCode: 99,
+            endpoint: 'http://localhost:1234/provider?token=private-value',
+            httpStatus: 503,
+            stderrPreview: 'inner failure token=private-value',
+          },
+        },
+      });
+      for (const form of ['zero', 'legacy', 'json-exit', 'process', 'missing'] as const) {
+        execCliMock.mockReset();
+        resolveBinaryMock.mockResolvedValue(form === 'missing' ? null : '/repo/cli-dev');
+        if (form === 'legacy')
+          execCliMock.mockResolvedValue({
+            stdout: JSON.stringify({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              error: { code: 'runtime-unhealthy', message: 'legacy failure' },
+            }),
+            stderr: '',
+          });
+        else if (form === 'zero') execCliMock.mockResolvedValue({ stdout: payload, stderr: '' });
+        else
+          execCliMock.mockRejectedValue(
+            Object.assign(new Error('process failure'), {
+              code: 7,
+              stdout: form === 'json-exit' ? payload : '',
+              stderr: 'token=private-value',
+            })
+          );
+        const [first, joined] = await Promise.all([load(), load()]);
+        const details = first.error!.diagnostics!;
+        expect(details.reportId).toMatch(/^oc-[a-f0-9]{32}$/);
+        expect(joined.error!.diagnostics!.reportId).toBe(details.reportId);
+        expect(execCliMock).toHaveBeenCalledTimes(form === 'missing' ? 0 : 1);
+        expect(details.exitCode).toBe(
+          form === 'missing' ? null : form === 'zero' || form === 'legacy' ? 0 : 7
+        );
+        expect(details.stage).toBe(form === 'missing' ? 'binary_lookup' : 'runtime_command');
+        expect(details.httpStatus).toBeUndefined();
+        expect(details.endpoint).toBeUndefined();
+        expect(JSON.stringify(first.error)).not.toContain('private-value');
+        if (form === 'zero' || form === 'json-exit') {
+          expect(details.upstreamReportId).toBe('upstream-fixed');
+          expect(details.summary).toBe('Catalog unavailable token=[redacted]');
+          expect(details.binaryPath).toBe('/repo/cli-dev');
+          expect(details.timeoutMs).toBe(90_000);
+          expect(details.durationMs).not.toBe(987654321);
+          expect(first.error?.message).toBe('api_key=[redacted]');
+          expect(details.hints?.join(' ')).toContain('inner failure');
+        }
+        const retry = await load();
+        expect(retry.error!.diagnostics!.reportId).not.toBe(details.reportId);
+        expectCatalogWarnings(
+          operation === 'directory' ? 'provider_directory' : 'provider_models',
+          [first.error!, retry.error!]
+        );
+      }
+    }
+  );
 
   it('returns stderr details for failed model tests instead of hiding them behind the command', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers test-model');
@@ -446,12 +590,14 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       providerId: 'openrouter',
     });
 
-    expect(response.error?.message).toContain('Authorization: Bearer ...redacted');
+    expect(response.error?.message).toContain('Authorization: [redacted]');
     expect(response.error?.message).not.toContain('live-token-123456789');
     expect(response.error?.message).not.toContain('logs.example/secret');
     expect(response.error?.message).not.toContain('[31m');
     expect(response.error?.message).not.toContain(']8;;');
-    expect(response.error?.diagnostics?.stderrPreview).toBe('Authorization: Bearer ...redacted');
+    expect(response.error?.diagnostics?.stderrPreview).toBe('Authorization: [redacted]');
+    expect(JSON.stringify(response)).not.toContain('\\u001b');
+    expectCatalogWarnings('provider_models', [response.error!]);
   });
 
   it('redacts non-OpenAI provider keys and generic token labels from diagnostics', async () => {
@@ -595,21 +741,24 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain(
       'This is not enough evidence to conclude that OpenCode auth is missing.'
     );
-    expect(response.error?.message).toContain('OpenCode provider key=...redacted');
+    expect(response.error?.message).toContain('OpenCode provider key=[redacted]');
     expect(response.error?.message).not.toContain('sk-secret-value-123456');
     expect(response.error?.diagnostics?.summary).toBe(
       'OpenCode provider settings timed out while waiting for the Agent Teams runtime.'
     );
     expect(response.error?.diagnostics?.command).toBe(
-      '/repo/cli-dev runtime providers directory --runtime opencode --json --project-path /Users/test/project --filter all --limit 50'
+      'runtime providers directory --runtime opencode --json --project-path /Users/test/project --filter all --limit 50'
     );
     expect(response.error?.diagnostics?.stderrPreview).toBe(
-      'OpenCode provider key=...redacted still probing'
+      'OpenCode provider key=[redacted] still probing'
     );
-    expect(response.error?.diagnostics?.stdoutPreview).toBe('inventory started');
+    expect(response.error?.diagnostics?.stdoutPreview).toBeNull();
+    expect(response.error?.message).toContain('inventory started');
+    expect(response.error?.diagnostics?.hints).toContain('Runtime hint stdout: inventory started');
     expect(response.error?.diagnostics?.hints).toContain(
-      'If the runtime binary is stale, update Agent Teams so the runtime can return a degraded OpenCode diagnostic instead of timing out.'
+      'Runtime hint: If the runtime binary is stale, update Agent Teams so the runtime can return a degraded OpenCode diagnostic instead of timing out.'
     );
+    expectCatalogWarnings('provider_directory', [response.error!]);
   });
 
   it('preserves runtime-side degraded JSON errors from rejected command output', async () => {
@@ -1429,6 +1578,91 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockRestore();
     }
   });
+
+  it.each(['process', 'json-exit', 'json-zero'] as const)(
+    'reports only the final %s failure after a Windows directory junction retry',
+    async (form) => {
+      const originalMessage = 'EPERM: operation not permitted, symlink original-node_modules';
+      const firstError = Object.assign(new Error('Original symlink execution failed'), {
+        code: 1,
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'runtime-unhealthy',
+            recoverable: true,
+            message: originalMessage,
+            diagnostics: { reportId: 'original-symlink-report', summary: originalMessage },
+          },
+        }),
+        stderr: originalMessage,
+      });
+      const finalMessage = 'Catalog retry service unavailable';
+      const finalStderr = 'Final execution connection refused';
+      const finalStdout =
+        form === 'process'
+          ? ''
+          : JSON.stringify({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              error: {
+                code: 'runtime-unhealthy',
+                recoverable: true,
+                message: finalMessage,
+                diagnostics: { reportId: 'final-retry-report', summary: finalMessage },
+              },
+            });
+      execCliMock.mockRejectedValueOnce(firstError);
+      if (form === 'json-zero') {
+        execCliMock.mockResolvedValueOnce({ stdout: finalStdout, stderr: finalStderr });
+      } else {
+        execCliMock.mockRejectedValueOnce(
+          Object.assign(new Error(finalMessage), {
+            code: 7,
+            stdout: finalStdout,
+            stderr: finalStderr,
+          })
+        );
+      }
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      vi.mocked(isOpenCodeNodeModulesSymlinkErrorMock).mockReturnValue(true);
+      vi.mocked(extractProfileIdFromSymlinkErrorMock).mockReturnValue('def456');
+      vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockReturnValue(true);
+
+      try {
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const [response, joined] = await Promise.all([
+          client.loadProviderDirectory({ runtimeId: 'opencode' }),
+          client.loadProviderDirectory({ runtimeId: 'opencode' }),
+        ]);
+        expect(execCliMock).toHaveBeenCalledTimes(2);
+        expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledTimes(1);
+        const error = response.error!;
+        expect(error.message).toContain(form === 'process' ? finalStderr : finalMessage);
+        expect(error.diagnostics).toMatchObject({
+          reportId: expect.stringMatching(/^oc-[a-f0-9]{32}$/),
+          stage: 'runtime_command',
+          exitCode: form === 'json-zero' ? 0 : 7,
+          stderrPreview: finalStderr,
+          timeoutMs: 90_000,
+          timedOut: false,
+        });
+        expect(error.diagnostics?.upstreamReportId).toBe(
+          form === 'process' ? undefined : 'final-retry-report'
+        );
+        expect(joined.error?.diagnostics?.reportId).toBe(error.diagnostics?.reportId);
+        expect(JSON.stringify(error)).not.toContain('original-symlink-report');
+        expect(JSON.stringify(error)).not.toContain(originalMessage);
+        expectCatalogWarnings('provider_directory', [error]);
+      } finally {
+        Object.defineProperty(process, 'platform', { value: originalPlatform });
+        vi.mocked(isOpenCodeNodeModulesSymlinkErrorMock).mockRestore();
+        vi.mocked(extractProfileIdFromSymlinkErrorMock).mockRestore();
+        vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockRestore();
+      }
+    }
+  );
 
   it('does not let non-object error logs shadow a later valid runtime response', async () => {
     const validResponse = {
@@ -2767,7 +3001,10 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
 
     expect((await latest).models?.models[0]?.modelId).toBe('deep');
     expect(firstSignal?.aborted).toBe(true);
-    expect((await first).error).toBeDefined();
+    const cancelled = await first;
+    expect(cancelled.error).toBeDefined();
+    expect(cancelled.error?.diagnostics?.reportId).toBeUndefined();
+    expect(console.warn).not.toHaveBeenCalled();
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
@@ -2820,7 +3057,10 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(openRouterCalls).toBe(2);
 
     rejectFirst?.(new Error('aborted command settled late'));
-    expect((await first).error).toBeDefined();
+    const cancelled = await first;
+    expect(cancelled.error).toBeDefined();
+    expect(cancelled.error?.diagnostics?.reportId).toBeUndefined();
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('cancels a grouped model load when its requesting scope disappears', async () => {
@@ -2850,8 +3090,45 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       client.cancelModelLoad({ requestGroupId: 'closing-catalog-scope' })
     ).resolves.toEqual({ ok: true });
     expect(commandSignal?.aborted).toBe(true);
-    expect((await pending).error).toBeDefined();
+    const cancelled = await pending;
+    expect(cancelled.error).toBeDefined();
+    expect(cancelled.error?.diagnostics?.reportId).toBeUndefined();
+    expect(console.warn).not.toHaveBeenCalled();
   });
+
+  it.each(['grouped', 'ungrouped'] as const)(
+    'reports an actual failure after cancellation leaves a %s subscriber',
+    async (subscriber) => {
+      let commandSignal: AbortSignal | undefined;
+      let rejectCommand: ((error: Error) => void) | undefined;
+      execCliMock.mockImplementation(
+        (_binaryPath: string, _args: string[], options: { signal?: AbortSignal }) => {
+          commandSignal = options.signal;
+          return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+            rejectCommand = reject;
+          });
+        }
+      );
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const input = { runtimeId: 'opencode' as const, providerId: 'openrouter' };
+      const first = client.loadModels({ ...input, requestGroupId: 'closing-scope' });
+      const retained = client.loadModels({
+        ...input,
+        ...(subscriber === 'grouped' ? { requestGroupId: 'retained-scope' } : {}),
+      });
+      await vi.waitFor(() => expect(commandSignal).toBeDefined());
+      await client.cancelModelLoad({ requestGroupId: 'closing-scope' });
+      expect(commandSignal?.aborted).toBe(false);
+      expect(console.warn).not.toHaveBeenCalled();
+      rejectCommand?.(new Error('retained subscriber command failed'));
+      const [firstResult, retainedResult] = await Promise.all([first, retained]);
+      expect(firstResult).toBe(retainedResult);
+      expect(retainedResult.error?.message).toContain('retained subscriber command failed');
+      expect(retainedResult.error?.diagnostics?.reportId).toMatch(/^oc-[a-f0-9]{32}$/);
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+      expectCatalogWarnings('provider_models', [retainedResult.error!]);
+    }
+  );
 
   it('does not abort a shared model load when an ungrouped caller still needs it', async () => {
     let sharedSignal: AbortSignal | undefined;

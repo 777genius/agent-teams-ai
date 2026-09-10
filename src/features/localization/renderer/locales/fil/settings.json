@@ -59,9 +59,12 @@
       "testAndUseProject": "Subukan at gamitin para sa proyektong ito"
     },
     "diagnostics": {
+      "previousPage": "Nakaraang pahina",
+      "nextPage": "Susunod na pahina",
       "copied": "Nakopya ang diagnostics",
       "copiedShort": "Nakopya",
       "copy": "Kopyahin ang diagnostics",
+      "copyAll": "Kopyahin lahat",
       "hints": "Mga Hint",
       "likelyCause": "Malamang na sanhi:",
       "windowsSymlinkAdminHint": "Windows: patakbuhin ang Agent Teams AI bilang Administrator"

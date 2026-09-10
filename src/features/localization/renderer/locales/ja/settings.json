@@ -59,9 +59,12 @@
       "testAndUseProject": "このプロジェクトでテストして使用"
     },
     "diagnostics": {
+      "previousPage": "前のページ",
+      "nextPage": "次のページ",
       "copied": "コピーされた診断",
       "copiedShort": "コピッド",
       "copy": "コピー診断",
+      "copyAll": "すべての診断情報をコピー",
       "hints": "ヒント",
       "likelyCause": "同様に原因:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI を管理者として実行してください"
