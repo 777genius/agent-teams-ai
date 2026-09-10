@@ -162,11 +162,12 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     await screenshot('dashboard');
     if (expectedFailures) {
       await click(`${alert}?.querySelector('button[aria-expanded="false"]')`);
-      assert.equal(
-        await evaluate(`${alert}?.querySelector('button[aria-expanded="true"]') !== null`),
-        true,
-        'Diagnostic details did not expand'
-      );
+      const expanded = await evaluate(`(() => {
+        const trigger = ${alert}?.querySelector('button[aria-expanded="true"]');
+        const content = trigger && document.getElementById(trigger.getAttribute('aria-controls'));
+        return Boolean(content && content.getClientRects().length && content.innerText.trim());
+      })()`);
+      assert.equal(expanded, true, 'Diagnostic details are missing, collapsed, or empty');
       await screenshot('details');
     }
 
