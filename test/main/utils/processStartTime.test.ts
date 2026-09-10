@@ -17,17 +17,21 @@ interface RecordedProbe {
   options: { env?: NodeJS.ProcessEnv; timeout?: number; maxBuffer?: number };
 }
 
-function recordProbes(result: { stdout?: string; error?: Error }): RecordedProbe[] {
+function recordProbes(result: {
+  stdout?: string;
+  stderr?: string;
+  error?: Error;
+}): RecordedProbe[] {
   const probes: RecordedProbe[] = [];
   (childProcess.execFile as unknown as Mock).mockImplementation(
     (
       command: string,
       args: string[],
       options: RecordedProbe['options'],
-      callback: (error: Error | null, stdout: string) => void
+      callback: (error: Error | null, stdout: string, stderr: string) => void
     ) => {
       probes.push({ command, args, options });
-      callback(result.error ?? null, result.stdout ?? '');
+      callback(result.error ?? null, result.stdout ?? '', result.stderr ?? '');
       return {};
     }
   );
@@ -38,6 +42,63 @@ describe('processStartTime', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it.each(['linux', 'win32'] as const)(
+    'optionally observes failed identity on %s without changing null',
+    async (platform) => {
+      recordProbes({
+        error: Object.assign(new Error('private command'), {
+          code: 9,
+          signal: 'SIGTERM',
+          killed: true,
+          errno: -2,
+        }),
+        stderr: 'denied TOKEN=mock-secret Authorization: Bearer mockbearersecret',
+      });
+      const observe = vi.fn();
+      await expect(readProcessStartTimeMs(4321, platform, undefined, observe)).resolves.toBeNull();
+      const message = observe.mock.calls[0][0];
+      expect(message).toContain('process_start_time:');
+      expect(message).toMatch(/durationMs=\d+; timeoutMs=2000/);
+      expect(message).toContain('code=9; errno=-2; signal=SIGTERM; killed=true; timedOut=unknown');
+      expect(message).not.toMatch(/mock-secret|mockbearersecret|private command/);
+      await expect(readProcessStartTimeMs(4321, platform)).resolves.toBeNull();
+      expect(observe).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['', 'not a date'])(
+    'reports unavailable parsed identity without exposing stdout: %j',
+    async (stdout) => {
+      recordProbes({ stdout });
+      const observe = vi.fn();
+      await expect(readProcessStartTimeMs(4321, 'win32', 250, observe)).resolves.toBeNull();
+      expect(observe.mock.calls[0][0]).toContain(
+        stdout ? 'invalid start time' : 'empty start time'
+      );
+      expect(observe.mock.calls[0][0]).not.toMatch(/not a date|code=0/);
+    }
+  );
+
+  it.each([false, true])('observer failure is isolated (async=%s)', async (asyncFailure) => {
+    recordProbes({ error: new Error('probe failed') });
+    const observe = () => {
+      if (asyncFailure) return Promise.reject(new Error('observer failed'));
+      throw new Error('observer failed');
+    };
+    await expect(readProcessStartTimeMs(4321, 'win32', 2_000, observe)).resolves.toBeNull();
+  });
+
+  it('does not observe successful probes even with stderr, and observes invalid Windows pid', async () => {
+    recordProbes({ stdout: '2025-08-27T08:12:33Z', stderr: 'warning' });
+    const observe = vi.fn();
+    expect(await readProcessStartTimeMs(4321, 'win32', undefined, observe)).toBe(
+      Date.parse('2025-08-27T08:12:33Z')
+    );
+    expect(observe).not.toHaveBeenCalled();
+    await expect(readProcessStartTimeMs(0, 'win32', undefined, observe)).resolves.toBeNull();
+    expect(observe.mock.calls[0][0]).toContain('invalid pid');
   });
 
   it('forces the C locale so POSIX lstart= stays parseable on a non-English desktop', async () => {

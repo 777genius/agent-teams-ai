@@ -264,3 +264,6 @@ jobs:
 
       - name: Test OpenCode nvm-windows runtime resolution
         run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+
+      - name: Test Windows cleanup probe diagnostics
+        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
