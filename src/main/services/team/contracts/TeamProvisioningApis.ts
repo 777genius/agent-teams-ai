@@ -1,7 +1,10 @@
 import { createLogger } from '@shared/utils/logger';
 
 import { purgeStaleOpenCodeHostStartupLocksBeforeLaunch } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
-import { whenOpenCodeStartupRuntimeSweepSettled } from '../opencode/bridge/OpenCodeStartupSweepGate';
+import {
+  OpenCodeStartupCleanupBusyError,
+  whenOpenCodeStartupRuntimeSweepSettled,
+} from '../opencode/bridge/OpenCodeStartupSweepGate';
 
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
 import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
@@ -324,8 +327,8 @@ export function bindTeamProvisioningStartApi(
   options: {
     /**
      * Runs immediately before every create and every launch. It is a
-     * preparation step, never a precondition: a failure is swallowed here so
-     * that nothing it does can be the reason a team fails to start.
+     * best-effort preparation step except for typed startup cleanup busy,
+     * which refuses admission and requires an explicit retry.
      */
     beforeStart?: (input: TeamProvisioningStartHookInput) => Promise<void>;
   } = {}
@@ -341,6 +344,9 @@ export function bindTeamProvisioningStartApi(
     try {
       await beforeStart(input);
     } catch (error) {
+      if (error instanceof OpenCodeStartupCleanupBusyError) {
+        throw error;
+      }
       // Durable, not a warning: the start is going ahead regardless, so there
       // is nothing for a developer to act on in the moment - but the line has
       // to survive for whoever asks later why a launch was slow.
@@ -368,8 +374,8 @@ export function bindTeamProvisioningStartApi(
  * produce one has nothing to lose to it and must never pay the wait. A start
  * whose provider is not stated is resolved later from the saved config and can
  * still be OpenCode, so it keeps the wait. A launch request carries no roster:
- * a mixed team whose lead is not OpenCode relies on the sweep's own start-time
- * fence rather than on this gate.
+ * on Windows its unknown saved members must gate even for a non-OpenCode lead.
+ * Unix retains its existing wait policy.
  */
 function startRequestMayRaceOpenCodeStartupSweep(
   request: TeamCreateRequest | TeamLaunchRequest
@@ -378,7 +384,10 @@ function startRequestMayRaceOpenCodeStartupSweep(
     return true;
   }
   const members = 'members' in request ? request.members : undefined;
-  return members?.some((member) => member.providerId === 'opencode') === true;
+  return (
+    (process.platform === 'win32' && members === undefined) ||
+    members?.some((member) => member.providerId === 'opencode') === true
+  );
 }
 
 function buildStartupSweepWaitProgress(teamName: string): TeamProvisioningProgress {
