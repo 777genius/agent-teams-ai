@@ -56,9 +56,13 @@ async function assertOwnedDebugEndpoint() {
       assertListenerOwnership(ids, owned);
     } catch (error) {
       const currentSnapshot = processes();
-      const missing = ids.filter(pid => !owned.some(p => p.pid === pid));
-      if (ids.some(pid => owned.some(p => p.pid === pid)) && missing.length &&
-          missing.every(pid => !currentSnapshot.some(p => p.pid === pid)) && attempt < 2) {
+      const missing = ids.filter((pid) => !owned.some((p) => p.pid === pid));
+      if (
+        ids.some((pid) => owned.some((p) => p.pid === pid)) &&
+        missing.length &&
+        missing.every((pid) => !currentSnapshot.some((p) => p.pid === pid)) &&
+        attempt < 2
+      ) {
         await delay(50);
         continue; // Restart all ownership reads; never authorize an unverified listener.
       }
@@ -241,7 +245,10 @@ if (mode === 'seed') {
     await send('Log.enable');
     await send('Page.bringToFront');
     await send('Emulation.setDeviceMetricsOverride', {
-      width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
+      width: 1440,
+      height: 1000,
+      deviceScaleFactor: 1,
+      mobile: false,
     });
     assert.equal(await evaluate('window.innerWidth'), 1440, 'Unexpected test viewport width');
     if (mode === 'verify')
