@@ -1,0 +1,81 @@
+name: OpenCode packaged Windows E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/opencode-packaged-e2e.yml
+      - scripts/e2e/opencode-diagnostics/packaged*.mjs
+      - scripts/e2e/opencode-diagnostics/run-packaged.mjs
+      - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - scripts/e2e/opencode-diagnostics/platform.mjs
+      - scripts/e2e/opencode-diagnostics/catalog.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable long paths
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: pnpm install --frozen-lockfile
+      - name: Verify harness contracts
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs
+      - name: Stage pinned runtime
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage pinned terminal runtime
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
+      - name: Build application
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm build
+      - name: Stage native OpenCode wrapper
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Package without publishing
+        run: pnpm pack:win:x64 --dir --publish never
+      - name: Validate bundle
+        run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+      - name: Qualify cold and warm packaged starts
+        shell: pwsh
+        run: |
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-packaged-windows-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/desktop.log
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/desktop.log
