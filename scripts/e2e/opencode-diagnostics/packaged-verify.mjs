@@ -266,6 +266,22 @@ export async function collectPages(load, kind, source, maxPages = 20) {
   throw new Error('Pagination exceeded bounded page limit');
 }
 
+export async function waitForAppVersion(read, timeoutMs = 120000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      return await read();
+    } catch (error) {
+      if (
+        !String(error).includes("No handler registered for 'get-app-version'") ||
+        Date.now() >= deadline
+      )
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+}
+
 export function qualifySummary(provider) {
   assert(provider?.providerId === 'opencode' && provider.supported, 'OpenCode was not detected');
   const passive =
@@ -445,7 +461,11 @@ export async function verifyPackaged({
         executionContextId,
       }));
     }
-    evidence.appVersion = await evaluate('window.electronAPI.getAppVersion()');
+    evidence.appVersion = await probe(
+      'appReady',
+      `(${waitForAppVersion.toString()})(() => window.electronAPI.getAppVersion())`,
+      125000
+    );
     await probe('invalidateDiscovery', 'window.electronAPI.cliInstaller.invalidateStatus()');
     const discovery = await probe(
       'discovery',

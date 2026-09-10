@@ -19,6 +19,7 @@ import {
   matchesPackagedPreload,
   refreshSettled,
   qualifySummary,
+  waitForAppVersion,
   qualifyModels,
   collectPages,
   readCommittedCatalog,
@@ -88,6 +89,7 @@ test('packaged environment reuses isolation without inheriting credentials, PATH
     USERPROFILE: 'C:\\real-user',
   };
   const env = packagedEnvironment(data, inherited, path.win32);
+  assert.equal(env.ProgramFiles, inherited.ProgramFiles);
   assert.equal(env.HOME, data.home);
   assert.equal(env.USERPROFILE, data.home);
   assert.equal(env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR, data.userData);
@@ -97,7 +99,6 @@ test('packaged environment reuses isolation without inheriting credentials, PATH
   );
   assert.equal(env.ComSpec, 'C:\\Windows\\System32\\cmd.exe');
   for (const key of [
-    'ProgramFiles',
     'NVM_HOME',
     'NVM_SYMLINK',
     'NODE_OPTIONS',
@@ -712,4 +713,28 @@ test('passive summary permits catalog qualification without claiming auth or lau
     { providerId: 'codex' },
   ])
     assert.throws(() => qualifySummary({ ...passive, ...patch }));
+});
+
+test('main readiness waits only for missing version handler and preserves real failures', async () => {
+  let calls = 0;
+  assert.equal(
+    await waitForAppVersion(() => {
+      if (++calls === 1) throw new Error("No handler registered for 'get-app-version'");
+      return '2.1.2';
+    }, 1000),
+    '2.1.2'
+  );
+  assert.equal(calls, 2);
+  await assert.rejects(
+    waitForAppVersion(() => {
+      throw new Error('main crashed');
+    }),
+    /main crashed/
+  );
+  await assert.rejects(
+    waitForAppVersion(() => {
+      throw new Error("No handler registered for 'get-app-version'");
+    }, 0),
+    /No handler/
+  );
 });
