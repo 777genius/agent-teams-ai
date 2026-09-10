@@ -150,9 +150,9 @@ harness process tree.
 
 `startup-cleanup-evidence.json` and `calls.ndjson` are the primary artifacts;
 preserve the whole sandbox on failure too. A refusal fails the verifier. The total
-verification deadline includes launcher/initialization time (a conservative bound
-before owner construction), capped against the first owner's actual 120-second
-bridge deadline. No CDP call waits for a deliberately held retry: promise results
+verification limit is 360 seconds including Electron initialization and two cleanup
+attempts; it never renews on polling. Each attempt's distinct 120-second admission
+deadline is recorded separately. The harness limit is not a production cleanup SLA. No CDP call waits for a deliberately held retry: promise results
 are polled externally. Both terminal UI transitions require the actual owner status
 and at least the production eight-second tail after response publication.
 

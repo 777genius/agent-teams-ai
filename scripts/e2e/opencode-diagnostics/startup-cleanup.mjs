@@ -80,11 +80,12 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
   assert.equal(process.platform, 'win32', 'Startup cleanup E2E is Windows-only');
   const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
   assert(Number.isSafeInteger(manifest.cleanupLaunchStartedAt));
-  // Conservative outer bound includes launcher/preflight/bridge initialization, never
-  // restarts at CDP attachment. Refine against the actual owner's bridge deadline.
-  let deadline = manifest.cleanupLaunchStartedAt + 120000;
+  // Harness bound includes Electron startup and two separately budgeted cleanup attempts.
+  // It never renews on polling; production admission deadlines remain independently recorded.
+  const deadline = manifest.cleanupLaunchStartedAt + 360000;
   const evidence = { scenario: cleanupScenario, launchSubmitted: false, observations: [] };
-  const checkTime = () => assert(Date.now() < deadline, 'Cleanup owner 120s budget exhausted');
+  const checkTime = () =>
+    assert(Date.now() < deadline, 'Cleanup E2E 360s observation limit exhausted');
   const events = async () => {
     let raw;
     try {
@@ -156,8 +157,8 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
   };
   try {
     const first = await poll(async () => (await accepted())[0]);
-    deadline = Math.min(deadline, first.request.body.deadlineUnixMs);
     evidence.ownerStartedAt = first.request.body.deadlineUnixMs - 120000;
+    evidence.attemptDeadlines = [first.request.body.deadlineUnixMs];
     await count(1);
     await observe('pending', first.requestId);
     const manage = `(() => { const label = [...document.querySelectorAll('span')].find(s => s.textContent.trim() === 'OpenCode (200+ models)' && s.classList.contains('truncate'));
@@ -217,6 +218,8 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
     await click(button('Retry OpenCode cleanup'));
     const second = await poll(async () => (await accepted())[1]);
     assert.notEqual(second.requestId, first.requestId);
+    evidence.attemptDeadlines.push(second.request.body.deadlineUnixMs);
+    assert(second.request.body.deadlineUnixMs > first.request.body.deadlineUnixMs);
     await count(2);
     await observe('pending', second.requestId);
     const busy = button('Checking cleanup…');
