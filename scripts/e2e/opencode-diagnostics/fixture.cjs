@@ -51,7 +51,14 @@ if (role === 'opencode' && exact('--version')) {
   } else if (scenario === 'version-exit') {
     process.stderr.write('fixture failed api_key=DO_NOT_COPY_THIS_SECRET\n');
     process.exitCode = 9;
-  } else console.log('1.16.0');
+  } else {
+    fs.appendFileSync(
+      path.join(root, 'calls.ndjson'),
+      JSON.stringify({ event: 'version-success', scenario, pid: process.pid, at: Date.now() }) +
+        '\n'
+    );
+    console.log('1.16.0');
+  }
 } else if (role === 'orchestrator' && exact('--version')) console.log('2.1.114 (Claude Code)');
 else if (role === 'orchestrator' && providerQuery('auth'))
   console.log(JSON.stringify({ loggedIn: true, authMethod: 'oauth' }));

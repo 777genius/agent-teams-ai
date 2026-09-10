@@ -251,12 +251,16 @@ if (mode === 'seed') {
         await verifyCatalog({ root, scenario, evaluate, send });
       } else {
         let found;
+        let refreshClicked = false;
+        let recovered = false;
+        const verifyStarted = Date.now();
         for (let attempt = 0; attempt < 90; attempt++) {
           if (attempt === 0) {
             const refresh = await evaluate(
               `(() => { const button = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Refresh status' && !b.disabled); if (!button) return null; button.scrollIntoView({block:'center'}); const r = button.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
             );
             if (refresh) {
+              refreshClicked = true;
               await send('Input.dispatchMouseEvent', {
                 type: 'mousePressed',
                 button: 'left',
@@ -274,16 +278,30 @@ if (mode === 'seed') {
           found = await evaluate(
             `document.querySelector('[data-testid="opencode-version-diagnostics"]')?.innerText`
           );
+          if (scenario === 'ready' && refreshClicked && !found) {
+            const events = (await readFile(path.join(root, 'calls.ndjson'), 'utf8'))
+              .trim()
+              .split('\n')
+              .map(JSON.parse);
+            recovered =
+              events.some(
+                (e) =>
+                  e.scenario === 'ready' && e.event === 'version-success' && e.at >= verifyStarted
+              ) && /OpenCode: Connected/.test(await evaluate('document.body.innerText'));
+          }
           if (
             scenario === 'ready'
-              ? !found && attempt >= 5
+              ? recovered
               : found && (scenario !== 'version-timeout' || found.includes('timed out'))
           )
             break;
           await delay(1000);
         }
         if (scenario === 'ready') {
-          assert(!found, 'Successful retry retained stale diagnostics');
+          assert(
+            refreshClicked && recovered && !found,
+            'Retry did not complete a fresh successful version probe'
+          );
           console.log(JSON.stringify({ passed: true, scenario, platform: process.platform }));
           const screenshot = await send('Page.captureScreenshot');
           await writeFile(path.join(root, 'ready.png'), Buffer.from(screenshot.data, 'base64'));
@@ -295,6 +313,7 @@ if (mode === 'seed') {
         await evaluate(
           `document.querySelector('[data-testid="opencode-version-diagnostics"] button').scrollIntoView({block:'center'})`
         );
+        const previousClipboard = await evaluate('navigator.clipboard.readText()');
         const point = await evaluate(
           `(() => { const r = document.querySelector('[data-testid="opencode-version-diagnostics"] button').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
         );
@@ -321,7 +340,16 @@ if (mode === 'seed') {
             break;
           await delay(100);
         }
+        assert(
+          (
+            await evaluate(
+              `document.querySelector('[data-testid="opencode-version-diagnostics"] button').innerText`
+            )
+          ).includes('Copied'),
+          'Copy did not complete'
+        );
         const copied = await evaluate('navigator.clipboard.readText()');
+        assert.notEqual(copied, previousClipboard, 'Clipboard retained a previous report');
         assert.match(copied, /version_probe/);
         assert.match(copied, /reportId: oc-[a-f0-9]{32}/);
         assert.match(copied, /timeoutMs: 30000/);

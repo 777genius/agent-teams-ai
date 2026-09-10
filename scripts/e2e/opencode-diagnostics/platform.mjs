@@ -69,7 +69,14 @@ export function ownedTree(snapshot, launcher) {
   const owned = [launcher];
   for (let i = 0; i < owned.length; i++) {
     for (const p of snapshot)
-      if (p.parent === owned[i].pid && !owned.some((o) => o.pid === p.pid)) owned.push(p);
+      if (p.parent === owned[i].pid && !owned.some((o) => o.pid === p.pid)) {
+        const parentBirth = Date.parse(owned[i].birth);
+        const childBirth = Date.parse(p.birth);
+        assert(Number.isFinite(parentBirth) && Number.isFinite(childBirth), 'Invalid birth time');
+        const iso =
+          /^\d{4}-\d{2}-\d{2}T/.test(p.birth) && /^\d{4}-\d{2}-\d{2}T/.test(owned[i].birth);
+        if (iso ? p.birth >= owned[i].birth : childBirth >= parentBirth) owned.push(p);
+      }
   }
   return owned;
 }

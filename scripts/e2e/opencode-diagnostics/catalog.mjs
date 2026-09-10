@@ -180,7 +180,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
         window.electronAPI.runtimeProviderManagement.${source ? 'loadModels' : 'loadProviderDirectory'}(${JSON.stringify(input)})
         .then(value => window.__catalogProbe = {done:true,value}, error => window.__catalogProbe = {done:true,error:String(error)}); void 0`);
       let result;
-      for (let i = 0; i < 90; i++) {
+      for (let i = 0; i < 240; i++) {
         result = await evaluate('window.__catalogProbe');
         if (result.done) break;
         await pause(500);

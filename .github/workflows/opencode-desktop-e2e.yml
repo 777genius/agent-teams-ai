@@ -58,6 +58,8 @@ jobs:
           path: |
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.ndjson
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson

@@ -32,10 +32,22 @@ test('OS process and listener output parsing fails closed', () => {
   assert.throws(() => parseListeners('not a pid'));
 });
 test('ownership rejects stale launchers, reused child PIDs and unrelated listeners', () => {
-  const launcher = { pid: 42, parent: 1, birth: 'a' };
-  const child = { pid: 43, parent: 42, birth: 'b' };
-  const tree = ownedTree([launcher, child, { pid: 99, parent: 1, birth: 'c' }], launcher);
+  const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };
+  const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
+  const tree = ownedTree(
+    [launcher, child, { pid: 99, parent: 1, birth: '2026-09-10T01:00:01.0000000Z' }],
+    launcher
+  );
   assert.deepEqual(tree, [launcher, child]);
+  const stale = { pid: 90, parent: 43, birth: '2026-09-10T01:00:00.0000000Z' };
+  assert.deepEqual(ownedTree([launcher, child, stale], launcher), [launcher, child]);
+  assert.deepEqual(
+    ownedTree(
+      [launcher, { ...stale, parent: 42, birth: '2026-09-09T00:00:00.0000000Z' }],
+      launcher
+    ),
+    [launcher]
+  );
   assertListenerOwnership([43], tree);
   for (const ids of [[], [99], [43, 99], [42]])
     assert.throws(() => assertListenerOwnership(ids, tree));
@@ -92,7 +104,7 @@ test('real fixture permits diagnostic queries only, and Unix shim handles spaces
     await writeFile(path.join(root, 'scenario'), 'ready');
     const run = (role, ...args) =>
       spawnSync(process.execPath, [script, role, ...args], { encoding: 'utf8' });
-    assert.equal(run('opencode', '--version').stdout.trim(), '1.14.24');
+    assert.equal(run('opencode', '--version').stdout.trim(), '1.16.0');
     for (const role of ['opencode', 'orchestrator', 'unknown']) {
       for (const args of [['run'], ['--version', 'run'], ['runtime', 'launch'], ['auth', 'login']])
         assert.equal(run(role, ...args).status, 64);
