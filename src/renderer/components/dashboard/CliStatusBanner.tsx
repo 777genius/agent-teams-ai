@@ -26,6 +26,8 @@ import {
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
   useOpenCodeConnectedModelCatalog,
+  OpenCodeCatalogErrorAlert,
+  type OpenCodeCatalogFailure,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -431,6 +433,7 @@ const CliCheckingSpinner = ({
 // =============================================================================
 
 interface InstalledBannerProps {
+  catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
   cliStatusLoading: boolean;
@@ -857,6 +860,7 @@ const OpenCodeAtlasCloudBanner = ({
 };
 
 const InstalledBanner = ({
+  catalogFailures = [],
   cliStatus,
   sourceProviderMap,
   cliStatusLoading,
@@ -1272,11 +1276,11 @@ const InstalledBanner = ({
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
                         {provider.providerId === 'opencode' &&
-                        provider.modelCatalog?.diagnostics.message ? (
+                        provider.modelCatalog?.diagnostics.message ? (catalogFailures.length ? <OpenCodeCatalogErrorAlert failures={catalogFailures} /> : (
                           <ProviderCatalogDiagnostics
                             message={provider.modelCatalog.diagnostics.message}
                           />
-                        ) : null}
+                        )) : null}
                         {!hasProviderModels &&
                           !modelCatalogLoading &&
                           !isPassiveOpenCodeModelSummary && (
@@ -2257,6 +2261,7 @@ export const CliStatusBanner = ({
     if (multimodelEnabled) {
       return (
         <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2516,6 +2521,7 @@ export const CliStatusBanner = ({
       return (
         <>
           <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2598,6 +2604,7 @@ export const CliStatusBanner = ({
     return (
       <>
         <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2800,6 +2807,7 @@ export const CliStatusBanner = ({
   return (
     <>
       <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}
         cliStatusLoading={cliStatusLoading}

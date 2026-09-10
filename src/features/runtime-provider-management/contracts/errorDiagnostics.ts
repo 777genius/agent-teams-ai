@@ -12,6 +12,7 @@ export const RUNTIME_ERROR_STAGES = [
 export interface RuntimeErrorDetails {
   schemaVersion?: 1;
   reportId?: string;
+  upstreamReportId?: string;
   timestamp?: string;
   appVersion?: string;
   platform?: string;
@@ -103,6 +104,7 @@ export function normalizeRuntimeErrorDetails(value: unknown): RuntimeErrorDetail
   if (input.schemaVersion === 1) output.schemaVersion = 1;
   for (const key of [
     'reportId',
+    'upstreamReportId',
     'timestamp',
     'appVersion',
     'platform',

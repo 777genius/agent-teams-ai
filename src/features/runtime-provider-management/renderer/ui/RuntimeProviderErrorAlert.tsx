@@ -23,6 +23,7 @@ import type { RuntimeProviderManagementErrorDiagnosticsDto } from '../../contrac
 
 interface RuntimeProviderErrorAlertProps {
   readonly message: string;
+  readonly reportText?: string;
   readonly diagnostics?: RuntimeProviderManagementErrorDiagnosticsDto | null;
   readonly testId: string;
   readonly compact?: boolean;
@@ -33,7 +34,7 @@ export function formatRuntimeProviderDiagnosticsCopyText(
   diagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null | undefined
 ): string {
   const lines = [
-    'OpenCode provider settings diagnostics',
+    'OpenCode catalog diagnostics',
     '',
     'Message:',
     cleanRuntimeDiagnosticText(message) ?? '',
@@ -137,6 +138,7 @@ function copyRuntimeProviderDiagnosticsWithSelection(text: string): boolean {
 
 export const RuntimeProviderErrorAlert = ({
   message,
+  reportText,
   diagnostics = null,
   testId,
   compact = false,
@@ -147,15 +149,15 @@ export const RuntimeProviderErrorAlert = ({
   const [copyFailed, setCopyFailed] = useState(false);
   const { t: commonT } = useAppTranslation('common');
   const [headline = message, ...detailLines] = message.trim().split(/\r?\n/);
-  const fallbackDetails = detailLines.join('\n').trim();
+  const fallbackDetails = reportText ?? detailLines.join('\n').trim();
   const hints = diagnostics?.hints ?? [];
   const showWindowsSymlinkPermissionHint = isOpenCodeWindowsNodeModulesSymlinkPermissionError(
     message,
     diagnostics
   );
   const copyText = useMemo(
-    () => formatRuntimeProviderDiagnosticsCopyText(message, diagnostics),
-    [diagnostics, message]
+    () => reportText === undefined ? formatRuntimeProviderDiagnosticsCopyText(message, diagnostics) : cleanRuntimeDiagnosticText(reportText, 16384) ?? '',
+    [diagnostics, message, reportText]
   );
   const copyGeneration = useRef(0);
   const diagnosticRows = diagnostics ? getRuntimeProviderDiagnosticRows(diagnostics) : [];
