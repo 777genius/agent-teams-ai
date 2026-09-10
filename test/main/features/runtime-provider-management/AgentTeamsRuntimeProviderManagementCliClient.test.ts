@@ -312,10 +312,10 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         }
         const retry = await load();
         expect(retry.error!.diagnostics!.reportId).not.toBe(details.reportId);
-        expectCatalogWarnings(operation === 'directory' ? 'provider_directory' : 'provider_models', [
-          first.error!,
-          retry.error!,
-        ]);
+        expectCatalogWarnings(
+          operation === 'directory' ? 'provider_directory' : 'provider_models',
+          [first.error!, retry.error!]
+        );
       }
     }
   );
@@ -1578,6 +1578,91 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockRestore();
     }
   });
+
+  it.each(['process', 'json-exit', 'json-zero'] as const)(
+    'reports only the final %s failure after a Windows directory junction retry',
+    async (form) => {
+      const originalMessage = 'EPERM: operation not permitted, symlink original-node_modules';
+      const firstError = Object.assign(new Error('Original symlink execution failed'), {
+        code: 1,
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'runtime-unhealthy',
+            recoverable: true,
+            message: originalMessage,
+            diagnostics: { reportId: 'original-symlink-report', summary: originalMessage },
+          },
+        }),
+        stderr: originalMessage,
+      });
+      const finalMessage = 'Catalog retry service unavailable';
+      const finalStderr = 'Final execution connection refused';
+      const finalStdout =
+        form === 'process'
+          ? ''
+          : JSON.stringify({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              error: {
+                code: 'runtime-unhealthy',
+                recoverable: true,
+                message: finalMessage,
+                diagnostics: { reportId: 'final-retry-report', summary: finalMessage },
+              },
+            });
+      execCliMock.mockRejectedValueOnce(firstError);
+      if (form === 'json-zero') {
+        execCliMock.mockResolvedValueOnce({ stdout: finalStdout, stderr: finalStderr });
+      } else {
+        execCliMock.mockRejectedValueOnce(
+          Object.assign(new Error(finalMessage), {
+            code: 7,
+            stdout: finalStdout,
+            stderr: finalStderr,
+          })
+        );
+      }
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      vi.mocked(isOpenCodeNodeModulesSymlinkErrorMock).mockReturnValue(true);
+      vi.mocked(extractProfileIdFromSymlinkErrorMock).mockReturnValue('def456');
+      vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockReturnValue(true);
+
+      try {
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const [response, joined] = await Promise.all([
+          client.loadProviderDirectory({ runtimeId: 'opencode' }),
+          client.loadProviderDirectory({ runtimeId: 'opencode' }),
+        ]);
+        expect(execCliMock).toHaveBeenCalledTimes(2);
+        expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledTimes(1);
+        const error = response.error!;
+        expect(error.message).toContain(form === 'process' ? finalStderr : finalMessage);
+        expect(error.diagnostics).toMatchObject({
+          reportId: expect.stringMatching(/^oc-[a-f0-9]{32}$/),
+          stage: 'runtime_command',
+          exitCode: form === 'json-zero' ? 0 : 7,
+          stderrPreview: finalStderr,
+          timeoutMs: 90_000,
+          timedOut: false,
+        });
+        expect(error.diagnostics?.upstreamReportId).toBe(
+          form === 'process' ? undefined : 'final-retry-report'
+        );
+        expect(joined.error?.diagnostics?.reportId).toBe(error.diagnostics?.reportId);
+        expect(JSON.stringify(error)).not.toContain('original-symlink-report');
+        expect(JSON.stringify(error)).not.toContain(originalMessage);
+        expectCatalogWarnings('provider_directory', [error]);
+      } finally {
+        Object.defineProperty(process, 'platform', { value: originalPlatform });
+        vi.mocked(isOpenCodeNodeModulesSymlinkErrorMock).mockRestore();
+        vi.mocked(extractProfileIdFromSymlinkErrorMock).mockRestore();
+        vi.mocked(ensureOpenCodeProfileNodeModulesJunctionMock).mockRestore();
+      }
+    }
+  );
 
   it('does not let non-object error logs shadow a later valid runtime response', async () => {
     const validResponse = {
