@@ -133,7 +133,10 @@ async function installCatalogObservation(send, preloadScripts, archivePath) {
   const builderRequire = createRequire(require.resolve('electron-builder'));
   const packageRequire = createRequire(builderRequire.resolve('app-builder-lib'));
   const { extractFile } = packageRequire('@electron/asar');
-  const expected = extractFile(archivePath, 'dist-electron/preload/index.js').toString('utf8');
+  const expected = extractFile(
+    archivePath,
+    path.join('dist-electron', 'preload', 'index.js')
+  ).toString('utf8');
   assert(expected.length > 0 && expected.length < 8 * 1024 * 1024, 'Invalid packaged preload size');
   await send('Debugger.enable');
   let breakpointId;
@@ -261,6 +264,15 @@ export async function collectPages(load, kind, source, maxPages = 20) {
     cursor = next;
   }
   throw new Error('Pagination exceeded bounded page limit');
+}
+
+export function refreshSettled(observation, current) {
+  return (
+    !observation.overflow &&
+    current?.state === 'ready' &&
+    observation.records.length > 0 &&
+    observation.records.every((record) => Number.isFinite(record.completedAt))
+  );
 }
 
 export async function qualifyUIRefresh(records, completed) {
@@ -503,20 +515,20 @@ export async function verifyPackaged({
         if (current?.state !== evidence.ui.transitions.at(-1)?.state)
           evidence.ui.transitions.push({ ...current, at: Date.now() });
         if (current?.state === 'loading') loading = true;
-        if (loading && current?.state !== 'loading') {
+        const snapshot = await observe('globalThis.__packagedCatalogObservation');
+        assert(!snapshot.overflow, 'UI completion observation overflow/failure');
+        if (refreshSettled(snapshot, current)) {
           completed = current;
           break;
         }
         await pause(250);
       }
+      evidence.ui.observedLoading = loading;
       evidence.ui.completed = completed;
       const observation = await observe('globalThis.__packagedCatalogObservation');
       evidence.ui.requests = observation.records;
       assert(!observation.overflow, 'UI completion observation overflow/failure');
-      assert(
-        loading && completed?.state === 'ready',
-        'UI did not complete a successful catalog refresh'
-      );
+      assert(completed?.state === 'ready', 'UI did not complete a successful catalog refresh');
       assert(!completed.diagnostics?.message, 'UI catalog diagnostics fail qualification');
       evidence.ui.inventory = await qualifyUIRefresh(observation.records, completed);
       evidence.qualification = evidence.ui.inventory.modelIds.length

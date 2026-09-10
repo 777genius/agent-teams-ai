@@ -17,6 +17,7 @@ import {
 import {
   waitForPackagedPreload,
   matchesPackagedPreload,
+  refreshSettled,
   qualifyModels,
   collectPages,
   readCommittedCatalog,
@@ -673,4 +674,15 @@ test('anonymous preload selection requires exact packaged source and bounded wra
   assert(!matchesPackagedPreload(expected + expected, expected));
   assert(!matchesPackagedPreload('x'.repeat(2049) + expected, expected));
   assert(!matchesPackagedPreload('', ''));
+});
+
+test('fast refresh can settle without a sampled loading state but cannot use cached readiness', () => {
+  const ready = { state: 'ready' };
+  assert(refreshSettled({ records: [{ completedAt: 123 }], overflow: false }, ready));
+  assert(!refreshSettled({ records: [], overflow: false }, ready));
+  assert(!refreshSettled({ records: [{}], overflow: false }, ready));
+  assert(
+    !refreshSettled({ records: [{ completedAt: 123 }], overflow: false }, { state: 'loading' })
+  );
+  assert(!refreshSettled({ records: [{ completedAt: 123 }], overflow: true }, ready));
 });
