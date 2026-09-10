@@ -59,6 +59,8 @@
       "testAndUseProject": "Testează și folosește pentru acest proiect"
     },
     "diagnostics": {
+      "previousPage": "Pagina anterioară",
+      "nextPage": "Pagina următoare",
       "copied": "Diagnostice copiate",
       "copiedShort": "Copiat",
       "copy": "Copiază diagnosticele",

@@ -59,6 +59,8 @@
       "testAndUseProject": "اختبار واستخدام لهذا المشروع"
     },
     "diagnostics": {
+      "previousPage": "الصفحة السابقة",
+      "nextPage": "الصفحة التالية",
       "copied": "أجهزة التشخيص",
       "copiedShort": "Copied",
       "copy": "تشخيص النسخ",

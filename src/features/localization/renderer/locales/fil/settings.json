@@ -59,6 +59,8 @@
       "testAndUseProject": "Subukan at gamitin para sa proyektong ito"
     },
     "diagnostics": {
+      "previousPage": "Nakaraang pahina",
+      "nextPage": "Susunod na pahina",
       "copied": "Nakopya ang diagnostics",
       "copiedShort": "Nakopya",
       "copy": "Kopyahin ang diagnostics",

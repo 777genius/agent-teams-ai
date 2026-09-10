@@ -1,4 +1,7 @@
+import { useMemo, useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 
 import { cleanRuntimeDiagnosticText } from '../../contracts';
 
@@ -54,28 +57,67 @@ export const OpenCodeCatalogErrorAlert = ({
   failures: readonly OpenCodeCatalogFailure[];
 }) => {
   const { t } = useAppTranslation('common');
+  const { t: settingsT } = useAppTranslation('settings');
+  const [pagination, setPagination] = useState({ failures, page: 0 });
+  // Reset during render so a retry never commits details from the previous page.
+  if (pagination.failures !== failures) {
+    setPagination({ failures, page: 0 });
+  }
+  const pageCount = Math.ceil(failures.length / MAX_FAILURES);
+  const page =
+    pagination.failures === failures ? Math.min(pagination.page, Math.max(0, pageCount - 1)) : 0;
+  const report = useMemo(() => formatOpenCodeCatalogReport(failures), [failures]);
   if (!failures.length) return null;
-  const report = formatOpenCodeCatalogReport(failures);
+  const start = page * MAX_FAILURES;
   return (
     <div className="w-full min-w-0">
       <RuntimeProviderErrorAlert
         compact
-        copyAll
+        copyAll={!report.includes('[truncated')}
         testId="opencode-catalog-error"
         message={t('providerModelBadges.checkFailed')}
         reportText={report}
       />
       {report.includes('[truncated')
-        ? failures.map((failure, index) => (
-            <RuntimeProviderErrorAlert
-              key={index}
-              compact
-              testId={`opencode-catalog-error-${index}`}
-              message={`${failure.sourceProviderId ?? failure.operation}: ${failure.message}`}
-              reportText={formatOpenCodeCatalogReport([failure])}
-            />
-          ))
+        ? failures
+            .slice(start, start + MAX_FAILURES)
+            .map((failure, index) => (
+              <RuntimeProviderErrorAlert
+                key={start + index}
+                compact
+                testId={`opencode-catalog-error-${start + index}`}
+                message={`${failure.sourceProviderId ?? failure.operation}: ${failure.message}`}
+                reportText={formatOpenCodeCatalogReport([failure])}
+              />
+            ))
         : null}
+      {pageCount > 1 ? (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="opencode-catalog-previous-page"
+            disabled={page === 0}
+            onClick={() => setPagination({ failures, page: page - 1 })}
+          >
+            {settingsT('runtimeProvider.diagnostics.previousPage')}
+          </Button>
+          <span>
+            {page + 1} / {pageCount}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="opencode-catalog-next-page"
+            disabled={page === pageCount - 1}
+            onClick={() => setPagination({ failures, page: page + 1 })}
+          >
+            {settingsT('runtimeProvider.diagnostics.nextPage')}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
-}
+};

@@ -59,6 +59,8 @@
       "testAndUseProject": "为此项目测试并使用"
     },
     "diagnostics": {
+      "previousPage": "上一页",
+      "nextPage": "下一页",
       "copied": "已复制诊断信息",
       "copiedShort": "已复制",
       "copy": "复制诊断",

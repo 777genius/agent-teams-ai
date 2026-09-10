@@ -208,6 +208,10 @@ function expectDirectoryWarnings(count: number): void {
         }),
       }),
     ]);
+    const logged = call[2] as { diagnostics: { reportId: string } };
+    expect(call[1]).toBe(
+      `OpenCode catalog provider_directory failed, report ${logged.diagnostics.reportId}`
+    );
   }
   vi.mocked(console.warn).mockClear();
 }

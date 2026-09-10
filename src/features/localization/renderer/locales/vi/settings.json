@@ -59,6 +59,8 @@
       "testAndUseProject": "Kiểm tra và dùng cho dự án này"
     },
     "diagnostics": {
+      "previousPage": "Trang trước",
+      "nextPage": "Trang tiếp theo",
       "copied": "Đã sao chép chẩn đoán",
       "copiedShort": "Đã sao chép",
       "copy": "Sao chép chẩn đoán",
