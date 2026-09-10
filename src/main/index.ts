@@ -1862,6 +1862,8 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -2191,9 +2193,8 @@ async function initializeServices(): Promise<void> {
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
   teamProvisioningService.setControlApiBaseUrlResolver(async () => {
-    if (!httpServer.isRunning()) {
-      await startHttpServer(handleModeSwitch);
-    }
+    // Listening alone does not prove that Host publication has committed.
+    await startHttpServer(handleModeSwitch);
 
     return getTeamControlApiBaseUrl();
   });
@@ -2603,9 +2604,7 @@ async function initializeServices(): Promise<void> {
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
     ...createTeamProvisioningMemberWorkSyncBusySignals(teamProvisioningService),
     resolveControlUrl: async () => {
-      if (!httpServer.isRunning()) {
-        await startHttpServer(handleModeSwitch);
-      }
+      await startHttpServer(handleModeSwitch);
       return getTeamControlApiBaseUrl();
     },
     proofMissingRecoveryGuard: {

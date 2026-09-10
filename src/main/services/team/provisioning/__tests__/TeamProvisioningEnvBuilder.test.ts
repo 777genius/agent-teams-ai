@@ -62,6 +62,29 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
+    const ports = createPorts({
+      getClaudeBasePath: () => '/sandbox/private-claude',
+      resolveControlApiBaseUrl: vi.fn(async () => 'http://127.0.0.1:4588'),
+      buildProviderAwareCliEnv: vi.fn(async () => ({
+        env: {
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON:
+            '{"ELECTRON_RUN_AS_NODE":"1","CLAUDE_TEAM_CONTROL_URL":"http://stale:9999"}',
+        },
+        connectionIssues: {},
+        providerArgs: [],
+      })),
+    });
+    const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
+    expect(result.env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/private-claude');
+    expect(result.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4588');
+    expect(JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toEqual({
+      ELECTRON_RUN_AS_NODE: '1',
+      AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/private-claude',
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:4588',
+    });
+  });
+
   it('returns codex runtime auth source for Codex provider env', async () => {
     const ports = createPorts({
       buildRuntimeTurnSettledEnvironment: vi.fn(async () => ({

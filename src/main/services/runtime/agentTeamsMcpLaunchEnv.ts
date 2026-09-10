@@ -2,6 +2,7 @@ import {
   resolveAgentTeamsMcpLaunchSpec,
   resolvePackagedAgentTeamsMcpEntry,
 } from '@main/services/team/TeamMcpConfigBuilder';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import type { McpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
@@ -15,6 +16,36 @@ const MCP_ENV_JSON_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON';
 const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
 
 export type AgentTeamsMcpLaunchEnv = Record<string, string | undefined>;
+
+/** Project existing app authority only; never resolve or start a server on a read. */
+export function applyAgentTeamsMcpAppContext(
+  env: AgentTeamsMcpLaunchEnv,
+  claudeBasePath: string = getClaudeBasePath(),
+  controlApiBaseUrl: string | null | undefined = process.env.CLAUDE_TEAM_CONTROL_URL
+): void {
+  const rawChildEnv = env[MCP_ENV_JSON_ENV]?.trim();
+  const parsed: unknown = rawChildEnv ? JSON.parse(rawChildEnv) : {};
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed) ||
+    Object.values(parsed).some((value) => typeof value !== 'string')
+  ) {
+    throw new Error('Agent Teams MCP child environment must be a JSON object of strings');
+  }
+  const childEnv = { ...parsed } as Record<string, string>;
+  env.AGENT_TEAMS_MCP_CLAUDE_DIR = claudeBasePath;
+  childEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = claudeBasePath;
+  const controlUrl = controlApiBaseUrl?.trim();
+  if (controlUrl) {
+    env.CLAUDE_TEAM_CONTROL_URL = controlUrl;
+    childEnv.CLAUDE_TEAM_CONTROL_URL = controlUrl;
+  } else {
+    delete env.CLAUDE_TEAM_CONTROL_URL;
+    delete childEnv.CLAUDE_TEAM_CONTROL_URL;
+  }
+  env[MCP_ENV_JSON_ENV] = JSON.stringify(childEnv);
+}
 
 export function hasAgentTeamsMcpLocalLaunchEnv(env: AgentTeamsMcpLaunchEnv): boolean {
   return Boolean(

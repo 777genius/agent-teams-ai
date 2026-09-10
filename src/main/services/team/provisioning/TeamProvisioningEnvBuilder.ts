@@ -1,4 +1,5 @@
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
+import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv';
 import {
@@ -362,6 +363,9 @@ export async function buildProvisioningEnv({
   const controlApiBaseUrl = await ports.resolveControlApiBaseUrl();
   if (controlApiBaseUrl) {
     providerEnv.CLAUDE_TEAM_CONTROL_URL = controlApiBaseUrl;
+  }
+  if (resolvedProviderId === 'opencode') {
+    applyAgentTeamsMcpAppContext(providerEnv, resolvedClaudeBasePath, controlApiBaseUrl);
   }
 
   // SHELL is a Unix concept - only set it on non-Windows platforms.
