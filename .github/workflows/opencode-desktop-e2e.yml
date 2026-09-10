@@ -19,10 +19,6 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    env:
-      TMPDIR: ${{ runner.temp }}
-      TEMP: ${{ runner.temp }}
-      TMP: ${{ runner.temp }}
     steps:
       - uses: actions/checkout@v6
       - name: Enable Windows long paths
@@ -37,6 +33,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify harness safety
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+      - name: Configure disposable artifact directory
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Verify Linux desktop
         if: runner.os == 'Linux'
         run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs
