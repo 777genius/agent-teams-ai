@@ -59,6 +59,8 @@
       "testAndUseProject": "اس پروجیکٹ کے لیے جانچیں اور استعمال کریں"
     },
     "diagnostics": {
+      "previousPage": "پچھلا صفحہ",
+      "nextPage": "اگلا صفحہ",
       "copied": "روزنامہیات نقل کرتے ہیں۔",
       "copiedShort": "کوس",
       "copy": "نقل و حمل",

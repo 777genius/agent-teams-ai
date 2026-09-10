@@ -59,6 +59,8 @@
       "testAndUseProject": "Проверить и использовать для этого проекта"
     },
     "diagnostics": {
+      "previousPage": "Предыдущая страница",
+      "nextPage": "Следующая страница",
       "copied": "Diagnostics скопированы",
       "copiedShort": "Скопировано",
       "copy": "Скопировать diagnostics",

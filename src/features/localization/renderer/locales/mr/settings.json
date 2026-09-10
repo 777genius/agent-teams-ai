@@ -59,6 +59,8 @@
       "testAndUseProject": "या प्रकल्पासाठी चाचणी करा आणि वापरा"
     },
     "diagnostics": {
+      "previousPage": "मागील पृष्ठ",
+      "nextPage": "पुढील पृष्ठ",
       "copied": "डायग्नॉस्टिक्स कॉपी केले",
       "copiedShort": "कॉपी केले",
       "copy": "डायग्नॉस्टिक्स कॉपी करा",

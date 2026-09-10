@@ -59,6 +59,8 @@
       "testAndUseProject": "Uji dan gunakan untuk projek ini"
     },
     "diagnostics": {
+      "previousPage": "Halaman sebelumnya",
+      "nextPage": "Halaman seterusnya",
       "copied": "Diagnostik disalin",
       "copiedShort": "Disalin",
       "copy": "Salin diagnostik",

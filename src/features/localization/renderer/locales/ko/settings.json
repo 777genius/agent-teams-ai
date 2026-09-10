@@ -59,6 +59,8 @@
       "testAndUseProject": "이 프로젝트에 테스트 후 사용"
     },
     "diagnostics": {
+      "previousPage": "이전 페이지",
+      "nextPage": "다음 페이지",
       "copied": "진단",
       "copiedShort": "뚱 베어",
       "copy": "복사 진단",

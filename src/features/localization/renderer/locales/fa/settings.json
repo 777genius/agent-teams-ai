@@ -59,6 +59,8 @@
       "testAndUseProject": "آزمایش و استفاده برای این پروژه"
     },
     "diagnostics": {
+      "previousPage": "صفحه قبل",
+      "nextPage": "صفحه بعد",
       "copied": "عیب‌یابی کپی شد",
       "copiedShort": "کپی شد",
       "copy": "کپی عیب‌یابی",

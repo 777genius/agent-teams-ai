@@ -59,6 +59,8 @@
       "testAndUseProject": "Testen en gebruiken voor dit project"
     },
     "diagnostics": {
+      "previousPage": "Vorige pagina",
+      "nextPage": "Volgende pagina",
       "copied": "Diagnostiek gekopieerd",
       "copiedShort": "Gekopieerd",
       "copy": "Diagnostiek kopiëren",

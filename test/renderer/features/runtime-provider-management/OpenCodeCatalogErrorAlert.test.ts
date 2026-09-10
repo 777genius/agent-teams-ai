@@ -86,7 +86,9 @@ it('copies all current failures and expands their useful details', async () => {
 });
 
 it('offers each omitted failure separately and keeps origin in its copy', async () => {
-  const current = failures(17);
+  const current = failures(33);
+  const lastPreview = vi.fn(() => 'Last preview');
+  Object.defineProperty(current[32].diagnostics!, 'stderrPreview', { get: lastPreview });
   const write = vi.fn(() => Promise.resolve());
   clipboard(write);
   await act(() =>
@@ -94,12 +96,37 @@ it('offers each omitted failure separately and keeps origin in its copy', async 
       root.render(React.createElement(OpenCodeCatalogErrorAlert, { failures: current }))
     )
   );
-  expect(formatOpenCodeCatalogReport(current)).toContain('1 failures omitted');
-  const last = host.querySelector('[data-testid="opencode-catalog-error-16"]')!;
+  expect(formatOpenCodeCatalogReport(current)).toContain('17 failures omitted');
+  const individuals = () => host.querySelectorAll('[data-testid^="opencode-catalog-error-"]');
+  const next = () =>
+    host.querySelector<HTMLButtonElement>('[data-testid="opencode-catalog-next-page"]')!;
+  const previous = () =>
+    host.querySelector<HTMLButtonElement>('[data-testid="opencode-catalog-previous-page"]')!;
+  expect(individuals()).toHaveLength(16);
+  expect(previous().disabled).toBe(true);
+  expect(lastPreview).not.toHaveBeenCalled();
+  await act(() => Promise.resolve(next().click()));
+  expect(individuals()).toHaveLength(16);
+  expect(host.querySelector('[data-testid="opencode-catalog-error-0"]')).toBeNull();
+  expect(lastPreview).not.toHaveBeenCalled();
+  await act(() => Promise.resolve(next().click()));
+  expect(individuals()).toHaveLength(1);
+  expect(next().disabled).toBe(true);
+  expect(lastPreview).toHaveBeenCalled();
+  const last = host.querySelector('[data-testid="opencode-catalog-error-32"]')!;
   await act(() => Promise.resolve(last.querySelector('button')!.click()));
   expect(write).toHaveBeenCalledWith(
-    expect.stringContaining('source=source-16 origin=main reportId=oc-report-16')
+    expect.stringContaining('source=source-32 origin=main reportId=oc-report-32')
   );
+  await act(() =>
+    Promise.resolve(
+      host.querySelector('[data-testid="opencode-catalog-error"]')!.querySelector('button')!.click()
+    )
+  );
+  expect(write).toHaveBeenLastCalledWith(formatOpenCodeCatalogReport(current));
+  await act(() => Promise.resolve(previous().click()));
+  expect(individuals()).toHaveLength(16);
+  expect(host.querySelector('[data-testid="opencode-catalog-error-16"]')).not.toBeNull();
 });
 
 it('uses selection fallback, then exposes the same redacted combined report for manual copying', async () => {
@@ -190,4 +217,44 @@ it('provides per-error copying when previews are clipped even though no failures
     await act(() => Promise.resolve(individual.querySelector('button')!.click()));
     expect(write).toHaveBeenLastCalledWith(formatOpenCodeCatalogReport([current[index]]));
   }
+});
+
+it('resets pagination on retry, shrinking failures, and an empty result', async () => {
+  const render = async (current: OpenCodeCatalogFailure[]) => {
+    await act(() =>
+      Promise.resolve(
+        root.render(React.createElement(OpenCodeCatalogErrorAlert, { failures: current }))
+      )
+    );
+  };
+  const advance = async () => {
+    await act(() =>
+      Promise.resolve(
+        host.querySelector<HTMLButtonElement>('[data-testid="opencode-catalog-next-page"]')!.click()
+      )
+    );
+  };
+  await render(failures(33));
+  await advance();
+  await advance();
+  const retry = failures(33);
+  retry.forEach((failure) => {
+    failure.message = 'New attempt';
+  });
+  await render(retry);
+  expect(host.querySelector('[data-testid="opencode-catalog-error-0"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="opencode-catalog-error-32"]')).toBeNull();
+  expect(host.textContent).not.toContain('Catalog failed');
+  await advance();
+  await render(failures(4, 20000));
+  expect(host.querySelectorAll('[data-testid^="opencode-catalog-error-"]')).toHaveLength(4);
+  expect(host.querySelector('[data-testid="opencode-catalog-next-page"]')).toBeNull();
+  await render([]);
+  expect(host.textContent).toBe('');
+  await render(failures(33));
+  expect(host.querySelector('[data-testid="opencode-catalog-error-0"]')).not.toBeNull();
+  expect(
+    host.querySelector<HTMLButtonElement>('[data-testid="opencode-catalog-previous-page"]')!
+      .disabled
+  ).toBe(true);
 });
