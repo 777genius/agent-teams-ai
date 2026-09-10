@@ -57,6 +57,14 @@ const codexAccountHookState = {
   logout: vi.fn(() => Promise.resolve(true)),
 };
 
+vi.mock('@renderer/api', () => ({
+  api: {
+    startup: {
+      getOpenCodeCleanupStatus: vi.fn(() => Promise.resolve({ state: 'unavailable' })),
+    },
+  },
+}));
+
 vi.mock('@renderer/store', () => {
   const useStore = (selector: (state: StoreState) => unknown) => selector(storeState);
   Object.assign(useStore, {
