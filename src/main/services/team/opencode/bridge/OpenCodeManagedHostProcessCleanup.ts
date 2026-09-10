@@ -136,15 +136,6 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
   const killProcess = options.killProcess;
-  // The escalation after a survived kill must not be weaker than the kill it
-  // follows: on Windows process.kill() terminates that process alone, so the
-  // host's children (cmd.exe for the bash tool, cursor-agent trees) outlive the
-  // sweep as orphans. taskkill /T takes the tree, and the caller has just
-  // re-confirmed this pid's identity. On POSIX the first attempt already sent
-  // SIGTERM, so the escalation must use SIGKILL.
-  const forceKillProcess =
-    options.forceKillProcess ??
-    ((pid: number) => killProcessByPidAndWait(pid, { platform, signal: 'SIGKILL' }));
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
 
@@ -298,13 +289,6 @@ export async function cleanupManagedOpenCodeServeProcesses(
       ): Promise<'confirmed' | 'gone' | 'changed'> => {
         let startTimeMatches = false;
         let ownershipMarkerMatches = false;
-        if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
-          const currentStartedAtMs = await readStartTimeMs(row.pid);
-          if (currentStartedAtMs !== startedAtMs) {
-            return isProcessAlive(row.pid) ? 'changed' : 'gone';
-          }
-          startTimeMatches = true;
-        }
         if (requiredDetailsMarkers.length > 0) {
           const currentDetails = await readDetails(row.pid);
           if (currentDetails) {
@@ -347,6 +331,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
             return isProcessAlive(row.pid) ? 'changed' : 'gone';
           }
         }
+        // Ownership probes may await I/O; check PID birth after all of them.
+        if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
+          const currentStartedAtMs = await readStartTimeMs(row.pid);
+          if (currentStartedAtMs !== startedAtMs) {
+            return isProcessAlive(row.pid) ? 'changed' : 'gone';
+          }
+          startTimeMatches = true;
+        }
         if (startTimeMatches) {
           return 'confirmed';
         }
@@ -362,6 +354,11 @@ export async function cleanupManagedOpenCodeServeProcesses(
         }
         return isProcessAlive(row.pid) ? 'changed' : 'gone';
       };
+
+      const confirmTargetIdentity = async (): Promise<boolean> =>
+        Number.isFinite(startedAtMs) &&
+        startedAtMs !== null &&
+        (await readStartTimeMs(row.pid)) === startedAtMs;
 
       const identityBeforeDispose = await confirmCandidateIdentity();
       if (identityBeforeDispose === 'gone') {
@@ -416,10 +413,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
         } else if (platform === 'win32') {
           await killProcessByPidAndWait(row.pid, {
             platform,
-            confirmTargetIdentity: async () =>
-              Number.isFinite(startedAtMs) &&
-              startedAtMs !== null &&
-              (await readStartTimeMs(row.pid)) === startedAtMs,
+            confirmTargetIdentity,
           });
         } else {
           killProcessByPid(row.pid);
@@ -435,7 +429,16 @@ export async function cleanupManagedOpenCodeServeProcesses(
           const identityBeforeForceKill = await confirmCandidateIdentity(true);
           if (identityBeforeForceKill === 'confirmed') {
             try {
-              await forceKillProcess(row.pid);
+              if (options.forceKillProcess) {
+                await options.forceKillProcess(row.pid);
+              } else {
+                // Windows taskkill awaits before its direct termination fallback.
+                await killProcessByPidAndWait(row.pid, {
+                  platform,
+                  signal: 'SIGKILL',
+                  ...(platform === 'win32' ? { confirmTargetIdentity } : {}),
+                });
+              }
             } catch (error) {
               if (isProcessAlive(row.pid)) {
                 throw error;

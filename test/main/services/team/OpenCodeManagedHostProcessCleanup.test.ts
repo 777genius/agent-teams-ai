@@ -56,6 +56,112 @@ function resolved<T>(value: T): Promise<T> {
 }
 
 describe('OpenCodeManagedHostProcessCleanup', () => {
+  it.each([10_000, 20_000, null])(
+    'rechecks Windows birth after force taskkill before direct fallback (%s)',
+    async (birthAfterTaskkill) => {
+      let birth: number | null = 10_000;
+      let alive = true;
+      const nativeKill = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+        if (signal === 0) {
+          if (!alive) throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+        } else {
+          alive = false;
+        }
+        return true;
+      });
+      const exec = vi.mocked(childProcess.execFile).mockImplementation((...args: unknown[]) => {
+        const callback = args[3] as (error: Error | null) => void;
+        // Complete the external tree attempt asynchronously, with possible PID reuse.
+        void Promise.resolve().then(() => {
+          birth = birthAfterTaskkill;
+          callback(new Error('fixture taskkill failed'));
+        });
+        return {} as ReturnType<typeof childProcess.execFile>;
+      });
+      const killProcess = vi.fn();
+      try {
+        const result = await cleanupManagedOpenCodeServeProcesses({
+          mode: 'force',
+          platform: 'win32',
+          listProcessRows: () => resolved([{ pid: 42, ppid: 1, command: 'opencode serve' }]),
+          readProcessDetails: () => resolved(MANAGED_DETAILS),
+          readProcessStartTimeMs: () => resolved(birth),
+          killProcess,
+          isProcessAlive: () => alive,
+          sleepMs: () => resolved(undefined),
+        });
+        expect(killProcess).toHaveBeenCalledWith(42);
+        expect(exec).toHaveBeenCalledTimes(1);
+        expect(nativeKill.mock.calls.filter(([, signal]) => signal !== 0)).toEqual(
+          birthAfterTaskkill === 10_000 ? [[42, 'SIGKILL']] : []
+        );
+        expect(result.killed).toBe(birthAfterTaskkill === 10_000 ? 1 : 0);
+        if (birthAfterTaskkill !== 10_000) {
+          expect(result.candidates[0]).toMatchObject({
+            action: 'failed',
+            reason: expect.stringContaining('refusing unsafe direct termination'),
+          });
+        }
+      } finally {
+        nativeKill.mockRestore();
+        exec.mockRestore();
+      }
+    }
+  );
+
+  describe.each(['details', 'config', 'profile'] as const)('%s ownership probe', (proof) => {
+    it.each([1, 2, 3])('rejects PID reuse during confirmation phase %s', async (phase) => {
+      let birth = 10_000;
+      let probes = 0;
+      const changeBirthDuringProbe = async () => {
+        await Promise.resolve();
+        // Admission is the first probe, followed by dispose, kill, and force checks.
+        if (++probes === phase + 1) birth = 20_000;
+      };
+      const disposeServeHost = vi.fn(() => resolved(undefined));
+      const killProcess = vi.fn();
+      const forceKillProcess = vi.fn();
+      const result = await cleanupManagedOpenCodeServeProcesses({
+        mode: 'force',
+        platform: 'win32',
+        listProcessRows: () =>
+          resolved([{ pid: 42, ppid: 1, command: 'opencode serve --port 5001' }]),
+        requiredDetailsMarkers: proof === 'details' ? ['OPENCODE_CONFIG_CONTENT='] : [],
+        requiredServeConfigMarkersAny: proof === 'config' ? ['fixture-marker'] : [],
+        requiredProfileScope: proof === 'profile' ? 'own' : undefined,
+        readProcessDetails: async () => {
+          if (proof === 'details') await changeBirthDuringProbe();
+          return MANAGED_DETAILS;
+        },
+        readServeHostConfig: async () => {
+          await changeBirthDuringProbe();
+          return JSON.stringify({
+            marker: 'fixture-marker',
+            mcp: { 'agent-teams': { environment: { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'own' } } },
+          });
+        },
+        readProcessStartTimeMs: () => resolved(birth),
+        disposeServeHost,
+        killProcess,
+        forceKillProcess,
+        isProcessAlive: () => true,
+        sleepMs: () => resolved(undefined),
+      });
+      expect(disposeServeHost).toHaveBeenCalledTimes(phase > 1 ? 1 : 0);
+      expect(killProcess).toHaveBeenCalledTimes(phase > 2 ? 1 : 0);
+      expect(forceKillProcess).not.toHaveBeenCalled();
+      expect(result.killed).toBe(0);
+      expect(result.candidates[0]).toMatchObject({
+        action: 'kept_unmanaged',
+        reason: [
+          'pid identity changed before graceful dispose',
+          'pid identity changed before cleanup signal',
+          'pid identity changed before force kill',
+        ][phase - 1],
+      });
+    });
+  });
+
   it('records default identity probe diagnostics and never kills an unreadable Windows identity', async () => {
     const exec = vi.mocked(childProcess.execFile).mockImplementation((...args: unknown[]) => {
       const callback = args[3] as (error: Error, stdout: string, stderr: string) => void;
