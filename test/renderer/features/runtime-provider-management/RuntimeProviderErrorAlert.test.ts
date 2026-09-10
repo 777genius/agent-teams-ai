@@ -88,3 +88,12 @@ it.each(['Error: api_key=custom-private-key-value', '{"auth":{"key":"custom-priv
     );
   }
 );
+
+it('preserves the provider settings heading unless catalog context is requested', () => {
+  expect(formatRuntimeProviderDiagnosticsCopyText('failed', null)).toMatch(
+    /^OpenCode provider settings diagnostics/
+  );
+  expect(
+    formatRuntimeProviderDiagnosticsCopyText('failed', null, 'OpenCode catalog diagnostics')
+  ).toMatch(/^OpenCode catalog diagnostics/);
+});

@@ -75,9 +75,10 @@ export async function loadOpenCodeScopedCatalog(
   isCurrentRequest: () => boolean,
   refresh = true
 ) {
-  const validationError = (message: string) => new CatalogFailureError(
-    catalogFailure('provider_models', sourceProviderId, 'client_validation', message)
-  );
+  const validationError = (message: string) =>
+    new CatalogFailureError(
+      catalogFailure('provider_models', sourceProviderId, 'client_validation', message)
+    );
   const modelById = new Map<string, RuntimeProviderModelDto>();
   let cursor: string | null = null;
   const defaultModelIds = new Set<string>();
@@ -120,7 +121,9 @@ export async function loadOpenCodeScopedCatalog(
     if (modelPage.cursor !== undefined) {
       const responseCursor = modelPage.cursor?.trim() || null;
       if (responseCursor !== cursor) {
-        throw validationError('The runtime returned a mismatched provider-model pagination cursor.');
+        throw validationError(
+          'The runtime returned a mismatched provider-model pagination cursor.'
+        );
       }
     }
     if (

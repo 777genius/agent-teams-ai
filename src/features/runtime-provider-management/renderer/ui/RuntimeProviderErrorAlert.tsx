@@ -24,6 +24,8 @@ import type { RuntimeProviderManagementErrorDiagnosticsDto } from '../../contrac
 interface RuntimeProviderErrorAlertProps {
   readonly message: string;
   readonly reportText?: string;
+  readonly reportTitle?: string;
+  readonly copyAll?: boolean;
   readonly diagnostics?: RuntimeProviderManagementErrorDiagnosticsDto | null;
   readonly testId: string;
   readonly compact?: boolean;
@@ -31,14 +33,10 @@ interface RuntimeProviderErrorAlertProps {
 
 export function formatRuntimeProviderDiagnosticsCopyText(
   message: string,
-  diagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null | undefined
+  diagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null | undefined,
+  reportTitle = 'OpenCode provider settings diagnostics'
 ): string {
-  const lines = [
-    'OpenCode catalog diagnostics',
-    '',
-    'Message:',
-    cleanRuntimeDiagnosticText(message) ?? '',
-  ];
+  const lines = [reportTitle, '', 'Message:', cleanRuntimeDiagnosticText(message) ?? ''];
   if (!diagnostics) {
     return lines.join('\n');
   }
@@ -139,11 +137,16 @@ function copyRuntimeProviderDiagnosticsWithSelection(text: string): boolean {
 export const RuntimeProviderErrorAlert = ({
   message,
   reportText,
+  reportTitle,
+  copyAll = false,
   diagnostics = null,
   testId,
   compact = false,
 }: RuntimeProviderErrorAlertProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
+  const copyLabel = t(
+    copyAll ? 'runtimeProvider.diagnostics.copyAll' : 'runtimeProvider.diagnostics.copy'
+  );
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -156,8 +159,11 @@ export const RuntimeProviderErrorAlert = ({
     diagnostics
   );
   const copyText = useMemo(
-    () => reportText === undefined ? formatRuntimeProviderDiagnosticsCopyText(message, diagnostics) : cleanRuntimeDiagnosticText(reportText, 16384) ?? '',
-    [diagnostics, message, reportText]
+    () =>
+      reportText === undefined
+        ? formatRuntimeProviderDiagnosticsCopyText(message, diagnostics, reportTitle)
+        : (cleanRuntimeDiagnosticText(reportText, 16384) ?? ''),
+    [diagnostics, message, reportText, reportTitle]
   );
   const copyGeneration = useRef(0);
   const diagnosticRows = diagnostics ? getRuntimeProviderDiagnosticRows(diagnostics) : [];
@@ -218,11 +224,7 @@ export const RuntimeProviderErrorAlert = ({
                     'h-6 shrink-0 px-2 text-[11px]',
                     !copied && 'member-launch-diagnostics-pulse'
                   )}
-                  aria-label={
-                    copied
-                      ? t('runtimeProvider.diagnostics.copied')
-                      : t('runtimeProvider.diagnostics.copy')
-                  }
+                  aria-label={copied ? t('runtimeProvider.diagnostics.copied') : copyLabel}
                   onClick={(event) => {
                     event.stopPropagation();
                     void copyDiagnostics();
@@ -233,12 +235,10 @@ export const RuntimeProviderErrorAlert = ({
                   ) : (
                     <ClipboardList className="mr-1 size-3" />
                   )}
-                  {copied
-                    ? t('runtimeProvider.diagnostics.copiedShort')
-                    : t('runtimeProvider.diagnostics.copy')}
+                  {copied ? t('runtimeProvider.diagnostics.copiedShort') : copyLabel}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t('runtimeProvider.diagnostics.copy')}</TooltipContent>
+              <TooltipContent>{copyLabel}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

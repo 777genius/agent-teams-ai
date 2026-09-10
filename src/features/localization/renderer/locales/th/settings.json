@@ -62,6 +62,7 @@
       "copied": "คัดลอกการวินิจฉัยแล้ว",
       "copiedShort": "คัดลอกแล้ว",
       "copy": "คัดลอกการวินิจฉัย",
+      "copyAll": "คัดลอกทั้งหมด",
       "hints": "คำใบ้",
       "likelyCause": "สาเหตุที่เป็นไปได้:",
       "windowsSymlinkAdminHint": "Windows: รัน Agent Teams AI ในฐานะผู้ดูแลระบบ"

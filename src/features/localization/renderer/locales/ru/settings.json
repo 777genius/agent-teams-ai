@@ -62,6 +62,7 @@
       "copied": "Diagnostics скопированы",
       "copiedShort": "Скопировано",
       "copy": "Скопировать diagnostics",
+      "copyAll": "Копировать всю диагностику",
       "hints": "Подсказки",
       "likelyCause": "Вероятная причина:",
       "windowsSymlinkAdminHint": "Windows: запустите Agent Teams AI от имени администратора"

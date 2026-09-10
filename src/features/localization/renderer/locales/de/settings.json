@@ -62,6 +62,7 @@
       "copied": "Diagnostik kopiert",
       "copiedShort": "gekreppt",
       "copy": "Kopieren von Diagnosen",
+      "copyAll": "Alle kopieren",
       "hints": "Hinweise",
       "likelyCause": "Ursache:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI als Administrator ausführen"

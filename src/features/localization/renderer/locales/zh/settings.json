@@ -62,6 +62,7 @@
       "copied": "已复制诊断信息",
       "copiedShort": "已复制",
       "copy": "复制诊断",
+      "copyAll": "复制所有诊断信息",
       "hints": "提示词",
       "likelyCause": "可能的原因：",
       "windowsSymlinkAdminHint": "Windows：以管理员身份运行 Agent Teams AI"

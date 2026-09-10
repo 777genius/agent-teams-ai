@@ -1276,11 +1276,15 @@ const InstalledBanner = ({
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
                         {provider.providerId === 'opencode' &&
-                        provider.modelCatalog?.diagnostics.message ? (catalogFailures.length ? <OpenCodeCatalogErrorAlert failures={catalogFailures} /> : (
-                          <ProviderCatalogDiagnostics
-                            message={provider.modelCatalog.diagnostics.message}
-                          />
-                        )) : null}
+                        provider.modelCatalog?.diagnostics.message ? (
+                          catalogFailures.length ? (
+                            <OpenCodeCatalogErrorAlert failures={catalogFailures} />
+                          ) : (
+                            <ProviderCatalogDiagnostics
+                              message={provider.modelCatalog.diagnostics.message}
+                            />
+                          )
+                        ) : null}
                         {!hasProviderModels &&
                           !modelCatalogLoading &&
                           !isPassiveOpenCodeModelSummary && (
@@ -2261,7 +2265,7 @@ export const CliStatusBanner = ({
     if (multimodelEnabled) {
       return (
         <InstalledBanner
-        catalogFailures={openCodeDashboardCatalog.failures}
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2521,7 +2525,7 @@ export const CliStatusBanner = ({
       return (
         <>
           <InstalledBanner
-        catalogFailures={openCodeDashboardCatalog.failures}
+            catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2604,7 +2608,7 @@ export const CliStatusBanner = ({
     return (
       <>
         <InstalledBanner
-        catalogFailures={openCodeDashboardCatalog.failures}
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}

@@ -62,6 +62,7 @@
       "copied": "진단",
       "copiedShort": "뚱 베어",
       "copy": "복사 진단",
+      "copyAll": "모든 진단 복사",
       "hints": "뚱 베어",
       "likelyCause": "같은 원인:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI를 관리자 권한으로 실행하세요"

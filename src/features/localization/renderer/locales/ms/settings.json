@@ -62,6 +62,7 @@
       "copied": "Diagnostik disalin",
       "copiedShort": "Disalin",
       "copy": "Salin diagnostik",
+      "copyAll": "Salin semua",
       "hints": "Petua",
       "likelyCause": "Kemungkinan punca:",
       "windowsSymlinkAdminHint": "Windows: jalankan Agent Teams AI sebagai Pentadbir"

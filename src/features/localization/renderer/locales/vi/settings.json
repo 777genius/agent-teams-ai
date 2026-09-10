@@ -62,6 +62,7 @@
       "copied": "Đã sao chép chẩn đoán",
       "copiedShort": "Đã sao chép",
       "copy": "Sao chép chẩn đoán",
+      "copyAll": "Sao chép tất cả",
       "hints": "Gợi ý",
       "likelyCause": "Nguyên nhân có thể:",
       "windowsSymlinkAdminHint": "Windows: chạy Agent Teams AI với quyền Quản trị viên"

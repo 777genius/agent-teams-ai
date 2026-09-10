@@ -24,8 +24,11 @@ export function catalogFailure(
 ): OpenCodeCatalogFailure {
   if (error instanceof CatalogFailureError) return error.failure;
   return {
-    operation, sourceProviderId, origin,
-    message: cleanRuntimeDiagnosticText(error instanceof Error ? error.message : String(error)) ??
+    operation,
+    sourceProviderId,
+    origin,
+    message:
+      cleanRuntimeDiagnosticText(error instanceof Error ? error.message : String(error)) ??
       'Catalog request failed.',
   };
 }

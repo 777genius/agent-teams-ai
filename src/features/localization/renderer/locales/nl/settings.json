@@ -62,6 +62,7 @@
       "copied": "Diagnostiek gekopieerd",
       "copiedShort": "Gekopieerd",
       "copy": "Diagnostiek kopiëren",
+      "copyAll": "Alle diagnostiek kopiëren",
       "hints": "Tips",
       "likelyCause": "Waarschijnlijke oorzaak:",
       "windowsSymlinkAdminHint": "Windows: voer Agent Teams AI uit als administrator"

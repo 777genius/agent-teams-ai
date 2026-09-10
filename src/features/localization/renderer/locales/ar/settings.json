@@ -62,6 +62,7 @@
       "copied": "أجهزة التشخيص",
       "copiedShort": "Copied",
       "copy": "تشخيص النسخ",
+      "copyAll": "نسخ الكل",
       "hints": "Hints",
       "likelyCause": "السبب الغالب:",
       "windowsSymlinkAdminHint": "Windows: شغّل Agent Teams AI كمسؤول"

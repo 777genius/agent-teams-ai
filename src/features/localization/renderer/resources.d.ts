@@ -3240,6 +3240,7 @@ export default interface Resources {
         copied: 'Diagnostics copied';
         copiedShort: 'Copied';
         copy: 'Copy diagnostics';
+        copyAll: 'Copy all diagnostics';
         hints: 'Hints';
         likelyCause: 'Likely cause:';
         windowsSymlinkAdminHint: 'Windows: run Agent Teams AI as Administrator';

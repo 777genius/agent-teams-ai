@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
 
-import { CatalogFailureError, catalogFailure, mainCatalogFailure, type OpenCodeCatalogFailure } from './catalogFailure';
+import {
+  CatalogFailureError,
+  catalogFailure,
+  mainCatalogFailure,
+  type OpenCodeCatalogFailure,
+} from './catalogFailure';
 import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
@@ -97,9 +102,10 @@ export function useOpenCodeConnectedModelCatalog(input: {
     const retainedModels = stateRef.current.scope === scope ? stateRef.current.models : [];
     setState({ scope, loading: true, models: retainedModels, errors: [] });
     void (async () => {
-      const validationError = (message: string) => new CatalogFailureError(
-        catalogFailure('provider_directory', null, 'client_validation', message)
-      );
+      const validationError = (message: string) =>
+        new CatalogFailureError(
+          catalogFailure('provider_directory', null, 'client_validation', message)
+        );
       const loadedModels: RuntimeProviderModelDto[] = [];
       const loadErrors: OpenCodeCatalogFailure[] = [];
       const entries: RuntimeProviderDirectoryEntryDto[] = [];
@@ -142,7 +148,8 @@ export function useOpenCodeConnectedModelCatalog(input: {
         entries.push(...directory.entries);
         cursor = directory.nextCursor;
         if (!cursor) break;
-        if (cursors.has(cursor) || page === 19) throw validationError('Incomplete provider directory.');
+        if (cursors.has(cursor) || page === 19)
+          throw validationError('Incomplete provider directory.');
         cursors.add(cursor);
       }
       if (entries.length !== total) throw validationError('Incomplete provider directory.');
@@ -165,7 +172,9 @@ export function useOpenCodeConnectedModelCatalog(input: {
             if (!current()) return;
             loadedModels.push(...catalog.models);
             if (catalog.catalogState === 'stale') {
-              loadErrors.push(catalogFailure('provider_models', source, 'stale', 'Cached models are stale.'));
+              loadErrors.push(
+                catalogFailure('provider_models', source, 'stale', 'Cached models are stale.')
+              );
             }
             if (retainedModels.length === 0 && current()) {
               setState({
@@ -177,9 +186,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
             }
           } catch (error) {
             if (!current()) return;
-            loadErrors.push(
-              catalogFailure('provider_models', source, 'transport', error)
-            );
+            loadErrors.push(catalogFailure('provider_models', source, 'transport', error));
           } finally {
             activeGroups.delete(sourceRequestGroup);
           }
@@ -261,7 +268,13 @@ export function useOpenCodeConnectedModelCatalog(input: {
         diagnostics: {
           configReadState: 'ready' as const,
           appServerState: 'degraded' as const,
-          message: active.errors.map((error) => `${error.sourceProviderId ? `${error.sourceProviderId}: ` : ''}${error.message}`).join(' - ') || null,
+          message:
+            active.errors
+              .map(
+                (error) =>
+                  `${error.sourceProviderId ? `${error.sourceProviderId}: ` : ''}${error.message}`
+              )
+              .join(' - ') || null,
         },
       },
     };

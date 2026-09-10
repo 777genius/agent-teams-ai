@@ -176,6 +176,119 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     getAppDataPathMock.mockReturnValue(path.join(appDataRoot, 'data'));
   });
 
+  it('assigns directory correlation after seed-only timeout normalization and does not cache that failure', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          entries: [],
+          diagnostics: ['OpenCode inventory probe timed out after 5000ms'],
+          totalCount: 0,
+          returnedCount: 0,
+          cursor: null,
+          nextCursor: null,
+          query: null,
+          filter: 'all',
+          limit: 100,
+          fetchedAt: '2026-09-10T00:00:00.000Z',
+        },
+      }),
+      stderr: '',
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      summary: true,
+      projectPath: '/sandbox/catalog',
+    };
+    const [first, joined] = await Promise.all([
+      client.loadProviderDirectory(request),
+      client.loadProviderDirectory(request),
+    ]);
+    expect(first.error?.diagnostics).toMatchObject({
+      exitCode: 0,
+      timedOut: false,
+      stage: 'runtime_command',
+    });
+    expect(first.error?.message).toContain('inventory probe timed out');
+    expect(first.error?.diagnostics?.reportId).toMatch(/^oc-[a-f0-9]{32}$/);
+    expect(joined.error?.diagnostics?.reportId).toBe(first.error?.diagnostics?.reportId);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    const retry = await client.loadProviderDirectory(request);
+    expect(retry.error?.diagnostics?.reportId).not.toBe(first.error?.diagnostics?.reportId);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['directory', 'models'] as const)(
+    'preserves normalized %s failures for joined subscribers and gives retries new IDs',
+    async (operation) => {
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const request = { runtimeId: 'opencode' as const, projectPath: '/sandbox/catalog' };
+      const load = () =>
+        operation === 'directory'
+          ? client.loadProviderDirectory({ ...request, summary: true })
+          : client.loadModels({ ...request, providerId: 'openrouter' });
+      const payload = JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-unhealthy',
+          recoverable: true,
+          message: 'api_key=private-value',
+          diagnostics: {
+            reportId: 'upstream-fixed',
+            stage: 'catalog_http',
+            endpoint: 'http://localhost:1234/provider?token=private-value',
+            httpStatus: 503,
+            stderrPreview: 'inner failure token=private-value',
+          },
+        },
+      });
+      for (const form of ['zero', 'legacy', 'json-exit', 'process', 'missing'] as const) {
+        execCliMock.mockReset();
+        resolveBinaryMock.mockResolvedValue(form === 'missing' ? null : '/repo/cli-dev');
+        if (form === 'legacy')
+          execCliMock.mockResolvedValue({
+            stdout: JSON.stringify({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              error: { code: 'runtime-unhealthy', message: 'legacy failure' },
+            }),
+            stderr: '',
+          });
+        else if (form === 'zero') execCliMock.mockResolvedValue({ stdout: payload, stderr: '' });
+        else
+          execCliMock.mockRejectedValue(
+            Object.assign(new Error('process failure'), {
+              code: 7,
+              stdout: form === 'json-exit' ? payload : '',
+              stderr: 'token=private-value',
+            })
+          );
+        const [first, joined] = await Promise.all([load(), load()]);
+        const details = first.error!.diagnostics!;
+        expect(details.reportId).toMatch(/^oc-[a-f0-9]{32}$/);
+        expect(joined.error!.diagnostics!.reportId).toBe(details.reportId);
+        expect(execCliMock).toHaveBeenCalledTimes(form === 'missing' ? 0 : 1);
+        expect(details.exitCode).toBe(
+          form === 'missing' ? null : form === 'zero' || form === 'legacy' ? 0 : 7
+        );
+        expect(details.stage).toBe(form === 'missing' ? 'binary_lookup' : 'runtime_command');
+        expect(details.httpStatus).toBeUndefined();
+        expect(details.endpoint).toBeUndefined();
+        expect(JSON.stringify(first.error)).not.toContain('private-value');
+        if (form === 'zero' || form === 'json-exit') {
+          expect(details.upstreamReportId).toBe('upstream-fixed');
+          expect(details.hints?.join(' ')).toContain('inner failure');
+        }
+        const retry = await load();
+        expect(retry.error!.diagnostics!.reportId).not.toBe(details.reportId);
+      }
+    }
+  );
+
   it('returns stderr details for failed model tests instead of hiding them behind the command', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers test-model');
     Object.assign(error, {

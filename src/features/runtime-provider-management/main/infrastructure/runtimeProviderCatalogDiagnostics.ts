@@ -45,12 +45,14 @@ export class RuntimeProviderCatalogDiagnostics {
       this.stderr = result.stderr;
       return result;
     } catch (error) {
-      const raw = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+      const raw = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
       this.exitCode = typeof raw.code === 'number' && Number.isInteger(raw.code) ? raw.code : null;
       this.signal = typeof raw.signal === 'string' ? raw.signal : undefined;
       this.systemErrorCode = typeof raw.code === 'string' ? raw.code : undefined;
       this.stderr = typeof raw.stderr === 'string' ? raw.stderr : null;
-      this.timedOut = !options.signal?.aborted && error instanceof Error &&
+      this.timedOut =
+        !options.signal?.aborted &&
+        error instanceof Error &&
         error.message.startsWith(`Command timed out after ${this.timeoutMs}ms:`);
       throw error;
     } finally {
@@ -72,14 +74,18 @@ export class RuntimeProviderCatalogDiagnostics {
       appVersion: APP_VERSION,
       platform: process.platform,
       arch: process.arch,
-      stage: this.command ? 'runtime_command' as const : 'binary_lookup' as const,
+      stage: this.command ? ('runtime_command' as const) : ('binary_lookup' as const),
       binaryRole: 'orchestrator' as const,
       binarySource: 'unknown' as const,
-      ...(this.command ? {
-        durationMs: this.durationMs, timeoutMs: this.timeoutMs, timedOut: this.timedOut,
-        signal: clean(this.signal, 256) ?? undefined,
-        systemErrorCode: clean(this.systemErrorCode, 256) ?? undefined,
-      } : {}),
+      ...(this.command
+        ? {
+            durationMs: this.durationMs,
+            timeoutMs: this.timeoutMs,
+            timedOut: this.timedOut,
+            signal: clean(this.signal, 256) ?? undefined,
+            systemErrorCode: clean(this.systemErrorCode, 256) ?? undefined,
+          }
+        : {}),
       errorCode: response.error.code,
       summary: message,
       likelyCause: clean(previous?.likelyCause),
@@ -89,17 +95,41 @@ export class RuntimeProviderCatalogDiagnostics {
       exitCode: this.exitCode,
       stderrPreview: clean(this.stderr),
       stdoutPreview: null,
-      hints: previous ? [
-        ...runtimeErrorDetailRows(previous).map(([key, value]) => `Runtime hint ${key}: ${value}`),
-        ...(previous.hints ?? []).map((hint) => `Runtime hint: ${hint}`),
-      ].slice(0, 8).map((hint) => clean(hint, 512)!) : [],
+      hints: previous
+        ? [
+            ...[
+              ['summary', previous.summary],
+              ['stderr', previous.stderrPreview],
+              ['stdout', previous.stdoutPreview],
+            ]
+              .filter(([, value]) => value)
+              .map(([key, value]) => `Runtime hint ${key}: ${value}`),
+            ...runtimeErrorDetailRows(previous)
+              .filter(([key]) =>
+                ['stage', 'cause', 'httpMethod', 'endpoint', 'httpStatus'].includes(key)
+              )
+              .map(([key, value]) => `Runtime hint ${key}: ${value}`),
+            ...(previous.hints ?? []).map((hint) => `Runtime hint: ${hint}`),
+          ]
+            .slice(0, 8)
+            .map((hint) => clean(hint, 512)!)
+        : [],
     };
-    this.finalized = { code: response.error.code, recoverable: response.error.recoverable, message, diagnostics };
+    this.finalized = {
+      code: response.error.code,
+      recoverable: response.error.recoverable,
+      message,
+      diagnostics,
+    };
     try {
       logger.warn(`OpenCode catalog ${this.operation} failed, report ${diagnostics.reportId}`, {
-        sourceProviderId: clean(this.sourceProviderId, 256), message, diagnostics,
+        sourceProviderId: clean(this.sourceProviderId, 256),
+        message,
+        diagnostics,
       });
-    } catch { /* Logging cannot replace the catalog response. */ }
+    } catch {
+      /* Logging cannot replace the catalog response. */
+    }
     return { ...response, error: this.finalized };
   }
 }

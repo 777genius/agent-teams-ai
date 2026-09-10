@@ -1622,7 +1622,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         this.getDirectoryResponseCacheTtlMs(input),
         generation
       )
-    ).then(normalize).then((response) => attempt.finish(response));
+    )
+      .then(normalize)
+      .then((response) => attempt.finish(response));
     this.directoryResponseInFlight.set(inFlightKey, request);
     try {
       return await request;
@@ -2226,7 +2228,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
     const cacheKeyGeneration = this.modelRequests.getGeneration(cacheKey);
-    const attempt = new RuntimeProviderCatalogDiagnostics('provider_models', projectPath, input.providerId);
+    const attempt = new RuntimeProviderCatalogDiagnostics(
+      'provider_models',
+      projectPath,
+      input.providerId
+    );
     const promise = this.loadModelsUncached(
       input,
       projectPath,
