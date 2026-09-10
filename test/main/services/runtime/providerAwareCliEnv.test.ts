@@ -1,8 +1,21 @@
 // @vitest-environment node
 import * as fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const execCliMock = vi.fn();
+vi.mock('@main/utils/childProcess', () => ({
+  execCli: (...args: unknown[]) => execCliMock(...args),
+  spawnCli: vi.fn(() => {
+    throw new Error('unexpected spawn');
+  }),
+  killProcessTree: vi.fn(),
+}));
+vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
+  ClaudeBinaryResolver: { resolve: vi.fn(() => Promise.resolve('/sandbox/agent-teams-cli')) },
+}));
 
 const buildEnrichedEnvMock = vi.fn();
 const getCachedShellEnvMock = vi.fn();
@@ -29,6 +42,7 @@ vi.mock('@main/utils/cliEnv', () => ({
 
 vi.mock('@main/utils/shellEnv', () => ({
   getCachedShellEnv: () => getCachedShellEnvMock(),
+  resolveInteractiveShellEnvBestEffort: () => Promise.resolve(getCachedShellEnvMock()),
   getShellPreferredHome: () => getShellPreferredHomeMock(),
 }));
 
@@ -95,6 +109,86 @@ vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
 }));
 
 describe('buildProviderAwareCliEnv', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(['active', 'passive'] as const)(
+    'projects current app root/control into %s outer and MCP child env without stale shell contamination',
+    async (mode) => {
+      const { setClaudeBasePathOverride } = await import('@main/utils/pathDecoder');
+      const { buildProviderAwareCliEnv, buildPassiveProviderStatusCliEnv } =
+        await import('@main/services/runtime/providerAwareCliEnv');
+      setClaudeBasePathOverride('/sandbox/private-claude');
+      vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:4569');
+      const options = {
+        providerId: 'opencode' as const,
+        env: {
+          HOME: '/sandbox/home',
+          CLAUDE_CONFIG_DIR: '/sandbox/auth-namespace',
+          AGENT_TEAMS_MCP_CLAUDE_DIR: '/stale/root',
+          CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:9999',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: '/sandbox/electron',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/sandbox/mcp.js',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: '["/sandbox/mcp.js"]',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify({
+            ELECTRON_RUN_AS_NODE: '1',
+            OWNER_FIXTURE: 'unchanged',
+            AGENT_TEAMS_MCP_CLAUDE_DIR: '/stale/child',
+            CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:9998',
+          }),
+        },
+      };
+      try {
+        const result =
+          mode === 'active'
+            ? await buildProviderAwareCliEnv(options)
+            : buildPassiveProviderStatusCliEnv(options);
+        expect(result.env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/private-claude');
+        expect(result.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4569');
+        expect(JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toEqual({
+          ELECTRON_RUN_AS_NODE: '1',
+          OWNER_FIXTURE: 'unchanged',
+          AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/private-claude',
+          CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:4569',
+        });
+        expect(result.env.HOME).toBe('/sandbox/home');
+        expect(result.env.CLAUDE_CONFIG_DIR).toBe('/sandbox/auth-namespace');
+        expect(options.env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/stale/root');
+        expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
+        if (mode === 'passive') {
+          expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+          expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).not.toHaveBeenCalled();
+          expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+          expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+        }
+      } finally {
+        setClaudeBasePathOverride(null);
+      }
+    }
+  );
+
+  it('keeps passive reads passive when no server or MCP launch metadata exists and strips dead endpoints', async () => {
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', undefined);
+    const { buildPassiveProviderStatusCliEnv } =
+      await import('@main/services/runtime/providerAwareCliEnv');
+    const result = buildPassiveProviderStatusCliEnv({
+      providerId: 'opencode',
+      shellEnv: {
+        CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:9999',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON:
+          '{"CLAUDE_TEAM_CONTROL_URL":"http://127.0.0.1:9998"}',
+      },
+    });
+    expect(result.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+    expect(
+      JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!).CLAUDE_TEAM_CONTROL_URL
+    ).toBeUndefined();
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
+    expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
+    expect(resolvePackagedAgentTeamsMcpEntryMock).not.toHaveBeenCalled();
+    expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -131,6 +225,97 @@ describe('buildProviderAwareCliEnv', () => {
     });
     resolvePackagedAgentTeamsMcpEntryMock.mockResolvedValue(null);
   });
+
+  it('passes cold Host publication and changed-port reopen to direct provider catalog without provisioning', async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'app-catalog-context-'));
+    const { setClaudeBasePathOverride } = await import('@main/utils/pathDecoder');
+    const { writeTeamControlApiState, clearTeamControlApiState } =
+      await import('@main/services/team/TeamControlApiState');
+    const { AgentTeamsRuntimeProviderManagementCliClient } =
+      await import('@features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient');
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:9999');
+    setClaudeBasePathOverride(root);
+    getCachedShellEnvMock.mockReturnValue({
+      HOME: root,
+      CLAUDE_CONFIG_DIR: path.join(root, 'auth-namespace'),
+      AGENT_TEAMS_MCP_CLAUDE_DIR: '/stale/shell-root',
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:9998',
+    });
+    resolveAgentTeamsMcpLaunchSpecMock.mockResolvedValue({
+      command: '/sandbox/electron',
+      args: ['/sandbox/mcp.js'],
+      env: { ELECTRON_RUN_AS_NODE: '1' },
+    });
+    const response = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      models: {
+        runtimeId: 'opencode',
+        providerId: 'xai',
+        models: [],
+        defaultModelId: null,
+        diagnostics: [],
+        catalogState: 'fresh',
+      },
+    };
+    execCliMock.mockResolvedValue({ stdout: JSON.stringify(response), stderr: '' });
+    try {
+      await clearTeamControlApiState();
+      for (const port of [4580, 4581]) {
+        await writeTeamControlApiState(`http://127.0.0.1:${port}`);
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        await expect(
+          client.loadModels({ runtimeId: 'opencode', providerId: 'xai' })
+        ).resolves.toEqual(response);
+        const [command, args, options] = execCliMock.mock.calls.at(-1)!;
+        expect(command).toBe('/sandbox/agent-teams-cli');
+        expect(args).toEqual([
+          'runtime',
+          'providers',
+          'models',
+          '--runtime',
+          'opencode',
+          '--provider',
+          'xai',
+          '--json',
+        ]);
+        expect(options.env).toMatchObject({
+          AGENT_TEAMS_MCP_CLAUDE_DIR: root,
+          CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+          HOME: root,
+          CLAUDE_CONFIG_DIR: path.join(root, 'auth-namespace'),
+        });
+        expect(JSON.parse(options.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toEqual({
+          ELECTRON_RUN_AS_NODE: '1',
+          AGENT_TEAMS_MCP_CLAUDE_DIR: root,
+          CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+        });
+        await clearTeamControlApiState();
+        expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+      }
+      expect(execCliMock).toHaveBeenCalledTimes(2);
+    } finally {
+      await clearTeamControlApiState();
+      setClaudeBasePathOverride(null);
+      await fs.promises.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(['null', '[]', '{"OWNER":42}', '{broken'])(
+    'rejects malformed existing MCP child env %s without repairing away owner fields',
+    async (raw) => {
+      const { buildPassiveProviderStatusCliEnv } =
+        await import('@main/services/runtime/providerAwareCliEnv');
+      expect(() =>
+        buildPassiveProviderStatusCliEnv({
+          providerId: 'opencode',
+          env: { CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: raw },
+        })
+      ).toThrow();
+      expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
+      expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    }
+  );
 
   it('returns narrow provider status stored credential allowlists', async () => {
     const {
@@ -535,9 +720,9 @@ describe('buildProviderAwareCliEnv', () => {
     });
 
     expect(result.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
-    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBe(
-      '{"ELECTRON_RUN_AS_NODE":"1"}'
-    );
+    expect(JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toMatchObject({
+      ELECTRON_RUN_AS_NODE: '1',
+    });
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe(
       '/opt/Agent Teams AI/agent-teams-ai'
     );
@@ -560,9 +745,9 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe('custom-node');
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe('/custom/mcp.js');
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBe('["/custom/mcp.js"]');
-    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBe(
-      '{"ELECTRON_RUN_AS_NODE":"1"}'
-    );
+    expect(JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toMatchObject({
+      ELECTRON_RUN_AS_NODE: '1',
+    });
     expect(result.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
   });
 
@@ -705,10 +890,10 @@ describe('buildProviderAwareCliEnv', () => {
   });
 
   it('returns Codex custom provider launch args after API-key env application', async () => {
-    applyConfiguredConnectionEnvMock.mockImplementation(async (env: NodeJS.ProcessEnv) => {
+    applyConfiguredConnectionEnvMock.mockImplementation((env: NodeJS.ProcessEnv) => {
       env.OPENAI_API_KEY = 'stored-key';
       env.CODEX_API_KEY = 'stored-key';
-      return env;
+      return Promise.resolve(env);
     });
     const customSettings = JSON.stringify({
       codex: {
@@ -749,14 +934,14 @@ describe('buildProviderAwareCliEnv', () => {
 
   it('passes Codex env refreshed by strict credential application into launch args and issue checks', async () => {
     applyConfiguredConnectionEnvMock.mockImplementation(
-      async (env: NodeJS.ProcessEnv, providerId: string) => {
+      (env: NodeJS.ProcessEnv, providerId: string) => {
         expect(providerId).toBe('codex');
         env.CODEX_CLI_PATH = '/Users/tester/.local/bin/codex';
         env.CODEX_HOME = '/Users/tester/.codex-custom';
         env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD = 'chatgpt';
         delete env.OPENAI_API_KEY;
         delete env.CODEX_API_KEY;
-        return env;
+        return Promise.resolve(env);
       }
     );
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([

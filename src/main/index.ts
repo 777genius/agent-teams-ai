@@ -1862,6 +1862,8 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
