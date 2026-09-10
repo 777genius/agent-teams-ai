@@ -147,6 +147,7 @@ describe('shutdown MCP transport authority', () => {
       ).rejects.toBe(accepted);
     };
     const finished = new Error('bounded shutdown completed MCP teardown');
+    const stopStartupAdmission = vi.fn();
     const noOp = vi.fn();
     const teardown = vi.spyOn(server, 'stop').mockImplementation(() => {
       // Revocation must already hold on entry, even when server.stop is slow.
@@ -157,6 +158,7 @@ describe('shutdown MCP transport authority', () => {
     });
     const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
       shutdownPromise: null,
+      stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
       revokeMcpAppContext: revoke,
       logger: { info: noOp },
       announcementsLifecycle: { dispose: noOp },
@@ -184,6 +186,7 @@ describe('shutdown MCP transport authority', () => {
       const late = resolveEnv();
       await vi.waitFor(() => expect(resume).toBeTypeOf('function'));
       await expect(shutdown()).rejects.toBe(finished);
+      expect(stopStartupAdmission).toHaveBeenCalledExactlyOnceWith();
       expect(acceptedStops).toBe(2);
       expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
       const after = await resolveEnv();
