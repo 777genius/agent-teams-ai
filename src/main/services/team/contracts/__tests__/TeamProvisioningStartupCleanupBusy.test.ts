@@ -20,13 +20,13 @@ vi.mock('../../opencode/bridge/OpenCodeHostStartupLockCleanup', () => ({
 const createRequest: TeamCreateRequest = {
   teamName: 'cleanup-gate-fixture',
   cwd: '/sandbox/cleanup-gate-fixture',
-  providerId: 'claude',
+  providerId: 'anthropic',
   members: [{ name: 'worker', role: 'Worker', providerId: 'opencode' }],
 };
 const launchRequest: TeamLaunchRequest = {
   teamName: createRequest.teamName,
   cwd: createRequest.cwd,
-  providerId: 'claude',
+  providerId: 'anthropic',
 };
 
 function fixture(transport: 'ipc' | 'http') {
