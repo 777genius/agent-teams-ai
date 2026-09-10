@@ -1,6 +1,11 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import {
+  type CursorAgentAttributionPort,
+  DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT,
+  summarizeAttributedCursorAgentProcesses,
+} from '../opencode/bridge/CursorAgentAttributionRecords';
+import {
   CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
   type CursorAgentTreeSweepPort,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
@@ -31,13 +36,25 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   otherAliveTeams: readonly string[];
   requestedAtMs?: number;
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
+  cursorAgentAttribution?: CursorAgentAttributionPort;
 }): Promise<{ killedPids: number[]; incomplete: boolean; diagnostics: string[] }> {
+  // Read, reported, and not yet acted upon. The proof path that turns a record
+  // into permission to reap needs a runtime that writes one, and until this app
+  // pins such a runtime the only honest thing a stop can do with a record is
+  // say it saw it - which is also how an operator finds out whether the runtime
+  // in front of them writes records at all. Every branch below decides exactly
+  // what it decides today.
+  const attributionNotes = await describeAttributedCursorAgentProcesses(
+    input.cursorAgentAttribution
+  );
+
   const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
   if (!sweepPort.isEnabled()) {
     return {
       killedPids: [],
       incomplete: false,
       diagnostics: [
+        ...attributionNotes,
         'Skipped cursor-agent sweep: the cursor-agent tree sweep is disabled for this app instance',
       ],
     };
@@ -50,6 +67,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
       killedPids: [],
       incomplete: false,
       diagnostics: [
+        ...attributionNotes,
         'Skipped cursor-agent sweep: this team has no readable project path, and a lead tree is only reaped for a workspace this stop can name',
       ],
     };
@@ -84,6 +102,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
       killedPids: [],
       incomplete: false,
       diagnostics: [
+        ...attributionNotes,
         'Skipped cursor-agent sweep: a still-running team works in a directory whose command ' +
           `line cannot be told apart from this team's (${confusableWith.join(', ')})`,
       ],
@@ -94,6 +113,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
       killedPids: [],
       incomplete: false,
       diagnostics: [
+        ...attributionNotes,
         `Skipped cursor-agent sweep: still-running team(s) work in the same project directory (${sharedWith.join(', ')})`,
       ],
     };
@@ -123,8 +143,29 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
     requireOwnershipProof: false,
     orphanedOnly: false,
   });
-  const diagnostics =
-    sweep.killed.length > 0 ? [`Reaped ${sweep.killed.length} cursor-agent process tree(s)`] : [];
+  const diagnostics = [...attributionNotes];
+  if (sweep.killed.length > 0) {
+    diagnostics.push(`Reaped ${sweep.killed.length} cursor-agent process tree(s)`);
+  }
   diagnostics.push(...sweep.diagnostics.map((entry) => `cursor-agent sweep: ${entry}`));
   return { killedPids: sweep.killed, incomplete: sweep.incomplete, diagnostics };
+}
+
+/**
+ * One line when the runtime has recorded processes for this install, and
+ * nothing at all when it has not - a stop against a runtime that writes no
+ * records reads exactly as it does today. The reader never throws, so an
+ * unreadable record directory is already the empty answer.
+ */
+async function describeAttributedCursorAgentProcesses(
+  port: CursorAgentAttributionPort | undefined
+): Promise<string[]> {
+  const attributed = await (
+    port ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT
+  ).readAttributedProcesses();
+  const { total, withRecordedOwner } = summarizeAttributedCursorAgentProcesses(attributed);
+  if (total === 0) return [];
+  return [
+    `cursor-agent attribution: ${total} runtime process record(s) available, ${withRecordedOwner} with a recorded owner; this stop still decides on the command line`,
+  ];
 }

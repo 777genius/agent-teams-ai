@@ -7,6 +7,8 @@ import {
   runOpenCodeLifecycleCleanupTail,
 } from './OpenCodeLifecycleCleanupTail';
 
+import type { AttributedCursorAgentProcess } from './CursorAgentAttributionRecords';
+
 const steps: string[] = [];
 
 const cleanupManagedOpenCodeServeProcesses = vi.hoisted(() =>
@@ -68,6 +70,38 @@ const SWEEP_COMMAND_SETTLED_AT_MS = Date.parse('2026-09-02T09:00:12.000Z');
 
 const OWNED_WORKSPACES = ['C:\\workspaces\\example', 'C:\\workspaces\\other'];
 
+const readAttributedProcesses = vi.fn<() => Promise<readonly AttributedCursorAgentProcess[]>>(() =>
+  Promise.resolve([])
+);
+
+function attributedProcess(
+  pid: number,
+  owners: AttributedCursorAgentProcess['owners'] = []
+): AttributedCursorAgentProcess {
+  return {
+    record: {
+      schemaVersion: 1,
+      kind: 'cursor-agent',
+      attributionId: 'aaaa1111aaaa1111aaaa1111aaaa1111',
+      pid,
+      parentPid: pid - 1,
+      startedAtMs: APP_STARTED_AT_MS - 60_000,
+      startTimeToleranceMs: 2000,
+      nativeStartToken: null,
+      workspacePath: OWNED_WORKSPACES[0],
+      cwd: OWNED_WORKSPACES[0],
+      appInstanceId: '9100-1756803000000',
+      appProfileScope: 'this-install',
+      hostPid: 999,
+      runtimeVersion: '0.0.95',
+      writtenAtMs: APP_STARTED_AT_MS - 59_000,
+      exitedAtMs: null,
+    },
+    host: null,
+    owners,
+  };
+}
+
 const sweepCursorAgentTrees = vi.fn(
   (_input: { ownedWorkspaceCwds: readonly string[]; startedBeforeMs?: number | null }) =>
     Promise.resolve({
@@ -92,6 +126,9 @@ function baseInput(
     // The real port reads the host process table and kills what it finds; every
     // case here hands in a stub so the assertions are about scope, not luck.
     cursorAgentTreeSweep: { isEnabled: () => true, sweepCursorAgentTrees },
+    // The real port reads this install's record directory off disk; the cases
+    // here say what the runtime wrote, so none of them depends on the machine.
+    cursorAgentAttribution: { readAttributedProcesses: readAttributedProcesses },
     listOwnedLeadWorkspaces: () => Promise.resolve(OWNED_WORKSPACES),
   };
 }
@@ -322,6 +359,62 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     expect(ports.sweepResults).toContain(
       'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_owned_workspace'
     );
+  });
+
+  /**
+   * Read and reported, not acted upon. The proof path that turns a record into
+   * permission to reap needs a runtime that writes one, and this app pins none
+   * yet - so the startup sweep runs under exactly the fences it runs under
+   * today, and the count is how an operator learns whether the runtime in front
+   * of them records anything at all.
+   */
+  it('reports the attribution records the runtime wrote without widening the sweep', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const ports = createPorts();
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [
+        {
+          teamId: 'team-1',
+          teamName: 'alpha',
+          laneId: 'primary',
+          memberName: 'lead',
+          runId: 'run-1',
+          sessionId: 'session-1',
+          createdAt: '2026-09-02T08:00:00.000Z',
+          updatedAt: '2026-09-02T08:30:00.000Z',
+        },
+      ]),
+      attributedProcess(4322),
+    ]);
+
+    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+
+    expect(ports.sweepResults).toContain(
+      'opencode_cursor_agent_attribution_records sweep=startup count=2 owned=1'
+    );
+    expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      ownedWorkspaceCwds: OWNED_WORKSPACES,
+      startedBeforeMs: APP_STARTED_AT_MS,
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      orphanedOnly: true,
+    });
+  });
+
+  /**
+   * The control: against a runtime that writes no record - every runtime this
+   * app pins today - the startup tail says exactly what it said before.
+   */
+  it('says nothing about attribution when the runtime recorded none', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const ports = createPorts();
+
+    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+
+    expect(ports.sweepResults.filter((entry) => entry.includes('attribution_records'))).toEqual([]);
+    expect(ports.warnings).toEqual([]);
   });
 
   it('never reaps lead trees on shutdown, where every tree may be a live team', async () => {
