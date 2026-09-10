@@ -6,6 +6,8 @@ import { createLogger } from '@shared/utils/logger';
 
 import { cleanRuntimeDiagnosticText, runtimeErrorDetailRows } from '../../contracts';
 
+import { stripTerminalFormatting } from './runtimeProviderModelTestBoundary';
+
 import type { RuntimeProviderManagementErrorDto } from '../../contracts';
 
 const logger = createLogger('OpenCodeCatalog');
@@ -87,13 +89,13 @@ export class RuntimeProviderCatalogDiagnostics {
           }
         : {}),
       errorCode: response.error.code,
-      summary: message,
+      summary: clean(previous?.summary) || message,
       likelyCause: clean(previous?.likelyCause),
       binaryPath: clean(this.binaryPath ?? previous?.binaryPath),
       command: clean(this.command),
       projectPath: clean(this.projectPath),
       exitCode: this.exitCode,
-      stderrPreview: clean(this.stderr),
+      stderrPreview: clean(stripTerminalFormatting(this.stderr ?? '').trim()) || null,
       stdoutPreview: null,
       hints: previous
         ? [

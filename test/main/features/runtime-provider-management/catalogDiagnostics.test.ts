@@ -1,12 +1,14 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { RuntimeProviderCatalogDiagnostics } from '../../../../src/features/runtime-provider-management/main/infrastructure/runtimeProviderCatalogDiagnostics';
 import { normalizeRuntimeProviderDirectoryResponse } from '../../../../src/features/runtime-provider-management/main/infrastructure/runtimeProviderDirectoryResponse';
 import { sanitizeRuntimeProviderDiagnostics } from '../../../../src/features/runtime-provider-management/main/infrastructure/runtimeProviderErrorBoundary';
 import { installPersistentAppLog } from '../../../../src/main/utils/persistentAppLog';
+
 import type { RuntimeProviderManagementDirectoryResponse } from '../../../../src/features/runtime-provider-management/contracts';
 
 const execCli = vi.hoisted(() => vi.fn());
@@ -123,9 +125,17 @@ it('does not confuse normalized inventory timeout with a successful outer proces
       directory: {
         runtimeId: 'opencode',
         entries: [],
+        totalCount: 0,
+        returnedCount: 0,
+        query: null,
+        filter: 'all',
+        limit: 50,
+        cursor: null,
+        nextCursor: null,
+        fetchedAt: '2026-09-10T00:00:00.000Z',
         diagnostics: ['OpenCode inventory probe timed out after 5000ms'],
       },
-    } as RuntimeProviderManagementDirectoryResponse,
+    } satisfies RuntimeProviderManagementDirectoryResponse,
     true
   );
   const result = attempt.finish(response);

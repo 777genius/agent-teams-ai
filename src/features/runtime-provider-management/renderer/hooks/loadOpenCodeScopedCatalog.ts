@@ -5,12 +5,12 @@ import {
   qualifyModelId,
 } from '../../core/domain/openCodeModelIdentity';
 
+import { catalogFailure, CatalogFailureError, mainCatalogFailure } from './catalogFailure';
+
 import type {
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderModelDto,
 } from '../../contracts';
-
-import { CatalogFailureError, catalogFailure, mainCatalogFailure } from './catalogFailure';
 
 const MAX_MODEL_PAGES = 20;
 export const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;

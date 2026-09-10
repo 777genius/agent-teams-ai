@@ -48,11 +48,11 @@ export function formatOpenCodeCatalogReport(failures: readonly OpenCodeCatalogFa
   );
 }
 
-export function OpenCodeCatalogErrorAlert({
+export const OpenCodeCatalogErrorAlert = ({
   failures,
 }: {
   failures: readonly OpenCodeCatalogFailure[];
-}) {
+}) => {
   const { t } = useAppTranslation('common');
   if (!failures.length) return null;
   const report = formatOpenCodeCatalogReport(failures);

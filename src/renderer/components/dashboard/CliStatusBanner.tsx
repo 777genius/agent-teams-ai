@@ -21,13 +21,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
+  OpenCodeCatalogErrorAlert,
+  type OpenCodeCatalogFailure,
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderErrorAlert,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
   useOpenCodeConnectedModelCatalog,
-  OpenCodeCatalogErrorAlert,
-  type OpenCodeCatalogFailure,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -1657,8 +1657,6 @@ export const CliStatusBanner = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       openCodeRuntimeStatus?.installed !== false &&
       canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
-    // Pause new reads during status checks without restarting an in-flight
-    // catalog every time passive provider status temporarily becomes pending.
     statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,

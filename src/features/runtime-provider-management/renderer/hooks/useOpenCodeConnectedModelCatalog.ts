@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, isElectronMode } from '@renderer/api';
 
 import {
-  CatalogFailureError,
   catalogFailure,
+  CatalogFailureError,
   mainCatalogFailure,
   type OpenCodeCatalogFailure,
 } from './catalogFailure';

@@ -13,6 +13,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import { RuntimeProviderCatalogDiagnostics } from './runtimeProviderCatalogDiagnostics';
 import {
   appendBoundedSpawnOutput,
   appendOptionalArg,
@@ -32,7 +33,6 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
-import { RuntimeProviderCatalogDiagnostics } from './runtimeProviderCatalogDiagnostics';
 import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
 import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
@@ -2241,7 +2241,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       cacheKeyGeneration,
       controller.signal,
       attempt
-    ).then((response) => attempt.finish(response));
+    ).then((response) => (controller.signal.aborted ? response : attempt.finish(response)));
     const inFlightEntry = {
       controller,
       refresh: input.refresh === true,
