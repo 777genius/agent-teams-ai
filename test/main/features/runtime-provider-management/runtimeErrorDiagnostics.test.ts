@@ -90,6 +90,22 @@ describe('OpenCode diagnostic transport', () => {
     expect(cleanRuntimeDiagnosticText('x'.repeat(8000))).toContain('[truncated]');
   });
 
+  it.each(['AIza' + 'a'.repeat(35), 'or-' + 'b'.repeat(32), 'custom-private-key-value'])(
+    'redacts provider keys from version diagnostics: %s',
+    async (secret) => {
+      execCli.mockRejectedValueOnce(
+        Object.assign(new Error('version failed'), {
+          stderr: JSON.stringify({ key: secret }),
+          stdout: secret.startsWith('custom') ? `key=${secret}` : secret,
+        })
+      );
+      const result = await probeOpenCodeBinaryVersion('/test/opencode');
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain(secret);
+      expect(JSON.stringify(result)).toContain('[redacted]');
+    }
+  );
+
   it.each([
     [
       'timeout',

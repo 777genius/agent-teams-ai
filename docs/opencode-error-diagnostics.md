@@ -19,6 +19,6 @@ node scripts/e2e/opencode-diagnostics-desktop.mjs verify <printed-sandbox-path>
 node scripts/e2e/opencode-diagnostics-desktop.mjs stop <printed-sandbox-path>
 ```
 
-Use only disposable profiles/projects. The start command refuses an occupied dev CDP port. On a headless Linux host use Xvfb. The harness disables the Chromium sandbox for the test Electron process and must not load untrusted content. It does not launch teams or agents.
+Use only disposable profiles/projects. The start command refuses an occupied dev CDP port. The Unix harness requires `ps` and `lsof` and verifies the CDP listener belongs to the recorded launcher process tree before interacting with it. On a headless Linux host use Xvfb. The harness disables the Chromium sandbox for the test Electron process and must not load untrusted content. It does not launch teams or agents.
 
 Set the sandbox's `scenario` file to `version-exit`, `version-timeout` or `ready` before verification. The clipboard assertion uses the isolated test display. Windows and macOS desktop qualification and full production-runtime HTTP desktop E2E have not been completed.

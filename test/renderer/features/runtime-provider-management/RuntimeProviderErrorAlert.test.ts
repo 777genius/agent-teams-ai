@@ -1,7 +1,10 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { RuntimeProviderErrorAlert } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert';
+import {
+  RuntimeProviderErrorAlert,
+  formatRuntimeProviderDiagnosticsCopyText,
+} from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert';
 
 beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true));
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -65,4 +68,14 @@ it('ignores a clipboard completion belonging to the previous error', async () =>
   expect(host.textContent).toContain('Second error');
   expect(host.textContent).not.toContain('Copied');
   await act(async () => root.unmount());
+});
+
+it('removes bare and named provider keys from clipboard report text', () => {
+  for (const secret of [
+    'AIza' + 'a'.repeat(35),
+    'or-' + 'b'.repeat(32),
+    'custom-private-key-value',
+  ]) {
+    expect(formatRuntimeProviderDiagnosticsCopyText(`key="${secret}"`, null)).not.toContain(secret);
+  }
 });

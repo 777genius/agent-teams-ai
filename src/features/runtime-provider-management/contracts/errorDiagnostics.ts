@@ -36,10 +36,14 @@ export function cleanRuntimeDiagnosticText(value: unknown, limit = 4096): string
   // Telemetry redaction hides binary paths and report IDs needed for this opt-in report.
   const cleaned = value
     .replace(/\b(?:sk|pk|rk|ghp|gho|github_pat|xoxb|xoxp|ya29)[A-Za-z0-9_-]{12,}\b/g, '[redacted]')
+    .replace(/\b(?:or-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{20,})\b/g, '[redacted]')
     .replace(/\b(?:Bearer|Basic)\s+[^\s,"']+/gi, '[redacted]')
     .replace(
-      /((?:authorization|cookie|password|secret|api[-_]?key|[\w-]*token)["']?\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
-      '$1[redacted]'
+      /(\b([\w-]+)["']?\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,;]+)/g,
+      (field: string, prefix: string, name: string) =>
+        /(?:authorization|cookie|password|secret|key|token)$/i.test(name)
+          ? `${prefix}[redacted]`
+          : field
     )
     .replace(/https?:\/\/[^\s<>"']+/gi, (url) => safeRuntimeEndpoint(url) ?? '[url redacted]');
   return cleaned.length > limit ? `${cleaned.slice(0, limit - 15)}...[truncated]` : cleaned;

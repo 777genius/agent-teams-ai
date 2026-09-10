@@ -23,6 +23,53 @@ async function manifest() {
   return data;
 }
 
+function processBirth(pid) {
+  return execFileSync('ps', ['-p', String(pid), '-o', 'lstart='], {
+    encoding: 'utf8',
+    env: { ...process.env, LC_ALL: 'C' },
+  }).trim();
+}
+
+async function ownedProcessIds() {
+  const launcher = Number(await readFile(path.join(root, 'launcher.pid'), 'utf8'));
+  const expectedBirth = (await readFile(path.join(root, 'launcher.birth'), 'utf8')).trim();
+  assert(
+    expectedBirth && processBirth(launcher) === expectedBirth,
+    'Launcher PID was reused; refusing access'
+  );
+  const lines = execFileSync('ps', ['-eo', 'pid=,ppid=,args='], { encoding: 'utf8' })
+    .trim()
+    .split('\n');
+  const processes = lines
+    .map((line) => {
+      const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
+      return match ? { pid: Number(match[1]), parent: Number(match[2]), command: match[3] } : null;
+    })
+    .filter(Boolean);
+  assert(
+    processes.find((entry) => entry.pid === launcher)?.command.includes('pnpm dev:mcp'),
+    'Launcher identity changed; refusing cleanup'
+  );
+  const owned = [launcher];
+  for (let index = 0; index < owned.length; index++)
+    for (const entry of processes) if (entry.parent === owned[index]) owned.push(entry.pid);
+  return owned;
+}
+
+async function assertOwnedDebugEndpoint() {
+  const owned = await ownedProcessIds();
+  const listeners = execFileSync('lsof', ['-nP', '-t', '-iTCP:9222', '-sTCP:LISTEN'], {
+    encoding: 'utf8',
+  })
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+  assert(
+    listeners.length && listeners.every((pid) => owned.includes(pid)),
+    'CDP listener is not owned by this sandbox; refusing access'
+  );
+}
+
 if (mode === 'seed') {
   assert(
     process.platform !== 'win32',
@@ -59,23 +106,7 @@ else console.log('{}');
   console.log(dir);
 } else if (mode === 'stop') {
   await manifest();
-  const launcher = Number(await readFile(path.join(root, 'launcher.pid'), 'utf8'));
-  const lines = execFileSync('ps', ['-eo', 'pid=,ppid=,args='], { encoding: 'utf8' })
-    .trim()
-    .split('\n');
-  const processes = lines
-    .map((line) => {
-      const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
-      return match ? { pid: Number(match[1]), parent: Number(match[2]), command: match[3] } : null;
-    })
-    .filter(Boolean);
-  assert(
-    processes.find((entry) => entry.pid === launcher)?.command.includes('pnpm dev:mcp'),
-    'Launcher identity changed; refusing cleanup'
-  );
-  const owned = [launcher];
-  for (let index = 0; index < owned.length; index++)
-    for (const entry of processes) if (entry.parent === owned[index]) owned.push(entry.pid);
+  const owned = await ownedProcessIds();
   for (const pid of owned.reverse()) {
     try {
       process.kill(pid, 'SIGTERM');
@@ -114,12 +145,14 @@ else console.log('{}');
     },
   });
   await writeFile(path.join(root, 'launcher.pid'), String(child.pid));
+  await writeFile(path.join(root, 'launcher.birth'), processBirth(child.pid));
   child.on('exit', (code) => {
     process.exitCode = code ?? 1;
   });
   process.on('SIGTERM', () => child.kill('SIGTERM'));
 } else if (mode === 'inspect' || mode === 'verify') {
   await manifest();
+  await assertOwnedDebugEndpoint();
   const targets = await (await fetch('http://127.0.0.1:9222/json/list')).json();
   const target = targets.find(
     (entry) => entry.type === 'page' && /^http:\/\/(localhost|127\.0\.0\.1):/.test(entry.url)
