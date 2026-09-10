@@ -70,3 +70,15 @@ export function buildPrimaryOwnedMemberSpecForRuntime(input: {
     ...(input.configuredMember.agentType ? { agentType: input.configuredMember.agentType } : {}),
   };
 }
+
+/** Persist caller intent; runtime preparation contributes only resolved workspaces. */
+export function buildConfiguredMembersForPersistence(
+  configuredMembers: TeamCreateRequest['members'],
+  runtimeMembers: TeamCreateRequest['members']
+): TeamCreateRequest['members'] {
+  const runtimeByName = new Map(runtimeMembers.map(member => [member.name.trim().toLowerCase(), member]));
+  return configuredMembers.map(member => ({
+    ...member,
+    cwd: runtimeByName.get(member.name.trim().toLowerCase())?.cwd ?? member.cwd,
+  }));
+}

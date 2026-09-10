@@ -601,6 +601,21 @@ describe('TeamDataService draft metadata', () => {
     expect([['alpha'], ['beta']]).toContainEqual(members.members.map((member) => member.name));
   });
 
+  it('keeps canonical leads out of the saved teammate roster', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'model-inheritance-roster-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    await service.createTeamConfig({ teamName: 'inheritance-team', members: [{ name: 'inherited' }] });
+    const metaPath = path.join(claudeRoot, 'teams', 'inheritance-team', 'members.meta.json');
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+    meta.members.push({ name: 'team-lead', model: 'old-lead' });
+    meta.members.push({ name: 'legacy-lead', role: 'Lead', model: 'old-lead' });
+    await fs.writeFile(metaPath, JSON.stringify(meta));
+    expect((await service.getSavedRequest('inheritance-team'))?.members.map(member => member.name))
+      .toEqual(['inherited']);
+  });
+
   it('round-trips create config metadata through getSavedRequest', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-saved-request-'));
     tempPaths.push(claudeRoot);

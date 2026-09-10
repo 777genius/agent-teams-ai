@@ -9,6 +9,13 @@ import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComposition';
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
 
+const confirmedCleanup = new WeakMap<object, string>();
+
+/** Only record after both runtime Stop and exact-owned storage cleanup succeed. */
+export function recordOpenCodePrimaryCleanup(run: object, runId: string): void {
+  confirmedCleanup.set(run, runId);
+}
+
 /**
  * The two exact-owner primary-lane stops the aggregate restart path needs.
  * Extracted verbatim from the facade so the facade can host the lead
@@ -48,6 +55,13 @@ export async function stopUnretainableOpenCodePrimaryLane(
     input.previousEffectiveMembers
   );
   const currentOwner = ports.getRuntimeOwner(teamName);
+  if (
+    currentOwner &&
+    (currentOwner.providerId !== 'opencode' || currentOwner.runId !== input.run.runId)
+  ) {
+    throw getCancelledAggregateLaunchError(teamName);
+  }
+  if (!currentOwner && confirmedCleanup.get(input.run) === input.run.runId) return;
   const exactStopOwner = currentOwner ?? {
     runId: input.run.runId,
     providerId: 'opencode' as const,
@@ -75,6 +89,7 @@ export async function stopUnretainableOpenCodePrimaryLane(
     if (ports.getRuntimeOwner(teamName) !== exactStopOwner) {
       throw getCancelledAggregateLaunchError(teamName);
     }
+    ports.deleteRuntimeOwner(teamName);
   } catch (error) {
     if (ports.getRuntimeOwner(teamName) === exactStopOwner) {
       ports.publishFailed('Unretainable OpenCode primary lane cleanup failed', error);
@@ -97,6 +112,7 @@ export async function stopFailedOpenCodeAggregatePrimaryRelaunchCandidate(
 ): Promise<void> {
   const teamName = input.run.teamName;
   const currentOwner = ports.getRuntimeOwner(teamName);
+  if (!currentOwner && confirmedCleanup.get(input.run) === input.run.runId) return;
   if (
     currentOwner &&
     (currentOwner === input.previousOwner ||
