@@ -55,6 +55,13 @@ async function assertOwnedDebugEndpoint() {
     try {
       assertListenerOwnership(ids, owned);
     } catch (error) {
+      const currentSnapshot = processes();
+      const missing = ids.filter(pid => !owned.some(p => p.pid === pid));
+      if (ids.some(pid => owned.some(p => p.pid === pid)) && missing.length &&
+          missing.every(pid => !currentSnapshot.some(p => p.pid === pid)) && attempt < 2) {
+        await delay(50);
+        continue; // Restart all ownership reads; never authorize an unverified listener.
+      }
       // Diagnostic only: a later snapshot never authorizes this failed access.
       try {
         await writeFile(
