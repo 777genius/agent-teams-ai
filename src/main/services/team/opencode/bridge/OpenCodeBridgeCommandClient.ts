@@ -186,8 +186,6 @@ export class OpenCodeBridgeCommandClient {
   private readonly clock: () => Date;
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
-  private lastKnownMcpUrl: string | null;
-  private lastKnownMcpUrlHash: string | null;
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -205,8 +203,6 @@ export class OpenCodeBridgeCommandClient {
     this.clock = options.clock ?? (() => new Date());
     this.env = applyOpenCodeAutoUpdatePolicy(options.env ?? process.env);
     this.envProvider = options.envProvider ?? null;
-    this.lastKnownMcpUrl = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim() || null;
-    this.lastKnownMcpUrlHash = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH?.trim() || null;
     this.keepInputFile = options.keepInputFile ?? false;
     this.ensureWindowsNodeModulesJunction =
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
@@ -471,23 +467,9 @@ export class OpenCodeBridgeCommandClient {
     if (!this.envProvider) {
       return this.env;
     }
-    const resolved = applyOpenCodeAutoUpdatePolicy(await this.envProvider());
-    const resolvedMcpUrl = resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim();
-    if (resolvedMcpUrl) {
-      this.lastKnownMcpUrl = resolvedMcpUrl;
-      this.lastKnownMcpUrlHash =
-        resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH?.trim() || null;
-    } else if (this.lastKnownMcpUrl) {
-      // A transient HTTP MCP refresh failure must not silently switch an active
-      // OpenCode launch from its sealed remote transport to the local fallback.
-      // The next command can recover the endpoint, while changing transport
-      // here would invalidate every already-running selected session.
-      resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = this.lastKnownMcpUrl;
-      if (this.lastKnownMcpUrlHash) {
-        resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = this.lastKnownMcpUrlHash;
-      }
-    }
-    return resolved;
+    // Host publication is authoritative, including removal. A cached URL can name
+    // a retired server and must never override the current transport selection.
+    return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
   }
 
   private async writeInputFile<TBody>(
