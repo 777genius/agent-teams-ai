@@ -94,7 +94,7 @@ test('environment drops inherited provider/config and runtime overrides', () => 
   assert.equal(env.CLAUDE_DEV_RUNTIME_ROOT, undefined);
   assert.equal(env.OPENCODE_BIN_PATH, data.opencode);
   assert.equal(env.HOME, data.home);
-  assert(env.APPDATA.startsWith(data.home));
+  assert(env.APPDATA.startsWith(path.normalize(data.home)));
 });
 test('real fixture permits diagnostic queries only, and Unix shim handles spaces', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-test space-'));
