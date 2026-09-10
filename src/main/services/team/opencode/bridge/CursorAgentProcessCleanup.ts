@@ -10,7 +10,13 @@ import { createProcessStartTimeCache, readProcessStartTimeMs } from '@main/utils
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  proveCursorAgentRootFromAttributionRecords,
+  UNPROVEN_BY_ATTRIBUTION,
+} from './CursorAgentAttributionProof';
 import { readNativeProcessCommandWithEnv } from './OpenCodeManagedHostProcessCleanup';
+
+import type { CursorAgentAttributionRecord } from './CursorAgentAttributionRecords';
 
 const logger = createLogger('CursorAgentProcessCleanup');
 
@@ -33,6 +39,15 @@ const logger = createLogger('CursorAgentProcessCleanup');
  * a `--workspace` that matches - exactly - a workspace the caller owns. Lineage
  * carries the proof down: what stands below a root this app can name belongs to
  * that root, so the whole tree is reaped with it.
+ *
+ * A command line is not the only proof available any more. A runtime that
+ * records the agent processes it spawns writes that record from INSIDE the
+ * spawned process, where the pid, the start time and the `--workspace` argument
+ * are exact rather than joined into one string, and a root such a record answers
+ * for is attributed without reading any environment - which is the only
+ * ownership proof Windows and macOS can produce at all. A record is identity and
+ * never liveness: it outlives a `SIGKILL`, so every fence below still re-reads
+ * the live process itself before anything is signalled.
  *
  * Reaping it is a walk, not one signal. `killExternalProcessTree` reads the
  * process table, orders the tree deepest-first and signals each pid in turn,
@@ -102,6 +117,37 @@ export interface CursorAgentProcessCleanupOptions {
    * may still be shutting down alongside the lead it owns.
    */
   orphanedOnly?: boolean;
+  /**
+   * What the runtime recorded, from inside the processes it spawned, about the
+   * agents it started for this app.
+   *
+   * This is the proof a command line cannot give: the record is written by the
+   * agent process itself, so its pid, its start time and its `--workspace`
+   * argument are exact, and none of the three survives the join a process table
+   * performs. A root a record answers for is therefore proven on every platform,
+   * Windows and macOS included, where no environment can be read at all.
+   *
+   * The records are already narrowed to this install by the reader that loads
+   * them, and this sweep does not re-derive that scope: a caller handing in
+   * records from anywhere else is asserting the same filter.
+   */
+  attributedProcesses?: readonly CursorAgentAttributionRecord[];
+  /**
+   * Keep a tree no record proves, instead of falling back to the command line.
+   *
+   * A caller sets this the moment the runtime in front of it records anything
+   * at all: from then on a joined command line is no longer the best evidence
+   * available, and a tree no record names is a tree this app cannot show it
+   * started.
+   */
+  requireAttributionProof?: boolean;
+  /**
+   * Re-admit the command line for the trees no record proves. It is the
+   * operator switch below travelling down, and it decides nothing unless
+   * `requireAttributionProof` is set: an operator who turned the sweep on
+   * before records existed keeps exactly the behaviour they turned on.
+   */
+  allowUnattributedReap?: boolean;
   readProcessDetails?: (pid: number) => Promise<string | null>;
   readProcessStartTimeMs?: (pid: number) => Promise<number | null>;
   listProcessRows?: () => Promise<RuntimeProcessTableRow[]>;
@@ -144,6 +190,9 @@ export interface CursorAgentTreeSweepPort {
     requiredEnvMarkers?: readonly string[];
     requireOwnershipProof?: boolean;
     orphanedOnly?: boolean;
+    attributedProcesses?: readonly CursorAgentAttributionRecord[];
+    requireAttributionProof?: boolean;
+    allowUnattributedReap?: boolean;
   }): Promise<CursorAgentProcessCleanupResult>;
 }
 
@@ -178,10 +227,9 @@ export const CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER = 'CLAUDE_TEAM_APP_INSTANCE_I
  * stranger's, and nothing available separates one team of this app from another.
  *
  * Reaping on "no known conflict" is therefore the wrong shape for an operation
- * that kills whole process trees. Until a process carries positive attribution
- * to the team that started it - which needs a change in the orchestrator that
- * spawns it, not another parsing rule here - the sweep is off unless an operator
- * turns it on for a situation they understand.
+ * that kills whole process trees. The record above is the attribution that
+ * settles it, and until both sweeps decide on one this switch still gates every
+ * reap.
  */
 export const CURSOR_AGENT_TREE_SWEEP_ENV = 'CLAUDE_TEAM_CURSOR_AGENT_TREE_SWEEP_ENABLED';
 
@@ -431,12 +479,24 @@ export async function cleanupCursorAgentProcessTrees(
     (platformExposesProcessEnvironment(platform) || options.readProcessDetails !== undefined);
   const requiredEnvMarkers = environmentIsReadable ? requestedEnvMarkers : [];
   const requireOwnershipProof = options.requireOwnershipProof === true;
-  if (!environmentIsReadable && requireOwnershipProof && requestedEnvMarkers.length > 0) {
-    // The caller asked to reap only what it can prove it owns, and on this
-    // platform the proof it named is unobtainable. Dropping the marker list and
-    // continuing would silently downgrade that to "reap on the command line
-    // alone" - the exact fence the caller was trying not to rely on. A sweep
-    // that cannot meet its own precondition does nothing and says so.
+  const attributedProcesses = options.attributedProcesses ?? [];
+  const requireAttributionProof = options.requireAttributionProof === true;
+  const allowUnattributedReap = options.allowUnattributedReap === true;
+  if (
+    !environmentIsReadable &&
+    requireOwnershipProof &&
+    requestedEnvMarkers.length > 0 &&
+    attributedProcesses.length === 0
+  ) {
+    // The caller asked to reap only what it can prove it owns, and neither proof
+    // it could name is obtainable: this platform exposes no environment, and the
+    // runtime recorded nothing. Dropping the marker list and continuing would
+    // silently downgrade that to "reap on the command line alone" - the exact
+    // fence the caller was trying not to rely on. A sweep that cannot meet its
+    // own precondition does nothing and says so.
+    //
+    // With records in hand there is a proof to try, so the refusal moves into
+    // the loop and applies to the rows no record answers for.
     result.diagnostics.push(
       'cursor-agent sweep skipped: ownership proof was required, and a process environment ' +
         `cannot be read on ${platform === 'win32' ? 'Windows' : 'macOS'}`
@@ -477,6 +537,9 @@ export async function cleanupCursorAgentProcessTrees(
   // parent that exits between the two reads would flip a live tree into an
   // orphan - which is the one direction this fence must never be wrong in.
   const livePids = new Set(rows.map((row) => row.pid));
+  // The same snapshot again, keyed for the lineage a record has to be checked
+  // against. Asking the system a second time would ask about a later moment.
+  const rowsByPid = new Map(rows.map((row) => [row.pid, row]));
   for (const row of roots) {
     // Only the outermost process of each tree; children are reaped with it, and
     // killing an inner one first would orphan the rest. This is also where the
@@ -488,8 +551,35 @@ export async function cleanupCursorAgentProcessTrees(
     // guessing where it ends is how a stop of one directory reached the lead of
     // another.
     const command = row.command ?? '';
-    if (![...ownedWorkspaces].some((owned) => commandNamesOwnedWorkspace(command, owned, platform)))
+    const commandNamesOwnedWorkspaceCwd = [...ownedWorkspaces].some((owned) =>
+      commandNamesOwnedWorkspace(command, owned, platform)
+    );
+    // Asked before the command line decides, because the record answers the
+    // question the command line cannot: a workspace whose spelling is ambiguous
+    // once argv is joined - `/work/app - backup` - is an exact string here, so a
+    // root this sweep could never match by parsing is reachable by evidence.
+    const attribution =
+      attributedProcesses.length === 0
+        ? UNPROVEN_BY_ATTRIBUTION
+        : await proveCursorAgentRootFromAttributionRecords({
+            row,
+            rowsByPid,
+            records: attributedProcesses,
+            // The exact comparison the sweep scopes every other fence with,
+            // handed over rather than imported back: the proof answers about a
+            // workspace, and which workspaces are owned is this caller's
+            // business.
+            ownsWorkspacePath: (value) =>
+              [...ownedWorkspaces].some((owned) => isSameWorkspacePath(value, owned, platform)),
+            readStartTimeMs,
+          });
+    if (options.canAdmitStartupWork?.() === false) break;
+    if (attribution.outcome === 'declined') {
+      result.keptRecent.push(row.pid);
+      result.diagnostics.push(`Kept cursor-agent tree pid=${row.pid}: ${attribution.reason}`);
       continue;
+    }
+    if (attribution.outcome !== 'proven' && !commandNamesOwnedWorkspaceCwd) continue;
     if (orphanedOnly && isParentAlive(row.ppid, livePids)) {
       result.keptRecent.push(row.pid);
       result.diagnostics.push(
@@ -498,7 +588,37 @@ export async function cleanupCursorAgentProcessTrees(
       );
       continue;
     }
-    if (requiredEnvMarkers.length > 0) {
+    if (attribution.outcome === 'proven') {
+      // Every remaining fence is about the LIVE process, and they all still run:
+      // a record is identity, and identity is not permission to skip the time
+      // fence the kill is sequenced against.
+      result.diagnostics.push(
+        `cursor-agent tree pid=${row.pid}: the runtime records pid=${attribution.record.pid} as ` +
+          'an agent it started in this workspace'
+      );
+    } else if (requireAttributionProof && !allowUnattributedReap) {
+      // The runtime records what it starts, and it did not record this. A
+      // command line that merely looks right is what the record replaced.
+      result.keptRecent.push(row.pid);
+      result.diagnostics.push(
+        `Kept cursor-agent tree pid=${row.pid}: no runtime record names it, and a command line ` +
+          'alone is not attribution'
+      );
+      continue;
+    } else if (!environmentIsReadable && requireOwnershipProof && requestedEnvMarkers.length > 0) {
+      // Reachable only once records exist: without them the sweep already
+      // refused before it read the process table. This row is the one no record
+      // answered for, on a platform whose environment cannot be read, so the
+      // caller's precondition is unmet for this row alone.
+      result.keptRecent.push(row.pid);
+      result.diagnostics.push(
+        `Kept cursor-agent tree pid=${row.pid}: no runtime record names it, ownership proof was ` +
+          `required, and a process environment cannot be read on ${
+            platform === 'win32' ? 'Windows' : 'macOS'
+          }`
+      );
+      continue;
+    } else if (requiredEnvMarkers.length > 0) {
       const details = await readProcessDetails(row.pid);
       if (options.canAdmitStartupWork?.() === false) break;
       const proven = details !== null && stringIncludesAnyMarker(details, requiredEnvMarkers);
