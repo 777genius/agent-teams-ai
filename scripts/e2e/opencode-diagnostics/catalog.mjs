@@ -48,7 +48,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     let text = '';
     let copied = '';
     let loadingCaptured = false;
-    for (let attempt = 0; attempt < 100; attempt++) {
+    for (let attempt = 0; attempt < 240; attempt++) {
       await pause(500);
       calls = (await readFile(path.join(root, 'calls.ndjson'), 'utf8'))
         .trim()
@@ -120,8 +120,8 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
       } else assert(copied.includes('provider_directory source=null'));
       if (scenario === 'catalog-timeout') {
         assert.match(copied, /timedOut: true/);
-        assert.match(copied, /timeoutMs: 30000/);
-        assert(Date.now() - directoryStart.at >= 29000);
+        assert.match(copied, /timeoutMs: 90000/);
+        assert(Date.now() - directoryStart.at >= 89000);
         assert(!calls.some((c) => c.event === 'response' && c.pid === directoryStart.pid));
         const snapshot = processes();
         await save('timeout-processes.json', JSON.stringify(snapshot, null, 2));
@@ -132,7 +132,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
       }
       assert.match(copied, /stage: runtime_command/);
       assert.match(copied, /Command: runtime providers (directory|models)/);
-      assert.match(copied, /timeoutMs: 30000/);
+      assert.match(copied, /timeoutMs: 90000/);
       assert(!copied.includes('DO_NOT_COPY_THIS_SECRET'));
       await save('clipboard.txt', copied);
       await save(

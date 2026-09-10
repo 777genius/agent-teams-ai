@@ -220,7 +220,7 @@ function catalogCommand(operation) {
   };
   if (operation === 'directory' && scenario === 'catalog-timeout') {
     process.stderr.write('fixture catalog waiting api_key=DO_NOT_COPY_THIS_SECRET\n');
-    setTimeout(emit, 60000);
+    setTimeout(emit, 120000);
   } else emit();
 }
 function refuse() {
