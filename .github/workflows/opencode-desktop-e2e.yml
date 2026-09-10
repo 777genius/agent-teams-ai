@@ -48,6 +48,9 @@ jobs:
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Diagnose isolated Windows enumeration
+        if: runner.os == 'Windows'
+        run: node scripts/e2e/opencode-diagnostics/windows-enumeration-probe.mjs
       - name: Verify Windows startup cleanup recovery
         if: runner.os == 'Windows'
         shell: pwsh
