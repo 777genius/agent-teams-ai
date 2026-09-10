@@ -1,10 +1,11 @@
 import {
-  buildOpenCodeAppProfileScope,
   buildOpenCodeAppProcessOwnershipMarkers,
+  buildOpenCodeAppProfileScope,
   buildOpenCodeAppScopedMcpOwnershipMarker,
   buildOpenCodeAppScopedMcpUrl,
   clearOpenCodeLocalMcpLaunchEnv,
   copyOpenCodeLocalMcpLaunchEnv,
+  createOpenCodeMcpAppContext,
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
@@ -15,6 +16,69 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCodeMcpBridgeEnv', () => {
+  it('reads the current handle after delayed work and fences old revocation', async () => {
+    let handle: { url: string; port: number; urlHash: string } | null = null;
+    const projection = createOpenCodeMcpAppContext(() => handle);
+    const env = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/root',
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'old',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'a'.repeat(64),
+    };
+    const revokeOld = projection.bind(env, true);
+    let finish!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      finish = resolve;
+    }).then(() => {
+      revokeOld();
+      return projection.read('/sandbox/root');
+    });
+    const revokeNew = projection.bind({ ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'new' }, true);
+    handle = { url: 'http://127.0.0.1:41002/mcp', port: 41002, urlHash: 'new-hash' };
+    finish();
+    expect((await delayed)?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
+      '41002/mcp#agent-teams-app-instance=new'
+    );
+    revokeNew();
+    expect(projection.read('/sandbox/root')).toBeNull();
+    projection.bind(env, false);
+    expect(projection.read('/sandbox/root')?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+  });
+
+  it.each([
+    { AGENT_TEAMS_MCP_CLAUDE_DIR: '/foreign/root' },
+    { CLAUDE_TEAM_APP_INSTANCE_ID: '' },
+    { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'malformed' },
+  ])('rejects invalid Host context %j', (override) => {
+    const projection = createOpenCodeMcpAppContext(() => null);
+    projection.bind(
+      {
+        AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/root',
+        CLAUDE_TEAM_APP_INSTANCE_ID: 'host',
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'a'.repeat(64),
+        ...override,
+      },
+      true
+    );
+    expect(() => projection.read('/sandbox/root')).toThrow('Invalid current Host');
+  });
+
+  it('rejects foreign or malformed live transport without rewriting it', () => {
+    const projection = createOpenCodeMcpAppContext(() => ({
+      url: 'https://foreign.invalid/mcp#foreign',
+      port: 41001,
+      urlHash: 'hash',
+    }));
+    projection.bind(
+      {
+        AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/root',
+        CLAUDE_TEAM_APP_INSTANCE_ID: 'host',
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'a'.repeat(64),
+      },
+      true
+    );
+    expect(() => projection.read('/sandbox/root')).toThrow('Invalid current Host MCP transport');
+  });
+
   it('preserves exact profile ownership across app restarts and separates full authority roots', () => {
     const profile = buildOpenCodeAppProfileScope('/tmp/desktop/profile', '/tmp/desktop/.claude');
     expect(buildOpenCodeAppProfileScope('/tmp/desktop/profile', '/tmp/desktop/.claude')).toBe(

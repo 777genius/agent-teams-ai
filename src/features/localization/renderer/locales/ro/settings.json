@@ -59,9 +59,12 @@
       "testAndUseProject": "Testează și folosește pentru acest proiect"
     },
     "diagnostics": {
+      "previousPage": "Pagina anterioară",
+      "nextPage": "Pagina următoare",
       "copied": "Diagnostice copiate",
       "copiedShort": "Copiat",
       "copy": "Copiază diagnosticele",
+      "copyAll": "Copiază toate diagnosticele",
       "hints": "Indicii",
       "likelyCause": "Cauză probabilă:",
       "windowsSymlinkAdminHint": "Windows: rulează Agent Teams AI ca Administrator"

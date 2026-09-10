@@ -59,9 +59,12 @@
       "testAndUseProject": "Przetestuj i użyj dla tego projektu"
     },
     "diagnostics": {
+      "previousPage": "Poprzednia strona",
+      "nextPage": "Następna strona",
       "copied": "Skopiowano diagnostykę",
       "copiedShort": "Skopiowano",
       "copy": "Kopiuj diagnostykę",
+      "copyAll": "Kopiuj całą diagnostykę",
       "hints": "Wskazówki",
       "likelyCause": "Prawdopodobna przyczyna:",
       "windowsSymlinkAdminHint": "Windows: uruchom Agent Teams AI jako administrator"

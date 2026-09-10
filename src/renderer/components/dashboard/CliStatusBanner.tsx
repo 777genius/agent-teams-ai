@@ -21,6 +21,8 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
+  OpenCodeCatalogErrorAlert,
+  type OpenCodeCatalogFailure,
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderErrorAlert,
   RuntimeProviderOnboardingDialog,
@@ -431,6 +433,7 @@ const CliCheckingSpinner = ({
 // =============================================================================
 
 interface InstalledBannerProps {
+  catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
   cliStatusLoading: boolean;
@@ -857,6 +860,7 @@ const OpenCodeAtlasCloudBanner = ({
 };
 
 const InstalledBanner = ({
+  catalogFailures = [],
   cliStatus,
   sourceProviderMap,
   cliStatusLoading,
@@ -1273,9 +1277,13 @@ const InstalledBanner = ({
                         ) : null}
                         {provider.providerId === 'opencode' &&
                         provider.modelCatalog?.diagnostics.message ? (
-                          <ProviderCatalogDiagnostics
-                            message={provider.modelCatalog.diagnostics.message}
-                          />
+                          catalogFailures.length ? (
+                            <OpenCodeCatalogErrorAlert failures={catalogFailures} />
+                          ) : (
+                            <ProviderCatalogDiagnostics
+                              message={provider.modelCatalog.diagnostics.message}
+                            />
+                          )
                         ) : null}
                         {!hasProviderModels &&
                           !modelCatalogLoading &&
@@ -1649,8 +1657,6 @@ export const CliStatusBanner = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       openCodeRuntimeStatus?.installed !== false &&
       canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
-    // Pause new reads during status checks without restarting an in-flight
-    // catalog every time passive provider status temporarily becomes pending.
     statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
@@ -2257,6 +2263,7 @@ export const CliStatusBanner = ({
     if (multimodelEnabled) {
       return (
         <InstalledBanner
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2516,6 +2523,7 @@ export const CliStatusBanner = ({
       return (
         <>
           <InstalledBanner
+            catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2598,6 +2606,7 @@ export const CliStatusBanner = ({
     return (
       <>
         <InstalledBanner
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2800,6 +2809,7 @@ export const CliStatusBanner = ({
   return (
     <>
       <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}
         cliStatusLoading={cliStatusLoading}

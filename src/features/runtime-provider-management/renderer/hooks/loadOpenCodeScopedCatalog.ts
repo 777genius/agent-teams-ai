@@ -5,6 +5,8 @@ import {
   qualifyModelId,
 } from '../../core/domain/openCodeModelIdentity';
 
+import { catalogFailure, CatalogFailureError, mainCatalogFailure } from './catalogFailure';
+
 import type {
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderModelDto,
@@ -73,6 +75,10 @@ export async function loadOpenCodeScopedCatalog(
   isCurrentRequest: () => boolean,
   refresh = true
 ) {
+  const validationError = (message: string) =>
+    new CatalogFailureError(
+      catalogFailure('provider_models', sourceProviderId, 'client_validation', message)
+    );
   const modelById = new Map<string, RuntimeProviderModelDto>();
   let cursor: string | null = null;
   const defaultModelIds = new Set<string>();
@@ -85,7 +91,7 @@ export async function loadOpenCodeScopedCatalog(
 
   for (let page = 0; page < MAX_MODEL_PAGES; page += 1) {
     if (!isCurrentRequest()) {
-      throw new Error('Catalog request cancelled.');
+      throw validationError('Catalog request cancelled.');
     }
     const response = await api.runtimeProviderManagement.loadModels({
       runtimeId: 'opencode',
@@ -102,17 +108,22 @@ export async function loadOpenCodeScopedCatalog(
       requestGroupId,
     });
     if (!isCurrentRequest()) {
-      throw new Error('Catalog request cancelled.');
+      throw validationError('Catalog request cancelled.');
     }
     const failure = responseFailure(response, sourceProviderId);
     if (failure) {
-      throw new Error(failure);
+      if (response.schemaVersion === 1 && response.runtimeId === 'opencode' && response.error) {
+        throw mainCatalogFailure('provider_models', sourceProviderId, response.error);
+      }
+      throw validationError(failure);
     }
     const modelPage = response.models!;
     if (modelPage.cursor !== undefined) {
       const responseCursor = modelPage.cursor?.trim() || null;
       if (responseCursor !== cursor) {
-        throw new Error('The runtime returned a mismatched provider-model pagination cursor.');
+        throw validationError(
+          'The runtime returned a mismatched provider-model pagination cursor.'
+        );
       }
     }
     if (
@@ -121,14 +132,14 @@ export async function loadOpenCodeScopedCatalog(
         modelPage.returnedCount < 0 ||
         modelPage.returnedCount !== modelPage.models.length)
     ) {
-      throw new Error('The runtime returned an invalid provider-model page count.');
+      throw validationError('The runtime returned an invalid provider-model page count.');
     }
     if (modelPage.totalCount !== undefined) {
       if (!Number.isInteger(modelPage.totalCount) || modelPage.totalCount < 0) {
-        throw new Error('The runtime returned an invalid provider-model total count.');
+        throw validationError('The runtime returned an invalid provider-model total count.');
       }
       if (expectedTotalCount !== null && expectedTotalCount !== modelPage.totalCount) {
-        throw new Error('The runtime changed the provider-model total during pagination.');
+        throw validationError('The runtime changed the provider-model total during pagination.');
       }
       expectedTotalCount = modelPage.totalCount;
     }
@@ -136,7 +147,7 @@ export async function loadOpenCodeScopedCatalog(
       const modelId = qualifyModelId(model.providerId, model.modelId);
       if (modelId) {
         if (modelById.has(modelId)) {
-          throw new Error('The runtime returned a duplicate provider model across pages.');
+          throw validationError('The runtime returned a duplicate provider model across pages.');
         }
         modelById.set(modelId, model);
       }
@@ -157,27 +168,27 @@ export async function loadOpenCodeScopedCatalog(
     }
     sawMultiplePages = true;
     if (seenCursors.has(nextCursor) || page === MAX_MODEL_PAGES - 1) {
-      throw new Error('The runtime returned an invalid provider-model pagination cursor.');
+      throw validationError('The runtime returned an invalid provider-model pagination cursor.');
     }
     if (!isCurrentRequest()) {
-      throw new Error('Catalog request cancelled.');
+      throw validationError('Catalog request cancelled.');
     }
     seenCursors.add(nextCursor);
     cursor = nextCursor;
   }
 
   if (!isCurrentRequest()) {
-    throw new Error('Catalog request cancelled.');
+    throw validationError('Catalog request cancelled.');
   }
   if (defaultModelIds.size > 1) {
-    throw new Error('The runtime returned conflicting provider-model catalog defaults.');
+    throw validationError('The runtime returned conflicting provider-model catalog defaults.');
   }
   if (expectedTotalCount !== null && expectedTotalCount !== modelById.size) {
-    throw new Error('The runtime returned an incomplete provider-model catalog.');
+    throw validationError('The runtime returned an incomplete provider-model catalog.');
   }
   const defaultModelId = defaultModelIds.values().next().value ?? null;
   if (defaultModelId && !modelById.has(defaultModelId)) {
-    throw new Error('The runtime returned a default outside the provider-model catalog.');
+    throw validationError('The runtime returned a default outside the provider-model catalog.');
   }
   const completedAt = new Date().toISOString();
   // Separate page requests have no shared generation token in the compatibility
