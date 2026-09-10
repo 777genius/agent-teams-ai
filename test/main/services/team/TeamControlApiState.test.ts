@@ -101,6 +101,8 @@ describe('Host control endpoint publication', () => {
     const stopping = clearTeamControlApiState();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
     await stopping;
+    // Best-effort cleanup cannot promise disk removal when the filesystem rejects it.
+    expect(JSON.parse(await readFile(statePath(), 'utf8')).baseUrl).toBe('http://127.0.0.1:4572');
     await clearTeamControlApiState();
     await expectCleared();
     await writeTeamControlApiState('http://127.0.0.1:4573');
@@ -132,5 +134,31 @@ describe('Host control endpoint publication', () => {
     gate.resolve();
     await Promise.all([stopping, restarting]);
     await expectPublished('http://127.0.0.1:4576');
+  });
+
+  it('captures each root before queued writes and clears run across a root change', async () => {
+    const originalRoot = context.root;
+    const oldPath = statePath();
+    const gate = deferred();
+    writeGate.mockReturnValueOnce(gate.promise);
+    const pending = writeTeamControlApiState('http://127.0.0.1:4577');
+    await vi.waitFor(() => expect(writeGate).toHaveBeenCalledOnce());
+    const clearingOldRoot = clearTeamControlApiState();
+    context.root = path.join(originalRoot, 'alternate-root');
+    const publishingNewRoot = writeTeamControlApiState('http://127.0.0.1:4578');
+    try {
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+    } finally {
+      gate.resolve();
+      await Promise.all([pending, clearingOldRoot, publishingNewRoot]);
+    }
+    try {
+      await expectPublished('http://127.0.0.1:4578');
+      await expect(readFile(oldPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      await clearTeamControlApiState();
+      await expectCleared();
+    } finally {
+      context.root = originalRoot;
+    }
   });
 });

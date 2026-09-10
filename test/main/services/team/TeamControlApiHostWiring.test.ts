@@ -4,15 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
-import ts from 'typescript';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
   writeTeamControlApiState,
 } from '@main/services/team/TeamControlApiState';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import ts from 'typescript';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Exercise the existing private Host wiring with offline server doubles. Importing
 // main/index would boot Electron and all app services, outside this test's scope.
@@ -30,7 +29,43 @@ function functionSource(name: string): string {
   return declaration.getText(source);
 }
 
-function createHost() {
+type ResolverKind = 'provisioning' | 'memberWorkSync';
+
+function resolverSource(kind: ResolverKind): string {
+  const matches: ts.Expression[] = [];
+  function visit(node: ts.Node): void {
+    if (ts.isCallExpression(node)) {
+      if (
+        kind === 'provisioning' &&
+        node.expression.getText(source) === 'teamProvisioningService.setControlApiBaseUrlResolver'
+      ) {
+        matches.push(node.arguments[0]);
+      }
+      if (
+        kind === 'memberWorkSync' &&
+        node.expression.getText(source) === 'createMemberWorkSyncFeature'
+      ) {
+        const options = node.arguments[0];
+        if (ts.isObjectLiteralExpression(options)) {
+          for (const property of options.properties) {
+            if (
+              ts.isPropertyAssignment(property) &&
+              property.name.getText(source) === 'resolveControlUrl'
+            ) {
+              matches.push(property.initializer);
+            }
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  if (matches.length !== 1) throw new Error(`Expected exactly one ${kind} Host resolver`);
+  return matches[0].getText(source);
+}
+
+function createHost(publish = writeTeamControlApiState) {
   let running = false;
   let shuttingDown = false;
   const server = {
@@ -46,19 +81,24 @@ function createHost() {
     }),
   };
   const code = ts.transpileModule(
-    ['getTeamControlApiBaseUrl', 'syncTeamControlApiState', 'startHttpServer']
-      .map(functionSource)
-      .join('\n'),
+    [
+      ...['getTeamControlApiBaseUrl', 'syncTeamControlApiState', 'startHttpServer'].map(
+        functionSource
+      ),
+      `const provisioning = ${resolverSource('provisioning')};`,
+      `const memberWorkSync = ${resolverSource('memberWorkSync')};`,
+    ].join('\n'),
     { compilerOptions: { target: ts.ScriptTarget.ES2022 } }
   ).outputText;
   // Only named functions from this repository are executed, with offline dependencies.
   // eslint-disable-next-line sonarjs/code-eval -- trusted local source, no user input
-  const host = runInNewContext(`${code}\n({ startHttpServer })`, {
+  const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
     isShutdownStarted: () => shuttingDown,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
-    writeTeamControlApiState,
+    writeTeamControlApiState: publish,
+    handleModeSwitch: () => Promise.resolve(),
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
     teamHttpHandlerApis: {},
@@ -72,10 +112,15 @@ function createHost() {
     updaterService: {},
     sshConnectionManager: {},
     logger: { info: vi.fn(), error: vi.fn() },
-  }) as { startHttpServer: (handler: () => Promise<void>) => Promise<void> };
+  }) as {
+    startHttpServer: (handler: () => Promise<void>) => Promise<void>;
+    provisioning: () => Promise<string | null>;
+    memberWorkSync: () => Promise<string | null>;
+  };
   return {
     server,
     start: () => host.startHttpServer(() => Promise.resolve()),
+    resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
       shuttingDown = true;
     },
@@ -127,6 +172,61 @@ describe('existing app Host endpoint wiring', () => {
       code: 'ENOENT',
     });
   });
+
+  it.each(['provisioning', 'memberWorkSync'] as const)(
+    '%s retries failed publication even when the server is already listening',
+    async (kind) => {
+      const publish = vi.fn(writeTeamControlApiState);
+      publish.mockRejectedValueOnce(new Error('disk unavailable'));
+      const host = createHost(publish);
+      await expect(host.start()).rejects.toThrow('disk unavailable');
+      expect(host.server.isRunning()).toBe(true);
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+
+      publish.mockRejectedValueOnce(new Error('disk still unavailable'));
+      await expect(host.resolve(kind)).rejects.toThrow('disk still unavailable');
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+      await expect(host.resolve(kind)).resolves.toBe('http://127.0.0.1:4591');
+      expect(host.server.start).toHaveBeenCalledOnce();
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
+      expect(
+        JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
+      ).toBe('http://127.0.0.1:4591');
+    }
+  );
+
+  it.each(['provisioning', 'memberWorkSync'] as const)(
+    '%s awaits publication when listening precedes disk completion',
+    async (kind) => {
+      await clearTeamControlApiState();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const publish = vi.fn(async (baseUrl: string) => {
+        await gate;
+        await writeTeamControlApiState(baseUrl);
+      });
+      const host = createHost(publish);
+      const starting = host.start();
+      await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
+      let resolved = false;
+      const resolving = host.resolve(kind).then((url) => {
+        resolved = true;
+        return url;
+      });
+      try {
+        // Drain promise continuations while the publication is explicitly blocked.
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(resolved).toBe(false);
+        expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+      } finally {
+        release();
+        await Promise.all([starting, resolving]);
+      }
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
+    }
+  );
 
   it('clears both publications when shutdown interrupts server startup', async () => {
     await writeTeamControlApiState('http://127.0.0.1:4590');
