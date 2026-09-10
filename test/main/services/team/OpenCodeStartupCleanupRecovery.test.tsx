@@ -85,13 +85,13 @@ it('production recovery UI -> preload -> validated IPC runs one explicit pass an
     .fn()
     .mockResolvedValueOnce(result('partial'))
     .mockResolvedValue(result('complete'));
-  const scans = vi.fn(async () => empty);
+  const scans = vi.fn(() => Promise.resolve(empty));
   const owner = new OpenCodeWindowsStartupCleanup({
     appStartedAtMs: 100,
     profileScope: 'test-only',
-    logWarning: () => {},
+    logWarning: vi.fn(),
     sweep: scans,
-    waitMs: async () => {},
+    waitMs: () => Promise.resolve(),
   });
   const launch = vi.fn();
   await expect(whenOpenCodeStartupRuntimeSweepSettled().then(launch)).rejects.toThrow(
@@ -133,9 +133,9 @@ it('pending recovery observes original late terminal partial response without re
   const owner = new OpenCodeWindowsStartupCleanup({
     appStartedAtMs: 100,
     profileScope: 'test-only',
-    logWarning: () => {},
+    logWarning: vi.fn(),
     sweep: async () => empty,
-    waitMs: async () => {},
+    waitMs: () => Promise.resolve(),
   });
   await owner.preflight();
   const operation = owner.finish({ cleanupOpenCodeStartupHosts: cleanup });
@@ -182,9 +182,9 @@ it('lost runtime evidence remains blocked through the real recovery API and UI',
   const owner = new OpenCodeWindowsStartupCleanup({
     appStartedAtMs: 100,
     profileScope: 'test-only',
-    logWarning: () => {},
+    logWarning: vi.fn(),
     sweep: async () => empty,
-    waitMs: async () => {},
+    waitMs: () => Promise.resolve(),
   });
   await owner.preflight();
   await owner.finish({ cleanupOpenCodeStartupHosts: cleanup });
@@ -223,11 +223,11 @@ it('production recovery consumes a late correlated terminal response without a n
       env: {},
     })
   );
-  const scans = vi.fn(async () => empty);
+  const scans = vi.fn(() => Promise.resolve(empty));
   const owner = new OpenCodeWindowsStartupCleanup({
     appStartedAtMs: Date.now(),
     profileScope: 'test-only',
-    logWarning: () => {},
+    logWarning: vi.fn(),
     sweep: scans,
   });
   await owner.preflight();
