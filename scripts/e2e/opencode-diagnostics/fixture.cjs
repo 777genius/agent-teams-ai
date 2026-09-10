@@ -32,6 +32,7 @@ const providerQuery = (verb) => {
 const exact = (...expected) => JSON.stringify(args) === JSON.stringify(expected);
 if (
   ![
+    'startup-cleanup',
     'version-exit',
     'version-timeout',
     'ready',
@@ -118,9 +119,15 @@ else if (role === 'orchestrator' && providerQuery('runtime')) {
   catalogCommand('directory');
 } else if (role === 'orchestrator' && args.slice(0, 3).join(' ') === 'runtime providers models') {
   catalogCommand('models');
+} else if (
+  scenario === 'startup-cleanup' &&
+  role === 'orchestrator' &&
+  args[0] === 'runtime' &&
+  args[1] === 'opencode-command'
+) {
+  cleanupCommand();
 } else {
-  process.stderr.write('Fixture refuses unsupported command\n');
-  process.exitCode = 64;
+  refuse();
 }
 
 function catalogCommand(operation) {
@@ -231,6 +238,172 @@ function catalogCommand(operation) {
   } else emit();
 }
 function refuse() {
-  process.stderr.write('Fixture refuses unsupported catalog command\n');
+  fs.appendFileSync(
+    path.join(root, 'calls.ndjson'),
+    JSON.stringify({
+      event: 'refused',
+      scenario,
+      pid: process.pid,
+      at: Date.now(),
+      binary: role,
+      args,
+    }) + '\n'
+  );
+  process.stderr.write('Fixture refuses unsupported command\n');
   process.exitCode = 64;
+}
+
+// The only synthetic mutating response: no host records, subprocesses or cwd execution.
+function cleanupCommand() {
+  const assert = require('node:assert/strict');
+  const journal = (event, extra = {}) =>
+    fs.appendFileSync(
+      path.join(root, 'calls.ndjson'),
+      JSON.stringify({ event, scenario, pid: process.pid, at: Date.now(), ...extra }) + '\n'
+    );
+  const keys = (value, expected) => assert.deepEqual(Object.keys(value).sort(), expected.sort());
+  let request;
+  try {
+    assert.equal(args.length, 7);
+    assert.deepEqual(
+      args.filter((_, i) => i !== 4 && i !== 6),
+      ['runtime', 'opencode-command', '--json', '--input', '--output']
+    );
+    const [input, output] = [args[4], args[6]];
+    const bridgeDir = path.join(root, 'tmp', 'claude-team-opencode-bridge');
+    const safe = (file, exists) => {
+      assert(path.isAbsolute(file));
+      assert(!/^[\\/]{2}/.test(file), 'UNC/device path');
+      assert(!file.slice(process.platform === 'win32' ? 2 : 0).includes(':'), 'ADS');
+      assert(!file.split(/[\\/]/).some((p) => p === '..' || p === '.' || /[. ]$/.test(p)));
+      assert.equal(path.dirname(file), bridgeDir);
+      // Walk from the trusted fixture root: reject junctions, including ancestors.
+      for (const part of ['tmp', 'tmp/claude-team-opencode-bridge']) {
+        const dir = path.join(root, part);
+        assert(!fs.lstatSync(dir).isSymbolicLink());
+        assert.equal(fs.realpathSync(dir), path.join(fs.realpathSync(root), part));
+      }
+      let info;
+      try {
+        info = fs.lstatSync(file);
+      } catch (error) {
+        if (exists || error.code !== 'ENOENT') throw error;
+      }
+      if (info) {
+        assert(info.isFile() && !info.isSymbolicLink());
+        assert.equal(
+          fs.realpathSync(file),
+          path.join(fs.realpathSync(bridgeDir), path.basename(file))
+        );
+      }
+    };
+    safe(input, true);
+    safe(output, false);
+    assert.equal(output, input + '.output.json');
+    assert(!fs.existsSync(output));
+    assert(fs.statSync(input).size < 16384);
+    request = JSON.parse(fs.readFileSync(input, 'utf8'));
+    keys(request, [
+      'schemaVersion',
+      'requestId',
+      'command',
+      'cwd',
+      'startedAt',
+      'timeoutMs',
+      'body',
+    ]);
+    assert.equal(request.schemaVersion, 1);
+    assert.equal(request.command, 'opencode.cleanupStartupHosts');
+    assert(
+      /^opencode-startup-cleanup-[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(
+        request.requestId
+      )
+    );
+    assert.equal(path.basename(input), `opencode-command-${request.requestId}.json`);
+    assert(
+      typeof request.cwd === 'string' && request.cwd.length > 0 && !request.cwd.includes('\0')
+    );
+    const started = Date.parse(request.startedAt);
+    assert(Number.isFinite(started) && new Date(started).toISOString() === request.startedAt);
+    assert(started <= Date.now() + 1000 && started >= Date.now() - 120000);
+    assert(
+      Number.isSafeInteger(request.timeoutMs) &&
+        request.timeoutMs > 0 &&
+        request.timeoutMs <= 120000
+    );
+    const b = request.body;
+    keys(b, [
+      'reason',
+      'mode',
+      'staleAgeMs',
+      'leaseStaleAgeMs',
+      'preflightLeaseStaleAgeMs',
+      'deadlineUnixMs',
+    ]);
+    assert.equal(b.reason, 'startup');
+    assert.equal(b.mode, 'stale');
+    assert(Number.isSafeInteger(b.staleAgeMs) && b.staleAgeMs >= 300000);
+    assert.equal(b.leaseStaleAgeMs, 86400000);
+    assert.equal(b.preflightLeaseStaleAgeMs, 360000);
+    assert(Number.isSafeInteger(b.deadlineUnixMs) && b.deadlineUnixMs > Date.now());
+    assert(Math.abs(b.deadlineUnixMs - started - request.timeoutMs) <= 1000);
+    const control = path.join(root, 'cleanup-control');
+    assert(!fs.lstatSync(control).isSymbolicLink());
+    assert.equal(fs.realpathSync(control), path.join(fs.realpathSync(root), 'cleanup-control'));
+    const marker = path.join(control, request.requestId + '.accepted');
+    fs.writeFileSync(marker, '', { flag: 'wx' });
+    journal('accepted', { requestId: request.requestId, request });
+    process.on('exit', (code) => journal('exit', { requestId: request.requestId, code }));
+    const release = path.join(control, request.requestId + '.release.json');
+    const timer = setInterval(() => {
+      try {
+        if (Date.now() >= b.deadlineUnixMs) throw new Error('Unreleased fixture deadline');
+        assert(!fs.lstatSync(control).isSymbolicLink());
+        assert.equal(fs.realpathSync(control), path.join(fs.realpathSync(root), 'cleanup-control'));
+        if (!fs.existsSync(release)) return;
+        assert(fs.lstatSync(release).isFile() && !fs.lstatSync(release).isSymbolicLink());
+        assert(fs.statSync(release).size < 1024);
+        const value = JSON.parse(fs.readFileSync(release, 'utf8'));
+        keys(value, ['requestId', 'coverage']);
+        assert.equal(value.requestId, request.requestId);
+        assert(['partial', 'complete'].includes(value.coverage));
+        safe(input, true);
+        safe(output, false);
+        assert(!fs.existsSync(output));
+        const response = {
+          ok: true,
+          schemaVersion: 1,
+          requestId: request.requestId,
+          command: request.command,
+          completedAt: new Date().toISOString(),
+          durationMs: 1,
+          runtime: {
+            providerId: 'opencode',
+            binaryPath: null,
+            binaryFingerprint: null,
+            version: null,
+            capabilitySnapshotId: null,
+          },
+          diagnostics: [],
+          data: {
+            cleaned: 0,
+            remaining: 0,
+            hosts: [],
+            diagnostics: value.coverage === 'partial' ? ['Fixture terminal partial coverage'] : [],
+            startupCleanup: { completion: 'drained', coverage: value.coverage, survivingPids: [] },
+          },
+        };
+        const staging = output + '.fixture-tmp';
+        fs.writeFileSync(staging, JSON.stringify(response), { flag: 'wx' });
+        fs.renameSync(staging, output);
+        journal('response-written', { requestId: request.requestId, response });
+        clearInterval(timer);
+      } catch {
+        clearInterval(timer);
+        refuse();
+      }
+    }, 50);
+  } catch {
+    refuse();
+  }
 }

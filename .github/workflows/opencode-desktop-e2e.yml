@@ -32,7 +32,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Verify harness safety
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
       - name: Configure disposable artifact directory
         shell: bash
         run: |
@@ -47,6 +47,12 @@ jobs:
         shell: pwsh
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Windows startup cleanup recovery
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs --startup-cleanup
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Preserve diagnostic evidence
         if: always()

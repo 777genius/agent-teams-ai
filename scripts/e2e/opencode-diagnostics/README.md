@@ -108,3 +108,66 @@ expose its normal OpenCode re-check control; unavailable controls fail explicitl
 The recipe retains `pnpm_config_verify_deps_before_run=false` to protect pinned
 linked dependencies. An ancestry failure is a blocker to that desktop attempt;
 inspect its snapshot instead of bypassing the guard.
+
+## Windows startup cleanup recovery (separate scenario)
+
+With dependencies already provisioned on a clean disposable Windows desktop runner,
+from the repository root (PowerShell):
+
+```powershell
+$sandbox = (node scripts/e2e/opencode-diagnostics-desktop.mjs seed startup-cleanup).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Cleanup seed failed' }
+$driver = Start-Process -FilePath (Get-Command node).Source -PassThru -NoNewWindow `
+  -ArgumentList @('scripts/e2e/opencode-diagnostics-desktop.mjs', 'start', "`"$sandbox`"") `
+  -RedirectStandardOutput "$sandbox/launcher.stdout.log" `
+  -RedirectStandardError "$sandbox/launcher.stderr.log"
+try {
+  $readyBy = (Get-Date).AddSeconds(60)
+  do {
+    node scripts/e2e/opencode-diagnostics-desktop.mjs inspect $sandbox
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($driver.HasExited -or (Get-Date) -ge $readyBy) { throw 'Owned renderer unavailable' }
+    Start-Sleep -Milliseconds 250
+  } while ($true)
+  node scripts/e2e/opencode-diagnostics-desktop.mjs verify $sandbox
+  if ($LASTEXITCODE -ne 0) { throw 'Cleanup verification failed' }
+} finally {
+  node scripts/e2e/opencode-diagnostics-desktop.mjs stop $sandbox
+  Write-Output "Cleanup artifacts: $sandbox"
+}
+```
+
+Do not run the general `run.mjs` catalog/version scenario sequence on this profile.
+Seed selects cleanup before launch; it never changes catalog behavior mid-request.
+The verifier uses the existing ownership-checked CDP driver and real Manage →
+OpenCode settings controls. Supplemental concurrent existing preload retries are
+recorded separately from the UI Retry click. Each synthetic cleanup subprocess
+waits for its own request-ID release file, atomically publishes a strictly correlated
+response, and journals accepted/response-written/normal exit. It never runs input
+`cwd`, spawns a host, or kills a process. The production local scans/tail still run
+on the disposable profile. The existing driver's final stop is limited to its owned
+harness process tree.
+
+`startup-cleanup-evidence.json` and `calls.ndjson` are the primary artifacts;
+preserve the whole sandbox on failure too. A refusal fails the verifier. The total
+verification deadline includes launcher/initialization time (a conservative bound
+before owner construction), capped against the first owner's actual 120-second
+bridge deadline. No CDP call waits for a deliberately held retry: promise results
+are polled externally. Both terminal UI transitions require the actual owner status
+and at least the production eight-second tail after response publication.
+
+Dependency-free checks:
+
+```sh
+node --test test/scripts/opencodeStartupCleanupFixture.test.mjs
+node --check scripts/e2e/opencode-diagnostics/startup-cleanup.mjs
+node --check scripts/e2e/opencode-diagnostics-desktop.mjs
+```
+
+Linux source/fixture tests do **not** qualify Windows Electron behavior. Parent CI
+must establish Windows initialization, shim transport, selectors, IPC, tail drainage
+and UI completion. This scenario submits **zero launches** and checks empty
+team/task/session storage throughout recovery; it proves cleanup itself did not
+initiate a launch. The stronger “rejected launch was never queued” invariant remains
+with existing provisioning/gate unit tests. Native host discovery, taskkill drainage,
+real host registry mutation and packaged-runtime qualification remain separate proof.

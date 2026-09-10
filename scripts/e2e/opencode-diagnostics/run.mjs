@@ -7,7 +7,9 @@ import { catalogScenarios } from './catalog.mjs';
 const harness = fileURLToPath(new URL('../opencode-diagnostics-desktop.mjs', import.meta.url));
 const command = (mode, root) =>
   spawnSync(process.execPath, [harness, mode, ...(root ? [root] : [])], { encoding: 'utf8' });
-const seed = command('seed');
+const startupCleanup = process.argv.slice(2).join(' ') === '--startup-cleanup';
+if (process.argv.length > 2 && !startupCleanup) throw new Error('Unsupported runner arguments');
+const seed = command('seed', startupCleanup ? 'startup-cleanup' : undefined);
 if (seed.status !== 0) throw new Error(seed.stderr);
 const root = seed.stdout.trim();
 console.log(`Sandbox artifacts: ${root}`);
@@ -33,7 +35,9 @@ try {
   }
   if (inspection?.status !== 0) throw new Error(inspection?.stderr || 'Renderer unavailable');
   await writeFile(path.join(root, 'inspect.txt'), inspection.stdout);
-  for (const scenario of ['version-exit', 'version-timeout', 'ready', ...catalogScenarios]) {
+  for (const scenario of startupCleanup
+    ? ['startup-cleanup']
+    : ['version-exit', 'version-timeout', 'ready', ...catalogScenarios]) {
     await writeFile(path.join(root, 'scenario'), scenario);
     const result = command('verify', root);
     await writeFile(path.join(root, `verify-${scenario}.txt`), result.stdout + result.stderr);
