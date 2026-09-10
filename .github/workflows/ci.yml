@@ -267,3 +267,12 @@ jobs:
 
       - name: Test delayed provider summaries through real subprocesses
         run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
+
+      - name: Test OpenCode catalog diagnostic boundaries
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
+          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
+          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts
