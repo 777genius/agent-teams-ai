@@ -42,6 +42,8 @@ function compileExpression(expression: string, ports: Record<string, unknown>): 
   const js = ts.transpileModule(`const boundary = ${expression};`, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
   }).outputText;
+  // Execute only checked-in source AST with test-owned ports, never user input.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, sonarjs/code-eval
   return Function(...Object.keys(ports), `${js}; return boundary;`)(...Object.values(ports));
 }
 const profile = 'a'.repeat(64);
@@ -82,13 +84,13 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
     bridgeEnv: env,
     useHttpMcpBridge: true,
     agentTeamsMcpHttpServer: server,
-    ensureOpenCodeRuntimeBinaryEnv: async () => {},
-    ensureOpenCodeLocalMcpLaunchEnv: async () => {},
+    ensureOpenCodeRuntimeBinaryEnv: vi.fn().mockResolvedValue(undefined),
+    ensureOpenCodeLocalMcpLaunchEnv: vi.fn().mockResolvedValue(undefined),
     buildOpenCodeAppScopedMcpUrl,
     openCodeManagedHostInstanceId: 'review-host',
     profileScope: profile,
     applyAgentTeamsMcpAppContext,
-    logger: { warn() {} },
+    logger: { warn: vi.fn() },
     ...overrides,
   });
 }
@@ -110,7 +112,7 @@ describe('shutdown MCP transport authority', () => {
       env,
       envProvider: resolveEnv,
       processRunner: {
-        async run(input) {
+        run(input) {
           const child = JSON.parse(input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!);
           // Reject mismatched current transport/authority, as a retaining non-Cursor
           // Stop probe does. Never manufacture a successful bridge response.
@@ -127,7 +129,7 @@ describe('shutdown MCP transport authority', () => {
             throw new Error('retaining Stop rejected: current MCP transport/authority mismatch');
           }
           acceptedStops += 1;
-          throw accepted;
+          return Promise.reject(accepted);
         },
       },
     });
@@ -145,19 +147,20 @@ describe('shutdown MCP transport authority', () => {
       ).rejects.toBe(accepted);
     };
     const finished = new Error('bounded shutdown completed MCP teardown');
-    const noOp = () => {};
-    const teardown = vi.spyOn(server, 'stop').mockImplementation(async () => {
+    const noOp = vi.fn();
+    const teardown = vi.spyOn(server, 'stop').mockImplementation(() => {
       // Revocation must already hold on entry, even when server.stop is slow.
       expect(server.appContext.read(getClaudeBasePath())).toBeNull();
       live.mockReturnValue(null);
       start.mockRejectedValue(new Error('startup disabled during shutdown'));
+      return Promise.resolve();
     });
     const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
       shutdownPromise: null,
       revokeMcpAppContext: revoke,
       logger: { info: noOp },
       announcementsLifecycle: { dispose: noOp },
-      runShutdownStep: async (_name: string, step: () => unknown) => step(),
+      runShutdownStep: async (_name: string, step: () => unknown) => await step(),
       clearStartupTimers: noOp,
       clearInboxNotifyTimers: noOp,
       stopPeriodicOpenCodeHostStartupLockPurge: null,
@@ -209,8 +212,9 @@ describe('shutdown MCP transport authority', () => {
     let ready!: () => void;
     const owned = new AgentTeamsMcpHttpServer({
       statePath: null,
-      resolveLaunchSpec: async () => ({ command: '/sandbox/node', args: ['/sandbox/mcp.js'] }),
-      allocatePort: async () => 41002,
+      resolveLaunchSpec: () =>
+        Promise.resolve({ command: '/sandbox/node', args: ['/sandbox/mcp.js'] }),
+      allocatePort: () => Promise.resolve(41002),
       spawnProcess: () => child as never,
       waitForPort: () =>
         new Promise<void>((resolve) => {
