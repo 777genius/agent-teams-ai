@@ -271,6 +271,7 @@ jobs:
       - name: Test OpenCode catalog diagnostic boundaries
         run: >-
           pnpm exec vitest run --maxWorkers=1
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
           test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
           test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
           src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx

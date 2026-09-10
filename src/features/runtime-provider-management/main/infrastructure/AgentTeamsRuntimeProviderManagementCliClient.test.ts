@@ -194,6 +194,24 @@ const directoryOutput = (response: RuntimeProviderManagementDirectoryResponse) =
   stderr: '',
 });
 
+function expectDirectoryWarnings(count: number): void {
+  const calls = vi.mocked(console.warn).mock.calls;
+  expect(calls).toHaveLength(count);
+  for (const call of calls) {
+    expect(call).toEqual([
+      '[OpenCodeCatalog]',
+      expect.stringMatching(/^OpenCode catalog provider_directory failed, report oc-[a-f0-9]{32}$/),
+      expect.objectContaining({
+        message: expect.any(String),
+        diagnostics: expect.objectContaining({
+          reportId: expect.stringMatching(/^oc-[a-f0-9]{32}$/),
+        }),
+      }),
+    ]);
+  }
+  vi.mocked(console.warn).mockClear();
+}
+
 describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout', () => {
   beforeEach(() => {
     execCliMock.mockReset();
@@ -210,6 +228,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     await client.loadProviderDirectory(directoryInput);
     expect(execCliMock).toHaveBeenCalledTimes(2);
     for (const [, args] of execCliMock.mock.calls) expect(args).toContain('--summary');
+    expectDirectoryWarnings(2);
   });
 
   it('keeps the previous catalog on a failed refresh without caching the error', async () => {
@@ -226,6 +245,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     expect(execCliMock).toHaveBeenCalledTimes(2);
     expect((await client.loadProviderDirectory(directoryInput)).error).toBeUndefined();
     expect(execCliMock).toHaveBeenCalledTimes(3);
+    expectDirectoryWarnings(1);
   });
 
   it('never borrows a previous directory from another project, filter or page', async () => {
@@ -243,6 +263,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
       expect(response.directory).toBeUndefined();
       expect(response.error?.code).toBe('runtime-unhealthy');
     }
+    expectDirectoryWarnings(3);
   });
 
   it('handles an empty filtered timeout result as unknown rather than no connected providers', async () => {
@@ -260,6 +281,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
       ).error?.code
     ).toBe('runtime-unhealthy');
     expect(execCliMock).toHaveBeenCalledTimes(1);
+    expectDirectoryWarnings(1);
   });
 
   it.each([
@@ -321,6 +343,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     expect(left).toEqual(right);
     expect(left.error?.code).toBe('runtime-unhealthy');
     expect(execCliMock).toHaveBeenCalledTimes(1);
+    expectDirectoryWarnings(1);
   });
 
   it('normalizes timeout JSON recovered from a failed command without caching it', async () => {
@@ -335,6 +358,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     );
     await client.loadProviderDirectory(directoryInput);
     expect(execCliMock).toHaveBeenCalledTimes(2);
+    expectDirectoryWarnings(2);
   });
 
   it('preserves the no-cache policy for successful JSON recovered from a failed command', async () => {
@@ -364,5 +388,6 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
       'connected'
     );
     expect(execCliMock).toHaveBeenCalledTimes(2);
+    expectDirectoryWarnings(1);
   });
 });
