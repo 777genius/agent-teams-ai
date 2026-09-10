@@ -92,6 +92,8 @@ function runWindowsTaskkill(pid: number, timeoutMs: number): Promise<Error | nul
 export async function killProcessByPidAndWait(
   pid: number,
   options: {
+    requireTreeSuccess?: boolean;
+    assertCanTerminate?: () => void;
     signal?: NodeJS.Signals;
     timeoutMs?: number;
     pollIntervalMs?: number;
@@ -109,9 +111,11 @@ export async function killProcessByPidAndWait(
   const platform = options.platform ?? process.platform;
   let taskkillError: Error | null = null;
 
+  options.assertCanTerminate?.();
   if (platform === 'win32') {
     taskkillError = await runWindowsTaskkill(normalizedPid, timeoutMs);
     if (!isProcessAlive(normalizedPid)) {
+      if (options.requireTreeSuccess && taskkillError) throw taskkillError;
       return;
     }
   }
@@ -122,17 +126,20 @@ export async function killProcessByPidAndWait(
     );
   }
 
+  options.assertCanTerminate?.();
   let directKillError: Error | null = null;
   try {
     process.kill(normalizedPid, options.signal ?? 'SIGTERM');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+      if (options.requireTreeSuccess && taskkillError) throw taskkillError;
       return;
     }
     directKillError = error instanceof Error ? error : new Error(String(error));
   }
 
   if (!directKillError && (await waitForProcessExit(normalizedPid, timeoutMs, pollIntervalMs))) {
+    if (options.requireTreeSuccess && taskkillError) throw taskkillError;
     return;
   }
 

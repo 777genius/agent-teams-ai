@@ -215,6 +215,7 @@ import { join } from 'path';
 
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
@@ -256,10 +257,12 @@ import {
   buildOpenCodeProcessOwnershipMarkers,
   cleanupOpenCodeHostProcessFallback,
   runOpenCodeLifecycleCleanupTail,
+  runOpenCodeStartupCleanupMaintenance,
   type OpenCodeLifecycleCleanupTailPorts,
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
 import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import { OpenCodeWindowsStartupCleanup, stopAdmittingOpenCodeStartupCleanup } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -1314,6 +1317,7 @@ function registerAppStartupHandlers(): void {
   }
   appStartupHandlersRegistered = true;
   registerRendererLogHandlers(ipcMain);
+  registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
 }
@@ -2060,7 +2064,16 @@ async function initializeServices(): Promise<void> {
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
   });
-  await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+  const windowsStartupCleanup = process.platform === 'win32'
+    ? new OpenCodeWindowsStartupCleanup({
+        appStartedAtMs,
+        profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+        ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+        maintenance: (canAdmitStartupWork) => runOpenCodeStartupCleanupMaintenance({ appStartedAtMs, ports: openCodeLifecycleCleanupTailPorts, canAdmitStartupWork }),
+        logWarning: (message) => logger.warn(message),
+      }) : null;
+  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  else await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
     appStartedAtMs,
     requiredProfileScope: buildOpenCodeAppProfileScope(
       app.getPath('userData'),
@@ -2082,15 +2095,19 @@ async function initializeServices(): Promise<void> {
   teamRuntimeRecoveryFeature.start();
   // Armed before the delay, not inside the task, so a launch requested during
   // the scheduling delay serialises behind the sweep as well.
-  const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
-  scheduleStartupTask(() => {
-    void cleanupOpenCodeHostsForLifecycle('startup')
-      .catch((error: unknown) =>
-        logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-      )
-      .finally(settleStartupRuntimeSweep);
-  }, STARTUP_RECOVERY_DELAY_MS);
-  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
+  }
+  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted() ? null : startPeriodicOpenCodeHostStartupLockPurge({
     logInfo: (message) => logger.info(message),
     logWarning: (message) => logger.warn(message),
   });
@@ -3022,6 +3039,7 @@ async function startHttpServer(
  * Shuts down all services.
  */
 async function shutdownServices(): Promise<void> {
+  stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
     return shutdownPromise;
   }

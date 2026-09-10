@@ -29,6 +29,12 @@ import {
   assertLauncherCommand,
 } from './opencode-diagnostics/platform.mjs';
 
+import {
+  cleanupScenario,
+  seedStartupCleanup,
+  verifyStartupCleanup,
+} from './opencode-diagnostics/startup-cleanup.mjs';
+
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const mode = process.argv[2];
 const root = process.argv[3];
@@ -159,6 +165,9 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'seed') {
+  const seededScenario = root || 'version-exit';
+  assert(['version-exit', cleanupScenario].includes(seededScenario), 'Unsupported seed scenario');
+  if (seededScenario === cleanupScenario) assert.equal(process.platform, 'win32');
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
@@ -172,7 +181,8 @@ if (mode === 'seed-packaged') {
   };
   for (const value of [data.home, data.userData, data.bin, data.temp])
     await mkdir(value, { recursive: true });
-  await writeFile(path.join(dir, 'scenario'), 'version-exit');
+  await writeFile(path.join(dir, 'scenario'), seededScenario);
+  if (seededScenario === cleanupScenario) await seedStartupCleanup(dir);
   await writeFile(
     data.fixture,
     await readFile(new URL('./opencode-diagnostics/fixture.cjs', import.meta.url))
@@ -247,6 +257,10 @@ if (mode === 'seed-packaged') {
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   }
   if (data.packaged) setInterval(() => {}, 1000); // Keep ownership root live until explicit stop.
+  if (!data.packaged && (await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario) {
+    assert.equal(process.platform, 'win32');
+    data.cleanupLaunchStartedAt = Date.now();
+  }
   const child = spawn(launch.command, launch.args, {
     cwd: data.packaged ? data.root : repo,
     stdio: 'inherit',
@@ -373,7 +387,9 @@ if (mode === 'seed-packaged') {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
-      if (catalogScenarios.includes(scenario)) {
+      if (scenario === cleanupScenario) {
+        await verifyStartupCleanup({ root, evaluate, send });
+      } else if (catalogScenarios.includes(scenario)) {
         await verifyCatalog({ root, scenario, evaluate, send });
       } else {
         let found;
@@ -516,5 +532,5 @@ if (mode === 'seed-packaged') {
   }
 } else
   throw new Error(
-    'Usage: seed | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+    'Usage: seed [startup-cleanup] | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
   );

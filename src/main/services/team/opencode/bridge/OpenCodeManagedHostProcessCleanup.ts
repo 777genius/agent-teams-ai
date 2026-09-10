@@ -12,6 +12,8 @@ import {
   OPENCODE_APP_PROFILE_SCOPE_ENV,
 } from './OpenCodeMcpBridgeEnv';
 
+import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
+
 export type OpenCodeManagedHostCleanupMode = 'orphaned' | 'force';
 
 export interface OpenCodeManagedHostCleanupCandidate {
@@ -29,6 +31,8 @@ export interface OpenCodeManagedHostCleanupResult {
 }
 
 export interface OpenCodeManagedHostProcessCleanupOptions {
+  startupBudget?: OpenCodeStartupCleanupBudget;
+  canAdmitStartupWork?: () => boolean;
   mode: OpenCodeManagedHostCleanupMode;
   excludePids?: ReadonlySet<number>;
   requiredDetailsMarkers?: readonly string[];
@@ -108,6 +112,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
   options: OpenCodeManagedHostProcessCleanupOptions
 ): Promise<OpenCodeManagedHostCleanupResult> {
   const platform = options.platform ?? process.platform;
+  const budget = platform === 'win32' ? options.startupBudget : undefined;
+  const canAdmit = (): boolean => !budget || options.canAdmitStartupWork?.() !== false;
+  const assertCanTerminate = (): void => {
+    if (!canAdmit()) throw new Error('Startup cleanup stopped for shutdown');
+    budget?.assertCanTerminate();
+  };
   const result: OpenCodeManagedHostCleanupResult = {
     scanned: 0,
     killed: 0,
@@ -118,28 +128,36 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const listProcessRows =
     options.listProcessRows ??
     (platform === 'win32'
-      ? () => listWindowsProcessTable(4_000, { bypassCache: true })
+      ? () => listWindowsProcessTable(budget ? budget.capMs(20_000) : 4_000, { bypassCache: true })
       : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
+  if (!canAdmit()) return result;
+  budget?.capMs(20_000);
   const rows = await listProcessRows();
+  if (!canAdmit()) return result;
   const excludePids = options.excludePids ?? new Set<number>();
   const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];
   const requiredServeConfigMarkersAny = options.requiredServeConfigMarkersAny ?? [];
   const readDetails =
     options.readProcessDetails ??
     (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
-  const readStartTimeMs =
+  const readStartTimeImpl =
     options.readProcessStartTimeMs ??
     ((pid: number) =>
-      readProcessStartTimeMs(pid, platform, undefined, (diagnostic) => {
+      readProcessStartTimeMs(pid, platform, budget?.capMs(6_000), (diagnostic) => {
         result.diagnostics.push(`pid=${pid}; ${diagnostic}`);
       }));
+  const readStartTimeMs = (pid: number): Promise<number | null> =>
+    budget && budget.remainingMs() === 0 ? Promise.resolve(null) : readStartTimeImpl(pid);
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
-  const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
+  const readServeHostConfig = (baseUrl: string): Promise<string | null> =>
+    budget && budget.remainingMs() === 0 ? Promise.resolve(null) :
+      (options.readServeHostConfig ?? ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000))))(baseUrl);
   const killProcess = options.killProcess;
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
 
   for (const row of rows) {
+    if (!canAdmit()) break;
     if (!isOpenCodeServeCommand(row.command) && !isOrchestratorServeCommand(row.command)) {
       continue;
     }
@@ -155,8 +173,17 @@ export async function cleanupManagedOpenCodeServeProcesses(
       continue;
     }
 
+    if (budget && budget.remainingMs() < 5_000) {
+      result.candidates.push({
+        pid: row.pid, ppid: row.ppid, action: 'failed',
+        reason: 'startup cleanup budget exhausted; manual retry required',
+      });
+      result.diagnostics.push(`Unprocessed managed host candidate pid=${row.pid}: budget exhausted`);
+      continue;
+    }
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
     const details = await readDetails(row.pid);
+    if (!canAdmit()) break;
     // The install path is evidence; the binary name is not.
     //
     // `isAppManagedWindowsOpenCodeServeCommand` matches a runtime under this
@@ -180,6 +207,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
       // the last way to tell whose host this is asks the host itself over
       // loopback. Silence still reads as "not ours".
       serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+      if (!canAdmit()) break;
       isManaged = Boolean(serveConfig && isManagedOpenCodeServeHostConfig(serveConfig));
     }
     const hasRequiredDetailsMarkers =
@@ -192,6 +220,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
       serveConfig === null
     ) {
       serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+      if (!canAdmit()) break;
     }
     const hasRequiredServeConfigMarker =
       requiredServeConfigMarkersAny.length === 0 ||
@@ -225,6 +254,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
       requiredDetailsMarkers.length > 0 ||
       requiredServeConfigMarkersAny.length > 0;
     const startedAtMs = shouldTrackStartTime ? await readStartTimeMs(row.pid) : null;
+    if (!canAdmit()) break;
     if (shouldTrackStartTime && !Number.isFinite(startedAtMs)) {
       if (!isProcessAlive(row.pid)) {
         result.killed += 1;
@@ -291,6 +321,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
         let ownershipMarkerMatches = false;
         if (requiredDetailsMarkers.length > 0) {
           const currentDetails = await readDetails(row.pid);
+          if (!canAdmit()) return 'changed';
           if (currentDetails) {
             if (!processDetailsIncludeMarkers(currentDetails, requiredDetailsMarkers)) {
               return isProcessAlive(row.pid) ? 'changed' : 'gone';
@@ -302,6 +333,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
           const currentServeConfig = baseUrl
             ? await readServeHostConfig(baseUrl).catch(() => null)
             : null;
+          if (!canAdmit()) return 'changed';
           if (currentServeConfig) {
             if (!stringIncludesAnyMarker(currentServeConfig, requiredServeConfigMarkersAny)) {
               return isProcessAlive(row.pid) ? 'changed' : 'gone';
@@ -311,10 +343,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
         }
         if (options.requiredProfileScope !== undefined) {
           const currentDetails = platform === 'win32' ? null : await readDetails(row.pid);
+          if (!canAdmit()) return 'changed';
           const currentConfig =
             platform === 'win32' && baseUrl
               ? await readServeHostConfig(baseUrl).catch(() => null)
               : null;
+          if (!canAdmit()) return 'changed';
           if (currentDetails || currentConfig) {
             if (
               !hasProfileOwnership(
@@ -334,6 +368,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
         // Ownership probes may await I/O; check PID birth after all of them.
         if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
           const currentStartedAtMs = await readStartTimeMs(row.pid);
+          if (!canAdmit()) return 'changed';
           if (currentStartedAtMs !== startedAtMs) {
             return isProcessAlive(row.pid) ? 'changed' : 'gone';
           }
@@ -355,12 +390,16 @@ export async function cleanupManagedOpenCodeServeProcesses(
         return isProcessAlive(row.pid) ? 'changed' : 'gone';
       };
 
-      const confirmTargetIdentity = async (): Promise<boolean> =>
-        Number.isFinite(startedAtMs) &&
-        startedAtMs !== null &&
-        (await readStartTimeMs(row.pid)) === startedAtMs;
+      const confirmTargetIdentity = async (): Promise<boolean> => {
+        const confirmed = budget ? await confirmCandidateIdentity() === 'confirmed' :
+          Number.isFinite(startedAtMs) && startedAtMs !== null &&
+          (await readStartTimeMs(row.pid)) === startedAtMs;
+        return canAdmit() && confirmed && (!budget || (budget.remainingMs() >= 5_000 &&
+          !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))));
+      };
 
       const identityBeforeDispose = await confirmCandidateIdentity();
+      if (!canAdmit()) break;
       if (identityBeforeDispose === 'gone') {
         result.killed += 1;
         result.candidates.push({
@@ -381,12 +420,13 @@ export async function cleanupManagedOpenCodeServeProcesses(
         continue;
       }
 
-      if (baseUrl) {
+      if (baseUrl && !budget) {
         await disposeServeHost(baseUrl).catch(() => undefined);
       }
 
       // Graceful dispose can stop /config; an unchanged PID/start time still identifies the host.
-      const identityBeforeKill = await confirmCandidateIdentity(true);
+      const identityBeforeKill = await confirmCandidateIdentity(!budget);
+      if (!canAdmit()) break;
       if (identityBeforeKill === 'gone') {
         result.killed += 1;
         result.candidates.push({
@@ -407,6 +447,10 @@ export async function cleanupManagedOpenCodeServeProcesses(
         continue;
       }
 
+      assertCanTerminate();
+      if (budget && options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid)) {
+        throw new Error('Parent ownership changed during startup cleanup');
+      }
       try {
         if (killProcess) {
           await killProcess(row.pid);
@@ -414,20 +458,25 @@ export async function cleanupManagedOpenCodeServeProcesses(
           await killProcessByPidAndWait(row.pid, {
             platform,
             confirmTargetIdentity,
+            requireTreeSuccess: Boolean(budget),
+            assertCanTerminate: budget ? assertCanTerminate : undefined,
           });
         } else {
           killProcessByPid(row.pid);
         }
       } catch (error) {
-        if (isProcessAlive(row.pid)) {
+        if (budget || isProcessAlive(row.pid)) {
           throw error;
         }
       }
+      if (!canAdmit()) break;
       if (options.mode === 'force' && isProcessAlive(row.pid)) {
         await sleepMs(250);
+        if (!canAdmit()) break;
         if (isProcessAlive(row.pid)) {
-          const identityBeforeForceKill = await confirmCandidateIdentity(true);
+          const identityBeforeForceKill = await confirmCandidateIdentity(!budget);
           if (identityBeforeForceKill === 'confirmed') {
+            assertCanTerminate();
             try {
               if (options.forceKillProcess) {
                 await options.forceKillProcess(row.pid);
@@ -436,11 +485,13 @@ export async function cleanupManagedOpenCodeServeProcesses(
                 await killProcessByPidAndWait(row.pid, {
                   platform,
                   signal: 'SIGKILL',
+                  requireTreeSuccess: Boolean(budget),
+                  assertCanTerminate: budget ? assertCanTerminate : undefined,
                   ...(platform === 'win32' ? { confirmTargetIdentity } : {}),
                 });
               }
             } catch (error) {
-              if (isProcessAlive(row.pid)) {
+              if (budget || isProcessAlive(row.pid)) {
                 throw error;
               }
             }
@@ -602,9 +653,9 @@ async function disposeOpenCodeServeHost(baseUrl: string): Promise<void> {
   }
 }
 
-async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | null> {
+async function readOpenCodeServeHostConfig(baseUrl: string, timeoutMs = 1_000): Promise<string | null> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${baseUrl}/config`, { signal: controller.signal });
     if (!response.ok) {
