@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 // Disposable Electron profile and CLI only. No agent/team launch commands.
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import {
+  processes,
+  sameIdentity,
+  ownedTree,
+  listeners,
+  assertListenerOwnership,
+  assertPortAvailable,
+  fixtureShim,
+  launchCommand,
+  isolatedEnvironment,
+  assertNoInstalledOpenCode,
+  assertLauncherCommand,
+} from './opencode-diagnostics/platform.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const mode = process.argv[2];
@@ -23,93 +36,90 @@ async function manifest() {
   return data;
 }
 
-function processBirth(pid) {
-  return execFileSync('ps', ['-p', String(pid), '-o', 'lstart='], {
-    encoding: 'utf8',
-    env: { ...process.env, LC_ALL: 'C' },
-  }).trim();
-}
-
-async function ownedProcessIds() {
-  const launcher = Number(await readFile(path.join(root, 'launcher.pid'), 'utf8'));
-  const expectedBirth = (await readFile(path.join(root, 'launcher.birth'), 'utf8')).trim();
-  assert(
-    expectedBirth && processBirth(launcher) === expectedBirth,
-    'Launcher PID was reused; refusing access'
-  );
-  const lines = execFileSync('ps', ['-eo', 'pid=,ppid=,args='], { encoding: 'utf8' })
-    .trim()
-    .split('\n');
-  const processes = lines
-    .map((line) => {
-      const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
-      return match ? { pid: Number(match[1]), parent: Number(match[2]), command: match[3] } : null;
-    })
-    .filter(Boolean);
-  assert(
-    processes.find((entry) => entry.pid === launcher)?.command.includes('pnpm dev:mcp'),
-    'Launcher identity changed; refusing cleanup'
-  );
-  const owned = [launcher];
-  for (let index = 0; index < owned.length; index++)
-    for (const entry of processes) if (entry.parent === owned[index]) owned.push(entry.pid);
+async function ownedProcesses() {
+  const data = await manifest();
+  assert(data.launcher, 'No manifest-owned launcher');
+  const owned = ownedTree(processes(), data.launcher);
+  assertLauncherCommand(data.launcher);
   return owned;
 }
 
 async function assertOwnedDebugEndpoint() {
-  const owned = await ownedProcessIds();
-  const listeners = execFileSync('lsof', ['-nP', '-t', '-iTCP:9222', '-sTCP:LISTEN'], {
-    encoding: 'utf8',
-  })
-    .trim()
-    .split(/\s+/)
-    .map(Number);
-  assert(
-    listeners.length && listeners.every((pid) => owned.includes(pid)),
-    'CDP listener is not owned by this sandbox; refusing access'
-  );
+  // A short-lived owned probe can inherit the listener and exit between OS reads.
+  // Retry only that read-only race; missing/reused launcher or foreign listeners fail closed.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const owned = await ownedProcesses();
+    const ids = listeners();
+    assertListenerOwnership(ids, owned);
+    const current = processes();
+    sameIdentity(
+      owned[0],
+      current.find((p) => p.pid === owned[0].pid)
+    );
+    const listenerProcesses = owned.filter((p) => ids.includes(p.pid));
+    if (listenerProcesses.some((p) => !current.some((now) => now.pid === p.pid))) continue;
+    for (const entry of listenerProcesses)
+      sameIdentity(
+        entry,
+        current.find((p) => p.pid === entry.pid)
+      );
+    return;
+  }
+  throw new Error('CDP listener ownership did not stabilize; refusing access');
 }
 
 if (mode === 'seed') {
-  assert(
-    process.platform !== 'win32',
-    'This shell fixture runner supports Unix; Windows requires native shim fixtures'
-  );
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
     home: path.join(dir, 'home'),
     userData: path.join(dir, 'user-data'),
     bin: path.join(dir, 'bin'),
+    temp: path.join(dir, 'tmp'),
+    node: process.execPath,
+    fixture: path.join(dir, 'fixture.cjs'),
+    platform: process.platform,
   };
-  for (const value of [data.home, data.userData, data.bin]) await mkdir(value, { recursive: true });
-  await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data));
+  for (const value of [data.home, data.userData, data.bin, data.temp])
+    await mkdir(value, { recursive: true });
   await writeFile(path.join(dir, 'scenario'), 'version-exit');
-  const fixture = `#!${process.execPath}
-const fs = require('node:fs');
-const root = ${JSON.stringify(dir)};
-const scenario = fs.readFileSync(root + '/scenario', 'utf8').trim();
-const args = process.argv.slice(2);
-fs.appendFileSync(root + '/calls.ndjson', JSON.stringify({binary: process.argv[1], args})+'\\n');
-if (process.argv[1].endsWith('/opencode')) {
-  if (scenario === 'version-timeout') { process.stderr.write('waiting for fixture\\n'); setTimeout(()=>{}, 60000); }
-  else if (scenario === 'version-exit') { process.stderr.write('fixture failed api_key=DO_NOT_COPY_THIS_SECRET\\n'); process.exitCode=9; }
-  else console.log('1.14.24');
-} else if (args.includes('--version')) console.log('2.1.114 (Claude Code)');
-else if (args[0] === 'auth') console.log(JSON.stringify({loggedIn:true,authMethod:'oauth'}));
-else if (args[0] === 'runtime' && args[1] === 'status') console.log(JSON.stringify({providers:Object.fromEntries(['anthropic','codex','gemini','opencode'].map(providerId=>[providerId,{providerId,supported:true,authenticated:true,verificationState:'verified',statusCheckOutcome:'authoritative',statusMessage:'Sandbox fixture',models:[],capabilities:{teamLaunch:false,oneShot:false}}]))}));
-else if (args[0] === 'runtime' && args[1] === 'providers') console.log(JSON.stringify({runtimeId:'opencode',ok:false,error:{code:'runtime-unhealthy',message:'Sandbox provider settings unavailable',recoverable:true}}));
-else console.log('{}');
-`;
-  for (const name of ['opencode', 'fixture-runtime'])
-    await writeFile(path.join(data.bin, name), fixture, { mode: 0o755 });
+  await writeFile(
+    data.fixture,
+    await readFile(new URL('./opencode-diagnostics/fixture.cjs', import.meta.url))
+  );
+  for (const [role, name] of [
+    ['opencode', 'opencode'],
+    ['orchestrator', 'fixture-runtime'],
+  ]) {
+    data[role] = path.join(data.bin, name + (process.platform === 'win32' ? '.cmd' : ''));
+    await writeFile(data[role], fixtureShim(data.node, data.fixture, role), { mode: 0o755 });
+  }
+  // PATH .cmd candidates are intentionally rejected by the production native-runtime
+  // resolver. Seed its existing app-managed fixture contract instead of changing it.
+  data.openCodeManifest = path.join(data.userData, 'data/runtimes/opencode/current.json');
+  await mkdir(path.dirname(data.openCodeManifest), { recursive: true });
+  await writeFile(
+    data.openCodeManifest,
+    JSON.stringify({
+      schemaVersion: 1,
+      version: '1.14.24',
+      platformPackage: 'diagnostics-fixture',
+      binaryPath: data.opencode,
+      integrity: 'disposable-fixture',
+      installedAt: new Date().toISOString(),
+    })
+  );
+  await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
-  await manifest();
-  const owned = await ownedProcessIds();
-  for (const pid of owned.reverse()) {
+  const owned = await ownedProcesses();
+  // Capture identities before cleanup; never use taskkill /T or a process-group signal.
+  for (const entry of owned.reverse()) {
+    const current = processes().find((p) => p.pid === entry.pid);
+    if (!current) continue;
+    sameIdentity(entry, current);
     try {
-      process.kill(pid, 'SIGTERM');
+      process.kill(entry.pid, 'SIGTERM');
     } catch (error) {
       if (error.code !== 'ESRCH') throw error;
     }
@@ -117,39 +127,26 @@ else console.log('{}');
   console.log('Stopped owned test process tree');
 } else if (mode === 'start') {
   const data = await manifest();
-  // Refuse to attach to a pre-existing app or replace its CDP endpoint.
-  let occupied = false;
-  try {
-    occupied = (await fetch('http://127.0.0.1:9222/json/version')).ok;
-  } catch {
-    /* vacant */
-  }
-  assert(!occupied, 'Port 9222 belongs to another process');
-  const child = spawn('pnpm', ['dev:mcp', '--noSandbox'], {
+  assert(!data.launcher, 'Sandbox already started; seed a new sandbox');
+  assertNoInstalledOpenCode(data);
+  await assertPortAvailable();
+  const launch = launchCommand();
+  const child = spawn(launch.command, launch.args, {
     cwd: repo,
     stdio: 'inherit',
-    env: {
-      ...process.env,
-      HOME: data.home,
-      USERPROFILE: data.home,
-      PATH: `${data.bin}${path.delimiter}${process.env.PATH}`,
-      SHELL: '/bin/sh',
-      AGENT_TEAMS_ELECTRON_USER_DATA_DIR: data.userData,
-      AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: path.join(data.home, '.claude'),
-      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: path.join(data.bin, 'fixture-runtime'),
-      CLAUDE_CLI_PATH: path.join(data.bin, 'fixture-runtime'),
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
-      NODE_BINARY: process.execPath,
-      XDG_CONFIG_HOME: path.join(data.home, '.config'),
-      XDG_DATA_HOME: path.join(data.home, '.local/share'),
-    },
+    shell: false,
+    env: isolatedEnvironment(data),
   });
-  await writeFile(path.join(root, 'launcher.pid'), String(child.pid));
-  await writeFile(path.join(root, 'launcher.birth'), processBirth(child.pid));
+  await new Promise((resolve, reject) => {
+    child.once('spawn', resolve);
+    child.once('error', reject);
+  });
+  data.launcher = processes().find((p) => p.pid === child.pid);
+  assert(data.launcher?.birth, 'Could not establish launcher birth identity');
+  await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   child.on('exit', (code) => {
     process.exitCode = code ?? 1;
   });
-  process.on('SIGTERM', () => child.kill('SIGTERM'));
 } else if (mode === 'inspect' || mode === 'verify') {
   await manifest();
   await assertOwnedDebugEndpoint();
@@ -158,7 +155,15 @@ else console.log('{}');
     (entry) => entry.type === 'page' && /^http:\/\/(localhost|127\.0\.0\.1):/.test(entry.url)
   );
   assert(target, 'No dev renderer');
-  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  const endpoint = new URL(target.webSocketDebuggerUrl);
+  assert(
+    ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) &&
+      endpoint.port === '9222' &&
+      endpoint.protocol === 'ws:',
+    'Unexpected CDP endpoint'
+  );
+  await assertOwnedDebugEndpoint();
+  const ws = new WebSocket(endpoint);
   await new Promise((resolve, reject) => {
     ws.once('open', resolve);
     ws.once('error', reject);
@@ -312,4 +317,7 @@ else console.log('{}');
   } finally {
     ws.close();
   }
-} else throw new Error('Usage: seed | start <sandbox> | inspect <sandbox> | verify <sandbox>');
+} else
+  throw new Error(
+    'Usage: seed | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+  );
