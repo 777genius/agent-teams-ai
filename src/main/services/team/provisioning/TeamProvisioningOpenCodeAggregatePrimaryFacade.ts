@@ -4,6 +4,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
+import { advanceOpenCodePrimaryIncarnation } from './OpenCodeAggregatePrimaryIncarnation';
 import {
   stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
   stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
@@ -342,11 +343,17 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
     }
 
-    if (currentPrimaryRun?.providerId === 'opencode' && currentPrimaryRun.runId === run.runId) {
-      await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
-      assertRestartCurrent();
-      this.runTracking.setAliveRunId(teamName, run.runId);
-    }
+    const advancePrimaryIncarnation = (): void =>
+      advanceOpenCodePrimaryIncarnation(run, restartLease, {
+        runs: this.runs,
+        provisioningRunByTeam: this.provisioningRunByTeam,
+        getRuntimeOwner: (name) => this.runtimeAdapterRunByTeam.get(name),
+        getAliveRunId: (name) => this.runTracking.getAliveRunId(name),
+        setAliveRunId: (name, id) => this.runTracking.setAliveRunId(name, id),
+      });
+    await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
+    assertRestartCurrent();
+    advancePrimaryIncarnation();
 
     run.effectiveMembers = run.effectiveMembers.filter(
       (member) => member.name.trim().toLowerCase() !== normalizedMemberName
@@ -400,6 +407,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       if (!hasRetainablePrimaryLead(primaryRelaunchResult)) {
         throw new Error('OpenCode primary member restart did not retain the team lead runtime.');
       }
+      run.detectedSessionId = primaryRelaunchResult?.leadSessionId?.trim() || null;
     } catch (restartError) {
       if (restartNoLongerCurrent()) {
         const abortedByOwnershipGuard = getErrorMessage(restartError).includes(
@@ -427,10 +435,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         run.effectiveMembers = previousEffectiveMembers;
         run.expectedMembers = previousExpectedMembers;
         run.mixedSecondaryLanes = previousSecondaryLanes;
-        this.invalidateRuntimeSnapshotCaches(teamName);
-        throw new Error(
-          `OpenCode member restart failed: ${getErrorMessage(restartError)}. Failed primary candidate cleanup prevented rollback: ${getErrorMessage(cleanupError)}`
+        const recoveryError = new Error(
+          `OpenCode member restart failed: ${getErrorMessage(restartError)}. Failed primary candidate cleanup prevented rollback: ${getErrorMessage(cleanupError)}. Primary run ${run.runId} remains owned because Stop was not confirmed. Inspect this team's launch diagnostics before retrying Launch.`
         );
+        this.aggregatePrimaryProgress.publishFailed(
+          run,
+          'Primary candidate cleanup prevented rollback',
+          recoveryError
+        );
+        throw recoveryError;
       }
       run.effectiveMembers = previousEffectiveMembers;
       run.expectedMembers = previousExpectedMembers;
@@ -438,6 +451,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.invalidateRuntimeSnapshotCaches(teamName);
 
       try {
+        assertRestartCurrent();
+        advancePrimaryIncarnation();
         const rollbackResult = await this.launchOpenCodeAggregatePrimaryLane({
           run,
           adapter,
@@ -452,6 +467,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         if (!hasRetainablePrimaryLead(rollbackResult)) {
           throw new Error('Primary rollback did not restore a retainable OpenCode team lead.');
         }
+        run.detectedSessionId = rollbackResult?.leadSessionId?.trim() || null;
         await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
         await assertRestartCurrentAfterPersistence();
         this.runTracking.setAliveRunId(teamName, run.runId);
@@ -486,34 +502,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           previousEffectiveMembers,
           previousLaunchState,
         });
-        await this.stopMixedSecondaryRuntimeLanes(teamName);
-        await this.clearPersistedLaunchState(teamName, { expectedRunId: run.runId }).catch(
-          (error: unknown) => {
-            logger.warn(
-              `[${teamName}] Failed to clear stale launch state after primary rollback failure: ${getErrorMessage(error)}`
-            );
-          }
+        await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
+        this.aggregatePrimaryProgress.publishFailed(
+          run,
+          'OpenCode member restart and primary rollback failed',
+          new Error(`${restartMessage} Rollback failed: ${rollbackMessage}`)
         );
-        await this.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
-          teamName,
-          run.runId
-        );
-        run.processKilled = true;
-        run.progress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
-          {
-            ...run.progress,
-            state: 'failed',
-            message: 'OpenCode member restart and primary rollback failed',
-            messageSeverity: 'error',
-            updatedAt: nowIso(),
-            error: `${restartMessage} Rollback failed: ${rollbackMessage}`,
-            cliLogsTail: `${restartMessage}\n${rollbackMessage}`,
-          },
-          run.onProgress
-        );
-        if (this.runs.get(run.runId) === run) {
-          this.cleanupRun(run);
-        }
+        this.writeLaunchFailureArtifactPackBestEffort(run, {
+          reason: 'opencode_primary_restart_and_rollback_failed',
+        });
         throw new Error(
           `OpenCode member restart failed: ${restartMessage}. Primary rollback failed: ${rollbackMessage}`
         );

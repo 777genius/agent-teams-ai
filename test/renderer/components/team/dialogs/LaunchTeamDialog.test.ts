@@ -2166,6 +2166,11 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
+    vi.mocked(runProviderPrepareDiagnostics).mockClear();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
     await confirmLaunchPreflight(host);
 
     const preparedProviderIds = vi
@@ -5082,6 +5087,46 @@ it('submits a role-only legacy lead separately from the settings teammate roster
   expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ model: 'sonnet' }),
     [expect.objectContaining({ name: 'alice' })], expect.objectContaining({ memberName: 'lead', targetKind: 'lead', expectedTeamSettingsFingerprint: 'editor-defaults' }));
   await act(async () => root.unmount());
+});
+
+it.each([true, false])('reopens configured member intent without promoting runtime models (sync %s)', async (syncModelsWithLead) => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+    teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus',
+    syncModelsWithLead, members: [{ name: 'inherited' }, { name: 'explicit', model: 'opus' }],
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onRelaunch = vi.fn(async () => {});
+  try {
+    await act(async () => {
+      root.render(React.createElement(LaunchTeamDialog, {
+        mode: 'relaunch', open: true, teamName: 'team-alpha', defaultProjectPath: '/tmp/project',
+        members: [
+          { name: 'inherited', model: 'sonnet', configuredRuntimeSettings: {} },
+          { name: 'explicit', model: 'sonnet', configuredRuntimeSettings: { model: 'opus' } },
+        ] as any,
+        provisioningError: null, clearProvisioningError: vi.fn(), activeTeams: [], onClose: vi.fn(), onRelaunch,
+      }));
+      await flush();
+    });
+    const rows = teamRosterEditorSectionMock.lastProps.members;
+    expect(rows.find((row: any) => row.name === 'inherited').model || undefined).toBeUndefined();
+    expect(rows.find((row: any) => row.name === 'explicit').model).toBe('opus');
+    await confirmLaunchPreflight(host, 'Relaunch team');
+    await act(async () => {
+      Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Relaunch team')!.click();
+      await flush();
+    });
+    expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ syncModelsWithLead }), [
+      expect.objectContaining({ name: 'inherited', model: '' }),
+      expect.objectContaining({ name: 'explicit', model: 'opus' }),
+    ], undefined);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
 });
 
 });

@@ -8,7 +8,7 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
@@ -1110,7 +1110,7 @@ export class TeamDataService {
       extraCliArgs: meta.extraCliArgs,
       limitContext: meta.limitContext,
       members: members
-        .filter((member) => !member.removedAt)
+        .filter((member) => !member.removedAt && !isCanonicalSettingsLeadMember(member))
         .map((member) => ({
           name: member.name,
           role: member.role,

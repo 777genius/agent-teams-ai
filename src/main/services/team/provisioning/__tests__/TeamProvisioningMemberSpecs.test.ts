@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { buildEffectiveTeamMemberSpec } from '../TeamProvisioningMemberSpecs';
 
 describe('TeamProvisioningMemberSpecs', () => {
+  it('matches an explicit anthropic member to the implicit anthropic lead provider', () => {
+    expect(buildEffectiveTeamMemberSpec({ name: 'member', providerId: 'anthropic' },
+      { model: 'sonnet', syncModelsWithLead: true }).model).toBe('sonnet');
+  });
+
   it('keeps legacy lead-model inheritance when the sync preference is absent', () => {
     expect(
       buildEffectiveTeamMemberSpec(

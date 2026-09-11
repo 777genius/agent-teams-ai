@@ -212,7 +212,7 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
       ? await resolveOpenCodeRuntimeManifestReadPath(this.teamsBasePath, teamName, normalizedLaneId)
       : getOpenCodeRuntimeManifestPath(this.teamsBasePath, teamName);
     const manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, teamName, this.clock);
-    const stopSessions = includeSessionIdentity ? await readOpenCodeStopSessions(manifestPath) : undefined;
+    const stopSessions = includeSessionIdentity ? await readOpenCodeStopSessions(manifestPath, { teamName, laneId: normalizedLaneId ?? 'primary', runId: manifest.activeRunId }) : undefined;
     return {
       ...(stopSessions ? { stopSessions, sessionIdentityHash: hashOpenCodeStopSessions(stopSessions) } : {}),
       behaviorFingerprint: manifest.activeBehaviorFingerprint,

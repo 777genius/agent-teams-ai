@@ -1,10 +1,12 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
 import { getOpenCodeRuntimeManifestPath } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { prepareOpenCodeWorktreeRootAggregateLaunchPreflight } from '../TeamProvisioningOpenCodeAggregateRun';
 import {
   type OpenCodeRuntimeStopFlowPorts,
   type SingleMixedSecondaryRuntimeLaneStopPorts,
@@ -314,6 +316,77 @@ function expectFinalSingleLaneState(lane: MixedSecondaryRuntimeLaneState): void 
 }
 
 describe('OpenCode runtime stop flow', () => {
+  it('keeps a preserved missing-capability candidate fenced through forced Stop and normal Launch preflight', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-primary-recovery-'));
+    try {
+      const manifestPath = getOpenCodeRuntimeManifestPath(root, 'team-a', 'primary');
+      await mkdir(path.dirname(manifestPath), { recursive: true });
+      const manifest = { highWatermark: 0, activeRunId: 'run-primary', capabilitySnapshotId: null };
+      const bytes = JSON.stringify(manifest);
+      await writeFile(manifestPath, bytes);
+      const stop = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['stop']>[0]) => {
+        expect(input.force).toBe(true);
+        // Re-read the preserved profile for each normal action.
+        const persisted = JSON.parse(await readFile(manifestPath, 'utf8'));
+        bindLifecycleManifest(
+          {
+            command: 'opencode.stopTeam',
+            teamName: input.teamName,
+            laneId: 'primary',
+            runId: input.runId,
+            capabilitySnapshotId: null,
+            body: {
+              teamId: input.teamName,
+              laneId: 'primary',
+              runId: input.runId,
+              expectedCapabilitySnapshotId: null,
+            },
+          },
+          persisted
+        );
+        throw new Error('unreachable: missing capability must refuse');
+      });
+      const ports = makePorts({ adapter: makeAdapter(stop), previousLaunchState: null });
+      ports.teamsBasePath = root;
+      const owner = ports.runtimeAdapterRunByTeam.get('team-a');
+      const error = 'exact persisted lane run and capability snapshot';
+      await expect(stopOpenCodeRuntimeAdapterTeam('team-a', 'run-primary', ports)).rejects.toThrow(
+        error
+      );
+      const stopSecondaries = vi.fn();
+      await expect(
+        prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
+          { teamName: 'team-a', onProgress: vi.fn() },
+          {
+            getStopAllTeamsGeneration: () => 0,
+            getStopTeamGeneration: () => 0,
+            getRuntimeAdapterRun: (team) => ports.runtimeAdapterRunByTeam.get(team),
+            stopOpenCodeRuntimeAdapterTeam: (team, runId) =>
+              stopOpenCodeRuntimeAdapterTeam(team, runId, ports),
+            hasSecondaryRuntimeRuns: () => true,
+            stopMixedSecondaryRuntimeLanes: stopSecondaries,
+            getProvisioningRun: () => 'run-primary',
+            getRuntimeAdapterProgress: (runId) => ports.runtimeAdapterProgressByRunId.get(runId),
+            isCancellableRuntimeAdapterProgress: () => false,
+            cancelRuntimeAdapterProvisioning: vi.fn(),
+            recordCancelledOpenCodeRuntimeAdapterLaunch: vi.fn(),
+          }
+        )
+      ).rejects.toThrow(error);
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(stopSecondaries).not.toHaveBeenCalled();
+      expect(ports.runtimeAdapterRunByTeam.get('team-a')).toBe(owner);
+      expect(ports.clearCalls).toEqual([]);
+      expect(await readFile(manifestPath, 'utf8')).toBe(bytes);
+      expect(ports.progressUpdates.at(-1)).toMatchObject({
+        state: 'failed',
+        error: expect.stringContaining(error),
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('waits for other lanes and preserves diagnostics when session identity is malformed', async () => {
     const temp = await mkdtemp(path.join(tmpdir(), 'stop-lane-identity-'));
     const release = createDeferred<void>();
@@ -345,7 +418,9 @@ describe('OpenCode runtime stop flow', () => {
     );
     await mkdir(path.dirname(sessions), { recursive: true });
     await writeFile(sessions, '{"sessions": "invalid"}');
-    const stopping = stopMixedSecondaryRuntimeLanes('team-a', ports).catch((error: unknown) => error);
+    const stopping = stopMixedSecondaryRuntimeLanes('team-a', ports).catch(
+      (error: unknown) => error
+    );
     try {
       await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(2));
       expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(true);
@@ -706,7 +781,9 @@ describe('OpenCode runtime stop flow', () => {
       isRuntimeProcessAlive: () => false,
     });
 
-    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow('session abort not confirmed');
+    await expect(stopMixedSecondaryRuntimeLanes('team-a', ports)).rejects.toThrow(
+      'session abort not confirmed'
+    );
 
     expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(ports.clearCalls).toEqual([]);

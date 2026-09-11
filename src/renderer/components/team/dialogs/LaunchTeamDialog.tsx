@@ -411,9 +411,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const sourceMembers = isLaunchMode ? props.members : storeMembers;
   const memberSettingsDraft = isLaunchMode ? props.memberSettingsDraft : undefined;
-  const members = useMemo(() => memberSettingsDraft
-    ? applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft)
-    : sourceMembers, [sourceMembers, memberSettingsDraft]);
+  const members = useMemo(() => applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft),
+    [sourceMembers, memberSettingsDraft]);
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -928,15 +927,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
         relaunchInheritedSyncRef.current = savedSyncModelsWithLead;
+        // Reopening must not apply the synchronize-all action to explicit overrides.
         setSyncModelsWithLead(
-          (memberSettingsDraft ? false : savedSyncModelsWithLead) ??
+          !memberSettingsDraft && savedSyncModelsWithLead !== false &&
             !inputs.some(
-              (member) =>
-                member.providerId ||
-                member.providerBackendId ||
-                member.model ||
-                member.effort ||
-                ('fastMode' in member && member.fastMode)
+              (member) => member.providerId || member.providerBackendId || member.model ||
+                member.effort || ('fastMode' in member && member.fastMode)
             )
         );
       }
@@ -957,7 +953,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
       setLaunchHydratedTeamName(effectiveTeamName);
-      if (memberSettingsDraft && !relaunchSyncEditedRef.current) {
+      if (!relaunchSyncEditedRef.current) {
         relaunchInheritedSyncRef.current = savedRequest?.syncModelsWithLead;
       }
       if (!hydrationRef.current.rosterDirty) {
@@ -2346,7 +2342,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
                 ? selectedFastMode
                 : undefined,
-            syncModelsWithLead: memberSettingsDraft ? relaunchInheritedSyncRef.current : syncModelsWithLead,
+            syncModelsWithLead: relaunchInheritedSyncRef.current,
             limitContext: effectiveAnthropicRuntimeLimitContext,
             skipPermissions,
             allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,

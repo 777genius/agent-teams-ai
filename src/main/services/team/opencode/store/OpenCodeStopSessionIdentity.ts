@@ -4,7 +4,10 @@ import * as path from 'node:path';
 import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
 
 /** App-owned session identity only; mutable readiness/heartbeat fields are excluded. */
-export async function readOpenCodeStopSessions(manifestPath: string) {
+export async function readOpenCodeStopSessions(
+  manifestPath: string,
+  scope?: { teamName: string; laneId: string; runId: string | null }
+) {
   let raw: string;
   try {
     raw = await readFile(path.join(path.dirname(manifestPath), 'opencode-sessions.json'), 'utf8');
@@ -31,7 +34,21 @@ export async function readOpenCodeStopSessions(manifestPath: string) {
       sessionId: entry.id as string,
     };
   });
-  return identities;
+  if (!scope) return identities;
+  if (
+    (identities.length > 0 && !scope.runId) ||
+    identities.some(
+      (session) =>
+        session.teamName !== scope.teamName ||
+        session.laneId !== scope.laneId ||
+        typeof session.runId !== 'string' ||
+        !session.runId.trim()
+    )
+  )
+    throw new Error('Cannot establish exact OpenCode Stop session scope');
+  // The store retains prior incarnations. They are evidence, not targets of
+  // the active run's Stop. Keep the unscoped reader for full-store cleanup CAS.
+  return identities.filter((session) => session.runId === scope.runId);
 }
 
 export async function readOpenCodeStopSessionIdentity(manifestPath: string): Promise<string> {

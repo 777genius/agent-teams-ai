@@ -3,6 +3,11 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { stableHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  createStopTarget,
+  runtimeStopRequest,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeRuntimeStopRecovery';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
@@ -72,6 +77,132 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       writes: [{ descriptor, data: { sessions: input.sessions } }],
     });
   }
+
+  it('binds Stop only to active-run sessions while retaining historical rows on disk', async () => {
+    const teamName = 'stop-history-test';
+    const laneId = 'primary';
+    const runId = 'runtime-run-1';
+    const capabilitySnapshotId = `opencode:${'a'.repeat(32)}`;
+    const behaviorFingerprint = 'b'.repeat(64);
+    const sessions = ['previous-run-1', 'previous-run-2', runId].flatMap((id) =>
+      ['lead', 'worker'].map((memberName) => ({
+        id: `${id}-${memberName}`,
+        teamName,
+        laneId,
+        runId: id,
+        memberName,
+      }))
+    );
+    await writeCommittedSessionStore({ teamName, laneId, sessions });
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    await createRuntimeStoreManifestStore({ filePath: manifestPath, teamName }).setActiveRun({
+      runId,
+      capabilitySnapshotId,
+      behaviorFingerprint,
+    });
+    const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+    const manifest = await reader.read(teamName, laneId, true);
+    const current = sessions.filter((session) => session.runId === runId);
+    expect(manifest.stopSessions).toEqual(
+      current.map(({ id, ...session }) => ({ ...session, sessionId: id }))
+    );
+    expect(manifest.sessionIdentityHash).toBe(
+      stableHash(
+        current
+          .map((s) => [s.teamName, s.laneId, s.runId, s.memberName, s.id])
+          .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+      )
+    );
+    const target = createStopTarget(
+      {
+        teamName,
+        laneId,
+        runId,
+        capabilitySnapshotId,
+        behaviorFingerprint: null,
+        cwd: tempDir,
+        body: {},
+      },
+      manifest
+    );
+    expect(
+      runtimeStopRequest({ requestId: 'stop-current', idempotencyKey: 'stop-current' }, target)
+        .target.members
+    ).toEqual(current.map((s) => ({ memberName: s.memberName, sessionId: s.id })));
+    const stored = JSON.parse(
+      await fs.readFile(path.join(path.dirname(manifestPath), 'opencode-sessions.json'), 'utf8')
+    );
+    expect(stored.data.sessions).toEqual(sessions);
+  });
+
+  it.each([
+    { teamName: 'foreign-team' },
+    { laneId: 'foreign-lane' },
+    { runId: null },
+    { runId: '' },
+  ])('rejects ambiguous Stop session scope %j', async (override) => {
+    const teamName = 'stop-scope-test';
+    const laneId = 'primary';
+    await writeCommittedSessionStore({
+      teamName,
+      laneId,
+      sessions: [
+        {
+          id: 'session',
+          teamName,
+          laneId,
+          runId: 'runtime-run-1',
+          memberName: 'lead',
+          ...override,
+        },
+      ],
+    });
+    const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+    await expect(reader.read(teamName, laneId, true)).rejects.toThrow(
+      'exact OpenCode Stop session scope'
+    );
+  });
+
+  it.each([{ runs: [] }, { runs: ['previous-run'] }])(
+    'does not invent a Stop target without current sessions %j',
+    async ({ runs }) => {
+      const teamName = 'stop-missing-current-test';
+      const laneId = 'primary';
+      const runId = 'runtime-run-1';
+      const capabilitySnapshotId = `opencode:${'a'.repeat(32)}`;
+      await writeCommittedSessionStore({
+        teamName,
+        laneId,
+        sessions: runs.map((runId) => ({
+          id: 'old-session',
+          teamName,
+          laneId,
+          runId,
+          memberName: 'lead',
+        })),
+      });
+      await createRuntimeStoreManifestStore({
+        filePath: getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId),
+        teamName,
+      }).setActiveRun({ runId, capabilitySnapshotId, behaviorFingerprint: 'b'.repeat(64) });
+      const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+      const target = createStopTarget(
+        {
+          teamName,
+          laneId,
+          runId,
+          capabilitySnapshotId,
+          behaviorFingerprint: null,
+          cwd: tempDir,
+          body: {},
+        },
+        await reader.read(teamName, laneId, true)
+      );
+      expect(() =>
+        runtimeStopRequest({ requestId: 'stop', idempotencyKey: 'stop' }, target)
+      ).toThrow('incomplete original session target');
+    }
+  );
 
   it('reads only committed OpenCode bootstrap check-in session evidence', async () => {
     const teamName = 'team-committed-session';

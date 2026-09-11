@@ -5,11 +5,12 @@ import {
 import * as path from 'path';
 
 import { buildMembersMetaWritePayload } from './TeamProvisioningConfigLaunchNormalization';
+import { buildConfiguredMembersForPersistence } from './TeamProvisioningConfiguredMemberSpecs';
 import { type PreparedOpenCodeRuntimeAdapterLaunch } from './TeamProvisioningOpenCodeRuntimeAdapterPreparation';
-import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { type TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamMetaFile } from '../TeamMetaStore';
+import type { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import type {
   TeamCreateRequest,
   TeamCreateResponse,
@@ -115,7 +116,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   });
   await ports.writeMembersMeta(
     launchRequest.teamName,
-    buildMembersMetaWritePayload(effectiveMembers),
+    buildMembersMetaWritePayload(buildConfiguredMembersForPersistence(request.members, effectiveMembers)),
     { providerBackendId: launchRequest.providerBackendId }
   );
   await ports.writeOpenCodeTeamConfig(launchRequest, effectiveMembers);
