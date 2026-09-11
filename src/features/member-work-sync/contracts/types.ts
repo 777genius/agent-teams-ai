@@ -86,7 +86,16 @@ export interface MemberWorkSyncReport {
 
 export type MemberWorkSyncReportIntentStatus = 'pending' | 'accepted' | 'rejected' | 'superseded';
 
+export interface MemberWorkSyncReportJournalMetadata {
+  incarnation: string;
+  requestDigest: string;
+  firstRecordedAt: string;
+  origin: 'online' | 'fallback';
+  receipt?: MemberWorkSyncReportReceipt;
+}
+
 export interface MemberWorkSyncReportIntent {
+  journal?: MemberWorkSyncReportJournalMetadata;
   id: string;
   teamName: string;
   memberName: string;
@@ -120,18 +129,100 @@ export interface MemberWorkSyncShadowDiagnostics {
   };
 }
 
+export interface MemberWorkSyncStatusRevision {
+  incarnation: string;
+  lineageId: string;
+  sequence: number;
+  nonce: string;
+}
+
+export interface MemberWorkSyncReportReceiptDraft {
+  intentId: string;
+  incarnation: string;
+  requestDigest: string;
+  acceptedAt: string;
+  originalExpiresAt?: string;
+}
+
+export interface MemberWorkSyncReportReceipt extends MemberWorkSyncReportReceiptDraft {
+  appliedStatusRevision: MemberWorkSyncStatusRevision;
+}
+
+export type MemberWorkSyncRecoveryPhase =
+  | 'observing'
+  | 'continuation_pending'
+  | 'awaiting_outcome'
+  | 'attention'
+  | 'expected_wait';
+
+export interface MemberWorkSyncRecoveryEpisode {
+  episodeId: string;
+  workKey: string;
+  taskId: string;
+  firstObservedAt: string;
+  lastProgressAt?: string;
+  lastEvidenceId?: string;
+  dueAt: string;
+  phase: MemberWorkSyncRecoveryPhase;
+  reason: string;
+}
+
+export type MemberWorkSyncRecoveryTerminalOutcome =
+  | 'retryable_refusal'
+  | 'terminal_refusal'
+  | 'settled'
+  | 'unknown';
+
+export interface MemberWorkSyncRecoveryReservation {
+  intentId: string;
+  episodeId: string;
+  trigger: 'automatic' | 'manual';
+  reservedAt: string;
+  state: 'reserved' | 'awaiting_outcome' | 'resolved' | 'cancelled' | 'uncertain';
+  payloadHash: string;
+  controlRevision: number;
+  terminalOutcome?: MemberWorkSyncRecoveryTerminalOutcome;
+  terminalReceiptId?: string;
+  pendingAck?: boolean;
+  ackIdentity?: string;
+  compactWitness?: boolean;
+}
+
+export interface MemberWorkSyncAutoResumeStopLatch {
+  stoppedAt: string;
+  reason: string;
+  controlRevision: number;
+}
+
+export interface MemberWorkSyncRecoveryHealth {
+  schemaVersion: 1;
+  episodes: MemberWorkSyncRecoveryEpisode[];
+  unresolvedIntentId?: string;
+  attentionAt?: string;
+  attentionAcknowledgedAt?: string;
+  autoResumeStopLatch?: MemberWorkSyncAutoResumeStopLatch;
+  controlRevision?: number;
+  reservations?: MemberWorkSyncRecoveryReservation[];
+}
+
 export interface MemberWorkSyncStatus {
   teamName: string;
   memberName: string;
   state: MemberWorkSyncStatusState;
   agenda: MemberWorkSyncAgenda;
+  /** Assigned only by the authority storage adapter, never by report input. */
+  statusRevision?: MemberWorkSyncStatusRevision;
+  pendingReportReceipt?: MemberWorkSyncReportReceipt;
   report?: MemberWorkSyncReport;
+  /** Accepted lease authority, separate from the latest rejected diagnostic report. */
+  lastAcceptedReport?: MemberWorkSyncReport;
   reportToken?: string;
   reportTokenExpiresAt?: string;
   shadow?: MemberWorkSyncShadowDiagnostics;
   evaluatedAt: string;
   diagnostics: string[];
   providerId?: MemberWorkSyncProviderId;
+  recoveryHealth?: MemberWorkSyncRecoveryHealth;
 }
 
 export type MemberWorkSyncMetricEventKind =
@@ -227,6 +318,7 @@ export interface MemberWorkSyncReportResult {
   code: string;
   message: string;
   status: MemberWorkSyncStatus;
+  projectionDegraded?: boolean;
 }
 
 export interface MemberWorkSyncStatusRequest {

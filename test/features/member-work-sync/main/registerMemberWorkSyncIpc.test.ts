@@ -45,6 +45,7 @@ function makeIpcMain() {
 
 function makeFeature(): MemberWorkSyncFeatureFacade {
   return {
+    startBackground: vi.fn(),
     getStatus: vi.fn(async (request) => ({
       teamName: request.teamName,
       memberName: request.memberName,

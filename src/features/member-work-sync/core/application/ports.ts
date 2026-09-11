@@ -17,6 +17,8 @@ import type {
   MemberWorkSyncStatus,
   MemberWorkSyncTeamMetrics,
 } from '../../contracts';
+import type { MemberWorkSyncConditionalStatusPort } from './MemberWorkSyncConditionalStatusPort';
+import type { MemberWorkSyncReportJournalPort } from './MemberWorkSyncReportJournalPort';
 
 export interface MemberWorkSyncClockPort {
   now(): Date;
@@ -41,9 +43,15 @@ export interface MemberWorkSyncReportTokenVerifyInput {
   nowIso: string;
 }
 
+export interface MemberWorkSyncVerifiedReportTokenClaims {
+  expiresAt: string;
+  expiresAtMs: number;
+}
+
 export type MemberWorkSyncReportTokenVerification =
-  | { ok: true }
-  | { ok: false; reason: 'missing' | 'expired' | 'invalid' };
+  | { ok: true; claims?: MemberWorkSyncVerifiedReportTokenClaims }
+  | { ok: false; reason: 'expired'; claims?: MemberWorkSyncVerifiedReportTokenClaims }
+  | { ok: false; reason: 'missing' | 'invalid' };
 
 export interface MemberWorkSyncReportTokenPort {
   create(input: MemberWorkSyncReportTokenCreateInput): Promise<{
@@ -310,7 +318,10 @@ export interface MemberWorkSyncUseCaseDeps {
   hash: MemberWorkSyncHashPort;
   agendaSource: MemberWorkSyncAgendaSourcePort;
   statusStore: MemberWorkSyncStatusStorePort;
+  /** Bound by main admission; activated with the restore/replica ownership path. */
+  statusMutations?: MemberWorkSyncConditionalStatusPort;
   reportStore?: MemberWorkSyncReportStorePort;
+  reportJournal?: MemberWorkSyncReportJournalPort;
   outboxStore?: MemberWorkSyncOutboxStorePort;
   inboxNudge?: MemberWorkSyncInboxNudgePort;
   watchdogCooldown?: MemberWorkSyncWatchdogCooldownPort;
@@ -323,6 +334,13 @@ export interface MemberWorkSyncUseCaseDeps {
   auditJournal?: MemberWorkSyncAuditJournalPort;
   lifecycle?: MemberWorkSyncLifecyclePort;
   logger?: MemberWorkSyncLoggerPort;
+  /**
+   * Qualified D0 protocol-1 admission. Until enabled, planners record
+   * observation/attention only and must not create recovery reservations.
+   */
+  recoveryAllocation?: { enabled: boolean };
+  /** Declared runtime recovery protocol for this instance. Missing means 0. */
+  recoveryProtocol?: { version: number };
 }
 
 export interface LatestAcceptedReportLookup {

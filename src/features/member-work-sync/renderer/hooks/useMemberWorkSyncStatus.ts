@@ -21,6 +21,7 @@ export interface UseMemberWorkSyncStatusResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  continueManually: () => void;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -87,5 +88,24 @@ export function useMemberWorkSyncStatus({
     loading,
     error,
     refresh: () => setRefreshKey((current) => current + 1),
+    continueManually: () => {
+      const normalizedTeamName = teamName?.trim();
+      const normalizedMemberName = memberName?.trim();
+      if (!normalizedTeamName || !normalizedMemberName) {
+        return;
+      }
+      void api.memberWorkSync
+        .continueManually({
+          teamName: normalizedTeamName,
+          memberName: normalizedMemberName,
+        })
+        .then((nextStatus) => {
+          setStatus(nextStatus);
+          setError(null);
+        })
+        .catch((nextError: unknown) => {
+          setError(getErrorMessage(nextError));
+        });
+    },
   };
 }

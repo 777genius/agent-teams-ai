@@ -1,3 +1,4 @@
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -79,6 +80,7 @@ liveDescribe('OpenCode review pickup live e2e', () => {
         projectPath: PROJECT_PATH,
       });
       const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
         configReader: new TeamConfigReader(),
         taskReader: new TeamTaskReader(),

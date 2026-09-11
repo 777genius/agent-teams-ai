@@ -10,6 +10,7 @@ import type React from 'react';
 type MemberWorkSyncDetailsProps = Readonly<{
   status: MemberWorkSyncStatus | null;
   showDiagnostics?: boolean;
+  onContinue?: (input: { teamName: string; memberName: string }) => void;
 }>;
 
 function shortFingerprint(fingerprint?: string): string {
@@ -23,6 +24,7 @@ function shortFingerprint(fingerprint?: string): string {
 export function MemberWorkSyncDetails({
   status,
   showDiagnostics = false,
+  onContinue,
 }: MemberWorkSyncDetailsProps): React.ReactElement {
   const { t } = useAppTranslation('team');
   const viewModel = toMemberWorkSyncStatusViewModel(status);
@@ -72,6 +74,32 @@ export function MemberWorkSyncDetails({
           </dd>
         </div>
       </dl>
+
+      {viewModel.attentionSummary ? (
+        <div className="mt-3 space-y-2">
+          <p
+            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100"
+            data-testid="member-work-sync-attention"
+          >
+            {viewModel.attentionSummary}
+          </p>
+          {status && onContinue ? (
+            <button
+              type="button"
+              className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-text)]"
+              data-testid="member-work-sync-continue"
+              onClick={() => {
+                onContinue({
+                  teamName: status.teamName,
+                  memberName: status.memberName,
+                });
+              }}
+            >
+              Continue
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {agendaItems.length > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-[var(--color-text-secondary)]">

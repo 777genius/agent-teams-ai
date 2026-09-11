@@ -1,10 +1,11 @@
 import { archiveFileWithGenerations } from '@features/internal-storage/main';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
+import * as atomicWrite from '@main/utils/atomicWrite';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   MemberWorkSyncNudgePayload,
@@ -79,26 +80,235 @@ describe('JsonMemberWorkSyncStore', () => {
   let root: string;
   let store: JsonMemberWorkSyncStore;
 
+  it.each(['{broken', '{"schemaVersion":999}'])('strict backup index reader preserves invalid source %s', async (raw) => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const index = paths.getMetricsIndexPath('team-a');
+    await mkdir(join(paths.getTeamDir('team-a'), 'indexes'), {recursive: true});
+    await writeFile(index, raw);
+    const backupReader = new JsonMemberWorkSyncStore(paths, {strictIndexReads: true});
+    await expect(backupReader.readSnapshotForImport('team-a')).rejects.toThrow();
+    expect(await readFile(index, 'utf8')).toBe(raw);
+    expect(await readdir(join(paths.getTeamDir('team-a'), 'indexes'))).toEqual(['metrics.json']);
+  });
+
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'member-work-sync-store-'));
     store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(root));
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await rm(root, { recursive: true, force: true });
   });
 
-  it('quarantines invalid status JSON and returns empty state', async () => {
+  it('restores encoded report/outbox routes without relying on later index repair', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const memberName = 'Alice Smith';
+    const time = '2026-09-10T00:00:00.000Z';
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report-1',
+      teamName: 'team-a',
+      memberName,
+      request: {
+        teamName: 'team-a',
+        memberName,
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: time,
+    };
+    const outbox: MemberWorkSyncOutboxItem = {
+      id: 'outbox-1',
+      teamName: 'team-a',
+      memberName,
+      agendaFingerprint: 'agenda',
+      payloadHash: 'hash',
+      payload: makeNudgePayload({ to: memberName }),
+      status: 'pending',
+      attemptGeneration: 0,
+      createdAt: time,
+      updatedAt: time,
+    };
+    await store.restoreReplicaSnapshot('team-a', {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [outbox],
+      metricEvents: [],
+      filesToArchive: [],
+    });
+    for (const [path, id] of [
+      [paths.getPendingReportsIndexPath('team-a'), report.id],
+      [paths.getOutboxIndexPath('team-a'), outbox.id],
+    ]) {
+      const index = JSON.parse(await readFile(path, 'utf8'));
+      expect(index.items[id].memberKey).toBe(paths.getMemberKey(memberName));
+      expect(index.items[id].memberName).toBe(memberName);
+    }
+    const restored = await store.readSnapshotForImport('team-a');
+    expect(restored?.reportIntents).toEqual([report]);
+    expect(restored?.outboxItems).toEqual([outbox]);
+  });
+
+  it('preserves terminal delivery evidence while restoring older pending data', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const time = '2026-09-10T00:00:00Z';
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report',
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: time,
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+    };
+    const item: MemberWorkSyncOutboxItem = {
+      id: 'outbox',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda',
+      payloadHash: 'hash',
+      payload: makeNudgePayload(),
+      status: 'pending',
+      attemptGeneration: 1,
+      createdAt: time,
+      updatedAt: time,
+    };
+    const pending = {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [item],
+      metricEvents: [],
+      filesToArchive: [],
+    };
+    await store.restoreReplicaSnapshot('team-a', pending);
+    const accepted = { ...report, status: 'accepted', processedAt: time, resultCode: 'accepted' };
+    const delivered = {
+      ...item,
+      status: 'delivered',
+      deliveredMessageId: 'proof',
+      attemptGeneration: 2,
+    };
+    await writeFile(
+      paths.getMemberReportsPath('team-a', 'bob'),
+      JSON.stringify({ schemaVersion: 2, intents: { report: accepted } })
+    );
+    await writeFile(
+      paths.getMemberOutboxPath('team-a', 'bob'),
+      JSON.stringify({ schemaVersion: 2, items: { outbox: delivered } })
+    );
+    await store.restoreReplicaSnapshot('team-a', pending);
+    const restored = await store.readSnapshotForImport('team-a');
+    expect(restored?.reportIntents).toEqual([accepted]);
+    expect(restored?.outboxItems).toEqual([delivered]);
+  });
+
+  it('does not complete delivery hydration when strict publication fails and can retry', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report',
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: '2026-09-10T00:00:00Z',
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+    };
+    const snapshot = {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [],
+      metricEvents: [],
+      filesToArchive: [],
+    };
+    const original = atomicWrite.atomicWriteAsync;
+    let fail = true;
+    vi.spyOn(atomicWrite, 'atomicWriteAsync').mockImplementation(async (...args) => {
+      if (args[0] === paths.getMemberReportsPath('team-a', 'bob') && fail) {
+        fail = false;
+        throw new Error('report fsync failed');
+      }
+      await original(...args);
+    });
+    await expect(store.restoreReplicaSnapshot('team-a', snapshot)).rejects.toThrow('fsync failed');
+    await store.restoreReplicaSnapshot('team-a', snapshot);
+    expect((await store.readSnapshotForImport('team-a'))?.reportIntents).toEqual([report]);
+  });
+
+  it('preserves invalid legacy status JSON and reports corruption', async () => {
     const statusPath = join(root, 'team-a', '.member-work-sync', 'status.json');
     await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
     await writeFile(statusPath, '{bad json', 'utf8');
 
-    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).resolves.toBeNull();
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(readFile(statusPath, 'utf8')).resolves.toBe('{bad json');
 
     const teamDir = join(root, 'team-a', '.member-work-sync');
     const entries = await readdir(teamDir);
-    expect(entries.some((entry) => entry.startsWith('status.json.invalid.'))).toBe(true);
+    expect(entries.some((entry) => entry.startsWith('status.json.invalid.'))).toBe(false);
   });
+
+  it('does not let an ordinary read hide corrupt canonical state before import', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const canonical = paths.getMemberStatusPath('team-a', 'bob');
+    const legacy = paths.getLegacyStatusPath('team-a');
+    await mkdir(memberWorkSyncDir(root, 'team-a', 'bob'), { recursive: true });
+    await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
+    await writeFile(canonical, '{corrupt');
+    await writeFile(legacy, JSON.stringify({ schemaVersion: 1, members: { bob: makeStatus({}) } }));
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(store.readSnapshotForImport('team-a')).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(
+      store.readCanonicalStatusSnapshot({ teamName: 'team-a', memberName: 'bob' })
+    ).resolves.toMatchObject({ state: 'corrupt', raw: '{corrupt' });
+    await expect(readFile(canonical, 'utf8')).resolves.toBe('{corrupt');
+  });
+
+  it('preserves unreadable canonical state instead of falling back to empty', async () => {
+    const canonical = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+    await mkdir(canonical, { recursive: true });
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'unavailable',
+    });
+    await expect(readdir(canonical)).resolves.toEqual([]);
+  });
+
+  it.each(['{bad json', 'null', '{"schemaVersion":2,"status":null}'])(
+    'rejects corrupt archived status without erasing evidence: %s',
+    async (raw) => {
+      const canonical = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+      const memberDir = memberWorkSyncDir(root, 'team-a', 'bob');
+      await mkdir(memberDir, { recursive: true });
+      await writeFile(canonical, raw);
+      await archiveFileWithGenerations(canonical);
+      const before = await readdir(memberDir);
+      await expect(store.readArchivedSnapshotForImport('team-a')).rejects.toMatchObject({
+        reason: 'corrupt',
+      });
+      expect(await readdir(memberDir)).toEqual(before);
+      for (const name of before) expect(await readFile(join(memberDir, name), 'utf8')).toBe(raw);
+    }
+  );
 
   it('writes status into member-scoped storage and keeps team metrics in an index', async () => {
     await store.write(makeStatus({ providerId: 'opencode' }));

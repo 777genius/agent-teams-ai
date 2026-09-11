@@ -11,6 +11,7 @@ import {
   statusToMetricEventRecords,
   statusToRecord,
 } from './memberWorkSyncSqliteMappers';
+import { SqliteMemberWorkSyncReportJournal } from './SqliteMemberWorkSyncReportJournal';
 
 import type {
   MemberWorkSyncOutboxClaimInput,
@@ -35,6 +36,7 @@ import type {
 } from '../../core/application/ports';
 import type { MetricsIndexFile } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncSqliteImporter } from './MemberWorkSyncSqliteImporter';
+import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 
 export interface SqliteMemberWorkSyncStoreDeps {
@@ -58,14 +60,71 @@ export class SqliteMemberWorkSyncStore
     MemberWorkSyncOutboxStorePort
 {
   private readonly mutex = new KeyedMutex();
+  private readonly preparedIncarnations = new Map<string, string>();
   private readonly now: () => Date;
 
   constructor(private readonly deps: SqliteMemberWorkSyncStoreDeps) {
     this.now = deps.now ?? (() => new Date());
   }
 
+  createReportJournal(): SqliteMemberWorkSyncReportJournal {
+    return new SqliteMemberWorkSyncReportJournal(this.deps.gateway, (teamName) =>
+      this.ready(teamName)
+    );
+  }
+
   private async ready(teamName: string): Promise<void> {
     await this.mutex.run(teamName, () => this.deps.importer.ensureImported(teamName));
+  }
+
+  /** Caller already owns lifecycle/replica ordering; no public store operation may race restore. */
+  async invalidateCanonicalStatusPreparation(teamName: string): Promise<void> {
+    await this.mutex.run(teamName, async () => {
+      this.preparedIncarnations.delete(teamName);
+      this.deps.importer.invalidatePreparedTeam(teamName);
+    });
+  }
+
+  /** Preparation may write. The authority owner must fence and track this separately from CAS. */
+  prepareCanonicalStatus(
+    teamName: string,
+    incarnation?: string,
+    prepared?: { records: MemberWorkSyncTeamSnapshotRecords; filesToArchive: readonly string[] }
+  ): Promise<void> {
+    return this.mutex.run(teamName, async () => {
+      if (incarnation !== undefined) {
+        if (!incarnation || incarnation.trim() !== incarnation)
+          throw new Error('Invalid work-sync incarnation');
+        if (this.preparedIncarnations.get(teamName) !== incarnation) {
+          this.deps.importer.invalidatePreparedTeam(teamName);
+          this.preparedIncarnations.set(teamName, incarnation);
+        }
+      }
+      if (prepared)
+        await this.deps.importer.finalizePreparedImport(
+          teamName,
+          prepared.records,
+          prepared.filesToArchive
+        );
+      else await this.deps.importer.ensureImported(teamName);
+    });
+  }
+
+  /** Raw row read after controlled preparation; never normalizes the expected statusJson. */
+  readCanonicalStatusRecord(input: { teamName: string; memberName: string }) {
+    return this.deps.gateway.statusRead(input.teamName, normalizeMemberKey(input.memberName));
+  }
+
+  /** Internal authority bridge, deliberately without implicit import or post-commit projection. */
+  compareAndWriteCanonicalStatus(input: {
+    expectedRaw: string | null;
+    nextStatus: MemberWorkSyncStatus;
+  }) {
+    return this.deps.gateway.statusCompareAndWrite({
+      expectedStatusJson: input.expectedRaw,
+      record: statusToRecord(input.nextStatus),
+      events: statusToMetricEventRecords(input.nextStatus),
+    });
   }
 
   async read(input: {

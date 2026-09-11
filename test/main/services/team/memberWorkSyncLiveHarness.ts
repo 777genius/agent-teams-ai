@@ -2,7 +2,7 @@ import { constants as fsConstants, promises as fs } from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
-import { encodePath } from '../../../../src/main/utils/pathDecoder';
+import { encodePath, getTeamsBasePath } from '../../../../src/main/utils/pathDecoder';
 
 import type { MemberWorkSyncReportRequest } from '../../../../src/features/member-work-sync/contracts';
 import type { MemberWorkSyncFeatureFacade } from '../../../../src/features/member-work-sync/main';
@@ -359,4 +359,23 @@ function sendJson(response: http.ServerResponse, statusCode: number, payload: un
     'content-type': 'application/json',
   });
   response.end(JSON.stringify(payload));
+}
+
+export async function readMemberWorkSyncOutboxItems(
+  teamName: string,
+  memberName: string
+): Promise<Record<string, { status?: string; payload?: { workSyncIntentKey?: string } }>> {
+  const outboxPath = path.join(
+    getTeamsBasePath(),
+    teamName,
+    'members',
+    memberName,
+    '.member-work-sync',
+    'outbox.json'
+  );
+  const raw = await fs.readFile(outboxPath, 'utf8').catch(() => '{"items":{}}');
+  const parsed = JSON.parse(raw) as {
+    items?: Record<string, { status?: string; payload?: { workSyncIntentKey?: string } }>;
+  };
+  return parsed.items ?? {};
 }

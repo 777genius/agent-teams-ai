@@ -21,13 +21,17 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 0);
     });
-    expect(dispatchDue).toHaveBeenCalledTimes(1);
+    expect(dispatchDue).toHaveBeenCalledTimes(2);
 
     release();
     await Promise.all([first, second]);
 
     expect(dispatchDue).toHaveBeenCalledWith(
-      ['team-a', 'team-b'],
+      ['team-a'],
+      expect.objectContaining({ aborted: false })
+    );
+    expect(dispatchDue).toHaveBeenCalledWith(
+      ['team-b'],
       expect.objectContaining({ aborted: false })
     );
   });
@@ -156,7 +160,7 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
-  it('does not overlap later scheduled runs while timed-out active team listing is still settling', async () => {
+  it('allows one replacement while timed-out discovery remains physically tracked', async () => {
     vi.useFakeTimers();
     try {
       let releaseFirst!: (teams: string[]) => void;
@@ -201,7 +205,8 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
       expect(dispatchDue).not.toHaveBeenCalled();
 
       await scheduler.runOnce();
-      expect(dispatchDue).not.toHaveBeenCalled();
+      expect(listCalls).toBe(2);
+      expect(dispatchDue).toHaveBeenCalledTimes(1);
 
       releaseFirst(['team-a']);
       await vi.advanceTimersByTimeAsync(0);

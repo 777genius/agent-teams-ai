@@ -1,4 +1,12 @@
+import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/MemberWorkSyncReportJournalRow';
 import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
+
+import {
+  chooseMemberWorkSyncStatusRevision,
+  readMemberWorkSyncStatusRevision,
+} from '../../core/domain/MemberWorkSyncStatusRevision';
+
+import { chooseMemberWorkSyncReportJournalMerge } from './memberWorkSyncReportJournalMerge';
 
 import type {
   MemberWorkSyncMetricEventRecord,
@@ -16,8 +24,18 @@ export function mergeMemberWorkSyncSnapshots(
   canonical: MemberWorkSyncTeamSnapshotRecords,
   incoming: MemberWorkSyncTeamSnapshotRecords
 ): MemberWorkSyncTeamSnapshotRecords {
+  for (const row of [...canonical.reportIntents, ...incoming.reportIntents]) {
+    if (row.journalJson != null)
+      validateMemberWorkSyncReportJournalRow(
+        { ...row, request: JSON.parse(row.requestJson), journal: JSON.parse(row.journalJson) },
+        { teamName }
+      );
+  }
   const normalizedCanonical = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, canonical);
   const normalizedIncoming = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, incoming);
+  for (const row of [...normalizedCanonical.statuses, ...normalizedIncoming.statuses]) {
+    readMemberWorkSyncStatusRevision(JSON.parse(row.statusJson));
+  }
   return {
     statuses: mergeByIdentity(
       normalizedCanonical.statuses,
@@ -70,6 +88,11 @@ function pickStatus(
   canonical: MemberWorkSyncStatusRecord,
   incoming: MemberWorkSyncStatusRecord
 ): MemberWorkSyncStatusRecord {
+  const revision = chooseMemberWorkSyncStatusRevision(
+    JSON.parse(canonical.statusJson),
+    JSON.parse(incoming.statusJson)
+  );
+  if (revision) return revision === 'incoming' ? incoming : canonical;
   const comparison = compareIso(incoming.evaluatedAt, canonical.evaluatedAt);
   return comparison > 0 || comparison === 0 ? incoming : canonical;
 }
@@ -78,6 +101,18 @@ function pickReportIntent(
   canonical: MemberWorkSyncReportIntentRecord,
   incoming: MemberWorkSyncReportIntentRecord
 ): MemberWorkSyncReportIntentRecord {
+  if (canonical.journalJson != null || incoming.journalJson != null) {
+    const unpack = (row: MemberWorkSyncReportIntentRecord) => ({
+      ...row,
+      request: JSON.parse(row.requestJson) as unknown,
+      journal: row.journalJson == null ? undefined : (JSON.parse(row.journalJson) as unknown),
+    });
+    const journalChoice = chooseMemberWorkSyncReportJournalMerge(
+      unpack(canonical),
+      unpack(incoming)
+    );
+    if (journalChoice) return journalChoice === 'incoming' ? incoming : canonical;
+  }
   const canonicalProcessed = PROCESSED_REPORT_STATUSES.has(canonical.status);
   const incomingProcessed = PROCESSED_REPORT_STATUSES.has(incoming.status);
   if (canonicalProcessed !== incomingProcessed) {

@@ -165,6 +165,7 @@ function createDeps(outbox: PlannerOutboxHarness): MemberWorkSyncUseCaseDeps {
       readTeamMetrics: async () => metrics(),
     },
     outboxStore: outbox as never,
+    recoveryAllocation: { enabled: true },
   };
 }
 

@@ -50,11 +50,13 @@ import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
+  getMemberWorkSyncAcceptedReport,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
   isRuntimeMemberActivityUncertainForWorkSync,
   isRuntimeMemberActiveForWorkSync,
   type MemberWorkSyncFeatureFacade,
+  MemberWorkSyncTeamOperationGate,
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
@@ -2118,15 +2120,10 @@ async function initializeServices(): Promise<void> {
     .catch((error: unknown) =>
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
-  teamBackupService = new TeamBackupService();
-  // Fire-and-forget: initializeServices() is sync, cannot await.
-  // Safe because TeamBackupService.initialized flag blocks all backup/restore
-  // operations until initialize() completes internally (restore → prune → set flag).
-  void teamBackupService
-    .initialize()
-    .catch((error: unknown) =>
-      logger.warn(`[Init] TeamBackupService init failed: ${String(error)}`)
-    );
+  const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
+  const initializedBackupOwner = new TeamBackupService();
+  teamBackupService = initializedBackupOwner;
+  // Bind the restore participant before backup initialization can publish team state.
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2140,12 +2137,29 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
+  const memberWorkSyncStallObservation: {
+    record(input: {
+      teamName: string;
+      memberName: string;
+      taskId: string;
+      reason: string;
+      observedAt: string;
+    }): Promise<void>;
+  } = {
+    record: async () => undefined,
+  };
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
     new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
     new TeamTaskStallPolicy(),
     new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
-    new TeamTaskStallNotifier(teamDataService, teamProvisioningService)
+    new TeamTaskStallNotifier(
+      teamDataService,
+      teamProvisioningService,
+      undefined,
+      undefined,
+      memberWorkSyncStallObservation
+    )
   );
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
@@ -2613,7 +2627,12 @@ async function initializeServices(): Promise<void> {
     );
     return activeTeamNames;
   };
-  memberWorkSyncFeature = createMemberWorkSyncFeature({
+  const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+    lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
+    operationGate: workSyncRestoreGate,
+    startBackground: false,
+    bindRestoreParticipant: (participant) =>
+      initializedBackupOwner.configureWorkSyncRestore(workSyncRestoreGate, participant),
     teamsBasePath: getTeamsBasePath(),
     configReader: new TeamConfigReader(),
     taskReader: new TeamTaskReader(),
@@ -2812,6 +2831,17 @@ async function initializeServices(): Promise<void> {
     },
     logger: memberWorkSyncLogger,
   });
+  try {
+    await initializedBackupOwner.initialize();
+  } catch (error) {
+    await preparedMemberWorkSyncFeature.dispose();
+    throw error;
+  }
+  memberWorkSyncFeature = preparedMemberWorkSyncFeature;
+  memberWorkSyncStallObservation.record = async (input) => {
+    await memberWorkSyncFeature?.recordStallObservation(input);
+  };
+  memberWorkSyncFeature.startBackground();
   teamProvisioningService.setRuntimeTurnSettledHookSettingsProvider((input) =>
     memberWorkSyncFeature
       ? memberWorkSyncFeature.buildRuntimeTurnSettledHookSettings(input)
@@ -2832,7 +2862,7 @@ async function initializeServices(): Promise<void> {
       return false;
     }
     const status = await memberWorkSyncFeature.getStatus(input);
-    const report = status.report;
+    const report = getMemberWorkSyncAcceptedReport(status);
     if (report?.accepted !== true || report.agendaFingerprint !== status.agenda.fingerprint) {
       return false;
     }

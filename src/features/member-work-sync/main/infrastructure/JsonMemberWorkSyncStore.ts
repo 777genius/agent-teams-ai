@@ -1,3 +1,8 @@
+import { JsonMemberWorkSyncReportJournal } from './JsonMemberWorkSyncReportJournal';
+import { buildPendingReportIntentId } from './memberWorkSyncReportIntentId';
+import { findCanonicalReportJournalOwner } from './memberWorkSyncReportJournalOwnership';
+export { buildPendingReportIntentId };
+
 import { listPreSqliteArchiveGenerations } from '@features/internal-storage/main';
 import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
@@ -5,14 +10,31 @@ import { createHash } from 'crypto';
 import { access, mkdir, readdir, readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
-import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
+import { decodeMemberWorkSyncImportStatus } from './decodeMemberWorkSyncStoredStatus';
+import {
+  compareAndWriteMemberWorkSyncJsonStatus,
+  readMemberWorkSyncJsonStatus,
+} from './memberWorkSyncJsonStatusPersistence';
+import { toMetrics } from './memberWorkSyncMetricsProjection';
+import { restoreMemberWorkSyncJsonDelivery } from './restoreMemberWorkSyncJsonDelivery';
+import { restoreMemberWorkSyncJsonStatuses } from './restoreMemberWorkSyncJsonStatuses';
+export { toMetrics } from './memberWorkSyncMetricsProjection';
 
-import { purgeJsonMemberWorkSyncActiveState } from './JsonMemberWorkSyncActiveStatePurger';
+import {
+  listJsonMemberWorkSyncActiveFilePaths,
+  purgeJsonMemberWorkSyncActiveState,
+} from './JsonMemberWorkSyncActiveStatePurger';
 import {
   mergeDomainSnapshots,
+  mergeImportedStatus,
   pickDomainOutboxItem,
   pickDomainReportIntent,
 } from './memberWorkSyncDomainSnapshotMerge';
+import {
+  isMemberStatusFile,
+  MemberWorkSyncSafetyJsonReadError,
+  readMemberWorkSyncSafetyJson,
+} from './memberWorkSyncSafetyJson';
 import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 import type {
@@ -56,7 +78,7 @@ interface LegacyStatusFile {
  * import into SQLite. A retry after a partial archive can be a strict subset of
  * an earlier snapshot, so consumers must treat these arrays as an overlay:
  * memberKey identifies statuses and id identifies report intents, outbox items,
- * and metric events. Later duplicate identities win; missing identities are not
+ * and metric events. Status revisions select winners; missing identities are not
  * deletions. filesToArchive lists every file the snapshot came from.
  */
 export interface MemberWorkSyncStoreSnapshot {
@@ -182,6 +204,29 @@ export function isMemberWorkSyncStoreSnapshot(
   );
 }
 
+/** No mutations: validate every incoming collection before any restore phase publishes data. */
+function validateImportSnapshot(teamName: string, snapshot: MemberWorkSyncStoreSnapshot): void {
+  if (!isMemberWorkSyncStoreSnapshot({ ...snapshot, filesToArchive: [] }, teamName)) {
+    throw new MemberWorkSyncSafetyJsonReadError('corrupt');
+  }
+  for (const status of snapshot.statuses) {
+    decodeMemberWorkSyncImportStatus(status, { teamName, memberName: status.memberName });
+  }
+  for (const intent of snapshot.reportIntents) {
+    if (
+      !intent.id.trim() ||
+      !normalizeMemberKey(intent.memberName) ||
+      normalizeMemberKey(intent.request.memberName) !== normalizeMemberKey(intent.memberName)
+    ) {
+      throw new MemberWorkSyncSafetyJsonReadError('corrupt');
+    }
+  }
+  for (const item of snapshot.outboxItems) {
+    if (!item.id.trim() || !normalizeMemberKey(item.memberName))
+      throw new MemberWorkSyncSafetyJsonReadError('corrupt');
+  }
+}
+
 interface MemberStatusFile {
   schemaVersion: 2;
   status: MemberWorkSyncStatus;
@@ -256,6 +301,8 @@ type OutboxDueRoute = [string, OutboxIndexRoute];
 const MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS = 5 * 60 * 1000;
 
 export interface JsonMemberWorkSyncStoreDeps {
+  /** Backup readers reject broken indexes without quarantining source files. */
+  strictIndexReads?: boolean;
   auditJournal?: MemberWorkSyncAuditJournalPort;
   logger?: MemberWorkSyncLoggerPort;
   now?: () => Date;
@@ -269,17 +316,6 @@ function emptyMetricsIndex(): MetricsIndexFile {
   return { schemaVersion: 2, members: {}, recentEvents: [] };
 }
 
-function emptyStateCounts(): Record<MemberWorkSyncStatusState, number> {
-  return {
-    caught_up: 0,
-    needs_sync: 0,
-    still_working: 0,
-    blocked: 0,
-    inactive: 0,
-    unknown: 0,
-  };
-}
-
 function isLegacyStatusFile(value: unknown): value is LegacyStatusFile {
   return (
     value != null &&
@@ -288,16 +324,6 @@ function isLegacyStatusFile(value: unknown): value is LegacyStatusFile {
     (value as LegacyStatusFile).members != null &&
     typeof (value as LegacyStatusFile).members === 'object' &&
     !Array.isArray((value as LegacyStatusFile).members)
-  );
-}
-
-function isMemberStatusFile(value: unknown): value is MemberStatusFile {
-  return (
-    value != null &&
-    typeof value === 'object' &&
-    (value as MemberStatusFile).schemaVersion === 2 &&
-    (value as MemberStatusFile).status != null &&
-    typeof (value as MemberStatusFile).status === 'object'
   );
 }
 
@@ -498,24 +524,6 @@ function stableStringify(value: unknown): string {
     .join(',')}}`;
 }
 
-export function buildPendingReportIntentId(request: MemberWorkSyncReportRequest): string {
-  const taskIds = [...new Set(request.taskIds ?? [])].sort();
-  const payload = {
-    teamName: request.teamName,
-    memberName: normalizeMemberKey(request.memberName),
-    state: request.state,
-    agendaFingerprint: request.agendaFingerprint,
-    reportToken: request.reportToken ?? '',
-    ...(taskIds.length > 0 ? { taskIds } : {}),
-    ...(request.note ? { note: request.note } : {}),
-    ...(request.leaseTtlMs ? { leaseTtlMs: request.leaseTtlMs } : {}),
-    ...(request.source ? { source: request.source } : {}),
-  };
-  return `member-work-sync-intent:${createHash('sha256')
-    .update(stableStringify(payload))
-    .digest('hex')}`;
-}
-
 function buildMetricEventId(status: MemberWorkSyncStatus, kind: MemberWorkSyncMetricEvent['kind']) {
   return `member-work-sync-metric:${createHash('sha256')
     .update(
@@ -572,13 +580,14 @@ export function buildMetricEvents(status: MemberWorkSyncStatus): MemberWorkSyncM
       kind: 'fingerprint_changed',
     });
   }
-  if (status.report?.accepted) {
+  const reportMutation = !status.shadow || status.shadow.reconciledBy === 'report';
+  if (reportMutation && status.report?.accepted) {
     events.push({
       ...base,
       id: buildMetricEventId(status, 'report_accepted'),
       kind: 'report_accepted',
     });
-  } else if (status.report?.rejectionCode) {
+  } else if (reportMutation && status.report?.rejectionCode) {
     events.push({
       ...base,
       id: buildMetricEventId(status, 'report_rejected'),
@@ -614,39 +623,6 @@ function updateMetricsMember(
   appendMetricEvents(file, status);
 }
 
-export function toMetrics(teamName: string, file: MetricsIndexFile): MemberWorkSyncTeamMetrics {
-  const stateCounts = emptyStateCounts();
-  const members = Object.values(file.members);
-  let actionableItemCount = 0;
-  for (const member of members) {
-    stateCounts[member.state] += 1;
-    actionableItemCount += member.actionableCount;
-  }
-  const recentEvents = [...file.recentEvents].sort((left, right) =>
-    left.recordedAt.localeCompare(right.recordedAt)
-  );
-  const metrics = {
-    teamName,
-    generatedAt: new Date().toISOString(),
-    memberCount: members.length,
-    stateCounts,
-    actionableItemCount,
-    wouldNudgeCount: recentEvents.filter((event) => event.kind === 'would_nudge').length,
-    fingerprintChangeCount: recentEvents.filter((event) => event.kind === 'fingerprint_changed')
-      .length,
-    reportAcceptedCount: recentEvents.filter((event) => event.kind === 'report_accepted').length,
-    reportRejectedCount: recentEvents.filter((event) => event.kind === 'report_rejected').length,
-    recentEvents,
-  };
-  return {
-    ...metrics,
-    phase2Readiness: assessMemberWorkSyncPhase2Readiness({
-      memberCount: metrics.memberCount,
-      recentEvents: metrics.recentEvents,
-    }),
-  };
-}
-
 async function quarantineFile(filePath: string): Promise<void> {
   try {
     await renamePathWithRetry(filePath, `${filePath}.invalid.${Date.now()}`);
@@ -659,7 +635,7 @@ async function readJsonFile<T>(
   filePath: string,
   guard: (value: unknown) => value is T,
   fallback: T,
-  options: { quarantineInvalid?: boolean } = {}
+  options: { quarantineInvalid?: boolean; strict?: boolean } = {}
 ): Promise<T> {
   try {
     const raw = await readFile(filePath, 'utf8');
@@ -667,10 +643,12 @@ async function readJsonFile<T>(
     if (guard(parsed)) {
       return parsed;
     }
+    if (options.strict) throw new Error('Invalid member work sync index');
     if (options.quarantineInvalid) {
       await quarantineFile(filePath);
     }
   } catch (error) {
+    if (options.strict && (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && options.quarantineInvalid) {
       await quarantineFile(filePath);
     }
@@ -699,6 +677,23 @@ export class JsonMemberWorkSyncStore
     this.now = deps.now ?? (() => new Date());
   }
 
+  createReportJournal(): JsonMemberWorkSyncReportJournal {
+    return new JsonMemberWorkSyncReportJournal(
+      this.paths,
+      (team, operation) => this.enqueue(team, operation),
+      async (intent) => {
+        const index = await this.readPendingReportsIndexFile(intent.teamName);
+        index.items[intent.id] = {
+          memberKey: this.paths.getMemberKey(intent.memberName),
+          memberName: intent.memberName,
+          status: intent.status,
+          recordedAt: intent.recordedAt,
+        };
+        await this.writePendingReportsIndexFile(intent.teamName, index);
+      }
+    );
+  }
+
   async read(input: {
     teamName: string;
     memberName: string;
@@ -722,21 +717,59 @@ export class JsonMemberWorkSyncStore
     return legacyStatus;
   }
 
+  readCanonicalStatusSnapshot(input: { teamName: string; memberName: string }) {
+    return readMemberWorkSyncJsonStatus(
+      this.paths.getMemberStatusPath(input.teamName, input.memberName)
+    );
+  }
+
+  async compareAndWriteCanonicalStatus(input: {
+    expectedRaw: string | null;
+    mutationId: string;
+    nextStatus: MemberWorkSyncStatus;
+  }) {
+    const status = input.nextStatus;
+    await this.paths.ensureMemberWorkSyncDir(status.teamName, status.memberName);
+    let result!: Awaited<ReturnType<typeof compareAndWriteMemberWorkSyncJsonStatus>>;
+    await this.enqueue(status.teamName, async () => {
+      result = await withFileLock(
+        this.paths.getMetricsIndexPath(status.teamName),
+        () =>
+          compareAndWriteMemberWorkSyncJsonStatus({
+            ...input,
+            path: this.paths.getMemberStatusPath(status.teamName, status.memberName),
+            project: async () => {
+              const metrics = await this.readMetricsIndexFile(status.teamName);
+              updateMetricsMember(metrics, status, this.paths.getMemberKey(status.memberName));
+              await this.writeMetricsIndexFile(status.teamName, metrics);
+            },
+          }),
+        { preventLiveOwnerTakeover: true }
+      );
+    });
+    return result;
+  }
+
   async write(status: MemberWorkSyncStatus): Promise<void> {
     const memberKey = this.paths.getMemberKey(status.memberName);
     await this.paths.ensureMemberWorkSyncDir(status.teamName, status.memberName);
     await this.enqueue(status.teamName, async () => {
-      await withFileLock(this.paths.getMetricsIndexPath(status.teamName), async () => {
-        await withFileLock(
-          this.paths.getMemberStatusPath(status.teamName, status.memberName),
-          async () => {
-            const metrics = await this.readMetricsIndexFile(status.teamName);
-            updateMetricsMember(metrics, status, memberKey);
-            await this.writeMemberStatusFile(status);
-            await this.writeMetricsIndexFile(status.teamName, metrics);
-          }
-        );
-      });
+      await withFileLock(
+        this.paths.getMetricsIndexPath(status.teamName),
+        async () => {
+          await withFileLock(
+            this.paths.getMemberStatusPath(status.teamName, status.memberName),
+            async () => {
+              const metrics = await this.readMetricsIndexFile(status.teamName);
+              updateMetricsMember(metrics, status, memberKey);
+              await this.writeMemberStatusFile(status);
+              await this.writeMetricsIndexFile(status.teamName, metrics);
+            },
+            { preventLiveOwnerTakeover: true }
+          );
+        },
+        { preventLiveOwnerTakeover: true }
+      );
     });
     await this.appendAudit({
       teamName: status.teamName,
@@ -771,8 +804,24 @@ export class JsonMemberWorkSyncStore
         await withFileLock(
           this.paths.getMemberReportsPath(request.teamName, request.memberName),
           async () => {
+            const owner = await findCanonicalReportJournalOwner(this.paths, {
+              teamName: request.teamName,
+              memberName: request.memberName,
+              incarnation: 'unbound',
+              intentId: id,
+              requestDigest: 'unbound',
+            });
+            if (
+              owner.state === 'conflict' ||
+              owner.state === 'corrupt' ||
+              owner.state === 'unavailable'
+            ) {
+              throw new Error('Bound report intent requires strict journal API');
+            }
             const reports = await this.readMemberReportsFile(request.teamName, request.memberName);
             const current = reports.intents[id];
+            if (current?.journal)
+              throw new Error('Bound report intent requires strict journal API');
             if (current && current.status !== 'pending') {
               return;
             }
@@ -893,6 +942,8 @@ export class JsonMemberWorkSyncStore
               if (current.status !== 'pending') {
                 return;
               }
+              if (current.journal)
+                throw new Error('Bound report intent requires strict journal API');
               const next: MemberWorkSyncReportIntent = {
                 ...current,
                 status: result.status,
@@ -1299,22 +1350,10 @@ export class JsonMemberWorkSyncStore
     lifecycle: Parameters<typeof purgeJsonMemberWorkSyncActiveState>[1]
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
-      const activeFilePaths = [
-        this.paths.getLegacyStatusPath(teamName),
-        this.paths.getLegacyPendingReportsPath(teamName),
-        this.paths.getLegacyOutboxPath(teamName),
-        this.paths.getMetricsIndexPath(teamName),
-        this.paths.getOutboxIndexPath(teamName),
-        this.paths.getPendingReportsIndexPath(teamName),
-      ];
-      for (const memberName of await this.scanMemberNamesForImport(teamName)) {
-        activeFilePaths.push(
-          this.paths.getMemberStatusPath(teamName, memberName),
-          this.paths.getMemberReportsPath(teamName, memberName),
-          this.paths.getMemberOutboxPath(teamName, memberName)
-        );
-      }
-      await purgeJsonMemberWorkSyncActiveState(activeFilePaths, lifecycle);
+      await purgeJsonMemberWorkSyncActiveState(
+        await listJsonMemberWorkSyncActiveFilePaths(this.paths, teamName),
+        lifecycle
+      );
     });
   }
 
@@ -1361,61 +1400,19 @@ export class JsonMemberWorkSyncStore
     replica: MemberWorkSyncStoreSnapshot
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
+      validateImportSnapshot(teamName, replica);
       const active = await this.readSnapshotForImportUnqueued(teamName);
+      if (active) validateImportSnapshot(teamName, active);
       const snapshot = mergeDomainSnapshots(replica, active);
 
-      const metrics: MetricsIndexFile = emptyMetricsIndex();
-      for (const status of snapshot.statuses) {
-        await this.paths.ensureMemberWorkSyncDir(teamName, status.memberName);
-        await this.writeMemberStatusFile(status);
-        metrics.members[normalizeMemberKey(status.memberName)] = {
-          memberName: status.memberName,
-          state: status.state,
-          agendaFingerprint: status.agenda.fingerprint,
-          actionableCount: status.agenda.items.length,
-          evaluatedAt: status.evaluatedAt,
-          ...(status.providerId ? { providerId: status.providerId } : {}),
-        };
-      }
-      metrics.recentEvents = [...snapshot.metricEvents]
-        .sort((left, right) =>
-          left.recordedAt === right.recordedAt
-            ? left.id.localeCompare(right.id)
-            : left.recordedAt.localeCompare(right.recordedAt)
-        )
-        .slice(-200);
-      await this.writeMetricsIndexFile(teamName, metrics);
+      await restoreMemberWorkSyncJsonStatuses(this.paths, teamName, snapshot);
 
-      const reportsByMember = groupByMember(snapshot.reportIntents);
-      const reportIndex: PendingReportsIndexFile = { schemaVersion: 2, items: {} };
-      for (const intents of reportsByMember.values()) {
-        const memberName = intents[0]?.memberName;
-        if (!memberName) continue;
-        const file: MemberReportsFile = { schemaVersion: 2, intents: {} };
-        for (const intent of intents) {
-          file.intents[intent.id] = intent;
-          reportIndex.items[intent.id] = toPendingReportIndexItem(
-            intent,
-            normalizeMemberKey(memberName)
-          );
-        }
-        await this.writeMemberReportsFile(teamName, memberName, file);
-      }
-      await this.writePendingReportsIndexFile(teamName, reportIndex);
-
-      const outboxByMember = groupByMember(snapshot.outboxItems);
-      const outboxIndex: OutboxIndexFile = { schemaVersion: 2, items: {} };
-      for (const items of outboxByMember.values()) {
-        const memberName = items[0]?.memberName;
-        if (!memberName) continue;
-        const file: MemberOutboxFile = { schemaVersion: 2, items: {} };
-        for (const item of items) {
-          file.items[item.id] = item;
-          outboxIndex.items[item.id] = toOutboxIndexItem(item, normalizeMemberKey(memberName));
-        }
-        await this.writeMemberOutboxFile(teamName, memberName, file);
-      }
-      await this.writeOutboxIndexFile(teamName, outboxIndex);
+      await restoreMemberWorkSyncJsonDelivery(this.paths, teamName, snapshot, {
+        reports: (memberName) => this.readMemberReportsFile(teamName, memberName),
+        outbox: (memberName) => this.readMemberOutboxFile(teamName, memberName),
+        reportIndex: () => this.readPendingReportsIndexFile(teamName),
+        outboxIndex: () => this.readOutboxIndexFile(teamName),
+      });
     });
   }
 
@@ -1460,7 +1457,7 @@ export class JsonMemberWorkSyncStore
       if (!status || normalizeTeamKey(status.teamName) !== teamKey) {
         continue;
       }
-      statuses.set(normalizeMemberKey(status.memberName), status);
+      mergeImportedStatus(statuses, normalizeMemberKey(status.memberName), status);
     }
     const legacyStatus = await this.readLegacyStatusFile(teamName);
     for (const [memberKey, status] of Object.entries(legacyStatus.members)) {
@@ -1468,9 +1465,7 @@ export class JsonMemberWorkSyncStore
         continue;
       }
       const key = normalizeMemberKey(status.memberName) || normalizeMemberKey(memberKey);
-      if (!statuses.has(key)) {
-        statuses.set(key, status);
-      }
+      mergeImportedStatus(statuses, key, status, true);
     }
 
     const reportIntents = new Map<string, MemberWorkSyncReportIntent>();
@@ -1478,7 +1473,8 @@ export class JsonMemberWorkSyncStore
       const reports = await this.readMemberReportsFile(teamName, memberName);
       for (const intent of Object.values(reports.intents)) {
         if (isReportIntentOwnedBy(teamName, memberName, intent)) {
-          reportIntents.set(intent.id, intent);
+          const current = reportIntents.get(intent.id);
+          reportIntents.set(intent.id, current ? pickDomainReportIntent(current, intent) : intent);
         }
       }
     }
@@ -1551,7 +1547,7 @@ export class JsonMemberWorkSyncStore
     ): Promise<T[]> => {
       const files: T[] = [];
       for (const archivedPath of await archivePaths(filePath)) {
-        files.push(await readJsonFile(archivedPath, guard, fallback));
+        files.push(await readMemberWorkSyncSafetyJson(archivedPath, guard, fallback, false));
       }
       return files;
     };
@@ -1567,7 +1563,8 @@ export class JsonMemberWorkSyncStore
         if (normalizeTeamKey(status.teamName) !== teamKey) {
           continue;
         }
-        statuses.set(
+        mergeImportedStatus(
+          statuses,
           normalizeMemberKey(status.memberName) || normalizeMemberKey(memberKey),
           status
         );
@@ -1576,12 +1573,16 @@ export class JsonMemberWorkSyncStore
     for (const memberName of memberNames) {
       const memberStatusFiles = await readArchiveFiles<MemberStatusFile | null>(
         this.paths.getMemberStatusPath(teamName, memberName),
-        (value): value is MemberStatusFile | null => value === null || isMemberStatusFile(value),
+        (value): value is MemberStatusFile | null => isMemberStatusFile(value),
         null
       );
       for (const memberStatus of memberStatusFiles) {
         if (memberStatus && normalizeTeamKey(memberStatus.status.teamName) === teamKey) {
-          statuses.set(normalizeMemberKey(memberStatus.status.memberName), memberStatus.status);
+          mergeImportedStatus(
+            statuses,
+            normalizeMemberKey(memberStatus.status.memberName),
+            memberStatus.status
+          );
         }
       }
     }
@@ -1684,11 +1685,10 @@ export class JsonMemberWorkSyncStore
   }
 
   private async readLegacyStatusFile(teamName: string): Promise<LegacyStatusFile> {
-    return readJsonFile(
+    return readMemberWorkSyncSafetyJson(
       this.paths.getLegacyStatusPath(teamName),
       isLegacyStatusFile,
-      { schemaVersion: 1, members: {}, metrics: { recentEvents: [] } },
-      { quarantineInvalid: true }
+      { schemaVersion: 1, members: {}, metrics: { recentEvents: [] } }
     );
   }
 
@@ -1696,13 +1696,11 @@ export class JsonMemberWorkSyncStore
     teamName: string,
     memberName: string
   ): Promise<MemberStatusFile | null> {
-    const file = await readJsonFile<MemberStatusFile | null>(
+    return readMemberWorkSyncSafetyJson<MemberStatusFile | null>(
       this.paths.getMemberStatusPath(teamName, memberName),
-      (value): value is MemberStatusFile | null => value === null || isMemberStatusFile(value),
-      null,
-      { quarantineInvalid: true }
+      (value): value is MemberStatusFile | null => isMemberStatusFile(value),
+      null
     );
-    return file;
   }
 
   private async writeMemberStatusFile(status: MemberWorkSyncStatus): Promise<void> {
@@ -1719,6 +1717,7 @@ export class JsonMemberWorkSyncStore
       emptyMetricsIndex(),
       {
         quarantineInvalid: true,
+        strict: this.deps.strictIndexReads,
       }
     );
   }
@@ -1728,11 +1727,10 @@ export class JsonMemberWorkSyncStore
   }
 
   private async readLegacyPendingFile(teamName: string): Promise<LegacyPendingReportFile> {
-    return readJsonFile(
+    return readMemberWorkSyncSafetyJson(
       this.paths.getLegacyPendingReportsPath(teamName),
       isLegacyPendingReportFile,
-      { schemaVersion: 1, intents: {} },
-      { quarantineInvalid: true }
+      { schemaVersion: 1, intents: {} }
     );
   }
 
@@ -1740,11 +1738,10 @@ export class JsonMemberWorkSyncStore
     teamName: string,
     memberName: string
   ): Promise<MemberReportsFile> {
-    return readJsonFile(
+    return readMemberWorkSyncSafetyJson(
       this.paths.getMemberReportsPath(teamName, memberName),
       isMemberReportsFile,
-      { schemaVersion: 2, intents: {} },
-      { quarantineInvalid: true }
+      { schemaVersion: 2, intents: {} }
     );
   }
 
@@ -1762,7 +1759,7 @@ export class JsonMemberWorkSyncStore
       this.paths.getPendingReportsIndexPath(teamName),
       isPendingReportsIndexFile,
       { schemaVersion: 2, items: {} },
-      { quarantineInvalid: true }
+      { quarantineInvalid: true, strict: this.deps.strictIndexReads }
     );
   }
 
@@ -1774,11 +1771,10 @@ export class JsonMemberWorkSyncStore
   }
 
   private async readLegacyOutboxFile(teamName: string): Promise<LegacyOutboxFile> {
-    return readJsonFile(
+    return readMemberWorkSyncSafetyJson(
       this.paths.getLegacyOutboxPath(teamName),
       isLegacyOutboxFile,
-      { schemaVersion: 1, items: {} },
-      { quarantineInvalid: true }
+      { schemaVersion: 1, items: {} }
     );
   }
 
@@ -1786,11 +1782,10 @@ export class JsonMemberWorkSyncStore
     teamName: string,
     memberName: string
   ): Promise<MemberOutboxFile> {
-    return readJsonFile(
+    return readMemberWorkSyncSafetyJson(
       this.paths.getMemberOutboxPath(teamName, memberName),
       isMemberOutboxFile,
-      { schemaVersion: 2, items: {} },
-      { quarantineInvalid: true }
+      { schemaVersion: 2, items: {} }
     );
   }
 
@@ -1808,7 +1803,7 @@ export class JsonMemberWorkSyncStore
       this.paths.getOutboxIndexPath(teamName),
       isOutboxIndexFile,
       { schemaVersion: 2, items: {} },
-      { quarantineInvalid: true }
+      { quarantineInvalid: true, strict: this.deps.strictIndexReads }
     );
   }
 
@@ -2304,14 +2299,14 @@ export class JsonMemberWorkSyncStore
   private async enqueue(teamName: string, operation: () => Promise<void>): Promise<void> {
     const previous = this.writeQueues.get(teamName) ?? Promise.resolve();
     const next = previous.then(operation, operation);
-    this.writeQueues.set(
-      teamName,
-      next.finally(() => {
-        if (this.writeQueues.get(teamName) === next) {
-          this.writeQueues.delete(teamName);
-        }
-      })
+    const settled = next.then(
+      () => undefined,
+      () => undefined
     );
+    this.writeQueues.set(teamName, settled);
+    void settled.then(() => {
+      if (this.writeQueues.get(teamName) === settled) this.writeQueues.delete(teamName);
+    });
     await next;
   }
 }
@@ -2341,15 +2336,4 @@ function toPendingReportIndexItem(
     recordedAt: intent.recordedAt,
     ...(intent.processedAt ? { processedAt: intent.processedAt } : {}),
   };
-}
-
-function groupByMember<T extends { memberName: string }>(records: readonly T[]): Map<string, T[]> {
-  const grouped = new Map<string, T[]>();
-  for (const record of records) {
-    const key = normalizeMemberKey(record.memberName);
-    const rows = grouped.get(key) ?? [];
-    rows.push(record);
-    grouped.set(key, rows);
-  }
-  return grouped;
 }

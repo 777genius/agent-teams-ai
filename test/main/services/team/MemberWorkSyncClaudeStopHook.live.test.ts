@@ -1,3 +1,4 @@
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -226,6 +227,7 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     const configReader = new TeamConfigReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader,
       taskReader: new TeamTaskReader(),

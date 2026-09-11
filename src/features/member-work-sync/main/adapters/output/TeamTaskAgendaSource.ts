@@ -9,6 +9,7 @@ import {
   type MemberWorkSyncMemberLike,
   normalizeMemberName,
 } from '../../../core/domain';
+import { MemberWorkSyncReadSingleFlight } from '../../infrastructure/MemberWorkSyncReadSingleFlight';
 
 import { mergeTeamMembers } from './mergeTeamMembers';
 
@@ -32,6 +33,7 @@ export interface TeamTaskAgendaSourceDeps {
   membersMetaStore: TeamMembersMetaStore;
   hash: MemberWorkSyncHashPort;
   clock: { now(): Date };
+  readTimeoutMs?: number;
 }
 
 interface TeamRosterSnapshot {
@@ -80,11 +82,16 @@ function toMemberLike(member: TeamMember): MemberWorkSyncMemberLike {
 }
 
 export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
-  private readonly rosterInFlightByTeam = new Map<string, Promise<TeamRosterSnapshot>>();
+  private readonly rosterReads: MemberWorkSyncReadSingleFlight<TeamRosterSnapshot>;
   private readonly rosterCacheByTeam = new Map<string, TeamRosterCacheEntry>();
-  private readonly workInFlightByTeam = new Map<string, Promise<TeamWorkSnapshot>>();
+  private readonly workReads: MemberWorkSyncReadSingleFlight<TeamWorkSnapshot>;
 
-  constructor(private readonly deps: TeamTaskAgendaSourceDeps) {}
+  constructor(private readonly deps: TeamTaskAgendaSourceDeps) {
+    const timeout = deps.readTimeoutMs ?? 120_000;
+    if (!Number.isFinite(timeout) || timeout < 1) throw new Error('invalid agenda read timeout');
+    this.rosterReads = new MemberWorkSyncReadSingleFlight(timeout);
+    this.workReads = new MemberWorkSyncReadSingleFlight(timeout);
+  }
 
   async loadActiveMemberNames(teamName: string): Promise<string[]> {
     const roster = await this.loadRoster(teamName, { allowRecentCache: true });
@@ -158,32 +165,34 @@ export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
   ): Promise<TeamRosterSnapshot> {
     const nowMs = this.deps.clock.now().getTime();
     const cached = this.rosterCacheByTeam.get(teamName);
-    if (options.allowRecentCache && cached && nowMs - cached.cachedAtMs < ROSTER_CACHE_MAX_AGE_MS) {
+    if (
+      options.allowRecentCache &&
+      cached &&
+      nowMs >= cached.cachedAtMs &&
+      nowMs - cached.cachedAtMs < ROSTER_CACHE_MAX_AGE_MS
+    ) {
       return Promise.resolve(cached.snapshot);
     }
 
-    const existing = this.rosterInFlightByTeam.get(teamName);
-    if (existing) {
-      return existing;
-    }
-
-    const request = this.buildRoster(teamName).finally(() => {
-      if (this.rosterInFlightByTeam.get(teamName) === request) {
-        this.rosterInFlightByTeam.delete(teamName);
-      }
-    });
-    this.rosterInFlightByTeam.set(teamName, request);
-    return request;
+    return this.rosterReads
+      .run(teamName, () => this.buildRoster(teamName))
+      .then((snapshot) => {
+        this.rosterCacheByTeam.set(teamName, {
+          snapshot,
+          cachedAtMs: this.deps.clock.now().getTime(),
+        });
+        if (this.rosterCacheByTeam.size > 128) {
+          const oldest = this.rosterCacheByTeam.keys().next().value;
+          if (oldest !== undefined) this.rosterCacheByTeam.delete(oldest);
+        }
+        return snapshot;
+      });
   }
 
   private async buildRoster(teamName: string): Promise<TeamRosterSnapshot> {
     const config = await this.deps.configReader.getConfig(teamName);
     if (!config || config.deletedAt) {
       const snapshot = { config, members: [], activeMemberNames: [] };
-      this.rosterCacheByTeam.set(teamName, {
-        snapshot,
-        cachedAtMs: this.deps.clock.now().getTime(),
-      });
       return snapshot;
     }
 
@@ -194,33 +203,21 @@ export class TeamTaskAgendaSource implements MemberWorkSyncAgendaSourcePort {
       .map((member) => normalizeMemberName(member.name))
       .filter(Boolean);
     const snapshot = { config, members, activeMemberNames };
-    this.rosterCacheByTeam.set(teamName, {
-      snapshot,
-      cachedAtMs: this.deps.clock.now().getTime(),
-    });
     return snapshot;
   }
 
   private loadWork(teamName: string): Promise<TeamWorkSnapshot> {
-    const existing = this.workInFlightByTeam.get(teamName);
-    if (existing) {
-      return existing;
-    }
-
-    const request = this.buildWork(teamName).finally(() => {
-      if (this.workInFlightByTeam.get(teamName) === request) {
-        this.workInFlightByTeam.delete(teamName);
-      }
-    });
-    this.workInFlightByTeam.set(teamName, request);
-    return request;
+    return this.workReads.run(teamName, () => this.buildWork(teamName));
   }
 
   private async buildWork(teamName: string): Promise<TeamWorkSnapshot> {
-    const [tasks, kanban] = await Promise.all([
+    const [tasks, kanban] = await Promise.allSettled([
       this.deps.taskReader.getTasks(teamName),
-      this.deps.kanbanManager.getState(teamName),
+      this.deps.kanbanManager.getState(teamName, { strict: true }),
     ]);
-    return { tasks, kanban };
+    // A failed sibling cannot hide still-running I/O from the replacement budget.
+    if (tasks.status === 'rejected') throw tasks.reason;
+    if (kanban.status === 'rejected') throw kanban.reason;
+    return { tasks: tasks.value, kanban: kanban.value };
   }
 }

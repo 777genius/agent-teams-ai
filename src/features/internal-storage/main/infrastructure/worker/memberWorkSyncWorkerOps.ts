@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, isNull } from 'drizzle-orm';
 
 import {
   isSameMemberWorkSyncTeam,
@@ -11,6 +11,14 @@ import {
   memberWorkSyncReportIntents,
   memberWorkSyncStatus,
 } from './internalStorageSchema';
+import {
+  mutateMemberWorkSyncReportJournal,
+  readMemberWorkSyncReportJournal,
+} from './memberWorkSyncReportJournalWorkerOps';
+import {
+  compareAndWriteMemberWorkSyncStatus,
+  writeMemberWorkSyncStatus,
+} from './memberWorkSyncStatusWorkerOps';
 
 import type {
   MemberWorkSyncMetricEventRecord,
@@ -18,6 +26,9 @@ import type {
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
   MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncReportJournalOpResult,
+  MemberWorkSyncStatusCompareAndWriteInput,
+  MemberWorkSyncStatusCompareAndWriteResult,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
 } from '../../../contracts/internalStorageContracts';
@@ -25,8 +36,6 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 // Mirrors MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS in JsonMemberWorkSyncStore.
 const CLAIM_STALE_MS = 5 * 60 * 1000;
-// Mirrors the recentEvents cap in the JSON metrics index.
-const METRIC_EVENTS_CAP = 200;
 const INSERT_CHUNK_SIZE = 200;
 
 const OUTBOX_TERMINAL_STATUSES = ['delivered', 'superseded', 'failed_terminal'];
@@ -115,6 +124,8 @@ export function handleMemberWorkSyncOp(
       ops.statusWrite(typed.record, typed.events);
       return null;
     }
+    case 'mws.status.compareAndWrite':
+      return ops.statusCompareAndWrite(p as MemberWorkSyncStatusCompareAndWriteInput);
     case 'mws.status.list':
       return ops.statusList((p as { teamName: string }).teamName);
     case 'mws.metricEvents.list':
@@ -135,6 +146,18 @@ export function handleMemberWorkSyncOp(
       ops.reportsMarkProcessed(typed.teamName, typed.id, typed);
       return null;
     }
+    case 'mws.reports.journalRead':
+      return ops.reportsJournalRead(
+        p as Parameters<MemberWorkSyncWorkerOps['reportsJournalRead']>[0]
+      );
+    case 'mws.reports.journalEnsure':
+      return ops.reportsJournalEnsure(
+        p as Parameters<MemberWorkSyncWorkerOps['reportsJournalEnsure']>[0]
+      );
+    case 'mws.reports.journalTransfer':
+      return ops.reportsJournalTransfer(
+        p as Parameters<MemberWorkSyncWorkerOps['reportsJournalTransfer']>[0]
+      );
     case 'mws.outbox.ensurePending':
       return ops.outboxEnsurePending(p as MemberWorkSyncOutboxEnsureRecordInput);
     case 'mws.outbox.claimDue':
@@ -214,46 +237,14 @@ export class MemberWorkSyncWorkerOps {
       .all();
   }
 
-  /**
-   * Status upsert plus metric-event append in one transaction (the JSON store
-   * updates the metrics index under the same lock). Events are deduped by
-   * their deterministic id and the newest METRIC_EVENTS_CAP per team survive.
-   */
   statusWrite(record: MemberWorkSyncStatusRecord, events: MemberWorkSyncMetricEventRecord[]): void {
-    const orm = this.getOrm();
-    orm.transaction(() => {
-      orm
-        .insert(memberWorkSyncStatus)
-        .values(record)
-        .onConflictDoUpdate({
-          target: [memberWorkSyncStatus.teamName, memberWorkSyncStatus.memberKey],
-          set: {
-            memberName: record.memberName,
-            state: record.state,
-            evaluatedAt: record.evaluatedAt,
-            providerId: record.providerId,
-            statusJson: record.statusJson,
-          },
-        })
-        .run();
-      for (const event of events) {
-        orm
-          .insert(memberWorkSyncMetricEvents)
-          .values(event)
-          .onConflictDoUpdate({
-            target: [memberWorkSyncMetricEvents.teamName, memberWorkSyncMetricEvents.id],
-            set: {
-              memberKey: event.memberKey,
-              memberName: event.memberName,
-              kind: event.kind,
-              recordedAt: event.recordedAt,
-              eventJson: event.eventJson,
-            },
-          })
-          .run();
-      }
-      this.pruneMetricEvents(record.teamName);
-    });
+    writeMemberWorkSyncStatus(this.getOrm(), record, events);
+  }
+
+  statusCompareAndWrite(
+    input: MemberWorkSyncStatusCompareAndWriteInput
+  ): MemberWorkSyncStatusCompareAndWriteResult {
+    return compareAndWriteMemberWorkSyncStatus(this.getOrm(), input);
   }
 
   metricEventsList(teamName: string): MemberWorkSyncMetricEventRecord[] {
@@ -270,6 +261,13 @@ export class MemberWorkSyncWorkerOps {
     const orm = this.getOrm();
     orm.transaction(() => {
       const current = this.readReportRow(record.teamName, record.id);
+      if (
+        current?.journalJson != null ||
+        record.journalJson != null ||
+        (current && current.memberKey !== record.memberKey)
+      ) {
+        throw new Error('Bound report intent requires strict journal API');
+      }
       if (current && current.status !== 'pending') {
         return;
       }
@@ -295,10 +293,29 @@ export class MemberWorkSyncWorkerOps {
             processedAt: next.processedAt,
             resultCode: next.resultCode,
             requestJson: next.requestJson,
+            journalJson: next.journalJson ?? null,
           },
         })
         .run();
     });
+  }
+
+  reportsJournalRead(
+    input: Parameters<typeof readMemberWorkSyncReportJournal>[1]
+  ): MemberWorkSyncReportJournalOpResult {
+    return readMemberWorkSyncReportJournal(this.getOrm(), input);
+  }
+
+  reportsJournalEnsure(
+    input: Parameters<typeof mutateMemberWorkSyncReportJournal>[1]
+  ): MemberWorkSyncReportJournalOpResult {
+    return mutateMemberWorkSyncReportJournal(this.getOrm(), input);
+  }
+
+  reportsJournalTransfer(
+    input: Parameters<typeof mutateMemberWorkSyncReportJournal>[1]
+  ): MemberWorkSyncReportJournalOpResult {
+    return mutateMemberWorkSyncReportJournal(this.getOrm(), input);
   }
 
   reportsListPending(teamName: string): MemberWorkSyncReportIntentRecord[] {
@@ -332,7 +349,8 @@ export class MemberWorkSyncWorkerOps {
         and(
           eq(memberWorkSyncReportIntents.teamName, teamName),
           eq(memberWorkSyncReportIntents.id, id),
-          eq(memberWorkSyncReportIntents.status, 'pending')
+          eq(memberWorkSyncReportIntents.status, 'pending'),
+          isNull(memberWorkSyncReportIntents.journalJson)
         )
       )
       .run();
@@ -724,35 +742,6 @@ export class MemberWorkSyncWorkerOps {
         orm.insert(memberWorkSyncMetricEvents).values(rows).run();
       }
     });
-  }
-
-  private pruneMetricEvents(teamName: string): void {
-    const orm = this.getOrm();
-    const survivors = orm
-      .select({ id: memberWorkSyncMetricEvents.id })
-      .from(memberWorkSyncMetricEvents)
-      .where(eq(memberWorkSyncMetricEvents.teamName, teamName))
-      .orderBy(desc(memberWorkSyncMetricEvents.recordedAt), desc(memberWorkSyncMetricEvents.id))
-      .limit(METRIC_EVENTS_CAP)
-      .all();
-    const keep = new Set(survivors.map((row) => row.id));
-    const all = orm
-      .select({ id: memberWorkSyncMetricEvents.id })
-      .from(memberWorkSyncMetricEvents)
-      .where(eq(memberWorkSyncMetricEvents.teamName, teamName))
-      .all();
-    const doomed = all.map((row) => row.id).filter((id) => !keep.has(id));
-    for (const ids of chunked(doomed)) {
-      orm
-        .delete(memberWorkSyncMetricEvents)
-        .where(
-          and(
-            eq(memberWorkSyncMetricEvents.teamName, teamName),
-            inArray(memberWorkSyncMetricEvents.id, ids)
-          )
-        )
-        .run();
-    }
   }
 
   private readReportRow(teamName: string, id: string): MemberWorkSyncReportIntentRecord | null {

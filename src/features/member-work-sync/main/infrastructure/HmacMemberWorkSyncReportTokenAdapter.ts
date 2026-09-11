@@ -1,7 +1,14 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicCreateAsync, atomicWriteAsync } from '@main/utils/atomicWrite';
+
+import {
+  normalizeTokenSecretTeam,
+  parseMemberWorkSyncTokenSecret,
+  tokenSecretMatchesIdentity,
+  validateBackupTokenSecret,
+} from './memberWorkSyncTokenSecret';
 
 import type {
   MemberWorkSyncReportTokenCreateInput,
@@ -10,14 +17,11 @@ import type {
   MemberWorkSyncReportTokenVerifyInput,
 } from '../../core/application';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+import type { TokenSecretIdentity } from './memberWorkSyncTokenSecret';
+import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 
 const TOKEN_PREFIX = 'wrs:v1';
 const TOKEN_TTL_MS = 15 * 60 * 1000;
-
-interface SecretFile {
-  schemaVersion: 1;
-  secret: string;
-}
 
 interface TokenPayload {
   version: 1;
@@ -33,16 +37,6 @@ function base64UrlEncode(value: string): string {
 
 function base64UrlDecode(value: string): string {
   return Buffer.from(value, 'base64url').toString('utf8');
-}
-
-function isSecretFile(value: unknown): value is SecretFile {
-  return (
-    value != null &&
-    typeof value === 'object' &&
-    (value as SecretFile).schemaVersion === 1 &&
-    typeof (value as SecretFile).secret === 'string' &&
-    (value as SecretFile).secret.length >= 32
-  );
 }
 
 function isTokenPayload(value: unknown): value is TokenPayload {
@@ -66,7 +60,13 @@ function safeEqual(left: string, right: string): boolean {
 export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncReportTokenPort {
   private readonly secretCache = new Map<string, Promise<string>>();
 
-  constructor(private readonly paths: MemberWorkSyncStorePaths) {}
+  constructor(
+    private readonly paths: MemberWorkSyncStorePaths,
+    private readonly identityAccess: Pick<
+      TeamWorkSyncIdentityAccess,
+      'readCurrent' | 'adoptLegacy' | 'withCurrent'
+    >
+  ) {}
 
   async create(input: MemberWorkSyncReportTokenCreateInput): Promise<{
     token: string;
@@ -121,55 +121,106 @@ export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncRepor
     ) {
       return { ok: false, reason: 'invalid' };
     }
-    if (Date.parse(payload.expiresAt) <= Date.parse(input.nowIso)) {
-      return { ok: false, reason: 'expired' };
-    }
+    const expiry = Date.parse(payload.expiresAt);
+    const now = Date.parse(input.nowIso);
+    if (!Number.isFinite(expiry) || !Number.isFinite(now)) return { ok: false, reason: 'invalid' };
+    const claims = { expiresAt: payload.expiresAt, expiresAtMs: expiry };
+    if (expiry <= now) return { ok: false, reason: 'expired', claims };
+    return { ok: true, claims };
+  }
 
-    return { ok: true };
+  /** Privileged restore only: caller owns the lifecycle fence and drained token users. */
+  async restoreBackupSecret(
+    teamName: string,
+    backupJson: string | null,
+    identity: TokenSecretIdentity
+  ): Promise<void> {
+    if (
+      !identity.incarnation ||
+      identity.incarnation.trim() !== identity.incarnation ||
+      !identity.teamName ||
+      identity.teamName.trim() !== identity.teamName ||
+      normalizeTokenSecretTeam(teamName) !== normalizeTokenSecretTeam(identity.teamName)
+    )
+      throw new Error('Restore token secret identity mismatch');
+    if (backupJson !== null) validateBackupTokenSecret(backupJson, identity);
+    // Backup keys are validation evidence only. Never revive an older signing key.
+    for (const key of this.secretCache.keys()) {
+      if ((JSON.parse(key) as [string, string])[0] === normalizeTokenSecretTeam(teamName))
+        this.secretCache.delete(key);
+    }
+    await this.loadOrCreateSecret(teamName, identity);
   }
 
   private async sign(teamName: string, encodedPayload: string): Promise<string> {
-    const secret = await this.getSecret(teamName);
-    return createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+    let observed = await this.identityAccess.readCurrent(teamName);
+    if (observed.status === 'unidentified' && observed.reason === 'missing_marker')
+      observed = await this.identityAccess.adoptLegacy(teamName);
+    if (observed.status !== 'identified') throw new Error('Report token identity unavailable');
+    const identity = { teamName, incarnation: observed.identityId };
+    const result = await this.identityAccess.withCurrent(
+      teamName,
+      identity.incarnation,
+      async () => {
+        const secret = await this.getSecret(teamName, identity);
+        return createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+      }
+    );
+    if (!result.current) throw new Error('Report token identity changed');
+    return result.value;
   }
 
-  private async getSecret(teamName: string): Promise<string> {
-    const existing = this.secretCache.get(teamName);
-    if (existing) {
-      return existing;
-    }
-
-    const next = this.loadOrCreateSecret(teamName).catch((error: unknown) => {
-      this.secretCache.delete(teamName);
+  private async getSecret(teamName: string, identity: TokenSecretIdentity): Promise<string> {
+    const key = JSON.stringify([normalizeTokenSecretTeam(teamName), identity.incarnation]);
+    const existing = this.secretCache.get(key);
+    if (existing) return existing;
+    const next = this.loadOrCreateSecret(teamName, identity).catch((error: unknown) => {
+      this.secretCache.delete(key);
       throw error;
     });
-    this.secretCache.set(teamName, next);
+    this.secretCache.set(key, next);
     return next;
   }
 
-  private async loadOrCreateSecret(teamName: string): Promise<string> {
+  private async loadOrCreateSecret(
+    teamName: string,
+    identity: TokenSecretIdentity
+  ): Promise<string> {
+    const target = this.paths.getReportTokenSecretPath(teamName);
+    let current: ReturnType<typeof parseMemberWorkSyncTokenSecret> | null = null;
     try {
-      const raw = await readFile(this.paths.getReportTokenSecretPath(teamName), 'utf8');
-      const parsed = JSON.parse(raw);
-      if (isSecretFile(parsed)) {
-        return parsed.secret;
-      }
+      current = parseMemberWorkSyncTokenSecret(await readFile(target, 'utf8'));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        // A corrupt token secret only affects short-lived proof tokens. Regenerate it so
-        // member work sync can recover without requiring an app restart.
-      }
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-
-    const secretFile: SecretFile = {
-      schemaVersion: 1,
+    if (current?.schemaVersion === 2 && current.teamName !== normalizeTokenSecretTeam(teamName))
+      throw new Error('Report token secret team mismatch');
+    if (current && tokenSecretMatchesIdentity(current, identity)) return current.secret;
+    const secretFile = {
+      schemaVersion: 2,
+      teamName: normalizeTokenSecretTeam(teamName),
+      incarnation: identity.incarnation,
       secret: randomBytes(32).toString('base64url'),
     };
     await mkdir(this.paths.getTeamDir(teamName), { recursive: true });
-    await atomicWriteAsync(
-      this.paths.getReportTokenSecretPath(teamName),
-      JSON.stringify(secretFile, null, 2)
-    );
-    return secretFile.secret;
+    const raw = JSON.stringify(secretFile, null, 2);
+    // The lifecycle guard remains held across durable rotation and publication.
+    if (current)
+      await atomicWriteAsync(target, raw, {
+        mode: 0o600,
+        durability: 'strict',
+        syncDirectory: true,
+      });
+    else {
+      try {
+        await atomicCreateAsync(target, raw, { mode: 0o600 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
+    }
+    const winner = parseMemberWorkSyncTokenSecret(await readFile(target, 'utf8'));
+    if (!tokenSecretMatchesIdentity(winner, identity))
+      throw new Error('Report token secret identity mismatch');
+    return winner.secret;
   }
 }

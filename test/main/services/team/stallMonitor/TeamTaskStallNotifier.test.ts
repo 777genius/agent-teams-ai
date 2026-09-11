@@ -27,321 +27,42 @@ function createAlert(overrides: Partial<TaskStallAlert> = {}): TaskStallAlert {
 }
 
 describe('TeamTaskStallNotifier', () => {
-  it('sends OpenCode owner nudges with deterministic message ids', async () => {
-    const teamDataService = {
-      sendSystemNotificationToLead: vi.fn(async () => undefined),
-    };
-    const teamProvisioningService = {
-      relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-        relayed: 1,
-        attempted: 1,
-        delivered: 1,
-        failed: 0,
-        lastDelivery: { delivered: true, accepted: true },
-      })),
-    };
-    const inboxReader = {
-      getMessagesFor: vi.fn(async () => []),
-    };
-    const inboxWriter = {
-      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
-    };
-    const notifier = new TeamTaskStallNotifier(
-      teamDataService as never,
-      teamProvisioningService as never,
-      inboxReader as never,
-      inboxWriter as never
-    );
-    const alert = createAlert();
-    const messageId = `task-stall:demo:task-a:${alert.epochKey}`;
-
-    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
-
-    expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
-      'demo',
-      expect.objectContaining({
-        member: 'alice',
-        from: 'system',
-        to: 'alice',
-        messageId,
-        summary: 'Potential stalled task',
-        taskRefs: [alert.taskRef],
-        actionMode: 'do',
-        source: 'system_notification',
-        messageKind: 'task_stall_remediation',
-      })
-    );
-    expect(teamProvisioningService.relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith(
-      'demo',
-      'alice',
-      {
-        onlyMessageId: messageId,
-        source: 'watchdog',
-        deliveryMetadata: {
-          replyRecipient: 'user',
-          actionMode: 'do',
-          taskRefs: [alert.taskRef],
-        },
-      }
-    );
-    expect(teamDataService.sendSystemNotificationToLead).not.toHaveBeenCalled();
-  });
-
-  it('skips non-OpenCode owners', async () => {
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      {
-        relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-          lastDelivery: { delivered: true },
-        })),
-      } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
-    );
-
-    await expect(
-      notifier.notifyOpenCodeOwners('demo', [
-        createAlert({ ownerProviderId: 'codex', owner: 'alice' }),
-      ])
-    ).resolves.toEqual([]);
-  });
-
-  it('skips review alerts because task owner is not necessarily the reviewer', async () => {
-    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
+  it('records stall observations into member-work-sync instead of sending owner commands', async () => {
+    const record = vi.fn(async () => undefined);
+    const inboxWriter = { sendMessage: vi.fn() };
+    const relay = vi.fn();
     const notifier = new TeamTaskStallNotifier(
       { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
-    );
-
-    await expect(
-      notifier.notifyOpenCodeOwners('demo', [
-        createAlert({ branch: 'review', ownerProviderId: 'opencode', owner: 'alice' }),
-      ])
-    ).resolves.toEqual([]);
-    expect(relay).not.toHaveBeenCalled();
-  });
-
-  it('returns no remediated alert when OpenCode delivery is rejected', async () => {
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      {
-        relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-          relayed: 0,
-          attempted: 1,
-          delivered: 0,
-          failed: 1,
-          lastDelivery: {
-            delivered: false,
-            reason: 'opencode_runtime_not_active',
-          },
-        })),
-      } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
+      inboxWriter as never,
+      { record }
     );
 
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
-  });
-
-  it('sends a start-the-task nudge for pending pickup alerts', async () => {
-    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true, accepted: true } }));
-    const inboxWriter = {
-      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
-    };
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      { relayOpenCodeMemberInboxMessages: relay } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      inboxWriter as never
-    );
-    const alert = createAlert({
-      signal: 'pending_pickup_after_unblock',
-      remediationKind: 'pending_pickup',
-      epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
-      reason: 'Potential pickup stall.',
+    expect(record).toHaveBeenCalledWith({
+      teamName: 'demo',
+      memberName: 'alice',
+      taskId: 'task-a',
+      reason: 'Potential work stall after weak start-only task comment.',
+      observedAt: expect.any(String),
     });
-    const messageId = `task-stall:demo:task-a:${alert.epochKey}`;
-
-    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
-
-    const request = (inboxWriter.sendMessage.mock.calls as unknown as unknown[][])[0]?.[1] as {
-      messageId: string;
-      messageKind: string;
-      summary: string;
-      actionMode: string;
-      text: string;
-    };
-    expect(request.text).toContain('still pending on the board');
-    expect(request.text).toContain('A direct message to the user does not move the board');
-    expect(request.text).toContain('task_start');
-    expect(request.summary).toBe('Assigned task not started');
-    // Only text and summary change: id, kind and relay metadata stay on the proven path.
-    expect(request.messageId).toBe(messageId);
-    expect(request.messageKind).toBe('task_stall_remediation');
-    expect(request.actionMode).toBe('do');
-    expect(relay).toHaveBeenCalledWith('demo', 'alice', {
-      onlyMessageId: messageId,
-      source: 'watchdog',
-      deliveryMetadata: {
-        replyRecipient: 'user',
-        actionMode: 'do',
-        taskRefs: [alert.taskRef],
-      },
-    });
-  });
-
-  it('does not write a second inbox row for a repeated pending pickup alert', async () => {
-    const alert = createAlert({
-      signal: 'pending_pickup_after_unblock',
-      remediationKind: 'pending_pickup',
-      epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
-    });
-    const messageId = `task-stall:demo:task-a:${alert.epochKey}`;
-    const inboxWriter = {
-      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId })),
-    };
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      {
-        relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-          lastDelivery: { delivered: true, accepted: true },
-        })),
-      } as never,
-      { getMessagesFor: vi.fn(async () => [{ messageId }]) } as never,
-      inboxWriter as never
-    );
-
-    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
     expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    expect(relay).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['opencode_inbox_message_already_read', { delivered: true }],
-    ['opencode_inbox_read_already_committed', { delivered: true, accepted: true }],
-  ])(
-    'does not count a %s no-op redelivery as remediated so the alert can escalate',
-    async (reason, deliveryShape) => {
-      const notifier = new TeamTaskStallNotifier(
-        { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-        {
-          relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-            attempted: 1,
-            delivered: 1,
-            lastDelivery: { ...deliveryShape, reason, diagnostics: [reason] },
-            diagnostics: [reason],
-          })),
-        } as never,
-        { getMessagesFor: vi.fn(async () => []) } as never,
-        { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
-      );
-
-      await expect(
-        notifier.notifyOpenCodeOwners('demo', [
-          createAlert({
-            signal: 'pending_pickup_after_unblock',
-            remediationKind: 'pending_pickup',
-            epochKey: 'task-a:work:pending_pickup_after_unblock:alice:2026-04-19T12:00:00.000Z',
-          }),
-        ])
-      ).resolves.toEqual([]);
-    }
-  );
-
-  it('does not mark queued-behind delivery as remediated even when active ledger exists', async () => {
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      {
-        relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
-          relayed: 0,
-          attempted: 1,
-          delivered: 0,
-          failed: 0,
-          lastDelivery: {
-            delivered: true,
-            accepted: false,
-            responsePending: true,
-            ledgerRecordId: 'active-ledger-record',
-            queuedBehindMessageId: 'msg-active',
-            reason: 'opencode_delivery_response_pending',
-          },
-        })),
-      } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
-    );
-
-    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
-  });
-
-  it('marks accepted response-pending delivery as remediated and leaves follow-up to the delivery ledger', async () => {
-    const relay = vi.fn(async () => ({
-      relayed: 1,
-      attempted: 1,
-      delivered: 1,
-      failed: 0,
-      lastDelivery: {
-        delivered: true,
-        accepted: true,
-        responsePending: true,
-        ledgerRecordId: 'active-ledger-record',
-        reason: 'opencode_delivery_response_pending',
-      },
-    }));
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      { relayOpenCodeMemberInboxMessages: relay } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
-    );
-
+  it('still notifies the lead for user-visible stall attention', async () => {
+    const sendSystemNotificationToLead = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier({ sendSystemNotificationToLead } as never);
     const alert = createAlert();
-    await expect(notifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([alert]);
-    expect(relay).toHaveBeenCalledTimes(1);
-  });
 
-  it('does not deliver runtime nudge when inbox write fails', async () => {
-    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      { relayOpenCodeMemberInboxMessages: relay } as never,
-      { getMessagesFor: vi.fn(async () => []) } as never,
-      {
-        sendMessage: vi.fn(async () => {
-          throw new Error('disk full');
-        }),
-      } as never
-    );
+    await notifier.notifyLead('demo', [alert]);
 
-    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
-    expect(relay).not.toHaveBeenCalled();
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'OpenCode task stall remediation inbox write failed'
-    );
-    vi.mocked(console.warn).mockClear();
-  });
-
-  it('does not write or relay when existing inbox read fails', async () => {
-    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
-    const inboxWrite = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' }));
-    const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
-      { relayOpenCodeMemberInboxMessages: relay } as never,
-      {
-        getMessagesFor: vi.fn(async () => {
-          throw new Error('read failed');
-        }),
-      } as never,
-      { sendMessage: inboxWrite } as never
-    );
-
-    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
-    expect(inboxWrite).not.toHaveBeenCalled();
-    expect(relay).not.toHaveBeenCalled();
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'OpenCode task stall remediation inbox write failed'
-    );
-    vi.mocked(console.warn).mockClear();
+    expect(sendSystemNotificationToLead).toHaveBeenCalledWith({
+      teamName: 'demo',
+      summary: 'Potential stalled tasks detected',
+      text: expect.stringContaining('Task A'),
+      taskRefs: [alert.taskRef],
+    });
   });
 });

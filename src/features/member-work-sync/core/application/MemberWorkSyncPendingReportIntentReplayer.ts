@@ -88,52 +88,21 @@ export class MemberWorkSyncPendingReportIntentReplayer {
   private async executeReplay(
     intent: MemberWorkSyncReportIntent
   ): Promise<MemberWorkSyncReportResult> {
-    const result = await this.reporter.execute({
+    const request = {
       ...intent.request,
       source: intent.request.source ?? 'mcp',
-    });
-    const freshToken = await this.getFreshTokenForExpiredFallbackReport(intent, result);
-    if (!freshToken) {
-      return result;
-    }
-    return this.reporter.execute({
-      ...intent.request,
-      agendaFingerprint: freshToken.agendaFingerprint,
-      reportToken: freshToken.reportToken,
-      source: intent.request.source ?? 'mcp',
-    });
-  }
-
-  private async getFreshTokenForExpiredFallbackReport(
-    intent: MemberWorkSyncReportIntent,
-    result: MemberWorkSyncReportResult
-  ): Promise<{ agendaFingerprint: string; reportToken: string } | null> {
-    if (
-      result.accepted ||
-      result.code !== 'invalid_report_token' ||
-      intent.reason !== 'control_api_unavailable' ||
-      !intent.request.reportToken ||
-      !result.status.reportToken ||
-      result.status.agenda.fingerprint !== intent.request.agendaFingerprint ||
-      !this.deps.reportToken
-    ) {
-      return null;
-    }
-
-    const validation = await this.deps.reportToken.verify({
-      token: intent.request.reportToken,
-      teamName: result.status.teamName,
-      memberName: result.status.memberName,
-      agendaFingerprint: result.status.agenda.fingerprint,
-      nowIso: this.deps.clock.now().toISOString(),
-    });
-    if (validation.ok || validation.reason !== 'expired') {
-      return null;
-    }
-
-    return {
-      agendaFingerprint: result.status.agenda.fingerprint,
-      reportToken: result.status.reportToken,
     };
+    const journal = intent.journal;
+    // Legacy unbound pending never receives a backfilled incarnation or receivedAt.
+    if (!journal) {
+      return this.reporter.execute(request);
+    }
+    return this.reporter.execute(request, {
+      intentId: intent.id,
+      incarnation: journal.incarnation,
+      requestDigest: journal.requestDigest,
+      receivedAt: journal.firstRecordedAt,
+      origin: journal.origin,
+    });
   }
 }

@@ -8,6 +8,7 @@ import type {
   JsonMemberWorkSyncStore,
   MemberWorkSyncStoreSnapshot,
 } from './JsonMemberWorkSyncStore';
+import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 
 export interface MemberWorkSyncSqliteImporterDeps {
@@ -43,6 +44,31 @@ export class MemberWorkSyncSqliteImporter {
   private readonly recentFailures = new Map<string, { atMs: number; error: Error }>();
 
   constructor(private readonly deps: MemberWorkSyncSqliteImporterDeps) {}
+
+  /** Called by the existing store mutex after lifecycle owner confirms a new incarnation. */
+  invalidatePreparedTeam(teamName: string): void {
+    this.importedTeams.delete(teamName);
+    this.recentFailures.delete(teamName);
+  }
+
+  /** Authority already preflighted and imported this exact snapshot; do not re-read legacy inputs. */
+  async finalizePreparedImport(
+    teamName: string,
+    records: MemberWorkSyncTeamSnapshotRecords,
+    filesToArchive: readonly string[]
+  ): Promise<void> {
+    const roundTrip = await this.deps.gateway.listTeamSnapshot(teamName);
+    if (!areSnapshotRecordSetsEquivalent(roundTrip, records))
+      throw new Error('member-work-sync prepared import verification failed');
+    await this.deps.gateway.recordStoreImport(
+      MEMBER_WORK_SYNC_STORE_ID,
+      teamName,
+      records.statuses.length + records.reportIntents.length + records.outboxItems.length
+    );
+    for (const file of filesToArchive) await archiveFileWithGenerations(file);
+    this.recentFailures.delete(teamName);
+    this.importedTeams.add(teamName);
+  }
 
   /** Must run under the same per-team mutex as the store methods. */
   async ensureImported(teamName: string): Promise<void> {
