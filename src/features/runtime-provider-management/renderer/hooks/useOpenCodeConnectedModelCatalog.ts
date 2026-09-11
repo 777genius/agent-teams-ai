@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
-import type { CliProviderStatus } from '@shared/types';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
@@ -14,6 +13,7 @@ import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
+import type { CliProviderStatus } from '@shared/types';
 
 const CONCURRENT_SOURCE_LOADS = 1;
 let nextRequest = 0;
@@ -144,8 +144,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
         if (
           response.schemaVersion !== 1 ||
           response.runtimeId !== 'opencode' ||
-          !directory ||
-          directory.runtimeId !== 'opencode'
+          directory?.runtimeId !== 'opencode'
         )
           throw validationError('Invalid provider directory response.');
         if (
