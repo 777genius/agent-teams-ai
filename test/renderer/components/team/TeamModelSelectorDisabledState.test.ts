@@ -1495,6 +1495,102 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('keeps catalog Ollama visible after an empty authoritative local overlay lookup', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
+    installLoadModelsApi(loadModels);
+    const localModelId = 'ollama/qwen';
+    const provider = {
+      providerId: 'opencode',
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      detailMessage: null,
+      statusMessage: null,
+      capabilities: { teamLaunch: true },
+      models: [localModelId],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2099-07-20T12:10:00.000Z',
+        defaultModelId: localModelId,
+        defaultLaunchModel: localModelId,
+        models: [
+          {
+            id: localModelId,
+            launchModel: localModelId,
+            displayName: 'qwen',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+            metadata: {
+              opencode: {
+                providerId: 'ollama',
+                modelId: 'qwen',
+                sourceLabel: 'Ollama',
+                accessKind: 'configured_authless',
+                routeKind: 'configured_local',
+                proofState: 'needs_probe',
+                requiresExecutionProof: true,
+                reason: null,
+              },
+            },
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [provider],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    await flushFailClosedAuthorityClocks();
+
+    await vi.waitFor(() => {
+      expect(host.textContent).toContain('qwen');
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-ollama"]')
+    ).toBeNull();
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+    ).not.toBeNull();
+    expect(loadModels).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('never dispatches a remote catalog load for a custom local provider route', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const localLookup = createDeferred<RuntimeLocalProviderListResponse>();

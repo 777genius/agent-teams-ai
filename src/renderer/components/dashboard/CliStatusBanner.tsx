@@ -82,7 +82,7 @@ import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus
 import { getRuntimeDisplayName as getHumanRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
-import { getOpenCodeModelRoutePresentationStatus } from '@shared/utils/opencodeModelRoute';
+import { countConfiguredLocalOpenCodeCatalogModels } from '@shared/utils/opencodeModelRoute';
 import {
   AlertTriangle,
   CheckCircle,
@@ -568,6 +568,7 @@ function formatRuntimeAuthSummary(
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>,
   visibleProviders: readonly CliProviderStatus[],
   additionalConnectedCount: number,
+  configuredLocalCount: number,
   codexSnapshotPending: boolean,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string | null {
@@ -582,10 +583,15 @@ function formatRuntimeAuthSummary(
       visibleProviders.filter(
         (provider) => !isPending(provider) && isProviderCountedAsConnected(provider)
       ).length + additionalConnectedCount;
-
-    return connected > 0
-      ? t('cliStatus.provider.connectedCount', { connected })
-      : t('cliStatus.provider.connectToGetStarted');
+    if (connected <= 0 && configuredLocalCount <= 0) {
+      return t('cliStatus.provider.connectToGetStarted');
+    }
+    return [
+      ...(connected > 0 ? [t('cliStatus.provider.connectedCount', { connected })] : []),
+      ...(configuredLocalCount > 0
+        ? [t('cliStatus.provider.configuredLocalCount', { count: configuredLocalCount })]
+        : []),
+    ].join(' · ');
   }
 
   if (cliStatus.authStatusChecking) {
@@ -713,22 +719,7 @@ function getOpenCodeDashboardChips(
   }
 
   const catalogModels = provider.modelCatalog?.models ?? [];
-  const configuredLocalCount = new Set(
-    catalogModels
-      .filter((model) => {
-        const route = model.metadata?.opencode;
-        return (
-          getOpenCodeModelRoutePresentationStatus({
-            modelId: model.launchModel,
-            catalogId: model.id,
-            providerId: route?.providerId,
-            routeKind: route?.routeKind,
-            accessKind: route?.accessKind,
-          }) === 'local'
-        );
-      })
-      .map((model) => model.launchModel)
-  ).size;
+  const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(catalogModels);
   const verifiedCount = new Set(
     catalogModels
       .filter((model) => model.metadata?.opencode?.proofState === 'verified')
@@ -914,6 +905,10 @@ const InstalledBanner = ({
   );
   const detailedProviders = visibleProviders;
   const canOpenExtensions = cliStatus.installed;
+  const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(
+    visibleProviders.find((provider) => provider.providerId === 'opencode')?.modelCatalog?.models ??
+      []
+  );
   const hasConnectedMultimodelProvider =
     isMultimodelRuntimeStatus(cliStatus) &&
     (visibleProviders.some(
@@ -921,7 +916,8 @@ const InstalledBanner = ({
         !isCodexSnapshotPending(provider, codexSnapshotPending) &&
         isProviderCountedAsConnected(provider)
     ) ||
-      openCodeConnectedPlanCount > 0);
+      openCodeConnectedPlanCount > 0 ||
+      configuredLocalCount > 0);
   const runtimeLabel = hasConnectedMultimodelProvider
     ? t('cliStatus.provider.readyToRunAgents')
     : formatRuntimeLabel(cliStatus);
@@ -929,6 +925,7 @@ const InstalledBanner = ({
     cliStatus,
     visibleProviders,
     openCodeConnectedPlanCount,
+    configuredLocalCount,
     codexSnapshotPending,
     t
   );
