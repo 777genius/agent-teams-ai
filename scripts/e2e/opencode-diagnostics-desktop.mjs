@@ -221,15 +221,26 @@ if (mode === 'seed-packaged') {
   const ordered = data.packaged
     ? packagedStopOrder(owned, data.artifact.app.path)
     : [...owned].reverse();
-  for (const entry of ordered) {
-    const current = processes().find((p) => p.pid === entry.pid);
-    if (!current) continue;
-    sameIdentity(entry, current);
-    try {
-      process.kill(entry.pid, 'SIGTERM');
-    } catch (error) {
-      if (error.code !== 'ESRCH') throw error;
+  const signals = [];
+  try {
+    for (const entry of ordered) {
+      const record = { expected: entry, at: new Date().toISOString(), outcome: 'checking' };
+      signals.push(record);
+      const current = processes().find((p) => p.pid === entry.pid);
+      record.current = current ?? null;
+      if (!current) { record.outcome = 'missing-from-identity-snapshot'; continue; }
+      sameIdentity(entry, current);
+      try {
+        process.kill(entry.pid, 'SIGTERM');
+        record.outcome = 'signal-returned';
+      } catch (error) {
+        record.outcome = error.code ?? String(error);
+        if (error.code !== 'ESRCH') throw error;
+      }
     }
+  } finally {
+    if (data.packaged)
+      await writeFile(path.join(root, 'cleanup-signals.json'), JSON.stringify(signals, null, 2));
   }
   console.log('Stopped owned test process tree');
 } else if (mode === 'start') {

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   parseWindowsProcesses,
+  windowsCleanupEvidence,
   parseUnixProcesses,
   parseListeners,
   ownedTree,
@@ -160,4 +161,11 @@ test('timeout fixture stays live until its owning test terminates it', async () 
     if (child && child.exitCode === null) child.kill();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('Windows cleanup evidence retains current PID through independent read-only queries', { skip: process.platform !== 'win32' }, () => {
+  const evidence = windowsCleanupEvidence([process.pid]);
+  assert(evidence.cim.some(entry => entry.pid === process.pid && entry.creationDate));
+  assert(evidence.native.some(entry => entry.pid === process.pid && entry.startTime && entry.hasExited === false));
+  assert(Array.isArray(evidence.tcp));
 });

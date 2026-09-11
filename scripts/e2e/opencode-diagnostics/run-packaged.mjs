@@ -7,7 +7,7 @@ import { open, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
-import { processes, listeners, sameIdentity } from './platform.mjs';
+import { processes, listeners, sameIdentity, windowsCleanupEvidence } from './platform.mjs';
 
 const args = process.argv.slice(2);
 packagedArguments(args); // Validate before creating a profile or launching anything.
@@ -115,6 +115,12 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
           2
         )
       );
+      if (!drain.drained) {
+        let diagnostic;
+        try { diagnostic = windowsCleanupEvidence([...new Set([...identities.map(p => p.pid), ...drain.listenerPids])]); }
+        catch (error) { diagnostic = { collectionError: String(error) }; }
+        await writeFile(path.join(runDir, 'cleanup-os.json'), JSON.stringify(diagnostic, null, 2));
+      }
       assert(drain.drained, 'Owned processes or CDP listener survived cleanup; refusing warm restart');
       const current = JSON.parse(await readFile(manifestPath, 'utf8'));
       sameIdentity(ownedManifest.launcher, current.launcher);
