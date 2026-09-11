@@ -28,7 +28,9 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.14.2 (2026-09-11)
+## Published: v2.14.2 (2026-09-11)
+
+GitHub release: [v2.14.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.14.2).
 
 Target branch: `main`.
 
@@ -37,7 +39,7 @@ Runtime gate:
 - Agent Teams runtime: `v0.0.95`.
 - Terminal Platform runtime: `v0.3.3`.
 
-Draft body source for GitHub release:
+Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.2 -->
 Fixes OpenCode startup, stop, and catalog errors, and keeps teammate models after relaunch.
