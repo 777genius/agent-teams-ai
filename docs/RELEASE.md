@@ -28,7 +28,82 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.14.1 (2026-09-08)
+## Draft: v2.14.2 (2026-09-11)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.95`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.14.2 -->
+Fixes OpenCode startup, stop, and catalog errors, and keeps teammate models after relaunch.
+
+### What's New
+
+- Copy OpenCode version and catalog failure details from the dashboard.
+- Open a project from an empty dashboard instead of being stuck on that screen.
+
+### Fixes
+
+- Restart stopped OpenCode teams without losing the selected models.
+- Clean up failed OpenCode Windows startups without a manual reset.
+- Keep teammate models after relaunch.
+- Stop old task comments from replaying when the app starts.
+- Keep Claude auth modes available in settings.
+- Patch high-severity editor and document dependencies.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/Agent.Teams.AI-2.14.2-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/Agent.Teams.AI-2.14.2-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/Agent.Teams.AI.Setup.2.14.2.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/Agent.Teams.AI.Setup.2.14.2-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/Agent.Teams.AI-2.14.2.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/agent-teams-ai_2.14.2_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/agent-teams-ai-2.14.2.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.2/agent-teams-ai-2.14.2.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.14.2 -->
+
+## Published: v2.14.1 (2026-09-08)
+
+GitHub release: [v2.14.1](https://github.com/777genius/agent-teams-ai/releases/tag/v2.14.1).
 
 Target branch: `main`, including Cursor integration and the merged team Stop and recovery fixes.
 
