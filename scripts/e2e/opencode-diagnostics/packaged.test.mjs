@@ -19,6 +19,7 @@ import {
   matchesPackagedPreload,
   refreshSettled,
   qualifySummary,
+  qualifySettings,
   waitForAppVersion,
   qualifyModels,
   collectPages,
@@ -737,4 +738,16 @@ test('main readiness waits only for missing version handler and preserves real f
     }, 0),
     /No handler/
   );
+});
+
+test('native settings qualification rejects degraded or failed reads', () => {
+  const response = { schemaVersion: 1, runtimeId: 'opencode', view: {
+    runtimeId: 'opencode', runtime: { state: 'ready' }, providers: [], configuredModels: [], diagnostics: [],
+  } };
+  assert.equal(qualifySettings(response).state, 'ready');
+  for (const state of ['degraded', 'needs-setup', undefined]) {
+    assert.throws(() => qualifySettings({ ...response, view: { ...response.view, runtime: { state } } }));
+  }
+  assert.throws(() => qualifySettings({ ...response, error: { message: 'timeout' } }));
+  assert.throws(() => qualifySettings({ ...response, view: { ...response.view, diagnostics: ['HTTP timeout'] } }));
 });

@@ -2,6 +2,15 @@ name: OpenCode packaged Windows E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      runtime_candidate_run:
+        description: 'Optional successful runtime CI run for test-only packaging'
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        description: 'Exact runtime source SHA (required with candidate run)'
+        type: string
+        default: ''
   pull_request:
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
@@ -38,6 +47,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage verified test-only runtime candidate
+        if: inputs.runtime_candidate_run != '' || inputs.runtime_candidate_sha != ''
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+        run: node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
       - name: Stage pinned terminal runtime
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +87,9 @@ jobs:
           @"
           Windows test build, not an installer or an updater release.
           Source commit: $env:GITHUB_SHA
-          Runtime version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
+          Runtime payload version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
+          Runtime candidate source (empty for published pin): ${{ inputs.runtime_candidate_sha }}
+          If a candidate source is present this is an unreleased test runtime. See runtime-candidate-evidence.json.
           Extract the ZIP. Do not launch AgentTeamsAI.exe directly with your everyday profile.
           Use the separate disposable-profile instructions supplied with this test build.
           Do not launch teams in real projects.
@@ -88,6 +106,7 @@ jobs:
             release/AgentTeamsAI-windows-test-*.zip
             release/test-build-SHA256SUMS.txt
             release/test-build-README.txt
+            runtime-candidate-evidence.json
       - name: Preserve qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
