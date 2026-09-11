@@ -2,10 +2,20 @@ name: OpenCode packaged Windows E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      runtime_candidate_run:
+        description: 'Optional runtime CI run with a successful Windows candidate job'
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        description: 'Exact runtime source SHA (required with candidate run)'
+        type: string
+        default: ''
   pull_request:
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
+      - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
@@ -33,11 +43,18 @@ jobs:
           python-version: '3.11'
       - run: pnpm install --frozen-lockfile
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage verified test-only runtime candidate
+        if: inputs.runtime_candidate_run != '' || inputs.runtime_candidate_sha != ''
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+        run: node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
       - name: Stage pinned terminal runtime
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,6 +67,13 @@ jobs:
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
       - name: Package without publishing
         run: pnpm pack:win:x64 --dir --publish never
+      - name: Verify packaged candidate identity
+        if: inputs.runtime_candidate_run != ''
+        shell: pwsh
+        run: |
+          $candidate = Get-Content runtime-candidate-evidence.json | ConvertFrom-Json
+          $packagedHash = (Get-FileHash 'release/win-unpacked/resources/runtime/claude-multimodel.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($packagedHash -ne $candidate.binarySha256) { throw 'Packaging replaced the verified runtime candidate' }
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Qualify cold and warm packaged starts
@@ -71,7 +95,9 @@ jobs:
           @"
           Windows test build, not an installer or an updater release.
           Source commit: $env:GITHUB_SHA
-          Runtime version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
+          Runtime payload version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
+          Runtime candidate source (empty for published pin): ${{ inputs.runtime_candidate_sha }}
+          If a candidate source is present this is an unreleased test runtime. See runtime-candidate-evidence.json.
           Extract the ZIP. Do not launch AgentTeamsAI.exe directly with your everyday profile.
           Use the separate disposable-profile instructions supplied with this test build.
           Do not launch teams in real projects.
@@ -88,6 +114,7 @@ jobs:
             release/AgentTeamsAI-windows-test-*.zip
             release/test-build-SHA256SUMS.txt
             release/test-build-README.txt
+            runtime-candidate-evidence.json
       - name: Preserve qualification evidence
         if: always()
         uses: actions/upload-artifact@v4

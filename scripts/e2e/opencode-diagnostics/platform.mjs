@@ -235,3 +235,25 @@ export function assertLauncherCommand(launcher) {
     'Launcher command changed; refusing access/cleanup'
   );
 }
+
+// Read-only failure evidence. Missing identity never grants signal authority.
+export function windowsCleanupEvidence(pids) {
+  assert(pids.every(pid => Number.isInteger(pid) && pid > 0));
+  assert(pids.length <= 500, 'Cleanup evidence PID bound exceeded');
+  if (!windows) return null;
+  const ids = [...new Set(pids)].join(',');
+  return JSON.parse(powershell(`
+    $targets = @(${ids});
+    $cim = @(Get-CimInstance Win32_Process | Where-Object { $targets -contains [int]$_.ProcessId } | ForEach-Object {
+      [pscustomobject]@{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; creationDate=$_.CreationDate; executable=$_.ExecutablePath }
+    });
+    $native = @($targets | ForEach-Object {
+      $targetPid = $_;
+      try { $proc = Get-Process -Id $targetPid -ErrorAction Stop;
+        [pscustomobject]@{ pid=$targetPid; startTime=$proc.StartTime.ToUniversalTime().ToString('o'); hasExited=$proc.HasExited }
+      } catch { [pscustomobject]@{ pid=$targetPid; error=$_.Exception.Message } }
+    });
+    $tcp = @(Get-NetTCPConnection | Where-Object { $_.LocalPort -eq 9222 } | Select-Object LocalAddress,LocalPort,State,OwningProcess);
+    @{ cim=$cim; native=$native; tcp=$tcp } | ConvertTo-Json -Depth 5 -Compress
+  `).replace(/^\uFEFF/, '').trim());
+}

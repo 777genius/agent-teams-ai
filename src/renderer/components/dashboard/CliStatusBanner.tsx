@@ -1207,7 +1207,6 @@ const InstalledBanner = ({
               modelCatalogLoading ||
               provider.modelCatalog?.diagnostics.message
             );
-
             return (
               <div
                 key={provider.providerId}
@@ -1421,6 +1420,7 @@ const InstalledBanner = ({
                       </button>
                     ) : null}
                     <button
+                      data-testid={`runtime-manage-${provider.providerId}`}
                       onClick={() => onProviderManage(provider.providerId)}
                       disabled={actionDisabled}
                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"

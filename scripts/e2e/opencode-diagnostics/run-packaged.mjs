@@ -6,8 +6,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { open, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { packagedArguments } from './packaged.mjs';
-import { processes, listeners, sameIdentity } from './platform.mjs';
+import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
+import { processes, listeners, sameIdentity, windowsCleanupEvidence } from './platform.mjs';
 
 const args = process.argv.slice(2);
 packagedArguments(args); // Validate before creating a profile or launching anything.
@@ -98,30 +98,30 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         JSON.stringify(identities, null, 2)
       );
       const deadline = Date.now() + 15000;
-      let alive;
+      let drain;
       do {
-        const snapshot = processes();
-        alive = identities.filter((entry) =>
-          snapshot.some((now) => now.pid === entry.pid && now.birth === entry.birth)
-        );
-        if (!alive.length) break;
+        drain = packagedDrainSnapshot(identities, processes(), listeners());
+        if (drain.drained) break;
         await new Promise((resolve) => setTimeout(resolve, 250));
       } while (Date.now() < deadline);
-      assert.equal(alive.length, 0, 'Owned processes survived cleanup; refusing warm restart');
-      const listenerPids = listeners();
       await writeFile(
         path.join(runDir, 'cleanup.json'),
         JSON.stringify(
           {
             at: new Date().toISOString(),
-            ownedRemaining: alive,
-            listenerPids,
+            ...drain,
           },
           null,
           2
         )
       );
-      assert.equal(listenerPids.length, 0, 'Port occupied after cleanup; refusing warm restart');
+      if (!drain.drained) {
+        let diagnostic;
+        try { diagnostic = windowsCleanupEvidence([...new Set([...identities.map(p => p.pid), ...drain.listenerPids])]); }
+        catch (error) { diagnostic = { collectionError: String(error) }; }
+        await writeFile(path.join(runDir, 'cleanup-os.json'), JSON.stringify(diagnostic, null, 2));
+      }
+      assert(drain.drained, 'Owned processes or CDP listener survived cleanup; refusing warm restart');
       const current = JSON.parse(await readFile(manifestPath, 'utf8'));
       sameIdentity(ownedManifest.launcher, current.launcher);
       delete current.launcher;

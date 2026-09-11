@@ -12,6 +12,8 @@ import {
   packagedArtifact,
   preparePackagedProfile,
   packagedTarget,
+  packagedStopOrder,
+  closePackagedBrowser,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
@@ -212,19 +214,60 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
-  const owned = await ownedProcesses();
-  if ((await manifest()).packaged)
+  let owned = await ownedProcesses();
+  const data = await manifest();
+  if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
-  // Capture identities before cleanup; never use taskkill /T or a process-group signal.
-  for (const entry of owned.reverse()) {
-    const current = processes().find((p) => p.pid === entry.pid);
-    if (!current) continue;
-    sameIdentity(entry, current);
+  if (data.packaged) {
+    const graceful = { at: new Date().toISOString() };
     try {
-      process.kill(entry.pid, 'SIGTERM');
+      graceful.outcome = await closePackagedBrowser({
+        assertOwnership: assertOwnedDebugEndpoint,
+        readVersion: async () => (await fetch('http://127.0.0.1:9222/json/version', {
+          signal: AbortSignal.timeout(5000),
+        })).json(),
+        connect: endpoint => new WebSocket(endpoint),
+      });
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const snapshot = processes();
+        if (!owned.some(entry => entry.pid !== data.launcher.pid && snapshot.some(current =>
+          entry.pid === current.pid && entry.birth === current.birth))) break;
+        await delay(100);
+      }
     } catch (error) {
-      if (error.code !== 'ESRCH') throw error;
+      graceful.error = String(error); // Identity-checked signals remain the fallback.
     }
+    await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
+    const survivors = await ownedProcesses();
+    for (const entry of survivors)
+      if (!owned.some(prior => prior.pid === entry.pid && prior.birth === entry.birth)) owned.push(entry);
+    await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
+  }
+  // Capture identities before cleanup; never use taskkill /T or a process-group signal.
+  const ordered = data.packaged
+    ? packagedStopOrder(owned, data.artifact.app.path)
+    : [...owned].reverse();
+  const signals = [];
+  try {
+    for (const entry of ordered) {
+      const record = { expected: entry, at: new Date().toISOString(), outcome: 'checking' };
+      signals.push(record);
+      const current = processes().find((p) => p.pid === entry.pid);
+      record.current = current ?? null;
+      if (!current) { record.outcome = 'missing-from-identity-snapshot'; continue; }
+      sameIdentity(entry, current);
+      try {
+        process.kill(entry.pid, 'SIGTERM');
+        record.outcome = 'signal-returned';
+      } catch (error) {
+        record.outcome = error.code ?? String(error);
+        if (error.code !== 'ESRCH') throw error;
+      }
+    }
+  } finally {
+    if (data.packaged)
+      await writeFile(path.join(root, 'cleanup-signals.json'), JSON.stringify(signals, null, 2));
   }
   console.log('Stopped owned test process tree');
 } else if (mode === 'start') {
