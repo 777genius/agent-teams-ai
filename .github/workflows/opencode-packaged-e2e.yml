@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       runtime_candidate_run:
-        description: 'Optional successful runtime CI run for test-only packaging'
+        description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
         default: ''
       runtime_candidate_sha:

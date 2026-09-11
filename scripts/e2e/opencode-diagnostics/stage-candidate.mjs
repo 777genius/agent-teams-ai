@@ -18,8 +18,11 @@ const run = api(`repos/${repo}/actions/runs/${runId}`);
 assert.equal(run.head_sha, sha, 'Candidate source mismatch');
 assert.equal(run.head_repository.full_name, repo, 'Foreign candidate repository');
 assert.equal(run.path, '.github/workflows/ci.yml', 'Not the runtime CI workflow');
-assert.equal(run.status, 'completed', 'Runtime CI is not complete');
-assert.equal(run.conclusion, 'success', 'Runtime CI did not pass');
+// Qualification can run alongside the remaining CI suites. Delivery still requires full CI.
+const jobs = api(`repos/${repo}/actions/runs/${runId}/jobs?per_page=100`);
+const producers = jobs.jobs.filter(job => job.name === 'Windows packaged backfill (candidate)');
+assert.equal(producers.length, 1, 'Missing or ambiguous candidate producer');
+assert.equal(producers[0].conclusion, 'success', 'Windows candidate producer did not pass');
 const pkg = api(`repos/${repo}/contents/package.json?ref=${sha}`);
 const sourceVersion = JSON.parse(Buffer.from(pkg.content, 'base64').toString('utf8')).version;
 const lock = JSON.parse(await readFile('runtime.lock.json', 'utf8'));
@@ -52,7 +55,7 @@ try {
   const binarySha256 = createHash('sha256').update(bytes).digest('hex');
   await copyFile(binary, 'resources/runtime/claude-multimodel.exe');
   const provenance = { schemaVersion: 1, testOnly: true, repository: repo, runId, sourceSha: sha,
-    sourceVersion, artifactId: artifact.id, artifactDigest: artifact.digest, binarySha256 };
+    sourceVersion, producerJobId: producers[0].id, artifactId: artifact.id, artifactDigest: artifact.digest, binarySha256 };
   await writeFile('resources/runtime/TEST-CANDIDATE.json', JSON.stringify(provenance, null, 2));
   await writeFile('runtime-candidate-evidence.json', JSON.stringify(provenance, null, 2));
   console.log(JSON.stringify(provenance));
