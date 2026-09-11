@@ -365,7 +365,9 @@ describe('CursorAgentAttributionRecords', () => {
       expect(resolveCursorAgentAttributionDirectory(env)).toBe(expected);
       await expect(fs.stat(expected)).resolves.toBeDefined();
     } finally {
-      await fs.rm(path.resolve('cursor-agent-attribution-test'), { recursive: true, force: true });
+      // Only what this test created: the parent goes when nothing else is in it.
+      await fs.rm(expected, { recursive: true, force: true });
+      await fs.rmdir(path.dirname(expected)).catch(() => undefined);
     }
   });
 
