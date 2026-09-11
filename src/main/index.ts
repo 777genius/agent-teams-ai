@@ -212,6 +212,10 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import {
+  createDeferredWorkSyncStallObservation,
+  startPreparedMemberWorkSyncFeature,
+} from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -2134,8 +2138,7 @@ async function initializeServices(): Promise<void> {
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
-  const initializedBackupOwner = new TeamBackupService();
-  teamBackupService = initializedBackupOwner;
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2149,17 +2152,7 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
-  const memberWorkSyncStallObservation: {
-    record(input: {
-      teamName: string;
-      memberName: string;
-      taskId: string;
-      reason: string;
-      observedAt: string;
-    }): Promise<void>;
-  } = {
-    record: async () => undefined,
-  };
+  const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
     new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
@@ -2843,17 +2836,11 @@ async function initializeServices(): Promise<void> {
     },
     logger: memberWorkSyncLogger,
   });
-  try {
-    await initializedBackupOwner.initialize();
-  } catch (error) {
-    await preparedMemberWorkSyncFeature.dispose();
-    throw error;
-  }
-  memberWorkSyncFeature = preparedMemberWorkSyncFeature;
-  memberWorkSyncStallObservation.record = async (input) => {
-    await memberWorkSyncFeature?.recordStallObservation(input);
-  };
-  memberWorkSyncFeature.startBackground();
+  memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
+    backup: initializedBackupOwner,
+    prepared: preparedMemberWorkSyncFeature,
+    stallObservation: memberWorkSyncStallObservation,
+  });
   teamProvisioningService.setRuntimeTurnSettledHookSettingsProvider((input) =>
     memberWorkSyncFeature
       ? memberWorkSyncFeature.buildRuntimeTurnSettledHookSettings(input)
