@@ -407,6 +407,17 @@ describe('connected OpenCode dashboard catalog', () => {
     ).toEqual(['opencode', 'openrouter', 'xai']);
   });
 
+  it('keeps available local OpenCode sources in the dashboard catalog inventory', () => {
+    expect(
+      connectedCatalogSourceIds([
+        { providerId: 'opencode', state: 'connected', metadata: {} },
+        { providerId: 'ollama', state: 'available', metadata: {} },
+        { providerId: 'lmstudio', state: 'available', metadata: { configuredAuthless: true } },
+        { providerId: 'openrouter', state: 'not-connected', metadata: {} },
+      ] as RuntimeProviderDirectoryEntryDto[])
+    ).toEqual(['opencode', 'lmstudio', 'ollama']);
+  });
+
   it('recovers an initial failure on the periodic tick and reloads changed connected sources', async () => {
     vi.useFakeTimers();
     try {

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+import type { CliProviderStatus } from '@shared/types';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
   catalogFailure,
@@ -12,7 +14,6 @@ import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
-import type { CliProviderStatus } from '@shared/types';
 
 const CONCURRENT_SOURCE_LOADS = 1;
 let nextRequest = 0;
@@ -23,12 +24,23 @@ export function connectedCatalogSourceIds(
   return [
     ...new Set(
       entries
-        .filter(
-          (entry) =>
-            entry.providerId.trim().toLowerCase() === 'opencode' ||
-            (entry.state !== 'ignored' &&
-              (entry.state === 'connected' || entry.metadata.configuredAuthless))
-        )
+        .filter((entry) => {
+          const providerId = entry.providerId.trim().toLowerCase();
+          if (!providerId) {
+            return false;
+          }
+          if (providerId === 'opencode') {
+            return true;
+          }
+          if (entry.state === 'ignored') {
+            return false;
+          }
+          return (
+            entry.state === 'connected' ||
+            entry.metadata.configuredAuthless ||
+            (entry.state === 'available' && isOpenCodeLocalProviderId(providerId))
+          );
+        })
         .map((entry) => entry.providerId.trim().toLowerCase())
         .filter(Boolean)
     ),
