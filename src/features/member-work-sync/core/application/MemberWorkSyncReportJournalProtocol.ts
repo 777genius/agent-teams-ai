@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import type {
   MemberWorkSyncReportReceipt,
   MemberWorkSyncReportReceiptDraft,
@@ -53,7 +51,7 @@ export function createMemberWorkSyncReportJournalInput(input: {
     teamName: input.request.teamName,
     memberName: input.request.memberName,
     incarnation: input.replay?.incarnation ?? input.incarnation,
-    intentId: input.replay?.intentId ?? randomUUID(),
+    intentId: input.replay?.intentId ?? `report:${requestDigest}`,
     requestDigest,
     receivedAt: input.replay?.receivedAt ?? input.receivedAt,
     origin: input.replay?.origin ?? 'online',

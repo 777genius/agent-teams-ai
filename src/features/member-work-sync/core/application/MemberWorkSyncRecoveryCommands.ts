@@ -82,10 +82,7 @@ export class MemberWorkSyncRecoveryCommands {
         return { ok: false as const, code: 'member_stopped' as const };
       }
       const existing = read.status.recoveryHealth?.unresolvedIntentId;
-      if (existing) {
-        return { ok: true as const, status: read.status, code: 'continued' as const };
-      }
-      if (this.deps.busySignal) {
+      if (!existing && this.deps.busySignal) {
         const busy = await this.deps.busySignal.isBusy({
           teamName: input.teamName,
           memberName: input.memberName,
@@ -107,7 +104,7 @@ export class MemberWorkSyncRecoveryCommands {
       if (!baseInput) {
         return { ok: false as const, code: 'status_not_nudgeable' as const };
       }
-      const intentKey = `manual-continue:${input.idempotencyKey?.trim() || 'default'}`;
+      const intentKey = existing ?? `manual-continue:${input.idempotencyKey?.trim() || 'default'}`;
       const payload = {
         ...baseInput.payload,
         workSyncIntentKey: intentKey,
@@ -116,35 +113,39 @@ export class MemberWorkSyncRecoveryCommands {
         ...baseInput,
         payload,
         payloadHash: buildMemberWorkSyncNudgePayloadHash(this.deps.hash, payload),
-        id: `${baseInput.id}:${intentKey}`,
+        id: existing ?? `${baseInput.id}:${intentKey}`,
       };
-      const nowIso = this.deps.clock.now().toISOString();
-      const controlRevision =
-        read.status.recoveryHealth?.controlRevision ??
-        read.status.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
-        1;
-      const reserved = {
-        ...read.status,
-        recoveryHealth: attachMemberWorkSyncRecoveryReservation({
-          previous: read.status.recoveryHealth,
-          reservation: {
-            intentId: recoveryInput.id,
-            episodeId: read.status.recoveryHealth?.episodes[0]?.episodeId ?? `manual:${nowIso}`,
-            trigger: 'manual',
-            reservedAt: nowIso,
-            state: 'reserved',
-            payloadHash: recoveryInput.payloadHash,
-            controlRevision,
-          },
-        }),
-        evaluatedAt: nowIso,
-      };
-      const committed = await commitMemberWorkSyncStatus(this.deps, read, reserved, mutationId);
+      let committedStatus = read.status;
+      if (!existing) {
+        const nowIso = this.deps.clock.now().toISOString();
+        const controlRevision =
+          read.status.recoveryHealth?.controlRevision ??
+          read.status.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
+          1;
+        const reserved = {
+          ...read.status,
+          recoveryHealth: attachMemberWorkSyncRecoveryReservation({
+            previous: read.status.recoveryHealth,
+            reservation: {
+              intentId: recoveryInput.id,
+              episodeId: read.status.recoveryHealth?.episodes[0]?.episodeId ?? `manual:${nowIso}`,
+              trigger: 'manual',
+              reservedAt: nowIso,
+              state: 'reserved',
+              payloadHash: recoveryInput.payloadHash,
+              controlRevision,
+            },
+          }),
+          evaluatedAt: nowIso,
+        };
+        committedStatus = (await commitMemberWorkSyncStatus(this.deps, read, reserved, mutationId))
+          .status;
+      }
       const ensured = await outboxStore.ensurePending(recoveryInput);
       if (!ensured.ok) {
         return { ok: false as const, code: 'payload_conflict' as const };
       }
-      return { ok: true as const, status: committed.status, code: 'continued' as const };
+      return { ok: true as const, status: committedStatus, code: 'continued' as const };
     });
   }
 

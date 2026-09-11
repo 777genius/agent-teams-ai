@@ -14,13 +14,13 @@ import {
   MemberWorkSyncReconcileCancelledError,
   MemberWorkSyncReconciler,
   MemberWorkSyncRecoveryCommands,
-  recordMemberWorkSyncDispatchOutcome,
-  retireMemberWorkSyncRecoveryIntent,
   MemberWorkSyncReporter,
   type MemberWorkSyncReviewPickupDeliveryPort,
   type MemberWorkSyncReviewPickupEscalationPort,
   type MemberWorkSyncStatusStorePort,
   type MemberWorkSyncUseCaseDeps,
+  recordMemberWorkSyncDispatchOutcome,
+  retireMemberWorkSyncRecoveryIntent,
 } from '@features/member-work-sync/core/application';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -1307,6 +1307,58 @@ describe('MemberWorkSync use cases', () => {
     });
   });
 
+  it('supersedes a claimed nudge when stop latch appears after revalidation and before inbox write', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({ outboxStore: outbox, inboxNudge: inbox });
+    store.phase2ReadinessState = 'shadow_ready';
+
+    const status = await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const originalRead = store.read.bind(store);
+    let unlatchedReads = 0;
+    store.read = async () => {
+      const current = await originalRead();
+      if (current && !current.recoveryHealth?.autoResumeStopLatch) {
+        unlatchedReads += 1;
+        if (unlatchedReads >= 2) {
+          return {
+            ...current,
+            recoveryHealth: {
+              ...current.recoveryHealth,
+              autoResumeStopLatch: {
+                stoppedAt: '2026-04-29T00:00:00.000Z',
+                reason: 'user_stop',
+                controlRevision: 1,
+              },
+              controlRevision: 1,
+            },
+          };
+        }
+      }
+      return current;
+    };
+
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    expect(summary).toMatchObject({ claimed: 1, delivered: 0, superseded: 1 });
+    expect(inbox.inserted).toEqual([]);
+    expect(
+      outbox.items.get(`member-work-sync:team-a:bob:${status.agenda.fingerprint}`)
+    ).toMatchObject({
+      status: 'superseded',
+      lastError: 'member_stopped',
+    });
+  });
+
   it('continues dispatching later claimed nudges when one item times out', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({ outboxStore: outbox });
@@ -1872,9 +1924,9 @@ describe('MemberWorkSync use cases', () => {
     expect(occupied.recoveryHealth?.unresolvedIntentId).toBe(recovery?.id);
     for (let tick = 0; tick < 20; tick += 1) {
       const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(occupied);
-      expect(planned.code === 'slot_occupied' || planned.code === 'existing' || !planned.planned).toBe(
-        true
-      );
+      expect(
+        planned.code === 'slot_occupied' || planned.code === 'existing' || !planned.planned
+      ).toBe(true);
     }
     const retired = await retireMemberWorkSyncRecoveryIntent({
       deps,
@@ -1955,6 +2007,37 @@ describe('MemberWorkSync use cases', () => {
         item.payload.workSyncIntentKey?.includes('manual-continue')
       )
     ).toEqual([]);
+  });
+
+  it('repairs a missing outbox item for an unresolved Continue reservation', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const first = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const intentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(intentId).toBeTruthy();
+    expect(outbox.items.has(intentId!)).toBe(true);
+    outbox.items.delete(intentId!);
+    const repaired = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(repaired.ok).toBe(true);
+    expect(outbox.items.has(intentId!)).toBe(true);
   });
 
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {

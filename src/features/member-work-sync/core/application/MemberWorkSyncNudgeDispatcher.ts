@@ -13,6 +13,7 @@ import {
 } from './MemberWorkSyncNudgeDispatchPolicy';
 import { MemberWorkSyncNudgeRevalidator } from './MemberWorkSyncNudgeRevalidator';
 import { recordMemberWorkSyncDispatchOutcome } from './MemberWorkSyncRecoveryDispatchOutcome';
+import { readMemberWorkSyncStatus } from './MemberWorkSyncStatusMutation';
 
 import type {
   MemberWorkSyncOutboxItem,
@@ -460,6 +461,22 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     try {
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
+      const preDelivery = await readMemberWorkSyncStatus(this.deps, {
+        teamName: item.teamName,
+        memberName: item.memberName,
+      });
+      if (preDelivery.status?.recoveryHealth?.autoResumeStopLatch) {
+        await outbox.markSuperseded({
+          teamName: item.teamName,
+          id: item.id,
+          reason: 'member_stopped',
+          nowIso,
+        });
+        return 'superseded';
+      }
       if (isDispatchRunCancelled(run)) {
         return 'retryable';
       }

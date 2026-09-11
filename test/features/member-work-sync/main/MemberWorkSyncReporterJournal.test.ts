@@ -188,102 +188,120 @@ async function setup(kind: 'json' | 'sqlite') {
   };
 }
 
-describe.each(['json', 'sqlite'] as const)('reporter journal protocol on real %s storage', (kind) => {
-  it('transfers I1 before I2 and replays I1 without renewing the current lease', async () => {
-    const h = await setup(kind);
-    const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
-    expect(first.accepted).toBe(true);
-    const i1 = first.status.pendingReportReceipt;
-    expect(i1?.intentId).toBeTruthy();
-    h.setTime('2026-09-10T00:01:00.000Z');
-    const second = await h.run((deps) =>
-      new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
-    );
-    expect(second.accepted).toBe(true);
-    const i2 = second.status.pendingReportReceipt;
-    expect(i2?.intentId).toBeTruthy();
-    expect(i2?.intentId).not.toBe(i1?.intentId);
-    expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
-    const replayed = await h.run((deps) =>
-      new MemberWorkSyncReporter(deps).execute(h.request, {
-        intentId: i1!.intentId,
-        incarnation,
-        requestDigest: i1!.requestDigest,
-        receivedAt: i1!.acceptedAt,
-        origin: 'online',
-      })
-    );
-    expect(replayed.accepted).toBe(true);
-    expect(replayed.status.pendingReportReceipt?.intentId).toBe(i2?.intentId);
-    expect(replayed.status.lastAcceptedReport?.note).toBe('accepted I2');
-    expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
-      second.status.lastAcceptedReport?.expiresAt
-    );
-  });
-
-  it('keeps the I1 checkpoint when transfer is unknown and later accepts I2', async () => {
-    const h = await setup(kind);
-    const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
-    const i1 = first.status.pendingReportReceipt!;
-    const transfer = vi.spyOn(h.reportJournal, 'transfer').mockImplementationOnce(async () => ({
-      state: 'commit_unknown',
-    }));
-    h.setTime('2026-09-10T00:01:00.000Z');
-    await expect(
-      h.run((deps) =>
+describe.each(['json', 'sqlite'] as const)(
+  'reporter journal protocol on real %s storage',
+  (kind) => {
+    it('transfers I1 before I2 and replays I1 without renewing the current lease', async () => {
+      const h = await setup(kind);
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(first.accepted).toBe(true);
+      const i1 = first.status.pendingReportReceipt;
+      expect(i1?.intentId).toBeTruthy();
+      h.setTime('2026-09-10T00:01:00.000Z');
+      const second = await h.run((deps) =>
         new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
-      )
-    ).rejects.toMatchObject({ reason: 'unavailable' });
-    expect((await h.read()).pendingReportReceipt?.intentId).toBe(i1.intentId);
-    transfer.mockRestore();
-    const recovered = await h.run((deps) =>
-      new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
-    );
-    expect(recovered.accepted).toBe(true);
-    expect(recovered.status.pendingReportReceipt?.intentId).not.toBe(i1.intentId);
-  });
-
-  it('rejects the same intent id with a different digest without writing I2', async () => {
-    const h = await setup(kind);
-    const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
-    const i1 = first.status.pendingReportReceipt!;
-    const otherRequest = { ...h.request, note: 'forged digest' };
-    await expect(
-      h.run((deps) =>
-        new MemberWorkSyncReporter(deps).execute(otherRequest, {
-          intentId: i1.intentId,
+      );
+      expect(second.accepted).toBe(true);
+      const i2 = second.status.pendingReportReceipt;
+      expect(i2?.intentId).toBeTruthy();
+      expect(i2?.intentId).not.toBe(i1?.intentId);
+      expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
+      const replayed = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute(h.request, {
+          intentId: i1!.intentId,
           incarnation,
-          requestDigest: buildMemberWorkSyncReportRequestDigest(h.hash, otherRequest),
-          receivedAt: i1.acceptedAt,
+          requestDigest: i1!.requestDigest,
+          receivedAt: i1!.acceptedAt,
           origin: 'online',
         })
-      )
-    ).rejects.toMatchObject({ reason: 'conflict' });
-    expect((await h.read()).pendingReportReceipt?.intentId).toBe(i1.intentId);
-  });
-
-  it('preserves a reconcile between I1 transfer and I2 CAS', async () => {
-    const h = await setup(kind);
-    await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
-    const original = h.reportJournal.ensure.bind(h.reportJournal);
-    vi.spyOn(h.reportJournal, 'ensure').mockImplementationOnce(async (input) => {
-      await h.run((deps) => new MemberWorkSyncReconciler(deps).execute(member));
-      return original(input);
+      );
+      expect(replayed.accepted).toBe(true);
+      expect(replayed.status.pendingReportReceipt?.intentId).toBe(i2?.intentId);
+      expect(replayed.status.lastAcceptedReport?.note).toBe('accepted I2');
+      expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
+        second.status.lastAcceptedReport?.expiresAt
+      );
     });
-    h.setTime('2026-09-10T00:01:00.000Z');
-    const second = await h.run((deps) =>
-      new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
-    );
-    expect(second.accepted).toBe(true);
-    expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
-  });
 
-  it('marks projection degraded when post-commit transfer fails after I1 is accepted', async () => {
-    const h = await setup(kind);
-    vi.spyOn(h.reportJournal, 'transfer').mockResolvedValue({ state: 'unavailable' });
-    const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
-    expect(first.accepted).toBe(true);
-    expect(first.projectionDegraded).toBe(true);
-    expect(first.status.pendingReportReceipt?.intentId).toBeTruthy();
-  });
-});
+    it('reuses a digest-stable intent ID when the same online report is retried', async () => {
+      const h = await setup(kind);
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      const second = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(first.accepted).toBe(true);
+      expect(second.accepted).toBe(true);
+      expect(first.status.pendingReportReceipt?.intentId).toMatch(/^report:/);
+      expect(second.status.pendingReportReceipt?.intentId).toBe(
+        first.status.pendingReportReceipt?.intentId
+      );
+      expect(second.status.lastAcceptedReport?.expiresAt).toBe(
+        first.status.lastAcceptedReport?.expiresAt
+      );
+    });
+
+    it('keeps the I1 checkpoint when transfer is unknown and later accepts I2', async () => {
+      const h = await setup(kind);
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      const i1 = first.status.pendingReportReceipt!;
+      const transfer = vi.spyOn(h.reportJournal, 'transfer').mockImplementationOnce(async () => ({
+        state: 'commit_unknown',
+      }));
+      h.setTime('2026-09-10T00:01:00.000Z');
+      await expect(
+        h.run((deps) =>
+          new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
+        )
+      ).rejects.toMatchObject({ reason: 'unavailable' });
+      expect((await h.read()).pendingReportReceipt?.intentId).toBe(i1.intentId);
+      transfer.mockRestore();
+      const recovered = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
+      );
+      expect(recovered.accepted).toBe(true);
+      expect(recovered.status.pendingReportReceipt?.intentId).not.toBe(i1.intentId);
+    });
+
+    it('rejects the same intent id with a different digest without writing I2', async () => {
+      const h = await setup(kind);
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      const i1 = first.status.pendingReportReceipt!;
+      const otherRequest = { ...h.request, note: 'forged digest' };
+      await expect(
+        h.run((deps) =>
+          new MemberWorkSyncReporter(deps).execute(otherRequest, {
+            intentId: i1.intentId,
+            incarnation,
+            requestDigest: buildMemberWorkSyncReportRequestDigest(h.hash, otherRequest),
+            receivedAt: i1.acceptedAt,
+            origin: 'online',
+          })
+        )
+      ).rejects.toMatchObject({ reason: 'conflict' });
+      expect((await h.read()).pendingReportReceipt?.intentId).toBe(i1.intentId);
+    });
+
+    it('preserves a reconcile between I1 transfer and I2 CAS', async () => {
+      const h = await setup(kind);
+      await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      const original = h.reportJournal.ensure.bind(h.reportJournal);
+      vi.spyOn(h.reportJournal, 'ensure').mockImplementationOnce(async (input) => {
+        await h.run((deps) => new MemberWorkSyncReconciler(deps).execute(member));
+        return original(input);
+      });
+      h.setTime('2026-09-10T00:01:00.000Z');
+      const second = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
+      );
+      expect(second.accepted).toBe(true);
+      expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
+    });
+
+    it('marks projection degraded when post-commit transfer fails after I1 is accepted', async () => {
+      const h = await setup(kind);
+      vi.spyOn(h.reportJournal, 'transfer').mockResolvedValue({ state: 'unavailable' });
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(first.accepted).toBe(true);
+      expect(first.projectionDegraded).toBe(true);
+      expect(first.status.pendingReportReceipt?.intentId).toBeTruthy();
+    });
+  }
+);

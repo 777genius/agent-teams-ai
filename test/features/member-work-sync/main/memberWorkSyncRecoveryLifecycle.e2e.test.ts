@@ -1,6 +1,5 @@
-import {
-  createMemberWorkSyncFeature,
-} from '@features/member-work-sync/main';
+import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';
@@ -137,6 +136,7 @@ function createFeature(input: {
   memberName: string;
   recoveryAllocation?: { enabled: boolean };
   incarnation?: string;
+  resolveControlUrl?: () => Promise<string | null>;
 }) {
   return createMemberWorkSyncFeature({
     lifecycleIdentity: createTestWorkSyncIdentity(input.incarnation),
@@ -165,6 +165,7 @@ function createFeature(input: {
     membersMetaStore: { getMembers: async () => [] } as never,
     isTeamActive: async () => true,
     queueQuietWindowMs: 1,
+    ...(input.resolveControlUrl ? { resolveControlUrl: input.resolveControlUrl } : {}),
   });
 }
 
@@ -401,6 +402,155 @@ describe('member work sync recovery lifecycle e2e', () => {
           (message) => message.messageKind === 'member_work_sync_nudge'
         )
       ).toHaveLength(1);
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
+  it('repairs the same Continue outbox ID after crash before durable outbox (C20)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-c20';
+    const memberName = 'bob';
+    const first = createFeature({ teamsBasePath, teamName, memberName });
+    let intentId: string | undefined;
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+      const continued = await first.continueManually({
+        teamName,
+        memberName,
+        idempotencyKey: 'c20',
+      });
+      intentId = continued.recoveryHealth?.unresolvedIntentId;
+      expect(intentId).toBeTruthy();
+    } finally {
+      await first.dispose();
+    }
+
+    const outboxPath = path.join(
+      teamsBasePath,
+      teamName,
+      'members',
+      memberName,
+      '.member-work-sync',
+      'outbox.json'
+    );
+    const persisted = JSON.parse(await fs.promises.readFile(outboxPath, 'utf8')) as {
+      items?: Record<string, unknown>;
+    };
+    expect(persisted.items?.[intentId!]).toBeTruthy();
+    delete persisted.items?.[intentId!];
+    await fs.promises.writeFile(outboxPath, `${JSON.stringify(persisted)}\n`, 'utf8');
+
+    const restarted = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      const repaired = await restarted.continueManually({
+        teamName,
+        memberName,
+        idempotencyKey: 'c20',
+      });
+      expect(repaired.recoveryHealth?.unresolvedIntentId).toBe(intentId);
+      expect(
+        Object.keys(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toContain(intentId);
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
+  it('does not start a second turn after crash between spool processed and restart (C48)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-c48';
+    const memberName = 'bob';
+    const first = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      recoveryAllocation: { enabled: true },
+      resolveControlUrl: async () => 'http://127.0.0.1:43123',
+    });
+    let messageIds: Array<string | undefined> = [];
+    let spoolRoot: string | undefined;
+    let eventFileName = '';
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+      const env = await first.buildRuntimeTurnSettledEnvironment({ provider: 'codex' });
+      spoolRoot = env?.[RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV];
+      expect(spoolRoot).toBeTruthy();
+      eventFileName = '20260505T120001000Z-c48.codex.json';
+      await fs.promises.writeFile(
+        path.join(spoolRoot!, 'incoming', eventFileName),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          provider: 'codex',
+          source: 'agent-teams-orchestrator-codex-native',
+          eventName: 'runtime_turn_settled',
+          hookEventName: 'Stop',
+          sessionId: 'ses-codex-c48',
+          memberName,
+          teamName,
+          cwd: claudeRoot,
+          outcome: 'success',
+          recordedAt: '2026-05-05T12:00:01.000Z',
+        })}\n`,
+        'utf8'
+      );
+      await expect(first.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
+        invalid: 0,
+        unresolved: 0,
+      });
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges.length).toBeGreaterThanOrEqual(2);
+        messageIds = nudges.map((message) => message.messageId);
+      });
+      expect(fs.existsSync(path.join(spoolRoot!, 'processed', `${eventFileName}.meta.json`))).toBe(
+        true
+      );
+    } finally {
+      await first.dispose();
+    }
+
+    const restarted = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      recoveryAllocation: { enabled: true },
+      resolveControlUrl: async () => 'http://127.0.0.1:43123',
+    });
+    try {
+      await expect(restarted.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
+        invalid: 0,
+        unresolved: 0,
+      });
+      restarted.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges.map((message) => message.messageId)).toEqual(messageIds);
+      });
     } finally {
       await restarted.dispose();
     }
