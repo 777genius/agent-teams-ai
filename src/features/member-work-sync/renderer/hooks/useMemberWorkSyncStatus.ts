@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -37,6 +37,8 @@ export function useMemberWorkSyncStatus({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const selectionRef = useRef({ teamName, memberName });
+  selectionRef.current = { teamName, memberName };
 
   useEffect(() => {
     const normalizedTeamName = teamName?.trim();
@@ -100,10 +102,24 @@ export function useMemberWorkSyncStatus({
           memberName: normalizedMemberName,
         })
         .then((nextStatus) => {
+          const current = selectionRef.current;
+          if (
+            current.teamName?.trim() !== normalizedTeamName ||
+            current.memberName?.trim() !== normalizedMemberName
+          ) {
+            return;
+          }
           setStatus(nextStatus);
           setError(null);
         })
         .catch((nextError: unknown) => {
+          const current = selectionRef.current;
+          if (
+            current.teamName?.trim() !== normalizedTeamName ||
+            current.memberName?.trim() !== normalizedMemberName
+          ) {
+            return;
+          }
           setError(getErrorMessage(nextError));
         });
     },

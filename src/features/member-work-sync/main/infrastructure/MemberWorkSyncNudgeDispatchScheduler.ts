@@ -25,6 +25,7 @@ export interface MemberWorkSyncNudgeDispatchSchedulerDeps {
     teamNames: string[],
     signal?: AbortSignal
   ): Promise<MemberWorkSyncNudgeDispatchSummary> | MemberWorkSyncScheduledDispatch;
+  observeDue?(teamName: string): Promise<void>;
   intervalMs?: number;
   dispatchTimeoutMs?: number;
   logger?: MemberWorkSyncLoggerPort;
@@ -121,7 +122,10 @@ export class MemberWorkSyncNudgeDispatchScheduler {
       const consume = async (): Promise<void> => {
         while (!this.stopped && cursor < teamNames.length) {
           const teamName = teamNames[cursor++];
-          if (this.dispatches.has(teamName)) continue;
+          if (this.dispatches.has(teamName)) {
+            await this.observeRetainedTeam(teamName);
+            continue;
+          }
           if (this.dispatches.size >= 128) {
             this.deps.logger?.warn('member work sync scheduler retained operation limit reached', {
               retained: this.dispatches.size,
@@ -196,6 +200,37 @@ export class MemberWorkSyncNudgeDispatchScheduler {
           unrefTimer(timeout);
         }),
       ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async observeRetainedTeam(teamName: string): Promise<void> {
+    if (!this.deps.observeDue) {
+      return;
+    }
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        Promise.resolve().then(() => this.deps.observeDue?.(teamName)),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
+            reject(
+              new Error(
+                `member work sync scheduled observation timed out after ${this.dispatchTimeoutMs}ms`
+              )
+            );
+          }, this.dispatchTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+    } catch (error) {
+      this.deps.logger?.warn('member work sync scheduled observation failed', {
+        teamName,
+        error: String(error),
+      });
     } finally {
       if (timeout) {
         clearTimeout(timeout);

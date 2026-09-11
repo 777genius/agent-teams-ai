@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 
 import { toMemberWorkSyncStatusViewModel } from '../view-models/memberWorkSyncStatusViewModel';
 
@@ -9,6 +10,7 @@ import type React from 'react';
 
 type MemberWorkSyncDetailsProps = Readonly<{
   status: MemberWorkSyncStatus | null;
+  actionError?: string | null;
   showDiagnostics?: boolean;
   onContinue?: (input: { teamName: string; memberName: string }) => void;
 }>;
@@ -21,11 +23,12 @@ function shortFingerprint(fingerprint?: string): string {
   return suffix.length > 12 ? `${suffix.slice(0, 12)}...` : suffix;
 }
 
-export function MemberWorkSyncDetails({
+export const MemberWorkSyncDetails = ({
   status,
+  actionError,
   showDiagnostics = false,
   onContinue,
-}: MemberWorkSyncDetailsProps): React.ReactElement {
+}: MemberWorkSyncDetailsProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const viewModel = toMemberWorkSyncStatusViewModel(status);
   const agendaItems = status?.agenda.items ?? [];
@@ -84,9 +87,10 @@ export function MemberWorkSyncDetails({
             {viewModel.attentionSummary}
           </p>
           {status && onContinue ? (
-            <button
+            <Button
               type="button"
-              className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-text)]"
+              variant="outline"
+              size="sm"
               data-testid="member-work-sync-continue"
               onClick={() => {
                 onContinue({
@@ -96,7 +100,12 @@ export function MemberWorkSyncDetails({
               }}
             >
               Continue
-            </button>
+            </Button>
+          ) : null}
+          {actionError ? (
+            <p className="text-xs text-red-400" data-testid="member-work-sync-action-error">
+              {actionError}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -123,4 +132,4 @@ export function MemberWorkSyncDetails({
       ) : null}
     </section>
   );
-}
+};

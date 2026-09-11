@@ -519,6 +519,11 @@ export function createMemberWorkSyncFeature(deps: {
               trackSettling,
             })
           ),
+        observeDue: async (teamName) => {
+          await operationGate.run(teamName, (admission) =>
+            refreshBackgroundStaleStatuses(teamName, bindDeps(teamName, admission))
+          );
+        },
         logger: deps.logger,
       })
     : null;

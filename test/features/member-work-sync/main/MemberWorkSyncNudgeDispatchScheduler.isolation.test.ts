@@ -46,6 +46,49 @@ describe('scheduled dispatch isolation (recovery plan Q01/Q02)', () => {
       vi.useRealTimers();
     }
   });
+
+  it('keeps observing a retained team without a second transport attempt', async () => {
+    vi.useFakeTimers();
+    let releaseStalled!: () => void;
+    const stalled = new Promise<void>((resolve) => {
+      releaseStalled = resolve;
+    });
+    const attempts: string[] = [];
+    const observations: string[] = [];
+    const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+      listLifecycleActiveTeamNames: async () => ['stalled-team', 'healthy-team'],
+      dispatchTimeoutMs: 20,
+      dispatchDue: async (teams) => {
+        for (const team of teams) {
+          attempts.push(team);
+          if (team === 'stalled-team') await stalled;
+        }
+        return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+      },
+      observeDue: async (teamName) => {
+        observations.push(teamName);
+      },
+    });
+
+    try {
+      const first = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(20);
+      await first;
+      for (let tick = 0; tick < 5; tick += 1) {
+        const run = scheduler.runOnce();
+        await vi.advanceTimersByTimeAsync(20);
+        await run;
+      }
+      expect(attempts.filter((team) => team === 'stalled-team')).toHaveLength(1);
+      expect(observations.filter((team) => team === 'stalled-team').length).toBeGreaterThan(0);
+      expect(attempts.filter((team) => team === 'healthy-team').length).toBeGreaterThan(1);
+    } finally {
+      releaseStalled();
+      await vi.advanceTimersByTimeAsync(0);
+      await scheduler.dispose();
+      vi.useRealTimers();
+    }
+  });
   it.each([false, true])(
     'retains a dispatch after early logical completion (reject=%s)',
     async (reject) => {

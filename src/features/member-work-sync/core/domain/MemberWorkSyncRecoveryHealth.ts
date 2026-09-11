@@ -225,7 +225,14 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
   const episodes: MemberWorkSyncRecoveryEpisode[] = runnable.map((item) => {
     const workKey = recoveryWorkKey(item);
     const existing = previousByKey.get(workKey);
-    const firstObservedAt = existing?.firstObservedAt ?? input.nowIso;
+    const evidenceId = item.evidenceStatus;
+    const progressedToActiveWork =
+      Boolean(existing) &&
+      evidenceId === 'in_progress' &&
+      existing?.lastEvidenceId !== 'in_progress';
+    const firstObservedAt = progressedToActiveWork
+      ? input.nowIso
+      : (existing?.firstObservedAt ?? input.nowIso);
     const firstObservedMs = Date.parse(firstObservedAt);
     const dueAt = new Date(firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS).toISOString();
     const overdue = input.nowMs >= firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS;
@@ -243,19 +250,26 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
         ? 'expected_wait'
         : overdue
           ? 'attention'
-          : existing?.phase === 'attention'
-            ? 'attention'
-            : 'observing';
+          : progressedToActiveWork
+            ? 'observing'
+            : existing?.phase === 'attention'
+              ? 'attention'
+              : 'observing';
+    const lastProgressAt = progressedToActiveWork ? input.nowIso : existing?.lastProgressAt;
+    const lastEvidenceId = evidenceId ?? existing?.lastEvidenceId;
     return {
-      episodeId: existing?.episodeId ?? `episode:${workKey}:${firstObservedAt}`,
+      episodeId:
+        progressedToActiveWork || !existing
+          ? `episode:${workKey}:${firstObservedAt}`
+          : existing.episodeId,
       workKey,
       taskId: item.taskId,
       firstObservedAt,
       dueAt,
       phase,
       reason: classified.reason,
-      ...(existing?.lastProgressAt ? { lastProgressAt: existing.lastProgressAt } : {}),
-      ...(existing?.lastEvidenceId ? { lastEvidenceId: existing.lastEvidenceId } : {}),
+      ...(lastProgressAt ? { lastProgressAt } : {}),
+      ...(lastEvidenceId ? { lastEvidenceId } : {}),
     };
   });
   const attentionAt = episodes.some((episode) => episode.phase === 'attention')

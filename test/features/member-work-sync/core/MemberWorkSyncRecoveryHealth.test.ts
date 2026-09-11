@@ -77,7 +77,12 @@ describe('member work sync recovery health observation', () => {
       nowIso: '2026-09-11T00:00:00.000Z',
       nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
       items: [
-        { ...work, taskId: 'task-a', evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' },
+        {
+          ...work,
+          taskId: 'task-a',
+          evidenceStatus: 'in_progress',
+          reason: 'owned_in_progress_task',
+        },
         { ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' },
       ],
       expectedWaiting: false,
@@ -102,5 +107,37 @@ describe('member work sync recovery health observation', () => {
     });
     expect(health?.episodes[0]?.reason).toBe('no_start_unconfirmed');
     expect(health?.episodes[0]?.phase).toBe('observing');
+  });
+
+  it('restarts the no-progress deadline when a pending task starts making progress', () => {
+    const first = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [{ ...work, evidenceStatus: 'pending' }],
+      expectedWaiting: false,
+    });
+    const almostDue =
+      Date.parse('2026-09-11T00:00:00.000Z') + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS - 60_000;
+    const started = observeMemberWorkSyncRecoveryHealth({
+      previous: first,
+      nowIso: new Date(almostDue).toISOString(),
+      nowMs: almostDue,
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    expect(started?.episodes[0]?.firstObservedAt).toBe(new Date(almostDue).toISOString());
+    expect(started?.episodes[0]?.lastProgressAt).toBe(new Date(almostDue).toISOString());
+    expect(started?.episodes[0]?.lastEvidenceId).toBe('in_progress');
+    expect(started?.episodes[0]?.phase).toBe('observing');
+    const stillWorking = Date.parse(started!.episodes[0]!.firstObservedAt) + 60_000;
+    const later = observeMemberWorkSyncRecoveryHealth({
+      previous: started,
+      nowIso: new Date(stillWorking).toISOString(),
+      nowMs: stillWorking,
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    expect(later?.episodes[0]?.firstObservedAt).toBe(started?.episodes[0]?.firstObservedAt);
+    expect(later?.episodes[0]?.phase).toBe('observing');
   });
 });

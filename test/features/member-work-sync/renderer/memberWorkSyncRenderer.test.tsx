@@ -189,4 +189,127 @@ describe('member work sync renderer', () => {
       root.unmount();
     });
   });
+
+  it('shows a Continue failure next to the details panel', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const status = makeStatus({
+      recoveryHealth: {
+        schemaVersion: 1,
+        attentionAt: '2026-04-29T00:20:00.000Z',
+        episodes: [
+          {
+            episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:bob',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncDetails, {
+          status,
+          actionError: 'member_stopped',
+          onContinue: apiMocks.continueManually,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-action-error"]')?.textContent).toBe(
+      'member_stopped'
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('ignores a stale Continue result after the selected member changes', async () => {
+    let resolveContinue!: (status: ReturnType<typeof makeStatus>) => void;
+    apiMocks.getStatus.mockImplementation(async (request: { memberName: string }) =>
+      makeStatus({
+        memberName: request.memberName,
+        diagnostics: [`from-${request.memberName}`],
+        recoveryHealth: {
+          schemaVersion: 1,
+          attentionAt: '2026-04-29T00:20:00.000Z',
+          episodes: [
+            {
+              episodeId: `episode:task-1:${request.memberName}:2026-04-29T00:00:00.000Z`,
+              workKey: `task-1:${request.memberName}`,
+              taskId: 'task-1',
+              firstObservedAt: '2026-04-29T00:00:00.000Z',
+              dueAt: '2026-04-29T00:20:00.000Z',
+              phase: 'attention',
+              reason: 'no_progress_deadline',
+            },
+          ],
+        },
+      })
+    );
+    apiMocks.continueManually.mockReturnValue(
+      new Promise((resolve) => {
+        resolveContinue = resolve;
+      })
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncStatusPanel, {
+          teamName: 'team-a',
+          memberName: 'bob',
+          showDiagnostics: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const continueButton = host.querySelector(
+      '[data-testid="member-work-sync-continue"]'
+    ) as HTMLButtonElement | null;
+    expect(continueButton).toBeTruthy();
+    await act(async () => {
+      continueButton?.click();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncStatusPanel, {
+          teamName: 'team-a',
+          memberName: 'alice',
+          showDiagnostics: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      resolveContinue(
+        makeStatus({
+          memberName: 'bob',
+          diagnostics: ['from-bob-continue'],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('from-alice');
+    expect(host.textContent).not.toContain('from-bob-continue');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });

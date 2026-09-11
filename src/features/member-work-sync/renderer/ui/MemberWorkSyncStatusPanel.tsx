@@ -14,12 +14,12 @@ type MemberWorkSyncStatusPanelProps = Readonly<{
   showDiagnostics?: boolean;
 }>;
 
-export function MemberWorkSyncStatusPanel({
+export const MemberWorkSyncStatusPanel = ({
   teamName,
   memberName,
   enabled = true,
   showDiagnostics = false,
-}: MemberWorkSyncStatusPanelProps): React.ReactElement | null {
+}: MemberWorkSyncStatusPanelProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
   const { status, viewModel, loading, error, continueManually } = useMemberWorkSyncStatus({
     teamName,
@@ -35,6 +35,7 @@ export function MemberWorkSyncStatusPanel({
     return (
       <MemberWorkSyncDetails
         status={status}
+        actionError={error}
         showDiagnostics={showDiagnostics}
         onContinue={continueManually}
       />
@@ -60,4 +61,4 @@ export function MemberWorkSyncStatusPanel({
       </div>
     </section>
   );
-}
+};
