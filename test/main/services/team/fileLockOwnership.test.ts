@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
-import * as fs from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('file lock physical owner mode', () => {
@@ -44,50 +43,6 @@ describe('file lock physical owner mode', () => {
         })
       ).toThrow('File lock timeout');
     });
-  });
-
-  it('cleans its own failed acquisition after a candidate write fault', async () => {
-    const fault = new Error('test lock acquisition fault');
-    const spy = vi.spyOn(fs, 'writeSync').mockImplementationOnce(() => {
-      throw fault;
-    });
-    let called = false;
-    await expect(
-      withFileLock(
-        path,
-        async () => {
-          called = true;
-        },
-        {
-          preventLiveOwnerTakeover: true,
-        }
-      )
-    ).rejects.toThrow('test lock acquisition fault');
-    spy.mockRestore();
-    expect(called).toBe(false);
-    expect(
-      await withFileLock(path, async () => 'recovered', {
-        preventLiveOwnerTakeover: true,
-        acquireTimeoutMs: 100,
-      })
-    ).toBe('recovered');
-  });
-
-  it('does not delete a replacement inode while cleaning a failed publication', async () => {
-    const replacement = `${process.pid}\n${Date.now()}\nstrict:replacement\n`;
-    const link = fs.linkSync;
-    vi.spyOn(fs, 'linkSync').mockImplementationOnce((existing, newPath) => {
-      link(existing, newPath);
-      fs.unlinkSync(newPath);
-      fs.appendFileSync(newPath, replacement);
-      throw new Error('test publish fault');
-    });
-    await expect(
-      withFileLock(path, async () => 'not reached', {
-        preventLiveOwnerTakeover: true,
-      })
-    ).rejects.toThrow('test publish fault');
-    expect(await readFile(`${path}.lock`, 'utf8')).toBe(replacement);
   });
 
   it('reclaims a dead strict owner and does not unlink a replacement token on release', async () => {

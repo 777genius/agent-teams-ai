@@ -409,7 +409,12 @@ export class TeamBackupService {
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
-    let manifest = await readBackupManifestStrict(path.join(backupDir, 'manifest.json'), teamName);
+    let manifest: BackupManifest | null = null;
+    try {
+      manifest = await readBackupManifestStrict(path.join(backupDir, 'manifest.json'), teamName);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EISDIR') throw error;
+    }
     if (manifest?.workSyncRestorePending) return;
     // Reset stale manifest from a previously deleted team with the same name.
     // The backup dir may already contain the new team's files (copied by FileWatcher),
@@ -543,7 +548,14 @@ export class TeamBackupService {
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
-    let manifest = readBackupManifestStrictSync(path.join(backupDir, 'manifest.json'), teamName);
+    let manifest: BackupManifest | null = null;
+    try {
+      manifest = readBackupManifestStrictSync(path.join(backupDir, 'manifest.json'), teamName);
+    } catch (error) {
+      // A directory at the manifest path is a blocked writer, not a missing
+      // record. Fall through so the persist step reports the same failure.
+      if ((error as NodeJS.ErrnoException).code !== 'EISDIR') throw error;
+    }
     if (manifest?.workSyncRestorePending) return;
 
     if (

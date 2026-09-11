@@ -322,4 +322,87 @@ describe('member work sync recovery lifecycle e2e', () => {
       await recreated.dispose();
     }
   });
+
+  it('keeps the same inbox message after crash between write and restart (D01)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-d01';
+    const memberName = 'bob';
+    const first = createFeature({ teamsBasePath, teamName, memberName });
+    let messageIds: Array<string | undefined> = [];
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const messages = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(messages).toHaveLength(1);
+        messageIds = messages.map((message) => message.messageId);
+      });
+    } finally {
+      await first.dispose();
+    }
+
+    const restarted = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      restarted.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const messages = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(messages.map((message) => message.messageId)).toEqual(messageIds);
+      });
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).filter(
+          (item) => item.payload?.workSyncIntentKey
+        )
+      ).toEqual([]);
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
+  it('rejects Continue after user stop across process restart (C14/U04)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-continue-stop';
+    const memberName = 'bob';
+    const first = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+      await first.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
+      await expect(first.continueManually({ teamName, memberName })).rejects.toThrow(
+        'member_stopped'
+      );
+    } finally {
+      await first.dispose();
+    }
+
+    const restarted = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      await expect(restarted.continueManually({ teamName, memberName })).rejects.toThrow(
+        'member_stopped'
+      );
+      const status = await restarted.getStatus({ teamName, memberName });
+      expect(status.recoveryHealth?.autoResumeStopLatch?.reason).toBe('user_stop');
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+    } finally {
+      await restarted.dispose();
+    }
+  });
 });
