@@ -1,12 +1,11 @@
-import type { InternalStorageBackendSelector } from '@features/internal-storage/main';
-
+import type { MemberWorkSyncReportReceipt } from '../../contracts';
 import type {
   MemberWorkSyncReportJournalIdentity,
   MemberWorkSyncReportJournalInput,
   MemberWorkSyncReportJournalPort,
   MemberWorkSyncReportJournalResult,
 } from '../../core/application/MemberWorkSyncReportJournalPort';
-import type { MemberWorkSyncReportReceipt } from '../../contracts';
+import type { InternalStorageBackendSelector } from '@features/internal-storage/main';
 
 /** Routes report-journal mutations through the session-wide backend decision. */
 export class BackendSelectingMemberWorkSyncReportJournal implements MemberWorkSyncReportJournalPort {

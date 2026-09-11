@@ -1,7 +1,7 @@
-import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/MemberWorkSyncReportJournalRow';
 import { createHash } from 'node:crypto';
 
 import { buildMemberWorkSyncNudgePayloadHash } from '../../core/domain/MemberWorkSyncNudge';
+import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/MemberWorkSyncReportJournalRow';
 
 import { decodeMemberWorkSyncStoredStatus } from './decodeMemberWorkSyncStoredStatus';
 import { isMemberWorkSyncStoreSnapshot, normalizeMemberKey } from './JsonMemberWorkSyncStore';
@@ -12,7 +12,10 @@ import type { MemberWorkSyncOutboxItem } from '../../contracts';
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
 
-export type MemberWorkSyncPreparationIdentity = { teamName: string; incarnation: string };
+export interface MemberWorkSyncPreparationIdentity {
+  teamName: string;
+  incarnation: string;
+}
 
 /** Validate persisted ownership before a mapper can normalize it into the requested scope. */
 export function validateMemberWorkSyncAuthoritySnapshot(
@@ -99,8 +102,7 @@ function validateOutbox(item: MemberWorkSyncOutboxItem): void {
   if (
     !item.id.trim() ||
     !normalizeMemberKey(item.memberName) ||
-    !payload ||
-    payload.from !== 'system' ||
+    payload?.from !== 'system' ||
     payload.messageKind !== 'member_work_sync_nudge' ||
     payload.source !== 'member-work-sync' ||
     payload.actionMode !== 'do' ||
@@ -153,10 +155,8 @@ export function assertMemberWorkSyncDirtyContinuity(
   for (const status of candidate.statuses) {
     const primary = current.get(normalizeMemberKey(status.memberName));
     if (
-      !primary?.statusRevision ||
-      primary.statusRevision.incarnation !== identity.incarnation ||
-      !status.statusRevision ||
-      primary.statusRevision.lineageId !== status.statusRevision.lineageId ||
+      primary?.statusRevision?.incarnation !== identity.incarnation ||
+      primary.statusRevision.lineageId !== status.statusRevision?.lineageId ||
       primary.statusRevision.sequence < status.statusRevision.sequence
     )
       throw new MemberWorkSyncSafetyJsonReadError('unavailable');

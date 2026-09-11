@@ -34,8 +34,12 @@ export function patchMemberWorkSyncReservation(
   if (index < 0) {
     return health;
   }
+  const current = reservations[index];
+  if (!current) {
+    return health;
+  }
   const nextReservations = [...reservations];
-  nextReservations[index] = patch(reservations[index]!);
+  nextReservations[index] = patch(current);
   const unresolvedIntentId =
     options?.clearUnresolved && health.unresolvedIntentId === intentId
       ? undefined

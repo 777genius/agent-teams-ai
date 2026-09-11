@@ -1,5 +1,6 @@
 import { readMemberWorkSyncReportReceipt } from './MemberWorkSyncReportReceipt';
 import { readMemberWorkSyncStatusRevision } from './MemberWorkSyncStatusRevision';
+
 import type {
   MemberWorkSyncReportJournalMetadata,
   MemberWorkSyncReportReceipt,

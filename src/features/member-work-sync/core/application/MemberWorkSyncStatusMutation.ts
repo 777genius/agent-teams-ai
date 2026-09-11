@@ -6,10 +6,10 @@ import type {
 import type { MemberWorkSyncStatusAuthoritySnapshot } from './MemberWorkSyncConditionalStatusPort';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
-type StatusRead = {
+interface StatusRead {
   status: MemberWorkSyncStatus | null;
   snapshot?: MemberWorkSyncStatusAuthoritySnapshot;
-};
+}
 export class MemberWorkSyncStatusMutationError extends Error {
   constructor(
     readonly reason: string,

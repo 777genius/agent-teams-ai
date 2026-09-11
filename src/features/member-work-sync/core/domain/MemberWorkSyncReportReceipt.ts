@@ -45,7 +45,7 @@ export function readMemberWorkSyncReportReceiptDraft(
     acceptedAt: candidate.acceptedAt,
     ...(candidate.originalExpiresAt === undefined
       ? {}
-      : { originalExpiresAt: candidate.originalExpiresAt as string }),
+      : { originalExpiresAt: candidate.originalExpiresAt }),
   };
 }
 
@@ -60,8 +60,7 @@ export function readMemberWorkSyncReportReceipt(
     statusRevision: (value as Record<string, unknown>).appliedStatusRevision,
   });
   if (
-    !revision ||
-    revision.incarnation !== currentRevision.incarnation ||
+    revision?.incarnation !== currentRevision.incarnation ||
     revision.lineageId !== currentRevision.lineageId ||
     revision.sequence > currentRevision.sequence ||
     (revision.sequence === currentRevision.sequence && revision.nonce !== currentRevision.nonce)

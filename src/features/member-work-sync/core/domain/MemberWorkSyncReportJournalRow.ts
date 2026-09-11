@@ -2,7 +2,11 @@ import { decodeMemberWorkSyncReportJournalMetadata } from './MemberWorkSyncRepor
 
 import type { MemberWorkSyncReportJournalMetadata } from '../../contracts';
 
-type Scope = { teamName: string; memberName?: string; incarnation?: string };
+interface Scope {
+  teamName: string;
+  memberName?: string;
+  incarnation?: string;
+}
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const key = (value: unknown): string =>
@@ -17,8 +21,7 @@ export function validateMemberWorkSyncReportJournalRow(
   if (value.journal === undefined) return undefined;
   if (
     typeof value.id !== 'string' ||
-    !value.id ||
-    value.id.trim() !== value.id ||
+    value.id?.trim() !== value.id ||
     !key(value.teamName) ||
     !key(value.memberName) ||
     !object(value.request) ||

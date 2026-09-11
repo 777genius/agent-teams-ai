@@ -29,7 +29,10 @@ import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
 const identifier = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.trim() === value;
 
-type Reports = { schemaVersion: 2; intents: Record<string, MemberWorkSyncReportIntent> };
+interface Reports {
+  schemaVersion: 2;
+  intents: Record<string, MemberWorkSyncReportIntent>;
+}
 
 /** Uses the store's existing queue, then index lock, then member-file lock. */
 export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJournalPort {

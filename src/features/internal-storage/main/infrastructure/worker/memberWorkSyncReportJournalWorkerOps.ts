@@ -22,13 +22,13 @@ export interface MemberWorkSyncReportJournalMutation {
   receiptJson?: string;
 }
 
-type JournalBinding = {
+interface JournalBinding {
   incarnation: string;
   requestDigest: string;
   firstRecordedAt: string;
   origin: string;
   receipt?: { acceptedAt: string; intentId: string };
-};
+}
 
 function parseJson(raw: string): unknown {
   try {
