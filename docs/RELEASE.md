@@ -28,6 +28,71 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
+## Draft: v2.14.3 (2026-09-11)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.95`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.14.3 -->
+Keeps local OpenCode models such as Ollama visible after a catalog refresh, and shows them as ready instead of missing.
+
+### Fixes
+
+- Keep Ollama, LM Studio, and llama.cpp models visible after refresh.
+- Show configured local providers as ready instead of asking to connect.
+- Keep available local OpenCode sources in the dashboard catalog.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/Agent.Teams.AI-2.14.3-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/Agent.Teams.AI-2.14.3-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/Agent.Teams.AI.Setup.2.14.3.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/Agent.Teams.AI.Setup.2.14.3-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/Agent.Teams.AI-2.14.3.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/agent-teams-ai_2.14.3_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/agent-teams-ai-2.14.3.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.14.3/agent-teams-ai-2.14.3.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.14.3 -->
+
 ## Published: v2.14.2 (2026-09-11)
 
 GitHub release: [v2.14.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.14.2).
