@@ -16772,7 +16772,7 @@ describe('TeamProvisioningService', () => {
 
       stopRelease.resolve(undefined);
       await stopping;
-      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBe(exactOwner);
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBeUndefined();
     });
 
     it.each([

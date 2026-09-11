@@ -7,6 +7,7 @@ import {
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
 import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { stopUnretainableOpenCodePrimaryLane } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import { launchOpenCodeAggregatePrimaryLane } from '../TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from '../TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
@@ -86,6 +87,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     capabilitySnapshotId: 'cap-original',
   };
   readonly clearPrimaryLaneIfOwned = vi.fn(async () => undefined);
+  readonly writeFailureArtifact = vi.fn();
 
   protected readonly inboxReader = {
     getMessagesFor: vi.fn(async () => []),
@@ -110,6 +112,13 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   protected readonly cancellationBoundary = {
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: this.clearPrimaryLaneIfOwned,
   } as never;
+
+  protected writeLaunchFailureArtifactPackBestEffort(
+    run: ProvisioningRun,
+    options: { reason: string; launchSnapshot?: PersistedTeamLaunchSnapshot | null }
+  ): void {
+    this.writeFailureArtifact(run, options);
+  }
 
   trackRun(run: ProvisioningRun, owner: RuntimeAdapterRunByTeamEntry): void {
     this.runs.set(run.runId, run);
@@ -292,6 +301,44 @@ function materializedResult(
 }
 
 describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
+  it('stops an unretainable primary using its retained owner cwd', async () => {
+    const run = createRun();
+    const owner = {
+      runId: run.runId,
+      providerId: 'opencode' as const,
+      cwd: '/safe-test-workspace/retained',
+    };
+    const stop = vi.fn(async () => ({
+      runId: run.runId,
+      teamName: run.teamName,
+      stopped: true,
+      warnings: [],
+      diagnostics: [],
+    }));
+    const deleteRuntimeOwner = vi.fn();
+    await stopUnretainableOpenCodePrimaryLane(
+      {
+        adapter: { stop } as unknown as TeamLaunchRuntimeAdapter,
+        run,
+        previousEffectiveMembers: run.effectiveMembers,
+        previousLaunchState: null,
+      },
+      {
+        getRuntimeOwner: () => owner,
+        setRuntimeOwner: vi.fn(),
+        deleteRuntimeOwner,
+        getOpenCodeRuntimeLaunchCwd: () => '/safe-test-workspace/recomputed',
+        publishPending: vi.fn(),
+        publishFailed: vi.fn(),
+        logWarn: vi.fn(),
+      }
+    );
+    expect(stop).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: owner.cwd, runId: owner.runId })
+    );
+    expect(deleteRuntimeOwner).toHaveBeenCalledWith(run.teamName);
+  });
+
   it.each([0, 1, 2])(
     'uses fresh incarnations with materialized sessions; failed launches=%s',
     async (failedLaunches) => {
@@ -394,6 +441,14 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(
         failedLaunches === 2 ? undefined : run.runId
       );
+      if (failedLaunches === 2) {
+        expect(facade.clearPrimaryLaneIfOwned).toHaveBeenCalledWith(run.teamName, run.runId);
+        expect(facade.writeFailureArtifact).toHaveBeenCalledWith(run, {
+          reason: 'opencode_primary_restart_and_rollback_failed',
+        });
+      } else {
+        expect(facade.writeFailureArtifact).not.toHaveBeenCalled();
+      }
       expect(run.progress.state).toBe(failedLaunches === 2 ? 'failed' : 'ready');
       expect(run.effectiveMembers.map((entry) => entry.name)).toEqual(
         failedLaunches ? ['Lead', 'Worker'] : ['Lead']

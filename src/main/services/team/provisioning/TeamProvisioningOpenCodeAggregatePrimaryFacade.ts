@@ -502,11 +502,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           previousEffectiveMembers,
           previousLaunchState,
         });
+        await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
         this.aggregatePrimaryProgress.publishFailed(
           run,
           'OpenCode member restart and primary rollback failed',
           new Error(`${restartMessage} Rollback failed: ${rollbackMessage}`)
         );
+        this.writeLaunchFailureArtifactPackBestEffort(run, {
+          reason: 'opencode_primary_restart_and_rollback_failed',
+        });
         throw new Error(
           `OpenCode member restart failed: ${restartMessage}. Primary rollback failed: ${rollbackMessage}`
         );

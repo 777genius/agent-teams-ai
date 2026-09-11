@@ -79,7 +79,7 @@ export async function stopUnretainableOpenCodePrimaryLane(
       runId: input.run.runId,
       laneId: 'primary',
       teamName,
-      cwd,
+      cwd: exactStopOwner.cwd ?? cwd,
       providerId: 'opencode',
       reason: 'cleanup',
       previousLaunchState: input.previousLaunchState,
