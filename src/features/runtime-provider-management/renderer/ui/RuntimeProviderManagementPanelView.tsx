@@ -62,8 +62,10 @@ import {
   canAttemptOpenCodeDefaultSelection,
   getOpenCodeRouteUnavailableTitle,
 } from './runtimeProviderModelAccess';
+import { RuntimeProviderModelTestButton } from './RuntimeProviderModelTestButton';
 import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
 import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
+import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 import {
   RuntimeProviderCopilotAccessSummary,
   RuntimeProviderOAuthAuthorizationLink,
@@ -1810,29 +1812,16 @@ const ModelRow = ({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 min-w-20 justify-center"
-            aria-label={`${t('runtimeProvider.actions.test')}: ${modelTarget}`}
-            disabled={disabled || !hasProjectContext || testing}
-            title={
-              hasProjectContext ? undefined : t('runtimeProvider.models.selectProjectBeforeTesting')
-            }
-            onClick={(event) => {
-              event.stopPropagation();
-              if (!hasProjectContext) return;
+          <RuntimeProviderModelTestButton
+            modelId={model.modelId}
+            modelTarget={modelTarget}
+            disabled={disabled}
+            hasProjectContext={hasProjectContext}
+            testing={testing}
+            onTest={() => {
               void actions.testModel(provider.providerId, model.modelId);
             }}
-          >
-            {testing ? (
-              <Loader2 className="mr-1 size-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="mr-1 size-3.5" />
-            )}
-            {t('runtimeProvider.actions.test')}
-          </Button>
+          />
           {defaultTarget ? (
             <Button
               type="button"
@@ -2395,6 +2384,7 @@ export const RuntimeProviderManagementPanelView = ({
             </TabsTrigger>
             <TabsTrigger
               value="providers"
+              data-testid="runtime-provider-tab-providers"
               disabled={disabled || blockingCredentialWrite}
               className="rounded-b-none data-[state=active]:bg-[var(--color-surface)]"
             >
@@ -2467,6 +2457,25 @@ export const RuntimeProviderManagementPanelView = ({
         </TabsContent>
 
         <TabsContent value="providers" className="mt-3 space-y-3">
+          <RuntimeProviderProjectContextSelect
+            projectPath={effectiveProjectPath}
+            projects={projectContextProjects}
+            loading={projectContextLoading}
+            error={projectContextError}
+            disabled={disabled || blockingCredentialWrite}
+            onProjectChange={(nextProjectPath) => {
+              actions.closeModelPicker();
+              onProjectContextChange?.(nextProjectPath);
+            }}
+          />
+          {!hasProjectContext ? (
+            <p
+              className="text-xs text-amber-200"
+              data-testid="runtime-provider-providers-test-project-hint"
+            >
+              {t('runtimeProvider.models.selectProjectBeforeTesting')}
+            </p>
+          ) : null}
           {defaultTarget ? (
             <OpenCodeDefaultTargetBanner
               target={defaultTarget.scope}

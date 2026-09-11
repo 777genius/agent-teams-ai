@@ -68,7 +68,10 @@ export const RuntimeProviderProjectContextSelect = ({
           disabled={disabled || loading || !onProjectChange}
           onValueChange={(value) => onProjectChange?.(value === NO_PROJECT ? null : value)}
         >
-          <SelectTrigger className="h-8 min-w-[220px] max-w-full text-xs">
+          <SelectTrigger
+            className="h-8 min-w-[220px] max-w-full text-xs"
+            data-testid="runtime-provider-project-context-trigger"
+          >
             <SelectValue placeholder={t('runtimeProvider.defaults.selectProjectContext')} />
           </SelectTrigger>
           <SelectContent>
