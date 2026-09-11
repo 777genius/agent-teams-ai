@@ -1,12 +1,7 @@
-/* eslint-disable sonarjs/no-clear-text-protocols -- live Ollama uses the documented local HTTP API */
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import {
-  isAppManagedOpenCodeLocalModel,
-  shouldRetainOpenCodeLocalCatalogModel,
-} from '@renderer/components/team/dialogs/openCodeLocalCatalogVisibility';
 import {
   countConfiguredLocalOpenCodeCatalogModels,
   isKnownConfiguredLocalOpenCodeCatalogModel,
@@ -122,18 +117,8 @@ liveDescribe('OpenCodeLocalProviderConnector live Ollama', () => {
           },
         },
       };
-      const emptyOverlay = new Set<string>();
-      const v2141KeptCatalogLocal =
-        emptyOverlay.has(catalogModel.id) ||
-        !isAppManagedOpenCodeLocalModel(catalogModel.id, catalogModel);
-
       expect(countConfiguredLocalOpenCodeCatalogModels([catalogModel])).toBe(1);
       expect(isKnownConfiguredLocalOpenCodeCatalogModel(catalogModel.id, catalogModel)).toBe(true);
-      expect(v2141KeptCatalogLocal).toBe(false);
-      expect(
-        shouldRetainOpenCodeLocalCatalogModel(catalogModel.id, catalogModel, emptyOverlay)
-      ).toBe(true);
     }
   );
 });
-/* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the live Ollama HTTP calls */

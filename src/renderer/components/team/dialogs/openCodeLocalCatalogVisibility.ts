@@ -4,7 +4,7 @@ import {
   isOpenCodeLocalProviderId,
 } from '@shared/utils/opencodeModelRoute';
 
-type CatalogModel = {
+interface CatalogModel {
   id?: string | null;
   launchModel?: string | null;
   metadata?: {
@@ -14,7 +14,7 @@ type CatalogModel = {
       accessKind?: string | null;
     } | null;
   } | null;
-};
+}
 
 export const OPENCODE_COMPANION_SOURCE_IDS = new Set(['cursor-acp', 'kiro']);
 

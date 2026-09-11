@@ -4263,4 +4263,129 @@ describe('RuntimeProviderManagementPanelView', () => {
       }
     }
   });
+
+  it('lets users pick a project on Providers so local Ollama Test is enabled', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const ollamaProvider = {
+      ...createState().view!.providers[0]!,
+      providerId: 'ollama',
+      displayName: 'Ollama',
+      state: 'available' as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: 'ollama/qwen3-30b-32k',
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const ollamaModel = {
+      providerId: 'ollama',
+      modelId: 'ollama/qwen3-30b-32k',
+      displayName: 'qwen3-30b-32k',
+      sourceLabel: 'Ollama',
+      free: false,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason:
+        'OpenCode provider "ollama" for selected model "ollama/qwen3-30b-32k" requires execution verification before launch',
+    };
+    const project = {
+      id: 'sandbox',
+      path: '/tmp/agent-teams-ollama-sandbox',
+      name: 'Ollama sandbox',
+      sessions: [],
+      totalSessions: 0,
+      createdAt: 0,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: null,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-project-context-select"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')?.textContent
+    ).toContain('Select a project context before testing models.');
+    const disabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(disabledTest?.disabled).toBe(true);
+    expect(actions.testModel).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: project.path,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+    ).toBeNull();
+    const enabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(enabledTest?.disabled).toBe(false);
+
+    await act(async () => {
+      enabledTest?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
+  });
 });
