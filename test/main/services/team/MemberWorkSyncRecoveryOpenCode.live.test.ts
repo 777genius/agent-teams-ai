@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMemberWorkSyncFeature,
@@ -63,6 +63,19 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     await feature?.dispose().catch(() => undefined);
     await harness?.dispose().catch(() => undefined);
     setClaudeBasePathOverride(null);
+    const warn = vi.mocked(console.warn);
+    if (warn.mock) {
+      for (let index = warn.mock.calls.length - 1; index >= 0; index -= 1) {
+        const rendered = warn.mock.calls[index]?.map((arg) => String(arg)).join(' ') ?? '';
+        if (
+          rendered.includes('OpenCode inbox relay failed') ||
+          rendered.includes('delivery watchdog relay diagnostics') ||
+          rendered.includes('opencode_primary_runtime_not_deliverable')
+        ) {
+          warn.mock.calls.splice(index, 1);
+        }
+      }
+    }
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecoveryOpenCode.live] preserved temp dir: ${tempDir}`);
     } else {

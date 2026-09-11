@@ -137,7 +137,35 @@ function createFeature(input: {
   recoveryAllocation?: { enabled: boolean };
   incarnation?: string;
   resolveControlUrl?: () => Promise<string | null>;
+  agentType?: string;
+  tasks?: Array<{
+    id: string;
+    displayId: string;
+    subject: string;
+    status: string;
+    owner: string;
+  }>;
+  priorityBusySignals?: Array<{
+    isBusy: (request: {
+      teamName: string;
+      memberName: string;
+      nowIso: string;
+    }) => Promise<{ busy: boolean; reason?: string }>;
+  }>;
+  isMemberActive?: (request: {
+    teamName: string;
+    memberName: string;
+  }) => boolean | Promise<boolean>;
 }) {
+  const tasks = input.tasks ?? [
+    {
+      id: 'task-1',
+      displayId: '11111111',
+      subject: 'Recover stuck work',
+      status: 'pending',
+      owner: input.memberName,
+    },
+  ];
   return createMemberWorkSyncFeature({
     lifecycleIdentity: createTestWorkSyncIdentity(input.incarnation),
     teamsBasePath: input.teamsBasePath,
@@ -145,25 +173,25 @@ function createFeature(input: {
     configReader: {
       getConfig: async () => ({
         name: input.teamName,
-        members: [{ name: input.memberName, providerId: 'codex' }],
+        members: [
+          {
+            name: input.memberName,
+            providerId: 'codex',
+            ...(input.agentType ? { agentType: input.agentType } : {}),
+          },
+        ],
       }),
     } as never,
     taskReader: {
-      getTasks: async () => [
-        {
-          id: 'task-1',
-          displayId: '11111111',
-          subject: 'Recover stuck work',
-          status: 'pending',
-          owner: input.memberName,
-        },
-      ],
+      getTasks: async () => tasks,
     } as never,
     kanbanManager: {
       getState: async () => ({ teamName: input.teamName, reviewers: [], tasks: {} }),
     } as never,
     membersMetaStore: { getMembers: async () => [] } as never,
     isTeamActive: async () => true,
+    ...(input.isMemberActive ? { isMemberActive: input.isMemberActive } : {}),
+    ...(input.priorityBusySignals ? { priorityBusySignals: input.priorityBusySignals } : {}),
     queueQuietWindowMs: 1,
     ...(input.resolveControlUrl ? { resolveControlUrl: input.resolveControlUrl } : {}),
   });
@@ -551,6 +579,323 @@ describe('member work sync recovery lifecycle e2e', () => {
         );
         expect(nudges.map((message) => message.messageId)).toEqual(messageIds);
       });
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
+  it('observes lead-owned work and delivers a nudge for a lead-only team', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-lead';
+    const memberName = 'team-lead';
+    const feature = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      agentType: 'team-lead',
+    });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const status = await feature.getStatus({ teamName, memberName });
+        expect(status.agenda.items.some((item) => item.taskId === 'task-1')).toBe(true);
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('refuses Continue while approval or an active tool is occupying the runtime (C)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-busy';
+    const memberName = 'bob';
+    const approval = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      priorityBusySignals: [
+        {
+          isBusy: async () => ({ busy: true, reason: 'approval_pending' }),
+        },
+      ],
+    });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      approval.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const status = await approval.refreshStatus({ teamName, memberName });
+        expect(status.state).toBe('needs_sync');
+      });
+      await expect(approval.continueManually({ teamName, memberName })).rejects.toThrow(
+        'member_busy'
+      );
+    } finally {
+      await approval.dispose();
+    }
+
+    const toolBusy = createFeature({
+      teamsBasePath,
+      teamName: 'team-lifecycle-tool',
+      memberName,
+    });
+    try {
+      await seedShadowReadyMetrics({
+        teamsBasePath,
+        teamName: 'team-lifecycle-tool',
+        memberName,
+      });
+      toolBusy.noteTeamChange({
+        type: 'task',
+        teamName: 'team-lifecycle-tool',
+        taskId: 'task-1',
+      } as never);
+      await waitForAssertion(async () => {
+        const status = await toolBusy.refreshStatus({
+          teamName: 'team-lifecycle-tool',
+          memberName,
+        });
+        expect(status.state).toBe('needs_sync');
+      });
+      toolBusy.noteTeamChange({
+        type: 'tool-activity',
+        teamName: 'team-lifecycle-tool',
+        detail: JSON.stringify({
+          action: 'start',
+          activity: {
+            memberName,
+            toolUseId: 'approval-1',
+            toolName: 'AskUserQuestion',
+            startedAt: new Date().toISOString(),
+            source: 'runtime',
+          },
+        }),
+      } as never);
+      await expect(
+        toolBusy.continueManually({ teamName: 'team-lifecycle-tool', memberName })
+      ).rejects.toThrow('member_busy');
+    } finally {
+      await toolBusy.dispose();
+    }
+  });
+
+  it('promotes durable attention after the no-progress deadline without a burst of recovery IDs (B)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-attention';
+    const memberName = 'bob';
+    const first = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      recoveryAllocation: { enabled: false },
+    });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const status = await first.getStatus({ teamName, memberName });
+        expect(status.recoveryHealth?.episodes[0]?.firstObservedAt).toBeTruthy();
+      });
+    } finally {
+      await first.dispose();
+    }
+
+    const statusPath = path.join(
+      teamsBasePath,
+      teamName,
+      'members',
+      memberName,
+      '.member-work-sync',
+      'status.json'
+    );
+    const stored = JSON.parse(await fs.promises.readFile(statusPath, 'utf8')) as {
+      schemaVersion?: number;
+      status?: {
+        recoveryHealth?: {
+          episodes?: Array<{ firstObservedAt?: string; dueAt?: string; phase?: string }>;
+          attentionAt?: string;
+        };
+      };
+      recoveryHealth?: {
+        episodes?: Array<{ firstObservedAt?: string; dueAt?: string; phase?: string }>;
+        attentionAt?: string;
+      };
+    };
+    const health = stored.status?.recoveryHealth ?? stored.recoveryHealth;
+    const observed = health?.episodes?.[0]?.firstObservedAt;
+    expect(observed).toBeTruthy();
+    const overdueAt = new Date(Date.parse(observed!) - 21 * 60_000).toISOString();
+    health!.episodes![0]!.firstObservedAt = overdueAt;
+    health!.episodes![0]!.dueAt = observed;
+    await fs.promises.writeFile(statusPath, `${JSON.stringify(stored)}\n`, 'utf8');
+
+    const restarted = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      recoveryAllocation: { enabled: false },
+    });
+    try {
+      const status = await restarted.refreshStatus({ teamName, memberName });
+      expect(status.recoveryHealth?.episodes[0]?.phase).toBe('attention');
+      expect(status.recoveryHealth?.attentionAt).toBeTruthy();
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).filter(
+          (item) => item.payload?.workSyncIntentKey
+        )
+      ).toEqual([]);
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
+  it('treats confirmed task progress after continuation as a new baseline (A)', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-progress';
+    const memberName = 'bob';
+    const tasks = [
+      {
+        id: 'task-1',
+        displayId: '11111111',
+        subject: 'Recover stuck work',
+        status: 'pending',
+        owner: memberName,
+      },
+    ];
+    const feature = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      recoveryAllocation: { enabled: true },
+      resolveControlUrl: async () => 'http://127.0.0.1:43123',
+      tasks,
+    });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+      const env = await feature.buildRuntimeTurnSettledEnvironment({ provider: 'codex' });
+      const spoolRoot = env?.[RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV];
+      expect(spoolRoot).toBeTruthy();
+      await fs.promises.writeFile(
+        path.join(spoolRoot!, 'incoming', '20260505T120002000Z-progress.codex.json'),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          provider: 'codex',
+          source: 'agent-teams-orchestrator-codex-native',
+          eventName: 'runtime_turn_settled',
+          hookEventName: 'Stop',
+          sessionId: 'ses-codex-progress',
+          memberName,
+          teamName,
+          cwd: claudeRoot,
+          outcome: 'success',
+          recordedAt: '2026-05-05T12:00:02.000Z',
+        })}\n`,
+        'utf8'
+      );
+      await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
+        invalid: 0,
+        unresolved: 0,
+      });
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          ).length
+        ).toBeGreaterThanOrEqual(2);
+      });
+      const beforeProgress = await feature.getStatus({ teamName, memberName });
+      const beforeObserved = beforeProgress.recoveryHealth?.episodes[0]?.firstObservedAt;
+      tasks[0]!.status = 'in_progress';
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const status = await feature.refreshStatus({ teamName, memberName });
+        expect(status.recoveryHealth?.episodes[0]?.lastEvidenceId).toBe('in_progress');
+        expect(status.recoveryHealth?.episodes[0]?.firstObservedAt).not.toBe(beforeObserved);
+        expect(status.recoveryHealth?.episodes[0]?.phase).not.toBe('attention');
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('keeps the same inbox message after a teammate process disappears and returns', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-pid';
+    const memberName = 'bob';
+    let memberActive = true;
+    const first = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      isMemberActive: () => memberActive,
+    });
+    let messageIds: Array<string | undefined> = [];
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const messages = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(messages).toHaveLength(1);
+        messageIds = messages.map((message) => message.messageId);
+      });
+      memberActive = false;
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+    } finally {
+      await first.dispose();
+    }
+
+    memberActive = true;
+    const restarted = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      isMemberActive: () => memberActive,
+    });
+    try {
+      restarted.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const messages = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(messages.map((message) => message.messageId)).toEqual(messageIds);
+      });
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).filter(
+          (item) => item.payload?.workSyncIntentKey
+        )
+      ).toEqual([]);
     } finally {
       await restarted.dispose();
     }
