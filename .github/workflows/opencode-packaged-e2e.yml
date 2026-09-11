@@ -66,6 +66,13 @@ jobs:
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
       - name: Package without publishing
         run: pnpm pack:win:x64 --dir --publish never
+      - name: Verify packaged candidate identity
+        if: inputs.runtime_candidate_run != ''
+        shell: pwsh
+        run: |
+          $candidate = Get-Content runtime-candidate-evidence.json | ConvertFrom-Json
+          $packagedHash = (Get-FileHash 'release/win-unpacked/resources/runtime/claude-multimodel.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($packagedHash -ne $candidate.binarySha256) { throw 'Packaging replaced the verified runtime candidate' }
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Qualify cold and warm packaged starts
