@@ -7,7 +7,7 @@ import {
   setAppDataBasePath,
   setClaudeBasePathOverride,
 } from '@main/utils/pathDecoder';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV,
@@ -270,6 +270,61 @@ describe('CursorAgentAttributionRecords', () => {
    * no directory, no records, and every caller left with exactly the
    * attribution it has today.
    */
+  it('ignores a host record filed under an attribution id that is not its own', async () => {
+    await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+    // A stale or corrupt host file named for one id but naming another would
+    // lend its owners to trees its host never spawned.
+    await writeHostFile(SECOND_ATTRIBUTION_ID, hostRecord({ attributionId: FIRST_ATTRIBUTION_ID }));
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(attributed.map((entry) => entry.record.pid)).toEqual([4321]);
+    expect(attributed[0]?.host).toBeNull();
+    expect(attributed[0]?.owners).toEqual([]);
+  });
+
+  /**
+   * Fail closed on the lease set. A caller that has to prove it may clear every
+   * lease refuses on an owner it cannot name, so an unreadable set has to reach
+   * it as such - dropped, it would read as "nobody owns this host".
+   */
+  it('reports an owner set it cannot read as an owner it cannot name', async () => {
+    const unnamed = {
+      teamId: null,
+      teamName: null,
+      laneId: null,
+      memberName: null,
+      runId: null,
+      sessionId: null,
+      createdAt: null,
+      updatedAt: null,
+    };
+    await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ owners: 'team-1' }));
+    await writeAgentFile(
+      SECOND_ATTRIBUTION_ID,
+      '4322-1757500000123.json',
+      agentRecord({ attributionId: SECOND_ATTRIBUTION_ID, pid: 4322 })
+    );
+    await writeHostFile(
+      SECOND_ATTRIBUTION_ID,
+      hostRecord({
+        attributionId: SECOND_ATTRIBUTION_ID,
+        owners: [42, { teamId: 'team-2', laneId: 'primary', memberName: 'lead' }],
+      })
+    );
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(attributed.map((entry) => entry.record.pid)).toEqual([4321, 4322]);
+    expect(attributed[0]?.owners).toEqual([unnamed]);
+    expect(attributed[1]?.owners.map((owner) => owner.teamId)).toEqual([null, 'team-2']);
+    expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+      total: 2,
+      withRecordedOwner: 2,
+    });
+  });
+
   it('answers with no records when the runtime has written none', async () => {
     expect(await readAttributedCursorAgentProcesses()).toEqual([]);
     expect(
@@ -295,6 +350,42 @@ describe('CursorAgentAttributionRecords', () => {
 
     expect(env[AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]).toBe(designated);
     await expect(fs.stat(designated)).resolves.toBeDefined();
+  });
+
+  it('resolves a relative designation to an absolute path before it travels', async () => {
+    const relative = path.join('cursor-agent-attribution-test', `store-${process.pid}`);
+    const expected = path.resolve(relative);
+    const env: NodeJS.ProcessEnv = { [AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]: relative };
+    try {
+      await applyCursorAgentAttributionEnv(env);
+
+      // The runtime is launched from each project's own working directory, so
+      // only an absolute path names the same place for the writer and the reader.
+      expect(env[AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]).toBe(expected);
+      expect(resolveCursorAgentAttributionDirectory(env)).toBe(expected);
+      await expect(fs.stat(expected)).resolves.toBeDefined();
+    } finally {
+      await fs.rm(path.resolve('cursor-agent-attribution-test'), { recursive: true, force: true });
+    }
+  });
+
+  it('logs a directory it cannot create and still designates it', async () => {
+    const blocker = path.join(tempRoot, 'blocker');
+    await fs.writeFile(blocker, 'not a directory', 'utf8');
+    const designated = path.join(blocker, 'process-attribution');
+    const env: NodeJS.ProcessEnv = { [AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]: designated };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await applyCursorAgentAttributionEnv(env);
+
+      // Still designated - the runtime may yet manage what this app could not -
+      // and said out loud, so an empty store is not mistaken for this.
+      expect(env[AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]).toBe(designated);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(String(errorSpy.mock.calls[0]?.[0])).toContain(designated);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   /**

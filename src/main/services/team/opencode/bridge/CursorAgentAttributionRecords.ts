@@ -138,13 +138,16 @@ export interface ReadAttributedCursorAgentProcessOptions {
  * `userData` root, so a second install writes somewhere else entirely.
  *
  * An explicit value in the environment wins, the way the identity store path
- * does: whatever the runtime was handed is what it wrote to.
+ * does: whatever the runtime was handed is what it wrote to. It is made
+ * absolute before it travels, because the runtime is launched from each
+ * project's own working directory: a relative value would name a different
+ * place for the writer than for this reader.
  */
 export function resolveCursorAgentAttributionDirectory(
   env: NodeJS.ProcessEnv = process.env
 ): string {
   const designated = env[AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV]?.trim();
-  if (designated) return designated;
+  if (designated) return path.resolve(designated);
   return path.join(getAppDataBasePath(), BRIDGE_CONTROL_DIR_NAME, PROCESS_ATTRIBUTION_DIR_NAME);
 }
 
@@ -163,9 +166,14 @@ export async function applyCursorAgentAttributionEnv(
   const directory = resolveCursorAgentAttributionDirectory(env);
   try {
     await fs.mkdir(directory, { recursive: true, mode: 0o700 });
-  } catch {
+  } catch (error) {
     // A runtime that cannot write records leaves the app exactly as blind as it
-    // is today, which is a supported state, not a launch failure.
+    // is today, which is a supported state, not a launch failure - but not a
+    // silent one either, or an empty store would be indistinguishable from this.
+    console.error(
+      `[CursorAgentAttribution] failed to create the attribution directory ${directory}`,
+      error
+    );
   }
   env[AGENT_TEAMS_PROCESS_ATTRIBUTION_DIR_ENV] = directory;
   return env;
@@ -208,7 +216,8 @@ export async function readAttributedCursorAgentProcesses(
       const host = hosts.get(record.attributionId) ?? null;
       return { record, host, owners: host?.owners ?? [] };
     });
-  } catch {
+  } catch (error) {
+    console.error('[CursorAgentAttribution] failed to read the attribution records', error);
     return [];
   }
 }
@@ -252,6 +261,11 @@ async function readHostRecords(
   for (const fileName of await listRecordFileNames(directory)) {
     const host = parseHostRecord(await readJsonFile(path.join(directory, fileName)));
     if (!host) continue;
+    // The file name is the join key the agent records are matched by, so a
+    // payload naming a different id would lend its owners to trees its host
+    // never spawned. Corrupt, not a second opinion - the rule the agent
+    // directory below applies as well.
+    if (fileName !== `${host.attributionId}${ATTRIBUTION_RECORD_SUFFIX}`) continue;
     if (host.appProfileScope !== appProfileScope) continue;
     hosts.set(host.attributionId, host);
   }
@@ -368,18 +382,33 @@ function parseHostRecord(value: unknown): CursorAgentAttributionHostRecord | nul
   };
 }
 
+/** What an owner this app cannot read at all is reported as. */
+const UNNAMED_OWNER: CursorAgentAttributionOwner = {
+  teamId: null,
+  teamName: null,
+  laneId: null,
+  memberName: null,
+  runId: null,
+  sessionId: null,
+  createdAt: null,
+  updatedAt: null,
+};
+
 /**
- * The host's lease set verbatim, and lenient on purpose: an owner this app
- * cannot name is still an owner, and a caller that has to prove it may kill
- * every one of them has to refuse on the unnamed one rather than never see it.
+ * The host's lease set, read so that a caller is only ever told about MORE
+ * owners than it can name, never fewer. An entry this app cannot read, and a
+ * set that is not a list at all, become an owner with no name: a caller that
+ * has to prove it may clear every lease refuses on the unnamed one, where
+ * dropping it would have turned schema drift or a corrupt file into "nobody
+ * owns this host" - the one reading that lets a stop reach a tree it does not
+ * own.
  */
 function parseOwners(value: unknown): readonly CursorAgentAttributionOwner[] {
-  if (!Array.isArray(value)) return [];
-  const owners: CursorAgentAttributionOwner[] = [];
-  for (const entry of value) {
+  if (!Array.isArray(value)) return [UNNAMED_OWNER];
+  return value.map((entry) => {
     const source = asObject(entry);
-    if (!source) continue;
-    owners.push({
+    if (!source) return UNNAMED_OWNER;
+    return {
       teamId: readString(source, 'teamId'),
       teamName: readString(source, 'teamName'),
       laneId: readString(source, 'laneId'),
@@ -388,9 +417,8 @@ function parseOwners(value: unknown): readonly CursorAgentAttributionOwner[] {
       sessionId: readString(source, 'sessionId'),
       createdAt: readString(source, 'createdAt'),
       updatedAt: readString(source, 'updatedAt'),
-    });
-  }
-  return owners;
+    };
+  });
 }
 
 function isAttributionKind(value: string | null): value is CursorAgentAttributionKind {
