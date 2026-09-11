@@ -1207,7 +1207,6 @@ const InstalledBanner = ({
               modelCatalogLoading ||
               provider.modelCatalog?.diagnostics.message
             );
-
             return (
               <div
                 key={provider.providerId}

@@ -2511,6 +2511,7 @@ export const RuntimeProviderManagementPanelView = ({
                     state.directorySummary ? 'Load the full OpenCode provider catalog' : undefined
                   }
                   disabled={disabled || state.directoryLoading || state.directoryRefreshing}
+                  data-testid="runtime-provider-refresh-catalog"
                   onClick={() => void actions.refreshDirectory()}
                 >
                   {state.directoryRefreshing ? (

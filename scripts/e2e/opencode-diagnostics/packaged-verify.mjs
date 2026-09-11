@@ -412,6 +412,28 @@ export async function qualifyUIRefresh(records, completed) {
   return { sources, modelIds };
 }
 
+export function settingsRefreshSettled(observation, now, quietMs = 500) {
+  const records = observation.records;
+  return !observation.overflow && records.some(record =>
+    record.method === 'loadProviderDirectory' && record.input?.runtimeId === 'opencode'
+    && record.input.refresh === true && record.input.summary !== true)
+    && records.every(record => Number.isFinite(record.completedAt) && record.response
+      && !record.error && !record.response.error && now - record.completedAt >= quietMs
+      && record.response.schemaVersion === 1 && record.response.runtimeId === 'opencode'
+      && (record.method === 'loadProviderDirectory'
+        ? record.response.directory?.runtimeId === 'opencode'
+          && Array.isArray(record.response.directory.entries)
+          && record.response.directory.returnedCount === record.response.directory.entries.length
+          && Number.isInteger(record.response.directory.totalCount)
+          && record.response.directory.totalCount >= record.response.directory.returnedCount
+          && Array.isArray(record.response.directory.diagnostics)
+          && record.response.directory.diagnostics.length === 0
+        : record.method === 'loadModels'
+          && record.response.models?.catalogState === 'fresh'
+          && record.response.models?.runtimeId === 'opencode'
+          && Array.isArray(record.response.models.models)));
+}
+
 export function qualifySettings(response) {
   assert.equal(response?.schemaVersion, 1);
   assert.equal(response.runtimeId, 'opencode');
@@ -691,6 +713,24 @@ export async function verifyPackaged({
       settingsRendered = settingsRendered && !requests.overflow && requests.records.length > 0
         && requests.records.every(record => record.completedAt && record.response && !record.error && !record.response.error);
       if (settingsRendered) break;
+      await pause(250);
+    }
+    assert(settingsRendered, 'Provider settings initial load did not finish');
+    await observe('globalThis.__packagedCatalogObservation.records = []');
+    await clickControl(evaluate, send,
+      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`);
+    settingsRendered = false;
+    for (let attempt = 0; attempt < 360; attempt++) {
+      const requests = await observe('globalThis.__packagedCatalogObservation');
+      const now = await observe('Date.now()');
+      const ready = await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-catalog-list"]'))
+        && Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)'))
+        && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
+      if (ready && settingsRefreshSettled(requests, now)) {
+        settingsRendered = true;
+        evidence.settingsRefresh = requests.records;
+        break;
+      }
       await pause(250);
     }
     await shot('provider-settings');

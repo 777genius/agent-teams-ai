@@ -20,6 +20,7 @@ import {
   refreshSettled,
   qualifySummary,
   qualifySettings,
+  settingsRefreshSettled,
   waitForAppVersion,
   qualifyModels,
   collectPages,
@@ -750,4 +751,23 @@ test('native settings qualification rejects degraded or failed reads', () => {
   }
   assert.throws(() => qualifySettings({ ...response, error: { message: 'timeout' } }));
   assert.throws(() => qualifySettings({ ...response, view: { ...response.view, diagnostics: ['HTTP timeout'] } }));
+});
+
+test('settings refresh waits for fresh explicit request and delayed settlement', () => {
+  const first = { method: 'loadProviderDirectory', input: { runtimeId: 'opencode', refresh: true }, response: { schemaVersion: 1, runtimeId: 'opencode', directory: { runtimeId: 'opencode', entries: [], returnedCount: 0, totalCount: 0, diagnostics: [] } }, completedAt: 1000 };
+  const observation = { records: [first], overflow: false };
+  assert.equal(settingsRefreshSettled(observation, 1499), false);
+  assert.equal(settingsRefreshSettled(observation, 1500), true);
+  first.response.directory.diagnostics.push({ message: 'inventory timed out' });
+  assert.equal(settingsRefreshSettled(observation, 1500), false);
+  first.response.directory.diagnostics = [];
+  const delayed = { method: 'loadModels', startedAt: 1400 };
+  observation.records.push(delayed);
+  assert.equal(settingsRefreshSettled(observation, 2000), false);
+  Object.assign(delayed, { response: { schemaVersion: 1, runtimeId: 'opencode', models: { runtimeId: 'opencode', catalogState: 'fresh', models: [] } }, completedAt: 1800 });
+  assert.equal(settingsRefreshSettled(observation, 2000), false);
+  assert.equal(settingsRefreshSettled(observation, 2300), true);
+  delayed.response.error = 'late failure';
+  assert.equal(settingsRefreshSettled(observation, 2400), false);
+  assert.equal(settingsRefreshSettled({ records: [{ ...first, input: { refresh: false } }], overflow: false }, 3000), false);
 });
