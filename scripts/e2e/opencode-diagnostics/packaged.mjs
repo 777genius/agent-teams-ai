@@ -299,3 +299,48 @@ export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
   return { ownedRemaining, listenerPids,
     drained: ownedRemaining.length === 0 && listenerPids.length === 0 };
 }
+
+// Acknowledgement is diagnostic only; the caller must still prove OS/socket drain.
+export async function closePackagedBrowser({ assertOwnership, readVersion, connect, timeoutMs = 5000 }) {
+  await assertOwnership();
+  const version = await readVersion();
+  const endpoint = new URL(version.webSocketDebuggerUrl);
+  assert(endpoint.protocol === 'ws:' && endpoint.port === '9222'
+    && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
+    && !endpoint.username && !endpoint.password && endpoint.pathname.startsWith('/devtools/browser/'),
+  'Unexpected packaged browser CDP endpoint');
+  await assertOwnership();
+  const ws = connect(endpoint);
+  try {
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => finish(new Error('Packaged Browser.close timed out')), timeoutMs);
+      let sent = false;
+      let finished = false;
+      const finish = (error, outcome) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        error ? reject(error) : resolve(outcome);
+      };
+      ws.once('error', error => finish(error));
+      ws.once('close', () => finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed'));
+      ws.on('message', raw => {
+        try {
+          const response = JSON.parse(String(raw));
+          if (response.id === 1) finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
+        } catch (error) { finish(error); }
+      });
+      ws.once('open', async () => {
+        try {
+          await assertOwnership();
+          if (finished) return;
+          if (ws.readyState !== 1) throw new Error('CDP closed during ownership check');
+          ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
+          sent = true;
+        } catch (error) { finish(error); }
+      });
+    });
+  } finally {
+    ws.terminate();
+  }
+}

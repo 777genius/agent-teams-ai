@@ -13,6 +13,7 @@ import {
   preparePackagedProfile,
   packagedTarget,
   packagedStopOrder,
+  closePackagedBrowser,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
@@ -213,10 +214,36 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
-  const owned = await ownedProcesses();
+  let owned = await ownedProcesses();
   const data = await manifest();
   if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
+  if (data.packaged) {
+    const graceful = { at: new Date().toISOString() };
+    try {
+      graceful.outcome = await closePackagedBrowser({
+        assertOwnership: assertOwnedDebugEndpoint,
+        readVersion: async () => (await fetch('http://127.0.0.1:9222/json/version', {
+          signal: AbortSignal.timeout(5000),
+        })).json(),
+        connect: endpoint => new WebSocket(endpoint),
+      });
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const snapshot = processes();
+        if (!owned.some(entry => entry.pid !== data.launcher.pid && snapshot.some(current =>
+          entry.pid === current.pid && entry.birth === current.birth))) break;
+        await delay(100);
+      }
+    } catch (error) {
+      graceful.error = String(error); // Identity-checked signals remain the fallback.
+    }
+    await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
+    const survivors = await ownedProcesses();
+    for (const entry of survivors)
+      if (!owned.some(prior => prior.pid === entry.pid && prior.birth === entry.birth)) owned.push(entry);
+    await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
+  }
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
   const ordered = data.packaged
     ? packagedStopOrder(owned, data.artifact.app.path)

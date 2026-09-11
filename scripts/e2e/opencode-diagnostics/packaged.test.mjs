@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { EventEmitter } from 'node:events';
 import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
   packagedArguments,
+  closePackagedBrowser,
   packagedStopOrder,
   packagedDrainSnapshot,
   packagedEnvironment,
@@ -785,4 +787,55 @@ test('packaged cleanup stops main before recovering helpers and drains sockets j
   assert.equal(packagedDrainSnapshot(owned, [main], []).drained, false);
   assert.equal(packagedDrainSnapshot(owned, [], []).drained, true);
   assert.equal(packagedDrainSnapshot(owned, [{ ...main, birth: 'reused' }], [2]).drained, false);
+});
+
+function browserCloseFixture({ endpoint = 'ws://127.0.0.1:9222/devtools/browser/test', failCheck = 0, respond = true } = {}) {
+  const socket = new EventEmitter();
+  socket.readyState = 1;
+  const sent = [];
+  let checks = 0;
+  let connected = false;
+  let terminated = false;
+  socket.send = message => {
+    sent.push(JSON.parse(message));
+    if (respond) queueMicrotask(() => socket.emit('message', '{"id":1,"result":{}}'));
+  };
+  socket.terminate = () => { terminated = true; socket.readyState = 3; };
+  return {
+    options: {
+      assertOwnership: async () => { if (++checks === failCheck) throw new Error('PID reused'); },
+      readVersion: async () => ({ webSocketDebuggerUrl: endpoint }),
+      connect: () => { connected = true; queueMicrotask(() => socket.emit('open')); return socket; },
+      timeoutMs: 50,
+    },
+    state: () => ({ sent, checks, connected, terminated }),
+  };
+}
+
+test('graceful packaged cleanup checks ownership before discovery, connection and Browser.close', async () => {
+  const fixture = browserCloseFixture();
+  assert.equal(await closePackagedBrowser(fixture.options), 'acknowledged');
+  assert.deepEqual(fixture.state(), {
+    sent: [{ id: 1, method: 'Browser.close' }], checks: 3, connected: true, terminated: true,
+  });
+});
+
+test('graceful packaged cleanup rejects foreign endpoints and ownership changes', async () => {
+  for (const endpoint of ['ws://foreign:9222/devtools/browser/test', 'ws://127.0.0.1:9223/devtools/browser/test',
+    'ws://127.0.0.1:9222/devtools/page/test', 'ws://user@127.0.0.1:9222/devtools/browser/test']) {
+    const fixture = browserCloseFixture({ endpoint });
+    await assert.rejects(closePackagedBrowser(fixture.options), /Unexpected/);
+    assert.equal(fixture.state().connected, false);
+  }
+  for (const failCheck of [1, 2, 3]) {
+    const fixture = browserCloseFixture({ failCheck });
+    await assert.rejects(closePackagedBrowser(fixture.options), /PID reused/);
+    assert.deepEqual(fixture.state().sent, []);
+  }
+});
+
+test('graceful packaged cleanup bounds an unresponsive browser and closes its socket', async () => {
+  const fixture = browserCloseFixture({ respond: false });
+  await assert.rejects(closePackagedBrowser(fixture.options), /timed out/);
+  assert.equal(fixture.state().terminated, true);
 });
