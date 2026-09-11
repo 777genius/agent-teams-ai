@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { readBackupManifestStrict } from '@main/services/team/TeamBackupManifest';
+import { readBackupManifestStrict } from '@main/services/team/teamBackupManifest';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 let root: string;
