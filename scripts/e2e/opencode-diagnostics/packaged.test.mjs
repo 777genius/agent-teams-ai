@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   packagedArguments,
+  packagedStopOrder,
+  packagedDrainSnapshot,
   packagedEnvironment,
   packagedTarget,
   containedPath,
@@ -770,4 +772,17 @@ test('settings refresh waits for fresh explicit request and delayed settlement',
   delayed.response.error = 'late failure';
   assert.equal(settingsRefreshSettled(observation, 2400), false);
   assert.equal(settingsRefreshSettled({ records: [{ ...first, input: { refresh: false } }], overflow: false }, 3000), false);
+});
+
+test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {
+  const launcher = { pid: 1, birth: 'one' };
+  const main = { pid: 2, parent: 1, birth: 'two', executable: exe };
+  const helper = { pid: 3, parent: 2, birth: 'three', executable: exe };
+  const owned = [launcher, main, helper];
+  assert.deepEqual(packagedStopOrder(owned, exe), [main, helper, launcher]);
+  assert.deepEqual(owned, [launcher, main, helper]);
+  assert.equal(packagedDrainSnapshot(owned, [], [2]).drained, false);
+  assert.equal(packagedDrainSnapshot(owned, [main], []).drained, false);
+  assert.equal(packagedDrainSnapshot(owned, [], []).drained, true);
+  assert.equal(packagedDrainSnapshot(owned, [{ ...main, birth: 'reused' }], [2]).drained, false);
 });

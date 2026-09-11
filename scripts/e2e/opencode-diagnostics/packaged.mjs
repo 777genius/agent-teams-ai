@@ -284,3 +284,18 @@ export function probeOrchestratorVersion(
     );
   });
 }
+
+// Ownership is established before ordering; executable names alone grant no authority.
+export function packagedStopOrder(owned, executable) {
+  const main = owned.filter(entry => entry.parent === owned[0]?.pid
+    && entry.executable?.toLowerCase() === executable.toLowerCase());
+  assert(main.length <= 1, 'Ambiguous packaged main identity');
+  return [...main, ...owned.filter(entry => entry !== main[0]).reverse()];
+}
+
+export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
+  const ownedRemaining = identities.filter(entry => snapshot.some(current =>
+    current.pid === entry.pid && current.birth === entry.birth));
+  return { ownedRemaining, listenerPids,
+    drained: ownedRemaining.length === 0 && listenerPids.length === 0 };
+}

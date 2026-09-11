@@ -12,6 +12,7 @@ import {
   packagedArtifact,
   preparePackagedProfile,
   packagedTarget,
+  packagedStopOrder,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
@@ -213,10 +214,14 @@ if (mode === 'seed-packaged') {
   console.log(dir);
 } else if (mode === 'stop') {
   const owned = await ownedProcesses();
-  if ((await manifest()).packaged)
+  const data = await manifest();
+  if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
-  for (const entry of owned.reverse()) {
+  const ordered = data.packaged
+    ? packagedStopOrder(owned, data.artifact.app.path)
+    : [...owned].reverse();
+  for (const entry of ordered) {
     const current = processes().find((p) => p.pid === entry.pid);
     if (!current) continue;
     sameIdentity(entry, current);
