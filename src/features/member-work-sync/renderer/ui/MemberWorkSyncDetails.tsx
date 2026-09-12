@@ -82,14 +82,16 @@ export const MemberWorkSyncDetails = ({
         </div>
       </dl>
 
-      {viewModel.attentionSummary ? (
+      {viewModel.attentionSummary || viewModel.autoResumeStopped || actionError ? (
         <div className="mt-3 space-y-2">
-          <p
-            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100"
-            data-testid="member-work-sync-attention"
-          >
-            {viewModel.attentionSummary}
-          </p>
+          {viewModel.attentionSummary ? (
+            <p
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100"
+              data-testid="member-work-sync-attention"
+            >
+              {viewModel.attentionSummary}
+            </p>
+          ) : null}
           {viewModel.autoResumeStopped ? (
             <p
               className="text-xs text-[var(--color-text-muted)]"

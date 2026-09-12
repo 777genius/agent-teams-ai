@@ -195,6 +195,28 @@ describe('memberWorkSyncStatusViewModel', () => {
     expect(viewModel.canStop).toBeUndefined();
     expect(viewModel.canResume).toBe(true);
   });
+
+  it('keeps Resume available after attention clears while the stop latch remains', () => {
+    const viewModel = toMemberWorkSyncStatusViewModel(
+      makeStatus({
+        recoveryHealth: {
+          schemaVersion: 1,
+          episodes: [],
+          autoResumeStopLatch: {
+            stoppedAt: '2026-04-29T00:21:00.000Z',
+            reason: 'user_stop',
+            controlRevision: 1,
+          },
+        },
+      })
+    );
+
+    expect(viewModel.attentionSummary).toBeUndefined();
+    expect(viewModel.autoResumeStopped).toBe(true);
+    expect(viewModel.canContinue).toBeUndefined();
+    expect(viewModel.canStop).toBeUndefined();
+    expect(viewModel.canResume).toBe(true);
+  });
 });
 
 it('shows the accepted lease even when the last diagnostic report was rejected', () => {

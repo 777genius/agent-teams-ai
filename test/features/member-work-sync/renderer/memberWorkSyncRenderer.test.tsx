@@ -348,6 +348,59 @@ describe('member work sync renderer', () => {
     });
   });
 
+  it('keeps Resume visible after attention has cleared while auto-resume remains stopped', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const status = makeStatus({
+      state: 'still_working',
+      recoveryHealth: {
+        schemaVersion: 1,
+        autoResumeStopLatch: {
+          stoppedAt: '2026-04-29T00:21:00.000Z',
+          reason: 'user_stop',
+          controlRevision: 1,
+        },
+        episodes: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncDetails, {
+          status,
+          onContinue: apiMocks.continueManually,
+          onStop: apiMocks.stopAutoResume,
+          onResume: apiMocks.resumeAutoResume,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-attention"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stop"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stopped"]')?.textContent).toContain(
+      'Automatic continuation is stopped'
+    );
+    const resumeButton = host.querySelector(
+      '[data-testid="member-work-sync-resume"]'
+    ) as HTMLButtonElement | null;
+    expect(resumeButton).toBeTruthy();
+    await act(async () => {
+      resumeButton?.click();
+      await Promise.resolve();
+    });
+    expect(apiMocks.resumeAutoResume).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('keeps the attention explanation without Continue when status is not nudgeable', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
