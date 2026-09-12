@@ -65,7 +65,8 @@ export function createMemberWorkSyncPersistence(input: {
     reportJournal: new BackendSelectingMemberWorkSyncReportJournal(
       input.internalStorageBackend.selector,
       sqliteStore.createReportJournal(),
-      jsonJournal
+      jsonJournal,
+      store
     ),
     authority: new MemberWorkSyncStatusAuthority({
       identity: input.lifecycleIdentity,

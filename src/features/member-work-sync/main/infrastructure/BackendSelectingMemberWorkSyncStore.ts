@@ -37,6 +37,7 @@ import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
 import {
   areSnapshotRecordSetsEquivalent,
+  emptyMemberWorkSyncStoreSnapshot as emptySnapshot,
   normalizeMemberWorkSyncStoreSnapshotTeamIdentity,
   recordsToSnapshot,
   snapshotToRecords,
@@ -85,16 +86,6 @@ interface PendingPrimaryPurgeMarker {
   recoverySafe: boolean;
 }
 
-function emptySnapshot(): MemberWorkSyncStoreSnapshot {
-  return {
-    statuses: [],
-    reportIntents: [],
-    outboxItems: [],
-    metricEvents: [],
-    filesToArchive: [],
-  };
-}
-
 export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
   paths: MemberWorkSyncStorePaths;
@@ -102,12 +93,7 @@ export interface BackendSelectingMemberWorkSyncStoreOptions {
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 
-/**
- * Routes member-work-sync persistence through the internal-storage session
- * backend decision: SQLite when the worker pinged successfully, the legacy
- * JSON store otherwise. The decision is made once per session, so delivery
- * state never splits between backends.
- */
+/** Routes persistence through the session SQLite/JSON backend decision. */
 export class BackendSelectingMemberWorkSyncStore
   implements
     MemberWorkSyncStatusStorePort,
@@ -796,5 +782,14 @@ export class BackendSelectingMemberWorkSyncStore
       (store) => store.findRecentRecoveryByIntent(input),
       (store) => store.findRecentRecoveryByIntent(input)
     );
+  }
+
+  runReplicaFenced<T>(
+    teamName: string,
+    mutation: boolean,
+    sqliteAction: () => Promise<T>,
+    jsonAction: () => Promise<T>
+  ): Promise<T> {
+    return this.run(teamName, mutation, sqliteAction, jsonAction);
   }
 }

@@ -2339,6 +2339,28 @@ describe('MemberWorkSync use cases', () => {
     expect(next.recoveryHealth?.attentionAt).toBe(observed.status.recoveryHealth?.attentionAt);
   });
 
+  it('does not acknowledge a stall observation without a matching recovery episode', async () => {
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const before = await store.read();
+    await expect(
+      new MemberWorkSyncRecoveryCommands(deps).recordStallObservation({
+        teamName: 'team-a',
+        memberName: 'bob',
+        taskId: 'missing-task',
+        reason: 'pending_pickup',
+      })
+    ).rejects.toMatchObject({ name: 'MemberWorkSyncStallEpisodeMissingError' });
+    expect(await store.read()).toEqual(before);
+    expect(before?.recoveryHealth?.attentionAt).toBeUndefined();
+  });
+
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {
     const { deps, store } = createDeps({
       providerId: 'codex',

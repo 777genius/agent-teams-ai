@@ -22,6 +22,16 @@ import type {
   MemberWorkSyncTeamSnapshotRecords,
 } from '@features/internal-storage/contracts/internalStorageContracts';
 
+export function emptyMemberWorkSyncStoreSnapshot(): MemberWorkSyncStoreSnapshot {
+  return {
+    statuses: [],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [],
+    filesToArchive: [],
+  };
+}
+
 export function statusToRecord(status: MemberWorkSyncStatus): MemberWorkSyncStatusRecord {
   const record: MemberWorkSyncStatusRecord = {
     teamName: status.teamName,

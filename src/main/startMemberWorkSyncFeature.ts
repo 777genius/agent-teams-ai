@@ -4,16 +4,39 @@ import type { TeamBackupService } from '@main/services/team/TeamBackupService';
 
 type StallObservation = Parameters<TeamTaskStallObservationPort['record']>[0];
 
-export function createDeferredWorkSyncStallObservation(): TeamTaskStallObservationPort & {
+const DEFAULT_STALL_RETRY_MS = 2_000;
+
+export function createDeferredWorkSyncStallObservation(options?: {
+  retryDelayMs?: number;
+}): TeamTaskStallObservationPort & {
   attach(feature: MemberWorkSyncFeatureFacade | null): void;
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
   const pending: StallObservation[] = [];
+  const retryDelayMs = options?.retryDelayMs ?? DEFAULT_STALL_RETRY_MS;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearRetry = (): void => {
+    if (!retryTimer) {
+      return;
+    }
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  };
+  const scheduleRetry = (): void => {
+    if (retryTimer || !feature || pending.length === 0) {
+      return;
+    }
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      void flush();
+    }, retryDelayMs);
+  };
   const flush = async (): Promise<void> => {
     const current = feature;
     if (!current) {
       return;
     }
+    clearRetry();
     while (pending.length > 0) {
       const observation = pending[0];
       if (!observation) {
@@ -25,22 +48,23 @@ export function createDeferredWorkSyncStallObservation(): TeamTaskStallObservati
           pending.shift();
         }
       } catch {
+        scheduleRetry();
         break;
       }
     }
   };
   return {
     record: async (input) => {
+      pending.push(input);
       if (!feature) {
-        pending.push(input);
         return;
       }
       await flush();
-      await feature.recordStallObservation(input);
     },
     attach(next) {
       feature = next;
-      if (!next || pending.length === 0) {
+      if (!next) {
+        clearRetry();
         return;
       }
       void flush();
@@ -89,7 +113,7 @@ export async function startPreparedMemberWorkSyncFeature(input: {
     await input.prepared.dispose();
     throw error;
   }
-  input.stallObservation.attach(input.prepared);
   input.prepared.startBackground();
+  input.stallObservation.attach(input.prepared);
   return input.prepared;
 }

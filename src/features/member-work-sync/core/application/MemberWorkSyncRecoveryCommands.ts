@@ -183,19 +183,35 @@ export class MemberWorkSyncRecoveryCommands {
       this.mutate(input, mutationId, (status, nowIso) => {
         const observedAt = input.observedAt ?? nowIso;
         const episodes = status.recoveryHealth?.episodes ?? [];
-        const nextEpisodes = episodes.map((episode) =>
-          episode.taskId === input.taskId
-            ? {
-                ...episode,
-                lastEvidenceId: `stall:${input.reason}:${observedAt}`,
-                reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
-                phase:
-                  episode.phase === 'expected_wait'
-                    ? ('expected_wait' as const)
-                    : ('attention' as const),
-              }
-            : episode
-        );
+        let matched = false;
+        let promoted = false;
+        const nextEpisodes = episodes.map((episode) => {
+          if (episode.taskId !== input.taskId) {
+            return episode;
+          }
+          matched = true;
+          if (episode.phase === 'expected_wait') {
+            return {
+              ...episode,
+              lastEvidenceId: `stall:${input.reason}:${observedAt}`,
+            };
+          }
+          promoted = true;
+          return {
+            ...episode,
+            lastEvidenceId: `stall:${input.reason}:${observedAt}`,
+            reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
+            phase: 'attention' as const,
+          };
+        });
+        if (!matched) {
+          const error = new Error('episode_missing');
+          error.name = 'MemberWorkSyncStallEpisodeMissingError';
+          throw error;
+        }
+        const attentionAt = promoted
+          ? (status.recoveryHealth?.attentionAt ?? observedAt)
+          : status.recoveryHealth?.attentionAt;
         return {
           ...status,
           recoveryHealth: {
@@ -204,9 +220,7 @@ export class MemberWorkSyncRecoveryCommands {
             ...(status.recoveryHealth?.unresolvedIntentId
               ? { unresolvedIntentId: status.recoveryHealth.unresolvedIntentId }
               : {}),
-            ...(status.recoveryHealth?.attentionAt
-              ? { attentionAt: status.recoveryHealth.attentionAt }
-              : { attentionAt: observedAt }),
+            ...(attentionAt ? { attentionAt } : {}),
             ...(status.recoveryHealth?.autoResumeStopLatch
               ? { autoResumeStopLatch: status.recoveryHealth.autoResumeStopLatch }
               : {}),
