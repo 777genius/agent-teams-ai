@@ -778,6 +778,183 @@ liveDescribe('Member work sync recovery live canary', () => {
     feature.completeTeamDeletion(teamName);
   }, 420_000);
 
+  it('rejects token T1 after delete/recreate of the same live Codex team name (C21/S12)', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
+
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    teamName = `member-work-sync-recovery-codex-recreate-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync recovery Codex live recreate canary\n\nDisposable sandbox only.\n',
+      'utf8'
+    );
+
+    const [
+      { TeamProvisioningService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
+
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: hasCodexApiKey ? 'auto' : ('chatgpt' as const),
+            },
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = () =>
+      createMemberWorkSyncFeature({
+        lifecycleIdentity,
+        teamsBasePath: getTeamsBasePath(),
+        recoveryAllocation: { enabled: false },
+        configReader: new TeamConfigReader(),
+        taskReader: new TeamTaskReader(),
+        kanbanManager: new TeamKanbanManager(),
+        membersMetaStore: new TeamMembersMetaStore(),
+        isTeamActive: (name) =>
+          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+        listLifecycleActiveTeamNames: async () => [teamName!],
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        queueQuietWindowMs: 1,
+      });
+
+    feature = createFeature();
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+
+    const launchTeam = async () => {
+      const progressEvents: TeamProvisioningProgress[] = [];
+      await activeService.createTeam(
+        {
+          teamName: teamName!,
+          cwd: projectPath,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model,
+          effort: DEFAULT_EFFORT,
+          fastMode: 'off',
+          skipPermissions: true,
+          prompt: [
+            'Keep launch work minimal.',
+            'Do not edit files.',
+            'If you receive a task, wait for instructions and do not complete it.',
+          ].join(' '),
+          members: [],
+        },
+        (progress) => {
+          progressEvents.push(progress);
+        }
+      );
+      await waitUntil(async () => {
+        const last = progressEvents.at(-1);
+        if (last?.state === 'failed') {
+          throw new FatalWaitError(formatProgressDump(progressEvents));
+        }
+        const dump = formatProgressDump(progressEvents);
+        if (/usage limit/i.test(dump)) {
+          throw new FatalWaitError(dump);
+        }
+        const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
+        if (fatalRuntimeMessage) {
+          throw new FatalWaitError(fatalRuntimeMessage);
+        }
+        return last?.state === 'ready';
+      }, 240_000);
+    };
+
+    await launchTeam();
+    expect(activeService.isTeamAlive(teamName)).toBe(true);
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+
+    const firstStatus = await feature.refreshStatus({ teamName, memberName });
+    expect(firstStatus.reportToken).toBeTruthy();
+    const firstIdentity = await lifecycleIdentity.readCurrent(teamName);
+    expect(firstIdentity.status).toBe('identified');
+    if (firstIdentity.status !== 'identified') {
+      throw new Error('expected identified lifecycle marker before recreate');
+    }
+    const firstToken = firstStatus.reportToken;
+    const firstFingerprint = firstStatus.agenda.fingerprint;
+    await feature.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
+
+    await activeService.stopTeam(teamName).catch(() => undefined);
+    await feature.prepareTeamDeletion(teamName, firstIdentity.identityId);
+    feature.completeTeamDeletion(teamName);
+    await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
+    feature.resumeTeam(teamName);
+
+    await launchTeam();
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    const recreated = await feature.refreshStatus({ teamName, memberName });
+    const secondIdentity = await lifecycleIdentity.readCurrent(teamName);
+    expect(secondIdentity.status).toBe('identified');
+    if (secondIdentity.status !== 'identified') {
+      throw new Error('expected identified lifecycle marker after recreate');
+    }
+    expect(secondIdentity.identityId).not.toBe(firstIdentity.identityId);
+    expect(recreated.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+    expect(recreated.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
+    expect(recreated.reportToken).toBeTruthy();
+    expect(recreated.reportToken).not.toBe(firstToken);
+    await expect(
+      feature.report({
+        teamName,
+        memberName,
+        state: 'caught_up',
+        agendaFingerprint: firstFingerprint,
+        reportToken: firstToken,
+        source: 'test',
+      })
+    ).resolves.toMatchObject({
+      accepted: false,
+      code: 'invalid_report_token',
+    });
+
+    await feature.prepareTeamDeletion(teamName);
+    feature.completeTeamDeletion(teamName);
+  }, 600_000);
+
   remainingWorkIt(
     'continues remaining Codex work after a settled status-only turn (A/B/C)',
     async () => {
