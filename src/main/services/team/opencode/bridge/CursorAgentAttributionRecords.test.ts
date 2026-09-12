@@ -20,6 +20,16 @@ import { buildOpenCodeAppProfileScope } from './OpenCodeMcpBridgeEnv';
 
 const FIRST_ATTRIBUTION_ID = 'aaaa1111aaaa1111aaaa1111aaaa1111';
 const SECOND_ATTRIBUTION_ID = 'bbbb2222bbbb2222bbbb2222bbbb2222';
+const UNKNOWN_OWNER = {
+  teamId: null,
+  teamName: null,
+  laneId: null,
+  memberName: null,
+  runId: null,
+  sessionId: null,
+  createdAt: null,
+  updatedAt: null,
+};
 /** The directory a joined command line cannot decide, spelled exactly. */
 const OWNED_WORKSPACE = 'D:\\work\\app - backup';
 
@@ -176,13 +186,12 @@ describe('CursorAgentAttributionRecords', () => {
     ]);
     // The probe tree the sweep documents as untouchable is evidence now, not a comment.
     expect(attributed[1].record.kind).toBe('readiness-probe');
-    // A host that never wrote a record claims nothing, which a caller has to
-    // read as "unowned", never as "unrestricted".
+    // Missing host evidence is an unknown lease, not a released lease set.
     expect(attributed[2].host).toBeNull();
-    expect(attributed[2].owners).toEqual([]);
+    expect(attributed[2].owners).toEqual([UNKNOWN_OWNER]);
     expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
       total: 3,
-      withRecordedOwner: 2,
+      withRecordedOwner: 3,
     });
   });
 
@@ -193,18 +202,37 @@ describe('CursorAgentAttributionRecords', () => {
     expect(await readAttributedCursorAgentProcesses()).toEqual([]);
   });
 
-  /**
-   * A host record this app cannot parse leaves the agent unowned rather than
-   * unrestricted: the record still names a process, and nothing names a team.
-   */
-  it('keeps an agent unowned when its host record is of an unknown schema version', async () => {
-    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ schemaVersion: 7 }));
+  it.each(['missing', 'invalid JSON', 'unsupported schema', 'mismatched id', 'foreign profile'])(
+    'reports an unknown owner for a host with %s',
+    async (scenario) => {
+      const overrides: Record<string, unknown> = {};
+      if (scenario === 'unsupported schema') overrides.schemaVersion = 7;
+      if (scenario === 'mismatched id') overrides.attributionId = SECOND_ATTRIBUTION_ID;
+      if (scenario === 'foreign profile') overrides.appProfileScope = 'another-install';
+      if (scenario !== 'missing') {
+        await writeHostFile(
+          FIRST_ATTRIBUTION_ID,
+          scenario === 'invalid JSON' ? '{' : hostRecord(overrides)
+        );
+      }
+      await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+
+      const attributed = await readAttributedCursorAgentProcesses();
+
+      expect(attributed).toHaveLength(1);
+      expect(attributed[0].host).toBeNull();
+      expect(attributed[0].owners).toEqual([UNKNOWN_OWNER]);
+    }
+  );
+
+  it('preserves an explicitly empty lease set from a valid host', async () => {
+    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ owners: [] }));
     await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
 
     const attributed = await readAttributedCursorAgentProcesses();
 
     expect(attributed).toHaveLength(1);
-    expect(attributed[0].host).toBeNull();
+    expect(attributed[0].host).not.toBeNull();
     expect(attributed[0].owners).toEqual([]);
   });
 
@@ -246,7 +274,7 @@ describe('CursorAgentAttributionRecords', () => {
     const attributed = await readAttributedCursorAgentProcesses();
 
     expect(attributed).toHaveLength(1);
-    expect(attributed[0].owners).toEqual([]);
+    expect(attributed[0].owners).toEqual([UNKNOWN_OWNER]);
   });
 
   /**
@@ -265,11 +293,7 @@ describe('CursorAgentAttributionRecords', () => {
     expect(await readAttributedCursorAgentProcesses()).toEqual([]);
   });
 
-  /**
-   * The state every install is in until a runtime that writes records ships:
-   * no directory, no records, and every caller left with exactly the
-   * attribution it has today.
-   */
+  /** A misfiled host cannot supply lease evidence for the readable agent. */
   it('ignores a host record filed under an attribution id that is not its own', async () => {
     await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
     // A stale or corrupt host file named for one id but naming another would
@@ -280,7 +304,7 @@ describe('CursorAgentAttributionRecords', () => {
 
     expect(attributed.map((entry) => entry.record.pid)).toEqual([4321]);
     expect(attributed[0]?.host).toBeNull();
-    expect(attributed[0]?.owners).toEqual([]);
+    expect(attributed[0]?.owners).toEqual([UNKNOWN_OWNER]);
   });
 
   /**

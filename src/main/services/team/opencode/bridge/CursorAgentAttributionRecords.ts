@@ -30,10 +30,10 @@ import { buildOpenCodeAppProfileScope } from './OpenCodeMcpBridgeEnv';
  * This module reads, and what it reads is identity - never liveness. A record
  * outlives a SIGKILL, so a caller that acts on one has to re-read the live start
  * time itself and kill in the same turn as that check; that fence belongs where
- * the kill is, and lands with the proof path rather than here. Every failure -
- * a missing directory, which is what an older runtime leaves, a corrupt file, an
- * unknown schema version - answers with no records, which leaves every caller
- * with exactly the attribution it has today.
+ * the kill is, and lands with the proof path rather than here. Unreadable or
+ * invalid agent records contribute nothing. A readable agent whose host cannot
+ * be validated carries an unnamed owner, so missing host evidence cannot be
+ * mistaken for an explicitly released lease set.
  */
 
 /** The directory the app designates, and the runtime writes its records into. */
@@ -114,10 +114,9 @@ export interface CursorAgentAttributionRecord {
 
 /**
  * An agent record with the host that spawned it. `host` is null when no host
- * record answers for the id - a host that was pruned, or a record written by a
- * runtime whose host file never landed - and `owners` is then empty, which a
- * caller asking "may I kill this" has to read as "nobody has claimed it", never
- * as "no restriction".
+ * record can be validated for the id and profile. `owners` then contains an
+ * unnamed owner that vetoes lease clearance. Only a validated host with an
+ * explicitly empty owner list reports an empty lease set.
  */
 export interface AttributedCursorAgentProcess {
   record: CursorAgentAttributionRecord;
@@ -182,9 +181,9 @@ export async function applyCursorAgentAttributionEnv(
 /**
  * Every agent record this install may look at, joined with its host's owners.
  *
- * Never throws and never partially fails: an unreadable directory, a corrupt
- * file or an unknown schema version contributes nothing, and the answer is the
- * records that did parse.
+ * Never throws: unreadable or invalid agent records contribute nothing. A
+ * missing, unreadable or rejected host contributes an unnamed owner to its
+ * readable agents, preserving the distinction from an explicitly empty lease set.
  *
  * Records name the install that asked for them, and only this install's are
  * returned. A second copy of the app hashes to a different profile scope and is
@@ -214,7 +213,7 @@ export async function readAttributedCursorAgentProcesses(
     );
     return records.map((record) => {
       const host = hosts.get(record.attributionId) ?? null;
-      return { record, host, owners: host?.owners ?? [] };
+      return { record, host, owners: host?.owners ?? [UNNAMED_OWNER] };
     });
   } catch (error) {
     console.error('[CursorAgentAttribution] failed to read the attribution records', error);
