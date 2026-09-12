@@ -131,7 +131,13 @@ async function seed() {
     await mkdir(directory, { recursive: true });
   await chmod(roots.XDG_RUNTIME_DIR, 0o700);
   env = {
-    ...process.env,
+    // Keep only host settings needed to launch the desktop. Provider credentials
+    // and runtime/home overrides must never enter the disposable app.
+    ...Object.fromEntries(
+      ['PATH', 'DISPLAY', 'XAUTHORITY', 'LANG', 'LC_ALL', 'TZ'].flatMap((key) =>
+        process.env[key] === undefined ? [] : [[key, process.env[key]]]
+      )
+    ),
     ...roots,
     SHELL: '/bin/sh',
     GOMAXPROCS: '2',
@@ -139,26 +145,7 @@ async function seed() {
     pnpm_config_verify_deps_before_run: 'false',
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
   };
-  // Do not pass credentials or provider-home overrides to the disposable desktop.
-  for (const key of Object.keys(env)) {
-    if (
-      /API_KEY|ACCESS_TOKEN|AUTH_TOKEN|SECRET|^(CODEX_HOME|OPENAI_BASE_URL|ANTHROPIC_BASE_URL|NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$/.test(
-        key
-      )
-    )
-      delete env[key];
-  }
-  for (const key of [
-    'CLAUDE_DEV_RUNTIME_ROOT',
-    'CLAUDE_DEV_RUNTIME_CACHE_ROOT',
-    'CLAUDE_TERMINAL_PLATFORM_ROOT',
-    'TERMINAL_PLATFORM_ROOT',
-    'CLAUDE_TERMINAL_DAEMON_BINARY',
-    'AGENT_TEAMS_ORG_DEMO',
-  ])
-    delete env[key];
   env.CLAUDE_DEV_RUNTIME_DISABLE_GH = '1';
-  delete env.ELECTRON_CLI_ARGS;
   // electron-vite translates this into --no-sandbox for root-owned Linux CI.
   if (process.getuid?.() === 0) env.NO_SANDBOX = '1';
   const version = JSON.parse(await readFile(path.join(repo, 'runtime.lock.json'), 'utf8')).version;
@@ -549,8 +536,14 @@ try {
   assert(
     evidence.blockedRuntimeCalls.every(
       (args) =>
-        args[0] === 'runtime' &&
-        (args[1] === 'opencode-command' || (args[1] === 'status' && args.includes('--summary')))
+        (args[0] === 'runtime' &&
+          (args[1] === 'opencode-command' || (args[1] === 'status' && args.includes('--summary')))) ||
+        (args.length === 5 &&
+          args[2] === '--json' &&
+          args[3] === '--provider' &&
+          ['anthropic', 'codex', 'opencode'].includes(args[4]) &&
+          ((args[0] === 'auth' && args[1] === 'status') ||
+            (args[0] === 'model' && args[1] === 'list')))
     ),
     'Only blocked startup availability probes expected; no lifecycle commands'
   );
