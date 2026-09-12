@@ -153,10 +153,16 @@ export class MemberWorkSyncRecoveryCommands {
         committedStatus = await attachReservation(recoveryInput, read.status);
       }
       let ensured = await outboxStore.ensurePending(recoveryInput);
-      // A delivered/failed status-only intent cannot carry a new Continue payload.
-      // Allocate a fresh manual-continue item instead of failing closed.
-      if (!ensured.ok && existing) {
-        recoveryInput = buildRecoveryInput(defaultIntentKey, `${baseInput.id}:${defaultIntentKey}`);
+      // Delivered/failed unresolved intents cannot carry a new Continue payload,
+      // including a second UI click that reuses manual-continue:default.
+      const existingUnusable =
+        Boolean(existing) &&
+        (!ensured.ok ||
+          ensured.item.status === 'delivered' ||
+          ensured.item.status === 'failed_terminal');
+      if (existingUnusable) {
+        const retryKey = `${defaultIntentKey}:${mutationId}`;
+        recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
         committedStatus = await attachReservation(recoveryInput, committedStatus);
         ensured = await outboxStore.ensurePending(recoveryInput);
       }

@@ -1000,22 +1000,22 @@ async function refreshStatusWithToken(input: {
   teamName: string;
   memberName: string;
 }): Promise<Awaited<ReturnType<MemberWorkSyncFeatureFacade['refreshStatus']>>> {
-  let status: Awaited<ReturnType<MemberWorkSyncFeatureFacade['refreshStatus']>> | null = null;
+  const latest: { status?: Awaited<ReturnType<MemberWorkSyncFeatureFacade['refreshStatus']>> } = {};
   await waitUntil(
     async () => {
-      status = await input.feature.refreshStatus({
+      latest.status = await input.feature.refreshStatus({
         teamName: input.teamName,
         memberName: input.memberName,
       });
-      return Boolean(status.reportToken);
+      return Boolean(latest.status.reportToken);
     },
     30_000,
     250
   );
-  if (!status?.reportToken) {
+  if (!latest.status?.reportToken) {
     throw new Error('expected report token after refresh');
   }
-  return status;
+  return latest.status;
 }
 
 async function loadCodexLiveServices() {

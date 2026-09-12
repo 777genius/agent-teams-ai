@@ -6,11 +6,9 @@ import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/Member
 import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 import type { MemberWorkSyncReportIntent } from '../../contracts';
-import type {
-  MemberWorkSyncReportJournalIdentity,
-  MemberWorkSyncReportJournalResult,
-} from '../../core/application/MemberWorkSyncReportJournalPort';
+import type { MemberWorkSyncReportJournalIdentity } from '../../core/application/MemberWorkSyncReportJournalPort';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+import type { Dirent } from 'node:fs';
 
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -52,7 +50,13 @@ export async function readMemberWorkSyncReportJournalFile(
         return { state: 'corrupt' };
       validateMemberWorkSyncReportJournalRow(row, scope);
     }
-    return { state: 'present', file: file as Reports };
+    return {
+      state: 'present',
+      file: {
+        schemaVersion: 2,
+        intents: file.intents as Reports['intents'],
+      },
+    };
   } catch {
     return { state: 'corrupt' };
   }
@@ -76,9 +80,9 @@ export async function listTeamCanonicalReportJournalPaths(
   teamName: string
 ): Promise<{ state: 'ok'; files: string[] } | { state: 'unavailable' }> {
   const membersDir = join(paths.getTeamRootDir(teamName), 'members');
-  let entries: Awaited<ReturnType<typeof readdir>>;
+  let entries: Dirent[];
   try {
-    entries = await readdir(membersDir, { withFileTypes: true });
+    entries = await readdir(membersDir, { encoding: 'utf8', withFileTypes: true });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'ok', files: [] };
     return { state: 'unavailable' };
@@ -87,7 +91,7 @@ export async function listTeamCanonicalReportJournalPaths(
     state: 'ok',
     files: entries
       .filter((entry) => entry.isDirectory())
-      .map((entry) => join(membersDir, entry.name, '.member-work-sync', 'reports.json')),
+      .map((entry) => join(membersDir, String(entry.name), '.member-work-sync', 'reports.json')),
   };
 }
 
@@ -101,7 +105,9 @@ export async function findCanonicalReportJournalOwner(
 ): Promise<
   | { state: 'absent' }
   | { state: 'present'; path: string; intent: MemberWorkSyncReportIntent }
-  | Extract<MemberWorkSyncReportJournalResult, { state: 'conflict' | 'corrupt' | 'unavailable' }>
+  | { state: 'conflict' }
+  | { state: 'corrupt' }
+  | { state: 'unavailable' }
 > {
   const listed = await listTeamCanonicalReportJournalPaths(paths, input.teamName);
   if (listed.state !== 'ok') return listed;

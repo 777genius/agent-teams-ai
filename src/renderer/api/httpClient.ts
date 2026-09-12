@@ -1587,6 +1587,15 @@ export class HttpAPIClient implements ElectronAPI {
         `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/report`,
         request
       ),
+    stopAutoResume: async () => {
+      throw new Error('Member work sync stop is not available in browser mode.');
+    },
+    resumeAutoResume: async () => {
+      throw new Error('Member work sync resume is not available in browser mode.');
+    },
+    continueManually: async () => {
+      throw new Error('Member work sync continue is not available in browser mode.');
+    },
   };
 
   tmux: TmuxAPI = {

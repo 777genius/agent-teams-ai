@@ -173,6 +173,7 @@ export interface TaskStallAlert {
   reason: string;
   epochKey: string;
   owner?: string;
+  reviewer?: string;
   ownerProviderId?: TeamProviderId;
   taskRef: {
     taskId: string;

@@ -1340,6 +1340,8 @@ describe('MemberWorkSync use cases', () => {
           return {
             ...current,
             recoveryHealth: {
+              schemaVersion: 1,
+              episodes: current.recoveryHealth?.episodes ?? [],
               ...current.recoveryHealth,
               autoResumeStopLatch: {
                 stoppedAt: '2026-04-29T00:00:00.000Z',
@@ -2096,6 +2098,7 @@ describe('MemberWorkSync use cases', () => {
         workSyncIntent: 'agenda_sync',
         text: 'status-only recovery',
         workSyncIntentKey: 'status-only',
+        taskRefs: [],
       },
       status: 'delivered',
       attemptGeneration: 1,
@@ -2139,6 +2142,49 @@ describe('MemberWorkSync use cases', () => {
         item.payload.workSyncIntentKey?.includes('manual-continue:after-status-only')
       )
     ).toBe(true);
+  });
+
+  it('allocates a fresh Continue item when the default UI key was already delivered', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const first = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const firstItem = outbox.items.get(firstIntentId!);
+    expect(firstItem).toBeTruthy();
+    outbox.items.set(firstIntentId!, {
+      ...firstItem!,
+      status: 'delivered',
+      deliveredMessageId: firstIntentId,
+    });
+    const second = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.status.recoveryHealth?.unresolvedIntentId).not.toBe(firstIntentId);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'pending'
+    );
   });
 
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {
@@ -2196,7 +2242,7 @@ describe('MemberWorkSync use cases', () => {
     });
     expect(summary).toMatchObject({ claimed: 1, delivered: 0, superseded: 1 });
     expect(inbox.inserted).toHaveLength(0);
-    const afterStartRefusal = await store.read({ teamName: 'team-a', memberName: 'bob' });
+    const afterStartRefusal = await store.read();
     expect(afterStartRefusal?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
     expect(afterStartRefusal?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
 

@@ -165,7 +165,11 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
   shouldAbort: () => boolean | Promise<boolean>;
 }): Promise<
   | { status: 'ready'; inserted: boolean; messageId: string }
-  | { status: 'busy' | 'stale' | 'stopped' | 'aborted' | 'conflict' }
+  | { status: 'busy' }
+  | { status: 'stale' }
+  | { status: 'stopped' }
+  | { status: 'aborted' }
+  | { status: 'conflict' }
 > {
   if (!input.inbox) {
     return { status: 'stale' };

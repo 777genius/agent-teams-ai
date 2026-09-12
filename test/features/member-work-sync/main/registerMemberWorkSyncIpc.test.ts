@@ -247,6 +247,21 @@ describe('registerMemberWorkSyncIpc', () => {
     ).rejects.toThrow('report failed');
   });
 
+  it('rejects path-like team and member names before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_CONTINUE)?.({}, { teamName: '../etc', memberName: 'bob' })
+    ).rejects.toThrow(/invalid/i);
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_GET_STATUS)?.({}, { teamName: 'team-a', memberName: '../bob' })
+    ).rejects.toThrow(/invalid/i);
+    expect(feature.continueManually).not.toHaveBeenCalled();
+    expect(feature.getStatus).not.toHaveBeenCalled();
+  });
+
   it('removes exactly the member work sync handlers', () => {
     const { handlers, ipcMain } = makeIpcMain();
     const feature = makeFeature();

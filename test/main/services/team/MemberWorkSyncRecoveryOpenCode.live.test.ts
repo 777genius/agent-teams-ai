@@ -509,14 +509,12 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             message.messageKind === 'member_work_sync_nudge' &&
             typeof message.messageId === 'string'
         );
-      expect(firstNudge?.messageId).toBeTruthy();
-      await waitForOpenCodePeerRelay(
-        harness.svc,
-        teamName,
-        memberName,
-        firstNudge!.messageId,
-        180_000
-      );
+      const firstNudgeId = firstNudge?.messageId;
+      expect(firstNudgeId).toBeTruthy();
+      if (typeof firstNudgeId !== 'string') {
+        throw new Error('expected first work-sync nudge message id');
+      }
+      await waitForOpenCodePeerRelay(harness.svc, teamName, memberName, firstNudgeId, 180_000);
 
       await waitUntil(
         async () => {

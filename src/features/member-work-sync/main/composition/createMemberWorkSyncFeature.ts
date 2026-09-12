@@ -79,6 +79,7 @@ import type {
   MemberWorkSyncReviewPickupEscalationPort,
   MemberWorkSyncRuntimeTicketAdmissionPort,
   MemberWorkSyncTeamOperationAdmission,
+  MemberWorkSyncUseCaseDeps,
 } from '../../core/application';
 import type {
   MemberWorkSyncFeatureFacade,
@@ -280,7 +281,7 @@ export function createMemberWorkSyncFeature(deps: {
   };
   const refreshBackgroundStaleStatuses = async (
     teamName: string,
-    bound: typeof useCaseDeps,
+    bound: MemberWorkSyncUseCaseDeps,
     signal?: AbortSignal
   ): Promise<void> => {
     const nowMs = clock.now().getTime();
@@ -547,7 +548,7 @@ export function createMemberWorkSyncFeature(deps: {
 
   const readStatusWithStaleRefresh = async (
     request: MemberWorkSyncStatusRequest,
-    bound: typeof useCaseDeps
+    bound: MemberWorkSyncUseCaseDeps
   ): Promise<MemberWorkSyncStatus> => {
     const status = await new MemberWorkSyncDiagnosticsReader(bound).execute(request);
     const stalenessDiagnostics = getStatusStalenessDiagnostics(status, clock.now().getTime());

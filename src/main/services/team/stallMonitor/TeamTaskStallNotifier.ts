@@ -57,7 +57,7 @@ export class TeamTaskStallNotifier {
   ): Promise<TaskStallAlert[]> {
     const observedAt = new Date().toISOString();
     for (const alert of alerts) {
-      const memberName = alert.owner?.trim();
+      const memberName = (alert.branch === 'review' ? alert.reviewer : alert.owner)?.trim();
       if (!memberName) {
         continue;
       }

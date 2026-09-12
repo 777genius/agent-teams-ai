@@ -1331,6 +1331,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
       teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
       kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1406,6 +1407,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     );
     const feature = createMemberWorkSyncFeature({
       teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
       kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1449,6 +1451,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
       teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
       kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,

@@ -523,8 +523,9 @@ export class TeamTaskStallMonitor {
     }
 
     const displayId = getTaskDisplayId(task);
-    const ownerProviderId = task.owner
-      ? snapshot.providerByMemberName.get(task.owner.trim().toLowerCase())
+    const observationMember = evaluation.branch === 'review' ? evaluation.memberName : task.owner;
+    const ownerProviderId = observationMember
+      ? snapshot.providerByMemberName.get(observationMember.trim().toLowerCase())
       : undefined;
     return {
       teamName: snapshot.teamName,
@@ -538,6 +539,9 @@ export class TeamTaskStallMonitor {
       reason: evaluation.reason,
       epochKey: evaluation.epochKey,
       ...(task.owner ? { owner: task.owner } : {}),
+      ...(evaluation.branch === 'review' && evaluation.memberName
+        ? { reviewer: evaluation.memberName }
+        : {}),
       ...(ownerProviderId ? { ownerProviderId } : {}),
       taskRef: {
         taskId: task.id,

@@ -51,6 +51,35 @@ describe('TeamTaskStallNotifier', () => {
     expect(relay).not.toHaveBeenCalled();
   });
 
+  it('records review-stall observations against the reviewer, not the owner', async () => {
+    const record = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record }
+    );
+
+    await expect(
+      notifier.notifyOpenCodeOwners('demo', [
+        createAlert({
+          branch: 'review',
+          owner: 'alice',
+          reviewer: 'carol',
+          reason: 'Potential started-review stall after turn ended after touch.',
+        }),
+      ])
+    ).resolves.toEqual([]);
+    expect(record).toHaveBeenCalledWith({
+      teamName: 'demo',
+      memberName: 'carol',
+      taskId: 'task-a',
+      reason: 'Potential started-review stall after turn ended after touch.',
+      observedAt: expect.any(String),
+    });
+  });
+
   it('still notifies the lead for user-visible stall attention', async () => {
     const sendSystemNotificationToLead = vi.fn(async () => undefined);
     const notifier = new TeamTaskStallNotifier({ sendSystemNotificationToLead } as never);
