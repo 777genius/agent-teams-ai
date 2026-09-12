@@ -1492,7 +1492,7 @@ function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
  */
 export async function disposeInternalStorageAfterWriterDrains(
   services: InternalStorageShutdownServices,
-  options: { stepTimeoutMs?: number } = {}
+  options: { stepTimeoutMs?: number; waitForWriterCompletion?: boolean } = {}
 ): Promise<void> {
   const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
 
@@ -1528,6 +1528,9 @@ export async function disposeInternalStorageAfterWriterDrains(
       () => internalStorageDispose.then(() => undefined),
       stepTimeoutMs
     );
+  }
+  if (options.waitForWriterCompletion) {
+    await internalStorageDispose;
   }
 }
 
@@ -3120,12 +3123,15 @@ async function shutdownServices(): Promise<void> {
     // .member-work-sync status/report/replica/outbox files are copied together.
     await runShutdownBackupAfterWorkSyncDrain({
       drainWorkSync: () =>
-        disposeInternalStorageAfterWriterDrains({
-          teamDataService,
-          teamTaskStallMonitor,
-          memberWorkSyncFeature,
-          internalStorageFeature,
-        }),
+        disposeInternalStorageAfterWriterDrains(
+          {
+            teamDataService,
+            teamTaskStallMonitor,
+            memberWorkSyncFeature,
+            internalStorageFeature,
+          },
+          { waitForWriterCompletion: true }
+        ),
       backup: teamBackupService,
     });
     teamTaskStallMonitor = null;
