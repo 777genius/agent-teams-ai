@@ -4,6 +4,11 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
+import type {
+  AttributedCursorAgentProcess,
+  CursorAgentAttributionOwner,
+} from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
+
 interface CursorAgentSweepInput {
   ownedWorkspaceCwds: readonly string[];
   startedBeforeMs?: number | null;
@@ -34,6 +39,21 @@ vi.mock(
       typeof import('@main/services/team/opencode/bridge/CursorAgentProcessCleanup')
     >()),
     DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: { isEnabled: () => true, sweepCursorAgentTrees },
+  })
+);
+// The default port reads the record directory this app designates for the
+// runtime; every case here hands in what the runtime is supposed to have
+// written there, so the assertions are about the stop, not about this machine.
+const readAttributedProcesses = vi.hoisted(() =>
+  vi.fn<() => Promise<readonly AttributedCursorAgentProcess[]>>(() => Promise.resolve([]))
+);
+vi.mock(
+  '@main/services/team/opencode/bridge/CursorAgentAttributionRecords',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('@main/services/team/opencode/bridge/CursorAgentAttributionRecords')
+    >()),
+    DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT: { readAttributedProcesses },
   })
 );
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
@@ -310,5 +330,183 @@ describe('a live team whose directory cannot be told apart on a command line', (
 
     expect(sweepCursorAgentTrees).toHaveBeenCalledTimes(1);
     expect(result.killedPids).toEqual([8100]);
+  });
+});
+
+/**
+ * The record the runtime writes from inside the process it spawned - the pid,
+ * the start time and the exact `--workspace` argument a joined command line
+ * cannot give back, plus the teams its host holds leases for.
+ *
+ * The app cannot act on any of it yet: the proof path needs a pinned runtime
+ * that writes the record, so today a stop only reports what it can read. Every
+ * fence below has to decide exactly what it decides without a record.
+ */
+describe('the positive attribution records the runtime writes', () => {
+  function owner(teamName: string): CursorAgentAttributionOwner {
+    return {
+      teamId: `${teamName}-id`,
+      teamName,
+      laneId: 'primary',
+      memberName: 'lead',
+      runId: 'run-1',
+      sessionId: 'session-1',
+      createdAt: '2026-09-10T10:00:00.000Z',
+      updatedAt: '2026-09-10T10:05:00.000Z',
+    };
+  }
+
+  function attributedProcess(
+    pid: number,
+    owners: readonly CursorAgentAttributionOwner[] = []
+  ): AttributedCursorAgentProcess {
+    return {
+      record: {
+        schemaVersion: 1,
+        kind: 'cursor-agent',
+        attributionId: 'aaaa1111aaaa1111aaaa1111aaaa1111',
+        pid,
+        parentPid: pid - 1,
+        startedAtMs: 1_700_000_000_000,
+        startTimeToleranceMs: 2000,
+        nativeStartToken: null,
+        workspacePath: 'C:\\workspaces\\example',
+        cwd: 'C:\\workspaces\\example',
+        appInstanceId: '9100-1699999999000',
+        appProfileScope: 'this-install',
+        hostPid: 999,
+        runtimeVersion: '0.0.95',
+        writtenAtMs: 1_700_000_000_100,
+        exitedAtMs: null,
+      },
+      host: {
+        schemaVersion: 1,
+        attributionId: 'aaaa1111aaaa1111aaaa1111aaaa1111',
+        hostPid: 999,
+        hostStartedAtNative: null,
+        hostStartTimeFormat: null,
+        projectPath: 'C:\\workspaces\\example',
+        appInstanceId: '9100-1699999999000',
+        appProfileScope: 'this-install',
+        runtimeVersion: '0.0.95',
+        owners,
+        updatedAt: null,
+      },
+      owners,
+    };
+  }
+
+  it('reports the records it can read and still reaps on the command line', async () => {
+    writeTeamConfig('attributedteam', { projectPath: 'C:\\workspaces\\example' });
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [owner('attributedteam')]),
+      attributedProcess(4322),
+    ]);
+    sweepCursorAgentTrees.mockResolvedValueOnce({
+      scanned: 2,
+      killed: [4321],
+      keptRecent: [],
+      incomplete: false,
+      diagnostics: [],
+    });
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'attributedteam',
+      otherAliveTeams: [],
+      requestedAtMs: 1_700_000_000_000,
+    });
+
+    // Unchanged, deliberately: a record is not yet permission to reap, so every
+    // fence the sweep runs under is the one it runs under today.
+    expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      ownedWorkspaceCwds: ['C:\\workspaces\\example'],
+      startedBeforeMs: 1_700_000_000_000,
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      orphanedOnly: false,
+    });
+    expect(result.killedPids).toEqual([4321]);
+    expect(result.diagnostics).toEqual([
+      'cursor-agent attribution: 2 runtime process record(s) available, 1 with a recorded owner; this stop still decides on the command line',
+      'Reaped 1 cursor-agent process tree(s)',
+    ]);
+  });
+
+  /**
+   * The control: against a runtime that writes no record - every runtime this
+   * app pins today - the stop reports exactly what it reported before.
+   */
+  it.each(['unknown-only', 'missing host', 'empty owners'])(
+    'reports zero recorded owners for %s',
+    async (scenario) => {
+      writeTeamConfig('unknownattributedteam', { projectPath: 'C:\\workspaces\\example' });
+      const entry = attributedProcess(
+        4321,
+        scenario === 'empty owners'
+          ? []
+          : [
+              {
+                ...owner('alpha'),
+                teamId: null,
+                teamName: scenario === 'missing host' ? 'alpha' : null,
+              },
+            ]
+      );
+      if (scenario === 'missing host') entry.host = null;
+      readAttributedProcesses.mockResolvedValueOnce([entry]);
+
+      const result = await reapCursorAgentLeadTreesForStoppedTeam({
+        teamName: 'unknownattributedteam',
+        otherAliveTeams: [],
+        cursorAgentTreeSweep: { isEnabled: () => false, sweepCursorAgentTrees: vi.fn() },
+      });
+
+      expect(result.diagnostics).toContain(
+        'cursor-agent attribution: 1 runtime process record(s) available, 0 with a recorded owner; this stop still decides on the command line'
+      );
+      expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    }
+  );
+
+  it('says nothing about attribution when the runtime recorded none', async () => {
+    writeTeamConfig('unattributedteam', { projectPath: 'C:\\workspaces\\example' });
+    sweepCursorAgentTrees.mockResolvedValueOnce({
+      scanned: 1,
+      killed: [8100],
+      keptRecent: [],
+      incomplete: false,
+      diagnostics: [],
+    });
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'unattributedteam',
+      otherAliveTeams: [],
+      requestedAtMs: 1_700_000_000_000,
+    });
+
+    expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
+  });
+
+  /**
+   * The records are read before the switch, because whether the runtime writes
+   * them at all is exactly what an operator deciding to turn the sweep on needs
+   * to know - and reading them changes nothing the switch decides.
+   */
+  it('reports the records even where the sweep itself is switched off', async () => {
+    writeTeamConfig('disabledattributedteam', { projectPath: 'C:\\workspaces\\example' });
+    readAttributedProcesses.mockResolvedValueOnce([attributedProcess(4321, [owner('alpha')])]);
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'disabledattributedteam',
+      otherAliveTeams: [],
+      cursorAgentTreeSweep: { isEnabled: () => false, sweepCursorAgentTrees: vi.fn() },
+    });
+
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(result.killedPids).toEqual([]);
+    expect(result.diagnostics).toEqual([
+      'cursor-agent attribution: 1 runtime process record(s) available, 1 with a recorded owner; this stop still decides on the command line',
+      'Skipped cursor-agent sweep: the cursor-agent tree sweep is disabled for this app instance',
+    ]);
   });
 });

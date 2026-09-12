@@ -2,6 +2,11 @@ import { listTeamProjectWorkspaces } from '@main/services/team/TeamProjectWorksp
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import {
+  type CursorAgentAttributionPort,
+  DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT,
+  summarizeAttributedCursorAgentProcesses,
+} from './CursorAgentAttributionRecords';
+import {
   CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
   type CursorAgentTreeSweepPort,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
@@ -52,6 +57,14 @@ export interface OpenCodeLifecycleCleanupTailInput {
   /** Persistent application profile ownership retained across restarts. */
   profileScope?: string;
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
+  /**
+   * What the runtime recorded about the agent processes it started, read at
+   * startup and reported, not yet acted upon: the proof path that turns a
+   * record into permission to reap needs a runtime that writes one, and this
+   * app does not pin such a runtime yet. Reading it here is how an operator
+   * finds out whether the runtime in front of them writes records at all.
+   */
+  cursorAgentAttribution?: CursorAgentAttributionPort;
   /**
    * The workspaces this app has teams for. It is the ownership proof the
    * startup lead-tree reap runs on, so it defaults to the teams on disk rather
@@ -227,9 +240,17 @@ async function runIndependentStep(
  * It never runs on shutdown, where a running tree may belong to a live team.
  */
 async function reapOrphanedCursorAgentLeadTrees(
-  input: Pick<OpenCodeLifecycleCleanupTailInput,
-    'ports' | 'appStartedAtMs' | 'cursorAgentTreeSweep' | 'listOwnedLeadWorkspaces' | 'canAdmitStartupWork'>
+  input: Pick<
+    OpenCodeLifecycleCleanupTailInput,
+    | 'ports'
+    | 'appStartedAtMs'
+    | 'cursorAgentTreeSweep'
+    | 'cursorAgentAttribution'
+    | 'listOwnedLeadWorkspaces'
+    | 'canAdmitStartupWork'
+  >
 ): Promise<void> {
+  await reportAttributedCursorAgentProcesses(input);
   const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
   if (!sweepPort.isEnabled()) {
     input.ports.logSweepResult(
@@ -269,4 +290,24 @@ async function reapOrphanedCursorAgentLeadTrees(
   for (const diagnostic of sweep.diagnostics) {
     input.ports.logWarning(`[OpenCode] startup cursor-agent sweep: ${diagnostic}`);
   }
+}
+
+/**
+ * One durable line when the runtime has recorded processes for this install,
+ * and silence when it has not - a startup against a runtime that writes no
+ * records reads exactly as it does today. The reader never throws, so an
+ * unreadable record directory is already the empty answer, and the sweep behind
+ * this step decides on the same evidence it decides on now.
+ */
+async function reportAttributedCursorAgentProcesses(
+  input: Pick<OpenCodeLifecycleCleanupTailInput, 'ports' | 'cursorAgentAttribution'>
+): Promise<void> {
+  const port = input.cursorAgentAttribution ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT;
+  const { total, withRecordedOwner } = summarizeAttributedCursorAgentProcesses(
+    await port.readAttributedProcesses()
+  );
+  if (total === 0) return;
+  input.ports.logSweepResult(
+    `opencode_cursor_agent_attribution_records sweep=startup count=${total} owned=${withRecordedOwner}`
+  );
 }

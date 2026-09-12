@@ -262,7 +262,10 @@ import {
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
 import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
-import { OpenCodeWindowsStartupCleanup, stopAdmittingOpenCodeStartupCleanup } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
+import {
+  OpenCodeWindowsStartupCleanup,
+  stopAdmittingOpenCodeStartupCleanup,
+} from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -348,6 +351,7 @@ import {
   TeamTaskStallSnapshotSource,
   TeamTranscriptSourceLocator,
   UpdaterService,
+  applyCursorAgentAttributionEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 
@@ -506,6 +510,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns.
+  await applyCursorAgentAttributionEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
@@ -2064,25 +2071,33 @@ async function initializeServices(): Promise<void> {
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
   });
-  const windowsStartupCleanup = process.platform === 'win32'
-    ? new OpenCodeWindowsStartupCleanup({
-        appStartedAtMs,
-        profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
-        ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
-        maintenance: (canAdmitStartupWork) => runOpenCodeStartupCleanupMaintenance({ appStartedAtMs, ports: openCodeLifecycleCleanupTailPorts, canAdmitStartupWork }),
-        logWarning: (message) => logger.warn(message),
-      }) : null;
+  const windowsStartupCleanup =
+    process.platform === 'win32'
+      ? new OpenCodeWindowsStartupCleanup({
+          appStartedAtMs,
+          profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+          ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          maintenance: (canAdmitStartupWork) =>
+            runOpenCodeStartupCleanupMaintenance({
+              appStartedAtMs,
+              ports: openCodeLifecycleCleanupTailPorts,
+              canAdmitStartupWork,
+            }),
+          logWarning: (message) => logger.warn(message),
+        })
+      : null;
   if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
-  else await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
-    appStartedAtMs,
-    requiredProfileScope: buildOpenCodeAppProfileScope(
-      app.getPath('userData'),
-      getClaudeBasePath()
-    ),
-    logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
-    logWarning: (message) => logger.warn(message),
-    logError: (message) => logger.error(message),
-  });
+  else
+    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+      appStartedAtMs,
+      requiredProfileScope: buildOpenCodeAppProfileScope(
+        app.getPath('userData'),
+        getClaudeBasePath()
+      ),
+      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+      logWarning: (message) => logger.warn(message),
+      logError: (message) => logger.error(message),
+    });
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
@@ -2107,10 +2122,12 @@ async function initializeServices(): Promise<void> {
         .finally(settleStartupRuntimeSweep);
     }, STARTUP_RECOVERY_DELAY_MS);
   }
-  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted() ? null : startPeriodicOpenCodeHostStartupLockPurge({
-    logInfo: (message) => logger.info(message),
-    logWarning: (message) => logger.warn(message),
-  });
+  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted()
+    ? null
+    : startPeriodicOpenCodeHostStartupLockPurge({
+        logInfo: (message) => logger.info(message),
+        logWarning: (message) => logger.warn(message),
+      });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
