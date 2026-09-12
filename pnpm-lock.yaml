@@ -62,7 +62,7 @@ overrides:
   serialize-javascript: 7.0.5
   shell-quote: 1.10.0
   simple-git: 3.36.0
-  smol-toml: 1.6.1
+  smol-toml: 1.8.0
   srvx: 0.11.13
   svgo: 4.1.0
   tar: 7.5.22
@@ -10191,8 +10191,8 @@ packages:
     resolution: {integrity: sha512-KAkBqZl3c2GvNgNhcoyJae1aKldDW0LO279wF9bk1PnluRTETKBq0WyzRXxEhoQLk56yHaOY4JCBEKDuJIET5g==}
     engines: {node: '>=20.0.0'}
 
-  smol-toml@1.6.1:
-    resolution: {integrity: sha512-dWUG8F5sIIARXih1DTaQAX4SsiTXhInKf1buxdY9DIg4ZYPZK5nGM1VRIYmEbDbsHt7USo99xSLFu5Q1IqTmsg==}
+  smol-toml@1.8.0:
+    resolution: {integrity: sha512-kCZr2V3ch9i00x8zXRhjUNVcjG9ijES5dDudkXvUVCT5QlJNQWElSJdZqyPemffHoLNUYwOcou0Fy+ojN0uHSQ==}
     engines: {node: '>= 18'}
 
   sonic-boom@4.2.1:
@@ -20155,7 +20155,7 @@ snapshots:
       oxc-resolver: 11.16.4
       picocolors: 1.1.1
       picomatch: 4.0.4
-      smol-toml: 1.6.1
+      smol-toml: 1.8.0
       strip-json-comments: 5.0.3
       typescript: 5.9.3
       zod: 4.3.6
@@ -22927,7 +22927,7 @@ snapshots:
 
   smob@1.6.1: {}
 
-  smol-toml@1.6.1: {}
+  smol-toml@1.8.0: {}
 
   sonic-boom@4.2.1:
     dependencies:
