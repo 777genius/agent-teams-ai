@@ -1,4 +1,7 @@
-import { decideMemberWorkSyncStatus } from '../domain';
+import {
+  decideMemberWorkSyncStatus,
+  isStaleMemberWorkSyncRecoveryControlRevision,
+} from '../domain';
 import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
 
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
@@ -97,6 +100,14 @@ export class MemberWorkSyncNudgeRevalidator {
     }
     if (previous.recoveryHealth?.autoResumeStopLatch) {
       return { ok: false, reason: 'member_stopped', retryable: false };
+    }
+    if (
+      isStaleMemberWorkSyncRecoveryControlRevision({
+        health: previous.recoveryHealth,
+        intentId: item.id,
+      })
+    ) {
+      return { ok: false, reason: 'stale_control_revision', retryable: false };
     }
 
     let source;

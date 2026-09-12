@@ -98,4 +98,31 @@ describe('isMemberWorkSyncNudgeDeliveryStale', () => {
       reason: 'member_stopped',
     });
   });
+
+  it('aborts when the reserved control revision is older than the current revision', () => {
+    const status: MemberWorkSyncStatus = {
+      ...needsSync,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: item.id,
+        controlRevision: 3,
+        reservations: [
+          {
+            intentId: item.id,
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: nowIso,
+            state: 'reserved',
+            payloadHash: 'hash',
+            controlRevision: 1,
+          },
+        ],
+      },
+    };
+    expect(isMemberWorkSyncNudgeDeliveryStale({ status, item, nowIso })).toEqual({
+      abort: true,
+      reason: 'stale_control_revision',
+    });
+  });
 });

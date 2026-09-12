@@ -2342,6 +2342,116 @@ describe('MemberWorkSync use cases', () => {
     expect(planned).toEqual({ planned: false, code: 'member_stopped' });
   });
 
+  it('supersedes a recovery intent reserved before a Stop/Resume cycle', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const commands = new MemberWorkSyncRecoveryCommands(deps);
+    const continued = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(continued.ok).toBe(true);
+    if (!continued.ok) {
+      return;
+    }
+    const intentId = continued.status.recoveryHealth?.unresolvedIntentId;
+    expect(intentId).toBeTruthy();
+    expect(outbox.items.get(intentId!)?.status).toBe('pending');
+    await commands.stop({ teamName: 'team-a', memberName: 'bob', reason: 'user_stop' });
+    await commands.resume({ teamName: 'team-a', memberName: 'bob' });
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(summary.superseded).toBeGreaterThanOrEqual(1);
+    expect(outbox.items.get(intentId!)).toMatchObject({
+      status: 'superseded',
+      lastError: 'stale_control_revision',
+    });
+    expect(inbox.inserted.map((message) => message.messageId)).not.toContain(intentId);
+  });
+
+  it('keeps automatic attempt budget after queued work becomes runnable', async () => {
+    let busy = true;
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      busySignal: {
+        isBusy: async () => ({ busy, reason: 'runtime_busy' }),
+      },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const queued = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const episode = queued.recoveryHealth?.episodes[0];
+    expect(episode).toMatchObject({ phase: 'expected_wait', reason: 'queued' });
+    await store.write({
+      ...queued,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: queued.recoveryHealth?.episodes ?? [],
+        controlRevision: queued.recoveryHealth?.controlRevision ?? 1,
+        reservations: [
+          {
+            intentId: 'auto-1',
+            episodeId: episode!.episodeId,
+            trigger: 'automatic',
+            reservedAt: episode!.firstObservedAt,
+            state: 'resolved',
+            payloadHash: 'h1',
+            controlRevision: 1,
+          },
+          {
+            intentId: 'auto-2',
+            episodeId: episode!.episodeId,
+            trigger: 'automatic',
+            reservedAt: episode!.firstObservedAt,
+            state: 'resolved',
+            payloadHash: 'h2',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    busy = false;
+    const runnable = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(runnable.recoveryHealth?.episodes[0]).toMatchObject({
+      phase: 'observing',
+      episodeId: episode!.episodeId,
+      firstObservedAt: episode!.firstObservedAt,
+    });
+    const recoveryInput = buildMemberWorkSyncOutboxEnsureInput({
+      status: runnable,
+      hash: deps.hash,
+      nowIso: deps.clock.now().toISOString(),
+    });
+    expect(recoveryInput).toBeTruthy();
+    await expect(
+      reserveMemberWorkSyncRecoveryIntent({
+        deps,
+        status: runnable,
+        recoveryInput: recoveryInput!,
+        trigger: 'automatic',
+      })
+    ).resolves.toEqual({ ok: false, code: 'slot_occupied' });
+  });
+
   it('refuses a new manual continue while the runtime is busy', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({

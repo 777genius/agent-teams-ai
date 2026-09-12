@@ -10,6 +10,20 @@ export function nextMemberWorkSyncControlRevision(
   return current + 1;
 }
 
+export function isStaleMemberWorkSyncRecoveryControlRevision(input: {
+  health?: MemberWorkSyncRecoveryHealth;
+  intentId: string;
+}): boolean {
+  const currentRevision = input.health?.controlRevision;
+  if (currentRevision == null) {
+    return false;
+  }
+  const reservation = input.health?.reservations?.find(
+    (candidate) => candidate.intentId === input.intentId
+  );
+  return reservation != null && reservation.controlRevision < currentRevision;
+}
+
 export function applyMemberWorkSyncStopLatch(input: {
   previous?: MemberWorkSyncRecoveryHealth;
   nowIso: string;

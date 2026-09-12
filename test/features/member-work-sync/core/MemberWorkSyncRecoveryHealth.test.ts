@@ -148,9 +148,12 @@ describe('member work sync recovery health observation', () => {
       memberBusy: false,
       instrumentationKnown: true,
     });
+    const queuedEpisode = stillQueued?.episodes.find((episode) => episode.taskId === 'task-b');
     expect(runnable?.episodes.find((episode) => episode.taskId === 'task-b')).toMatchObject({
       phase: 'observing',
-      firstObservedAt: new Date(becameRunnableAt).toISOString(),
+      firstObservedAt: '2026-09-11T00:00:00.000Z',
+      episodeId: queuedEpisode?.episodeId,
+      dueAt: new Date(becameRunnableAt + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS).toISOString(),
     });
     expect(runnable?.episodes.find((episode) => episode.taskId === 'task-b')?.phase).not.toBe(
       'attention'

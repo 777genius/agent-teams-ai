@@ -1,4 +1,7 @@
-import { decideMemberWorkSyncStatus } from '../domain';
+import {
+  decideMemberWorkSyncStatus,
+  isStaleMemberWorkSyncRecoveryControlRevision,
+} from '../domain';
 import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
 
 import type {
@@ -173,6 +176,14 @@ export function isMemberWorkSyncNudgeDeliveryStale(input: {
   }
   if (input.status.recoveryHealth?.autoResumeStopLatch) {
     return { abort: true, reason: 'member_stopped' };
+  }
+  if (
+    isStaleMemberWorkSyncRecoveryControlRevision({
+      health: input.status.recoveryHealth,
+      intentId: input.item.id,
+    })
+  ) {
+    return { abort: true, reason: 'stale_control_revision' };
   }
   const decision = decideMemberWorkSyncStatus({
     agenda: input.status.agenda,

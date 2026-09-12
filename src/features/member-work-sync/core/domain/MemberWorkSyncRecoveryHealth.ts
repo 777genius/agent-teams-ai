@@ -245,17 +245,25 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
       (item.evidenceStatus === 'pending' &&
         (input.memberBusy === true || inProgressAssignees.has(item.assignee)));
     const leavingExpectedWait = existing?.phase === 'expected_wait' && !remainingExpectedWait;
+    const existingObservedMs = existing ? Date.parse(existing.firstObservedAt) : Number.NaN;
+    const clockRolledBack = Number.isFinite(existingObservedMs) && existingObservedMs > input.nowMs;
     let firstObservedAt =
-      progressedToActiveWork || leavingExpectedWait
+      progressedToActiveWork || !existing || clockRolledBack
         ? input.nowIso
-        : (existing?.firstObservedAt ?? input.nowIso);
-    let firstObservedMs = Date.parse(firstObservedAt);
+        : existing.firstObservedAt;
+    const firstObservedMs = Date.parse(firstObservedAt);
     if (!Number.isFinite(firstObservedMs) || firstObservedMs > input.nowMs) {
       firstObservedAt = input.nowIso;
-      firstObservedMs = input.nowMs;
     }
-    const dueAt = new Date(firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS).toISOString();
-    const overdue = input.nowMs >= firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS;
+    const existingDueMs = existing ? Date.parse(existing.dueAt) : Number.NaN;
+    const rebaseDeadline =
+      !existing || progressedToActiveWork || leavingExpectedWait || clockRolledBack;
+    const dueAtMs =
+      rebaseDeadline || !Number.isFinite(existingDueMs)
+        ? input.nowMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS
+        : existingDueMs;
+    const dueAt = new Date(dueAtMs).toISOString();
+    const overdue = input.nowMs >= dueAtMs;
     const classified = classifyRecoveryObservation({
       item,
       expectedWaiting: input.expectedWaiting,
@@ -279,7 +287,7 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
     const lastEvidenceId = evidenceId ?? existing?.lastEvidenceId;
     return {
       episodeId:
-        progressedToActiveWork || leavingExpectedWait || !existing
+        progressedToActiveWork || !existing || clockRolledBack
           ? `episode:${workKey}:${firstObservedAt}`
           : existing.episodeId,
       workKey,
