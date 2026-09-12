@@ -537,7 +537,8 @@ try {
     evidence.blockedRuntimeCalls.every(
       (args) =>
         (args[0] === 'runtime' &&
-          (args[1] === 'opencode-command' || (args[1] === 'status' && args.includes('--summary')))) ||
+          (args[1] === 'opencode-command' ||
+            (args[1] === 'status' && args.includes('--summary')))) ||
         (args.length === 5 &&
           args[2] === '--json' &&
           args[3] === '--provider' &&
