@@ -4490,6 +4490,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         phase2Readiness: {
@@ -4530,9 +4531,11 @@ describe('createMemberWorkSyncFeature composition', () => {
         memberName,
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
+      await feature.dispose();
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         phase2Readiness: {
@@ -4695,6 +4698,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         },
       });
       expect(repairedMetricsFile.recentEvents?.length).toBeGreaterThan(0);
+      feature = createFeature();
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         phase2Readiness: {
           state: 'collecting_shadow_data',
@@ -5648,6 +5652,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         phase2Readiness: {
@@ -5846,6 +5851,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         phase2Readiness: {
