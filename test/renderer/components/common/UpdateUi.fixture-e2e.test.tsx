@@ -1,13 +1,18 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
-import { UpdateBanner } from '@renderer/components/common/UpdateBanner';
 import { UpdateDialog } from '@renderer/components/common/UpdateDialog';
+import { TabBarActions } from '@renderer/components/layout/TabBarActions';
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock('@renderer/components/layout/MoreMenu', () => ({
+  MoreMenu: () => null,
 }));
 
 describe('app update UI fixture-e2e', () => {
@@ -41,9 +46,9 @@ describe('app update UI fixture-e2e', () => {
     vi.unstubAllGlobals();
   });
 
-  it('carries an available event through the store, global banner, and dialog actions', async () => {
+  it('carries an available event through the header action and dialog actions', async () => {
     await renderUpdateUi();
-    expect(host.textContent).not.toContain('updates.newVersionAvailable');
+    expect(host.textContent).not.toContain('updates.updateApp');
 
     await act(async () => {
       useStore.getState().handleUpdaterStatus({
@@ -53,7 +58,7 @@ describe('app update UI fixture-e2e', () => {
       });
     });
 
-    expect(host.textContent).toContain('updates.newVersionAvailable');
+    expect(host.textContent).toContain('updates.updateApp');
     expect(host.textContent).toContain('updateDialog.updateAvailable');
     expect(host.textContent).toContain('v999.0.0');
 
@@ -61,8 +66,8 @@ describe('app update UI fixture-e2e', () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     });
     expect(useStore.getState().showUpdateDialog).toBe(false);
-    expect(useStore.getState().showUpdateBanner).toBe(true);
     expect(localStorage.getItem('update:dismissed-version')).toBeNull();
+    expect(host.textContent).toContain('updates.updateApp');
 
     await clickButton('updates.updateApp');
     expect(useStore.getState().showUpdateDialog).toBe(true);
@@ -75,7 +80,7 @@ describe('app update UI fixture-e2e', () => {
     });
     expect(useStore.getState().updateStatus).toBe('available');
     expect(useStore.getState().updateError).toBe('Temporary update server failure');
-    expect(host.textContent).toContain('updates.newVersionAvailable');
+    expect(host.textContent).toContain('updates.updateApp');
 
     await clickButton('updateDialog.later');
     expect(localStorage.getItem('update:dismissed-version')).toBe('999.0.0');
@@ -87,10 +92,10 @@ describe('app update UI fixture-e2e', () => {
       });
     });
     expect(useStore.getState().showUpdateDialog).toBe(false);
-    expect(useStore.getState().showUpdateBanner).toBe(true);
+    expect(host.textContent).toContain('updates.updateApp');
   });
 
-  it('keeps a dismissed banner hidden until the update becomes ready', async () => {
+  it('keeps the header update action visible after the dialog is dismissed', async () => {
     await renderUpdateUi();
     await act(async () => {
       useStore.getState().handleUpdaterStatus({
@@ -98,10 +103,10 @@ describe('app update UI fixture-e2e', () => {
         version: '999.0.0',
       });
       useStore.getState().dismissUpdateDialog();
-      useStore.getState().dismissUpdateBanner();
     });
 
-    expect(host.textContent).not.toContain('updates.newVersionAvailable');
+    expect(useStore.getState().showUpdateDialog).toBe(false);
+    expect(host.textContent).toContain('updates.updateApp');
 
     await act(async () => {
       useStore.getState().handleUpdaterStatus({
@@ -109,7 +114,8 @@ describe('app update UI fixture-e2e', () => {
         version: '999.0.0',
       });
     });
-    expect(useStore.getState().showUpdateBanner).toBe(false);
+    expect(useStore.getState().showUpdateDialog).toBe(false);
+    expect(host.textContent).toContain('updates.updateApp');
 
     await act(async () => {
       useStore.getState().handleUpdaterStatus({
@@ -117,18 +123,17 @@ describe('app update UI fixture-e2e', () => {
         version: '999.0.0',
       });
     });
-    expect(useStore.getState().showUpdateBanner).toBe(true);
-    expect(host.textContent).toContain('updates.updateReady');
-    expect(host.textContent).toContain('v999.0.0');
+    expect(host.textContent).toContain('updates.restartToUpdate');
+    expect(host.textContent).not.toContain('v999.0.0');
   });
 
   async function renderUpdateUi(): Promise<void> {
     await act(async () => {
       root.render(
-        <>
-          <UpdateBanner />
+        <TooltipProvider>
+          <TabBarActions />
           <UpdateDialog />
-        </>
+        </TooltipProvider>
       );
     });
   }
