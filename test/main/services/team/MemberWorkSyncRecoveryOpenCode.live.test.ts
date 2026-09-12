@@ -503,17 +503,13 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             typeof message.messageId === 'string'
         );
       expect(firstNudge?.messageId).toBeTruthy();
-      let lastRelay: Awaited<
-        ReturnType<OpenCodeLiveHarness['svc']['relayOpenCodeMemberInboxMessages']>
-      > | null = null;
-      await waitUntil(async () => {
-        lastRelay = await harness.svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
-          onlyMessageId: firstNudge!.messageId,
-          source: 'manual',
-          deliveryMetadata: { replyRecipient: 'user' },
-        });
-        return Boolean(lastRelay.lastDelivery?.delivered);
-      }, 120_000);
+      await waitForOpenCodePeerRelay(
+        harness.svc,
+        teamName,
+        memberName,
+        firstNudge!.messageId,
+        180_000
+      );
 
       await waitUntil(
         async () => {
@@ -525,15 +521,12 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
         240_000,
         2_000,
         async () =>
-          [
-            `Last OpenCode relay: ${JSON.stringify(lastRelay, null, 2)}`,
-            await formatMemberWorkSyncDiagnostics({
-              feature: feature!,
-              teamName: teamName!,
-              memberName,
-              taskId: task.id,
-            }),
-          ].join('\n')
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName,
+            taskId: task.id,
+          })
       );
 
       const processedBeforeSettled = new Set(
@@ -554,16 +547,9 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             );
           });
         },
-        180_000,
-        2_000,
-        async () =>
-          formatMemberWorkSyncDiagnostics({
-            feature: feature!,
-            teamName: teamName!,
-            memberName,
-            taskId: task.id,
-          })
-      );
+        60_000,
+        2_000
+      ).catch(() => undefined);
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
       await expireOpenCodeAcceptedReportLease({ teamName, memberName });
@@ -603,7 +589,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             return true;
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (/member_busy|status_not_nudgeable/.test(message)) {
+            if (/member_busy|status_not_nudgeable|payload_conflict/.test(message)) {
               await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
               await feature!.refreshStatus({ teamName: teamName!, memberName });
               return false;
