@@ -1,4 +1,5 @@
 import {
+  applyMemberWorkSyncAcceptedReportRetirement,
   buildAgendaFingerprintPayload,
   canonicalizeAgendaFingerprintPayload,
   decideMemberWorkSyncStatus,
@@ -143,6 +144,10 @@ export class MemberWorkSyncReconciler {
     }
     const previous = read.status;
     const lastAcceptedReport = getMemberWorkSyncAcceptedReport(previous);
+    const previousRecoveryHealth = applyMemberWorkSyncAcceptedReportRetirement({
+      health: previous?.recoveryHealth,
+      reportedAt: lastAcceptedReport?.reportedAt,
+    });
     const nowIso = this.deps.clock.now().toISOString();
     const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
       teamName: agenda.teamName,
@@ -178,7 +183,7 @@ export class MemberWorkSyncReconciler {
     }
     assertReconcileNotCancelled(context);
     const recoveryHealth = observeMemberWorkSyncRecoveryHealth({
-      previous: previous?.recoveryHealth,
+      previous: previousRecoveryHealth,
       nowIso,
       nowMs: Date.parse(nowIso),
       items: agenda.items.map((item) => ({

@@ -2444,7 +2444,11 @@
       "yes": "oo",
       "no": "hindi",
       "moreActionableItems": "{{count}} pang naaaksyunang item",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "Nakahinto ang awtomatikong pagpapatuloy.",
+      "continue": "Magpatuloy",
+      "stopAutoResume": "Ihinto ang auto-resume",
+      "resumeAutoResume": "Ipagpatuloy ang auto-resume"
     },
     "title": "Member work sync",
     "loadingDiagnostics": "Niloload ang member work sync diagnostics.",

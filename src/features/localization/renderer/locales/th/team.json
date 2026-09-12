@@ -2444,7 +2444,11 @@
       "yes": "ใช่",
       "no": "ไม่",
       "moreActionableItems": "รายการที่ดำเนินการได้อีก {{count}} รายการ",
-      "diagnostics": "การวินิจฉัย: {{diagnostics}}"
+      "diagnostics": "การวินิจฉัย: {{diagnostics}}",
+      "autoResumeStopped": "การดำเนินการต่ออัตโนมัติหยุดแล้ว",
+      "continue": "ดำเนินการต่อ",
+      "stopAutoResume": "หยุดการทำงานต่ออัตโนมัติ",
+      "resumeAutoResume": "ทำงานต่ออัตโนมัติอีกครั้ง"
     },
     "title": "การซิงค์งานของสมาชิก",
     "loadingDiagnostics": "กำลังโหลดการวินิจฉัยการซิงค์งานของสมาชิก",

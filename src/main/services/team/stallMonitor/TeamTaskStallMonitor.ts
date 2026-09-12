@@ -371,6 +371,9 @@ export class TeamTaskStallMonitor {
     if (alerts.length > 0) {
       await this.notifier.recordWorkSyncObservations?.(teamName, alerts);
     }
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
     if (openCodeRemediationEnabled && ownerAlerts.length > 0) {
       const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, ownerAlerts);
       if (!this.shouldContinueScan(scanRun)) {

@@ -2444,7 +2444,11 @@
       "yes": "tak",
       "no": "nie",
       "moreActionableItems": "{{count}} więcej elementów do działania",
-      "diagnostics": "Diagnostyka: {{diagnostics}}"
+      "diagnostics": "Diagnostyka: {{diagnostics}}",
+      "autoResumeStopped": "Automatyczna kontynuacja jest zatrzymana.",
+      "continue": "Kontynuuj",
+      "stopAutoResume": "Zatrzymaj auto-wznawianie",
+      "resumeAutoResume": "Wznów auto-wznawianie"
     },
     "title": "Synchronizacja pracy członka",
     "loadingDiagnostics": "Ładowanie diagnostyki synchronizacji pracy członka.",

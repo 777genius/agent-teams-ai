@@ -2444,7 +2444,11 @@
       "yes": "sim",
       "no": "não",
       "moreActionableItems": "{{count}} item(s) mais acionáveis",
-      "diagnostics": "Diagnósticos: {{diagnostics}}"
+      "diagnostics": "Diagnósticos: {{diagnostics}}",
+      "autoResumeStopped": "A continuação automática está parada.",
+      "continue": "Continuar",
+      "stopAutoResume": "Parar retomada automática",
+      "resumeAutoResume": "Retomar retomada automática"
     },
     "title": "Sincronização do trabalho dos membros",
     "loadingDiagnostics": "A carregar os diagnósticos de sincronização de trabalho dos membros.",

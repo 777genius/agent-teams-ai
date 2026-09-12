@@ -1,4 +1,7 @@
-import { validateMemberWorkSyncReport } from '../domain';
+import {
+  applyMemberWorkSyncAcceptedReportRetirement,
+  validateMemberWorkSyncReport,
+} from '../domain';
 import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
 
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
@@ -231,6 +234,10 @@ export class MemberWorkSyncReporter {
             : ('still_working' as const),
       agenda,
       report,
+      recoveryHealth: applyMemberWorkSyncAcceptedReportRetirement({
+        health: read.status?.recoveryHealth,
+        reportedAt: receivedAt,
+      }),
       shadow: {
         reconciledBy: 'report',
         wouldNudge: false,

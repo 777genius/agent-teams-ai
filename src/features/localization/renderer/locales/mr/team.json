@@ -2444,7 +2444,11 @@
       "yes": "होय",
       "no": "नाही",
       "moreActionableItems": "{{count}} अधिक कृतीयोग्य आयटम",
-      "diagnostics": "डायग्नॉस्टिक्स: {{diagnostics}}"
+      "diagnostics": "डायग्नॉस्टिक्स: {{diagnostics}}",
+      "autoResumeStopped": "स्वयंचलित सुरू ठेवणे थांबवले आहे.",
+      "continue": "सुरू ठेवा",
+      "stopAutoResume": "ऑटो-रिज्यूम थांबवा",
+      "resumeAutoResume": "ऑटो-रिज्यूम पुन्हा सुरू करा"
     },
     "title": "सदस्य वर्क सिंक",
     "loadingDiagnostics": "सदस्य वर्क सिंक डायग्नॉस्टिक्स लोड होत आहेत.",

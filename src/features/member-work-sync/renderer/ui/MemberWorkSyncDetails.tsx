@@ -97,7 +97,7 @@ export const MemberWorkSyncDetails = ({
               className="text-xs text-[var(--color-text-muted)]"
               data-testid="member-work-sync-stopped"
             >
-              Automatic continuation is stopped.
+              {t('memberWorkSync.details.autoResumeStopped')}
             </p>
           ) : null}
           {status && (viewModel.canContinue || viewModel.canStop || viewModel.canResume) ? (
@@ -115,7 +115,7 @@ export const MemberWorkSyncDetails = ({
                     });
                   }}
                 >
-                  Continue
+                  {t('memberWorkSync.details.continue')}
                 </Button>
               ) : null}
               {viewModel.canStop && onStop ? (
@@ -131,7 +131,7 @@ export const MemberWorkSyncDetails = ({
                     });
                   }}
                 >
-                  Stop auto-resume
+                  {t('memberWorkSync.details.stopAutoResume')}
                 </Button>
               ) : null}
               {viewModel.canResume && onResume ? (
@@ -147,7 +147,7 @@ export const MemberWorkSyncDetails = ({
                     });
                   }}
                 >
-                  Resume auto-resume
+                  {t('memberWorkSync.details.resumeAutoResume')}
                 </Button>
               ) : null}
             </div>

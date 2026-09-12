@@ -74,7 +74,10 @@ async function mutateOwnedReservation(
 
 export async function recordMemberWorkSyncDispatchOutcome(input: {
   deps: MemberWorkSyncUseCaseDeps;
-  item: Pick<MemberWorkSyncOutboxItem, 'teamName' | 'memberName' | 'id' | 'payload'>;
+  item: Pick<
+    MemberWorkSyncOutboxItem,
+    'teamName' | 'memberName' | 'id' | 'payload' | 'deliveredMessageId'
+  >;
   outcome: MemberWorkSyncRecoveryDispatchKind;
 }): Promise<void> {
   if (!input.item.payload.workSyncIntentKey) {
@@ -96,6 +99,9 @@ export async function recordMemberWorkSyncDispatchOutcome(input: {
               ? applyMemberWorkSyncDeliveredDispatch({
                   health: status.recoveryHealth,
                   intentId: input.item.id,
+                  ...(input.item.deliveredMessageId
+                    ? { boundTurnId: input.item.deliveredMessageId }
+                    : {}),
                 })
               : input.outcome === 'terminal' || input.outcome === 'superseded'
                 ? applyMemberWorkSyncTerminalRetirement({

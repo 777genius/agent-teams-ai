@@ -1,4 +1,6 @@
 import {
+  applyMemberWorkSyncAcceptedReportRetirement,
+  applyMemberWorkSyncDeliveredDispatch,
   applyMemberWorkSyncRetryableDispatch,
   applyMemberWorkSyncTerminalAck,
   applyMemberWorkSyncTerminalRetirement,
@@ -106,5 +108,48 @@ describe('member work sync recovery terminal protocol', () => {
         runtimeTicketAdmission: {},
       })
     ).toBe(true);
+  });
+
+  it('binds delivered dispatch to the outbox prompt identity', () => {
+    const next = applyMemberWorkSyncDeliveredDispatch({
+      health,
+      intentId: 'intent-1',
+      boundTurnId: 'msg_recovery_prompt',
+    });
+    expect(next?.reservations?.[0]).toMatchObject({
+      state: 'awaiting_outcome',
+      boundTurnId: 'msg_recovery_prompt',
+    });
+  });
+
+  it('retires an awaiting reservation after a later accepted report', () => {
+    const awaiting = applyMemberWorkSyncDeliveredDispatch({
+      health,
+      intentId: 'intent-1',
+      boundTurnId: 'msg_recovery_prompt',
+    });
+    const retired = applyMemberWorkSyncAcceptedReportRetirement({
+      health: awaiting,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(retired?.unresolvedIntentId).toBeUndefined();
+    expect(retired?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalOutcome: 'settled',
+      terminalReceiptId: 'report-accepted:intent-1',
+    });
+  });
+
+  it('does not retire an awaiting reservation from an earlier report', () => {
+    const awaiting = applyMemberWorkSyncDeliveredDispatch({
+      health,
+      intentId: 'intent-1',
+    });
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
+      health: awaiting,
+      reportedAt: '2026-09-11T11:59:00.000Z',
+    });
+    expect(next?.unresolvedIntentId).toBe('intent-1');
+    expect(next?.reservations?.[0]?.state).toBe('awaiting_outcome');
   });
 });

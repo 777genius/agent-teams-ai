@@ -4530,13 +4530,17 @@ export default interface Resources {
     memberWorkSync: {
       details: {
         actionableItems: 'Actionable items';
+        autoResumeStopped: 'Automatic continuation is stopped.';
+        continue: 'Continue';
         diagnostics: 'Diagnostics: {{diagnostics}}';
         fingerprint: 'Fingerprint';
         moreActionableItems: '{{count}} more actionable item(s)';
         no: 'no';
         none: 'none';
         report: 'Report';
+        resumeAutoResume: 'Resume auto-resume';
         shadowWouldNudge: 'Shadow would nudge';
+        stopAutoResume: 'Stop auto-resume';
         title: 'Member work sync';
         yes: 'yes';
       };

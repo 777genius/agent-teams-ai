@@ -2488,7 +2488,11 @@
       "yes": "yes",
       "no": "no",
       "moreActionableItems": "{{count}} more actionable item(s)",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "Automatic continuation is stopped.",
+      "continue": "Continue",
+      "stopAutoResume": "Stop auto-resume",
+      "resumeAutoResume": "Resume auto-resume"
     },
     "title": "Member work sync",
     "loadingDiagnostics": "Loading member work sync diagnostics.",

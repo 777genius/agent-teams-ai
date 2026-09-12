@@ -1529,7 +1529,7 @@ export async function disposeInternalStorageAfterWriterDrains(
       stepTimeoutMs
     );
   }
-  await internalStorageDispose;
+  await internalStorageDispose.catch(() => undefined);
 }
 
 /**

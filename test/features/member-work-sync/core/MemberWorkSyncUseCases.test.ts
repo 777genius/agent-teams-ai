@@ -2568,6 +2568,113 @@ describe('MemberWorkSync use cases', () => {
     });
   });
 
+  it('binds a delivered recovery prompt identity onto the awaiting reservation', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        unresolvedIntentId: 'intent-settled',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-settled',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'reserved',
+            payloadHash: 'hash-settled',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    await recordMemberWorkSyncDispatchOutcome({
+      deps,
+      item: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        id: 'intent-settled',
+        deliveredMessageId: 'msg_recovery_prompt',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'review_pickup',
+          workSyncIntentKey: 'review-pickup:evt',
+          text: 'pickup',
+          taskRefs: [],
+        },
+      },
+      outcome: 'delivered',
+    });
+    const after = await store.read();
+    expect(after?.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'awaiting_outcome',
+      boundTurnId: 'msg_recovery_prompt',
+    });
+  });
+
+  it('releases an awaiting recovery reservation after a later accepted report', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      report: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: status.agenda.fingerprint,
+        reportedAt: '2026-05-05T12:00:05.000Z',
+        accepted: true,
+      },
+      lastAcceptedReport: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: status.agenda.fingerprint,
+        reportedAt: '2026-05-05T12:00:05.000Z',
+        accepted: true,
+      },
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        unresolvedIntentId: 'intent-settled',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-settled',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: '2026-05-05T12:00:00.000Z',
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-settled',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalReceiptId: 'report-accepted:intent-settled',
+    });
+  });
+
   it('writes a durable stop latch that blocks automatic recovery planning', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();

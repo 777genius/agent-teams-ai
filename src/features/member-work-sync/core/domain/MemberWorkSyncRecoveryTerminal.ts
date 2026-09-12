@@ -68,11 +68,40 @@ export function applyMemberWorkSyncRetryableDispatch(input: {
 export function applyMemberWorkSyncDeliveredDispatch(input: {
   health?: MemberWorkSyncRecoveryHealth;
   intentId: string;
+  boundTurnId?: string;
 }): MemberWorkSyncRecoveryHealth | undefined {
   return patchMemberWorkSyncReservation(input.health, input.intentId, (reservation) => ({
     ...reservation,
     state: 'awaiting_outcome',
+    ...(input.boundTurnId || reservation.boundTurnId
+      ? { boundTurnId: input.boundTurnId ?? reservation.boundTurnId }
+      : {}),
   }));
+}
+
+export function applyMemberWorkSyncAcceptedReportRetirement(input: {
+  health?: MemberWorkSyncRecoveryHealth;
+  reportedAt?: string;
+}): MemberWorkSyncRecoveryHealth | undefined {
+  const intentId = input.health?.unresolvedIntentId;
+  const reservation = input.health?.reservations?.find((entry) => entry.intentId === intentId);
+  if (!intentId || reservation?.state !== 'awaiting_outcome' || !input.reportedAt) {
+    return input.health;
+  }
+  const reportedAt = Date.parse(input.reportedAt);
+  const reservedMs = Date.parse(reservation.reservedAt);
+  if (!Number.isFinite(reportedAt) || !Number.isFinite(reservedMs) || reportedAt < reservedMs) {
+    return input.health;
+  }
+  return (
+    applyMemberWorkSyncTerminalRetirement({
+      health: input.health,
+      intentId,
+      receiptId: `report-accepted:${intentId}`,
+      outcome: 'settled',
+      pendingAck: false,
+    }) ?? input.health
+  );
 }
 
 export function applyMemberWorkSyncTerminalRetirement(input: {
