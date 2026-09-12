@@ -105,7 +105,14 @@ async function readInboxMessages(input: {
   teamsBasePath: string;
   teamName: string;
   memberName: string;
-}): Promise<Array<{ messageId?: string; messageKind?: string }>> {
+}): Promise<
+  Array<{
+    messageId?: string;
+    messageKind?: string;
+    read?: boolean;
+    workSyncIntent?: string;
+  }>
+> {
   const inboxPath = path.join(
     input.teamsBasePath,
     input.teamName,
@@ -254,6 +261,14 @@ describe('member work sync recovery lifecycle e2e', () => {
       expect(
         (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
           (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(0);
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) =>
+            message.read === true &&
+            message.messageKind === 'default' &&
+            message.workSyncIntent === 'agenda_sync'
         )
       ).toHaveLength(1);
       expect(
@@ -523,6 +538,14 @@ describe('member work sync recovery lifecycle e2e', () => {
       expect(
         (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
           (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(0);
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) =>
+            message.read === true &&
+            message.messageKind === 'default' &&
+            message.workSyncIntent === 'agenda_sync'
         )
       ).toHaveLength(1);
     } finally {
