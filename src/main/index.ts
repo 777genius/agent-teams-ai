@@ -323,6 +323,7 @@ import {
   ClaudeBinaryResolver,
   CliInstallerService,
   configManager,
+  configureCursorAgentAtomicReapBridge,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
@@ -501,6 +502,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
 
@@ -510,10 +512,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
-  // Where the runtime records the agent processes it starts, for the sweeps that
-  // may only reap a tree they can prove this app owns.
-  await applyCursorAgentAttributionEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns - read back under this
+  // same scope, however the Claude root moves later.
+  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
@@ -672,6 +675,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
   });
+  configureCursorAgentAtomicReapBridge(bridgeClient);
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,

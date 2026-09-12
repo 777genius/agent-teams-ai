@@ -513,4 +513,29 @@ describe('CursorAgentAttributionRecords', () => {
 
     expect(attributed.map((entry) => entry.record.pid)).toEqual([4321]);
   });
+
+  /**
+   * The scope the bridge environment was built with is the one the reader
+   * answers under, for as long as this process runs. The Claude root can move
+   * without a restart; the runtime keeps writing the scope its environment
+   * carries, and a reader recomputing the scope would filter those records out
+   * - leaving exactly the tree the stop exists to reap. Last in this file on
+   * purpose: the pin is process-wide.
+   */
+  it('answers under the scope the bridge environment was built with, however the Claude root moves', async () => {
+    await applyCursorAgentAttributionEnv({}, { appProfileScope });
+    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord());
+    await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+    const movedClaudeRoot = path.join(tempRoot, 'moved-claude-root');
+    await fs.mkdir(movedClaudeRoot, { recursive: true });
+    setClaudeBasePathOverride(movedClaudeRoot);
+    expect(buildOpenCodeAppProfileScope(tempAppDataBase, getClaudeBasePath())).not.toBe(
+      appProfileScope
+    );
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(attributed.map((entry) => entry.record.pid)).toEqual([4321]);
+    expect(attributed[0].owners.map((owner) => owner.teamName)).toEqual(['alpha']);
+  });
 });

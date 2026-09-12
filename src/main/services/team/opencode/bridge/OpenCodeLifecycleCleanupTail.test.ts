@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildOpenCodeProcessOwnershipMarkers,
@@ -7,6 +7,7 @@ import {
   runOpenCodeLifecycleCleanupTail,
 } from './OpenCodeLifecycleCleanupTail';
 
+import type { CursorAgentAtomicReapPort } from './CursorAgentAtomicReapBridge';
 import type { AttributedCursorAgentProcess } from './CursorAgentAttributionRecords';
 
 const steps: string[] = [];
@@ -125,6 +126,18 @@ const sweepCursorAgentTrees = vi.fn(
     })
 );
 
+const reapUnleasedCursorAgentTrees =
+  vi.fn<CursorAgentAtomicReapPort['reapUnleasedCursorAgentTrees']>();
+
+beforeEach(() => {
+  readAttributedProcesses.mockReset();
+  readAttributedProcesses.mockResolvedValue([attributedProcess(4321)]);
+  reapUnleasedCursorAgentTrees.mockReset();
+});
+afterEach(() => {
+  expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+});
+
 function baseInput(
   reason: 'startup' | 'shutdown'
 ): Omit<OpenCodeLifecycleCleanupTailInput, 'ports'> {
@@ -135,9 +148,13 @@ function baseInput(
     appStartedAtMs: APP_STARTED_AT_MS,
     sweepCommandSettledAtMs: SWEEP_COMMAND_SETTLED_AT_MS,
     managedHostInstanceId: '1234-1756803600000',
-    // The real port reads the host process table and kills what it finds; every
-    // case here hands in a stub so the assertions are about scope, not luck.
-    cursorAgentTreeSweep: { isEnabled: () => true, sweepCursorAgentTrees },
+    cursorAgentAtomicReap: { reapUnleasedCursorAgentTrees },
+    // Even an enabled legacy sweep is never consulted.
+    cursorAgentTreeSweep: {
+      isEnabled: () => true,
+      allowsUnattributedReap: () => true,
+      sweepCursorAgentTrees,
+    },
     // The real port reads this install's record directory off disk; the cases
     // here say what the runtime wrote, so none of them depends on the machine.
     cursorAgentAttribution: { readAttributedProcesses: readAttributedProcesses },
@@ -158,15 +175,9 @@ function recordSteps(): void {
     steps.push('startup-lock-purge');
     return { locksDir: '/locks', scanned: 0, removed: 0, kept: 0, diagnostics: [] };
   });
-  sweepCursorAgentTrees.mockImplementation(() => {
+  reapUnleasedCursorAgentTrees.mockImplementation(async () => {
     steps.push('cursor-agent-tree-sweep');
-    return Promise.resolve({
-      scanned: 0,
-      killed: [],
-      keptRecent: [],
-      incomplete: false,
-      diagnostics: [],
-    });
+    return { contractVersion: 1, status: 'completed', killedPids: [], diagnostics: [] };
   });
 }
 
@@ -317,6 +328,8 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     expect(ports.sweepResults).toEqual([
       '[OpenCode] opencode_managed_hosts_killed sweep=startup fallback count=2',
       'opencode_startup_locks_purged phase=startup removed=1 kept=3 dir=/locks',
+      'opencode_cursor_agent_attribution_records sweep=startup count=1 owned=0',
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 status=completed',
     ]);
     expect(ports.warnings).toEqual([
       '[OpenCode] startup fallback cleanup: host 7 refused to die',
@@ -335,19 +348,14 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
 
     await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports: createPorts() });
 
-    expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      contractVersion: 1,
+      reason: 'startup',
       ownedWorkspaceCwds: OWNED_WORKSPACES,
       startedBeforeMs: APP_STARTED_AT_MS,
-      // A startup sweep runs where a second copy of this app may hold a live
-      // team in the same directory, and the two leads are byte-identical on the
-      // command line. Both extra fences exist for that copy: the env marker
-      // proves the tree descends from an orchestrator of this app rather than
-      // from a user's own terminal, and the orphan check spares any tree whose
-      // launcher is still alive.
-      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
-      requireOwnershipProof: true,
-      orphanedOnly: true,
+      canDispatch: undefined,
     });
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
   });
 
   /**
@@ -367,56 +375,59 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
       ports,
     });
 
+    expect(reapUnleasedCursorAgentTrees).not.toHaveBeenCalled();
     expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
     expect(ports.sweepResults).toContain(
       'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_owned_workspace'
     );
   });
 
-  /**
-   * Read and reported, not acted upon. The proof path that turns a record into
-   * permission to reap needs a runtime that writes one, and this app pins none
-   * yet - so the startup sweep runs under exactly the fences it runs under
-   * today, and the count is how an operator learns whether the runtime in front
-   * of them records anything at all.
-   */
-  it('reports the attribution records the runtime wrote without widening the sweep', async () => {
+  it('reports snapshot owners but sends no snapshot authority to the runtime', async () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
-    readAttributedProcesses.mockResolvedValueOnce([
-      attributedProcess(4321, [
-        {
-          teamId: 'team-1',
-          teamName: 'alpha',
-          laneId: 'primary',
-          memberName: 'lead',
-          runId: 'run-1',
-          sessionId: 'session-1',
-          createdAt: '2026-09-02T08:00:00.000Z',
-          updatedAt: '2026-09-02T08:30:00.000Z',
-        },
-      ]),
-      attributedProcess(4322),
+    const owned = attributedProcess(4321, [
+      {
+        teamId: 'team-1',
+        teamName: 'alpha',
+        laneId: 'primary',
+        memberName: 'lead',
+        runId: 'run-1',
+        sessionId: 'session-1',
+        createdAt: '2026-09-02T08:00:00.000Z',
+        updatedAt: '2026-09-02T08:30:00.000Z',
+      },
     ]);
+    const unowned = attributedProcess(4322);
+    readAttributedProcesses.mockResolvedValueOnce([owned, unowned]);
 
-    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      cursorAgentTreeSweep: {
+        isEnabled: () => true,
+        allowsUnattributedReap: () => false,
+        sweepCursorAgentTrees,
+      },
+      ports,
+    });
 
     expect(ports.sweepResults).toContain(
       'opencode_cursor_agent_attribution_records sweep=startup count=2 owned=1'
     );
-    expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      contractVersion: 1,
+      reason: 'startup',
+      canDispatch: undefined,
       ownedWorkspaceCwds: OWNED_WORKSPACES,
       startedBeforeMs: APP_STARTED_AT_MS,
-      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
-      requireOwnershipProof: true,
-      orphanedOnly: true,
     });
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
   });
 
   /**
-   * The control: against a runtime that writes no record - every runtime this
-   * app pins today - the startup tail says exactly what it said before.
+   * The control: against a runtime that writes no record the startup tail says
+   * exactly what it said before, and - with the command-line path off - reads no
+   * process table at all, which is the state this app ships in today.
    */
   it.each(['unknown-only', 'missing host', 'empty owners'])(
     'reports zero recorded owners for %s',
@@ -455,10 +466,24 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
   it('says nothing about attribution when the runtime recorded none', async () => {
     vi.clearAllMocks();
     recordSteps();
+    readAttributedProcesses.mockResolvedValueOnce([]);
     const ports = createPorts();
 
-    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      cursorAgentTreeSweep: {
+        isEnabled: () => true,
+        allowsUnattributedReap: () => false,
+        sweepCursorAgentTrees,
+      },
+      ports,
+    });
 
+    expect(reapUnleasedCursorAgentTrees).not.toHaveBeenCalled();
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(ports.sweepResults).toContain(
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_attribution_record'
+    );
     expect(ports.sweepResults.filter((entry) => entry.includes('attribution_records'))).toEqual([]);
     expect(ports.warnings).toEqual([]);
   });
@@ -469,10 +494,11 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
 
     await runOpenCodeLifecycleCleanupTail({ ...baseInput('shutdown'), ports: createPorts() });
 
+    expect(reapUnleasedCursorAgentTrees).not.toHaveBeenCalled();
     expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
   });
 
-  it('reaps nothing and says so when the lead tree sweep port is disabled', async () => {
+  it('ignores the deprecated local sweep switch and uses only the runtime', async () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
@@ -480,13 +506,18 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
 
     await runOpenCodeLifecycleCleanupTail({
       ...baseInput('startup'),
-      cursorAgentTreeSweep: { isEnabled: () => false, sweepCursorAgentTrees: disabledSweep },
+      cursorAgentTreeSweep: {
+        isEnabled: () => false,
+        allowsUnattributedReap: () => true,
+        sweepCursorAgentTrees: disabledSweep,
+      },
       ports,
     });
 
     expect(disabledSweep).not.toHaveBeenCalled();
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledOnce();
     expect(ports.sweepResults).toContain(
-      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=sweep_disabled'
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 status=completed'
     );
   });
 
@@ -577,7 +608,8 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
       'startup-lock-purge',
       'cursor-agent-tree-sweep',
     ]);
-    expect(sweepCursorAgentTrees).toHaveBeenCalledOnce();
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledOnce();
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
     expect(ports.warnings).toEqual([
       '[OpenCode] startup fallback failed: process table unavailable',
     ]);
@@ -587,18 +619,86 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
-    sweepCursorAgentTrees.mockResolvedValueOnce({
-      scanned: 2,
-      killed: [8100],
-      keptRecent: [8200],
-      incomplete: false,
+    reapUnleasedCursorAgentTrees.mockResolvedValueOnce({
+      contractVersion: 1,
+      status: 'kept',
+      killedPids: [8100],
       diagnostics: ['Kept cursor-agent tree pid=8200: process start time could not be verified'],
     });
 
     await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
 
-    expect(ports.warnings).toContain(
-      '[OpenCode] startup cursor-agent sweep: Kept cursor-agent tree pid=8200: process start time could not be verified'
+    expect(ports.warnings).toEqual([
+      '[OpenCode] startup cursor-agent sweep: Kept cursor-agent tree pid=8200: process start time could not be verified',
+    ]);
+    expect(ports.sweepResults).toContain(
+      'opencode_cursor_agent_trees_reaped sweep=startup count=1 status=kept'
     );
+  });
+
+  it.each(['unsupported', 'unknown', 'incomplete'] as const)(
+    'reports runtime %s without local fallback or retry',
+    async (status) => {
+      vi.clearAllMocks();
+      recordSteps();
+      const ports = createPorts();
+      reapUnleasedCursorAgentTrees.mockResolvedValueOnce({
+        contractVersion: 1,
+        status,
+        killedPids: [],
+        diagnostics: ['runtime unavailable'],
+      });
+      await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+      expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledOnce();
+      expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+      expect(ports.warnings).toEqual([
+        '[OpenCode] startup cursor-agent sweep: runtime unavailable',
+        `[OpenCode] startup cursor-agent reap incomplete: ${status}`,
+      ]);
+    }
+  );
+
+  it('contains a rejected runtime port without local fallback', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const ports = createPorts();
+    reapUnleasedCursorAgentTrees.mockRejectedValueOnce(new Error('offline'));
+    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledOnce();
+    expect(ports.warnings).toEqual(['[OpenCode] startup cursor-agent sweep failed: offline']);
+  });
+
+  it('rechecks startup admission after reading workspaces', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    let admitted = true;
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      canAdmitStartupWork: () => admitted,
+      listOwnedLeadWorkspaces: async () => {
+        admitted = false;
+        return OWNED_WORKSPACES;
+      },
+      ports: createPorts(),
+    });
+    expect(reapUnleasedCursorAgentTrees).not.toHaveBeenCalled();
+  });
+
+  it('forwards startup admission to the atomic port', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const canAdmitStartupWork = () => true;
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      canAdmitStartupWork,
+      ports: createPorts(),
+    });
+    expect(reapUnleasedCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      contractVersion: 1,
+      reason: 'startup',
+      ownedWorkspaceCwds: OWNED_WORKSPACES,
+      startedBeforeMs: APP_STARTED_AT_MS,
+      canDispatch: canAdmitStartupWork,
+    });
   });
 });

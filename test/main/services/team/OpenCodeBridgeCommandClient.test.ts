@@ -113,10 +113,10 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(await fs.readdir(tempDir)).toEqual([]);
   });
 
-  it('checks shutdown admission after asynchronous environment preparation before CLI dispatch', async () => {
+  it.each(['opencode.cleanupStartupHosts', 'opencode.reapUnleasedCursorAgentTrees'] as const)('checks shutdown admission after asynchronous preparation: %s', async (command) => {
     let allowed = true;
     const client = createClient({ envProvider: async () => { allowed = false; return {}; } });
-    const result = await client.execute('opencode.cleanupStartupHosts', {}, {
+    const result = await client.execute(command, {}, {
       cwd: tempDir, timeoutMs: 100, canDispatch: () => allowed,
     });
     expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });

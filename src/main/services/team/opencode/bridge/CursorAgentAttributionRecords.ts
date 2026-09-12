@@ -151,8 +151,20 @@ export function resolveCursorAgentAttributionDirectory(
 }
 
 /**
+ * The profile scope the bridge environment carries, pinned by the caller that
+ * built that environment. The runtime writes it into every record and the
+ * reader filters by it, so both have to hold the SAME value for as long as this
+ * process runs. Recomputing it at read time would not: the Claude root can
+ * change without a restart, and a team launched under the scope the bridge
+ * environment still carries would then be filtered out by a reader computing
+ * the new one - leaving exactly the tree the stop exists to reap.
+ */
+let pinnedAppProfileScope: string | null = null;
+
+/**
  * Designates the directory on a bridge environment, and creates it best effort
- * so the runtime writing the first record does not have to.
+ * so the runtime writing the first record does not have to. The profile scope
+ * handed in beside it is the one the reader answers under from then on.
  *
  * The creation is best effort for the same reason every other directory under
  * the bridge control root is created that way: a directory this app cannot
@@ -160,8 +172,12 @@ export function resolveCursorAgentAttributionDirectory(
  * attribution they have today.
  */
 export async function applyCursorAgentAttributionEnv(
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
+  options: { appProfileScope?: string | null } = {}
 ): Promise<NodeJS.ProcessEnv> {
+  if (options.appProfileScope) {
+    pinnedAppProfileScope = options.appProfileScope;
+  }
   const directory = resolveCursorAgentAttributionDirectory(env);
   try {
     await fs.mkdir(directory, { recursive: true, mode: 0o700 });
@@ -255,11 +271,13 @@ export const DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT: CursorAgentAttributionPort =
 };
 
 /**
- * The same hash the bridge environment carries, over the same two authority
- * roots. A scope this app cannot compute is not a reason to widen the filter:
- * it answers with no records.
+ * The scope the bridge environment was built with, where a caller pinned it;
+ * otherwise the same hash over the same two authority roots, computed now. A
+ * scope this app cannot compute is not a reason to widen the filter: it
+ * answers with no records.
  */
 function resolveAppProfileScope(): string | null {
+  if (pinnedAppProfileScope !== null) return pinnedAppProfileScope;
   try {
     return buildOpenCodeAppProfileScope(getAppDataBasePath(), getClaudeBasePath());
   } catch {
