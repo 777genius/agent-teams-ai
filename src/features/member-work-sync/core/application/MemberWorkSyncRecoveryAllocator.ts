@@ -58,10 +58,14 @@ export async function reserveMemberWorkSyncRecoveryIntent(input: {
       return { ok: false, code: 'slot_occupied' };
     }
     const nowIso = input.deps.clock.now().toISOString();
-    const episodeId = current.recoveryHealth?.episodes[0]?.episodeId ?? `recovery:${nowIso}`;
+    const episodes = current.recoveryHealth?.episodes ?? [];
+    const episodeId = episodes[0]?.episodeId ?? `recovery:${nowIso}`;
     if (input.trigger === 'automatic') {
+      const coverageStart = [...episodes.map((episode) => episode.firstObservedAt)].sort()[0];
       const automaticAttempts = (current.recoveryHealth?.reservations ?? []).filter(
-        (reservation) => reservation.trigger === 'automatic' && reservation.episodeId === episodeId
+        (reservation) =>
+          reservation.trigger === 'automatic' &&
+          (coverageStart === undefined || reservation.reservedAt >= coverageStart)
       ).length;
       if (automaticAttempts >= MEMBER_WORK_SYNC_MAX_AUTOMATIC_CONTINUATIONS) {
         return { ok: false, code: 'slot_occupied' };

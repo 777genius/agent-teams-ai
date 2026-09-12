@@ -2554,6 +2554,71 @@ describe('MemberWorkSync use cases', () => {
     expect(reserved).toEqual({ ok: false, code: 'slot_occupied' });
   });
 
+  it('charges agenda-wide automatic continuations against every active episode', async () => {
+    const secondWorkItem: MemberWorkSyncActionableWorkItem = {
+      ...workItem,
+      taskId: 'task-2',
+      displayId: '44444444',
+      subject: 'Ship sync two',
+    };
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      items: [workItem, secondWorkItem],
+      outboxStore: new InMemoryOutboxStore(),
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const [episodeA, episodeB] = status.recoveryHealth?.episodes ?? [];
+    expect(episodeA?.episodeId).toBeTruthy();
+    expect(episodeB?.episodeId).toBeTruthy();
+    expect(episodeA?.episodeId).not.toBe(episodeB?.episodeId);
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: episodeB ? [episodeB] : [],
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'auto-1',
+            episodeId: episodeA!.episodeId,
+            trigger: 'automatic',
+            reservedAt: episodeB!.firstObservedAt,
+            state: 'resolved',
+            payloadHash: 'h1',
+            controlRevision: 1,
+          },
+          {
+            intentId: 'auto-2',
+            episodeId: episodeA!.episodeId,
+            trigger: 'automatic',
+            reservedAt: episodeB!.firstObservedAt,
+            state: 'resolved',
+            payloadHash: 'h2',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const current = (await store.read()) ?? status;
+    const recoveryInput = buildMemberWorkSyncOutboxEnsureInput({
+      status: current,
+      hash: deps.hash,
+      nowIso: deps.clock.now().toISOString(),
+    });
+    expect(recoveryInput).toBeTruthy();
+    const reserved = await reserveMemberWorkSyncRecoveryIntent({
+      deps,
+      status: current,
+      recoveryInput: recoveryInput!,
+      trigger: 'automatic',
+    });
+    expect(reserved).toEqual({ ok: false, code: 'slot_occupied' });
+  });
+
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {
     const { deps, store } = createDeps({
       providerId: 'codex',
