@@ -9,6 +9,7 @@ import {
 } from './MemberWorkSyncReconciler';
 import {
   createMemberWorkSyncReportJournalInput,
+  matchingPendingReportCheckpoint,
   reportReceiptDraftFromJournal,
   transferAcceptedReportReceipt,
   transferPreviousReportCheckpoint,
@@ -23,6 +24,7 @@ import {
 
 import type {
   MemberWorkSyncReport,
+  MemberWorkSyncReportReceipt,
   MemberWorkSyncReportRequest,
   MemberWorkSyncReportResult,
   MemberWorkSyncStatus,
@@ -70,6 +72,16 @@ export class MemberWorkSyncReporter {
         : {}),
     });
     let read = await readMemberWorkSyncStatus(this.deps, request);
+    const checkpoint = matchingPendingReportCheckpoint(read.status, replay);
+    if (checkpoint && replay) {
+      return this.completeCheckpointBackedReplay({
+        request,
+        mutationId,
+        replay,
+        read,
+        checkpoint,
+      });
+    }
     const source = await this.deps.agendaSource.loadAgenda(request);
     const agenda = finalizeMemberWorkSyncAgenda(this.deps, source);
     const nowIso = this.deps.clock.now().toISOString();
@@ -320,5 +332,80 @@ export class MemberWorkSyncReporter {
       ...(status.providerId ? { providerId: status.providerId } : {}),
     });
     return committed.status;
+  }
+
+  private async completeCheckpointBackedReplay(input: {
+    request: MemberWorkSyncReportRequest;
+    mutationId: string | undefined;
+    replay: MemberWorkSyncReportJournalReplay;
+    read: Awaited<ReturnType<typeof readMemberWorkSyncStatus>>;
+    checkpoint: MemberWorkSyncReportReceipt;
+  }): Promise<MemberWorkSyncReportResult> {
+    const { request, mutationId, replay, checkpoint } = input;
+    const status = input.read.status;
+    if (!status) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    const journal = this.deps.reportJournal;
+    if (!journal) {
+      return {
+        accepted: true,
+        code: 'accepted',
+        message: 'Member work sync report accepted.',
+        status,
+      };
+    }
+    const incarnation = input.read.snapshot?.incarnation;
+    if (!incarnation) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    const journalInput = createMemberWorkSyncReportJournalInput({
+      request,
+      incarnation,
+      receivedAt: replay.receivedAt,
+      hash: this.deps.hash,
+      replay,
+    });
+    const transferredPrevious = await transferPreviousReportCheckpoint(
+      journal,
+      status,
+      journalInput.intentId
+    );
+    if (transferredPrevious === 'degraded') {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    const ensured = await journal.ensure(journalInput);
+    if (ensured.state === 'present' && ensured.intent.status === 'accepted') {
+      return {
+        accepted: true,
+        code: 'accepted',
+        message: 'Member work sync report accepted.',
+        status,
+      };
+    }
+    if (ensured.state !== 'present') {
+      throw new MemberWorkSyncStatusMutationError(
+        ensured.state === 'conflict' ? 'conflict' : 'unavailable',
+        mutationId
+      );
+    }
+    const transferred = await transferAcceptedReportReceipt(
+      journal,
+      {
+        ...journalInput,
+        receivedAt: ensured.intent.journal?.firstRecordedAt ?? journalInput.receivedAt,
+        origin: ensured.intent.journal?.origin ?? journalInput.origin,
+      },
+      checkpoint
+    );
+    if (!transferred) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    return {
+      accepted: true,
+      code: 'accepted',
+      message: 'Member work sync report accepted.',
+      status,
+    };
   }
 }

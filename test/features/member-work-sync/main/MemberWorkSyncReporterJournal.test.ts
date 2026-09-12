@@ -238,6 +238,50 @@ describe.each(['json', 'sqlite'] as const)(
       );
     });
 
+    it('allocates a new online report intent when a later heartbeat repeats the same payload', async () => {
+      const h = await setup(kind);
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      h.setTime('2026-09-10T00:10:00.000Z');
+      const second = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(second.accepted).toBe(true);
+      expect(second.status.pendingReportReceipt?.intentId).not.toBe(
+        first.status.pendingReportReceipt?.intentId
+      );
+      expect(Date.parse(second.status.lastAcceptedReport?.expiresAt ?? '')).toBeGreaterThan(
+        Date.parse(first.status.lastAcceptedReport?.expiresAt ?? '')
+      );
+    });
+
+    it('repairs a checkpoint-backed replay after the live token expires without renewing the lease', async () => {
+      const h = await setup(kind);
+      vi.spyOn(h.reportJournal, 'transfer').mockResolvedValueOnce({ state: 'unavailable' });
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(first.accepted).toBe(true);
+      expect(first.projectionDegraded).toBe(true);
+      const checkpoint = first.status.pendingReportReceipt!;
+      h.setTime('2026-09-10T00:20:00.000Z');
+      const replayed = await h.run((deps) =>
+        new MemberWorkSyncReporter({
+          ...deps,
+          reportToken: {
+            create: deps.reportToken!.create,
+            verify: async () => ({ ok: false, reason: 'expired' }),
+          },
+        }).execute(h.request, {
+          intentId: checkpoint.intentId,
+          incarnation,
+          requestDigest: checkpoint.requestDigest,
+          receivedAt: checkpoint.acceptedAt,
+          origin: 'online',
+        })
+      );
+      expect(replayed.accepted).toBe(true);
+      expect(replayed.status.pendingReportReceipt?.intentId).toBe(checkpoint.intentId);
+      expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
+        first.status.lastAcceptedReport?.expiresAt
+      );
+    });
+
     it('keeps the I1 checkpoint when transfer is unknown and later accepts I2', async () => {
       const h = await setup(kind);
       const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));

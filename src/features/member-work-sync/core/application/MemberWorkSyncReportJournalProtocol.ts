@@ -51,12 +51,29 @@ export function createMemberWorkSyncReportJournalInput(input: {
     teamName: input.request.teamName,
     memberName: input.request.memberName,
     incarnation: input.replay?.incarnation ?? input.incarnation,
-    intentId: input.replay?.intentId ?? `report:${requestDigest}`,
+    intentId: input.replay?.intentId ?? `report:${requestDigest}:${input.receivedAt}`,
     requestDigest,
     receivedAt: input.replay?.receivedAt ?? input.receivedAt,
     origin: input.replay?.origin ?? 'online',
     request: input.request,
   };
+}
+
+export function matchingPendingReportCheckpoint(
+  status: MemberWorkSyncStatus | null | undefined,
+  replay: MemberWorkSyncReportJournalReplay | undefined
+): MemberWorkSyncReportReceipt | undefined {
+  const checkpoint = status?.pendingReportReceipt;
+  if (
+    !replay ||
+    !checkpoint ||
+    checkpoint.intentId !== replay.intentId ||
+    checkpoint.incarnation !== replay.incarnation ||
+    checkpoint.requestDigest !== replay.requestDigest
+  ) {
+    return undefined;
+  }
+  return checkpoint;
 }
 
 export async function transferPreviousReportCheckpoint(
