@@ -80,6 +80,13 @@ export function processGlobalTaskNotifications(params: ProcessGlobalTaskNotifica
   const { oldTasks, newTasks, appConfig, teamByName, isInitialFetch } = params;
 
   if (isInitialFetch) {
+    // The first response can already contain comments created while IPC loaded.
+    // Apply the context cutoff before seeding so those events are delivered once.
+    detectTaskCommentNotifications(
+      buildTaskNotificationIndexes(oldTasks),
+      newTasks,
+      appConfig?.notifications?.notifyOnTaskComments ?? true
+    );
     seedGlobalTaskNotificationState(newTasks);
     return;
   }

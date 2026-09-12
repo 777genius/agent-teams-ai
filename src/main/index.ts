@@ -875,13 +875,13 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
 
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip app-owned private bootstrap/control prompts. They are durable runtime proof inputs,
       // not user-visible conversation messages.
       if (isTeamInternalControlMessageEnvelope(msg)) continue;
-      // Skip internal review-pickup escalations. They are control-plane signals to the lead runtime,
-      // not user-facing inbox messages.
+      // Skip internal review-pickup escalations to the lead runtime.
       if (isReviewPickupEscalationMessage(msg)) continue;
       // Skip internal coordination noise (idle_notification, shutdown_*, etc.)
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
@@ -955,7 +955,8 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
       if ((msg.to ?? '').trim() !== 'user') continue;
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip internal coordination noise
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
