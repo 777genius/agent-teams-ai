@@ -6,7 +6,10 @@ import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createSandboxWorkSyncIdentity } from '../helpers/createSandboxWorkSyncIdentity';
 import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
+
+import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 
 const tempRoots: string[] = [];
 
@@ -14,6 +17,22 @@ function makeTempRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'member-work-sync-lifecycle-'));
   tempRoots.push(root);
   return root;
+}
+
+async function writeTeamConfig(
+  teamsBasePath: string,
+  teamName: string,
+  identityId?: string
+): Promise<void> {
+  const teamRoot = path.join(teamsBasePath, teamName);
+  await fs.promises.mkdir(teamRoot, { recursive: true });
+  await fs.promises.writeFile(
+    path.join(teamRoot, 'config.json'),
+    JSON.stringify({
+      name: teamName,
+      ...(identityId ? { _backupIdentityId: identityId } : {}),
+    })
+  );
 }
 
 afterEach(() => {
@@ -156,6 +175,10 @@ function createFeature(input: {
     teamName: string;
     memberName: string;
   }) => boolean | Promise<boolean>;
+  lifecycleIdentity?: Pick<
+    TeamWorkSyncIdentityAccess,
+    'readCurrent' | 'adoptLegacy' | 'withCurrent'
+  >;
 }) {
   const tasks = input.tasks ?? [
     {
@@ -167,7 +190,7 @@ function createFeature(input: {
     },
   ];
   return createMemberWorkSyncFeature({
-    lifecycleIdentity: createTestWorkSyncIdentity(input.incarnation),
+    lifecycleIdentity: input.lifecycleIdentity ?? createTestWorkSyncIdentity(input.incarnation),
     teamsBasePath: input.teamsBasePath,
     ...(input.recoveryAllocation ? { recoveryAllocation: input.recoveryAllocation } : {}),
     configReader: {
@@ -291,30 +314,39 @@ describe('member work sync recovery lifecycle e2e', () => {
     }
   });
 
-  it('does not inherit recovery budget after same-name team recreate', async () => {
+  it('rejects a report token after same-name recreate in the same process (C21/S12)', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
     const teamName = 'team-lifecycle-recreate';
     const memberName = 'bob';
-    const first = createFeature({
+    const identity = createSandboxWorkSyncIdentity();
+    await writeTeamConfig(teamsBasePath, teamName);
+    const feature = createFeature({
       teamsBasePath,
       teamName,
       memberName,
-      incarnation: 'inc-a',
+      lifecycleIdentity: identity,
     });
     try {
       await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
-      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      let firstStatus = await feature.refreshStatus({ teamName, memberName });
       await waitForAssertion(async () => {
-        const status = await first.refreshStatus({ teamName, memberName });
-        expect(status).toMatchObject({
-          state: 'needs_sync',
-        });
+        firstStatus = await feature.refreshStatus({ teamName, memberName });
+        expect(firstStatus.reportToken).toBeTruthy();
       });
-      await first.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
-      await first.prepareTeamDeletion(teamName);
-      first.completeTeamDeletion(teamName);
+      const firstIdentity = await identity.readCurrent(teamName);
+      expect(firstIdentity).toMatchObject({ status: 'identified' });
+      if (firstIdentity.status !== 'identified') {
+        throw new Error('expected identified lifecycle marker before recreate');
+      }
+      const firstToken = firstStatus.reportToken;
+      const firstFingerprint = firstStatus.agenda.fingerprint;
+      expect(firstToken).toBeTruthy();
+      await feature.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
+      await feature.prepareTeamDeletion(teamName, firstIdentity.identityId);
+      feature.completeTeamDeletion(teamName);
       expect(
         fs.existsSync(
           path.join(
@@ -327,28 +359,37 @@ describe('member work sync recovery lifecycle e2e', () => {
           )
         )
       ).toBe(false);
-    } finally {
-      await first.dispose();
-    }
 
-    await fs.promises.mkdir(path.join(teamsBasePath, teamName), { recursive: true });
-    await fs.promises.writeFile(path.join(teamsBasePath, teamName, 'config.json'), '{}');
-    const recreated = createFeature({
-      teamsBasePath,
-      teamName,
-      memberName,
-      incarnation: 'inc-b',
-    });
-    try {
-      recreated.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
-      recreated.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
-      await waitForAssertion(async () => {
-        const status = await recreated.getStatus({ teamName, memberName });
-        expect(status.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
-        expect(status.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+      await writeTeamConfig(teamsBasePath, teamName);
+      feature.resumeTeam(teamName);
+      feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      const recreated = await feature.refreshStatus({ teamName, memberName });
+      const secondIdentity = await identity.readCurrent(teamName);
+      expect(secondIdentity.status).toBe('identified');
+      if (secondIdentity.status !== 'identified') {
+        throw new Error('expected identified lifecycle marker after recreate');
+      }
+      expect(secondIdentity.identityId).not.toBe(firstIdentity.identityId);
+      expect(recreated.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+      expect(recreated.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+      expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
+      await expect(
+        feature.report({
+          teamName,
+          memberName,
+          state: 'still_working',
+          agendaFingerprint: firstFingerprint,
+          reportToken: firstToken,
+          taskIds: ['task-1'],
+          source: 'test',
+        })
+      ).resolves.toMatchObject({
+        accepted: false,
+        code: 'invalid_report_token',
       });
     } finally {
-      await recreated.dispose();
+      await feature.dispose();
     }
   });
 
