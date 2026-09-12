@@ -2,10 +2,15 @@ import { listTeamProjectWorkspaces } from '@main/services/team/TeamProjectWorksp
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import {
-  CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
-  type CursorAgentTreeSweepPort,
-  DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
-} from './CursorAgentProcessCleanup';
+  type CursorAgentAtomicReapPort,
+  DEFAULT_CURSOR_AGENT_ATOMIC_REAP_PORT,
+} from './CursorAgentAtomicReapBridge';
+import {
+  type CursorAgentAttributionPort,
+  type CursorAgentAttributionRecord,
+  DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT,
+  summarizeAttributedCursorAgentProcesses,
+} from './CursorAgentAttributionRecords';
 import {
   purgeStaleOpenCodeHostStartupLocks,
   resolveStartupStaleLockMinAgeMs,
@@ -13,6 +18,8 @@ import {
 import { cleanupManagedOpenCodeServeProcesses } from './OpenCodeManagedHostProcessCleanup';
 import { buildOpenCodeAppScopedMcpOwnershipMarker } from './OpenCodeMcpBridgeEnv';
 import { runOpenCodeStartupRuntimeSweepTail } from './OpenCodeStartupRuntimeSweep';
+
+import type { CursorAgentTreeSweepPort } from './CursorAgentProcessCleanup';
 
 /**
  * Everything the app does about OpenCode hosts after the host registry has
@@ -51,7 +58,11 @@ export interface OpenCodeLifecycleCleanupTailInput {
   managedHostInstanceId: string;
   /** Persistent application profile ownership retained across restarts. */
   profileScope?: string;
+  /** @deprecated Ignored; only the runtime may reap cursor-agent trees. */
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
+  cursorAgentAtomicReap?: CursorAgentAtomicReapPort;
+  /** Diagnostic snapshot and no-record optimization; never cleanup authority. */
+  cursorAgentAttribution?: CursorAgentAttributionPort;
   /**
    * The workspaces this app has teams for. It is the ownership proof the
    * startup lead-tree reap runs on, so it defaults to the teams on disk rather
@@ -164,8 +175,16 @@ export async function runOpenCodeLifecycleCleanupTail(
 
 /** Non-host maintenance shared by both startup paths. */
 export async function runOpenCodeStartupCleanupMaintenance(
-  input: Pick<OpenCodeLifecycleCleanupTailInput,
-    'ports' | 'appStartedAtMs' | 'cursorAgentTreeSweep' | 'listOwnedLeadWorkspaces' | 'canAdmitStartupWork'>
+  input: Pick<
+    OpenCodeLifecycleCleanupTailInput,
+    | 'ports'
+    | 'appStartedAtMs'
+    | 'cursorAgentTreeSweep'
+    | 'cursorAgentAtomicReap'
+    | 'cursorAgentAttribution'
+    | 'listOwnedLeadWorkspaces'
+    | 'canAdmitStartupWork'
+  >
 ): Promise<void> {
   const { ports } = input;
   if (input.canAdmitStartupWork?.() === false) return;
@@ -212,28 +231,25 @@ async function runIndependentStep(
   }
 }
 
-/**
- * The external half of the startup reap. The sweeps above only see hosts this
- * app registered; a cursor-acp lead is a `cursor-agent` process tree the
- * previous app instance spawned, and it outlives the app that started it while
- * holding the cursor proxy port every later cursor-acp launch has to bind.
- *
- * It runs last because the host sweeps are the ones that free the ports a launch
- * needs first, and under two fences. A tree has to name a workspace this app has
- * a team for, which is the only attribution available for a process no registry
- * ever recorded, so a startup that can read no team config reaps nothing rather
- * than everything. And it has to predate this app instance, which keeps whatever
- * the session now starting spawns out of scope - a readiness probe most of all.
- * It never runs on shutdown, where a running tree may belong to a live team.
- */
+/** Runtime leases and process identity are checked atomically by the runtime. */
 async function reapOrphanedCursorAgentLeadTrees(
-  input: Pick<OpenCodeLifecycleCleanupTailInput,
-    'ports' | 'appStartedAtMs' | 'cursorAgentTreeSweep' | 'listOwnedLeadWorkspaces' | 'canAdmitStartupWork'>
+  input: Pick<
+    OpenCodeLifecycleCleanupTailInput,
+    | 'ports'
+    | 'appStartedAtMs'
+    | 'cursorAgentTreeSweep'
+    | 'cursorAgentAtomicReap'
+    | 'cursorAgentAttribution'
+    | 'listOwnedLeadWorkspaces'
+    | 'canAdmitStartupWork'
+  >
 ): Promise<void> {
-  const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
-  if (!sweepPort.isEnabled()) {
+  if (input.canAdmitStartupWork?.() === false) return;
+  const records = await reportAttributedCursorAgentProcesses(input);
+  if (input.canAdmitStartupWork?.() === false) return;
+  if (!records.some((record) => record.kind === 'cursor-agent')) {
     input.ports.logSweepResult(
-      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=sweep_disabled'
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_attribution_record'
     );
     return;
   }
@@ -247,26 +263,37 @@ async function reapOrphanedCursorAgentLeadTrees(
     );
     return;
   }
-  const sweep = await sweepPort.sweepCursorAgentTrees({
-    canAdmitStartupWork: input.canAdmitStartupWork,
+  const result = await (
+    input.cursorAgentAtomicReap ?? DEFAULT_CURSOR_AGENT_ATOMIC_REAP_PORT
+  ).reapUnleasedCursorAgentTrees({
+    contractVersion: 1,
+    reason: 'startup',
     ownedWorkspaceCwds,
     startedBeforeMs: input.appStartedAtMs,
-    // A startup sweep runs where a SECOND copy of this app may have a live team
-    // in the same project directory, and the two leads are byte-identical on the
-    // command line. Both fences below exist for that copy, and both fail closed.
-    //
-    // The env marker proves the tree descends from an orchestrator of this app
-    // rather than from a user's own terminal; `requireOwnershipProof` makes an
-    // unreadable environment a reason to keep the tree, not to fall back to the
-    // command line. The orphan fence is the independent half: a lead of a
-    // running instance still has its serve host as a parent, so only a tree
-    // whose launcher is gone - which is what a crashed previous instance leaves
-    // behind, and the only thing this sweep is here for - can be reached.
-    requiredEnvMarkers: [CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER],
-    requireOwnershipProof: true,
-    orphanedOnly: true,
+    canDispatch: input.canAdmitStartupWork,
   });
-  for (const diagnostic of sweep.diagnostics) {
+  input.ports.logSweepResult(
+    `opencode_cursor_agent_trees_reaped sweep=startup count=${result.killedPids.length} status=${result.status}`
+  );
+  for (const diagnostic of result.diagnostics) {
     input.ports.logWarning(`[OpenCode] startup cursor-agent sweep: ${diagnostic}`);
   }
+  if (result.status !== 'completed' && result.status !== 'kept') {
+    input.ports.logWarning(`[OpenCode] startup cursor-agent reap incomplete: ${result.status}`);
+  }
+}
+
+/** Reports snapshot counts only; these records never authorize runtime cleanup. */
+async function reportAttributedCursorAgentProcesses(
+  input: Pick<OpenCodeLifecycleCleanupTailInput, 'ports' | 'cursorAgentAttribution'>
+): Promise<readonly CursorAgentAttributionRecord[]> {
+  const port = input.cursorAgentAttribution ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT;
+  const attributed = await port.readAttributedProcesses();
+  const { total, withRecordedOwner } = summarizeAttributedCursorAgentProcesses(attributed);
+  if (total > 0) {
+    input.ports.logSweepResult(
+      `opencode_cursor_agent_attribution_records sweep=startup count=${total} owned=${withRecordedOwner}`
+    );
+  }
+  return attributed.map((entry) => entry.record);
 }

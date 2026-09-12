@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countConfiguredLocalOpenCodeCatalogModels,
   getOpenCodeModelRoutePresentationStatus,
   hasExplicitFreeOpenCodeModelId,
+  isKnownConfiguredLocalOpenCodeCatalogModel,
   isOpenCodeLocalProviderId,
   isOpenCodeModelExplicitlyFree,
 } from '../opencodeModelRoute';
@@ -96,5 +98,42 @@ describe('opencodeModelRoute', () => {
         routeKind: 'connected_provider',
       })
     ).toBe(true);
+  });
+
+  it('counts only known configured-local routes, not companion config', () => {
+    expect(
+      countConfiguredLocalOpenCodeCatalogModels([
+        {
+          id: 'ollama/qwen',
+          launchModel: 'ollama/qwen',
+          metadata: { opencode: { providerId: 'ollama', routeKind: 'configured_local' } },
+        },
+        {
+          id: 'lmstudio/phi',
+          launchModel: 'lmstudio/phi',
+          metadata: { opencode: { providerId: 'lmstudio', routeKind: 'configured_local' } },
+        },
+        {
+          id: 'kiro/auto',
+          launchModel: 'kiro/auto',
+          metadata: { opencode: { providerId: 'kiro', routeKind: 'configured_local' } },
+        },
+      ])
+    ).toBe(2);
+  });
+
+  it('keeps known local catalog models when the live overlay misses them', () => {
+    expect(
+      isKnownConfiguredLocalOpenCodeCatalogModel('ollama/qwen', {
+        id: 'ollama/qwen',
+        metadata: { opencode: { providerId: 'ollama', routeKind: 'configured_local' } },
+      })
+    ).toBe(true);
+    expect(
+      isKnownConfiguredLocalOpenCodeCatalogModel('corp-local/model', {
+        id: 'corp-local/model',
+        metadata: { opencode: { providerId: 'corp-local', routeKind: 'configured_local' } },
+      })
+    ).toBe(false);
   });
 });

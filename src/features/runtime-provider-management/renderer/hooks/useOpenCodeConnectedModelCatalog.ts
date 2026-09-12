@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
   catalogFailure,
@@ -23,12 +24,23 @@ export function connectedCatalogSourceIds(
   return [
     ...new Set(
       entries
-        .filter(
-          (entry) =>
-            entry.providerId.trim().toLowerCase() === 'opencode' ||
-            (entry.state !== 'ignored' &&
-              (entry.state === 'connected' || entry.metadata.configuredAuthless))
-        )
+        .filter((entry) => {
+          const providerId = entry.providerId.trim().toLowerCase();
+          if (!providerId) {
+            return false;
+          }
+          if (providerId === 'opencode') {
+            return true;
+          }
+          if (entry.state === 'ignored') {
+            return false;
+          }
+          return (
+            entry.state === 'connected' ||
+            entry.metadata.configuredAuthless ||
+            (entry.state === 'available' && isOpenCodeLocalProviderId(providerId))
+          );
+        })
         .map((entry) => entry.providerId.trim().toLowerCase())
         .filter(Boolean)
     ),
@@ -132,8 +144,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
         if (
           response.schemaVersion !== 1 ||
           response.runtimeId !== 'opencode' ||
-          !directory ||
-          directory.runtimeId !== 'opencode'
+          directory?.runtimeId !== 'opencode'
         )
           throw validationError('Invalid provider directory response.');
         if (

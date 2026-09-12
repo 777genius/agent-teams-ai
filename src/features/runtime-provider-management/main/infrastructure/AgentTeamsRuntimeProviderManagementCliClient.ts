@@ -2470,7 +2470,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         input.modelId,
         '--scope',
         input.scope === 'all_projects' ? 'all-projects' : 'project',
-        '--probe',
+        ...(input.probe === false ? [] : ['--probe']),
         '--compact',
         '--json',
       ],

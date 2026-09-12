@@ -54,6 +54,8 @@
       "choosingAllProjects": "Pilih model untuk proyek tanpa pengesampingan.",
       "choosingProject": "Pilih model hanya untuk {{project}}.",
       "cancelChoosing": "Batal",
+      "select": "Pilih",
+      "selected": "Dipilih",
       "testAndUse": "Uji dan gunakan",
       "testAndUseAllProjects": "Uji dan gunakan untuk semua proyek",
       "testAndUseProject": "Uji dan gunakan untuk proyek ini"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: jalankan Agent Teams AI sebagai Administrator"
     },
     "models": {
+      "testingElapsed": "Menunggu hasil pengujian... {{seconds}} dtk",
       "alreadyDefault": "Ini sudah menjadi standar OpenCode yang dipilih.",
       "empty": "Tidak ada model yang ditemukan.",
       "emptyFree": "Tidak ditemukan model gratis.",

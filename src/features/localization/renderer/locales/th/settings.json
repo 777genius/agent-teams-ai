@@ -54,6 +54,8 @@
       "choosingAllProjects": "เลือกโมเดลสำหรับโปรเจกต์ที่ไม่มีการแทนที่",
       "choosingProject": "เลือกโมเดลสำหรับ {{project}} เท่านั้น",
       "cancelChoosing": "ยกเลิก",
+      "select": "เลือก",
+      "selected": "เลือกแล้ว",
       "testAndUse": "ทดสอบและใช้",
       "testAndUseAllProjects": "ทดสอบและใช้กับทุกโปรเจกต์",
       "testAndUseProject": "ทดสอบและใช้กับโปรเจกต์นี้"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: รัน Agent Teams AI ในฐานะผู้ดูแลระบบ"
     },
     "models": {
+      "testingElapsed": "กำลังรอผลการทดสอบ... {{seconds}} วินาที",
       "alreadyDefault": "นี่เป็นค่าเริ่มต้น OpenCode ที่เลือกอยู่แล้ว",
       "empty": "ไม่พบโมเดล",
       "emptyFree": "ไม่พบโมเดลฟรี",

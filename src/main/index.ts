@@ -332,6 +332,7 @@ import {
   ClaudeBinaryResolver,
   CliInstallerService,
   configManager,
+  configureCursorAgentAtomicReapBridge,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
@@ -360,6 +361,7 @@ import {
   TeamTaskStallSnapshotSource,
   TeamTranscriptSourceLocator,
   UpdaterService,
+  applyCursorAgentAttributionEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 
@@ -509,6 +511,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
 
@@ -519,6 +522,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns - read back under this
+  // same scope, however the Claude root moves later.
+  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
@@ -677,6 +684,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
   });
+  configureCursorAgentAtomicReapBridge(bridgeClient);
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
@@ -876,13 +884,13 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
 
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip app-owned private bootstrap/control prompts. They are durable runtime proof inputs,
       // not user-visible conversation messages.
       if (isTeamInternalControlMessageEnvelope(msg)) continue;
-      // Skip internal review-pickup escalations. They are control-plane signals to the lead runtime,
-      // not user-facing inbox messages.
+      // Skip internal review-pickup escalations to the lead runtime.
       if (isReviewPickupEscalationMessage(msg)) continue;
       // Skip internal coordination noise (idle_notification, shutdown_*, etc.)
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
@@ -956,7 +964,8 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
       if ((msg.to ?? '').trim() !== 'user') continue;
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip internal coordination noise
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;

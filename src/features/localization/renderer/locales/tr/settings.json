@@ -54,6 +54,8 @@
       "choosingAllProjects": "Geçersiz kılması olmayan projeler için bir model seçin.",
       "choosingProject": "Yalnızca {{project}} için bir model seçin.",
       "cancelChoosing": "İptal",
+      "select": "Seç",
+      "selected": "Seçildi",
       "testAndUse": "Test et ve kullan",
       "testAndUseAllProjects": "Tüm projeler için test et ve kullan",
       "testAndUseProject": "Bu proje için test et ve kullan"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI'yi Yönetici olarak çalıştırın"
     },
     "models": {
+      "testingElapsed": "Test sonucu bekleniyor... {{seconds}} sn",
       "alreadyDefault": "Bu zaten seçili OpenCode varsayılanı.",
       "empty": "Model bulunamadı.",
       "emptyFree": "Ücretsiz model bulunamadı.",

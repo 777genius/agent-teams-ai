@@ -252,6 +252,7 @@ export const OpenCodeDefaultTargetBanner = ({
   readonly focusRef?: Ref<HTMLDivElement>;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
   return (
     <div
       ref={focusRef}
@@ -267,7 +268,7 @@ export const OpenCodeDefaultTargetBanner = ({
             })}
       </span>
       <Button type="button" size="sm" variant="ghost" className="h-7" onClick={onCancel}>
-        {t('runtimeProvider.defaults.cancelChoosing')}
+        {commonT('actions.close')}
       </Button>
     </div>
   );

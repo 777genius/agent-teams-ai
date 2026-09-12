@@ -23,8 +23,8 @@
     "actions": {
       "cancel": "Cancel",
       "reconnect": "Reconnect",
-      "removeManagedCredential": "Remove managed credential",
-      "replaceCredential": "Replace credential",
+      "removeManagedCredential": "Remove saved credentials",
+      "replaceCredential": "Replace API key",
       "signInAgain": "Sign in again",
       "test": "Test"
     },
@@ -54,6 +54,8 @@
       "choosingAllProjects": "Choose a model for projects without an override.",
       "choosingProject": "Choose a model only for {{project}}.",
       "cancelChoosing": "Cancel",
+      "select": "Select",
+      "selected": "Selected",
       "testAndUse": "Test and use",
       "testAndUseAllProjects": "Test and use for all projects",
       "testAndUseProject": "Test and use for this project"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: run Agent Teams AI as Administrator"
     },
     "models": {
+      "testingElapsed": "Waiting for test result... {{seconds}}s",
       "alreadyDefault": "This is already the selected OpenCode default.",
       "empty": "No models found.",
       "emptyFree": "No free models found.",
@@ -93,7 +96,16 @@
       "routeUnavailableAuth": "This provider requires authentication before this model can be used.",
       "routeUnavailableFailed": "This model route failed its last execution test.",
       "routeUnavailableGeneric": "This model route cannot be used right now.",
-      "routeUnavailableUnknown": "This model is the current OpenCode default, but it is not available in the live catalog yet."
+      "routeUnavailableUnknown": "This model is the current OpenCode default, but it is not available in the live catalog yet.",
+      "shown": "Shown: {{shown}}",
+      "shownFree": "Free models shown: {{shown}}",
+      "loaded": "Loaded {{loaded}} of {{total}}",
+      "searchingRemaining": "No matches in the loaded models yet. Checking the rest of the catalog...",
+      "stopTest": "Stop",
+      "stoppingTest": "Stopping...",
+      "testCancelled": "Test stopped.",
+      "testCancelFailed": "Could not stop the test. Try again.",
+      "testCancelUnsupported": "Stopping tests is not supported by this runtime."
     },
     "providers": {
       "catalog": "OpenCode provider catalog",
@@ -109,7 +121,13 @@
       "description_few": "{{count}}. Connected and recommended providers are shown first.",
       "description_many": "{{count}}. Connected and recommended providers are shown first.",
       "description_one": "{{count}}. Connected and recommended providers are shown first.",
-      "description_other": "{{count}}. Connected and recommended providers are shown first."
+      "description_other": "{{count}}. Connected and recommended providers are shown first.",
+      "ownership": {
+        "managed": "Saved in this app",
+        "local": "From OpenCode settings",
+        "env": "From environment variables",
+        "project": "From project settings"
+      }
     },
     "reconnect": {
       "apiDescription": "Enter the new credential. The current managed credential stays active unless the replacement passes model verification.",

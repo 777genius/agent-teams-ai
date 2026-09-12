@@ -306,6 +306,15 @@ export function qualifySummary(provider) {
   };
 }
 
+export function qualifyProjectStatus(provider) {
+  assert(provider?.providerId === 'opencode' && provider.supported, 'OpenCode was not detected');
+  assert(!provider.statusCheckErrorCode, 'Project status returned an error code');
+  assert(!['error', 'offline'].includes(provider.verificationState), 'Project status failed');
+  assert(!['transient_error', 'pending'].includes(provider.statusCheckOutcome), 'Project status did not settle');
+  assert(!/\bEEXIST\b|file already exists.*mkdir/i.test(JSON.stringify(provider)));
+  return { verificationState: provider.verificationState, statusCheckOutcome: provider.statusCheckOutcome };
+}
+
 export function refreshSettled(observation, current) {
   return (
     !observation.overflow &&
@@ -556,6 +565,17 @@ export async function verifyPackaged({
       evidence.managedRuntime.integrity &&
         evidence.managedRuntime.platformPackage !== 'diagnostics-fixture'
     );
+    assert.equal(await readFile(data.projectSentinel, 'utf8'), 'preserve-existing-project\n', 'Existing project sentinel changed before status');
+    evidence.projectStatus = { path: data.project, sentinel: data.projectSentinel, attempts: [] };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await probe(
+        `projectStatus-${attempt + 1}`,
+        `window.electronAPI.cliInstaller.getProviderStatus("opencode", {projectPath:${JSON.stringify(data.project)}})`,
+        125000
+      );
+      evidence.projectStatus.attempts.push(qualifyProjectStatus(response));
+      assert.equal(await readFile(data.projectSentinel, 'utf8'), 'preserve-existing-project\n', 'Existing project sentinel changed during status');
+    }
     await probe('invalidateSummary', 'window.electronAPI.cliInstaller.invalidateStatus()');
     const statusSnapshot = await probe(
       'statusSnapshot',

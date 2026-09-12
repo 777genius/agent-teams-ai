@@ -430,7 +430,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_set_status',
     description:
-      'Set task work status. Execution transitions require the current owner; lead override is limited to administrative transitions.',
+      'Set task work status. Open dependencies prevent in_progress/completed. Execution transitions require the current owner; lead override is limited to administrative transitions.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -479,7 +479,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_start',
-    description: 'Mark task as in progress. Only the current owner may start it.',
+    description: 'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -502,7 +502,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_complete',
-    description: 'Mark task as completed. Only the current owner may complete it.',
+    description: 'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),

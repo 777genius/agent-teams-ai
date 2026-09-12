@@ -3221,6 +3221,28 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(modelLoadCount).toBe(2);
   });
 
+  it.each([false, true, undefined])('honors probe=%s when selecting a model', async (probe) => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: { providers: [], diagnostics: [] },
+      }),
+      stderr: '',
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/model-1',
+      projectPath: '/Users/test/project',
+      scope: 'project',
+      probe,
+    });
+    const args = execCliMock.mock.calls[0]?.[1] as string[];
+    expect(args.includes('--probe')).toBe(probe !== false);
+  });
+
   it('passes all-projects default scope to the runtime CLI', async () => {
     const response = {
       stdout: JSON.stringify({

@@ -47,6 +47,58 @@ export function isOpenCodeLocalProviderId(providerId: string | null | undefined)
   return normalized ? OPEN_CODE_LOCAL_PROVIDER_IDS.has(normalized) : false;
 }
 
+export function isKnownConfiguredLocalOpenCodeCatalogModel(
+  modelId: string | null | undefined,
+  catalogModel?: {
+    id?: string | null;
+    launchModel?: string | null;
+    metadata?: {
+      opencode?: {
+        providerId?: string | null;
+        routeKind?: string | null;
+        accessKind?: string | null;
+      } | null;
+    } | null;
+  } | null
+): boolean {
+  const route = catalogModel?.metadata?.opencode;
+  return (
+    getOpenCodeModelRoutePresentationStatus({
+      modelId: modelId ?? catalogModel?.launchModel,
+      catalogId: catalogModel?.id,
+      providerId: route?.providerId,
+      routeKind: route?.routeKind,
+      accessKind: route?.accessKind,
+    }) === 'local'
+  );
+}
+
+export function countConfiguredLocalOpenCodeCatalogModels(
+  models: readonly {
+    id?: string | null;
+    launchModel?: string | null;
+    metadata?: {
+      opencode?: {
+        providerId?: string | null;
+        routeKind?: string | null;
+        accessKind?: string | null;
+      } | null;
+    } | null;
+  }[]
+): number {
+  const ids = new Set<string>();
+  for (const model of models) {
+    if (!isKnownConfiguredLocalOpenCodeCatalogModel(model.launchModel, model)) {
+      continue;
+    }
+    const id = model.launchModel?.trim() || model.id?.trim();
+    if (id) {
+      ids.add(id);
+    }
+  }
+  return ids.size;
+}
+
 export function getOpenCodeModelRoutePresentationStatus(
   input: OpenCodeModelRouteFacts
 ): OpenCodeModelRoutePresentationStatus {

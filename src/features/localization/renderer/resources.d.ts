@@ -3185,8 +3185,8 @@ export default interface Resources {
       actions: {
         cancel: 'Cancel';
         reconnect: 'Reconnect';
-        removeManagedCredential: 'Remove managed credential';
-        replaceCredential: 'Replace credential';
+        removeManagedCredential: 'Remove saved credentials';
+        replaceCredential: 'Replace API key';
         signInAgain: 'Sign in again';
         test: 'Test';
       };
@@ -3222,9 +3222,11 @@ export default interface Resources {
         projectOverrideContext: 'Project override context';
         scopeDescriptionAllProjects: 'Default for every project that does not have its own OpenCode override.';
         scopeDescriptionProject: 'Override only the selected project. Running teams are not changed.';
+        select: 'Select';
         selectProjectContext: 'Select project context';
         selectProjectHint: 'Select a project before testing local models or saving defaults.';
         selectValidationContext: 'Select validation context';
+        selected: 'Selected';
         setAllProjectsDefault: 'Set all-projects default';
         setProjectDefault: 'Set project default';
         testAndUse: 'Test and use';
@@ -3261,6 +3263,7 @@ export default interface Resources {
         freeOnly: 'Free only';
         launchableDescription: 'Known routes from OpenCode config, free built-in models, and the current default. Local routes need a successful test before they are ready for team launches.';
         launchableTitle: 'OpenCode model routes';
+        loaded: 'Loaded {{loaded}} of {{total}}';
         loadingRoutes: 'Loading OpenCode model routes...';
         noRoutesMatch: 'No OpenCode model routes match "{{query}}".';
         noneReported: 'No OpenCode model routes were reported yet. Configure a local route in OpenCode or use the Providers tab to inspect catalog providers.';
@@ -3270,9 +3273,18 @@ export default interface Resources {
         routeUnavailableGeneric: 'This model route cannot be used right now.';
         routeUnavailableUnknown: 'This model is the current OpenCode default, but it is not available in the live catalog yet.';
         searchPlaceholder: 'Search models';
+        searchingRemaining: 'No matches in the loaded models yet. Checking the rest of the catalog...';
         selectProjectBeforeTesting: 'Select a project context before testing models.';
         selectProjectBeforeTestingDefaults: 'Select a project context before testing or saving OpenCode defaults.';
+        shown: 'Shown: {{shown}}';
+        shownFree: 'Free models shown: {{shown}}';
+        stopTest: 'Stop';
+        stoppingTest: 'Stopping...';
+        testCancelFailed: 'Could not stop the test. Try again.';
+        testCancelUnsupported: 'Stopping tests is not supported by this runtime.';
+        testCancelled: 'Test stopped.';
         testInProgress: 'Model test is already running.';
+        testingElapsed: 'Waiting for test result... {{seconds}}s';
         useInTeamPicker: 'Save for team picker';
         validationContextRequired: 'Select a validation context above to enable Test and Set default. Saving for team picker only stores the route for new teams.';
       };
@@ -3288,6 +3300,12 @@ export default interface Resources {
         loading: 'Loading OpenCode providers';
         noMatches: 'No providers match that search.';
         noneReported: 'No OpenCode providers reported by the managed runtime.';
+        ownership: {
+          env: 'From environment variables';
+          local: 'From OpenCode settings';
+          managed: 'Saved in this app';
+          project: 'From project settings';
+        };
         recommended: 'Recommended';
         refreshCatalog: 'Refresh catalog';
         searchPlaceholder: 'Search providers';

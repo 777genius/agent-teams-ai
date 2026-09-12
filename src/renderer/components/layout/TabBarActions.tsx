@@ -10,7 +10,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { Bell, PanelRight } from 'lucide-react';
+import { Bell, Loader2, PanelRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
@@ -32,6 +32,7 @@ export const TabBarActions = (): React.JSX.Element => {
     sidebarCollapsed,
     toggleSidebar,
     updateStatus,
+    downloadProgress,
     openUpdateDialog,
   } = useStore(
     useShallow((s) => ({
@@ -43,6 +44,7 @@ export const TabBarActions = (): React.JSX.Element => {
       sidebarCollapsed: s.sidebarCollapsed,
       toggleSidebar: s.toggleSidebar,
       updateStatus: s.updateStatus,
+      downloadProgress: s.downloadProgress,
       openUpdateDialog: s.openUpdateDialog,
     }))
   );
@@ -94,29 +96,40 @@ export const TabBarActions = (): React.JSX.Element => {
       className="ml-2 flex shrink-0 items-center gap-1"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
-      {/* Update app button — only visible when update available or downloaded */}
-      {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+      {/* Update app button — compact header action so tabs stay usable */}
+      {(updateStatus === 'available' ||
+        updateStatus === 'downloading' ||
+        updateStatus === 'downloaded') && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={openUpdateDialog}
               onMouseEnter={() => setUpdateHover(true)}
               onMouseLeave={() => setUpdateHover(false)}
-              className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
               style={{
                 color: updateHover ? '#4ade80' : '#22c55e',
                 backgroundColor: updateHover ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
               }}
             >
-              {updateStatus === 'downloaded'
-                ? t('updates.restartToUpdate')
-                : t('updates.updateApp')}
+              {updateStatus === 'downloading' ? (
+                <>
+                  <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                  <span className="tabular-nums">{Math.round(downloadProgress)}%</span>
+                </>
+              ) : updateStatus === 'downloaded' ? (
+                t('updates.restartToUpdate')
+              ) : (
+                t('updates.updateApp')
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {updateStatus === 'downloaded'
-              ? t('updates.downloadedRestartTooltip')
-              : t('updates.newVersionAvailable')}
+            {updateStatus === 'downloading'
+              ? t('updates.updatingApp')
+              : updateStatus === 'downloaded'
+                ? t('updates.downloadedRestartTooltip')
+                : t('updates.newVersionAvailable')}
           </TooltipContent>
         </Tooltip>
       )}

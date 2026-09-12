@@ -148,6 +148,15 @@ describe('task comment startup history', () => {
     expect(commentToasts()).toEqual([]);
   });
 
+  it('delivers comments created during the first request in its initial response', () => {
+    vi.setSystemTime('2026-09-09T10:01:00.000Z');
+    const snapshot = task([comment('old'), comment('during-load', new Date().toISOString())]);
+    refresh([], [snapshot], consumeFirstGlobalTasksFetchFlag());
+    refresh([snapshot], [snapshot]);
+    expect(commentToasts()).toMatchObject([{ target: { commentId: 'during-load' } }]);
+    expect(commentToasts()).toHaveLength(1);
+  });
+
   it('keeps comments created while the first context snapshot is still loading', () => {
     refresh([], [], consumeFirstGlobalTasksFetchFlag());
     vi.setSystemTime('2026-09-09T10:30:00.000Z');

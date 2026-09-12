@@ -89,6 +89,11 @@ import {
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import {
+  isAppManagedOpenCodeLocalModel,
+  OPENCODE_COMPANION_SOURCE_IDS,
+  shouldRetainOpenCodeLocalCatalogModel,
+} from './openCodeLocalCatalogVisibility';
+import {
   buildOpenCodeLocalModelOverlay,
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
@@ -255,7 +260,6 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
-const OPENCODE_COMPANION_SOURCE_IDS = new Set(['cursor-acp', 'kiro']);
 
 const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
   'local',
@@ -292,30 +296,6 @@ function getCuratedOpenCodeProviderTab(
     return { sourceId: normalizedSourceId, label: 'Xiaomi MiMo' };
   }
   return null;
-}
-
-function isAppManagedOpenCodeLocalModel(
-  modelId: string,
-  catalogModel: ProviderModelCatalogItem | null | undefined
-): boolean {
-  const route = catalogModel?.metadata?.opencode;
-  const sourceId =
-    route?.providerId?.trim().toLowerCase() ||
-    parseOpenCodeQualifiedModelRef(modelId)?.sourceId ||
-    null;
-  // OpenCode currently reports Cursor ACP and Kiro as configured_authless.
-  // They are companion runtimes, not local OpenAI-compatible servers managed by this app.
-  if (sourceId && OPENCODE_COMPANION_SOURCE_IDS.has(sourceId)) {
-    return false;
-  }
-  if (!route) {
-    return isOpenCodeLocalProviderId(sourceId);
-  }
-  if (route.routeKind !== 'configured_local') {
-    return false;
-  }
-
-  return route.accessKind !== 'credentialed' || modelId.startsWith('local/');
 }
 
 function getOpenCodeRouteGroup(
@@ -1776,7 +1756,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             (option) =>
               !option.value.trim() ||
               !isAppManagedOpenCodeLocalModel(option.value, catalogModelById.get(option.value)) ||
-              openCodeLocalModelOverlay.modelIds.has(option.value)
+              shouldRetainOpenCodeLocalCatalogModel(
+                option.value,
+                catalogModelById.get(option.value),
+                openCodeLocalModelOverlay.modelIds
+              )
           )
         : unscopedRuntimeOptions;
     const presentedRuntimeOptions = addCodexAstraUpdatePreview(
@@ -1845,8 +1829,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           effectiveProviderId === 'opencode' &&
           openCodeLocalProviderLookupAuthoritative &&
           isAppManagedOpenCodeLocalModel(launchModel || catalogModelId, model) &&
-          !openCodeLocalModelOverlay.modelIds.has(launchModel) &&
-          !openCodeLocalModelOverlay.modelIds.has(catalogModelId)
+          !shouldRetainOpenCodeLocalCatalogModel(
+            launchModel || catalogModelId,
+            model,
+            openCodeLocalModelOverlay.modelIds
+          )
         ) {
           continue;
         }

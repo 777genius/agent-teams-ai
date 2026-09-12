@@ -23,8 +23,8 @@
     "actions": {
       "cancel": "Отмена",
       "reconnect": "Переподключить",
-      "removeManagedCredential": "Удалить сохранённые данные подключения",
-      "replaceCredential": "Заменить данные подключения",
+      "removeManagedCredential": "Удалить данные входа",
+      "replaceCredential": "Заменить API-ключ",
       "signInAgain": "Войти снова",
       "test": "Тест"
     },
@@ -54,6 +54,8 @@
       "choosingAllProjects": "Выберите модель для проектов без переопределения.",
       "choosingProject": "Выберите модель только для {{project}}.",
       "cancelChoosing": "Отмена",
+      "select": "Выбрать",
+      "selected": "Выбрано",
       "testAndUse": "Проверить и использовать",
       "testAndUseAllProjects": "Проверить и использовать для всех проектов",
       "testAndUseProject": "Проверить и использовать для этого проекта"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: запустите Agent Teams AI от имени администратора"
     },
     "models": {
+      "testingElapsed": "Ожидание результата теста... {{seconds}} с",
       "alreadyDefault": "Это уже выбранный OpenCode default.",
       "empty": "Модели не найдены.",
       "emptyFree": "Free models не найдены.",
@@ -93,7 +96,16 @@
       "routeUnavailableAuth": "Этому provider нужна авторизация перед использованием модели.",
       "routeUnavailableFailed": "Этот model route не прошёл последний execution test.",
       "routeUnavailableGeneric": "Этот model route сейчас нельзя использовать.",
-      "routeUnavailableUnknown": "Эта модель выбрана текущим OpenCode default, но её пока нет в live catalog."
+      "routeUnavailableUnknown": "Эта модель выбрана текущим OpenCode default, но её пока нет в live catalog.",
+      "shown": "Показано: {{shown}}",
+      "shownFree": "Показано бесплатных: {{shown}}",
+      "loaded": "Загружено {{loaded}} из {{total}}",
+      "searchingRemaining": "Среди загруженных моделей совпадений пока нет. Проверяем остальной каталог...",
+      "stopTest": "Остановить",
+      "stoppingTest": "Останавливаем...",
+      "testCancelled": "Тест остановлен.",
+      "testCancelFailed": "Не удалось остановить тест. Попробуйте ещё раз.",
+      "testCancelUnsupported": "Этот runtime не поддерживает остановку тестов."
     },
     "providers": {
       "catalog": "OpenCode provider catalog",
@@ -109,7 +121,13 @@
       "noneReported": "Managed runtime не сообщил OpenCode providers.",
       "recommended": "Recommended",
       "refreshCatalog": "Обновить catalog",
-      "searchPlaceholder": "Поиск providers"
+      "searchPlaceholder": "Поиск providers",
+      "ownership": {
+        "managed": "Сохранено в приложении",
+        "local": "Из настроек OpenCode",
+        "env": "Из переменных окружения",
+        "project": "Из настроек проекта"
+      }
     },
     "reconnect": {
       "apiDescription": "Введите новые данные подключения. Текущие сохранённые данные останутся активными, пока новые не пройдут проверку модели.",

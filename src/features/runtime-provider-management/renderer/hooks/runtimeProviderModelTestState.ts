@@ -45,3 +45,16 @@ export function applyModelTestResultToView(
     ),
   };
 }
+
+export function applyModelTestResultToModels(
+  models: readonly RuntimeProviderModelDto[],
+  result: RuntimeProviderModelTestResultDto
+): RuntimeProviderModelDto[] {
+  return models.map((model) => applyModelTestResultToModel(model, result));
+}
+export function startModelTest(
+  current: Readonly<Record<string, number>>,
+  modelId: string
+): Readonly<Record<string, number>> {
+  return { ...current, [modelId]: Math.max(Date.now(), (current[modelId] ?? 0) + 1) };
+}

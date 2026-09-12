@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EventEmitter } from 'node:events';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -16,6 +16,7 @@ import {
   fingerprint,
   runtimeProvenance,
   preparePackagedProfile,
+  prepareExistingProject,
   probeOrchestratorVersion,
 } from './packaged.mjs';
 import {
@@ -23,6 +24,7 @@ import {
   matchesPackagedPreload,
   refreshSettled,
   qualifySummary,
+  qualifyProjectStatus,
   qualifySettings,
   settingsRefreshSettled,
   waitForAppVersion,
@@ -277,6 +279,25 @@ test('prelaunch creates only disposable profile paths and refuses installed fall
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('existing project fixture is nonempty, contained, and created only once', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-existing-project-'));
+  try {
+    const data = { root, project: path.join(root, 'existing-project') };
+    const sentinel = await prepareExistingProject(data);
+    assert.equal(await readFile(sentinel, 'utf8'), 'preserve-existing-project\n');
+    await assert.rejects(prepareExistingProject(data), { code: 'EEXIST' });
+    await assert.rejects(prepareExistingProject({ root, project: path.join(root, '..', 'foreign-project') }), /escapes sandbox/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('project-scoped status qualification rejects filesystem and unsettled failures', () => {
+  const ready = { providerId: 'opencode', supported: true, verificationState: 'unknown', statusCheckOutcome: 'model_only' };
+  assert.deepEqual(qualifyProjectStatus(ready), { verificationState: 'unknown', statusCheckOutcome: 'model_only' });
+  for (const failed of [{ statusCheckErrorCode: 'runtime_error' }, { verificationState: 'error' }, { statusCheckOutcome: 'transient_error' }, { detailMessage: 'EEXIST: file already exists, mkdir C:\\project' }]) assert.throws(() => qualifyProjectStatus({ ...ready, ...failed }));
 });
 
 test('prelaunch refuses a junction ancestor before creating directories outside the profile', async () => {

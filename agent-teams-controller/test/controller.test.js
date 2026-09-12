@@ -147,8 +147,8 @@ controller.messages.sendMessage({
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
 
-    const base = controller.tasks.createTask({ subject: 'Base task' });
-    const dependency = controller.tasks.createTask({ subject: 'Dependency task' });
+    const base = controller.tasks.createTask({ subject: 'Base task', owner: 'bob' });
+    const dependency = controller.tasks.createTask({ subject: 'Dependency task', owner: 'bob' });
     const created = controller.tasks.createTask({
       subject: 'Blocked task',
       owner: 'bob',
@@ -166,6 +166,8 @@ controller.messages.sendMessage({
     expect(controller.tasks.getTask(created.displayId).blockedBy).toEqual([base.id, dependency.id]);
 
     controller.kanban.addReviewer('alice');
+    controller.tasks.completeTask(base.id, 'bob');
+    controller.tasks.completeTask(dependency.id, 'bob');
     controller.tasks.completeTask(created.id, 'bob');
     controller.review.requestReview(created.id, { from: 'alice' });
     controller.review.approveReview(created.id, { 'notify-owner': true, from: 'alice' });
@@ -668,7 +670,10 @@ controller.messages.sendMessage({
       owner: 'carol',
       blockedBy: [lateBlocker.id],
     });
-    controller.taskBoard.completeTask(finished.id, 'carol');
+    // Model a legacy inconsistent row; execution APIs now reject open blockers.
+    const finishedPath = path.join(claudeDir, 'tasks', 'my-team', `${finished.id}.json`);
+    const finishedRow = JSON.parse(fs.readFileSync(finishedPath, 'utf8'));
+    fs.writeFileSync(finishedPath, JSON.stringify({ ...finishedRow, status: 'completed' }));
     controller.taskBoard.softDeleteTask(lateBlocker.id, 'alice');
     expect(readCarolInbox()).toHaveLength(2);
   });
