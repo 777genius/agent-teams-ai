@@ -216,6 +216,7 @@ import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import {
   bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
+  runShutdownBackupAfterWorkSyncDrain,
   startPreparedMemberWorkSyncFeature,
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
@@ -3115,10 +3116,21 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());
 
-    // Sync backup all team data. Files are stable after SIGKILL.
-    if (teamBackupService) {
-      await runShutdownStep('team backup sync', () => teamBackupService?.runShutdownBackupSync());
-    }
+    // Sync backup after SIGKILL and after work-sync writers have drained, so
+    // .member-work-sync status/report/replica/outbox files are copied together.
+    await runShutdownBackupAfterWorkSyncDrain({
+      drainWorkSync: () =>
+        disposeInternalStorageAfterWriterDrains({
+          teamDataService,
+          teamTaskStallMonitor,
+          memberWorkSyncFeature,
+          internalStorageFeature,
+        }),
+      backup: teamBackupService,
+    });
+    teamTaskStallMonitor = null;
+    memberWorkSyncFeature = null;
+    internalStorageFeature = null;
 
     if (httpServer?.isRunning()) {
       await runShutdownStep('HTTP server stop', () => httpServer.stop());
@@ -3150,15 +3162,6 @@ async function shutdownServices(): Promise<void> {
       await runShutdownStep('SSH connection manager dispose', () => sshConnectionManager.dispose());
     }
 
-    await disposeInternalStorageAfterWriterDrains({
-      teamDataService,
-      teamTaskStallMonitor,
-      memberWorkSyncFeature,
-      internalStorageFeature,
-    });
-    teamTaskStallMonitor = null;
-    memberWorkSyncFeature = null;
-    internalStorageFeature = null;
     if (updaterService) {
       await runShutdownStep('updater periodic check stop', () =>
         updaterService.stopPeriodicCheck()

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createDeferredWorkSyncStallObservation } from '../../src/main/startMemberWorkSyncFeature';
+import {
+  createDeferredWorkSyncStallObservation,
+  runShutdownBackupAfterWorkSyncDrain,
+} from '../../src/main/startMemberWorkSyncFeature';
 
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 
@@ -152,5 +155,22 @@ describe('createDeferredWorkSyncStallObservation', () => {
     });
 
     expect(recorded).toEqual(['team-b:task-b']);
+  });
+});
+
+describe('runShutdownBackupAfterWorkSyncDrain', () => {
+  it('drains work-sync writers before copying backup state', async () => {
+    const order: string[] = [];
+    await runShutdownBackupAfterWorkSyncDrain({
+      drainWorkSync: async () => {
+        order.push('drain');
+      },
+      backup: {
+        runShutdownBackupSync: () => {
+          order.push('backup');
+        },
+      },
+    });
+    expect(order).toEqual(['drain', 'backup']);
   });
 });

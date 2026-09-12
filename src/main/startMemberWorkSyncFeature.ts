@@ -148,3 +148,11 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   input.stallObservation.attach(input.prepared);
   return input.prepared;
 }
+
+export async function runShutdownBackupAfterWorkSyncDrain(input: {
+  drainWorkSync: () => Promise<void>;
+  backup?: { runShutdownBackupSync(): void } | null;
+}): Promise<void> {
+  await input.drainWorkSync();
+  input.backup?.runShutdownBackupSync();
+}
