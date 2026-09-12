@@ -13,6 +13,8 @@ type MemberWorkSyncDetailsProps = Readonly<{
   actionError?: string | null;
   showDiagnostics?: boolean;
   onContinue?: (input: { teamName: string; memberName: string }) => void;
+  onStop?: (input: { teamName: string; memberName: string }) => void;
+  onResume?: (input: { teamName: string; memberName: string }) => void;
 }>;
 
 function shortFingerprint(fingerprint?: string): string {
@@ -28,6 +30,8 @@ export const MemberWorkSyncDetails = ({
   actionError,
   showDiagnostics = false,
   onContinue,
+  onStop,
+  onResume,
 }: MemberWorkSyncDetailsProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const viewModel = toMemberWorkSyncStatusViewModel(status);
@@ -93,21 +97,58 @@ export const MemberWorkSyncDetails = ({
             >
               Automatic continuation is stopped.
             </p>
-          ) : viewModel.canContinue && status && onContinue ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              data-testid="member-work-sync-continue"
-              onClick={() => {
-                onContinue({
-                  teamName: status.teamName,
-                  memberName: status.memberName,
-                });
-              }}
-            >
-              Continue
-            </Button>
+          ) : null}
+          {status && (viewModel.canContinue || viewModel.canStop || viewModel.canResume) ? (
+            <div className="flex flex-wrap gap-2">
+              {viewModel.canContinue && onContinue ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-continue"
+                  onClick={() => {
+                    onContinue({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  Continue
+                </Button>
+              ) : null}
+              {viewModel.canStop && onStop ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-stop"
+                  onClick={() => {
+                    onStop({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  Stop auto-resume
+                </Button>
+              ) : null}
+              {viewModel.canResume && onResume ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-resume"
+                  onClick={() => {
+                    onResume({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  Resume auto-resume
+                </Button>
+              ) : null}
+            </div>
           ) : null}
           {actionError ? (
             <p className="text-xs text-red-400" data-testid="member-work-sync-action-error">

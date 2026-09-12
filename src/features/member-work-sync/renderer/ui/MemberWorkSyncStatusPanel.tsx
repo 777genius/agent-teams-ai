@@ -21,11 +21,12 @@ export const MemberWorkSyncStatusPanel = ({
   showDiagnostics = false,
 }: MemberWorkSyncStatusPanelProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
-  const { status, viewModel, loading, error, continueManually } = useMemberWorkSyncStatus({
-    teamName,
-    memberName,
-    enabled,
-  });
+  const { status, viewModel, loading, error, continueManually, stopAutoResume, resumeAutoResume } =
+    useMemberWorkSyncStatus({
+      teamName,
+      memberName,
+      enabled,
+    });
 
   if (!enabled) {
     return null;
@@ -38,6 +39,8 @@ export const MemberWorkSyncStatusPanel = ({
         actionError={error}
         showDiagnostics={showDiagnostics}
         onContinue={continueManually}
+        onStop={stopAutoResume}
+        onResume={resumeAutoResume}
       />
     );
   }

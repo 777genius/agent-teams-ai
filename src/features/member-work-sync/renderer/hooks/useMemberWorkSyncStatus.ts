@@ -25,6 +25,8 @@ export interface UseMemberWorkSyncStatusResult {
   error: string | null;
   refresh: () => void;
   continueManually: () => void;
+  stopAutoResume: () => void;
+  resumeAutoResume: () => void;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -105,44 +107,47 @@ export function useMemberWorkSyncStatus({
     };
   }, [enabled, memberName, teamName]);
 
+  const runStatusCommand = (method: 'continueManually' | 'stopAutoResume' | 'resumeAutoResume') => {
+    const normalizedTeamName = normalizeMemberName(teamName);
+    const normalizedMemberName = normalizeMemberName(memberName);
+    if (!normalizedTeamName || !normalizedMemberName) {
+      return;
+    }
+    void api.memberWorkSync[method]({
+      teamName: normalizedTeamName,
+      memberName: normalizedMemberName,
+    })
+      .then((nextStatus) => {
+        const current = selectionRef.current;
+        if (
+          normalizeMemberName(current.teamName) !== normalizedTeamName ||
+          normalizeMemberName(current.memberName) !== normalizedMemberName
+        ) {
+          return;
+        }
+        setStatus(nextStatus);
+        setError(null);
+      })
+      .catch((nextError: unknown) => {
+        const current = selectionRef.current;
+        if (
+          normalizeMemberName(current.teamName) !== normalizedTeamName ||
+          normalizeMemberName(current.memberName) !== normalizedMemberName
+        ) {
+          return;
+        }
+        setError(getErrorMessage(nextError));
+      });
+  };
+
   return {
     status,
     viewModel: toMemberWorkSyncStatusViewModel(status),
     loading,
     error,
     refresh: () => setRefreshKey((current) => current + 1),
-    continueManually: () => {
-      const normalizedTeamName = normalizeMemberName(teamName);
-      const normalizedMemberName = normalizeMemberName(memberName);
-      if (!normalizedTeamName || !normalizedMemberName) {
-        return;
-      }
-      void api.memberWorkSync
-        .continueManually({
-          teamName: normalizedTeamName,
-          memberName: normalizedMemberName,
-        })
-        .then((nextStatus) => {
-          const current = selectionRef.current;
-          if (
-            normalizeMemberName(current.teamName) !== normalizedTeamName ||
-            normalizeMemberName(current.memberName) !== normalizedMemberName
-          ) {
-            return;
-          }
-          setStatus(nextStatus);
-          setError(null);
-        })
-        .catch((nextError: unknown) => {
-          const current = selectionRef.current;
-          if (
-            normalizeMemberName(current.teamName) !== normalizedTeamName ||
-            normalizeMemberName(current.memberName) !== normalizedMemberName
-          ) {
-            return;
-          }
-          setError(getErrorMessage(nextError));
-        });
-    },
+    continueManually: () => runStatusCommand('continueManually'),
+    stopAutoResume: () => runStatusCommand('stopAutoResume'),
+    resumeAutoResume: () => runStatusCommand('resumeAutoResume'),
   };
 }

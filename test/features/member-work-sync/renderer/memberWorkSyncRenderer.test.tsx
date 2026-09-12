@@ -15,6 +15,8 @@ import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts'
 const apiMocks = vi.hoisted(() => ({
   getStatus: vi.fn(),
   continueManually: vi.fn(),
+  stopAutoResume: vi.fn(),
+  resumeAutoResume: vi.fn(),
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -22,6 +24,8 @@ vi.mock('@renderer/api', () => ({
     memberWorkSync: {
       getStatus: apiMocks.getStatus,
       continueManually: apiMocks.continueManually,
+      stopAutoResume: apiMocks.stopAutoResume,
+      resumeAutoResume: apiMocks.resumeAutoResume,
     },
   },
   isElectronMode: () => true,
@@ -137,6 +141,82 @@ describe('member work sync renderer', () => {
     expect(apiMocks.getStatus).toHaveBeenCalledWith({ teamName: 'team-a', memberName: 'bob' });
   });
 
+  it('stops and resumes auto-resume through the status panel hook', async () => {
+    const attentionHealth = {
+      schemaVersion: 1 as const,
+      attentionAt: '2026-04-29T00:20:00.000Z',
+      episodes: [
+        {
+          episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+          workKey: 'task-1:bob',
+          taskId: 'task-1',
+          firstObservedAt: '2026-04-29T00:00:00.000Z',
+          dueAt: '2026-04-29T00:20:00.000Z',
+          phase: 'attention' as const,
+          reason: 'no_progress_deadline' as const,
+        },
+      ],
+    };
+    const attention = makeStatus({ recoveryHealth: attentionHealth });
+    const stopped = makeStatus({
+      recoveryHealth: {
+        ...attentionHealth,
+        autoResumeStopLatch: {
+          stoppedAt: '2026-04-29T00:21:00.000Z',
+          reason: 'user_stop',
+          controlRevision: 1,
+        },
+      },
+    });
+    apiMocks.getStatus.mockResolvedValue(attention);
+    apiMocks.stopAutoResume.mockResolvedValue(stopped);
+    apiMocks.resumeAutoResume.mockResolvedValue(attention);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncStatusPanel, {
+          teamName: 'team-a',
+          memberName: 'bob',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const stopButton = host.querySelector(
+      '[data-testid="member-work-sync-stop"]'
+    ) as HTMLButtonElement | null;
+    expect(stopButton).toBeTruthy();
+    await act(async () => {
+      stopButton?.click();
+      await Promise.resolve();
+    });
+    expect(apiMocks.stopAutoResume).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+
+    const resumeButton = host.querySelector(
+      '[data-testid="member-work-sync-resume"]'
+    ) as HTMLButtonElement | null;
+    expect(resumeButton).toBeTruthy();
+    expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    await act(async () => {
+      resumeButton?.click();
+      await Promise.resolve();
+    });
+    expect(apiMocks.resumeAutoResume).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('shows durable attention and sends a manual continue from the details panel', async () => {
     apiMocks.continueManually.mockResolvedValue(makeStatus());
     const host = document.createElement('div');
@@ -165,6 +245,8 @@ describe('member work sync renderer', () => {
         React.createElement(MemberWorkSyncDetails, {
           status,
           onContinue: apiMocks.continueManually,
+          onStop: apiMocks.stopAutoResume,
+          onResume: apiMocks.resumeAutoResume,
         })
       );
       await Promise.resolve();
@@ -177,11 +259,24 @@ describe('member work sync renderer', () => {
       '[data-testid="member-work-sync-continue"]'
     ) as HTMLButtonElement | null;
     expect(continueButton).toBeTruthy();
+    const stopButton = host.querySelector(
+      '[data-testid="member-work-sync-stop"]'
+    ) as HTMLButtonElement | null;
+    expect(stopButton).toBeTruthy();
+    expect(host.querySelector('[data-testid="member-work-sync-resume"]')).toBeNull();
     await act(async () => {
       continueButton?.click();
       await Promise.resolve();
     });
     expect(apiMocks.continueManually).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await act(async () => {
+      stopButton?.click();
+      await Promise.resolve();
+    });
+    expect(apiMocks.stopAutoResume).toHaveBeenCalledWith({
       teamName: 'team-a',
       memberName: 'bob',
     });
@@ -223,15 +318,30 @@ describe('member work sync renderer', () => {
         React.createElement(MemberWorkSyncDetails, {
           status,
           onContinue: apiMocks.continueManually,
+          onStop: apiMocks.stopAutoResume,
+          onResume: apiMocks.resumeAutoResume,
         })
       );
       await Promise.resolve();
     });
 
     expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stop"]')).toBeNull();
     expect(host.querySelector('[data-testid="member-work-sync-stopped"]')?.textContent).toContain(
       'Automatic continuation is stopped'
     );
+    const resumeButton = host.querySelector(
+      '[data-testid="member-work-sync-resume"]'
+    ) as HTMLButtonElement | null;
+    expect(resumeButton).toBeTruthy();
+    await act(async () => {
+      resumeButton?.click();
+      await Promise.resolve();
+    });
+    expect(apiMocks.resumeAutoResume).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
 
     await act(async () => {
       root.unmount();
@@ -266,6 +376,8 @@ describe('member work sync renderer', () => {
         React.createElement(MemberWorkSyncDetails, {
           status,
           onContinue: apiMocks.continueManually,
+          onStop: apiMocks.stopAutoResume,
+          onResume: apiMocks.resumeAutoResume,
         })
       );
       await Promise.resolve();
@@ -275,6 +387,8 @@ describe('member work sync renderer', () => {
       'No confirmed task progress'
     );
     expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-resume"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stop"]')).toBeTruthy();
 
     await act(async () => {
       root.unmount();
@@ -309,6 +423,8 @@ describe('member work sync renderer', () => {
           status,
           actionError: 'member_stopped',
           onContinue: apiMocks.continueManually,
+          onStop: apiMocks.stopAutoResume,
+          onResume: apiMocks.resumeAutoResume,
         })
       );
       await Promise.resolve();
