@@ -21,7 +21,9 @@ export class MemberWorkSyncStatusMutationError extends Error {
   }
 }
 
-/** One full recomputation after a CAS conflict; unknown/committed outcomes are never retried here. */
+/** Retry CAS conflicts so live reconcile/backup writers can finish; unknown/committed outcomes are never retried. */
+export const MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS = 7;
+
 export async function runMemberWorkSyncStatusMutation<T>(
   deps: MemberWorkSyncUseCaseDeps,
   operation: (mutationId: string | undefined) => Promise<T>
@@ -37,8 +39,9 @@ export async function runMemberWorkSyncStatusMutation<T>(
         error.retryExhausted
       )
         throw error;
-      if (attempt >= 1)
+      if (attempt >= MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS)
         throw new MemberWorkSyncStatusMutationError(error.reason, error.mutationId, true);
+      await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
     }
   }
 }

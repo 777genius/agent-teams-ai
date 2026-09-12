@@ -10,6 +10,7 @@ import {
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { MemberWorkSyncNudgeOutboxPlanner } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanner';
+import { MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS } from '@features/member-work-sync/core/application/MemberWorkSyncStatusMutation';
 import { hasActiveAcceptedWorkLease } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeRecoveryPolicy';
 import {
   finalizeMemberWorkSyncAgenda,
@@ -371,13 +372,15 @@ describe.each(['json', 'sqlite'] as const)('conditional use cases on real %s sto
       }).execute({ ...h.request, taskIds: ['foreign'] });
     });
     await expect(result).rejects.toMatchObject({ reason: 'conflict', retryExhausted: true });
-    expect(writes).toHaveLength(2);
+    expect(writes).toHaveLength(MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS + 1);
     expect(writes.every((status) => status.report?.accepted !== false)).toBe(true);
     expect(planned).not.toHaveBeenCalled();
-    expect((await h.read()).statusRevision?.sequence).toBe(12);
+    expect((await h.read()).statusRevision?.sequence).toBe(
+      10 + MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS + 1
+    );
   });
 
-  it('stops after two actual stale-snapshot conflicts and does not plan an outbox', async () => {
+  it('stops after exhausted stale-snapshot conflicts and does not plan an outbox', async () => {
     const h = await setup(kind);
     const planned = vi.spyOn(MemberWorkSyncNudgeOutboxPlanner.prototype, 'plan');
     const mutationIds: string[] = [];
@@ -396,10 +399,12 @@ describe.each(['json', 'sqlite'] as const)('conditional use cases on real %s sto
       }).execute(member);
     });
     await expect(result).rejects.toMatchObject({ reason: 'conflict' });
-    expect(mutationIds).toHaveLength(2);
+    expect(mutationIds).toHaveLength(MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS + 1);
     expect(new Set(mutationIds).size).toBe(1);
     expect(planned).not.toHaveBeenCalled();
-    expect((await h.read()).statusRevision?.sequence).toBe(12);
+    expect((await h.read()).statusRevision?.sequence).toBe(
+      10 + MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS + 1
+    );
   });
 });
 
