@@ -7,14 +7,14 @@ import type {
 } from '../../core/application/MemberWorkSyncReportJournalPort';
 import type { InternalStorageBackendSelector } from '@features/internal-storage/main';
 
-export type MemberWorkSyncReportJournalReplicaFence = {
+export interface MemberWorkSyncReportJournalReplicaFence {
   runReplicaFenced<T>(
     teamName: string,
     mutation: boolean,
     sqliteAction: () => Promise<T>,
     jsonAction: () => Promise<T>
   ): Promise<T>;
-};
+}
 
 /** Routes report-journal mutations through the session-wide backend decision. */
 export class BackendSelectingMemberWorkSyncReportJournal implements MemberWorkSyncReportJournalPort {
