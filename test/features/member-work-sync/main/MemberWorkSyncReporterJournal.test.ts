@@ -219,7 +219,8 @@ describe.each(['json', 'sqlite'] as const)(
           origin: 'online',
         })
       );
-      expect(replayed.accepted).toBe(true);
+      expect(replayed.accepted).toBe(false);
+      expect(replayed.code).toBe('superseded');
       expect(replayed.status.pendingReportReceipt?.intentId).toBe(i2?.intentId);
       expect(replayed.status.lastAcceptedReport?.note).toBe('accepted I2');
       expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
@@ -265,11 +266,24 @@ describe.each(['json', 'sqlite'] as const)(
         second.status.lastAcceptedReport?.expiresAt
       );
       expect((await h.read()).lastAcceptedReport?.note).toBe('accepted I2');
+      const replayedAgain = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute(h.request, {
+          intentId: i1.intentId,
+          incarnation,
+          requestDigest: i1.requestDigest,
+          receivedAt: i1.receivedAt,
+          origin: 'online',
+        })
+      );
+      expect(replayedAgain.accepted).toBe(false);
+      expect(replayedAgain.code).toBe('superseded');
+      expect(replayedAgain.status.lastAcceptedReport?.note).toBe('accepted I2');
     });
 
     it('reuses a digest-stable intent ID when the same online report is retried', async () => {
       const h = await setup(kind);
       const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      h.setTime('2026-09-10T00:00:05.000Z');
       const second = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
       expect(first.accepted).toBe(true);
       expect(second.accepted).toBe(true);
@@ -282,11 +296,17 @@ describe.each(['json', 'sqlite'] as const)(
       );
     });
 
-    it('allocates a new online report intent when a later heartbeat repeats the same payload', async () => {
+    it('allocates a new online report intent when a later heartbeat presents new evidence', async () => {
       const h = await setup(kind);
       const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
       h.setTime('2026-09-10T00:10:00.000Z');
-      const second = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      const second = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute({
+          ...h.request,
+          reportToken: 'test-token-later',
+          reportedAt: '2026-09-10T00:10:00.000Z',
+        })
+      );
       expect(second.accepted).toBe(true);
       expect(second.status.pendingReportReceipt?.intentId).not.toBe(
         first.status.pendingReportReceipt?.intentId
@@ -294,6 +314,26 @@ describe.each(['json', 'sqlite'] as const)(
       expect(Date.parse(second.status.lastAcceptedReport?.expiresAt ?? '')).toBeGreaterThan(
         Date.parse(first.status.lastAcceptedReport?.expiresAt ?? '')
       );
+    });
+
+    it('surfaces a degraded journal projection instead of treating it as a clean transfer', async () => {
+      const h = await setup(kind);
+      vi.spyOn(h.reportJournal, 'transfer').mockResolvedValueOnce({
+        state: 'present',
+        projectionDegraded: true,
+        intent: {
+          id: 'report:degraded',
+          teamName: member.teamName,
+          memberName: member.memberName,
+          request: h.request,
+          reason: 'online',
+          status: 'accepted',
+          recordedAt: initialTime,
+        },
+      });
+      const first = await h.run((deps) => new MemberWorkSyncReporter(deps).execute(h.request));
+      expect(first.accepted).toBe(true);
+      expect(first.projectionDegraded).toBe(true);
     });
 
     it('repairs a checkpoint-backed replay after the live token expires without renewing the lease', async () => {

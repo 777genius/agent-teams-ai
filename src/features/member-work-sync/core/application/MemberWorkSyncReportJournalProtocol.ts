@@ -31,6 +31,7 @@ export function buildMemberWorkSyncReportRequestDigest(
       reportToken: request.reportToken ?? '',
       taskIds: [...new Set(request.taskIds ?? [])].sort(),
       note: request.note ?? '',
+      reportedAt: request.reportedAt ?? '',
       leaseTtlMs: request.leaseTtlMs ?? 0,
       source: request.source ?? '',
     })
@@ -51,7 +52,7 @@ export function createMemberWorkSyncReportJournalInput(input: {
     teamName: input.request.teamName,
     memberName: input.request.memberName,
     incarnation: input.replay?.incarnation ?? input.incarnation,
-    intentId: input.replay?.intentId ?? `report:${requestDigest}:${input.receivedAt}`,
+    intentId: input.replay?.intentId ?? `report:${requestDigest}`,
     requestDigest,
     receivedAt: input.replay?.receivedAt ?? input.receivedAt,
     origin: input.replay?.origin ?? 'online',
@@ -135,5 +136,5 @@ export async function transferAcceptedReportReceipt(
   receipt: MemberWorkSyncReportReceipt
 ): Promise<boolean> {
   const result = await journal.transfer({ ...input, receipt });
-  return result.state === 'present';
+  return result.state === 'present' && !result.projectionDegraded;
 }

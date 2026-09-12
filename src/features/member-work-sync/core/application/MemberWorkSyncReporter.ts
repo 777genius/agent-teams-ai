@@ -397,12 +397,7 @@ export class MemberWorkSyncReporter {
       throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
     }
     if (ensured.intent.status === 'accepted' || ensured.intent.status === 'superseded') {
-      return {
-        accepted: true,
-        code: 'accepted',
-        message: 'Member work sync report accepted.',
-        status,
-      };
+      return superseded;
     }
     const transferred = await transferAcceptedReportReceipt(
       journal,
