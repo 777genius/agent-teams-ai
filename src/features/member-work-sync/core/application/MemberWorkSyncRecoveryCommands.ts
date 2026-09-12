@@ -154,15 +154,20 @@ export class MemberWorkSyncRecoveryCommands {
           memberName: input.memberName,
           id: existing,
         });
-        recoveryInput = existingItem?.payload.workSyncIntentKey?.startsWith('manual-continue:')
-          ? {
-              ...baseInput,
-              id: existingItem.id,
-              agendaFingerprint: existingItem.agendaFingerprint,
-              payload: existingItem.payload,
-              payloadHash: existingItem.payloadHash,
-            }
-          : buildRecoveryInput(defaultIntentKey, existing);
+        const existingKey = existingItem?.payload.workSyncIntentKey;
+        recoveryInput =
+          existingItem && existingKey?.startsWith('manual-continue:')
+            ? {
+                ...baseInput,
+                id: existingItem.id,
+                agendaFingerprint: existingItem.agendaFingerprint,
+                payload: {
+                  ...existingItem.payload,
+                  workSyncIntentKey: existingKey,
+                },
+                payloadHash: existingItem.payloadHash,
+              }
+            : buildRecoveryInput(defaultIntentKey, existing);
       }
       let committedStatus = read.status;
       const candidateId = recoveryInput.id;
