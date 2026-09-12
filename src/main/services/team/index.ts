@@ -14,6 +14,7 @@ export { FileContentResolver } from './FileContentResolver';
 export { GitDiffFallback } from './GitDiffFallback';
 export { HunkSnippetMatcher } from './HunkSnippetMatcher';
 export { MemberStatsComputer } from './MemberStatsComputer';
+export { configureCursorAgentAtomicReapBridge } from './opencode/bridge/CursorAgentAtomicReapBridge';
 export { applyCursorAgentAttributionEnv } from './opencode/bridge/CursorAgentAttributionRecords';
 export type {
   OpenCodeReadinessBridgeCommandBody,

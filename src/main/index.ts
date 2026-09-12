@@ -323,6 +323,7 @@ import {
   ClaudeBinaryResolver,
   CliInstallerService,
   configManager,
+  configureCursorAgentAtomicReapBridge,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
@@ -501,6 +502,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
 
@@ -673,6 +675,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
   });
+  configureCursorAgentAtomicReapBridge(bridgeClient);
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,

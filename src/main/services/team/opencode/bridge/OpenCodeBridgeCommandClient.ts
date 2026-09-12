@@ -282,6 +282,7 @@ export class OpenCodeBridgeCommandClient {
     if (
       result.ok ||
       command === 'opencode.cleanupStartupHosts' ||
+      command === 'opencode.reapUnleasedCursorAgentTrees' ||
       !(await this.tryRecoverWindowsNodeModulesJunction(result))
     ) {
       return result;
