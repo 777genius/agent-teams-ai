@@ -114,7 +114,9 @@ describe('teamGlobalTaskNotifications', () => {
         createTask({
           needsClarification: 'user',
           blockedBy: ['task-2'],
-          comments: [createComment({ text: 'Needs review' })],
+          comments: [
+            createComment({ text: 'Needs review', createdAt: '2026-05-22T08:00:00.000Z' }),
+          ],
           status: 'completed',
         }),
       ],
