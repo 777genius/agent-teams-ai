@@ -570,7 +570,7 @@ liveDescribe('Member work sync recovery live canary', () => {
 
     await feature.prepareTeamDeletion(teamName);
     feature.completeTeamDeletion(teamName);
-  }, 180_000);
+  }, 420_000);
 
   remainingWorkIt(
     'continues remaining Codex work after a settled status-only turn (A/B/C)',
