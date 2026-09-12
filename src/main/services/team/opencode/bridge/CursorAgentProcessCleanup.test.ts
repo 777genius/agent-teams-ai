@@ -1314,6 +1314,77 @@ describe('the runtime records that prove a root', () => {
   });
 
   /**
+   * The re-read of the records is time in which a pid can change hands, and
+   * the time fence after it would answer from the sweep's cache. The OS is
+   * asked again, uncached: a root whose start time moved in that window is a
+   * different process wearing the proven number, and it is kept.
+   */
+  it('asks the OS again for a proven root after the re-read, and keeps one whose identity moved', async () => {
+    const killTree = vi.fn(reapedTree);
+    const probes = new Map<number, number>();
+    const readProcessStartTimeMs = vi.fn((pid: number) => {
+      const count = (probes.get(pid) ?? 0) + 1;
+      probes.set(pid, count);
+      // The first probe is the one the proof rests on; the next sees a process
+      // that started a minute later under the same pid.
+      return Promise.resolve(count === 1 ? AGENT_STARTED_AT_MS : AGENT_STARTED_AT_MS + 60_000);
+    });
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record()],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      reconfirmAttribution: () => Promise.resolve(true),
+      readProcessStartTimeMs,
+      killTree,
+    });
+
+    expect(probes.get(10)).toBe(2);
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+    expect(result.diagnostics).toContain(
+      'Kept cursor-agent tree pid=10: a process the record proved changed identity while the ' +
+        'record was re-read'
+    );
+  });
+
+  /** Through the Windows hop, both the root and the recorded process are asked again. */
+  it('asks again for the recorded process below a Windows hop as well', async () => {
+    const killTree = vi.fn(reapedTree);
+    const probes = new Map<number, number>();
+    const readProcessStartTimeMs = vi.fn((pid: number) => {
+      const count = (probes.get(pid) ?? 0) + 1;
+      probes.set(pid, count);
+      if (pid === 10) return Promise.resolve(AGENT_STARTED_AT_MS - 500);
+      return Promise.resolve(count === 1 ? AGENT_STARTED_AT_MS : AGENT_STARTED_AT_MS + 60_000);
+    });
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'win32',
+      listProcessRows: () =>
+        Promise.resolve([
+          { pid: 10, ppid: 1, command: WRAPPER },
+          { pid: 11, ppid: 10, command: NODE_CHILD },
+        ]),
+      attributedProcesses: [record({ pid: 11, parentPid: 10, workspacePath: WORKSPACE })],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      reconfirmAttribution: () => Promise.resolve(true),
+      readProcessStartTimeMs,
+      killTree,
+    });
+
+    expect(probes.get(11)).toBe(2);
+    expect(probes.get(10)).toBe(2);
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+  });
+
+  /**
    * A record without the `--workspace` argument proves nothing about a
    * workspace. The directory the process started in is not a substitute: any
    * agent launched from that directory would carry the same cwd, and the sweep

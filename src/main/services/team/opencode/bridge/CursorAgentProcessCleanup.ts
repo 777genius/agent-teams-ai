@@ -12,6 +12,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import {
   proveCursorAgentRootFromAttributionRecords,
+  provenIdentityStillHolds,
   UNPROVEN_BY_ATTRIBUTION,
 } from './CursorAgentAttributionProof';
 import { readNativeProcessCommandWithEnv } from './OpenCodeManagedHostProcessCleanup';
@@ -531,9 +532,9 @@ export async function cleanupCursorAgentProcessTrees(
   }
   const orphanedOnly = options.orphanedOnly === true;
   const readProcessDetails = options.readProcessDetails ?? readNativeProcessCommandWithEnv;
-  const readStartTimeMs = createProcessStartTimeCache(
-    options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform))
-  );
+  const readStartTimeMsUncached =
+    options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform));
+  const readStartTimeMs = createProcessStartTimeCache(readStartTimeMsUncached);
   const startedBeforeMs =
     typeof options.startedBeforeMs === 'number' && Number.isFinite(options.startedBeforeMs)
       ? options.startedBeforeMs
@@ -683,6 +684,24 @@ export async function cleanupCursorAgentProcessTrees(
         result.diagnostics.push(
           `Kept cursor-agent tree pid=${row.pid}: its record no longer selects for this stop - ` +
             'the host gained another owner, or the record is gone'
+        );
+        continue;
+      }
+      // That re-read awaited a filesystem, and the probes the proof rested on
+      // are older than it now. The fence below would answer from the cache, so
+      // the OS is asked again here, uncached, for every pid the proof named.
+      const identityHeld = await provenIdentityStillHolds({
+        record: attribution.record,
+        row,
+        readCachedStartTimeMs: readStartTimeMs,
+        readStartTimeMs: readStartTimeMsUncached,
+      });
+      if (options.canAdmitStartupWork?.() === false) break;
+      if (!identityHeld) {
+        result.keptRecent.push(row.pid);
+        result.diagnostics.push(
+          `Kept cursor-agent tree pid=${row.pid}: a process the record proved changed identity ` +
+            'while the record was re-read'
         );
         continue;
       }

@@ -139,3 +139,35 @@ export async function proveCursorAgentRootFromAttributionRecords(input: {
   }
   return UNPROVEN_BY_ATTRIBUTION;
 }
+
+/**
+ * Whether the processes a proof was made of are still the ones it was made of.
+ *
+ * The proof above read start times through the sweep's cache, and anything the
+ * sweep awaits after it - a re-read of the records, say - is time in which a
+ * pid can change hands. This asks the OS again, uncached, for every pid the
+ * proof rested on: the root, and through the Windows hop the recorded process
+ * below it. A start time that moved, or that cannot be read any more, means the
+ * identity the proof named is gone, and the tree is kept.
+ */
+export async function provenIdentityStillHolds(input: {
+  record: CursorAgentAttributionRecord;
+  row: RuntimeProcessTableRow;
+  /** The reader the proof used, answering from its cache. */
+  readCachedStartTimeMs: (pid: number) => Promise<number | null>;
+  /** The same reader without the cache: one fresh probe per pid. */
+  readStartTimeMs: (pid: number) => Promise<number | null>;
+}): Promise<boolean> {
+  for (const pid of new Set([input.row.pid, input.record.pid])) {
+    const proven = await input.readCachedStartTimeMs(pid);
+    if (proven === null) return false;
+    let fresh: number | null;
+    try {
+      fresh = await input.readStartTimeMs(pid);
+    } catch {
+      fresh = null;
+    }
+    if (fresh !== proven) return false;
+  }
+  return true;
+}
