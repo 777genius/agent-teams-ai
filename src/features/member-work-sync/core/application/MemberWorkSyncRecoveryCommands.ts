@@ -149,6 +149,10 @@ export class MemberWorkSyncRecoveryCommands {
         existing ?? `${baseInput.id}:${defaultIntentKey}`
       );
       let committedStatus = read.status;
+      const candidateId = recoveryInput.id;
+      if (!existing) {
+        committedStatus = await attachReservation(recoveryInput, read.status);
+      }
       let ensured = await outboxStore.ensurePending(recoveryInput);
       // Inbox delivery is not settlement. Keep an unresolved delivered slot.
       // Allocate a new id only after terminal failure, payload conflict, or a
@@ -160,10 +164,23 @@ export class MemberWorkSyncRecoveryCommands {
       if (needsFreshIntent) {
         const retryKey = `${defaultIntentKey}:${mutationId}`;
         recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
-        committedStatus = await attachReservation(recoveryInput, committedStatus);
+        const previous =
+          !existing && committedStatus.recoveryHealth
+            ? {
+                ...committedStatus,
+                recoveryHealth: {
+                  ...committedStatus.recoveryHealth,
+                  reservations: (committedStatus.recoveryHealth.reservations ?? []).map(
+                    (reservation) =>
+                      reservation.intentId === candidateId
+                        ? { ...reservation, state: 'resolved' as const }
+                        : reservation
+                  ),
+                },
+              }
+            : committedStatus;
+        committedStatus = await attachReservation(recoveryInput, previous);
         ensured = await outboxStore.ensurePending(recoveryInput);
-      } else if (!existing) {
-        committedStatus = await attachReservation(recoveryInput, read.status);
       }
       if (!ensured.ok) {
         return { ok: false as const, code: 'payload_conflict' as const };
