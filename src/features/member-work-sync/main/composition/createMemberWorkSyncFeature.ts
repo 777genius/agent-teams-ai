@@ -7,6 +7,7 @@ import {
   type MemberWorkSyncPendingReportReplaySummary,
   type MemberWorkSyncReconcileContext,
   MemberWorkSyncReconciler,
+  type MemberWorkSyncRecoveryCommandResult,
   MemberWorkSyncRecoveryCommands,
   MemberWorkSyncReporter,
   MemberWorkSyncTeamOperationGate,
@@ -667,6 +668,17 @@ export function createMemberWorkSyncFeature(deps: {
     });
     return { scheduled: true, reason: 'scheduled', intentKey };
   };
+  const runRecovery = (
+    teamName: string,
+    work: (commands: MemberWorkSyncRecoveryCommands) => Promise<MemberWorkSyncRecoveryCommandResult>
+  ) =>
+    operationGate.run(teamName, async (admission) => {
+      const result = await work(new MemberWorkSyncRecoveryCommands(bindDeps(teamName, admission)));
+      if (!result.ok) {
+        throw new Error(result.code);
+      }
+      return result.status;
+    });
   return {
     startBackground,
     getStatus: (request) =>
@@ -743,36 +755,18 @@ export function createMemberWorkSyncFeature(deps: {
         lastDiscoveryAt: null,
         discoveryCapacityExhausted: false,
       },
-    stopAutoResume: (input) =>
-      operationGate.run(input.teamName, async (admission) => {
-        const result = await new MemberWorkSyncRecoveryCommands(
-          bindDeps(input.teamName, admission)
-        ).stop(input);
-        if (!result.ok) {
-          throw new Error(result.code);
-        }
-        return result.status;
-      }),
-    resumeAutoResume: (input) =>
-      operationGate.run(input.teamName, async (admission) => {
-        const result = await new MemberWorkSyncRecoveryCommands(
-          bindDeps(input.teamName, admission)
-        ).resume(input);
-        if (!result.ok) {
-          throw new Error(result.code);
-        }
-        return result.status;
-      }),
-    continueManually: (input) =>
-      operationGate.run(input.teamName, async (admission) => {
-        const result = await new MemberWorkSyncRecoveryCommands(
-          bindDeps(input.teamName, admission)
-        ).continueManually(input);
-        if (!result.ok) {
-          throw new Error(result.code);
-        }
-        return result.status;
-      }),
+    stopAutoResume: (input) => runRecovery(input.teamName, (commands) => commands.stop(input)),
+    resumeAutoResume: (input) => runRecovery(input.teamName, (commands) => commands.resume(input)),
+    continueManually: async (input) => {
+      const status = await runRecovery(input.teamName, (commands) =>
+        commands.continueManually(input)
+      );
+      await dispatchNudgesForReadyTeams(
+        [input.teamName],
+        `member-work-sync:${process.pid}:continue`
+      );
+      return status;
+    },
     recordStallObservation: async (input) => {
       await operationGate.run(input.teamName, async (admission) => {
         await new MemberWorkSyncRecoveryCommands(

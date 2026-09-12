@@ -1104,6 +1104,69 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('dispatches a Continue nudge before returning success', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-continue-now';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      await expect(feature.refreshStatus({ teamName, memberName })).resolves.toMatchObject({
+        state: 'needs_sync',
+        shadow: { wouldNudge: true },
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      const continued = await feature.continueManually({
+        teamName,
+        memberName,
+        idempotencyKey: 'continue-now',
+      });
+      const intentId = continued.recoveryHealth?.unresolvedIntentId;
+      expect(intentId).toBeTruthy();
+      await expect(
+        fs.promises.readFile(path.join(teamsBasePath, teamName, 'inboxes', `${memberName}.json`), {
+          encoding: 'utf8',
+        })
+      ).resolves.toContain(intentId);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('keeps alias admission fenced until a destructive purge settles after resume', async () => {
     const teamsBasePath = path.join(makeTempRoot(), 'teams');
     const deletionIdentityId = '11111111-1111-4111-8111-111111111111';
