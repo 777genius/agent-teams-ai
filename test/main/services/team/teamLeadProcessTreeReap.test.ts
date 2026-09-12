@@ -1,12 +1,13 @@
 import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
-import type {
-  AttributedCursorAgentProcess,
-  CursorAgentAttributionOwner,
-} from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+import type {
+  AttributedCursorAgentProcess,
+  CursorAgentAttributionOwner,
+} from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
 
 interface CursorAgentSweepInput {
   ownedWorkspaceCwds: readonly string[];
@@ -378,7 +379,19 @@ describe('the positive attribution records the runtime writes', () => {
         writtenAtMs: 1_700_000_000_100,
         exitedAtMs: null,
       },
-      host: null,
+      host: {
+        schemaVersion: 1,
+        attributionId: 'aaaa1111aaaa1111aaaa1111aaaa1111',
+        hostPid: 999,
+        hostStartedAtNative: null,
+        hostStartTimeFormat: null,
+        projectPath: 'C:\\workspaces\\example',
+        appInstanceId: '9100-1699999999000',
+        appProfileScope: 'this-install',
+        runtimeVersion: '0.0.95',
+        owners,
+        updatedAt: null,
+      },
       owners,
     };
   }
@@ -423,6 +436,38 @@ describe('the positive attribution records the runtime writes', () => {
    * The control: against a runtime that writes no record - every runtime this
    * app pins today - the stop reports exactly what it reported before.
    */
+  it.each(['unknown-only', 'missing host', 'empty owners'])(
+    'reports zero recorded owners for %s',
+    async (scenario) => {
+      writeTeamConfig('unknownattributedteam', { projectPath: 'C:\\workspaces\\example' });
+      const entry = attributedProcess(
+        4321,
+        scenario === 'empty owners'
+          ? []
+          : [
+              {
+                ...owner('alpha'),
+                teamId: null,
+                teamName: scenario === 'missing host' ? 'alpha' : null,
+              },
+            ]
+      );
+      if (scenario === 'missing host') entry.host = null;
+      readAttributedProcesses.mockResolvedValueOnce([entry]);
+
+      const result = await reapCursorAgentLeadTreesForStoppedTeam({
+        teamName: 'unknownattributedteam',
+        otherAliveTeams: [],
+        cursorAgentTreeSweep: { isEnabled: () => false, sweepCursorAgentTrees: vi.fn() },
+      });
+
+      expect(result.diagnostics).toContain(
+        'cursor-agent attribution: 1 runtime process record(s) available, 0 with a recorded owner; this stop still decides on the command line'
+      );
+      expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    }
+  );
+
   it('says nothing about attribution when the runtime recorded none', async () => {
     writeTeamConfig('unattributedteam', { projectPath: 'C:\\workspaces\\example' });
     sweepCursorAgentTrees.mockResolvedValueOnce({
