@@ -125,6 +125,9 @@ function readReservation(value: unknown): MemberWorkSyncRecoveryReservation {
   if (reservation.boundTurnId !== undefined && !identifier(reservation.boundTurnId)) {
     throw new MemberWorkSyncRecoveryHealthError();
   }
+  if (reservation.deliveredAt !== undefined && !timestamp(reservation.deliveredAt)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
   return {
     intentId: reservation.intentId,
     episodeId: reservation.episodeId,
@@ -135,6 +138,9 @@ function readReservation(value: unknown): MemberWorkSyncRecoveryReservation {
     controlRevision,
     ...(typeof reservation.boundTurnId === 'string'
       ? { boundTurnId: reservation.boundTurnId }
+      : {}),
+    ...(typeof reservation.deliveredAt === 'string'
+      ? { deliveredAt: reservation.deliveredAt }
       : {}),
     ...(terminalOutcome ? { terminalOutcome } : {}),
     ...(reservation.terminalReceiptId ? { terminalReceiptId: reservation.terminalReceiptId } : {}),

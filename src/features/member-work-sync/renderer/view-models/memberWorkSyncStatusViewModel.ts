@@ -73,9 +73,13 @@ export function toMemberWorkSyncStatusViewModel(
   const report = getMemberWorkSyncAcceptedReport(status);
   const attentionSummary = describeRecoveryAttention(status);
   const autoResumeStopped = Boolean(status.recoveryHealth?.autoResumeStopLatch);
+  const recoveryMayAct =
+    Boolean(attentionSummary) ||
+    Boolean(status.recoveryHealth?.unresolvedIntentId) ||
+    (status.recoveryHealth?.episodes.length ?? 0) > 0;
   const canContinue =
     Boolean(attentionSummary) && !autoResumeStopped && status.state === 'needs_sync';
-  const canStop = Boolean(attentionSummary) && !autoResumeStopped;
+  const canStop = recoveryMayAct && !autoResumeStopped;
   const canResume = autoResumeStopped;
   const base = {
     actionableCount,

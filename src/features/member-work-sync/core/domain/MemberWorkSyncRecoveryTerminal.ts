@@ -69,12 +69,16 @@ export function applyMemberWorkSyncDeliveredDispatch(input: {
   health?: MemberWorkSyncRecoveryHealth;
   intentId: string;
   boundTurnId?: string;
+  deliveredAt?: string;
 }): MemberWorkSyncRecoveryHealth | undefined {
   return patchMemberWorkSyncReservation(input.health, input.intentId, (reservation) => ({
     ...reservation,
     state: 'awaiting_outcome',
     ...(input.boundTurnId || reservation.boundTurnId
       ? { boundTurnId: input.boundTurnId ?? reservation.boundTurnId }
+      : {}),
+    ...(input.deliveredAt || reservation.deliveredAt
+      ? { deliveredAt: input.deliveredAt ?? reservation.deliveredAt }
       : {}),
   }));
 }
@@ -85,12 +89,17 @@ export function applyMemberWorkSyncAcceptedReportRetirement(input: {
 }): MemberWorkSyncRecoveryHealth | undefined {
   const intentId = input.health?.unresolvedIntentId;
   const reservation = input.health?.reservations?.find((entry) => entry.intentId === intentId);
-  if (!intentId || reservation?.state !== 'awaiting_outcome' || !input.reportedAt) {
+  if (
+    !intentId ||
+    reservation?.state !== 'awaiting_outcome' ||
+    !input.reportedAt ||
+    !reservation.deliveredAt
+  ) {
     return input.health;
   }
   const reportedAt = Date.parse(input.reportedAt);
-  const reservedMs = Date.parse(reservation.reservedAt);
-  if (!Number.isFinite(reportedAt) || !Number.isFinite(reservedMs) || reportedAt < reservedMs) {
+  const deliveredAt = Date.parse(reservation.deliveredAt);
+  if (!Number.isFinite(reportedAt) || !Number.isFinite(deliveredAt) || reportedAt < deliveredAt) {
     return input.health;
   }
   return (

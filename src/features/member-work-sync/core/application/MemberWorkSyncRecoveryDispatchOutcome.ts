@@ -99,6 +99,7 @@ export async function recordMemberWorkSyncDispatchOutcome(input: {
               ? applyMemberWorkSyncDeliveredDispatch({
                   health: status.recoveryHealth,
                   intentId: input.item.id,
+                  deliveredAt: input.deps.clock.now().toISOString(),
                   ...(input.item.deliveredMessageId
                     ? { boundTurnId: input.item.deliveredMessageId }
                     : {}),

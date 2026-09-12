@@ -2620,6 +2620,7 @@ describe('MemberWorkSync use cases', () => {
       state: 'awaiting_outcome',
       boundTurnId: 'msg_recovery_prompt',
     });
+    expect(after?.recoveryHealth?.reservations?.[0]?.deliveredAt).toBeTruthy();
   });
 
   it('releases an awaiting recovery reservation after a later accepted report', async () => {
@@ -2657,6 +2658,7 @@ describe('MemberWorkSync use cases', () => {
             episodeId: 'episode-1',
             trigger: 'automatic',
             reservedAt: '2026-05-05T12:00:00.000Z',
+            deliveredAt: '2026-05-05T12:00:02.000Z',
             state: 'awaiting_outcome',
             payloadHash: 'hash-settled',
             controlRevision: 1,

@@ -182,6 +182,7 @@ export interface MemberWorkSyncRecoveryReservation {
   payloadHash: string;
   controlRevision: number;
   boundTurnId?: string;
+  deliveredAt?: string;
   terminalOutcome?: MemberWorkSyncRecoveryTerminalOutcome;
   terminalReceiptId?: string;
   pendingAck?: boolean;

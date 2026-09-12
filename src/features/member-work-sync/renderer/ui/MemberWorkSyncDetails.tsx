@@ -82,7 +82,12 @@ export const MemberWorkSyncDetails = ({
         </div>
       </dl>
 
-      {viewModel.attentionSummary || viewModel.autoResumeStopped || actionError ? (
+      {viewModel.attentionSummary ||
+      viewModel.autoResumeStopped ||
+      viewModel.canContinue ||
+      viewModel.canStop ||
+      viewModel.canResume ||
+      actionError ? (
         <div className="mt-3 space-y-2">
           {viewModel.attentionSummary ? (
             <p

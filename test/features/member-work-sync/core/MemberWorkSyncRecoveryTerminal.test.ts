@@ -115,10 +115,12 @@ describe('member work sync recovery terminal protocol', () => {
       health,
       intentId: 'intent-1',
       boundTurnId: 'msg_recovery_prompt',
+      deliveredAt: '2026-09-11T12:00:30.000Z',
     });
     expect(next?.reservations?.[0]).toMatchObject({
       state: 'awaiting_outcome',
       boundTurnId: 'msg_recovery_prompt',
+      deliveredAt: '2026-09-11T12:00:30.000Z',
     });
   });
 
@@ -127,6 +129,7 @@ describe('member work sync recovery terminal protocol', () => {
       health,
       intentId: 'intent-1',
       boundTurnId: 'msg_recovery_prompt',
+      deliveredAt: '2026-09-11T12:00:30.000Z',
     });
     const retired = applyMemberWorkSyncAcceptedReportRetirement({
       health: awaiting,
@@ -140,16 +143,31 @@ describe('member work sync recovery terminal protocol', () => {
     });
   });
 
-  it('does not retire an awaiting reservation from an earlier report', () => {
+  it('does not retire an awaiting reservation from a report before delivery', () => {
+    const awaiting = applyMemberWorkSyncDeliveredDispatch({
+      health,
+      intentId: 'intent-1',
+      deliveredAt: '2026-09-11T12:05:00.000Z',
+    });
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
+      health: awaiting,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(next?.unresolvedIntentId).toBe('intent-1');
+    expect(next?.reservations?.[0]?.state).toBe('awaiting_outcome');
+  });
+
+  it('does not retire an awaiting reservation without delivery proof', () => {
     const awaiting = applyMemberWorkSyncDeliveredDispatch({
       health,
       intentId: 'intent-1',
     });
     const next = applyMemberWorkSyncAcceptedReportRetirement({
       health: awaiting,
-      reportedAt: '2026-09-11T11:59:00.000Z',
+      reportedAt: '2026-09-11T12:01:00.000Z',
     });
     expect(next?.unresolvedIntentId).toBe('intent-1');
     expect(next?.reservations?.[0]?.state).toBe('awaiting_outcome');
+    expect(next?.reservations?.[0]?.deliveredAt).toBeUndefined();
   });
 });

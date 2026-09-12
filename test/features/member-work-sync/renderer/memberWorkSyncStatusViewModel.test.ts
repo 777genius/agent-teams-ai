@@ -217,6 +217,32 @@ describe('memberWorkSyncStatusViewModel', () => {
     expect(viewModel.canStop).toBeUndefined();
     expect(viewModel.canResume).toBe(true);
   });
+
+  it('offers Stop while automatic recovery is observing before attention', () => {
+    const viewModel = toMemberWorkSyncStatusViewModel(
+      makeStatus({
+        recoveryHealth: {
+          schemaVersion: 1,
+          episodes: [
+            {
+              episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+              workKey: 'task-1:bob',
+              taskId: 'task-1',
+              firstObservedAt: '2026-04-29T00:00:00.000Z',
+              dueAt: '2026-04-29T00:20:00.000Z',
+              phase: 'observing',
+              reason: 'owned_pending_task',
+            },
+          ],
+        },
+      })
+    );
+
+    expect(viewModel.attentionSummary).toBeUndefined();
+    expect(viewModel.canContinue).toBeUndefined();
+    expect(viewModel.canStop).toBe(true);
+    expect(viewModel.canResume).toBeUndefined();
+  });
 });
 
 it('shows the accepted lease even when the last diagnostic report was rejected', () => {
