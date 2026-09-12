@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Real desktop/store/IPC/filesystem test. Never launches a team or provider.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { chmod, mkdir, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises';
@@ -22,6 +22,8 @@ const project = path.join(artifacts, 'TEST-project');
 const nativeLog = path.join(artifacts, 'native-notifications.ndjson');
 const evidence = {
   kind: 'comment-notification-desktop-v1',
+  revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+  startedAt: new Date().toISOString(),
   artifacts,
   team,
   checks: [],
@@ -442,12 +444,14 @@ try {
   await forwarded('TEST_historical-removed');
   await snapshot('historical-startup', 2, 0);
   // Establish inbox baseline using a real watched file event, then prove it with a control.
-  const inboxEventCount = () => cdp.evaluate(
-    'window.__commentInboxEvents.filter((event) => event.type === "inbox").length'
-  );
+  const inboxEventCount = () =>
+    cdp.evaluate('window.__commentInboxEvents.filter((event) => event.type === "inbox").length');
   const baselineEvents = await inboxEventCount();
   await json(inboxFile, JSON.parse(await readFile(inboxFile, 'utf8')));
-  await until(async () => (await inboxEventCount()) > baselineEvents, 'engaged inbox watcher event');
+  await until(
+    async () => (await inboxEventCount()) > baselineEvents,
+    'engaged inbox watcher event'
+  );
   await delay(1500);
   await control('TEST_CONTROL_BASELINE');
   await until(
@@ -535,18 +539,23 @@ try {
     throw error;
   });
   evidence.blockedRuntimeCalls = evidence.runtimeDenied.trim()
-    ? evidence.runtimeDenied.trim().split('\n').map((line) => JSON.parse(line))
+    ? evidence.runtimeDenied
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line))
     : [];
   // The app probes provider status/bridge availability at startup. The fixture
   // rejects these with exit 77; no real runtime is reachable through this path.
   assert(
     evidence.blockedRuntimeCalls.every(
-      (args) => args[0] === 'runtime' &&
+      (args) =>
+        args[0] === 'runtime' &&
         (args[1] === 'opencode-command' || (args[1] === 'status' && args.includes('--summary')))
     ),
     'Only blocked startup availability probes expected; no lifecycle commands'
   );
   evidence.passed = true;
+  evidence.completedAt = new Date().toISOString();
 } catch (error) {
   evidence.error = error.stack || String(error);
   if (cdp) await cdp.screenshot(path.join(artifacts, 'failure.png')).catch(() => {});
