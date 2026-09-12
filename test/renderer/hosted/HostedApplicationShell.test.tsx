@@ -261,13 +261,21 @@ describe('HostedApplicationShell team configuration workflow', () => {
     vi.unstubAllGlobals();
   });
 
-  it('runs create, load, revision update, and delete through the feature port', async () => {
+  it('runs create and delete while presenting a saved manual draft as safely unavailable', async () => {
     let createAttempt = 0;
     const transport: HostedTeamConfigurationTransport = {
       getSavedRequest: vi.fn(async ({ teamId }) => ({
         schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
         kind: 'found' as const,
-        draft: draft(teamId as typeof TEAM_ONE),
+        draft: {
+          ...draft(teamId as typeof TEAM_ONE),
+          configuration: {
+            schemaVersion: 1 as const,
+            toolApprovalMode: 'manual' as const,
+            lanes: [{ kind: 'native' as const, provider: 'codex' as const,
+              members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-6' }] }],
+          },
+        },
       })),
       createDraft: vi.fn(async () => {
         createAttempt += 1;
@@ -289,10 +297,13 @@ describe('HostedApplicationShell team configuration workflow', () => {
               outcome: 'created' as const,
             };
       }),
-      updateDraft: vi.fn(async ({ teamId }) => ({
+      updateDraft: vi.fn(async () => ({
         schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
-        kind: 'updated' as const,
-        draft: draft(teamId as typeof TEAM_ONE, REVISION_TWO, 'Renamed Team'),
+        kind: 'error' as const,
+        error: createSafeAppError({
+          code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable',
+        }),
+        retryable: false,
       })),
       deleteDraft: vi.fn(async ({ workspaceId, teamId }) => ({
         schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
@@ -327,11 +338,16 @@ describe('HostedApplicationShell team configuration workflow', () => {
       vi.mocked(transport.createDraft).mock.calls[1]?.[0].idempotencyKey
     );
     await vi.waitFor(() => expect(host.textContent).toContain(`Server revision: ${REVISION_ONE}`));
+    expect(host.textContent).toContain('remains readable and unchanged');
+    expect(host.textContent).toContain('updates and activation are unavailable in Hosted MVP');
 
     const editName = host.querySelector<HTMLInputElement>('[aria-label="Team name"]')!;
     await act(async () => change(editName, 'Renamed Team'));
     await click(button(host, 'Save configuration'));
-    await vi.waitFor(() => expect(host.textContent).toContain(`Server revision: ${REVISION_TWO}`));
+    await vi.waitFor(() => expect(host.textContent).toContain(
+      'Manual approval is temporarily unavailable in Hosted MVP.'
+    ));
+    expect(host.textContent).toContain(`Server revision: ${REVISION_ONE}`);
     expect(transport.updateDraft).toHaveBeenCalledWith(
       expect.objectContaining({
         expectedRevision: REVISION_ONE,
@@ -346,7 +362,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await click(button(confirmation, 'Discard draft'));
     await vi.waitFor(() => expect(transport.deleteDraft).toHaveBeenCalledOnce());
     expect(transport.deleteDraft).toHaveBeenCalledWith(
-      expect.objectContaining({ expectedRevision: REVISION_TWO }),
+      expect.objectContaining({ expectedRevision: REVISION_ONE }),
       expect.anything()
     );
     await vi.waitFor(() => expect(host.textContent).toContain('Create team draft'));

@@ -39,9 +39,14 @@ describe('hosted approval production admission', () => {
     );
     expect(environmentComposition).toContain('hosted-production-producer-provenance-required');
     expect(environmentComposition).toContain('installProductHostedProducerProvenance');
+    expect(environmentComposition).toContain(
+      'manualApprovalAvailable = isHostedMvpManualApprovalAvailable()'
+    );
+    expect(environmentComposition).toContain('disableHostedNativeActivationInbox();');
     expect(standalone).toMatch(
       /hostedOperatorProduction\s*=\s*await createHostedApprovalProductionCompositionFromEnvironment\(\s*hostedBootstrapEnvironment,/
     );
+    expect(standalone).toContain('isHostedMvpManualApprovalAvailable()');
     expect(production).toContain('ownerAdmission.approvalRoutes.length === 0');
     expect(production).toContain('createHostedApprovalAdmissionAuthority');
     expect(production).toContain('activateHostedApprovalRuntime');

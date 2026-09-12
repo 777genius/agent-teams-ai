@@ -21,7 +21,12 @@ import {
   parseHostedGetSavedTeamRequest,
   parseHostedUpdateDraftTeamRequest,
 } from '../../../../contracts/hosted';
-import { type HostedDraftPublicationLookupResult, parseHostedDraftPublicationLookup, parseHostedDraftPublicationStatus, publicationLookupResult } from '../../../../contracts/hostedDraftPublication';
+import {
+  type HostedDraftPublicationLookupResult,
+  parseHostedDraftPublicationLookup,
+  parseHostedDraftPublicationStatus,
+  publicationLookupResult,
+} from '../../../../contracts/hostedDraftPublication';
 import {
   assertHostedRosterMatches,
   parseHostedRosterConfiguration,
@@ -67,6 +72,7 @@ function unavailable() {
 const PUBLIC_APPLICATION_ERRORS = Object.freeze({
   not_found: Object.freeze({ reason: 'team_configuration_not_found', retryable: false }),
   conflict: Object.freeze({ reason: 'team_configuration_revision_conflict', retryable: false }),
+  unsupported: Object.freeze({ reason: 'team_configuration_unsupported', retryable: false }),
   unavailable: Object.freeze({ reason: 'team_configuration_unavailable', retryable: true }),
   cancelled: Object.freeze({ reason: 'team_configuration_cancelled', retryable: false }),
 } as const);
@@ -149,9 +155,14 @@ function projectDraft(
   }
   try {
     const configuration = Object.hasOwn(value, 'configuration')
-      ? parseHostedRosterConfiguration(value.configuration) : undefined;
+      ? parseHostedRosterConfiguration(value.configuration)
+      : undefined;
     if (configuration) assertHostedRosterMatches(configuration, members);
-    return Object.freeze({ ...identity, revision, metadata, members: Object.freeze(members),
+    return Object.freeze({
+      ...identity,
+      revision,
+      metadata,
+      members: Object.freeze(members),
       ...(configuration ? { configuration } : {}),
     });
   } catch {
@@ -160,8 +171,14 @@ function projectDraft(
 }
 
 export interface HostedTeamConfigurationFacade {
-  getPublication?(body: unknown, principal: QueryContext): Promise<HostedDraftPublicationLookupResult>;
-  recoverPublication?(body: unknown, principal: QueryContext): Promise<HostedDraftPublicationLookupResult>;
+  getPublication?(
+    body: unknown,
+    principal: QueryContext
+  ): Promise<HostedDraftPublicationLookupResult>;
+  recoverPublication?(
+    body: unknown,
+    principal: QueryContext
+  ): Promise<HostedDraftPublicationLookupResult>;
   getSavedRequest(body: unknown, principal: QueryContext): Promise<HostedGetSavedTeamResult>;
   createDraft(body: unknown, principal: QueryContext): Promise<HostedCreateDraftTeamResult>;
   updateDraft(body: unknown, principal: QueryContext): Promise<HostedUpdateDraftTeamResult>;
@@ -175,21 +192,41 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
     private readonly authorization: HostedTeamConfigurationAuthorizationPort
   ) {}
 
-  getPublication(body: unknown, principal: QueryContext) { return this.publication(body, principal, false); }
-  recoverPublication(body: unknown, principal: QueryContext) { return this.publication(body, principal, true); }
-  private async publication(body: unknown, principal: QueryContext, recover: boolean): Promise<HostedDraftPublicationLookupResult> {
+  getPublication(body: unknown, principal: QueryContext) {
+    return this.publication(body, principal, false);
+  }
+  recoverPublication(body: unknown, principal: QueryContext) {
+    return this.publication(body, principal, true);
+  }
+  private async publication(
+    body: unknown,
+    principal: QueryContext,
+    recover: boolean
+  ): Promise<HostedDraftPublicationLookupResult> {
     let request;
-    try { request = parseHostedDraftPublicationLookup(body); }
-    catch { return errorResult('invalid_request', 'team_configuration_request_invalid', false); }
-    if (!(await this.authorize(recover ? 'recover_publication' : 'get_publication',
-      { kind: 'workspace', workspaceId: request.workspaceId }, principal))) {
+    try {
+      request = parseHostedDraftPublicationLookup(body);
+    } catch {
+      return errorResult('invalid_request', 'team_configuration_request_invalid', false);
+    }
+    if (
+      !(await this.authorize(
+        recover ? 'recover_publication' : 'get_publication',
+        { kind: 'workspace', workspaceId: request.workspaceId },
+        principal
+      ))
+    ) {
       return errorResult('forbidden', 'team_configuration_forbidden', false);
     }
     try {
       if (!this.application.publicationStatus) return unavailable();
       const result = await this.application.publicationStatus(request, principal, recover);
-      return result.kind === 'error' ? applicationError(result.error) : publicationLookupResult(result.teamId, result.publication);
-    } catch { return unavailable(); }
+      return result.kind === 'error'
+        ? applicationError(result.error)
+        : publicationLookupResult(result.teamId, result.publication);
+    } catch {
+      return unavailable();
+    }
   }
 
   async getSavedRequest(body: unknown, principal: QueryContext): Promise<HostedGetSavedTeamResult> {
@@ -242,7 +279,8 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
       if (result.kind === 'error') return applicationError(result.error);
       if (result.publication) {
         const publication = parseHostedDraftPublicationStatus(result.publication);
-        if (publication.state === 'pending' || publication.state === 'recovery_required') return unavailable();
+        if (publication.state === 'pending' || publication.state === 'recovery_required')
+          return unavailable();
       }
       const identity = Object.freeze({
         workspaceId: parsed.value.workspaceId,

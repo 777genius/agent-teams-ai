@@ -1,6 +1,9 @@
 import { isAbsolute, resolve } from 'node:path';
 
-import { createHostedDraftPublicationComposition, type HostedDraftPublicationComposition } from './composition/hosted/hostedDraftPublicationComposition';
+import {
+  createHostedDraftPublicationComposition,
+  type HostedDraftPublicationComposition,
+} from './composition/hosted/hostedDraftPublicationComposition';
 import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
 export { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
 
@@ -11,7 +14,10 @@ import {
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
-import { createInternalStorageFeature, type TeamIdentityReadGateway } from '@features/internal-storage/main';
+import {
+  createInternalStorageFeature,
+  type TeamIdentityReadGateway,
+} from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import {
   createHostedTeamIdentityReadBackend,
@@ -20,6 +26,7 @@ import {
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Standalone binds the bounded hosted approval catalog.
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
+import { isHostedMvpManualApprovalAvailable } from '@features/team-configuration/contracts';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
@@ -33,6 +40,7 @@ import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
 } from './composition/hosted/hostedAccessNodePlatform';
+import { readHostedCoordinationEventRetentionPolicy } from './composition/hosted/hostedCoordinationEventRetentionPolicyFromEnvironment';
 import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
 import { hostedCoordinationEventStreamIdentityFactory } from './composition/hosted/hostedCoordinationEventStreamNodePlatform';
 import {
@@ -129,35 +137,9 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-function hostedRetentionInteger(
-  name: string,
-  fallback: number,
-  minimum: number,
-  maximum: number
-): number {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-  if (!/^[1-9][0-9]*$/u.test(raw)) throw new TypeError(`${name} is invalid`);
-  const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new TypeError(`${name} is invalid`);
-  }
-  return value;
-}
-const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
-  intervalMs: hostedRetentionInteger(
-    'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
-    60_000,
-    50,
-    86_400_000
-  ),
-  maxRetainedEvents: hostedRetentionInteger(
-    'HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS',
-    10_000,
-    1,
-    1_000_000
-  ),
-});
+const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = readHostedCoordinationEventRetentionPolicy(
+  process.env
+);
 if (!process.env.CORS_ORIGIN) process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
@@ -242,7 +224,10 @@ async function start(): Promise<void> {
   );
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
-  hostedAuthStorageBackend = createInternalStorageFeature({ userDataPath: authDataDirectory, scope: 'hosted-auth' });
+  hostedAuthStorageBackend = createInternalStorageFeature({
+    userDataPath: authDataDirectory,
+    scope: 'hosted-auth',
+  });
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
       ? null
@@ -287,12 +272,18 @@ async function start(): Promise<void> {
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
 
       try {
-        hostedDraftPublication = await createHostedDraftPublicationComposition({ bootstrap, drafts: hostedAuthStorageBackend });
+        hostedDraftPublication = await createHostedDraftPublicationComposition({
+          bootstrap,
+          drafts: hostedAuthStorageBackend,
+        });
       } catch {
-        logger.warn('Canonical draft publication unavailable; configuration mutations remain disabled.');
+        logger.warn(
+          'Canonical draft publication unavailable; configuration mutations remain disabled.'
+        );
       }
       const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({
-        appDataRoot, currentWriter: hostedDraftPublication?.identityReadSource,
+        appDataRoot,
+        currentWriter: hostedDraftPublication?.identityReadSource,
       });
       if (teamIdentityGateway === null) {
         logger.warn(
@@ -301,8 +292,11 @@ async function start(): Promise<void> {
       } else {
         // Retained-writer reads preserve connection custody on every snapshot, including live WAL.
         // The legacy frozen-file admission keeps its separate query-only live worker path.
-        hostedTeamIdentityReadBackend = hostedDraftPublication ? null : createHostedTeamIdentityReadBackend(appDataRoot);
-        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend?.gateway ?? teamIdentityGateway;
+        hostedTeamIdentityReadBackend = hostedDraftPublication
+          ? null
+          : createHostedTeamIdentityReadBackend(appDataRoot);
+        const liveTeamIdentityGateway =
+          hostedTeamIdentityReadBackend?.gateway ?? teamIdentityGateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
@@ -342,17 +336,13 @@ async function start(): Promise<void> {
   if (admittedHostedClaudeRoot !== null) {
     setClaudeBasePathOverride(admittedHostedClaudeRoot);
   }
-  const [
-    { HttpServer },
-    { LocalFileSystemProvider },
-    { NotificationManager },
-    { ServiceContext },
-  ] = await Promise.all([
-    import('./services/infrastructure/HttpServer'),
-    import('./services/infrastructure/LocalFileSystemProvider'),
-    import('./services/infrastructure/NotificationManager'),
-    import('./services/infrastructure/ServiceContext'),
-  ]);
+  const [{ HttpServer }, { LocalFileSystemProvider }, { NotificationManager }, { ServiceContext }] =
+    await Promise.all([
+      import('./services/infrastructure/HttpServer'),
+      import('./services/infrastructure/LocalFileSystemProvider'),
+      import('./services/infrastructure/NotificationManager'),
+      import('./services/infrastructure/ServiceContext'),
+    ]);
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
   logger.info(`Projects directory: ${projectsDir}`);
@@ -470,29 +460,36 @@ async function start(): Promise<void> {
         requestStandaloneFatalFailStop?.('Approval owner lost', error),
     },
     {
-      drainStreams: operation => {
-        if (!hostedCoordinationEventStream) throw new Error('hosted_coordination_stream_not_initialized');
+      drainStreams: (operation) => {
+        if (!hostedCoordinationEventStream)
+          throw new Error('hosted_coordination_stream_not_initialized');
         return hostedCoordinationEventStream.runWithStreamsDrained(() =>
-          runWithEventStreamsDrained(operation));
+          runWithEventStreamsDrained(operation)
+        );
       },
-      createRouteAdmission: isReady => createHostedRouteAdmissionBinding({
-        routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
-        routeScope: 'production',
-        readiness: { readiness: async () => createStandaloneHostedRouteReadiness({
-          fatalFailStop,
-          runtimeIdentityAvailable: hostedDiagnosticsRuntimeInstance !== null,
-          diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
-          // This catalog owns only approvals. A new approval generation must not
-          // revive the retired lifecycle/task/message lease or its readiness.
-          lifecycleOwnerAvailable: isReady(),
-        }) },
-      }),
+      createRouteAdmission: (isReady) =>
+        createHostedRouteAdmissionBinding({
+          routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+          routeScope: 'production',
+          readiness: {
+            readiness: async () =>
+              createStandaloneHostedRouteReadiness({
+                fatalFailStop,
+                runtimeIdentityAvailable: hostedDiagnosticsRuntimeInstance !== null,
+                diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
+                // This catalog owns only approvals. A new approval generation must not
+                // revive the retired lifecycle/task/message lease or its readiness.
+                lifecycleOwnerAvailable: isReady(),
+              }),
+          },
+        }),
       revokeLifecycle: () => {
         hostedTeamMessageWriter?.close();
         hostedLifecycleCommands?.close();
         hostedLifecycleReadinessCleanup?.();
       },
-    }
+    },
+    isHostedMvpManualApprovalAvailable()
   );
   hostedTeamMessageWriter =
     hostedLifecycleCommands === null ||

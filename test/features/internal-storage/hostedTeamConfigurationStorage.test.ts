@@ -300,7 +300,7 @@ describe('hosted team configuration SQLite authority', () => {
     expect(mutationWinners).toHaveLength(1);
   });
 
-  it('persists complete configuration across restart and preserves it byte-for-byte on metadata edits', async () => {
+  it('keeps historical manual configuration readable and rejects every update without mutation', async () => {
     const file = await databasePath();
     const storage = core(file);
     const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
@@ -312,19 +312,28 @@ describe('hosted team configuration SQLite authority', () => {
     if (created.kind !== 'created') throw new Error('expected create');
     const identity = { workspaceId, teamId: created.teamId };
     const database = openDatabase(file);
-    const storedRoster = () => (database.prepare('SELECT members_json FROM hosted_team_configuration_drafts WHERE team_id = ?').get(created.teamId) as { members_json: string }).members_json;
-    const initialBytes = storedRoster();
-    expect(JSON.parse(initialBytes)).toEqual({ schemaVersion: 1, members: create.members, configuration });
+    const storedRow = () => database.prepare(
+      'SELECT revision_ordinal, revision_token, metadata_json, members_json, updated_at_ms FROM hosted_team_configuration_drafts WHERE team_id = ?'
+    ).get(created.teamId);
+    const initialRow = storedRow();
+    expect(JSON.parse((initialRow as { members_json: string }).members_json)).toEqual({
+      schemaVersion: 1, members: create.members, configuration,
+    });
     try {
-      const updated = storage.handle('hostedTeamConfiguration.update', { ...identity,
-        expectedRevision: created.revision, updates: { description: 'Metadata only' }, deadlineAtMs,
-      }) as HostedTeamConfigurationStorageUpdateResult;
-      if (updated.kind !== 'updated') throw new Error('expected update');
-      expect(updated.draft.configuration).toEqual(configuration);
-      expect(storedRoster()).toBe(initialBytes);
+      for (const updates of [
+        { description: 'Metadata only' },
+        { configuration: { ...configuration, toolApprovalMode: 'auto' as const } },
+      ]) {
+        expect(storage.handle('hostedTeamConfiguration.update', { ...identity,
+          expectedRevision: created.revision, updates, deadlineAtMs,
+        })).toEqual({ kind: 'unavailable', reason: 'manual_approval_unavailable' });
+        expect(storedRow()).toEqual(initialRow);
+      }
       storage.close();
       const restarted = core(file);
-      expect(restarted.handle('hostedTeamConfiguration.read', identity)).toEqual({ kind: 'found', draft: updated.draft });
+      expect(restarted.handle('hostedTeamConfiguration.read', identity)).toMatchObject({
+        kind: 'found', draft: { revision: created.revision, metadata: create.metadata, configuration },
+      });
       expect(restarted.handle('hostedTeamConfiguration.create', request)).toEqual({ ...created, outcome: 'idempotent_replay' });
       expect(restarted.handle('hostedTeamConfiguration.create', { ...request, payloadHash: 'b'.repeat(64),
         configuration: { ...configuration, toolApprovalMode: 'auto' },
@@ -340,7 +349,7 @@ describe('hosted team configuration SQLite authority', () => {
     const original = storage.handle('hostedTeamConfiguration.read', identity);
     expect(original).toMatchObject({ kind: 'found', draft: { members: create.members } });
     expect(original).not.toHaveProperty('draft.configuration');
-    const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+    const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
       { kind: 'native', provider: 'codex', members: [{ name: 'reviewer', prompt: 'Review.', model: 'gpt-5', effort: 'high' }] },
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'lead', prompt: 'Coordinate.' }] },
     ] } as const;

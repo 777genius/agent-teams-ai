@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import { parseHostedPromotionBegin } from '@features/internal-storage/contracts';
 import { HostedPromotionStorageOps } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { compileHostedPromotionPlan } from '@features/team-configuration';
 import { FreezeHostedPromotion } from '@features/team-configuration/core/application/hosted-authority/FreezeHostedPromotion';
 import { parseActorId, parseDeploymentId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
@@ -23,12 +24,12 @@ const publicationBinding = {
   runtimeWorkspaceId: parseWorkspaceId(`workspace_${'4'.repeat(32)}`),
   bindingGeneration: 1,
 };
-const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
   { kind: 'native', provider: 'codex', members: [{ name: 'builder', prompt: 'Build precisely.', model: 'gpt-6', effort: 'medium' }] },
   { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'reviewer', prompt: 'Review carefully.' }] },
 ] };
 
-async function fixture() {
+async function fixture(configurationOverride: typeof configuration = configuration) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'promotion-storage-'));
   cleanup.push(() => fs.rm(root, { recursive: true, force: true }));
   const databasePath = path.join(root, 'app.db');
@@ -45,7 +46,7 @@ async function fixture() {
   const worker = open();
   const created = worker.handle('hostedTeamConfiguration.create', { workspaceId, publicationBinding,
     idempotencyKey: 'idempotency_create-promotion', payloadHash: 'a'.repeat(64), metadata: { name: 'Original' },
-    members: [{ name: 'builder' }, { name: 'reviewer' }], configuration,
+    members: [{ name: 'builder' }, { name: 'reviewer' }], configuration: configurationOverride,
     deadlineAtMs: Number.MAX_SAFE_INTEGER } as never) as HostedTeamConfigurationStorageCreateResult;
   if (created.kind !== 'created') throw new Error('fixture-create');
   const scope = { workspaceId, teamId: created.teamId, actorId: publicationBinding.actorId, deploymentId: publicationBinding.deploymentId };
@@ -100,7 +101,7 @@ describe('durable promotion prerequisite', () => {
     } finally { db.close(); }
     expect(operation.planSha256).toBe(createHash('sha256').update(operation.planJson).digest('hex'));
     expect(JSON.parse(operation.planJson)).toEqual({ schemaVersion: 2, workspaceId: publicationBinding.runtimeWorkspaceId,
-      teamId: f.input.teamId, workspaceRoot: '/sandbox/project', toolApprovalMode: 'manual',
+      teamId: f.input.teamId, workspaceRoot: '/sandbox/project', toolApprovalMode: 'auto',
       lanes: configuration.lanes.map((lane, index) => ({ laneId: operation.laneIds[index], ...lane })) });
     expect(f.begin()).toEqual({ kind: 'frozen', operation });
     f.worker.close();
@@ -108,6 +109,79 @@ describe('durable promotion prerequisite', () => {
     expect(restarted.handle('hostedPromotion.begin', f.input)).toEqual({ kind: 'frozen', operation });
     expect(restarted.handle('hostedPromotion.lookup', { ...f.scope, reference: { operationId: operation.operationId } } as never)).toEqual(operation);
     expect(restarted.handle('hostedPromotion.lookup', { ...f.scope, reference: { idempotencyKey: f.input.idempotencyKey } } as never)).toEqual(operation);
+  });
+
+  it('keeps a saved manual draft readable while refusing to freeze it for activation', async () => {
+    const f = await fixture({ ...configuration, toolApprovalMode: 'manual' });
+    expect(f.worker.handle('hostedTeamConfiguration.read', {
+      workspaceId, teamId: f.input.teamId,
+    } as never)).toMatchObject({
+      kind: 'found', draft: { configuration: { toolApprovalMode: 'manual' } },
+    });
+    expect(f.begin()).toEqual({
+      kind: 'unavailable', reason: 'manual_approval_unavailable',
+    });
+    expect(f.worker.handle('hostedPromotion.lookup', { ...f.scope,
+      reference: { idempotencyKey: f.input.idempotencyKey },
+    } as never)).toBeNull();
+  });
+
+  it('rejects an exact replay of a historical frozen manual operation without mutation', async () => {
+    const manualConfiguration = { ...configuration, toolApprovalMode: 'manual' as const };
+    const f = await fixture(manualConfiguration);
+    const read = f.worker.handle('hostedTeamConfiguration.read', {
+      workspaceId, teamId: f.input.teamId,
+    } as never) as { kind: 'found'; draft: Record<string, unknown> };
+    const database = new Database(f.databasePath);
+    const laneIds = manualConfiguration.lanes.map((_, index) =>
+      `lane_${String(index + 1).repeat(32)}`);
+    const planJson = compileHostedPromotionPlan({
+      runtimeWorkspaceId: f.input.runtimeWorkspaceId,
+      originalTeamId: f.input.teamId,
+      admittedWorkspaceRoot: f.input.admittedWorkspaceRoot,
+      configuration: manualConfiguration,
+      laneIds,
+    });
+    const planSha256 = createHash('sha256').update(planJson).digest('hex');
+    const { deadlineAtMs: ignored, ...binding } = f.input;
+    void ignored;
+    const frozenRosterJson = (database.prepare(
+      'SELECT members_json FROM hosted_team_configuration_drafts WHERE team_id = ?'
+    ).get(f.input.teamId) as { members_json: string }).members_json;
+    const operation: HostedPromotionRecord = {
+      ...binding,
+      operationId: `promotion_${'6'.repeat(32)}`,
+      frozenRosterJson,
+      frozenDraftJson: JSON.stringify(read.draft),
+      laneIds,
+      planJson,
+      planSha256,
+      planGeneration: `plan-generation_${planSha256}`,
+      createdAtMs: 1,
+      state: 'frozen',
+    };
+    database.prepare(`INSERT INTO hosted_team_configuration_promotions
+      (operation_id, workspace_id, team_id, actor_id, deployment_id, idempotency_key, record_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(operation.operationId, operation.workspaceId,
+      operation.teamId, operation.actorId, operation.deploymentId, operation.idempotencyKey,
+      JSON.stringify(operation));
+    const before = database.prepare(
+      'SELECT * FROM hosted_team_configuration_promotions WHERE operation_id = ?'
+    ).get(operation.operationId);
+    database.close();
+
+    expect(f.begin()).toEqual({ kind: 'unavailable', reason: 'manual_approval_unavailable' });
+    f.worker.close();
+    const restarted = f.open();
+    expect(restarted.handle('hostedPromotion.begin', f.input)).toEqual({
+      kind: 'unavailable', reason: 'manual_approval_unavailable',
+    });
+    const verifier = new Database(f.databasePath, { readonly: true });
+    try {
+      expect(verifier.prepare(
+        'SELECT * FROM hosted_team_configuration_promotions WHERE operation_id = ?'
+      ).get(operation.operationId)).toEqual(before);
+    } finally { verifier.close(); }
   });
 
   it.each(['idempotencyKey', 'expectedRevision', 'actorId', 'deploymentId', 'runtimeWorkspaceId', 'bindingGeneration', 'createOperationId', 'admittedWorkspaceRoot'] as const)(
@@ -642,13 +716,16 @@ describe('durable promotion prerequisite', () => {
           if (corruption === 'schemaVersion') roster.schemaVersion = 2;
           else if (corruption === 'extra_field') roster.extra = true;
           else if (corruption === 'members') roster.members = [{ name: 'intruder' }];
-          else roster.configuration = { ...configuration, toolApprovalMode: 'auto' };
+          else roster.configuration = { ...configuration, toolApprovalMode: 'manual' };
           record.frozenRosterJson = JSON.stringify(roster);
         }
         writer.prepare('UPDATE hosted_team_configuration_promotions SET record_json = ?').run(JSON.stringify(record));
-        expect(() => f.worker.handle('hostedPromotion.lookup', { ...f.scope,
-          reference: { operationId: operation.operationId } } as never)).toThrow();
+        const lookup = () => f.worker.handle('hostedPromotion.lookup', { ...f.scope,
+          reference: { operationId: operation.operationId } } as never);
+        if (corruption === 'configuration') expect(lookup).toThrow('promotion-snapshot-corrupt');
+        else expect(lookup).toThrow();
         if (corruption === 'missing_publication') expect(f.begin().kind).toBe('unavailable');
+        else if (corruption === 'configuration') expect(() => f.begin()).toThrow('promotion-snapshot-corrupt');
         else expect(() => f.begin()).toThrow();
       } finally { writer.close(); }
     }

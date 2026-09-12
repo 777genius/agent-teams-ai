@@ -22,6 +22,7 @@ import {
   type HostedTeamConfigurationIdempotencyKey,
   parseHostedTeamConfigurationIdempotencyKey,
 } from '../../contracts/hosted';
+import { HOSTED_MVP_TOOL_APPROVAL_MODE } from '../../contracts/hostedRosterConfiguration';
 
 import type { HostedTeamConfigurationTransport } from '../ports/HostedTeamConfigurationRendererPorts';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
@@ -60,6 +61,7 @@ function memberNames(value: string): readonly { readonly name: string }[] {
 function errorText(code: string): string {
   if (code === 'conflict') return 'This draft changed on the server. Reload it before retrying.';
   if (code === 'not_found') return 'This draft is no longer available.';
+  if (code === 'unsupported') return 'Manual approval is temporarily unavailable in Hosted MVP.';
   if (code === 'cancelled') return 'The request was cancelled.';
   return 'The team configuration request could not be completed.';
 }
@@ -290,6 +292,18 @@ export const HostedTeamConfigurationPanel = ({
           </Button>
         ) : null}
       </div>
+
+      <p className="text-sm text-[var(--color-text-muted)]">
+        Hosted MVP launches use {HOSTED_MVP_TOOL_APPROVAL_MODE} tool approval. Manual approval is
+        temporarily unavailable; saved manual-mode drafts remain readable but cannot be activated.
+      </p>
+
+      {draft?.configuration?.toolApprovalMode === 'manual' ? (
+        <p role="alert" className="text-sm">
+          This saved draft uses manual approval. It remains readable and unchanged, but updates and
+          activation are unavailable in Hosted MVP.
+        </p>
+      ) : null}
 
       <div className="space-y-1.5">
         <Label htmlFor="hosted-team-name">Name</Label>

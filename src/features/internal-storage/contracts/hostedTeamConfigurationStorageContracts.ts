@@ -13,7 +13,10 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
-import { parseTeamDraftPublicationBinding, type TeamDraftPublicationBinding } from './teamDraftPublicationContracts';
+import {
+  parseTeamDraftPublicationBinding,
+  type TeamDraftPublicationBinding,
+} from './teamDraftPublicationContracts';
 
 export interface HostedTeamConfigurationStorageDraft {
   readonly workspaceId: WorkspaceId;
@@ -70,6 +73,7 @@ export interface HostedTeamConfigurationStorageUpdateRequest {
 export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'updated'; draft: HostedTeamConfigurationStorageDraft }>
   | Readonly<{ kind: 'not_found' }>
+  | Readonly<{ kind: 'unavailable'; reason: 'manual_approval_unavailable' }>
   | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export interface HostedTeamConfigurationStorageDeleteRequest {
@@ -156,7 +160,8 @@ function metadata(
 ): HostedTeamConfigurationStorageDraft['metadata'] {
   const input = record(value);
   const ownKeys = Reflect.ownKeys(input);
-  if (ownKeys.some((key) => typeof key !== 'string')) throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
+  if (ownKeys.some((key) => typeof key !== 'string'))
+    throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
   const keys = ownKeys as string[];
   if (
     keys.length < 1 ||
@@ -190,10 +195,13 @@ function members(value: unknown): HostedTeamConfigurationStorageDraft['members']
 /** New worker writes must obey the same pure name contract as hosted creates. */
 function newMembers(value: unknown): HostedTeamConfigurationStorageDraft['members'] {
   if (
-    !Array.isArray(value) || value.length < 1 || value.length > 32 ||
+    !Array.isArray(value) ||
+    value.length < 1 ||
+    value.length > 32 ||
     Reflect.ownKeys(value).length !== value.length + 1 ||
-    Array.from({ length: value.length }, (_, index) => index)
-      .some((index) => !Object.hasOwn(value, index))
+    Array.from({ length: value.length }, (_, index) => index).some(
+      (index) => !Object.hasOwn(value, index)
+    )
   ) {
     throw new TypeError('hosted-team-configuration-storage-members-invalid');
   }
@@ -234,7 +242,9 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     workspaceId: parseWorkspaceId(input.workspaceId),
     idempotencyKey: input.idempotencyKey,
     payloadHash: input.payloadHash,
-    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
+    ...(Object.hasOwn(input, 'publicationBinding')
+      ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) }
+      : {}),
     metadata: metadata(input.metadata, true) as Readonly<{ name: string }>,
     members: newMembers(input.members),
     ...configurationFields(input),
@@ -277,10 +287,17 @@ export function parseHostedTeamConfigurationStorageUpdateRequest(
 export function parseHostedTeamConfigurationStorageDeleteRequest(
   value: unknown
 ): HostedTeamConfigurationStorageDeleteRequest {
-  const input = exact(value, ['workspaceId', 'teamId', 'expectedRevision', 'deadlineAtMs',
-    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : [])]);
+  const input = exact(value, [
+    'workspaceId',
+    'teamId',
+    'expectedRevision',
+    'deadlineAtMs',
+    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : []),
+  ]);
   return Object.freeze({
-    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
+    ...(Object.hasOwn(input, 'publicationBinding')
+      ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) }
+      : {}),
     ...parseHostedTeamConfigurationStorageIdentity({
       workspaceId: input.workspaceId,
       teamId: input.teamId,
@@ -293,8 +310,16 @@ export function parseHostedTeamConfigurationStorageDeleteRequest(
 export function parseHostedTeamConfigurationStorageDraft(
   value: unknown
 ): HostedTeamConfigurationStorageDraft {
-  const input = exact(value, ['workspaceId', 'teamId', 'revision', 'metadata', 'members', ...(Object.hasOwn(record(value), 'configuration') ? ['configuration'] : [])]);
-  if (!Object.hasOwn(record(input.metadata), 'name')) throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
+  const input = exact(value, [
+    'workspaceId',
+    'teamId',
+    'revision',
+    'metadata',
+    'members',
+    ...(Object.hasOwn(record(value), 'configuration') ? ['configuration'] : []),
+  ]);
+  if (!Object.hasOwn(record(input.metadata), 'name'))
+    throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
   return Object.freeze({
     ...parseHostedTeamConfigurationStorageIdentity({
       workspaceId: input.workspaceId,
@@ -307,7 +332,9 @@ export function parseHostedTeamConfigurationStorageDraft(
   });
 }
 
-function configurationFields(input: Record<string, unknown>): { readonly configuration?: HostedRosterConfiguration } {
+function configurationFields(input: Record<string, unknown>): {
+  readonly configuration?: HostedRosterConfiguration;
+} {
   if (!Object.hasOwn(input, 'configuration')) return {};
   const configuration = parseHostedRosterConfiguration(input.configuration);
   assertHostedRosterMatches(configuration, members(input.members));
@@ -317,13 +344,20 @@ function configurationFields(input: Record<string, unknown>): { readonly configu
 function updates(value: unknown): HostedTeamConfigurationStorageUpdateRequest['updates'] {
   const input = record(value);
   const keys = Reflect.ownKeys(input);
-  if (!keys.length || keys.some((key) => typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(LIMITS, key)))) {
+  if (
+    !keys.length ||
+    keys.some(
+      (key) => typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(LIMITS, key))
+    )
+  ) {
     throw new TypeError('hosted-team-configuration-storage-update-invalid');
   }
   const { configuration: ignored, ...rest } = input;
   void ignored;
   return Object.freeze({
     ...(Object.keys(rest).length ? metadata(rest) : {}),
-    ...(Object.hasOwn(input, 'configuration') ? { configuration: parseHostedRosterConfiguration(input.configuration) } : {}),
+    ...(Object.hasOwn(input, 'configuration')
+      ? { configuration: parseHostedRosterConfiguration(input.configuration) }
+      : {}),
   });
 }
