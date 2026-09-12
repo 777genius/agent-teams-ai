@@ -245,6 +245,55 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('keeps the later turn-settled identity when coalescing queue items', async () => {
+    const reconciles: unknown[] = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 100,
+      reconcile: async (_request, context) => {
+        reconciles.push(context);
+      },
+      isTeamActive: () => true,
+    });
+
+    expect(
+      queue.enqueueTurnSettled({
+        teamName: 'team-a',
+        memberName: 'bob',
+        event: {
+          sourceId: 'newer',
+          recordedAt: '2026-05-05T12:00:01.000Z',
+          turnId: 'turn-new',
+        },
+      })
+    ).toBe(true);
+    expect(
+      queue.enqueueTurnSettled({
+        teamName: 'team-a',
+        memberName: 'bob',
+        event: {
+          sourceId: 'older',
+          recordedAt: '2026-05-05T12:00:00.000Z',
+          turnId: 'turn-old',
+        },
+      })
+    ).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(reconciles).toHaveLength(1);
+    expect(reconciles[0]).toMatchObject({
+      reconciledBy: 'queue',
+      triggerReasons: ['turn_settled'],
+      settlement: {
+        sourceId: 'newer',
+        recordedAt: '2026-05-05T12:00:01.000Z',
+        turnId: 'turn-new',
+      },
+    });
+    expect(queue.getDiagnostics()).toMatchObject({ coalesced: 1 });
+    await queue.stop();
+  });
+
   it('does not let a later quiet-window event delay a queued manual refresh', async () => {
     const reconciles: unknown[] = [];
     const queue = new MemberWorkSyncEventQueue({

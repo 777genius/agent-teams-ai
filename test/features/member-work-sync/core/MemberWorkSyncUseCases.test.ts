@@ -2323,7 +2323,7 @@ describe('MemberWorkSync use cases', () => {
     expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
   });
 
-  it('releases an awaiting recovery reservation when the delivered turn settles', async () => {
+  it('releases an awaiting recovery reservation when a matching turn settles', async () => {
     const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
@@ -2351,16 +2351,24 @@ describe('MemberWorkSync use cases', () => {
     });
     const after = await new MemberWorkSyncReconciler(deps).execute(
       { teamName: 'team-a', memberName: 'bob' },
-      { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
+      {
+        reconciledBy: 'queue',
+        triggerReasons: ['turn_settled'],
+        settlement: {
+          sourceId: 'src-settled',
+          recordedAt: status.evaluatedAt,
+          turnId: 'turn-settled',
+        },
+      }
     );
     expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
     expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
       state: 'resolved',
-      terminalReceiptId: 'turn-settled:intent-settled',
+      terminalReceiptId: 'turn-settled:intent-settled:src-settled',
     });
   });
 
-  it('releases an awaiting recovery reservation when the delivered turn settles', async () => {
+  it('does not release an awaiting recovery reservation on anonymous turn_settled', async () => {
     const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
@@ -2390,10 +2398,54 @@ describe('MemberWorkSync use cases', () => {
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
     );
-    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.unresolvedIntentId).toBe('intent-settled');
     expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
-      state: 'resolved',
-      terminalReceiptId: 'turn-settled:intent-settled',
+      state: 'awaiting_outcome',
+    });
+  });
+
+  it('does not release an awaiting recovery reservation for a stale settlement', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const reservedAt = '2026-05-05T12:00:00.000Z';
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        unresolvedIntentId: 'intent-settled',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-settled',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-settled',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      {
+        reconciledBy: 'queue',
+        triggerReasons: ['turn_settled'],
+        settlement: {
+          sourceId: 'src-stale',
+          recordedAt: '2026-05-05T11:59:59.000Z',
+          turnId: 'turn-old',
+        },
+      }
+    );
+    expect(after.recoveryHealth?.unresolvedIntentId).toBe('intent-settled');
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'awaiting_outcome',
     });
   });
 

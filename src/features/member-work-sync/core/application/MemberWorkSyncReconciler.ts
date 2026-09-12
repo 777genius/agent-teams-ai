@@ -25,9 +25,16 @@ import {
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from './ports';
 
+export interface MemberWorkSyncSettlementTrigger {
+  sourceId: string;
+  recordedAt: string;
+  turnId?: string;
+}
+
 export interface MemberWorkSyncReconcileContext {
   reconciledBy?: 'request' | 'queue';
   triggerReasons?: string[];
+  settlement?: MemberWorkSyncSettlementTrigger;
   isCancelled?: () => boolean;
   recovery?: {
     kind: 'proof_missing';
@@ -127,6 +134,7 @@ export class MemberWorkSyncReconciler {
           deps: this.deps,
           status: read.status,
           triggerReasons: context.triggerReasons,
+          settlement: context.settlement,
         }));
       if (settled) {
         read = await readMemberWorkSyncStatus(this.deps, request);

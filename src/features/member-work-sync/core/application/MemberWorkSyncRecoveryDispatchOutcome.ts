@@ -13,6 +13,7 @@ import {
 } from './MemberWorkSyncStatusMutation';
 
 import type { MemberWorkSyncOutboxItem, MemberWorkSyncStatus } from '../../contracts';
+import type { MemberWorkSyncSettlementTrigger } from './MemberWorkSyncReconciler';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
 export type MemberWorkSyncRecoveryDispatchKind =
@@ -177,10 +178,23 @@ export async function repairMemberWorkSyncDispatchOutcome(input: {
   return true;
 }
 
+export function settlementBelongsToReservation(
+  settlement: MemberWorkSyncSettlementTrigger | undefined,
+  reservedAt: string
+): boolean {
+  if (!settlement?.sourceId || !settlement.recordedAt) {
+    return false;
+  }
+  const settledAt = Date.parse(settlement.recordedAt);
+  const reservedMs = Date.parse(reservedAt);
+  return Number.isFinite(settledAt) && Number.isFinite(reservedMs) && settledAt >= reservedMs;
+}
+
 export async function retireMemberWorkSyncSettledReservation(input: {
   deps: MemberWorkSyncUseCaseDeps;
   status: MemberWorkSyncStatus;
   triggerReasons?: string[];
+  settlement?: MemberWorkSyncSettlementTrigger;
 }): Promise<boolean> {
   if (!input.triggerReasons?.includes('turn_settled')) {
     return false;
@@ -192,12 +206,18 @@ export async function retireMemberWorkSyncSettledReservation(input: {
   if (!intentId || reservation?.state !== 'awaiting_outcome') {
     return false;
   }
+  if (
+    !input.settlement ||
+    !settlementBelongsToReservation(input.settlement, reservation.reservedAt)
+  ) {
+    return false;
+  }
   await retireMemberWorkSyncRecoveryIntent({
     deps: input.deps,
     teamName: input.status.teamName,
     memberName: input.status.memberName,
     intentId,
-    receiptId: `turn-settled:${intentId}`,
+    receiptId: `turn-settled:${intentId}:${input.settlement.sourceId}`,
   });
   return true;
 }

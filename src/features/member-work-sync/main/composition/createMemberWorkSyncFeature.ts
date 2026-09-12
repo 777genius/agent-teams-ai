@@ -499,13 +499,8 @@ export function createMemberWorkSyncFeature(deps: {
     normalizer: runtimeTurnSettledNormalizer,
     targetResolver: runtimeTurnSettledTargetResolver,
     reconcileQueue: {
-      enqueueRuntimeTurnSettled: ({ teamName, memberName }) =>
-        acceptsRuntimeTurnSettledReconcile &&
-        queue.enqueue({
-          teamName,
-          memberName,
-          triggerReason: 'turn_settled',
-        }),
+      enqueueRuntimeTurnSettled: (input) =>
+        acceptsRuntimeTurnSettledReconcile && queue.enqueueTurnSettled(input),
     },
     clock,
     auditJournal,

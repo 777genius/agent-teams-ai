@@ -66,6 +66,7 @@ interface QueueItem {
   triggerReasonCounts: Map<MemberWorkSyncTriggerReason, number>;
   retryCount: number;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
+  settlement?: MemberWorkSyncReconcileContext['settlement'];
 }
 
 interface RunningItem {
@@ -75,6 +76,20 @@ interface RunningItem {
   rerunRequested: boolean;
   triggerReasons: Set<MemberWorkSyncTriggerReason>;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
+  settlement?: MemberWorkSyncReconcileContext['settlement'];
+}
+
+function preferLaterSettlement(
+  current: MemberWorkSyncReconcileContext['settlement'],
+  next: MemberWorkSyncReconcileContext['settlement']
+): MemberWorkSyncReconcileContext['settlement'] {
+  if (!next) {
+    return current;
+  }
+  if (!current) {
+    return next;
+  }
+  return Date.parse(next.recordedAt) >= Date.parse(current.recordedAt) ? next : current;
 }
 
 interface TriggerTimingPolicy {
@@ -191,6 +206,7 @@ export class MemberWorkSyncEventQueue {
     triggerReason: MemberWorkSyncTriggerReason;
     runAfterMs?: number;
     recovery?: MemberWorkSyncReconcileContext['recovery'];
+    settlement?: MemberWorkSyncReconcileContext['settlement'];
   }): boolean {
     if (this.stopped || this.quiescedTeams.has(input.teamName.trim())) {
       return false;
@@ -214,6 +230,7 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         running.recovery = input.recovery;
       }
+      running.settlement = preferLaterSettlement(running.settlement, input.settlement);
       this.counters.coalesced += 1;
       this.appendAudit({
         teamName,
@@ -231,6 +248,7 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         existing.recovery = input.recovery;
       }
+      existing.settlement = preferLaterSettlement(existing.settlement, input.settlement);
       existing.lastQueuedAt = now;
       existing.maxRunAt = Math.max(
         existing.maxRunAt,
@@ -269,6 +287,7 @@ export class MemberWorkSyncEventQueue {
       triggerReasonCounts: new Map([[input.triggerReason, 1]]),
       retryCount: 0,
       ...(input.recovery ? { recovery: input.recovery } : {}),
+      ...(input.settlement ? { settlement: input.settlement } : {}),
     });
     this.counters.enqueued += 1;
     this.appendAudit({
@@ -280,6 +299,23 @@ export class MemberWorkSyncEventQueue {
     });
     this.schedule();
     return true;
+  }
+
+  enqueueTurnSettled(input: {
+    teamName: string;
+    memberName: string;
+    event: { sourceId: string; recordedAt: string; turnId?: string };
+  }): boolean {
+    return this.enqueue({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      triggerReason: 'turn_settled',
+      settlement: {
+        sourceId: input.event.sourceId,
+        recordedAt: input.event.recordedAt,
+        ...(input.event.turnId ? { turnId: input.event.turnId } : {}),
+      },
+    });
   }
 
   dropTeam(teamName: string): void {
@@ -437,6 +473,7 @@ export class MemberWorkSyncEventQueue {
       rerunRequested: false,
       triggerReasons: new Set(item.triggerReasons),
       ...(item.recovery ? { recovery: item.recovery } : {}),
+      ...(item.settlement ? { settlement: item.settlement } : {}),
     };
     this.running.set(key, running);
     this.activeKeys.add(key);
@@ -520,6 +557,7 @@ export class MemberWorkSyncEventQueue {
     const now = this.now();
     const retryCount = quiesced ? item.retryCount : item.retryCount + 1;
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterSettlement(item.settlement, running.settlement);
     this.items.set(key, {
       ...item,
       lastQueuedAt: now,
@@ -529,6 +567,7 @@ export class MemberWorkSyncEventQueue {
       triggerReasonCounts: new Map(item.triggerReasonCounts),
       retryCount,
       ...(recovery ? { recovery } : {}),
+      ...(settlement ? { settlement } : {}),
     });
     this.appendAudit({
       teamName: item.teamName,
@@ -549,6 +588,7 @@ export class MemberWorkSyncEventQueue {
   private enqueueFollowUp(item: QueueItem, running: RunningItem): void {
     const reasons = [...running.triggerReasons].sort();
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterSettlement(item.settlement, running.settlement);
     const primaryReason =
       reasons.find((reason) => reason === 'manual_refresh') ??
       reasons.find((reason) => reason === 'turn_settled' || reason === 'tool_finished') ??
@@ -560,6 +600,7 @@ export class MemberWorkSyncEventQueue {
       triggerReason: primaryReason,
       runAfterMs: Math.min(this.resolveTimingPolicy(primaryReason).runAfterMs, 5_000),
       ...(recovery ? { recovery } : {}),
+      ...(settlement ? { settlement } : {}),
     });
     const queued = this.items.get(keyOf(item.teamName, item.memberName));
     if (!queued) {
@@ -587,6 +628,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterSettlement(item.settlement, running.settlement);
     await this.runReconcileWithTimeout(
       { teamName: item.teamName, memberName: item.memberName },
       {
@@ -594,6 +636,7 @@ export class MemberWorkSyncEventQueue {
         triggerReasons: [...running.triggerReasons].sort(),
         isCancelled: () => this.quiescedTeams.has(item.teamName),
         ...(recovery ? { recovery } : {}),
+        ...(settlement ? { settlement } : {}),
       }
     );
     this.counters.reconciled += 1;
