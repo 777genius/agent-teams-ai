@@ -190,6 +190,10 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
     expect(recreated.reportToken).toBeTruthy();
     expect(recreated.reportToken).not.toBe(firstToken);
+    const secondToken = recreated.reportToken;
+    if (!secondToken) {
+      throw new Error('expected report token after recreate');
+    }
     await expect(
       feature!.report({
         teamName,
@@ -202,6 +206,25 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     ).resolves.toMatchObject({
       accepted: false,
       code: 'invalid_report_token',
+    });
+    const t2Status = await feature!.refreshStatus({ teamName, memberName });
+    const t2Token = t2Status.reportToken;
+    if (!t2Token) {
+      throw new Error('expected report token after T1 reject');
+    }
+    const t2HasWork = t2Status.agenda.items.length > 0;
+    await expect(
+      feature!.report({
+        teamName,
+        memberName,
+        state: t2HasWork ? 'still_working' : 'caught_up',
+        agendaFingerprint: t2Status.agenda.fingerprint,
+        reportToken: t2Token,
+        source: 'test',
+        ...(t2HasWork ? { taskIds: t2Status.agenda.items.map((item) => item.taskId) } : {}),
+      })
+    ).resolves.toMatchObject({
+      accepted: true,
     });
   }, 420_000);
 

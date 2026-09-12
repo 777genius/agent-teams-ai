@@ -375,6 +375,16 @@ describe('member work sync recovery lifecycle e2e', () => {
       expect(recreated.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
       expect(recreated.recoveryHealth?.unresolvedIntentId).toBeUndefined();
       expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
+      let secondToken = recreated.reportToken;
+      await waitForAssertion(async () => {
+        const current = await feature.refreshStatus({ teamName, memberName });
+        expect(current.reportToken).toBeTruthy();
+        expect(current.reportToken).not.toBe(firstToken);
+        secondToken = current.reportToken;
+      });
+      if (!secondToken) {
+        throw new Error('expected report token after recreate');
+      }
       await expect(
         feature.report({
           teamName,
@@ -388,6 +398,25 @@ describe('member work sync recovery lifecycle e2e', () => {
       ).resolves.toMatchObject({
         accepted: false,
         code: 'invalid_report_token',
+      });
+      const t2Status = await feature.refreshStatus({ teamName, memberName });
+      const t2Token = t2Status.reportToken;
+      if (!t2Token) {
+        throw new Error('expected report token after T1 reject');
+      }
+      const t2HasWork = t2Status.agenda.items.length > 0;
+      await expect(
+        feature.report({
+          teamName,
+          memberName,
+          state: t2HasWork ? 'still_working' : 'caught_up',
+          agendaFingerprint: t2Status.agenda.fingerprint,
+          reportToken: t2Token,
+          source: 'test',
+          ...(t2HasWork ? { taskIds: t2Status.agenda.items.map((item) => item.taskId) } : {}),
+        })
+      ).resolves.toMatchObject({
+        accepted: true,
       });
     } finally {
       await feature.dispose();

@@ -57,25 +57,34 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
     const text = controlUrl
       ? this.withControlUrl(input.payload.text, controlUrl)
       : input.payload.text;
-    const result = await this.inboxWriter.sendMessage(input.teamName, {
-      member: input.memberName,
-      from: input.payload.from,
-      to: input.payload.to,
-      messageId: input.messageId,
-      timestamp: input.timestamp,
-      text,
-      taskRefs: input.payload.taskRefs,
-      actionMode: input.payload.actionMode,
-      summary: 'Work sync check',
-      source: 'system_notification',
-      messageKind: input.payload.messageKind,
-      workSyncIntent: input.payload.workSyncIntent,
-      workSyncIntentKey: input.payload.workSyncIntentKey,
-      workSyncReviewRequestEventIds: input.payload.workSyncReviewRequestEventIds,
-      workSyncRuntimeTicketId: input.payload.workSyncRuntimeTicketId,
-      workSyncRuntimeGeneration: input.payload.workSyncRuntimeGeneration,
-      workSyncPayloadHash: input.payloadHash,
-    });
+    const result = await this.inboxWriter.sendMessage(
+      input.teamName,
+      {
+        member: input.memberName,
+        from: input.payload.from,
+        to: input.payload.to,
+        messageId: input.messageId,
+        timestamp: input.timestamp,
+        text,
+        taskRefs: input.payload.taskRefs,
+        actionMode: input.payload.actionMode,
+        summary: 'Work sync check',
+        source: 'system_notification',
+        messageKind: input.payload.messageKind,
+        workSyncIntent: input.payload.workSyncIntent,
+        workSyncIntentKey: input.payload.workSyncIntentKey,
+        workSyncReviewRequestEventIds: input.payload.workSyncReviewRequestEventIds,
+        workSyncRuntimeTicketId: input.payload.workSyncRuntimeTicketId,
+        workSyncRuntimeGeneration: input.payload.workSyncRuntimeGeneration,
+        workSyncPayloadHash: input.payloadHash,
+      },
+      {
+        shouldStillWrite: async () => !(await input.shouldAbort?.()),
+      }
+    );
+    if (result.deliveredToInbox === false) {
+      return { inserted: false, messageId: input.messageId, aborted: true };
+    }
 
     return {
       inserted: true,

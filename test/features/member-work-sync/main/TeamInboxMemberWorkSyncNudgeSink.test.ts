@@ -458,23 +458,29 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
       messageId: input.messageId,
     });
 
-    expect(inboxWriter.sendMessage).toHaveBeenCalledWith('team-a', {
-      member: 'bob',
-      from: 'system',
-      to: 'bob',
-      messageId: input.messageId,
-      timestamp: input.timestamp,
-      text: input.payload.text,
-      taskRefs: input.payload.taskRefs,
-      actionMode: 'do',
-      summary: 'Work sync check',
-      source: 'system_notification',
-      messageKind: 'member_work_sync_nudge',
-      workSyncIntent: 'agenda_sync',
-      workSyncIntentKey: undefined,
-      workSyncReviewRequestEventIds: undefined,
-      workSyncPayloadHash: input.payloadHash,
-    });
+    expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+      'team-a',
+      {
+        member: 'bob',
+        from: 'system',
+        to: 'bob',
+        messageId: input.messageId,
+        timestamp: input.timestamp,
+        text: input.payload.text,
+        taskRefs: input.payload.taskRefs,
+        actionMode: 'do',
+        summary: 'Work sync check',
+        source: 'system_notification',
+        messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
+        workSyncIntentKey: undefined,
+        workSyncReviewRequestEventIds: undefined,
+        workSyncRuntimeTicketId: undefined,
+        workSyncRuntimeGeneration: undefined,
+        workSyncPayloadHash: input.payloadHash,
+      },
+      expect.objectContaining({ shouldStillWrite: expect.any(Function) })
+    );
   });
 
   it('does not insert a new nudge when a configured controlUrl resolver returns null', async () => {
@@ -626,7 +632,37 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
       expect.objectContaining({
         workSyncRuntimeTicketId: 'ticket-1',
         workSyncRuntimeGeneration: 7,
-      })
+      }),
+      expect.objectContaining({ shouldStillWrite: expect.any(Function) })
     );
+  });
+
+  it('does not publish when stop wins under the inbox write lock', async () => {
+    const input = makeInput();
+    let stopped = false;
+    const inboxReader = {
+      getMessagesFor: vi.fn(async () => []),
+    };
+    const inboxWriter = {
+      sendMessage: vi.fn(async (_team, request, options) => {
+        stopped = true;
+        if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
+          return { deliveredToInbox: false, messageId: request.messageId };
+        }
+        throw new Error('must not write after abort');
+      }),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(inboxReader as never, inboxWriter as never);
+
+    await expect(
+      sink.insertIfAbsent({
+        ...input,
+        shouldAbort: () => stopped,
+      })
+    ).resolves.toEqual({
+      inserted: false,
+      messageId: input.messageId,
+      aborted: true,
+    });
   });
 });

@@ -125,7 +125,7 @@ export interface SendInboxMessageOptions {
    * that only its successor sees. The check runs under the lock, so it observes
    * the state that holds at the moment this writer is allowed to append.
    */
-  shouldStillWrite?: () => boolean;
+  shouldStillWrite?: () => boolean | Promise<boolean>;
 }
 
 export class TeamInboxWriter {
@@ -191,7 +191,7 @@ export class TeamInboxWriter {
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
-        if (options?.shouldStillWrite && !options.shouldStillWrite()) {
+        if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
           rejectedByPrecondition = true;
           return;
         }
