@@ -50,6 +50,7 @@ import {
   createMemberWorkSyncRestoreParticipant,
   type MemberWorkSyncRestoreParticipant,
 } from './createMemberWorkSyncRestoreParticipant';
+import { createUnsupportedMemberWorkSyncRuntimeTicketAdmission } from './createUnsupportedMemberWorkSyncRuntimeTicketAdmission';
 import {
   buildProofMissingRecoveryIntentKey,
   normalizeRecoveryTaskRefs,
@@ -76,6 +77,7 @@ import type {
   MemberWorkSyncProofMissingRecoveryGuardPort,
   MemberWorkSyncReviewPickupDeliveryPort,
   MemberWorkSyncReviewPickupEscalationPort,
+  MemberWorkSyncRuntimeTicketAdmissionPort,
   MemberWorkSyncTeamOperationAdmission,
 } from '../../core/application';
 import type {
@@ -118,6 +120,7 @@ export function createMemberWorkSyncFeature(deps: {
   /** Qualified D0 protocol-1 recovery allocation. Desktop wiring turns this on. */
   recoveryAllocation?: { enabled: boolean };
   recoveryProtocol?: { version: number };
+  runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
   /**
    * SQLite backend handle from the internal-storage feature. When present,
    * persistence routes through SQLite (with the JSON store as the session
@@ -208,6 +211,11 @@ export function createMemberWorkSyncFeature(deps: {
         ? { recoveryAllocation: { enabled: true } }
         : {}),
     ...(deps.recoveryProtocol ? { recoveryProtocol: deps.recoveryProtocol } : {}),
+    ...(deps.runtimeTicketAdmission
+      ? { runtimeTicketAdmission: deps.runtimeTicketAdmission }
+      : (deps.recoveryProtocol?.version ?? 0) >= 2
+        ? { runtimeTicketAdmission: createUnsupportedMemberWorkSyncRuntimeTicketAdmission() }
+        : {}),
     reportToken,
     auditJournal,
     ...(deps.isTeamActive

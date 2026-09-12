@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   buildPendingReportIntentId,
@@ -7,9 +11,6 @@ import { MemberWorkSyncSqliteImporter } from '@features/member-work-sync/main/in
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
 import Database from 'better-sqlite3-node';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { InProcessGateway } from '../../internal-storage/helpers/InProcessGateway';
@@ -80,7 +81,9 @@ describe('strict SQLite report journal', () => {
       receivedAt: '2026-09-11T10:00:00.000Z',
       origin: 'fallback',
     });
-    expect(retry.state === 'present' && retry.intent.journal?.firstRecordedAt).toBe(input.receivedAt);
+    expect(retry.state === 'present' && retry.intent.journal?.firstRecordedAt).toBe(
+      input.receivedAt
+    );
     expect(
       (
         await journal.ensure({
@@ -112,5 +115,30 @@ describe('strict SQLite report journal', () => {
     await expect(store.appendPendingReport(otherRequest, 'online')).rejects.toThrow(
       'Bound report intent requires strict journal API'
     );
+  });
+
+  it('maps a thrown SQLite journal RPC to commit_unknown instead of conflict', async () => {
+    const { SqliteMemberWorkSyncReportJournal } =
+      await import('@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncReportJournal');
+    const journal = new SqliteMemberWorkSyncReportJournal(
+      {
+        reportsJournalEnsure: async () => {
+          throw new Error('worker rpc timeout');
+        },
+      } as never,
+      async () => undefined
+    );
+    expect((await journal.ensure(input)).state).toBe('commit_unknown');
+  });
+
+  it('serializes two members so only one can create the same SQLite journal ID', async () => {
+    const { journal } = await openJournal();
+    const other = {
+      ...input,
+      memberName: 'other',
+      request: { ...input.request, memberName: 'other' },
+    };
+    const [first, second] = await Promise.all([journal.ensure(input), journal.ensure(other)]);
+    expect([first.state, second.state].sort()).toEqual(['conflict', 'present']);
   });
 });

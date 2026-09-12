@@ -9,6 +9,7 @@ import {
   appendMemberWorkSyncAudit,
   buildMemberWorkSyncPhase2ReadinessAuditFields,
 } from './MemberWorkSyncAudit';
+import { planMemberWorkSyncEarlyContinuation } from './MemberWorkSyncEarlyContinuationPlanner';
 import {
   decideMemberWorkSyncNudgeActivation,
   type MemberWorkSyncNudgeActivationReason,
@@ -62,6 +63,7 @@ export interface MemberWorkSyncNudgeOutboxPlanResult {
     | 'member_stopped'
     | 'recovery_allocation_disabled'
     | 'early_continuation_disabled'
+    | 'early_continuation_rejected'
     | 'slot_occupied'
     | 'created'
     | 'existing'
@@ -78,12 +80,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
   async planEarlyContinuation(
     status: MemberWorkSyncStatus
   ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
-    if (!isMemberWorkSyncEarlyContinuationEnabled(this.deps)) {
-      const result = { planned: false, code: 'early_continuation_disabled' } as const;
-      await this.appendPlanAudit(status, result);
-      return result;
-    }
-    const result = { planned: false, code: 'early_continuation_disabled' } as const;
+    const result = await planMemberWorkSyncEarlyContinuation(this.deps, status);
     await this.appendPlanAudit(status, result);
     return result;
   }
@@ -456,6 +453,13 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       const result = { planned: false, code: 'member_stopped' } as const;
       await this.appendPlanAudit(status, result);
       return result;
+    }
+
+    if (isMemberWorkSyncEarlyContinuationEnabled(this.deps)) {
+      const early = await this.planEarlyContinuation(status);
+      if (early.code !== 'early_continuation_disabled') {
+        return early;
+      }
     }
 
     if (input.payload.workSyncIntent === 'review_pickup') {

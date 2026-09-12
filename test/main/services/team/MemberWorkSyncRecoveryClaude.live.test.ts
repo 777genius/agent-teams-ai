@@ -14,7 +14,10 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
+import {
+  createOwnedWorkSyncIdentity,
+  type OwnedWorkSyncIdentity,
+} from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -94,6 +97,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
   let feature: MemberWorkSyncFeatureFacade | null;
   let controlServer: MemberWorkSyncLiveControlServer | null;
   let teamName: string | null;
+  let owned: OwnedWorkSyncIdentity | null;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-recovery-claude-'));
@@ -134,6 +138,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     teamName = null;
     previousClaudeJsonConfig = undefined;
     previousTeamControlApiJson = undefined;
+    owned = await createOwnedWorkSyncIdentity();
   });
 
   afterEach(async () => {
@@ -145,6 +150,8 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     svc?.setRuntimeTurnSettledHookSettingsProvider(null);
     await feature?.dispose().catch(() => undefined);
     await controlServer?.close().catch(() => undefined);
+    await owned?.dispose().catch(() => undefined);
+    owned = null;
     if (
       usingConnectedClaudeAccount &&
       teamName &&
@@ -232,7 +239,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -360,7 +367,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
 
     svc = new TeamProvisioningService();
     const activeService = svc;
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -531,7 +538,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const configReader = new TeamConfigReader();
     const createFeature = (busy = false) =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createSandboxWorkSyncIdentity(),
+        lifecycleIdentity: owned!.identity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader,

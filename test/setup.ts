@@ -82,6 +82,10 @@ function applyTestHomeEnv(): void {
 applyTestHomeEnv();
 let testHomeDirRemoved = false;
 function removeTestHomeDir(): void {
+  if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
+    console.info(`[vitest setup] preserved test HOME: ${testHomeDir}`);
+    return;
+  }
   if (testHomeDirRemoved) {
     return;
   }

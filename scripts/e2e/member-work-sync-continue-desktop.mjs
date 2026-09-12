@@ -694,6 +694,18 @@ async function main() {
       'Continue control',
       5_000
     );
+    step('asserting durable attention instead of Working');
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="member-work-sync-attention"]'))`,
+      'attention banner',
+      5_000
+    );
+    const attentionUi = await cdp.evaluate(`({
+      banner: document.querySelector('[data-testid="member-work-sync-attention"]')?.textContent ?? '',
+      badge: document.querySelector('[data-testid="member-work-sync-badge"]')?.textContent ?? '',
+    })`);
+    assert.match(attentionUi.banner, /No confirmed task progress for 20 minutes/);
+    assert.equal(attentionUi.badge, 'Needs attention');
     step('clicking Continue');
     await cdp.evaluate(`document.querySelector(${JSON.stringify(continueSelector)}).click()`);
     await cdp.waitFor(

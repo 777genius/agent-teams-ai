@@ -26,7 +26,10 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
+import {
+  createOwnedWorkSyncIdentity,
+  type OwnedWorkSyncIdentity,
+} from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
   FatalWaitError,
@@ -57,6 +60,7 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
   let harness: OpenCodeLiveHarness | null;
   let teamName: string | null;
   let identity: TeamWorkSyncIdentityAccess | null;
+  let owned: OwnedWorkSyncIdentity | null;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(
@@ -67,7 +71,8 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     feature = null;
     harness = null;
     teamName = null;
-    identity = createSandboxWorkSyncIdentity();
+    owned = await createOwnedWorkSyncIdentity();
+    identity = owned.identity;
   });
 
   afterEach(async () => {
@@ -77,6 +82,9 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     }
     await feature?.dispose().catch(() => undefined);
     await harness?.dispose().catch(() => undefined);
+    await owned?.dispose().catch(() => undefined);
+    owned = null;
+    identity = null;
     setClaudeBasePathOverride(null);
     const warn = vi.mocked(console.warn);
     if (warn.mock) {

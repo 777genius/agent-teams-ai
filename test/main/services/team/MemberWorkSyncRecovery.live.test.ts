@@ -9,11 +9,16 @@ import {
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
+import { CodexBinaryResolver } from '../../../../src/main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import {
+  getTasksBasePath,
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
+import {
+  createOwnedWorkSyncIdentity,
+  type OwnedWorkSyncIdentity,
+} from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -24,6 +29,7 @@ import {
   readRuntimeTurnSettledProcessedMetas,
   restoreEnv,
   startMemberWorkSyncControlServer,
+  throwIfClaudeTranscriptApiError,
   waitUntil,
 } from './memberWorkSyncLiveHarness';
 
@@ -59,6 +65,33 @@ const DEFAULT_ORCHESTRATOR_CLI =
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_EFFORT = 'low' as const;
 
+async function resolveLiveCodexCliPath(connectedHome: string): Promise<string> {
+  const configured = process.env.CODEX_CLI_PATH?.trim();
+  if (configured) {
+    return configured;
+  }
+  const candidates = [
+    path.join(connectedHome, '.local', 'bin', 'codex'),
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex',
+  ];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // try the next well-known Codex binary
+    }
+  }
+  return 'codex';
+}
+
+function prependProcessPath(entries: string[]): void {
+  const current = process.env.PATH ?? '';
+  const merged = [...entries, ...current.split(path.delimiter).filter(Boolean)];
+  vi.stubEnv('PATH', [...new Set(merged)].join(path.delimiter));
+}
+
 liveDescribe('Member work sync recovery live canary', () => {
   let tempDir: string;
   let tempClaudeRoot: string;
@@ -67,6 +100,11 @@ liveDescribe('Member work sync recovery live canary', () => {
   let previousControlUrl: string | undefined;
   let previousCodexHome: string | undefined;
   let previousCodexIgnoreUserConfig: string | undefined;
+  let previousCodexCliPath: string | undefined;
+  let previousHome: string | undefined;
+  let previousUserProfile: string | undefined;
+  let previousPath: string | undefined;
+  let usingConnectedChatGptAccount = false;
   let codexHomeDir: string;
   let ownsCodexHomeDir: boolean;
   let codexAccountFeature: {
@@ -107,24 +145,42 @@ liveDescribe('Member work sync recovery live canary', () => {
   let feature: MemberWorkSyncFeatureFacade | null;
   let controlServer: MemberWorkSyncLiveControlServer | null;
   let teamName: string | null;
+  let owned: OwnedWorkSyncIdentity | null;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-recovery-live-'));
     tempClaudeRoot = path.join(tempDir, '.claude');
     await fs.mkdir(tempClaudeRoot, { recursive: true });
-    setClaudeBasePathOverride(tempClaudeRoot);
 
     previousCliPath = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
     previousCliFlavor = process.env.CLAUDE_TEAM_CLI_FLAVOR;
     previousControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
     previousCodexHome = process.env.CODEX_HOME;
     previousCodexIgnoreUserConfig = process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG;
+    previousCodexCliPath = process.env.CODEX_CLI_PATH;
+    previousHome = process.env.HOME;
+    previousUserProfile = process.env.USERPROFILE;
+    previousPath = process.env.PATH;
+    usingConnectedChatGptAccount = allowConnectedChatGptAccount && !hasCodexApiKey;
 
-    if (allowConnectedChatGptAccount && !hasCodexApiKey) {
-      codexHomeDir = previousCodexHome?.trim() || path.join(os.userInfo().homedir, '.codex');
+    const connectedHome = os.userInfo().homedir;
+    if (usingConnectedChatGptAccount) {
+      vi.stubEnv('HOME', connectedHome);
+      vi.stubEnv('USERPROFILE', connectedHome);
+      setClaudeBasePathOverride(null);
+      prependProcessPath([
+        path.join(connectedHome, '.local', 'bin'),
+        '/opt/homebrew/bin',
+        '/usr/local/bin',
+      ]);
+      process.env.CODEX_CLI_PATH = await resolveLiveCodexCliPath(connectedHome);
+      vi.stubEnv('CODEX_CLI_PATH', process.env.CODEX_CLI_PATH);
+      CodexBinaryResolver.clearCache();
+      codexHomeDir = path.join(connectedHome, '.codex');
       ownsCodexHomeDir = false;
       await fs.access(codexHomeDir);
     } else {
+      setClaudeBasePathOverride(tempClaudeRoot);
       const codexHomeRoot = path.resolve('temp', 'member-work-sync-recovery-live');
       await fs.mkdir(codexHomeRoot, { recursive: true });
       codexHomeDir = await fs.mkdtemp(path.join(codexHomeRoot, 'codex-home-'));
@@ -143,6 +199,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     teamName = null;
     codexAccountFeature = null;
     providerConnectionService = null;
+    owned = await createOwnedWorkSyncIdentity();
   });
 
   afterEach(async () => {
@@ -150,10 +207,34 @@ liveDescribe('Member work sync recovery live canary', () => {
     if (warn.mock) {
       for (let index = warn.mock.calls.length - 1; index >= 0; index -= 1) {
         const rendered = warn.mock.calls[index]?.map((arg) => String(arg)).join(' ') ?? '';
-        if (rendered.includes('stream-json result: error')) {
+        if (
+          rendered.includes('stream-json result: error') ||
+          rendered.includes('Failed to cleanup stale Anthropic team API-key helper material')
+        ) {
           warn.mock.calls.splice(index, 1);
         }
       }
+    }
+    if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1' && teamName) {
+      const snapshotDir = path.join(tempDir, 'teams-snapshot', teamName);
+      const spoolDir = path.join(tempDir, 'spool-snapshot');
+      const homeSpoolDir = path.join(tempDir, 'home-spool-snapshot');
+      await fs
+        .cp(path.join(getTeamsBasePath(), teamName), snapshotDir, { recursive: true })
+        .catch(() => undefined);
+      await fs
+        .cp(path.join(getTeamsBasePath(), '.member-work-sync'), spoolDir, { recursive: true })
+        .catch(() => undefined);
+      await fs
+        .cp(
+          path.join(process.env.HOME ?? os.homedir(), '.claude', 'teams', '.member-work-sync'),
+          homeSpoolDir,
+          { recursive: true }
+        )
+        .catch(() => undefined);
+      console.info(
+        `[MemberWorkSyncRecovery.live] preserved team snapshot: ${snapshotDir}; spool=${spoolDir}; homeSpool=${homeSpoolDir}`
+      );
     }
     if (svc && teamName) {
       await svc.stopTeam(teamName).catch(() => undefined);
@@ -164,12 +245,27 @@ liveDescribe('Member work sync recovery live canary', () => {
     await feature?.dispose().catch(() => undefined);
     await codexAccountFeature?.dispose().catch(() => undefined);
     await controlServer?.close().catch(() => undefined);
+    await owned?.dispose().catch(() => undefined);
+    owned = null;
+
+    if (
+      usingConnectedChatGptAccount &&
+      teamName &&
+      process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP !== '1'
+    ) {
+      await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
+      await fs.rm(path.join(getTasksBasePath(), teamName), { recursive: true, force: true });
+    }
 
     restoreEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', previousCliPath);
     restoreEnv('CLAUDE_TEAM_CLI_FLAVOR', previousCliFlavor);
     restoreEnv('CLAUDE_TEAM_CONTROL_URL', previousControlUrl);
     restoreEnv('CODEX_HOME', previousCodexHome);
     restoreEnv('CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG', previousCodexIgnoreUserConfig);
+    restoreEnv('CODEX_CLI_PATH', previousCodexCliPath);
+    restoreEnv('HOME', previousHome);
+    restoreEnv('USERPROFILE', previousUserProfile);
+    restoreEnv('PATH', previousPath);
     setClaudeBasePathOverride(null);
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecovery.live] preserved temp dir: ${tempDir}`);
@@ -179,7 +275,7 @@ liveDescribe('Member work sync recovery live canary', () => {
         await fs.rm(codexHomeDir, { recursive: true, force: true });
       }
     }
-  });
+  }, 120_000);
 
   it('keeps D0 off and a user stop latch across feature restart on a live Codex teammate', async () => {
     const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
@@ -238,7 +334,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -405,7 +501,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = (options: { busy?: boolean } = {}) =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -629,7 +725,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -832,7 +928,7 @@ liveDescribe('Member work sync recovery live canary', () => {
 
     svc = new TeamProvisioningService();
     const activeService = svc;
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
@@ -965,6 +1061,7 @@ liveDescribe('Member work sync recovery live canary', () => {
       const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
       const marker = `recovery-live-codex-a-${Date.now()}`;
       teamName = `member-work-sync-recovery-codex-progress-${Date.now()}`;
+      const startedAt = Date.now();
       const projectPath = path.join(tempDir, 'project');
       const canaryPath = path.join(projectPath, 'CANARY.txt');
       await fs.mkdir(projectPath, { recursive: true });
@@ -1018,7 +1115,7 @@ liveDescribe('Member work sync recovery live canary', () => {
       const teamDataService = new TeamDataService();
       const createFeature = (busy = false) =>
         createMemberWorkSyncFeature({
-          lifecycleIdentity: createSandboxWorkSyncIdentity(),
+          lifecycleIdentity: owned!.identity,
           teamsBasePath: getTeamsBasePath(),
           ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
           configReader: new TeamConfigReader(),
@@ -1070,6 +1167,28 @@ liveDescribe('Member work sync recovery live canary', () => {
         'utf8'
       );
 
+      const accountSnapshot = (await codexAccountFeature.getSnapshot()) as {
+        launchAllowed?: boolean;
+        launchIssueMessage?: string | null;
+        appServerState?: string | null;
+        requiresOpenaiAuth?: boolean | null;
+        localActiveChatgptAccountPresent?: boolean;
+        localAccountArtifactsPresent?: boolean;
+        managedAccount?: { type?: string } | null;
+      };
+      if (!accountSnapshot.launchAllowed) {
+        throw new Error(
+          [
+            accountSnapshot.launchIssueMessage ?? 'Codex account snapshot is not launchable.',
+            `appServerState=${accountSnapshot.appServerState ?? 'unknown'}`,
+            `requiresOpenaiAuth=${String(accountSnapshot.requiresOpenaiAuth)}`,
+            `localActive=${String(accountSnapshot.localActiveChatgptAccountPresent)}`,
+            `artifacts=${String(accountSnapshot.localAccountArtifactsPresent)}`,
+            `managedType=${accountSnapshot.managedAccount?.type ?? 'none'}`,
+          ].join(' ')
+        );
+      }
+
       const progressEvents: TeamProvisioningProgress[] = [];
       await activeService.createTeam(
         {
@@ -1093,6 +1212,24 @@ liveDescribe('Member work sync recovery live canary', () => {
         }
       );
 
+      const throwIfTranscriptApiError = async (context: string) => {
+        const claudeRoots = [tempClaudeRoot];
+        const homeClaudeRoot = process.env.HOME?.trim()
+          ? path.join(process.env.HOME.trim(), '.claude')
+          : null;
+        if (homeClaudeRoot && path.resolve(homeClaudeRoot) !== path.resolve(tempClaudeRoot)) {
+          claudeRoots.push(homeClaudeRoot);
+        }
+        for (const claudeRoot of claudeRoots) {
+          await throwIfClaudeTranscriptApiError({
+            claudeRoot,
+            context,
+            projectPath,
+            sinceMs: startedAt,
+          });
+        }
+      };
+
       await waitUntil(async () => {
         const last = progressEvents.at(-1);
         if (last?.state === 'failed') {
@@ -1102,6 +1239,7 @@ liveDescribe('Member work sync recovery live canary', () => {
         if (/usage limit/i.test(dump)) {
           throw new FatalWaitError(dump);
         }
+        await throwIfTranscriptApiError('Codex remaining-work launch');
         if (teamName) {
           const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName);
           if (fatalRuntimeMessage) {
@@ -1122,13 +1260,14 @@ liveDescribe('Member work sync recovery live canary', () => {
       const task = await teamDataService.createTask(teamName, {
         subject: `Write CANARY.txt ${marker}`,
         owner: memberName,
-        startImmediately: true,
+        startImmediately: false,
         prompt: [
           `This is a live recovery canary. Marker: ${marker}.`,
           'Do not edit files and do not complete this task in the first still_working turn.',
-          'Call mcp__agent-teams__task_start (or task_start) for this task.',
-          `Then call mcp__agent-teams__member_work_sync_status (or member_work_sync_status) with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          `Then call mcp__agent-teams__member_work_sync_report (or member_work_sync_report) with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by status, and this task id.`,
+          'Wait for a member_work_sync_nudge, then call the exposed Agent Teams MCP tools directly.',
+          'If tool search exposes prefixed names, use mcp__agent-teams__member_work_sync_status and mcp__agent-teams__member_work_sync_report.',
+          `Call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+          `Then call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and this task id.`,
           'Do not write CANARY.txt in this first turn.',
           'After the report is accepted, stop.',
         ].join('\n'),
@@ -1149,23 +1288,33 @@ liveDescribe('Member work sync recovery live canary', () => {
         await busyFeature.dispose();
       }
 
+      await waitUntil(
+        async () => {
+          try {
+            await feature!.continueManually({
+              teamName: teamName!,
+              memberName,
+              idempotencyKey: 'live-first-sync',
+            });
+            return true;
+          } catch (error) {
+            if (/member_busy/.test(error instanceof Error ? error.message : String(error))) {
+              return false;
+            }
+            throw error;
+          }
+        },
+        60_000,
+        2_000
+      );
+      await feature.dispatchDueNudges([teamName]);
       await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
       await activeService.relayLeadInboxMessages(teamName).catch(() => 0);
-      await activeService.sendMessageToTeam(
-        teamName,
-        [
-          `Live recovery canary instruction. Marker: ${marker}.`,
-          'For Agent Teams task and work-sync tools in this Codex-native handoff, call the exposed MCP tool directly.',
-          'If tool search exposes prefixed names, use mcp__agent-teams__task_get, mcp__agent-teams__task_start, mcp__agent-teams__member_work_sync_status, and mcp__agent-teams__member_work_sync_report.',
-          'Do not run shell searches just to discover these tools.',
-          `Call mcp__agent-teams__task_start for this task.`,
-          `Then call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          `Then call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and taskIds ["${task.id}"].`,
-          'Do not write CANARY.txt in this first turn.',
-          'Do not complete this task.',
-          'After the report is accepted, stop.',
-        ].join('\n')
-      );
+      expect(
+        (await readInboxMessages(teamName, memberName)).some(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toBe(true);
 
       await waitUntil(
         async () => {
@@ -1173,20 +1322,32 @@ liveDescribe('Member work sync recovery live canary', () => {
           if (fatalRuntimeMessage) {
             throw new FatalWaitError(fatalRuntimeMessage);
           }
+          await throwIfTranscriptApiError('Codex remaining-work first still_working report');
+          await feature!.dispatchDueNudges([teamName!]);
           await feature!.replayPendingReports([teamName!]);
           await feature!.drainRuntimeTurnSettledEvents();
+          await activeService
+            .relayInboxFileToLiveRecipient(teamName!, memberName)
+            .catch(() => undefined);
+          await activeService.relayLeadInboxMessages(teamName!).catch(() => 0);
           const status = await feature!.getStatus({ teamName: teamName!, memberName });
           return status.report?.accepted === true && status.report.state === 'still_working';
         },
         240_000,
         2_000,
         async () =>
-          formatMemberWorkSyncDiagnostics({
-            feature: feature!,
-            teamName: teamName!,
-            memberName,
-            taskId: task.id,
-          })
+          [
+            await formatMemberWorkSyncDiagnostics({
+              feature: feature!,
+              teamName: teamName!,
+              memberName,
+              taskId: task.id,
+            }),
+            await formatCodexNativeWorkSyncEvidence({
+              teamName: teamName!,
+              memberName,
+            }),
+          ].join('\n')
       );
 
       const processedBeforeSettled = new Set(
@@ -1287,6 +1448,7 @@ liveDescribe('Member work sync recovery live canary', () => {
           if (fatalRuntimeMessage) {
             throw new FatalWaitError(fatalRuntimeMessage);
           }
+          await throwIfTranscriptApiError('Codex remaining-work canary');
           await feature!.dispatchDueNudges([teamName!]);
           await feature!.drainRuntimeTurnSettledEvents();
           await activeService
@@ -1299,12 +1461,18 @@ liveDescribe('Member work sync recovery live canary', () => {
         240_000,
         2_000,
         async () =>
-          formatMemberWorkSyncDiagnostics({
-            feature: feature!,
-            teamName: teamName!,
-            memberName,
-            taskId: task.id,
-          })
+          [
+            await formatMemberWorkSyncDiagnostics({
+              feature: feature!,
+              teamName: teamName!,
+              memberName,
+              taskId: task.id,
+            }),
+            await formatCodexNativeWorkSyncEvidence({
+              teamName: teamName!,
+              memberName,
+            }),
+          ].join('\n')
       );
 
       await feature.prepareTeamDeletion(teamName);
@@ -1313,6 +1481,98 @@ liveDescribe('Member work sync recovery live canary', () => {
     1_200_000
   );
 });
+
+async function formatCodexNativeWorkSyncEvidence(input: {
+  teamName: string;
+  memberName: string;
+  taskId?: string;
+}): Promise<string> {
+  const inboxPath = path.join(
+    getTeamsBasePath(),
+    input.teamName,
+    'inboxes',
+    `${input.memberName}.json`
+  );
+  const teamSegment = encodeURIComponent(input.teamName);
+  const traceRoots = [
+    path.join(getTeamsBasePath(), '.member-work-sync', 'runtime-hooks', 'codex-native-traces'),
+    path.join(
+      process.env.HOME ?? os.homedir(),
+      '.claude',
+      'teams',
+      '.member-work-sync',
+      'runtime-hooks',
+      'codex-native-traces'
+    ),
+  ].filter((value, index, values) => values.indexOf(value) === index);
+  const inbox = await fs.readFile(inboxPath, 'utf8').catch(() => '[]');
+  const toolNames = new Set<string>();
+  const traceFiles: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+        continue;
+      }
+      if (!fullPath.endsWith('.jsonl')) {
+        continue;
+      }
+      if (!fullPath.includes(teamSegment) && !fullPath.includes(input.teamName)) {
+        continue;
+      }
+      traceFiles.push(fullPath);
+      const raw = await fs.readFile(fullPath, 'utf8').catch(() => '');
+      for (const line of raw.split('\n')) {
+        if (
+          !line.includes('member_work_sync') &&
+          !line.includes('mcp__') &&
+          !line.includes('toolName') &&
+          !line.includes('"tool"')
+        ) {
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(line) as {
+            name?: unknown;
+            toolName?: unknown;
+            tool?: unknown;
+            projection?: { toolName?: unknown };
+          };
+          for (const candidate of [
+            parsed.name,
+            parsed.toolName,
+            parsed.tool,
+            parsed.projection?.toolName,
+          ]) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+              toolNames.add(candidate.trim());
+            }
+          }
+        } catch {
+          // Trace rows can be truncated; keep scanning for complete JSON objects.
+        }
+      }
+    }
+  };
+  for (const traceRoot of traceRoots) {
+    await walk(traceRoot);
+  }
+  return [
+    `inboxNudgeCount=${
+      (JSON.parse(inbox) as Array<{ messageKind?: string }>).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      ).length
+    }`,
+    `teamsBasePath=${getTeamsBasePath()}`,
+    `traceRoots=${JSON.stringify(traceRoots)}`,
+    `traceFileCount=${traceFiles.length}`,
+    `traceFiles=${JSON.stringify(traceFiles.slice(0, 8))}`,
+    `traceTools=${JSON.stringify([...toolNames].sort())}`,
+    `ephemeralDefault=${String(process.env.CLAUDE_CODE_CODEX_NATIVE_PERSIST_THREADS !== '1')}`,
+  ].join('\n');
+}
 
 async function readInboxMessages(
   teamName: string,
@@ -1491,7 +1751,8 @@ async function readFatalRuntimeMessage(teamName: string): Promise<string | null>
     if (
       text.includes('Codex native exec exited') ||
       text.includes('Codex native error:') ||
-      text.includes('Codex native turn failed:')
+      text.includes('Codex native turn failed:') ||
+      text.includes('requires an active `codex login`')
     ) {
       return text;
     }

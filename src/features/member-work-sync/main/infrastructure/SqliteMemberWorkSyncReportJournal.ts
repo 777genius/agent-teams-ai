@@ -90,7 +90,7 @@ export class SqliteMemberWorkSyncReportJournal implements MemberWorkSyncReportJo
         })
       );
     } catch {
-      return { state: 'conflict' };
+      return { state: 'unavailable' };
     }
   }
 
@@ -99,9 +99,13 @@ export class SqliteMemberWorkSyncReportJournal implements MemberWorkSyncReportJo
   ): Promise<MemberWorkSyncReportJournalResult> {
     try {
       await this.ready(input.teamName);
+    } catch {
+      return { state: 'unavailable' };
+    }
+    try {
       return toResult(await this.gateway.reportsJournalEnsure(mutation(input)));
     } catch {
-      return { state: 'conflict' };
+      return { state: 'commit_unknown' };
     }
   }
 
@@ -110,9 +114,13 @@ export class SqliteMemberWorkSyncReportJournal implements MemberWorkSyncReportJo
   ): Promise<MemberWorkSyncReportJournalResult> {
     try {
       await this.ready(input.teamName);
+    } catch {
+      return { state: 'unavailable' };
+    }
+    try {
       return toResult(await this.gateway.reportsJournalTransfer(mutation(input, input.receipt)));
     } catch {
-      return { state: 'conflict' };
+      return { state: 'commit_unknown' };
     }
   }
 }

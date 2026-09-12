@@ -1,5 +1,9 @@
-/** Qualified D0: protocol-1 ordinary recovery is on in the desktop app. */
+/**
+ * Qualified D0 stays on. Protocol 2 is declared so early continuation can
+ * run only when a ticket port admits; the desktop default port returns
+ * `not_early` until the runtime advertises ticket/generation admission.
+ */
 export const MEMBER_WORK_SYNC_PRODUCTION_RECOVERY = {
   recoveryAllocation: { enabled: true },
-  recoveryProtocol: { version: 1 },
+  recoveryProtocol: { version: 2 },
 } as const;

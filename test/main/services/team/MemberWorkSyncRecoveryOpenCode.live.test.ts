@@ -18,7 +18,10 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
+import {
+  createOwnedWorkSyncIdentity,
+  type OwnedWorkSyncIdentity,
+} from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
   FatalWaitError,
@@ -55,6 +58,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
   let feature: MemberWorkSyncFeatureFacade | null;
   let harness: OpenCodeLiveHarness | null;
   let teamName: string | null;
+  let owned: OwnedWorkSyncIdentity | null;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-recovery-opencode-'));
@@ -64,6 +68,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     feature = null;
     harness = null;
     teamName = null;
+    owned = await createOwnedWorkSyncIdentity();
   });
 
   afterEach(async () => {
@@ -73,6 +78,8 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     }
     await feature?.dispose().catch(() => undefined);
     await harness?.dispose().catch(() => undefined);
+    await owned?.dispose().catch(() => undefined);
+    owned = null;
     setClaudeBasePathOverride(null);
     const warn = vi.mocked(console.warn);
     if (warn.mock) {
@@ -106,7 +113,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     const memberName = 'bob';
     teamName = `member-work-sync-recovery-opencode-${Date.now()}`;
-    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const lifecycleIdentity = owned!.identity;
     harness = await createOpenCodeLiveHarness({
       tempDir,
       selectedModel,
@@ -229,7 +236,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
     const createFeature = (svc: OpenCodeLiveHarness['svc']) =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createSandboxWorkSyncIdentity(),
+        lifecycleIdentity: owned!.identity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
@@ -378,7 +385,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
       const createFeature = (svc: OpenCodeLiveHarness['svc'], busy = false) =>
         createMemberWorkSyncFeature({
-          lifecycleIdentity: createSandboxWorkSyncIdentity(),
+          lifecycleIdentity: owned!.identity,
           teamsBasePath: getTeamsBasePath(),
           ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
           configReader: new TeamConfigReader(),

@@ -341,6 +341,34 @@ export interface MemberWorkSyncUseCaseDeps {
   recoveryAllocation?: { enabled: boolean };
   /** Declared runtime recovery protocol for this instance. Missing means 0. */
   recoveryProtocol?: { version: number };
+  /**
+   * Protocol-2 ticket admission. Required together with recoveryProtocol.version >= 2
+   * before early continuation may allocate. Missing/not_early falls through to D0.
+   */
+  runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
+}
+
+export type MemberWorkSyncRuntimeTicketAdmissionCode =
+  | 'not_early'
+  | 'busy'
+  | 'user_input'
+  | 'approval'
+  | 'stopped'
+  | 'instance_mismatch'
+  | 'conflict'
+  | 'unknown';
+
+export interface MemberWorkSyncRuntimeTicketAdmissionPort {
+  admit(input: {
+    teamName: string;
+    memberName: string;
+    intentId: string;
+    payloadHash: string;
+    controlRevision: number;
+  }): Promise<
+    | { admitted: true; ticketId: string; generation: number }
+    | { admitted: false; code: MemberWorkSyncRuntimeTicketAdmissionCode }
+  >;
 }
 
 export interface LatestAcceptedReportLookup {

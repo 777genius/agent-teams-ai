@@ -11,7 +11,7 @@ import { getCachedShellEnv } from '@main/utils/shellEnv';
 const CACHE_VERIFY_TTL_MS = 30_000;
 const STALE_POSITIVE_CACHE_TTL_MS = 5 * 60_000;
 const VERSION_CACHE_TTL_MS = 30_000;
-const BINARY_LAUNCH_VERIFY_TIMEOUT_MS = 3_000;
+const BINARY_LAUNCH_VERIFY_TIMEOUT_MS = 15_000;
 
 let cachedBinaryPath: string | null | undefined;
 let cacheVerifiedAt = 0;
@@ -280,7 +280,7 @@ export class CodexBinaryResolver {
     try {
       const result = await execCli(normalizedPath, ['--version'], {
         env: buildEnrichedEnv(normalizedPath),
-        timeout: 3_000,
+        timeout: BINARY_LAUNCH_VERIFY_TIMEOUT_MS,
       });
       const version = result.stdout.trim().split(/\s+/).filter(Boolean).at(-1) ?? null;
       versionCache.set(normalizedPath, {

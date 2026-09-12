@@ -6,7 +6,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createSandboxWorkSyncIdentity } from '../helpers/createSandboxWorkSyncIdentity';
+import { createOwnedWorkSyncIdentity } from '../helpers/createOwnedWorkSyncIdentity';
 import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
 
 import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
@@ -320,7 +320,8 @@ describe('member work sync recovery lifecycle e2e', () => {
     const teamsBasePath = getTeamsBasePath();
     const teamName = 'team-lifecycle-recreate';
     const memberName = 'bob';
-    const identity = createSandboxWorkSyncIdentity();
+    const owned = await createOwnedWorkSyncIdentity();
+    const identity = owned.identity;
     await writeTeamConfig(teamsBasePath, teamName);
     const feature = createFeature({
       teamsBasePath,
@@ -390,6 +391,30 @@ describe('member work sync recovery lifecycle e2e', () => {
       });
     } finally {
       await feature.dispose();
+      await owned.dispose();
+    }
+  });
+
+  it('does not mint a new marker when the backup owner still knows the prior identity', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const owned = await createOwnedWorkSyncIdentity();
+    try {
+      const teamName = 'team-lifecycle-identity-lost';
+      await writeTeamConfig(getTeamsBasePath(), teamName);
+      const first = await owned.identity.adoptLegacy(teamName);
+      expect(first.status).toBe('identified');
+      if (first.status !== 'identified') {
+        throw new Error('expected identified lifecycle marker before backup');
+      }
+      await owned.backup.backupTeam(teamName);
+      await writeTeamConfig(getTeamsBasePath(), teamName);
+      expect(await owned.identity.adoptLegacy(teamName)).toEqual({
+        status: 'unidentified',
+        reason: 'identity_lost',
+      });
+    } finally {
+      await owned.dispose();
     }
   });
 

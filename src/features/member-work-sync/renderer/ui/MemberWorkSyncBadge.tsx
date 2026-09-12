@@ -33,6 +33,7 @@ export function MemberWorkSyncBadge({
   return (
     <Badge
       variant="outline"
+      data-testid="member-work-sync-badge"
       className={cn(
         'cursor-default whitespace-nowrap font-medium',
         toneClassName[resolved.tone],

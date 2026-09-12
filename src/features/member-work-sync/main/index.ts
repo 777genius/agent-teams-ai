@@ -15,6 +15,7 @@ export {
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
 export type { MemberWorkSyncRestoreParticipant } from './composition/createMemberWorkSyncRestoreParticipant';
+export { createUnsupportedMemberWorkSyncRuntimeTicketAdmission } from './composition/createUnsupportedMemberWorkSyncRuntimeTicketAdmission';
 export { MEMBER_WORK_SYNC_PRODUCTION_RECOVERY } from './composition/memberWorkSyncProductionRecovery';
 export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
 export {
