@@ -10,6 +10,7 @@ import {
   finalizeMemberWorkSyncAgenda,
   MemberWorkSyncReconciler,
 } from '@features/member-work-sync/core/application/MemberWorkSyncReconciler';
+import { MemberWorkSyncRecoveryCommands } from '@features/member-work-sync/core/application/MemberWorkSyncRecoveryCommands';
 import { MemberWorkSyncReporter } from '@features/member-work-sync/core/application/MemberWorkSyncReporter';
 import {
   buildMemberWorkSyncReportRequestDigest,
@@ -380,6 +381,35 @@ describe.each(['json', 'sqlite'] as const)(
       );
       expect(second.accepted).toBe(true);
       expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
+    });
+
+    it('keeps a concurrent user Stop when accepting a report after journal refresh', async () => {
+      const h = await setup(kind);
+      const accepted = await h.run(async (bound) => {
+        const port = bound.statusMutations!;
+        let reads = 0;
+        return new MemberWorkSyncReporter({
+          ...bound,
+          statusMutations: {
+            ...port,
+            readSnapshot: async (input) => {
+              if (++reads === 2) {
+                await new MemberWorkSyncRecoveryCommands(bound).stop({
+                  ...member,
+                  reason: 'user_stop',
+                });
+              }
+              return port.readSnapshot(input);
+            },
+          },
+        }).execute(h.request);
+      });
+      expect(accepted.accepted).toBe(true);
+      expect(accepted.status.recoveryHealth?.autoResumeStopLatch?.reason).toBe('user_stop');
+      expect(accepted.status.lastAcceptedReport?.note).toBe('accepted I1');
+      const stored = await h.read();
+      expect(stored.recoveryHealth?.autoResumeStopLatch?.reason).toBe('user_stop');
+      expect(stored.lastAcceptedReport?.note).toBe('accepted I1');
     });
 
     it('marks projection degraded when post-commit transfer fails after I1 is accepted', async () => {

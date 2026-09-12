@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+import { KeyedMutex } from '@features/internal-storage/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -443,6 +444,58 @@ describe('prepared backend production storage path', () => {
         nowIso: '2026-09-10T00:00:00.000Z',
       })
     ).resolves.toMatchObject({ ok: true });
+  });
+
+  it('reissues restored report tokens while the identity fence is held', async () => {
+    const h = await setup('sqlite');
+    const mutex = new KeyedMutex();
+    const baseIdentity = createTestWorkSyncIdentity(identity.incarnation);
+    const fencedIdentity = {
+      ...baseIdentity,
+      readCurrent: (teamName: string) =>
+        mutex.run(identity.teamName, () => baseIdentity.readCurrent(teamName)),
+      adoptLegacy: (teamName: string) =>
+        mutex.run(identity.teamName, () => baseIdentity.adoptLegacy(teamName)),
+      withCurrent: <T>(teamName: string, expected: string, operation: () => Promise<T>) =>
+        mutex.run(identity.teamName, () => baseIdentity.withCurrent(teamName, expected, operation)),
+    };
+    const backupRoot = join(h.root, 'backup-teams');
+    const backupPaths = new MemberWorkSyncStorePaths(backupRoot);
+    const backupTokens = new HmacMemberWorkSyncReportTokenAdapter(
+      backupPaths,
+      createTestWorkSyncIdentity('inc-1')
+    );
+    await backupTokens.restoreBackupSecret(
+      identity.teamName,
+      JSON.stringify({ schemaVersion: 1, secret: 'a'.repeat(32) }),
+      { teamName: identity.teamName, incarnation: identity.incarnation }
+    );
+    const backupIssued = await backupTokens.create({
+      teamName: identity.teamName,
+      memberName: member.memberName,
+      agendaFingerprint: 'f',
+      issuedAt: '2026-09-10T00:00:00.000Z',
+    });
+    await new JsonMemberWorkSyncStore(backupPaths).write({
+      ...status(),
+      reportToken: backupIssued.token,
+      reportTokenExpiresAt: backupIssued.expiresAt,
+    });
+    const liveTokens = new HmacMemberWorkSyncReportTokenAdapter(h.paths, fencedIdentity);
+    const prepared = await createMemberWorkSyncRestoreParticipant(
+      h.store,
+      liveTokens,
+      h.paths
+    ).prepare({ ...identity, backupTeamsRoot: backupRoot });
+    await Promise.race([
+      mutex.run(identity.teamName, () => prepared.importAndVerify()),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('restore reissue deadlocked on identity fence')), 3000);
+      }),
+    ]);
+    const restored = await h.store.read(member);
+    expect(restored?.reportToken).toBeTruthy();
+    expect(restored?.reportToken).not.toBe(backupIssued.token);
   });
 
   it.each(['plain-json', 'sqlite'] as const)(

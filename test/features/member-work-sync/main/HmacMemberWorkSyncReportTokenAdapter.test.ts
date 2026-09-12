@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { KeyedMutex } from '@features/internal-storage/main';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -308,5 +309,43 @@ describe('HmacMemberWorkSyncReportTokenAdapter', () => {
     await expect(readFile(paths.getReportTokenSecretPath('team-a'))).rejects.toMatchObject({
       code: 'ENOENT',
     });
+  });
+
+  it('signs restore tokens without re-entering the identity fence', async () => {
+    const mutex = new KeyedMutex();
+    let fenceEntries = 0;
+    const base = createTestWorkSyncIdentity();
+    const port = {
+      ...base,
+      withCurrent: async <T>(
+        team: string,
+        expected: string,
+        operation: () => Promise<T>
+      ) =>
+        mutex.run('team-a', async () => {
+          fenceEntries += 1;
+          return base.withCurrent(team, expected, operation);
+        }),
+    };
+    const bound = new HmacMemberWorkSyncReportTokenAdapter(paths, port);
+    const identity = { teamName: 'team-a', incarnation: 'inc-a' };
+    const request = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'f',
+      issuedAt: '2026-09-10T00:00:00.000Z',
+    };
+    await mutex.run('team-a', async () => {
+      const issued = await bound.createForRestore(request, identity);
+      await expect(
+        bound.verifyForRestore(
+          { ...request, token: issued.token, nowIso: request.issuedAt },
+          identity
+        )
+      ).resolves.toMatchObject({ ok: true });
+    });
+    expect(fenceEntries).toBe(0);
+    await bound.create(request);
+    expect(fenceEntries).toBe(1);
   });
 });

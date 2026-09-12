@@ -182,31 +182,6 @@ export class MemberWorkSyncReporter {
       accepted: true,
     };
 
-    let status = await attachMemberWorkSyncReportToken(this.deps, {
-      ...read.status,
-      reportToken: undefined,
-      reportTokenExpiresAt: undefined,
-      providerId: source.providerId,
-      lastAcceptedReport: report,
-      teamName: agenda.teamName,
-      memberName: agenda.memberName,
-      state:
-        report.state === 'caught_up'
-          ? ('caught_up' as const)
-          : report.state === 'blocked'
-            ? ('blocked' as const)
-            : ('still_working' as const),
-      agenda,
-      report,
-      shadow: {
-        reconciledBy: 'report',
-        wouldNudge: false,
-        fingerprintChanged: false,
-      },
-      evaluatedAt: nowIso,
-      diagnostics: [...agenda.diagnostics, 'report_accepted'],
-    });
-
     const journal = this.deps.reportJournal;
     const incarnation = read.snapshot?.incarnation;
     let journalInput =
@@ -233,14 +208,36 @@ export class MemberWorkSyncReporter {
       if (!refreshed.status) throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
       read = refreshed;
       replacedReceipt = refreshed.status.pendingReportReceipt;
-      status = {
-        ...status,
-        statusRevision: refreshed.status.statusRevision,
-      };
     }
     if (replacedReceipt && replacedReceipt.intentId === journalInput?.intentId) {
       replacedReceipt = undefined;
     }
+
+    const status = await attachMemberWorkSyncReportToken(this.deps, {
+      ...read.status,
+      reportToken: undefined,
+      reportTokenExpiresAt: undefined,
+      providerId: source.providerId,
+      lastAcceptedReport: report,
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+      state:
+        report.state === 'caught_up'
+          ? ('caught_up' as const)
+          : report.state === 'blocked'
+            ? ('blocked' as const)
+            : ('still_working' as const),
+      agenda,
+      report,
+      shadow: {
+        reconciledBy: 'report',
+        wouldNudge: false,
+        fingerprintChanged: false,
+      },
+      evaluatedAt: nowIso,
+      diagnostics: [...agenda.diagnostics, 'report_accepted'],
+    });
+
     if (journal && journalInput) {
       const ensured = await journal.ensure(journalInput);
       if (ensured.state === 'present' && ensured.intent.status === 'accepted' && read.status) {

@@ -82,6 +82,7 @@ export class MemberWorkSyncRecoveryCommands {
         return { ok: false as const, code: 'member_stopped' as const };
       }
       const existing = read.status.recoveryHealth?.unresolvedIntentId;
+      const hadUnresolvedIntent = Boolean(existing);
       if (!existing && this.deps.busySignal) {
         const busy = await this.deps.busySignal.isBusy({
           teamName: input.teamName,
@@ -148,7 +149,7 @@ export class MemberWorkSyncRecoveryCommands {
         defaultIntentKey,
         `${baseInput.id}:${defaultIntentKey}`
       );
-      if (existing) {
+      if (hadUnresolvedIntent && existing) {
         const existingItem = await outboxStore.readItem?.({
           teamName: input.teamName,
           memberName: input.memberName,
@@ -174,11 +175,6 @@ export class MemberWorkSyncRecoveryCommands {
               }
             : buildRecoveryInput(defaultIntentKey, existing);
       }
-      let committedStatus = read.status;
-      const candidateId = recoveryInput.id;
-      if (!existing) {
-        committedStatus = await attachReservation(recoveryInput, read.status);
-      }
       let ensured = await outboxStore.ensurePending(recoveryInput);
       // Inbox delivery is not settlement. Keep an unresolved delivered slot.
       // Allocate a new id only after terminal failure, payload conflict, or a
@@ -186,19 +182,26 @@ export class MemberWorkSyncRecoveryCommands {
       const needsFreshIntent =
         !ensured.ok ||
         ensured.item.status === 'failed_terminal' ||
-        (!existing && ensured.item.status === 'delivered');
+        (!hadUnresolvedIntent && ensured.item.status === 'delivered');
       if (needsFreshIntent) {
         const retryKey = `${defaultIntentKey}:${mutationId}`;
         recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
+        ensured = await outboxStore.ensurePending(recoveryInput);
+      }
+      if (!ensured.ok) {
+        return { ok: false as const, code: 'payload_conflict' as const };
+      }
+      let committedStatus = read.status;
+      if (!hadUnresolvedIntent || needsFreshIntent) {
         const previous =
-          !existing && committedStatus.recoveryHealth
+          needsFreshIntent && hadUnresolvedIntent && committedStatus.recoveryHealth
             ? {
                 ...committedStatus,
                 recoveryHealth: {
                   ...committedStatus.recoveryHealth,
                   reservations: (committedStatus.recoveryHealth.reservations ?? []).map(
                     (reservation) =>
-                      reservation.intentId === candidateId
+                      reservation.intentId === existing
                         ? { ...reservation, state: 'resolved' as const }
                         : reservation
                   ),
@@ -206,10 +209,6 @@ export class MemberWorkSyncRecoveryCommands {
               }
             : committedStatus;
         committedStatus = await attachReservation(recoveryInput, previous);
-        ensured = await outboxStore.ensurePending(recoveryInput);
-      }
-      if (!ensured.ok) {
-        return { ok: false as const, code: 'payload_conflict' as const };
       }
       return { ok: true as const, status: committedStatus, code: 'continued' as const };
     });
@@ -234,15 +233,11 @@ export class MemberWorkSyncRecoveryCommands {
           }
           matched = true;
           if (episode.phase === 'expected_wait') {
-            return {
-              ...episode,
-              lastEvidenceId: `stall:${input.reason}:${observedAt}`,
-            };
+            return episode;
           }
           promoted = true;
           return {
             ...episode,
-            lastEvidenceId: `stall:${input.reason}:${observedAt}`,
             reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
             phase: 'attention' as const,
           };

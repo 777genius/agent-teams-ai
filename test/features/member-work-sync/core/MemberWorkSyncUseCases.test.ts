@@ -494,6 +494,50 @@ function createDeps(options?: {
   return { auditEvents, clock, deps, source, store };
 }
 
+function createInMemoryStatusMutations(
+  store: InMemoryStatusStore
+): NonNullable<MemberWorkSyncUseCaseDeps['statusMutations']> {
+  let token = 'cas-0';
+  let nextMutation = 0;
+  return {
+    createMutationId: () => `mutation-${++nextMutation}`,
+    async readSnapshot() {
+      return {
+        ok: true,
+        snapshot: {
+          status: await store.read(),
+          token,
+          incarnation: 'inc-a',
+        },
+      };
+    },
+    async compareAndWrite(input) {
+      if (input.expectedToken !== token) {
+        return {
+          committed: false,
+          reason: 'conflict',
+          current: {
+            status: await store.read(),
+            token,
+            incarnation: 'inc-a',
+          },
+        };
+      }
+      token = `cas-${nextMutation}-${input.mutationId}`;
+      await store.write(input.nextStatus);
+      return {
+        committed: true,
+        snapshot: {
+          status: input.nextStatus,
+          token,
+          incarnation: 'inc-a',
+        },
+        projectionDegraded: [],
+      };
+    },
+  };
+}
+
 describe('MemberWorkSync use cases', () => {
   it('reconciles actionable work into needs_sync without side effects', async () => {
     const { auditEvents, deps, store } = createDeps();
@@ -2765,6 +2809,64 @@ describe('MemberWorkSync use cases', () => {
     );
   });
 
+  it('allocates a fresh Continue item after a delivered default key is released under CAS', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    deps.statusMutations = createInMemoryStatusMutations(store);
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const first = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const firstItem = outbox.items.get(firstIntentId!);
+    expect(firstItem).toBeTruthy();
+    outbox.items.set(firstIntentId!, {
+      ...firstItem!,
+      status: 'delivered',
+      deliveredMessageId: firstIntentId,
+    });
+    const current = await store.read();
+    store.write({
+      ...current!,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: current?.recoveryHealth?.episodes ?? [],
+        controlRevision: current?.recoveryHealth?.controlRevision ?? 1,
+        reservations: (current?.recoveryHealth?.reservations ?? []).map((reservation) =>
+          reservation.intentId === firstIntentId
+            ? { ...reservation, state: 'resolved' as const }
+            : reservation
+        ),
+      },
+    });
+    const second = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.status.recoveryHealth?.unresolvedIntentId).not.toBe(firstIntentId);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'pending'
+    );
+  });
+
   it('promotes a watchdog stall into attention and keeps it across reconcile', async () => {
     const { deps, store } = createDeps({
       providerId: 'codex',
@@ -2793,6 +2895,7 @@ describe('MemberWorkSync use cases', () => {
     );
     expect(stalled?.phase).toBe('attention');
     expect(stalled?.reason).toBe('no_progress_deadline');
+    expect(stalled?.lastEvidenceId).toBe('pending');
     expect(observed.status.recoveryHealth?.attentionAt).toBeTruthy();
     const next = await reconciler.execute({
       teamName: 'team-a',
@@ -2801,6 +2904,43 @@ describe('MemberWorkSync use cases', () => {
     const kept = next.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1');
     expect(kept?.phase).toBe('attention');
     expect(next.recoveryHealth?.attentionAt).toBe(observed.status.recoveryHealth?.attentionAt);
+  });
+
+  it('starts a new recovery episode after a pending watchdog stall when work begins', async () => {
+    const { clock, deps, source, store } = createDeps({
+      providerId: 'codex',
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const observed = await new MemberWorkSyncRecoveryCommands(deps).recordStallObservation({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'no_start',
+    });
+    expect(observed.ok).toBe(true);
+    if (!observed.ok) {
+      return;
+    }
+    const stalled = observed.status.recoveryHealth?.episodes.find(
+      (episode) => episode.taskId === 'task-1'
+    );
+    expect(stalled?.lastEvidenceId).toBe('pending');
+    clock.set('2026-04-29T00:21:00.000Z');
+    source.agenda.items = [inProgressWorkItem];
+    const started = await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const active = started.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1');
+    expect(active?.lastEvidenceId).toBe('in_progress');
+    expect(active?.phase).toBe('observing');
+    expect(active?.episodeId).not.toBe(stalled?.episodeId);
+    expect(active?.firstObservedAt).toBe('2026-04-29T00:21:00.000Z');
   });
 
   it('does not acknowledge a stall observation without a matching recovery episode', async () => {

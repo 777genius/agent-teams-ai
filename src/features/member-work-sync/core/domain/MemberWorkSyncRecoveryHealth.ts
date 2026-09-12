@@ -235,11 +235,11 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
     const workKey = recoveryWorkKey(item);
     const existing = previousByKey.get(workKey);
     const evidenceId = item.evidenceStatus;
+    const lastTaskEvidenceId = existing?.lastEvidenceId?.startsWith('stall:')
+      ? undefined
+      : existing?.lastEvidenceId;
     const progressedToActiveWork =
-      Boolean(existing) &&
-      evidenceId === 'in_progress' &&
-      existing?.lastEvidenceId !== 'in_progress' &&
-      existing?.lastEvidenceId?.startsWith('stall:') !== true;
+      Boolean(existing) && evidenceId === 'in_progress' && lastTaskEvidenceId !== 'in_progress';
     const remainingExpectedWait =
       input.expectedWaiting ||
       (item.evidenceStatus === 'pending' &&

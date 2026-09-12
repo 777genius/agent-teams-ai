@@ -33,20 +33,26 @@ async function reissueRestoredReportTokens(
   for (const memberName of await listLiveStatusMemberNames(store, identity.teamName)) {
     const current = await store.read({ teamName: identity.teamName, memberName });
     if (!current?.reportToken?.trim()) continue;
-    const verified = await tokens.verify({
-      teamName: current.teamName,
-      memberName: current.memberName,
-      agendaFingerprint: current.agenda.fingerprint,
-      token: current.reportToken,
-      nowIso: issuedAt,
-    });
+    const verified = await tokens.verifyForRestore(
+      {
+        teamName: current.teamName,
+        memberName: current.memberName,
+        agendaFingerprint: current.agenda.fingerprint,
+        token: current.reportToken,
+        nowIso: issuedAt,
+      },
+      identity
+    );
     if (verified.ok) continue;
-    const issued = await tokens.create({
-      teamName: current.teamName,
-      memberName: current.memberName,
-      agendaFingerprint: current.agenda.fingerprint,
-      issuedAt,
-    });
+    const issued = await tokens.createForRestore(
+      {
+        teamName: current.teamName,
+        memberName: current.memberName,
+        agendaFingerprint: current.agenda.fingerprint,
+        issuedAt,
+      },
+      identity
+    );
     await store.write(
       createMemberWorkSyncStatusVersion(
         current,

@@ -72,61 +72,33 @@ export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncRepor
     token: string;
     expiresAt: string;
   }> {
-    const expiresAt = new Date(Date.parse(input.issuedAt) + TOKEN_TTL_MS).toISOString();
-    const payload: TokenPayload = {
-      version: 1,
-      teamName: input.teamName,
-      memberName: input.memberName,
-      agendaFingerprint: input.agendaFingerprint,
-      expiresAt,
-    };
-    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-    const signature = await this.sign(input.teamName, encodedPayload);
-    return {
-      token: `${TOKEN_PREFIX}.${encodedPayload}.${signature}`,
-      expiresAt,
-    };
+    return this.issue(input, (encodedPayload) => this.sign(input.teamName, encodedPayload));
   }
 
   async verify(
     input: MemberWorkSyncReportTokenVerifyInput
   ): Promise<MemberWorkSyncReportTokenVerification> {
-    if (!input.token) {
-      return { ok: false, reason: 'missing' };
-    }
+    return this.check(input, (encodedPayload) => this.sign(input.teamName, encodedPayload));
+  }
 
-    const [prefix, encodedPayload, signature, extra] = input.token.split('.');
-    if (prefix !== TOKEN_PREFIX || !encodedPayload || !signature || extra) {
-      return { ok: false, reason: 'invalid' };
-    }
+  /** Restore already holds the lifecycle fence; do not re-enter `withCurrent`. */
+  async createForRestore(
+    input: MemberWorkSyncReportTokenCreateInput,
+    identity: TokenSecretIdentity
+  ): Promise<{ token: string; expiresAt: string }> {
+    return this.issue(input, (encodedPayload) =>
+      this.signWithKnownIdentity(input.teamName, identity, encodedPayload)
+    );
+  }
 
-    const expectedSignature = await this.sign(input.teamName, encodedPayload);
-    if (!safeEqual(signature, expectedSignature)) {
-      return { ok: false, reason: 'invalid' };
-    }
-
-    let payload: unknown;
-    try {
-      payload = JSON.parse(base64UrlDecode(encodedPayload));
-    } catch {
-      return { ok: false, reason: 'invalid' };
-    }
-    if (!isTokenPayload(payload)) {
-      return { ok: false, reason: 'invalid' };
-    }
-    if (
-      payload.teamName !== input.teamName ||
-      payload.memberName !== input.memberName ||
-      payload.agendaFingerprint !== input.agendaFingerprint
-    ) {
-      return { ok: false, reason: 'invalid' };
-    }
-    const expiry = Date.parse(payload.expiresAt);
-    const now = Date.parse(input.nowIso);
-    if (!Number.isFinite(expiry) || !Number.isFinite(now)) return { ok: false, reason: 'invalid' };
-    const claims = { expiresAt: payload.expiresAt, expiresAtMs: expiry };
-    if (expiry <= now) return { ok: false, reason: 'expired', claims };
-    return { ok: true, claims };
+  /** Restore already holds the lifecycle fence; do not re-enter `withCurrent`. */
+  async verifyForRestore(
+    input: MemberWorkSyncReportTokenVerifyInput,
+    identity: TokenSecretIdentity
+  ): Promise<MemberWorkSyncReportTokenVerification> {
+    return this.check(input, (encodedPayload) =>
+      this.signWithKnownIdentity(input.teamName, identity, encodedPayload)
+    );
   }
 
   /** Privileged restore only: caller owns the lifecycle fence and drained token users. */
@@ -160,22 +132,88 @@ export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncRepor
     return { rotated: before !== (await readFile(target, 'utf8')) };
   }
 
+  private async issue(
+    input: MemberWorkSyncReportTokenCreateInput,
+    sign: (encodedPayload: string) => Promise<string>
+  ): Promise<{ token: string; expiresAt: string }> {
+    const expiresAt = new Date(Date.parse(input.issuedAt) + TOKEN_TTL_MS).toISOString();
+    const encodedPayload = base64UrlEncode(
+      JSON.stringify({
+        version: 1,
+        teamName: input.teamName,
+        memberName: input.memberName,
+        agendaFingerprint: input.agendaFingerprint,
+        expiresAt,
+      } satisfies TokenPayload)
+    );
+    return {
+      token: `${TOKEN_PREFIX}.${encodedPayload}.${await sign(encodedPayload)}`,
+      expiresAt,
+    };
+  }
+
+  private async check(
+    input: MemberWorkSyncReportTokenVerifyInput,
+    sign: (encodedPayload: string) => Promise<string>
+  ): Promise<MemberWorkSyncReportTokenVerification> {
+    if (!input.token) {
+      return { ok: false, reason: 'missing' };
+    }
+
+    const [prefix, encodedPayload, signature, extra] = input.token.split('.');
+    if (prefix !== TOKEN_PREFIX || !encodedPayload || !signature || extra) {
+      return { ok: false, reason: 'invalid' };
+    }
+
+    const expectedSignature = await sign(encodedPayload);
+    if (!safeEqual(signature, expectedSignature)) {
+      return { ok: false, reason: 'invalid' };
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(base64UrlDecode(encodedPayload));
+    } catch {
+      return { ok: false, reason: 'invalid' };
+    }
+    if (!isTokenPayload(payload)) {
+      return { ok: false, reason: 'invalid' };
+    }
+    if (
+      payload.teamName !== input.teamName ||
+      payload.memberName !== input.memberName ||
+      payload.agendaFingerprint !== input.agendaFingerprint
+    ) {
+      return { ok: false, reason: 'invalid' };
+    }
+    const expiry = Date.parse(payload.expiresAt);
+    const now = Date.parse(input.nowIso);
+    if (!Number.isFinite(expiry) || !Number.isFinite(now)) return { ok: false, reason: 'invalid' };
+    const claims = { expiresAt: payload.expiresAt, expiresAtMs: expiry };
+    if (expiry <= now) return { ok: false, reason: 'expired', claims };
+    return { ok: true, claims };
+  }
+
   private async sign(teamName: string, encodedPayload: string): Promise<string> {
     let observed = await this.identityAccess.readCurrent(teamName);
     if (observed.status === 'unidentified' && observed.reason === 'missing_marker')
       observed = await this.identityAccess.adoptLegacy(teamName);
     if (observed.status !== 'identified') throw new Error('Report token identity unavailable');
     const identity = { teamName, incarnation: observed.identityId };
-    const result = await this.identityAccess.withCurrent(
-      teamName,
-      identity.incarnation,
-      async () => {
-        const secret = await this.getSecret(teamName, identity);
-        return createHmac('sha256', secret).update(encodedPayload).digest('base64url');
-      }
+    const result = await this.identityAccess.withCurrent(teamName, identity.incarnation, () =>
+      this.signWithKnownIdentity(teamName, identity, encodedPayload)
     );
     if (!result.current) throw new Error('Report token identity changed');
     return result.value;
+  }
+
+  private async signWithKnownIdentity(
+    teamName: string,
+    identity: TokenSecretIdentity,
+    encodedPayload: string
+  ): Promise<string> {
+    const secret = await this.getSecret(teamName, identity);
+    return createHmac('sha256', secret).update(encodedPayload).digest('base64url');
   }
 
   private async getSecret(teamName: string, identity: TokenSecretIdentity): Promise<string> {

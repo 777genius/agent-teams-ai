@@ -255,7 +255,7 @@ describe('member work sync recovery health observation', () => {
         episodes: [
           {
             ...first!.episodes[0]!,
-            lastEvidenceId: 'stall:no_progress_deadline:2026-09-11T00:19:00.000Z',
+            lastEvidenceId: 'in_progress',
             phase: 'attention',
           },
         ],
@@ -270,6 +270,70 @@ describe('member work sync recovery health observation', () => {
     expect(attention?.episodes[0]?.episodeId).toBe(first?.episodes[0]?.episodeId);
     expect(attention?.episodes[0]?.phase).toBe('attention');
     expect(attention?.attentionAt).toBe('2026-09-11T00:19:00.000Z');
+  });
+
+  it('restarts the deadline when a pending task starts after a leftover stall marker', () => {
+    const first = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [{ ...work, evidenceStatus: 'pending' }],
+      expectedWaiting: false,
+    });
+    const startedAt = Date.parse('2026-09-11T00:21:00.000Z');
+    const started = observeMemberWorkSyncRecoveryHealth({
+      previous: {
+        ...first!,
+        episodes: [
+          {
+            ...first!.episodes[0]!,
+            lastEvidenceId: 'stall:no_start:2026-09-11T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+        attentionAt: '2026-09-11T00:20:00.000Z',
+      },
+      nowIso: new Date(startedAt).toISOString(),
+      nowMs: startedAt,
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    expect(started?.episodes[0]?.firstObservedAt).toBe(new Date(startedAt).toISOString());
+    expect(started?.episodes[0]?.episodeId).not.toBe(first?.episodes[0]?.episodeId);
+    expect(started?.episodes[0]?.phase).toBe('observing');
+    expect(started?.episodes[0]?.lastEvidenceId).toBe('in_progress');
+  });
+
+  it('restarts the deadline when a pending task starts after a watchdog stall', () => {
+    const first = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [{ ...work, evidenceStatus: 'pending' }],
+      expectedWaiting: false,
+    });
+    const startedAt = Date.parse('2026-09-11T00:21:00.000Z');
+    const started = observeMemberWorkSyncRecoveryHealth({
+      previous: {
+        ...first!,
+        episodes: [
+          {
+            ...first!.episodes[0]!,
+            lastEvidenceId: 'pending',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+        attentionAt: '2026-09-11T00:20:00.000Z',
+      },
+      nowIso: new Date(startedAt).toISOString(),
+      nowMs: startedAt,
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    expect(started?.episodes[0]?.firstObservedAt).toBe(new Date(startedAt).toISOString());
+    expect(started?.episodes[0]?.lastProgressAt).toBe(new Date(startedAt).toISOString());
+    expect(started?.episodes[0]?.phase).toBe('observing');
+    expect(started?.episodes[0]?.lastEvidenceId).toBe('in_progress');
   });
 
   it('rebases a future firstObservedAt after clock rollback', () => {
