@@ -238,11 +238,16 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
     const progressedToActiveWork =
       Boolean(existing) &&
       evidenceId === 'in_progress' &&
-      existing?.lastEvidenceId !== 'in_progress';
-    const firstObservedAt = progressedToActiveWork
+      existing?.lastEvidenceId !== 'in_progress' &&
+      existing?.lastEvidenceId?.startsWith('stall:') !== true;
+    let firstObservedAt = progressedToActiveWork
       ? input.nowIso
       : (existing?.firstObservedAt ?? input.nowIso);
-    const firstObservedMs = Date.parse(firstObservedAt);
+    let firstObservedMs = Date.parse(firstObservedAt);
+    if (!Number.isFinite(firstObservedMs) || firstObservedMs > input.nowMs) {
+      firstObservedAt = input.nowIso;
+      firstObservedMs = input.nowMs;
+    }
     const dueAt = new Date(firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS).toISOString();
     const overdue = input.nowMs >= firstObservedMs + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS;
     const classified = classifyRecoveryObservation({

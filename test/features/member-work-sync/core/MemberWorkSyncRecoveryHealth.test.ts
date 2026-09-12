@@ -176,4 +176,71 @@ describe('member work sync recovery health observation', () => {
     expect(nextCycle?.episodes[0]?.phase).toBe('observing');
     expect(nextCycle?.episodes[0]?.firstObservedAt).toBe(new Date(overdueMs + 60_000).toISOString());
   });
+
+  it('does not restart the deadline when a watchdog stall marks an in-progress task', () => {
+    const first = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    const due = Date.parse('2026-09-11T00:00:00.000Z') + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS;
+    const attention = observeMemberWorkSyncRecoveryHealth({
+      previous: {
+        ...first!,
+        episodes: [
+          {
+            ...first!.episodes[0]!,
+            lastEvidenceId: 'stall:no_progress_deadline:2026-09-11T00:19:00.000Z',
+            phase: 'attention',
+          },
+        ],
+        attentionAt: '2026-09-11T00:19:00.000Z',
+      },
+      nowIso: new Date(due).toISOString(),
+      nowMs: due,
+      items: [{ ...work, evidenceStatus: 'in_progress', reason: 'owned_in_progress_task' }],
+      expectedWaiting: false,
+    });
+    expect(attention?.episodes[0]?.firstObservedAt).toBe('2026-09-11T00:00:00.000Z');
+    expect(attention?.episodes[0]?.episodeId).toBe(first?.episodes[0]?.episodeId);
+    expect(attention?.episodes[0]?.phase).toBe('attention');
+    expect(attention?.attentionAt).toBe('2026-09-11T00:19:00.000Z');
+  });
+
+  it('rebases a future firstObservedAt after clock rollback', () => {
+    const future = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [work],
+      expectedWaiting: false,
+    });
+    const rolledBack = observeMemberWorkSyncRecoveryHealth({
+      previous: {
+        ...future!,
+        episodes: [
+          {
+            ...future!.episodes[0]!,
+            firstObservedAt: '2026-12-01T00:00:00.000Z',
+            dueAt: '2026-12-01T00:20:00.000Z',
+          },
+        ],
+      },
+      nowIso: '2026-09-11T00:01:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:01:00.000Z'),
+      items: [work],
+      expectedWaiting: false,
+    });
+    expect(rolledBack?.episodes[0]?.firstObservedAt).toBe('2026-09-11T00:01:00.000Z');
+    expect(rolledBack?.episodes[0]?.phase).toBe('observing');
+    const due = Date.parse('2026-09-11T00:01:00.000Z') + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS;
+    const attention = observeMemberWorkSyncRecoveryHealth({
+      previous: rolledBack,
+      nowIso: new Date(due).toISOString(),
+      nowMs: due,
+      items: [work],
+      expectedWaiting: false,
+    });
+    expect(attention?.episodes[0]?.phase).toBe('attention');
+  });
 });
