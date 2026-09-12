@@ -128,6 +128,13 @@ export interface SendInboxMessageOptions {
   shouldStillWrite?: () => boolean | Promise<boolean>;
 }
 
+class TeamInboxWriteAbortedError extends Error {
+  constructor() {
+    super('Inbox write aborted before commit');
+    this.name = 'TeamInboxWriteAbortedError';
+  }
+}
+
 export class TeamInboxWriter {
   async sendMessage(
     teamName: string,
@@ -198,6 +205,23 @@ export class TeamInboxWriter {
           }
           return false;
         };
+        const writeInboxList = async (list: InboxMessage[]): Promise<'aborted' | 'written'> => {
+          try {
+            await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2), {
+              beforeCommit: async () => {
+                if (await shouldAbortWrite()) {
+                  throw new TeamInboxWriteAbortedError();
+                }
+              },
+            });
+            return 'written';
+          } catch (error) {
+            if (error instanceof TeamInboxWriteAbortedError) {
+              return 'aborted';
+            }
+            throw error;
+          }
+        };
         if (await shouldAbortWrite()) {
           return;
         }
@@ -229,7 +253,9 @@ export class TeamInboxWriter {
               if (await shouldAbortWrite()) {
                 return;
               }
-              await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+              if ((await writeInboxList(list)) === 'aborted') {
+                return;
+              }
               const written = await this.readInbox(inboxPath);
               const writtenDuplicateIndex = matchedExplicitMessageId
                 ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
@@ -251,7 +277,9 @@ export class TeamInboxWriter {
           if (await shouldAbortWrite()) {
             return;
           }
-          await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+          if ((await writeInboxList(list)) === 'aborted') {
+            return;
+          }
           const written = await this.readInbox(inboxPath);
           if (written.some((msg) => msg.messageId === messageId)) {
             return;
