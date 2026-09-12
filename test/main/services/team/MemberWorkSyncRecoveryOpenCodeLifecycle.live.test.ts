@@ -54,6 +54,10 @@ import type {
 const liveDescribe = process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' ? describe : describe.skip;
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
+if (process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1') {
+  process.env.OPENCODE_E2E_USE_REAL_APP_CREDENTIALS ??= '1';
+}
+
 liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
   let tempDir: string;
   let feature: MemberWorkSyncFeatureFacade | null;

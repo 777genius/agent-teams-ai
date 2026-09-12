@@ -791,7 +791,227 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     await feature.prepareTeamDeletion(teamName);
     feature.completeTeamDeletion(teamName);
   }, 420_000);
+
+  it('rejects token T1 after delete/recreate of the same live Codex teammate team name (C21/S12)', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
+
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    teamName = `member-work-sync-recovery-codex-teammate-recreate-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync recovery Codex native teammate recreate canary\n',
+      'utf8'
+    );
+
+    const {
+      TeamProvisioningService,
+      TeamConfigReader,
+      TeamTaskReader,
+      TeamKanbanManager,
+      TeamMembersMetaStore,
+      createCodexAccountFeature,
+      ProviderConnectionService,
+    } = await loadCodexLiveServices();
+
+    codexAccountFeature = createCodexAccountFeature({
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: { preferredAuthMode: hasCodexApiKey ? 'auto' : ('chatgpt' as const) },
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const lifecycleIdentity = owned!.identity;
+    const createFeature = () =>
+      createMemberWorkSyncFeature({
+        lifecycleIdentity,
+        teamsBasePath: getTeamsBasePath(),
+        recoveryAllocation: { enabled: false },
+        configReader: new TeamConfigReader(),
+        taskReader: new TeamTaskReader(),
+        kanbanManager: new TeamKanbanManager(),
+        membersMetaStore: new TeamMembersMetaStore(),
+        isTeamActive: (name) =>
+          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+        listLifecycleActiveTeamNames: async () => [teamName!],
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        queueQuietWindowMs: 1,
+      });
+
+    feature = createFeature();
+    wireLiveFeature(activeService, feature);
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
+    await assertCodexLaunchAllowed(codexAccountFeature);
+
+    const launchTeam = async (context: string) => {
+      const progressEvents: TeamProvisioningProgress[] = [];
+      await activeService.createTeam(
+        {
+          teamName: teamName!,
+          cwd: projectPath,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model,
+          effort: DEFAULT_EFFORT,
+          fastMode: 'off',
+          skipPermissions: true,
+          prompt: [
+            'Keep launch work minimal.',
+            'Do not take teammate tasks. Wait for operator instructions.',
+          ].join(' '),
+          members: [
+            {
+              name: TEAMMATE_NAME,
+              role: 'Developer',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model,
+              effort: DEFAULT_EFFORT,
+            },
+          ],
+        },
+        (progress) => {
+          progressEvents.push(progress);
+        }
+      );
+      await waitForCodexTeamReady({
+        progressEvents,
+        teamName: teamName!,
+        projectPath,
+        tempClaudeRoot,
+        startedAt: Date.now(),
+        context,
+      });
+      await waitUntil(
+        async () => (await readMemberRuntimePids(teamName!, TEAMMATE_NAME)).length > 0,
+        120_000,
+        2_000
+      );
+    };
+
+    await launchTeam('Codex teammate C21 first launch');
+    expect(activeService.isTeamAlive(teamName)).toBe(true);
+
+    const firstStatus = await refreshStatusWithToken({
+      feature,
+      teamName,
+      memberName: TEAMMATE_NAME,
+    });
+    const firstIdentity = await lifecycleIdentity.readCurrent(teamName);
+    expect(firstIdentity.status).toBe('identified');
+    if (firstIdentity.status !== 'identified') {
+      throw new Error('expected identified lifecycle marker before recreate');
+    }
+    const firstToken = firstStatus.reportToken;
+    const firstFingerprint = firstStatus.agenda.fingerprint;
+    await waitUntil(
+      async () => {
+        await feature!.stopAutoResume({
+          teamName: teamName!,
+          memberName: TEAMMATE_NAME,
+          reason: 'user_stop',
+        });
+        return true;
+      },
+      15_000,
+      250
+    );
+
+    await activeService.stopTeam(teamName).catch(() => undefined);
+    await feature.prepareTeamDeletion(teamName, firstIdentity.identityId);
+    feature.completeTeamDeletion(teamName);
+    await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
+    await feature.dispose();
+    await controlServer.close().catch(() => undefined);
+    feature = createFeature();
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    wireLiveFeature(activeService, feature);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
+    feature.resumeTeam(teamName);
+
+    await launchTeam('Codex teammate C21 recreate launch');
+    feature.noteTeamChange({ type: 'config', teamName, detail: 'config.json' });
+    const recreated = await refreshStatusWithToken({
+      feature,
+      teamName,
+      memberName: TEAMMATE_NAME,
+    });
+    const secondIdentity = await lifecycleIdentity.readCurrent(teamName);
+    expect(secondIdentity.status).toBe('identified');
+    if (secondIdentity.status !== 'identified') {
+      throw new Error('expected identified lifecycle marker after recreate');
+    }
+    expect(secondIdentity.identityId).not.toBe(firstIdentity.identityId);
+    expect(recreated.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+    expect(recreated.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
+    expect(recreated.reportToken).toBeTruthy();
+    expect(recreated.reportToken).not.toBe(firstToken);
+    await expect(
+      feature.report({
+        teamName,
+        memberName: TEAMMATE_NAME,
+        state: 'caught_up',
+        agendaFingerprint: firstFingerprint,
+        reportToken: firstToken,
+        source: 'test',
+      })
+    ).resolves.toMatchObject({
+      accepted: false,
+      code: 'invalid_report_token',
+    });
+
+    await feature.prepareTeamDeletion(teamName);
+    feature.completeTeamDeletion(teamName);
+  }, 600_000);
 });
+
+async function refreshStatusWithToken(input: {
+  feature: MemberWorkSyncFeatureFacade;
+  teamName: string;
+  memberName: string;
+}): Promise<Awaited<ReturnType<MemberWorkSyncFeatureFacade['refreshStatus']>>> {
+  let status: Awaited<ReturnType<MemberWorkSyncFeatureFacade['refreshStatus']>> | null = null;
+  await waitUntil(
+    async () => {
+      status = await input.feature.refreshStatus({
+        teamName: input.teamName,
+        memberName: input.memberName,
+      });
+      return Boolean(status.reportToken);
+    },
+    30_000,
+    250
+  );
+  if (!status?.reportToken) {
+    throw new Error('expected report token after refresh');
+  }
+  return status;
+}
 
 async function loadCodexLiveServices() {
   const [
@@ -1131,12 +1351,7 @@ async function readFatalRuntimeMessage(teamName: string): Promise<string | null>
 async function readMemberRuntimePids(teamName: string, memberName: string): Promise<number[]> {
   const pids = new Set<number>();
   const addPid = (pid: unknown) => {
-    if (
-      typeof pid === 'number' &&
-      Number.isSafeInteger(pid) &&
-      pid > 1 &&
-      pid !== process.pid
-    ) {
+    if (typeof pid === 'number' && Number.isSafeInteger(pid) && pid > 1 && pid !== process.pid) {
       pids.add(pid);
     }
   };
