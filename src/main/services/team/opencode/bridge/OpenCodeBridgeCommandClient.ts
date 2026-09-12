@@ -379,7 +379,7 @@ export class OpenCodeBridgeCommandClient {
           bridgeArgs.push('--output', outputPath);
         }
         const env = await this.resolveEnv();
-        if (command === 'opencode.cleanupStartupHosts' && options.canDispatch?.() === false) {
+        if (options.canDispatch?.() === false) {
           retainStartupEvidence = false;
           return this.contractFailure(
             envelope,
