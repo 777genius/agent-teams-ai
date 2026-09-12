@@ -30,4 +30,11 @@ export interface MemberWorkSyncReportJournalPort {
   transfer(
     input: MemberWorkSyncReportJournalInput & { receipt: MemberWorkSyncReportReceipt }
   ): Promise<MemberWorkSyncReportJournalResult>;
+  retire(
+    input: MemberWorkSyncReportJournalInput & {
+      status: 'rejected' | 'superseded';
+      resultCode: string;
+      processedAt: string;
+    }
+  ): Promise<MemberWorkSyncReportJournalResult>;
 }

@@ -41,7 +41,15 @@ export function validateMemberWorkSyncReportJournalRow(
       value.processedAt !== metadata.receipt.acceptedAt
     )
       throw new Error('Report journal receipt disagrees with processed outcome');
-  } else if (value.status !== 'pending' || value.resultCode != null || value.processedAt != null) {
+  } else if (value.status === 'pending') {
+    if (value.resultCode != null || value.processedAt != null) {
+      throw new Error('Report journal outcome requires a receipt');
+    }
+  } else if (
+    (value.status !== 'rejected' && value.status !== 'superseded') ||
+    typeof value.resultCode !== 'string' ||
+    typeof value.processedAt !== 'string'
+  ) {
     throw new Error('Report journal outcome requires a receipt');
   }
   return metadata;

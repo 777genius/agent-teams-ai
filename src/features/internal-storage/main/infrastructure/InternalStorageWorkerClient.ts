@@ -277,6 +277,9 @@ export class InternalStorageWorkerClient
     requestJson: string;
     journalJson: string;
     receiptJson?: string;
+    terminalStatus?: 'rejected' | 'superseded';
+    resultCode?: string;
+    processedAt?: string;
   }): Promise<MemberWorkSyncReportJournalOpResult> {
     return (await this.call(
       'mws.reports.journalTransfer',

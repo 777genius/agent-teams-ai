@@ -141,4 +141,56 @@ describe('strict SQLite report journal', () => {
     const [first, second] = await Promise.all([journal.ensure(input), journal.ensure(other)]);
     expect([first.state, second.state].sort()).toEqual(['conflict', 'present']);
   });
+
+  it('retires a pending bound row without a receipt and leaves the pending set', async () => {
+    const { journal, store } = await openJournal();
+    expect(
+      (
+        await journal.retire({
+          ...input,
+          status: 'rejected',
+          resultCode: 'invalid_report_token',
+          processedAt: '2026-09-10T10:01:00.000Z',
+        })
+      ).state
+    ).toBe('absent');
+    await journal.ensure(input);
+    expect((await store.listPendingReports(input.teamName)).map((row) => row.id)).toEqual([
+      input.intentId,
+    ]);
+    expect(
+      await journal.retire({
+        ...input,
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      })
+    ).toMatchObject({
+      state: 'present',
+      intent: {
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      },
+    });
+    expect(
+      await journal.retire({
+        ...input,
+        status: 'superseded',
+        resultCode: 'member_runtime_inactive',
+        processedAt: '2026-09-10T10:02:00.000Z',
+      })
+    ).toMatchObject({
+      state: 'present',
+      intent: { status: 'rejected', resultCode: 'invalid_report_token' },
+    });
+    expect(await store.listPendingReports(input.teamName)).toEqual([]);
+    await expect(
+      store.markPendingReportProcessed(input.teamName, input.intentId, {
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      })
+    ).resolves.toBeUndefined();
+  });
 });

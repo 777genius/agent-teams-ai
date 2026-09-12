@@ -47,6 +47,20 @@ export class BackendSelectingMemberWorkSyncReportJournal implements MemberWorkSy
     );
   }
 
+  retire(
+    input: MemberWorkSyncReportJournalInput & {
+      status: 'rejected' | 'superseded';
+      resultCode: string;
+      processedAt: string;
+    }
+  ): Promise<MemberWorkSyncReportJournalResult> {
+    return this.mutate(
+      input.teamName,
+      () => this.sqlite.retire(input),
+      () => this.json.retire(input)
+    );
+  }
+
   private mutate<T>(
     teamName: string,
     sqliteAction: () => Promise<T>,

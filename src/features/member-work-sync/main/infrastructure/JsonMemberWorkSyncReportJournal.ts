@@ -59,10 +59,24 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
   ): Promise<MemberWorkSyncReportJournalResult> {
     return this.mutate(input, input.receipt);
   }
+  retire(
+    input: MemberWorkSyncReportJournalInput & {
+      status: 'rejected' | 'superseded';
+      resultCode: string;
+      processedAt: string;
+    }
+  ): Promise<MemberWorkSyncReportJournalResult> {
+    return this.mutate(input, undefined, {
+      status: input.status,
+      resultCode: input.resultCode,
+      processedAt: input.processedAt,
+    });
+  }
 
   private async mutate(
     input: MemberWorkSyncReportJournalInput,
-    receipt?: MemberWorkSyncReportReceipt
+    receipt?: MemberWorkSyncReportReceipt,
+    terminal?: { status: 'rejected' | 'superseded'; resultCode: string; processedAt: string }
   ): Promise<MemberWorkSyncReportJournalResult> {
     let result: MemberWorkSyncReportJournalResult = { state: 'unavailable' };
     let metadata: MemberWorkSyncReportJournalMetadata;
@@ -129,7 +143,7 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                   result = { state: 'conflict' };
                   return;
                 }
-                if (receipt && !current) {
+                if ((receipt || terminal) && !current) {
                   result = { state: 'absent' };
                   return;
                 }
@@ -150,7 +164,14 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                         processedAt: receipt.acceptedAt,
                         journal: { ...current.journal!, receipt },
                       }
-                    : current
+                    : terminal && current.status === 'pending'
+                      ? {
+                          ...current,
+                          status: terminal.status,
+                          resultCode: terminal.resultCode,
+                          processedAt: terminal.processedAt,
+                        }
+                      : current
                   : {
                       id: input.intentId,
                       teamName: input.teamName,
@@ -162,7 +183,7 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                       journal: metadata,
                     };
                 file.intents[input.intentId] = intent;
-                const provingExisting = Boolean(current && (!receipt || current.journal?.receipt));
+                const provingExisting = Boolean(current && isDeepStrictEqual(current, intent));
                 let publishStarted = provingExisting;
                 try {
                   for (let dir = dirname(path); ; dir = dirname(dir)) {

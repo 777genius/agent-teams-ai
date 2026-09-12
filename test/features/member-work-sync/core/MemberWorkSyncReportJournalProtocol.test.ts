@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   buildMemberWorkSyncReportRequestDigest,
   createMemberWorkSyncReportJournalInput,
+  retireRejectedReportJournal,
   transferAcceptedReportReceipt,
 } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalProtocol';
 import { describe, expect, it } from 'vitest';
@@ -79,6 +80,7 @@ describe('MemberWorkSyncReportJournalProtocol', () => {
           recordedAt: '2026-09-10T00:00:00.000Z',
         },
       }),
+      retire: async () => ({ state: 'unavailable' }),
     };
     const receipt: MemberWorkSyncReportReceipt = {
       intentId: 'report:degraded',
@@ -106,6 +108,49 @@ describe('MemberWorkSyncReportJournalProtocol', () => {
           request,
         },
         receipt
+      )
+    ).resolves.toBe(false);
+  });
+
+  it('treats a present but degraded journal retire as failure', async () => {
+    const journal: MemberWorkSyncReportJournalPort = {
+      ensure: async () => ({ state: 'unavailable' }),
+      read: async () => ({ state: 'unavailable' }),
+      transfer: async () => ({ state: 'unavailable' }),
+      retire: async () => ({
+        state: 'present',
+        projectionDegraded: true,
+        intent: {
+          id: 'report:degraded',
+          teamName: request.teamName,
+          memberName: request.memberName,
+          request,
+          reason: 'online',
+          status: 'rejected',
+          recordedAt: '2026-09-10T00:00:00.000Z',
+          resultCode: 'invalid_report_token',
+          processedAt: '2026-09-10T00:00:00.000Z',
+        },
+      }),
+    };
+    await expect(
+      retireRejectedReportJournal(
+        journal,
+        {
+          teamName: request.teamName,
+          memberName: request.memberName,
+          incarnation: 'inc-1',
+          intentId: 'report:degraded',
+          requestDigest: 'digest',
+          receivedAt: '2026-09-10T00:00:00.000Z',
+          origin: 'online',
+          request,
+        },
+        {
+          status: 'rejected',
+          resultCode: 'invalid_report_token',
+          processedAt: '2026-09-10T00:00:00.000Z',
+        }
       )
     ).resolves.toBe(false);
   });

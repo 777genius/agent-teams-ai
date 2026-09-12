@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { KeyedMutex } from '@features/internal-storage/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { MemberWorkSyncPendingReportIntentReplayer } from '@features/member-work-sync/core/application/MemberWorkSyncPendingReportIntentReplayer';
 import {
   finalizeMemberWorkSyncAgenda,
   MemberWorkSyncReconciler,
@@ -186,6 +187,7 @@ async function setup(kind: 'json' | 'sqlite') {
     request,
     run,
     read,
+    store,
     setTime: (time: string) => {
       now = time;
     },
@@ -459,6 +461,36 @@ describe.each(['json', 'sqlite'] as const)(
       expect(first.accepted).toBe(true);
       expect(first.projectionDegraded).toBe(true);
       expect(first.status.pendingReportReceipt?.intentId).toBeTruthy();
+    });
+
+    it('retires a journal-backed expired-token replay from the pending set', async () => {
+      const h = await setup(kind);
+      const pending = createMemberWorkSyncReportJournalInput({
+        request: h.request,
+        incarnation,
+        receivedAt: initialTime,
+        hash: h.hash,
+      });
+      expect((await h.reportJournal.ensure(pending)).state).toBe('present');
+      expect((await h.store.listPendingReports(member.teamName)).map((row) => row.id)).toEqual([
+        pending.intentId,
+      ]);
+      const summary = await h.run((deps) =>
+        new MemberWorkSyncPendingReportIntentReplayer({
+          ...deps,
+          reportStore: h.store,
+          reportToken: {
+            create: deps.reportToken!.create,
+            verify: async () => ({ ok: false, reason: 'expired' }),
+          },
+        }).replayTeam(member.teamName)
+      );
+      expect(summary).toEqual({ processed: 1, accepted: 0, rejected: 1, superseded: 0 });
+      expect(await h.store.listPendingReports(member.teamName)).toEqual([]);
+      expect(await h.reportJournal.read(pending)).toMatchObject({
+        state: 'present',
+        intent: { status: 'rejected', resultCode: 'invalid_report_token' },
+      });
     });
   }
 );

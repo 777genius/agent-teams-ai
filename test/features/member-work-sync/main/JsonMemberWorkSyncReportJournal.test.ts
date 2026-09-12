@@ -1,11 +1,13 @@
-import { JsonMemberWorkSyncStore, buildPendingReportIntentId } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
-import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
-import { JsonMemberWorkSyncReportJournal } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncReportJournal';
-import * as atomicWrite from '@main/utils/atomicWrite';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { JsonMemberWorkSyncReportJournal } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncReportJournal';
+import { buildPendingReportIntentId, JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
+import * as atomicWrite from '@main/utils/atomicWrite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { MemberWorkSyncReportJournalInput } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalPort';
 
 const input: MemberWorkSyncReportJournalInput = {
@@ -337,5 +339,65 @@ describe('strict JSON report journal', () => {
     expect(
       await readFile(paths.getMemberReportsPath(input.teamName, input.memberName), 'utf8')
     ).toBe(ownerBytes);
+  });
+
+  it('retires a pending bound row without a receipt and leaves the pending set', async () => {
+    const store = new JsonMemberWorkSyncStore(paths);
+    journal = store.createReportJournal();
+    expect(
+      (
+        await journal.retire({
+          ...input,
+          status: 'rejected',
+          resultCode: 'invalid_report_token',
+          processedAt: '2026-09-10T10:01:00.000Z',
+        })
+      ).state
+    ).toBe('absent');
+    await journal.ensure(input);
+    expect((await store.listPendingReports(input.teamName)).map((row) => row.id)).toEqual([
+      input.intentId,
+    ]);
+    await expect(
+      store.markPendingReportProcessed(input.teamName, input.intentId, {
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      })
+    ).rejects.toThrow('Bound report intent requires strict journal API');
+    expect(
+      await journal.retire({
+        ...input,
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      })
+    ).toMatchObject({
+      state: 'present',
+      intent: {
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      },
+    });
+    expect(
+      await journal.retire({
+        ...input,
+        status: 'superseded',
+        resultCode: 'member_runtime_inactive',
+        processedAt: '2026-09-10T10:02:00.000Z',
+      })
+    ).toMatchObject({
+      state: 'present',
+      intent: { status: 'rejected', resultCode: 'invalid_report_token' },
+    });
+    expect(await store.listPendingReports(input.teamName)).toEqual([]);
+    await expect(
+      store.markPendingReportProcessed(input.teamName, input.intentId, {
+        status: 'rejected',
+        resultCode: 'invalid_report_token',
+        processedAt: '2026-09-10T10:01:00.000Z',
+      })
+    ).resolves.toBeUndefined();
   });
 });

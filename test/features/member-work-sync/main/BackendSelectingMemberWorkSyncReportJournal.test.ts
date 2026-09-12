@@ -52,6 +52,10 @@ function journal(label: string, calls: string[]): MemberWorkSyncReportJournalPor
       calls.push(`${label}:transfer`);
       return { state: 'present', intent: { id: input.intentId } } as MemberWorkSyncReportJournalResult;
     },
+    retire: async () => {
+      calls.push(`${label}:retire`);
+      return { state: 'present', intent: { id: input.intentId } } as MemberWorkSyncReportJournalResult;
+    },
   };
 }
 
@@ -78,11 +82,19 @@ describe('BackendSelectingMemberWorkSyncReportJournal', () => {
     );
     await wrapped.ensure(input);
     await wrapped.transfer({ ...input, receipt });
+    await wrapped.retire({
+      ...input,
+      status: 'rejected',
+      resultCode: 'invalid_report_token',
+      processedAt: input.receivedAt,
+    });
     expect(calls).toEqual([
       'fence:team-a:true',
       'sqlite:ensure',
       'fence:team-a:true',
       'sqlite:transfer',
+      'fence:team-a:true',
+      'sqlite:retire',
     ]);
   });
 });

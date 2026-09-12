@@ -1,4 +1,8 @@
 import { MemberWorkSyncReporter } from './MemberWorkSyncReporter';
+import {
+  createMemberWorkSyncReportJournalInput,
+  retireRejectedReportJournal,
+} from './MemberWorkSyncReportJournalProtocol';
 
 import type {
   MemberWorkSyncReportIntent,
@@ -76,10 +80,34 @@ export class MemberWorkSyncPendingReportIntentReplayer {
       } else {
         summary.rejected += 1;
       }
+      const processedAt = this.deps.clock.now().toISOString();
+      if (intent.journal && status !== 'accepted' && this.deps.reportJournal) {
+        await retireRejectedReportJournal(
+          this.deps.reportJournal,
+          createMemberWorkSyncReportJournalInput({
+            request: intent.request,
+            incarnation: intent.journal.incarnation,
+            receivedAt: intent.journal.firstRecordedAt,
+            hash: this.deps.hash,
+            replay: {
+              intentId: intent.id,
+              incarnation: intent.journal.incarnation,
+              requestDigest: intent.journal.requestDigest,
+              receivedAt: intent.journal.firstRecordedAt,
+              origin: intent.journal.origin,
+            },
+          }),
+          {
+            status: status === 'superseded' ? 'superseded' : 'rejected',
+            resultCode,
+            processedAt,
+          }
+        );
+      }
       await store.markPendingReportProcessed(teamName, intent.id, {
         status,
         resultCode,
-        processedAt: this.deps.clock.now().toISOString(),
+        processedAt,
       });
     }
 

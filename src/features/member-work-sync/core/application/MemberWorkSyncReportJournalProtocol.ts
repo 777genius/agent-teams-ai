@@ -138,3 +138,12 @@ export async function transferAcceptedReportReceipt(
   const result = await journal.transfer({ ...input, receipt });
   return result.state === 'present' && !result.projectionDegraded;
 }
+
+export async function retireRejectedReportJournal(
+  journal: MemberWorkSyncReportJournalPort,
+  input: MemberWorkSyncReportJournalInput,
+  outcome: { status: 'rejected' | 'superseded'; resultCode: string; processedAt: string }
+): Promise<boolean> {
+  const result = await journal.retire({ ...input, ...outcome });
+  return result.state === 'present' && !result.projectionDegraded;
+}

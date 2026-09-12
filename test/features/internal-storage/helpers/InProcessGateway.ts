@@ -114,6 +114,9 @@ export class InProcessGateway
     requestJson: string;
     journalJson: string;
     receiptJson?: string;
+    terminalStatus?: 'rejected' | 'superseded';
+    resultCode?: string;
+    processedAt?: string;
   }): Promise<MemberWorkSyncReportJournalOpResult> {
     return this.op('mws.reports.journalTransfer', input);
   }

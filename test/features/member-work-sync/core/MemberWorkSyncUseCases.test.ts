@@ -5300,4 +5300,82 @@ describe('MemberWorkSync use cases', () => {
       resultCode: 'member_runtime_inactive',
     });
   });
+
+  it('retires a journal-backed rejected replay before marking the bound pending row', async () => {
+    const { deps, store } = createDeps();
+    const reader = new MemberWorkSyncReconciler(deps);
+    const current = await reader.execute({ teamName: 'team-a', memberName: 'bob' });
+    const originalMark = store.markPendingReportProcessed.bind(store);
+    store.markPendingReportProcessed = async (teamName, id, result) => {
+      const row = store.pendingIntents.get(id);
+      if (row?.journal && row.status === 'pending') {
+        throw new Error('Bound report intent requires strict journal API');
+      }
+      return originalMark(teamName, id, result);
+    };
+    store.pendingIntents.set('intent-1', {
+      id: 'intent-1',
+      teamName: 'team-a',
+      memberName: 'bob',
+      status: 'pending',
+      reason: 'control_api_unavailable',
+      recordedAt: '2026-04-29T00:16:00.000Z',
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: current.agenda.fingerprint,
+        reportToken: 'expired-token',
+        leaseTtlMs: 120_000,
+        source: 'mcp',
+      },
+      journal: {
+        incarnation: 'inc-1',
+        requestDigest: 'digest-1',
+        firstRecordedAt: '2026-04-29T00:16:00.000Z',
+        origin: 'fallback',
+      },
+    });
+    const retired: string[] = [];
+    deps.reportJournal = {
+      ensure: async () => ({ state: 'unavailable' }),
+      read: async () => ({ state: 'unavailable' }),
+      transfer: async () => ({ state: 'unavailable' }),
+      retire: async (input) => {
+        retired.push(input.intentId);
+        const row = store.pendingIntents.get(input.intentId);
+        if (!row) {
+          return { state: 'absent' };
+        }
+        store.pendingIntents.set(input.intentId, {
+          ...row,
+          status: input.status,
+          resultCode: input.resultCode,
+          processedAt: input.processedAt,
+        });
+        return {
+          state: 'present',
+          projectionDegraded: false,
+          intent: store.pendingIntents.get(input.intentId)!,
+        };
+      },
+    };
+    const baseReportToken = deps.reportToken!;
+    deps.reportToken = {
+      create: baseReportToken.create,
+      verify: async (input) =>
+        input.token === 'expired-token'
+          ? { ok: false, reason: 'expired' }
+          : baseReportToken.verify(input),
+    };
+
+    const summary = await new MemberWorkSyncPendingReportIntentReplayer(deps).replayTeam('team-a');
+
+    expect(retired).toEqual(['intent-1']);
+    expect(summary).toEqual({ processed: 1, accepted: 0, rejected: 1, superseded: 0 });
+    expect(store.pendingIntents.get('intent-1')).toMatchObject({
+      status: 'rejected',
+      resultCode: 'invalid_report_token',
+    });
+  });
 });

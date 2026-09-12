@@ -97,6 +97,9 @@ export interface MemberWorkSyncStorageGateway {
     requestJson: string;
     journalJson: string;
     receiptJson?: string;
+    terminalStatus?: 'rejected' | 'superseded';
+    resultCode?: string;
+    processedAt?: string;
   }): Promise<MemberWorkSyncReportJournalOpResult>;
   outboxEnsurePending(
     input: MemberWorkSyncOutboxEnsureRecordInput

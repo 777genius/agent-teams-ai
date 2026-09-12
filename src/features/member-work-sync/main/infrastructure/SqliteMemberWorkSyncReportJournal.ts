@@ -27,7 +27,11 @@ function toResult(
   }
 }
 
-function mutation(input: MemberWorkSyncReportJournalInput, receipt?: MemberWorkSyncReportReceipt) {
+function mutation(
+  input: MemberWorkSyncReportJournalInput,
+  receipt?: MemberWorkSyncReportReceipt,
+  terminal?: { status: 'rejected' | 'superseded'; resultCode: string; processedAt: string }
+) {
   const metadata = decodeMemberWorkSyncReportJournalMetadata(
     {
       incarnation: input.incarnation,
@@ -44,9 +48,13 @@ function mutation(input: MemberWorkSyncReportJournalInput, receipt?: MemberWorkS
     memberName: input.memberName,
     request: input.request,
     reason: input.origin,
-    status: receipt ? 'accepted' : 'pending',
+    status: receipt ? 'accepted' : terminal ? terminal.status : 'pending',
     recordedAt: input.receivedAt,
-    ...(receipt ? { resultCode: 'accepted', processedAt: receipt.acceptedAt } : {}),
+    ...(receipt
+      ? { resultCode: 'accepted', processedAt: receipt.acceptedAt }
+      : terminal
+        ? { resultCode: terminal.resultCode, processedAt: terminal.processedAt }
+        : {}),
     journal: metadata,
   });
   return {
@@ -57,6 +65,13 @@ function mutation(input: MemberWorkSyncReportJournalInput, receipt?: MemberWorkS
     requestJson: record.requestJson,
     journalJson: record.journalJson ?? JSON.stringify(metadata),
     ...(receipt ? { receiptJson: JSON.stringify(receipt) } : {}),
+    ...(terminal
+      ? {
+          terminalStatus: terminal.status,
+          resultCode: terminal.resultCode,
+          processedAt: terminal.processedAt,
+        }
+      : {}),
   };
 }
 
@@ -119,6 +134,33 @@ export class SqliteMemberWorkSyncReportJournal implements MemberWorkSyncReportJo
     }
     try {
       return toResult(await this.gateway.reportsJournalTransfer(mutation(input, input.receipt)));
+    } catch {
+      return { state: 'commit_unknown' };
+    }
+  }
+
+  async retire(
+    input: MemberWorkSyncReportJournalInput & {
+      status: 'rejected' | 'superseded';
+      resultCode: string;
+      processedAt: string;
+    }
+  ): Promise<MemberWorkSyncReportJournalResult> {
+    try {
+      await this.ready(input.teamName);
+    } catch {
+      return { state: 'unavailable' };
+    }
+    try {
+      return toResult(
+        await this.gateway.reportsJournalTransfer(
+          mutation(input, undefined, {
+            status: input.status,
+            resultCode: input.resultCode,
+            processedAt: input.processedAt,
+          })
+        )
+      );
     } catch {
       return { state: 'commit_unknown' };
     }

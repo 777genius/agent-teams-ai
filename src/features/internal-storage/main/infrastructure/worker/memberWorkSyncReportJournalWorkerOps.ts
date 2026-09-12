@@ -20,6 +20,9 @@ export interface MemberWorkSyncReportJournalMutation {
   requestJson: string;
   journalJson: string;
   receiptJson?: string;
+  terminalStatus?: 'rejected' | 'superseded';
+  resultCode?: string;
+  processedAt?: string;
 }
 
 interface JournalBinding {
@@ -55,7 +58,13 @@ function inspect(row: MemberWorkSyncReportIntentRecord): 'ok' | 'corrupt' {
       row.processedAt !== journal.receipt.acceptedAt
     )
       return 'corrupt';
-  } else if (row.status !== 'pending' || row.resultCode != null || row.processedAt != null) {
+  } else if (row.status === 'pending') {
+    if (row.resultCode != null || row.processedAt != null) return 'corrupt';
+  } else if (
+    (row.status !== 'rejected' && row.status !== 'superseded') ||
+    typeof row.resultCode !== 'string' ||
+    typeof row.processedAt !== 'string'
+  ) {
     return 'corrupt';
   }
   return 'ok';
@@ -121,7 +130,7 @@ export function mutateMemberWorkSyncReportJournal(
     return orm.transaction(() => {
       const current = readRow(orm, input.teamName, input.id);
       if (current && inspect(current) === 'corrupt') return { state: 'corrupt' as const };
-      if (receipt && !current) return { state: 'absent' as const };
+      if ((receipt || input.terminalStatus) && !current) return { state: 'absent' as const };
       if (!current) {
         const record: MemberWorkSyncReportIntentRecord = {
           teamName: input.teamName,
@@ -165,6 +174,21 @@ export function mutateMemberWorkSyncReportJournal(
         writeRow(orm, record);
         return present(record);
       }
+      if (input.terminalStatus === 'rejected' || input.terminalStatus === 'superseded') {
+        if (typeof input.resultCode !== 'string' || typeof input.processedAt !== 'string') {
+          return { state: 'conflict' as const };
+        }
+        if (current.status !== 'pending') return present(current);
+        const record: MemberWorkSyncReportIntentRecord = {
+          ...current,
+          status: input.terminalStatus,
+          resultCode: input.resultCode,
+          processedAt: input.processedAt,
+        };
+        writeRow(orm, record);
+        return present(record);
+      }
+      if (input.terminalStatus) return { state: 'conflict' as const };
       return present(current);
     });
   } catch {
