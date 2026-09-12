@@ -455,13 +455,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       return result;
     }
 
-    if (isMemberWorkSyncEarlyContinuationEnabled(this.deps)) {
-      const early = await this.planEarlyContinuation(status);
-      if (early.code !== 'early_continuation_disabled') {
-        return early;
-      }
-    }
-
+    let planStatus = status;
     if (input.payload.workSyncIntent === 'review_pickup') {
       const capability = await this.deps.reviewPickupDelivery?.canDeliver({
         teamName: status.teamName,
@@ -499,9 +493,9 @@ export class MemberWorkSyncNudgeOutboxPlanner {
           return { planned: false, code };
         }
 
-        const filteredStatus = filterReviewPickupStatusByRequestIds(status, undeliveredEventIds);
+        planStatus = filterReviewPickupStatusByRequestIds(status, undeliveredEventIds);
         const filteredInput = buildMemberWorkSyncOutboxEnsureInput({
-          status: filteredStatus,
+          status: planStatus,
           hash: this.deps.hash,
           nowIso: status.evaluatedAt,
         });
@@ -511,6 +505,13 @@ export class MemberWorkSyncNudgeOutboxPlanner {
           return { planned: false, code };
         }
         input = filteredInput;
+      }
+    }
+
+    if (isMemberWorkSyncEarlyContinuationEnabled(this.deps)) {
+      const early = await this.planEarlyContinuation(planStatus);
+      if (early.code !== 'early_continuation_disabled') {
+        return early;
       }
     }
 

@@ -3,6 +3,7 @@ import {
   buildMemberWorkSyncPhase2ReadinessAuditFields,
   reasonToAuditEvent,
 } from './MemberWorkSyncAudit';
+import { startMemberWorkSyncRuntimeTicketForOutboxItem } from './MemberWorkSyncEarlyContinuationPlanner';
 import {
   addNudgeDispatchSummary,
   emptyNudgeDispatchSummary,
@@ -473,6 +474,22 @@ export class MemberWorkSyncNudgeDispatcher {
           teamName: item.teamName,
           id: item.id,
           reason: 'member_stopped',
+          nowIso,
+        });
+        return 'superseded';
+      }
+      if (isDispatchRunCancelled(run)) {
+        return 'retryable';
+      }
+      const started = await startMemberWorkSyncRuntimeTicketForOutboxItem(
+        this.deps.runtimeTicketAdmission,
+        item
+      );
+      if (!started.ok) {
+        await outbox.markSuperseded({
+          teamName: item.teamName,
+          id: item.id,
+          reason: `runtime_ticket_${started.code}`,
           nowIso,
         });
         return 'superseded';

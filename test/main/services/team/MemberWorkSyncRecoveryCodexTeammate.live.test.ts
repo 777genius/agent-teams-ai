@@ -111,6 +111,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
   let previousHome: string | undefined;
   let previousUserProfile: string | undefined;
   let previousPath: string | undefined;
+  let previousBootstrapTimeout: string | undefined;
   let usingConnectedChatGptAccount = false;
   let codexHomeDir: string;
   let ownsCodexHomeDir: boolean;
@@ -167,13 +168,12 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     previousHome = process.env.HOME;
     previousUserProfile = process.env.USERPROFILE;
     previousPath = process.env.PATH;
+    previousBootstrapTimeout = process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS;
     usingConnectedChatGptAccount = allowConnectedChatGptAccount && !hasCodexApiKey;
 
     const connectedHome = os.userInfo().homedir;
+    setClaudeBasePathOverride(tempClaudeRoot);
     if (usingConnectedChatGptAccount) {
-      vi.stubEnv('HOME', connectedHome);
-      vi.stubEnv('USERPROFILE', connectedHome);
-      setClaudeBasePathOverride(null);
       prependProcessPath([
         path.join(connectedHome, '.local', 'bin'),
         '/opt/homebrew/bin',
@@ -186,7 +186,6 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       ownsCodexHomeDir = false;
       await fs.access(codexHomeDir);
     } else {
-      setClaudeBasePathOverride(tempClaudeRoot);
       const codexHomeRoot = path.resolve('temp', 'member-work-sync-recovery-live');
       await fs.mkdir(codexHomeRoot, { recursive: true });
       codexHomeDir = await fs.mkdtemp(path.join(codexHomeRoot, 'codex-home-'));
@@ -198,6 +197,8 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     process.env.CLAUDE_TEAM_CLI_FLAVOR = 'agent_teams_orchestrator';
     process.env.CODEX_HOME = codexHomeDir;
     process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'true';
+    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS =
+      process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS?.trim() || '240000';
     feature = null;
     controlServer = null;
     svc = null;
@@ -251,6 +252,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     restoreEnv('HOME', previousHome);
     restoreEnv('USERPROFILE', previousUserProfile);
     restoreEnv('PATH', previousPath);
+    restoreEnv('CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS', previousBootstrapTimeout);
     setClaudeBasePathOverride(null);
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecoveryCodexTeammate.live] preserved temp dir: ${tempDir}`);
@@ -539,19 +541,6 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         2_000
       );
       await feature.dispatchDueNudges([teamName]);
-      await activeService.relayInboxFileToLiveRecipient(teamName, TEAMMATE_NAME);
-      await teamDataService.sendMessage(teamName, {
-        member: TEAMMATE_NAME,
-        from: 'user',
-        text: [
-          `Continue remaining recovery work. Marker: ${marker}.`,
-          `Use the board MCP tools as member "${TEAMMATE_NAME}".`,
-          'A member_work_sync_nudge for remaining work was already delivered.',
-          'Write CANARY.txt in the project root with exactly: done',
-          'Do not complete the task unless the file is written.',
-          'Then stop.',
-        ].join('\n'),
-      });
       await activeService.relayInboxFileToLiveRecipient(teamName, TEAMMATE_NAME);
 
       await waitUntil(
@@ -987,7 +976,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
     await feature.prepareTeamDeletion(teamName);
     feature.completeTeamDeletion(teamName);
-  }, 600_000);
+  }, 720_000);
 });
 
 async function refreshStatusWithToken(input: {

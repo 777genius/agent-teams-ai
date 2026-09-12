@@ -164,10 +164,8 @@ liveDescribe('Member work sync recovery live canary', () => {
     usingConnectedChatGptAccount = allowConnectedChatGptAccount && !hasCodexApiKey;
 
     const connectedHome = os.userInfo().homedir;
+    setClaudeBasePathOverride(tempClaudeRoot);
     if (usingConnectedChatGptAccount) {
-      vi.stubEnv('HOME', connectedHome);
-      vi.stubEnv('USERPROFILE', connectedHome);
-      setClaudeBasePathOverride(null);
       prependProcessPath([
         path.join(connectedHome, '.local', 'bin'),
         '/opt/homebrew/bin',
@@ -180,7 +178,6 @@ liveDescribe('Member work sync recovery live canary', () => {
       ownsCodexHomeDir = false;
       await fs.access(codexHomeDir);
     } else {
-      setClaudeBasePathOverride(tempClaudeRoot);
       const codexHomeRoot = path.resolve('temp', 'member-work-sync-recovery-live');
       await fs.mkdir(codexHomeRoot, { recursive: true });
       codexHomeDir = await fs.mkdtemp(path.join(codexHomeRoot, 'codex-home-'));
@@ -1430,17 +1427,6 @@ liveDescribe('Member work sync recovery live canary', () => {
       await feature.dispatchDueNudges([teamName]);
       await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
       await activeService.relayLeadInboxMessages(teamName).catch(() => 0);
-      await activeService.sendMessageToTeam(
-        teamName,
-        [
-          `Continue remaining recovery work. Marker: ${marker}.`,
-          `Use the board MCP tools as member "${memberName}".`,
-          'A member_work_sync_nudge for remaining work was already delivered.',
-          'Write CANARY.txt in the project root with exactly: done',
-          'Do not complete the task unless the file is written.',
-          'Then stop.',
-        ].join('\n')
-      );
 
       await waitUntil(
         async () => {

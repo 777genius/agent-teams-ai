@@ -113,17 +113,11 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       allowConnectedClaudeAccount && !process.env.ANTHROPIC_API_KEY?.trim();
     const connectedHome = os.userInfo().homedir;
     const tempHome = usingConnectedClaudeAccount ? connectedHome : path.join(tempDir, 'home');
-    tempClaudeRoot = usingConnectedClaudeAccount
-      ? path.join(tempHome, '.claude')
-      : path.join(tempDir, '.claude');
+    tempClaudeRoot = path.join(tempDir, '.claude');
     claudeJsonConfigRoot = usingConnectedClaudeAccount ? tempHome : tempClaudeRoot;
     await fs.mkdir(tempHome, { recursive: true });
     await fs.mkdir(tempClaudeRoot, { recursive: true });
-    if (usingConnectedClaudeAccount) {
-      setClaudeBasePathOverride(null);
-    } else {
-      setClaudeBasePathOverride(tempClaudeRoot);
-    }
+    setClaudeBasePathOverride(tempClaudeRoot);
     process.env.HOME = tempHome;
     process.env.HISTFILE = '/dev/null';
     process.env.USERPROFILE = tempHome;
@@ -830,17 +824,6 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     await feature.dispatchDueNudges([teamName]);
     await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
     await activeService.relayLeadInboxMessages(teamName).catch(() => 0);
-    await activeService.sendMessageToTeam(
-      teamName,
-      [
-        `Continue remaining recovery work. Marker: ${marker}.`,
-        `Use the board MCP tools as member "${memberName}".`,
-        'A member_work_sync_nudge for remaining work was already delivered.',
-        'Write CANARY.txt in the project root with exactly: done',
-        'Do not complete the task unless the file is written.',
-        'Then stop.',
-      ].join('\n')
-    );
 
     await waitUntil(
       async () => {

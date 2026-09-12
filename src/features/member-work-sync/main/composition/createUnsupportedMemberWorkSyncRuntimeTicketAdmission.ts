@@ -7,5 +7,7 @@ import type { MemberWorkSyncRuntimeTicketAdmissionPort } from '../../core/applic
 export function createUnsupportedMemberWorkSyncRuntimeTicketAdmission(): MemberWorkSyncRuntimeTicketAdmissionPort {
   return {
     admit: async () => ({ admitted: false, code: 'not_early' }),
+    start: async () => ({ ok: false, code: 'stale' }),
+    cancel: async () => undefined,
   };
 }

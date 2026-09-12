@@ -1,4 +1,7 @@
-import { MemberWorkSyncNudgeOutboxPlanner } from '@features/member-work-sync/core/application';
+import {
+  MemberWorkSyncNudgeOutboxPlanner,
+  startMemberWorkSyncRuntimeTicketForOutboxItem,
+} from '@features/member-work-sync/core/application';
 import { EARLY_CONTINUATION_INTENT_PREFIX } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanHelpers';
 import { describe, expect, it } from 'vitest';
 
@@ -9,6 +12,7 @@ import type {
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
 import type {
+  MemberWorkSyncRuntimeTicket,
   MemberWorkSyncRuntimeTicketAdmissionPort,
   MemberWorkSyncUseCaseDeps,
 } from '@features/member-work-sync/core/application';
@@ -113,6 +117,8 @@ function itemFromInput(
 
 class PlannerOutboxHarness {
   readonly items = new Map<string, MemberWorkSyncOutboxItem>();
+  deliveredReviewRequestEventIds: string[] = [];
+  findDeliveredCalls = 0;
 
   async ensurePending(input: MemberWorkSyncOutboxEnsureInput) {
     const existing = this.items.get(input.id);
@@ -131,19 +137,68 @@ class PlannerOutboxHarness {
     this.items.set(input.id, created);
     return { ok: true as const, outcome: 'created' as const, item: created };
   }
+
+  async findDeliveredReviewPickupRequestEventIds(input: {
+    reviewRequestEventIds: string[];
+  }): Promise<string[]> {
+    this.findDeliveredCalls += 1;
+    const requested = new Set(input.reviewRequestEventIds);
+    return this.deliveredReviewRequestEventIds.filter((eventId) => requested.has(eventId));
+  }
 }
 
-function admittingTicket(): MemberWorkSyncRuntimeTicketAdmissionPort {
+function admittingTicket(
+  overrides: Partial<MemberWorkSyncRuntimeTicketAdmissionPort> = {}
+): MemberWorkSyncRuntimeTicketAdmissionPort {
   return {
     admit: async () => ({ admitted: true, ticketId: 'ticket-1', generation: 1 }),
+    start: async () => ({ ok: true }),
+    cancel: async () => undefined,
+    ...overrides,
   };
+}
+
+function reviewPickupStatus(): MemberWorkSyncStatus {
+  return status({
+    providerId: 'opencode',
+    agenda: {
+      teamName: 'team-a',
+      memberName: 'bob',
+      generatedAt: '2026-05-06T00:00:00.000Z',
+      fingerprint: 'agenda:v1:review',
+      items: [
+        {
+          taskId: 'task-review',
+          displayId: '22222222',
+          subject: 'Review docs',
+          kind: 'review',
+          assignee: 'bob',
+          priority: 'review_requested',
+          reason: 'current_cycle_review_assigned',
+          evidence: {
+            status: 'completed',
+            owner: 'alice',
+            reviewer: 'bob',
+            reviewState: 'review',
+            reviewCycleId: 'evt-reviewed-once',
+            reviewRequestEventId: 'evt-reviewed-once',
+            reviewObligation: 'review_pickup_required',
+            canBypassPhase2: true,
+            historyEventIds: ['evt-reviewed-once'],
+          },
+        },
+      ],
+      diagnostics: [],
+    },
+  });
 }
 
 function createDeps(options: {
   ticket?: MemberWorkSyncRuntimeTicketAdmissionPort;
   protocol?: number;
-  busy?: boolean;
+  busy?: boolean | { reason: string };
   status?: MemberWorkSyncStatus;
+  reviewPickupDelivery?: boolean;
 }): {
   deps: MemberWorkSyncUseCaseDeps;
   outbox: PlannerOutboxHarness;
@@ -154,6 +209,11 @@ function createDeps(options: {
   const stored = new Map<string, MemberWorkSyncStatus>([
     [`${current.teamName}:${current.memberName}`, current],
   ]);
+  const busy = options.busy
+    ? typeof options.busy === 'boolean'
+      ? { busy: true as const, reason: 'pending_tool_approval' }
+      : { busy: true as const, reason: options.busy.reason }
+    : null;
   const deps: MemberWorkSyncUseCaseDeps = {
     clock: { now: () => new Date('2026-05-06T00:05:00.000Z') },
     hash: { sha256Hex: (value) => `hash-${value.length}` },
@@ -173,10 +233,20 @@ function createDeps(options: {
     recoveryAllocation: { enabled: true },
     recoveryProtocol: { version: options.protocol ?? 2 },
     ...(options.ticket ? { runtimeTicketAdmission: options.ticket } : {}),
-    ...(options.busy
+    ...(busy
       ? {
           busySignal: {
-            isBusy: async () => ({ busy: true, reason: 'pending_tool_approval' }),
+            isBusy: async () => busy,
+          },
+        }
+      : {}),
+    ...(options.reviewPickupDelivery
+      ? {
+          reviewPickupDelivery: {
+            canDeliver: async () => ({ ok: true as const }),
+            deliver: async () => {
+              throw new Error('not used');
+            },
           },
         }
       : {}),
@@ -206,14 +276,16 @@ describe('protocol-2 early continuation', () => {
     expect(item?.payload.workSyncIntentKey).toBe(
       `${EARLY_CONTINUATION_INTENT_PREFIX}:${current.agenda.fingerprint}`
     );
+    expect(item?.payload.workSyncRuntimeTicketId).toBe('ticket-1');
+    expect(item?.payload.workSyncRuntimeGeneration).toBe(1);
     expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).toBe(item?.id);
   });
 
   it('does not allocate when the ticket says the runtime is busy', async () => {
     const { deps, outbox } = createDeps({
-      ticket: {
+      ticket: admittingTicket({
         admit: async () => ({ admitted: false, code: 'busy' }),
-      },
+      }),
     });
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
     expect(planned).toEqual({ planned: false, code: 'member_busy' });
@@ -222,9 +294,9 @@ describe('protocol-2 early continuation', () => {
 
   it('does not treat unknown ticket refusal as idle D0', async () => {
     const { deps, outbox } = createDeps({
-      ticket: {
+      ticket: admittingTicket({
         admit: async () => ({ admitted: false, code: 'unknown' }),
-      },
+      }),
     });
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
     expect(planned).toEqual({ planned: false, code: 'early_continuation_rejected' });
@@ -233,9 +305,9 @@ describe('protocol-2 early continuation', () => {
 
   it('falls through to ordinary planning when the ticket says not_early', async () => {
     const { deps, outbox } = createDeps({
-      ticket: {
+      ticket: admittingTicket({
         admit: async () => ({ admitted: false, code: 'not_early' }),
-      },
+      }),
     });
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
     expect(planned.planned).toBe(true);
@@ -253,5 +325,110 @@ describe('protocol-2 early continuation', () => {
     );
     expect(planned).toEqual({ planned: false, code: 'member_busy' });
     expect(outbox.items.size).toBe(0);
+  });
+
+  it('cancels an admitted ticket when desktop busy blocks persistence', async () => {
+    const cancelled: MemberWorkSyncRuntimeTicket[] = [];
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket({
+        cancel: async (ticket) => {
+          cancelled.push(ticket);
+        },
+      }),
+      busy: true,
+    });
+    const current = status();
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(current);
+    expect(outbox.items.size).toBe(0);
+    expect(cancelled).toEqual([
+      expect.objectContaining({ ticketId: 'ticket-1', generation: 1 }),
+    ]);
+  });
+
+  it('falls through to D0 when not_early even if recent tool activity is busy', async () => {
+    let admitted = false;
+    const current = status({
+      shadow: {
+        reconciledBy: 'queue',
+        wouldNudge: true,
+        fingerprintChanged: false,
+        triggerReasons: ['turn_settled'],
+      },
+    });
+    const { deps, outbox } = createDeps({
+      status: current,
+      busy: { reason: 'recent_tool_activity' },
+      ticket: admittingTicket({
+        admit: async () => {
+          admitted = true;
+          return { admitted: false, code: 'not_early' };
+        },
+      }),
+    });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
+    expect(admitted).toBe(true);
+    expect(planned).not.toEqual({ planned: false, code: 'member_busy' });
+    expect(planned.planned).toBe(true);
+    const keys = [...outbox.items.values()].map((item) => item.payload.workSyncIntentKey);
+    expect(keys.some((key) => key?.startsWith(`${EARLY_CONTINUATION_INTENT_PREFIX}:`))).toBe(false);
+  });
+
+  it('deduplicates a delivered review request before admitting D1', async () => {
+    const current = reviewPickupStatus();
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket(),
+      status: current,
+      reviewPickupDelivery: true,
+    });
+    outbox.deliveredReviewRequestEventIds = ['evt-reviewed-once'];
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
+    expect(planned).toEqual({
+      planned: false,
+      code: 'review_pickup_already_delivered_still_stuck',
+    });
+    expect(outbox.findDeliveredCalls).toBeGreaterThan(0);
+    expect(outbox.items.size).toBe(0);
+  });
+
+  it('starts an admitted runtime ticket and refuses a stale one', async () => {
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 1,
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(
+      startMemberWorkSyncRuntimeTicketForOutboxItem(admittingTicket(), item)
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      startMemberWorkSyncRuntimeTicketForOutboxItem(
+        admittingTicket({
+          start: async () => ({ ok: false, code: 'stale' }),
+        }),
+        item
+      )
+    ).resolves.toEqual({ ok: false, code: 'stale' });
+    await expect(startMemberWorkSyncRuntimeTicketForOutboxItem(undefined, item)).resolves.toEqual({
+      ok: false,
+      code: 'stale',
+    });
   });
 });

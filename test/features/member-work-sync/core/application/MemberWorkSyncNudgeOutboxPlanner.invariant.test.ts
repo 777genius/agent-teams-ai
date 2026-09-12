@@ -263,4 +263,34 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
     expect(recoveryInputs).toHaveLength(1);
     expect(result).toMatchObject({ planned: false, code: 'existing' });
   });
+
+  it('still plans status-only recovery when protocol 2 is not_early and recent tool activity is busy', async () => {
+    let admitted = false;
+    const outbox = new PlannerOutboxHarness('delivered');
+    const planner = new MemberWorkSyncNudgeOutboxPlanner({
+      ...createDeps(outbox),
+      recoveryProtocol: { version: 2 },
+      runtimeTicketAdmission: {
+        admit: async () => {
+          admitted = true;
+          return { admitted: false, code: 'not_early' };
+        },
+        start: async () => ({ ok: false, code: 'stale' }),
+        cancel: async () => undefined,
+      },
+      busySignal: {
+        isBusy: async () => ({ busy: true, reason: 'recent_tool_activity' }),
+      },
+    });
+
+    const result = await planner.plan(status());
+
+    expect(admitted).toBe(true);
+    expect(result.planned).toBe(true);
+    expect(
+      outbox.ensureInputs.some((input) =>
+        input.payload.workSyncIntentKey?.startsWith('status-only:')
+      )
+    ).toBe(true);
+  });
 });

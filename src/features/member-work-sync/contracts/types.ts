@@ -348,6 +348,8 @@ export interface MemberWorkSyncNudgePayload {
   workSyncIntent: MemberWorkSyncNudgeIntent;
   workSyncIntentKey?: string;
   workSyncReviewRequestEventIds?: string[];
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
   text: string;
   taskRefs: {
     taskId: string;

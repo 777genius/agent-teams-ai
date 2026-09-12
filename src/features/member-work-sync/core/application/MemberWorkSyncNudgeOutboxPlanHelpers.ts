@@ -11,6 +11,7 @@ export const AGENDA_SYNC_REFRESH_INTENT_PREFIX = 'agenda-sync-refresh';
 export const DELIVERED_STILL_STUCK_RECOVERY_INTENT_PREFIX = 'agenda-sync-still-stuck';
 export const TASK_PROTOCOL_REPAIR_INTENT_PREFIX = 'task-protocol-repair';
 export const EARLY_CONTINUATION_INTENT_PREFIX = 'early-continuation';
+
 export const DELIVERED_STILL_STUCK_RECOVERY_BUCKET_MS = 30 * 60_000;
 export const DELIVERED_STILL_STUCK_RECOVERY_DELIVERY_WINDOW_MS = 60 * 60_000;
 export const DELIVERED_STILL_STUCK_RECOVERY_MAX_DELIVERED_PER_WINDOW = 2;

@@ -358,6 +358,12 @@ export type MemberWorkSyncRuntimeTicketAdmissionCode =
   | 'conflict'
   | 'unknown';
 
+export interface MemberWorkSyncRuntimeTicket {
+  ticketId: string;
+  generation: number;
+  intentId: string;
+}
+
 export interface MemberWorkSyncRuntimeTicketAdmissionPort {
   admit(input: {
     teamName: string;
@@ -369,6 +375,10 @@ export interface MemberWorkSyncRuntimeTicketAdmissionPort {
     | { admitted: true; ticketId: string; generation: number }
     | { admitted: false; code: MemberWorkSyncRuntimeTicketAdmissionCode }
   >;
+  start(
+    ticket: MemberWorkSyncRuntimeTicket
+  ): Promise<{ ok: true } | { ok: false; code: 'stale' | 'busy' | 'stopped' }>;
+  cancel(ticket: MemberWorkSyncRuntimeTicket): Promise<void>;
 }
 
 export interface LatestAcceptedReportLookup {

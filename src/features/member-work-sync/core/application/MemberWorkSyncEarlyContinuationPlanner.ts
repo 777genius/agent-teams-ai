@@ -11,8 +11,16 @@ import {
 } from './MemberWorkSyncNudgeOutboxPlanHelpers';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
 
-import type { MemberWorkSyncOutboxEnsureInput, MemberWorkSyncStatus } from '../../contracts';
-import type { MemberWorkSyncUseCaseDeps } from './ports';
+import type {
+  MemberWorkSyncOutboxEnsureInput,
+  MemberWorkSyncOutboxItem,
+  MemberWorkSyncStatus,
+} from '../../contracts';
+import type {
+  MemberWorkSyncRuntimeTicket,
+  MemberWorkSyncRuntimeTicketAdmissionPort,
+  MemberWorkSyncUseCaseDeps,
+} from './ports';
 
 type EarlyContinuationPlanResult = {
   planned: boolean;
@@ -58,6 +66,23 @@ function buildEarlyContinuationInput(
   };
 }
 
+function attachRuntimeTicket(
+  input: MemberWorkSyncOutboxEnsureInput,
+  ticket: { ticketId: string; generation: number },
+  hash: MemberWorkSyncUseCaseDeps['hash']
+): MemberWorkSyncOutboxEnsureInput {
+  const payload = {
+    ...input.payload,
+    workSyncRuntimeTicketId: ticket.ticketId,
+    workSyncRuntimeGeneration: ticket.generation,
+  };
+  return {
+    ...input,
+    payload,
+    payloadHash: buildMemberWorkSyncNudgePayloadHash(hash, payload),
+  };
+}
+
 function refusalCode(
   code:
     | 'busy'
@@ -75,6 +100,43 @@ function refusalCode(
     return 'member_busy';
   }
   return 'early_continuation_rejected';
+}
+
+async function cancelAdmittedTicket(
+  admission: MemberWorkSyncRuntimeTicketAdmissionPort,
+  ticket: { ticketId: string; generation: number },
+  intentId: string
+): Promise<void> {
+  await admission.cancel({
+    ticketId: ticket.ticketId,
+    generation: ticket.generation,
+    intentId,
+  });
+}
+
+export function readMemberWorkSyncRuntimeTicket(
+  item: MemberWorkSyncOutboxItem
+): MemberWorkSyncRuntimeTicket | null {
+  const ticketId = item.payload.workSyncRuntimeTicketId?.trim();
+  const generation = item.payload.workSyncRuntimeGeneration;
+  if (!ticketId || generation == null || !Number.isInteger(generation)) {
+    return null;
+  }
+  return { ticketId, generation, intentId: item.id };
+}
+
+export async function startMemberWorkSyncRuntimeTicketForOutboxItem(
+  admission: MemberWorkSyncRuntimeTicketAdmissionPort | undefined,
+  item: MemberWorkSyncOutboxItem
+): Promise<{ ok: true } | { ok: false; code: 'stale' | 'busy' | 'stopped' }> {
+  const ticket = readMemberWorkSyncRuntimeTicket(item);
+  if (!ticket) {
+    return { ok: true };
+  }
+  if (!admission) {
+    return { ok: false, code: 'stale' };
+  }
+  return admission.start(ticket);
 }
 
 /** Protocol-2 early continuation. No-ops unless version >= 2 and a ticket port exists. */
@@ -99,19 +161,9 @@ export async function planMemberWorkSyncEarlyContinuation(
   if (!baseInput) {
     return { planned: false, code: 'status_not_nudgeable' };
   }
-  const busy = await deps.busySignal?.isBusy({
-    teamName: status.teamName,
-    memberName: status.memberName,
-    nowIso: status.evaluatedAt,
-    workSyncIntent: baseInput.payload.workSyncIntent,
-    workSyncIntentKey: baseInput.payload.workSyncIntentKey,
-    taskRefs: baseInput.payload.taskRefs,
-  });
-  if (busy?.busy) {
-    return { planned: false, code: 'member_busy' };
-  }
   const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash);
-  const ticket = await deps.runtimeTicketAdmission!.admit({
+  const admission = deps.runtimeTicketAdmission!;
+  const ticket = await admission.admit({
     teamName: status.teamName,
     memberName: status.memberName,
     intentId: recoveryInput.id,
@@ -124,20 +176,35 @@ export async function planMemberWorkSyncEarlyContinuation(
     }
     return { planned: false, code: refusalCode(ticket.code) };
   }
+  const busy = await deps.busySignal?.isBusy({
+    teamName: status.teamName,
+    memberName: status.memberName,
+    nowIso: status.evaluatedAt,
+    workSyncIntent: recoveryInput.payload.workSyncIntent,
+    workSyncIntentKey: recoveryInput.payload.workSyncIntentKey,
+    taskRefs: recoveryInput.payload.taskRefs,
+  });
+  if (busy?.busy) {
+    await cancelAdmittedTicket(admission, ticket, recoveryInput.id);
+    return { planned: false, code: 'member_busy' };
+  }
+  const ticketedInput = attachRuntimeTicket(recoveryInput, ticket, deps.hash);
   const reserved = await reserveMemberWorkSyncRecoveryIntent({
     deps,
     status,
-    recoveryInput,
+    recoveryInput: ticketedInput,
     trigger: 'automatic',
   });
   if (!reserved.ok) {
+    await cancelAdmittedTicket(admission, ticket, ticketedInput.id);
     return {
       planned: false,
       code: reserved.code === 'member_stopped' ? 'member_stopped' : 'slot_occupied',
     };
   }
-  const ensured = await deps.outboxStore.ensurePending(recoveryInput);
+  const ensured = await deps.outboxStore.ensurePending(ticketedInput);
   if (!ensured.ok) {
+    await cancelAdmittedTicket(admission, ticket, ticketedInput.id);
     return { planned: false, code: 'payload_conflict' };
   }
   return {
