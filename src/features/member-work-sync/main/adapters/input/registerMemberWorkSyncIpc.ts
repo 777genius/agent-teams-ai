@@ -46,6 +46,17 @@ function requireStatusIdentity(request: MemberWorkSyncStatusRequest): MemberWork
   };
 }
 
+function requireStatusRequest(request: MemberWorkSyncStatusRequest): MemberWorkSyncStatusRequest {
+  const identity = requireStatusIdentity(request);
+  if (request?.forceNudge !== undefined && typeof request.forceNudge !== 'boolean') {
+    throw new Error('forceNudge must be a boolean');
+  }
+  return {
+    ...identity,
+    ...(request?.forceNudge === true ? { forceNudge: true } : {}),
+  };
+}
+
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
 }
@@ -114,7 +125,7 @@ export function registerMemberWorkSyncIpc(
     MEMBER_WORK_SYNC_GET_STATUS,
     async (_event, request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus> => {
       try {
-        return await feature.getStatus(requireStatusIdentity(request));
+        return await feature.getStatus(requireStatusRequest(request));
       } catch (error) {
         logger.error('Failed to get member work sync status', error);
         throw error;
@@ -138,7 +149,7 @@ export function registerMemberWorkSyncIpc(
     MEMBER_WORK_SYNC_REFRESH_STATUS,
     async (_event, request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus> => {
       try {
-        return await feature.refreshStatus(requireStatusIdentity(request));
+        return await feature.refreshStatus(requireStatusRequest(request));
       } catch (error) {
         logger.error('Failed to refresh member work sync status', error);
         throw error;
@@ -166,9 +177,10 @@ export function registerMemberWorkSyncIpc(
     ): Promise<MemberWorkSyncStatus> => {
       try {
         const identity = requireStatusIdentity(request);
+        const reason = requireOptionalString(request?.reason, 'reason')?.trim();
         return await feature.stopAutoResume({
           ...identity,
-          ...(request.reason ? { reason: request.reason } : {}),
+          ...(reason ? { reason } : {}),
         });
       } catch (error) {
         logger.error('Failed to stop member work sync auto-resume', error);

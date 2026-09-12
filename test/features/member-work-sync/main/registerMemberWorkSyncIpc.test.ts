@@ -320,6 +320,31 @@ describe('registerMemberWorkSyncIpc', () => {
     expect(feature.continueManually).not.toHaveBeenCalled();
   });
 
+  it('rejects a non-string Stop reason before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_STOP)?.({}, { teamName: 'team-a', memberName: 'bob', reason: 12 })
+    ).rejects.toThrow(/reason must be a string/i);
+    expect(feature.stopAutoResume).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-boolean forceNudge before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_REFRESH_STATUS)?.(
+        {},
+        { teamName: 'team-a', memberName: 'bob', forceNudge: 'yes' }
+      )
+    ).rejects.toThrow(/forceNudge must be a boolean/i);
+    expect(feature.refreshStatus).not.toHaveBeenCalled();
+  });
+
   it('removes exactly the member work sync handlers', () => {
     const { handlers, ipcMain } = makeIpcMain();
     const feature = makeFeature();
