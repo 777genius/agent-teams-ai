@@ -171,7 +171,7 @@ export class InProcessGateway
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number> {
+  }): Promise<{ count: number; oldestUpdatedAt?: string }> {
     return this.op('mws.outbox.countRecentDelivered', input);
   }
 

@@ -145,8 +145,8 @@ class PlannerOutboxHarness {
     };
   }
 
-  async countRecentDelivered(): Promise<number> {
-    return 0;
+  async countRecentDelivered(): Promise<{ count: number }> {
+    return { count: 0 };
   }
 }
 

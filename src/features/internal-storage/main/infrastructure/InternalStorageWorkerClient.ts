@@ -340,8 +340,11 @@ export class InternalStorageWorkerClient
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number> {
-    return (await this.call('mws.outbox.countRecentDelivered', input)) as number;
+  }): Promise<{ count: number; oldestUpdatedAt?: string }> {
+    return (await this.call('mws.outbox.countRecentDelivered', input)) as {
+      count: number;
+      oldestUpdatedAt?: string;
+    };
   }
 
   async outboxCountDeliveredForAgenda(input: {

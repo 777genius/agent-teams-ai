@@ -418,7 +418,7 @@ describe('SqliteMemberWorkSyncStore', () => {
       expect(after).toHaveLength(0);
       expect(
         await store.countRecentDelivered({ teamName: 'team-a', memberName: 'bob', sinceIso: T0 })
-      ).toBe(1);
+      ).toEqual({ count: 1, oldestUpdatedAt: STALE });
     });
 
     it('resets a pending item when the payload hash changes and conflicts on delivered', async () => {
@@ -645,7 +645,7 @@ describe('SqliteMemberWorkSyncStore', () => {
           sinceIso: T1,
           workSyncIntentKeyPrefix: 'intent:',
         })
-      ).toBe(1);
+      ).toEqual({ count: 1, oldestUpdatedAt: T1 });
 
       const recovery = await store.findRecentRecoveryByIntent?.({
         teamName: 'team-a',

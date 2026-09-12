@@ -58,6 +58,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncReportIntent,
   MemberWorkSyncReportIntentStatus,
   MemberWorkSyncReportRequest,
@@ -731,7 +732,7 @@ export class BackendSelectingMemberWorkSyncStore
 
   async countRecentDelivered(
     input: MemberWorkSyncOutboxCountRecentDeliveredInput
-  ): Promise<number> {
+  ): Promise<MemberWorkSyncOutboxRecentDeliveredSummary> {
     return this.run(
       input.teamName,
       false,

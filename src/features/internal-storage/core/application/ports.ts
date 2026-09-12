@@ -136,7 +136,7 @@ export interface MemberWorkSyncStorageGateway {
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number>;
+  }): Promise<{ count: number; oldestUpdatedAt?: string }>;
   outboxCountDeliveredForAgenda(input: {
     teamName: string;
     memberKey: string;

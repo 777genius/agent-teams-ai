@@ -4,6 +4,7 @@ export * from './currentReviewCycle';
 export * from './memberName';
 export * from './MemberWorkSyncNudge';
 export * from './MemberWorkSyncPhase2Readiness';
+export * from './memberWorkSyncRecentDelivered';
 export * from './MemberWorkSyncRecoveryControl';
 export * from './MemberWorkSyncRecoveryHealth';
 export * from './MemberWorkSyncRecoveryTerminal';

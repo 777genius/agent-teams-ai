@@ -3,13 +3,13 @@ import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAccepte
 
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
 import {
-  addNudgeDispatchMinutes,
   AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX,
   getProofMissingRecoveryOriginalMessageId,
   isAgendaSyncStillStuckRecoveryOutboxItem,
   isManualContinueOutboxItem,
   isReviewPickupOutboxItem,
   isStatusOnlyRecoveryOutboxItem,
+  memberNudgeRateLimitRetryAt,
   preserveCurrentRuntimeStallDiagnostics,
   reviewPickupRequestIdsStillMatch,
   subtractNudgeDispatchMinutes,
@@ -224,13 +224,13 @@ export class MemberWorkSyncNudgeRevalidator {
     if (
       !manualContinue &&
       recentDelivered != null &&
-      recentDelivered >= MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR
+      recentDelivered.count >= MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR
     ) {
       return {
         ok: false,
         reason: 'member_nudge_rate_limited',
         retryable: true,
-        nextAttemptAt: addNudgeDispatchMinutes(nowIso, 60),
+        nextAttemptAt: memberNudgeRateLimitRetryAt(nowIso, recentDelivered.oldestUpdatedAt),
       };
     }
 

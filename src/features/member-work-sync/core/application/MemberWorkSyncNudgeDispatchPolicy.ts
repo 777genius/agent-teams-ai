@@ -41,6 +41,24 @@ export function subtractNudgeDispatchMinutes(iso: string, minutes: number): stri
   return new Date(Date.parse(iso) - minutes * 60_000).toISOString();
 }
 
+export const MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES = 60;
+
+export function memberNudgeRateLimitRetryAt(nowIso: string, oldestUpdatedAt?: string): string {
+  const nowMs = Date.parse(nowIso);
+  const oldestMs = oldestUpdatedAt ? Date.parse(oldestUpdatedAt) : Number.NaN;
+  const windowMs = MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES * 60_000;
+  if (Number.isFinite(oldestMs) && Number.isFinite(nowMs)) {
+    const retryMs = oldestMs + windowMs;
+    if (retryMs > nowMs) {
+      return new Date(retryMs).toISOString();
+    }
+    if (retryMs === nowMs) {
+      return new Date(nowMs + 1).toISOString();
+    }
+  }
+  return addNudgeDispatchMinutes(nowIso, MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES);
+}
+
 export function preserveCurrentRuntimeStallDiagnostics(input: {
   previous: MemberWorkSyncStatus;
   agenda: MemberWorkSyncAgenda;

@@ -4,6 +4,7 @@ import { findCanonicalReportJournalOwner } from './memberWorkSyncReportJournalOw
 export { buildPendingReportIntentId };
 
 import { listPreSqliteArchiveGenerations } from '@features/internal-storage/main';
+import { summarizeRecentDeliveredOutboxItems } from '@features/member-work-sync/core/domain/memberWorkSyncRecentDelivered';
 import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createHash } from 'crypto';
@@ -48,6 +49,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncReportIntent,
   MemberWorkSyncReportRequest,
   MemberWorkSyncStatus,
@@ -1215,16 +1217,14 @@ export class JsonMemberWorkSyncStore
 
   async countRecentDelivered(
     input: MemberWorkSyncOutboxCountRecentDeliveredInput
-  ): Promise<number> {
+  ): Promise<MemberWorkSyncOutboxRecentDeliveredSummary> {
     const workSyncIntentKeyPrefix = input.workSyncIntentKeyPrefix?.trim();
     if (workSyncIntentKeyPrefix) {
       const memberOutbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
-      return Object.values(memberOutbox.items).filter(
-        (item) =>
-          item.status === 'delivered' &&
-          item.updatedAt >= input.sinceIso &&
-          item.payload.workSyncIntentKey?.startsWith(workSyncIntentKeyPrefix) === true
-      ).length;
+      return summarizeRecentDeliveredOutboxItems(Object.values(memberOutbox.items), {
+        sinceIso: input.sinceIso,
+        workSyncIntentKeyPrefix,
+      });
     }
 
     let index = await this.readOutboxIndexFile(input.teamName);
@@ -1238,24 +1238,24 @@ export class JsonMemberWorkSyncStore
         });
       });
     }
-    const indexedCount = Object.values(index.items).filter(
-      (item) =>
-        normalizeMemberKey(item.memberName) === normalizeMemberKey(input.memberName) &&
-        item.status === 'delivered' &&
-        item.updatedAt >= input.sinceIso
-    ).length;
+    const indexed = summarizeRecentDeliveredOutboxItems(
+      Object.values(index.items).filter(
+        (item) => normalizeMemberKey(item.memberName) === normalizeMemberKey(input.memberName)
+      ),
+      { sinceIso: input.sinceIso }
+    );
     const memberOutbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
-    const memberFileCount = Object.values(memberOutbox.items).filter(
-      (item) => item.status === 'delivered' && item.updatedAt >= input.sinceIso
-    ).length;
-    if (memberFileCount > indexedCount) {
+    const memberFile = summarizeRecentDeliveredOutboxItems(Object.values(memberOutbox.items), {
+      sinceIso: input.sinceIso,
+    });
+    if (memberFile.count > indexed.count) {
       await this.enqueue(input.teamName, async () => {
         await withFileLock(this.paths.getOutboxIndexPath(input.teamName), async () => {
           await this.repairOutboxIndex(input.teamName);
         });
       });
     }
-    return Math.max(indexedCount, memberFileCount);
+    return memberFile.count >= indexed.count ? memberFile : indexed;
   }
 
   async countDeliveredForAgenda(

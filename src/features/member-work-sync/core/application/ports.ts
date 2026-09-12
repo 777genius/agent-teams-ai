@@ -9,6 +9,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncProviderId,
   MemberWorkSyncReport,
   MemberWorkSyncReportIntent,
@@ -172,7 +173,9 @@ export interface MemberWorkSyncOutboxStorePort {
   markDelivered(input: MemberWorkSyncOutboxMarkDeliveredInput): Promise<void>;
   markSuperseded(input: MemberWorkSyncOutboxMarkSupersededInput): Promise<void>;
   markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void>;
-  countRecentDelivered(input: MemberWorkSyncOutboxCountRecentDeliveredInput): Promise<number>;
+  countRecentDelivered(
+    input: MemberWorkSyncOutboxCountRecentDeliveredInput
+  ): Promise<MemberWorkSyncOutboxRecentDeliveredSummary>;
   countDeliveredForAgenda?(
     input: MemberWorkSyncOutboxCountDeliveredForAgendaInput
   ): Promise<number>;

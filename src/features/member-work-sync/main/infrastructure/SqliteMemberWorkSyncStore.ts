@@ -23,6 +23,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncReportIntent,
   MemberWorkSyncReportIntentStatus,
   MemberWorkSyncReportRequest,
@@ -275,7 +276,7 @@ export class SqliteMemberWorkSyncStore
 
   async countRecentDelivered(
     input: MemberWorkSyncOutboxCountRecentDeliveredInput
-  ): Promise<number> {
+  ): Promise<MemberWorkSyncOutboxRecentDeliveredSummary> {
     await this.ready(input.teamName);
     return this.deps.gateway.outboxCountRecentDelivered({
       teamName: input.teamName,

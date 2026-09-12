@@ -38,22 +38,16 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 const CLAIM_STALE_MS = 5 * 60 * 1000;
 const INSERT_CHUNK_SIZE = 200;
 
-const OUTBOX_TERMINAL_STATUSES = ['delivered', 'superseded', 'failed_terminal'];
-
 function isOutboxTerminal(status: string): boolean {
-  return OUTBOX_TERMINAL_STATUSES.includes(status);
+  return status === 'delivered' || status === 'superseded' || status === 'failed_terminal';
 }
 
-// Mirrors canReviveOutboxItem: superseded | claimed | failed_retryable.
 function canRevive(status: string): boolean {
   return status === 'superseded' || (!isOutboxTerminal(status) && status !== 'pending');
 }
 
 function parseIsoMs(value: string | null | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-  const ms = Date.parse(value);
+  const ms = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(ms) ? ms : null;
 }
 
@@ -566,9 +560,13 @@ export class MemberWorkSyncWorkerOps {
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): number {
-    const rows = this.getOrm()
-      .select({ workSyncIntentKey: memberWorkSyncOutbox.workSyncIntentKey })
+  }): { count: number; oldestUpdatedAt?: string } {
+    const prefix = input.workSyncIntentKeyPrefix;
+    const matching = this.getOrm()
+      .select({
+        workSyncIntentKey: memberWorkSyncOutbox.workSyncIntentKey,
+        updatedAt: memberWorkSyncOutbox.updatedAt,
+      })
       .from(memberWorkSyncOutbox)
       .where(
         and(
@@ -578,12 +576,13 @@ export class MemberWorkSyncWorkerOps {
           gte(memberWorkSyncOutbox.updatedAt, input.sinceIso)
         )
       )
-      .all();
-    if (!input.workSyncIntentKeyPrefix) {
-      return rows.length;
-    }
-    const prefix = input.workSyncIntentKeyPrefix;
-    return rows.filter((row) => row.workSyncIntentKey?.startsWith(prefix) === true).length;
+      .all()
+      .filter((row) => !prefix || row.workSyncIntentKey?.startsWith(prefix) === true);
+    const oldestUpdatedAt = matching.reduce<string | undefined>(
+      (oldest, row) => (!oldest || row.updatedAt < oldest ? row.updatedAt : oldest),
+      undefined
+    );
+    return oldestUpdatedAt ? { count: matching.length, oldestUpdatedAt } : { count: 0 };
   }
 
   /** Exclusive since (updatedAt > sinceIso), matching the JSON store. */

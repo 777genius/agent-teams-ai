@@ -1647,7 +1647,7 @@ describe('JsonMemberWorkSyncStore', () => {
         memberName: 'bob',
         sinceIso: '2026-04-29T00:00:00.000Z',
       })
-    ).resolves.toBe(1);
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
   });
 
   it('counts delivered nudges from the member outbox when the outbox index is partially stale', async () => {
@@ -1693,7 +1693,7 @@ describe('JsonMemberWorkSyncStore', () => {
         memberName: 'bob',
         sinceIso: '2026-04-29T00:00:00.000Z',
       })
-    ).resolves.toBe(1);
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
     const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
     expect(repaired.items[bobInput.id]).toMatchObject({ memberName: 'bob', status: 'delivered' });
   });
@@ -1748,7 +1748,7 @@ describe('JsonMemberWorkSyncStore', () => {
         memberName: 'bob',
         sinceIso: '2026-04-29T00:00:00.000Z',
       })
-    ).resolves.toBe(3);
+    ).resolves.toEqual({ count: 3, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
     await expect(
       store.countRecentDelivered({
         teamName: 'team-a',
@@ -1756,7 +1756,7 @@ describe('JsonMemberWorkSyncStore', () => {
         sinceIso: '2026-04-29T00:00:00.000Z',
         workSyncIntentKeyPrefix: 'agenda-sync-still-stuck:',
       })
-    ).resolves.toBe(1);
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
   });
 
   it('counts delivered nudges for one agenda fingerprint from member-scoped outbox files', async () => {

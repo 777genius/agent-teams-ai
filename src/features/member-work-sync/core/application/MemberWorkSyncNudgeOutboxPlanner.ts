@@ -300,7 +300,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         sinceIso: new Date(evaluatedAtMs - TASK_PROTOCOL_REPAIR_DELIVERY_WINDOW_MS).toISOString(),
         workSyncIntentKeyPrefix: `${TASK_PROTOCOL_REPAIR_INTENT_PREFIX}:`,
       });
-      if (recentDelivered >= TASK_PROTOCOL_REPAIR_MAX_DELIVERED_PER_WINDOW) {
+      if (recentDelivered.count >= TASK_PROTOCOL_REPAIR_MAX_DELIVERED_PER_WINDOW) {
         const result = { planned: false, code: 'task_protocol_repair_rate_limited' } as const;
         await this.appendPlanAudit(status, result);
         return result;
@@ -385,7 +385,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       ).toISOString(),
       workSyncIntentKeyPrefix: `${DELIVERED_STILL_STUCK_RECOVERY_INTENT_PREFIX}:`,
     });
-    if (recentDelivered >= DELIVERED_STILL_STUCK_RECOVERY_MAX_DELIVERED_PER_WINDOW) {
+    if (recentDelivered.count >= DELIVERED_STILL_STUCK_RECOVERY_MAX_DELIVERED_PER_WINDOW) {
       await this.appendPlanAudit(status, { planned: false, code: 'existing' });
       return { planned: false, code: 'existing' };
     }

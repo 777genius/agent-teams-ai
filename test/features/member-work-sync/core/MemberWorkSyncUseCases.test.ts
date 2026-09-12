@@ -24,7 +24,7 @@ import {
   retireMemberWorkSyncRecoveryIntent,
 } from '@features/member-work-sync/core/application';
 import { reserveMemberWorkSyncRecoveryIntent } from '@features/member-work-sync/core/application/MemberWorkSyncRecoveryAllocator';
-import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
+import { buildMemberWorkSyncOutboxEnsureInput, summarizeRecentDeliveredOutboxItems } from '@features/member-work-sync/core/domain';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -35,6 +35,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncPhase2ReadinessReason,
   MemberWorkSyncPhase2ReadinessState,
   MemberWorkSyncReportIntent,
@@ -312,15 +313,8 @@ class InMemoryOutboxStore implements MemberWorkSyncOutboxStorePort {
     memberName: string;
     sinceIso: string;
     workSyncIntentKeyPrefix?: string;
-  }): Promise<number> {
-    return [...this.items.values()].filter(
-      (item) =>
-        item.status === 'delivered' &&
-        item.memberName === input.memberName &&
-        item.updatedAt >= input.sinceIso &&
-        (!input.workSyncIntentKeyPrefix ||
-          item.payload.workSyncIntentKey?.startsWith(input.workSyncIntentKeyPrefix) === true)
-    ).length;
+  }): Promise<MemberWorkSyncOutboxRecentDeliveredSummary> {
+    return summarizeRecentDeliveredOutboxItems(this.items.values(), input);
   }
 
   async countDeliveredForAgenda(input: {
@@ -4586,6 +4580,50 @@ describe('MemberWorkSync use cases', () => {
       });
     }
 
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    expect(summary).toMatchObject({ claimed: 1, delivered: 0, retryable: 1 });
+    expect(inbox.inserted).toEqual([]);
+    expect(
+      outbox.items.get(`member-work-sync:team-a:bob:${current.agenda.fingerprint}`)
+    ).toMatchObject({
+      status: 'failed_retryable',
+      lastError: 'member_nudge_rate_limited',
+      nextAttemptAt: '2026-04-29T01:00:00.000Z',
+    });
+  });
+
+  it('retries rate-limited nudges when the oldest counted delivery leaves the hour window', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { clock, deps, store } = createDeps({ outboxStore: outbox, inboxNudge: inbox });
+    store.phase2ReadinessState = 'shadow_ready';
+
+    const current = await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const firstId = `member-work-sync:team-a:bob:${current.agenda.fingerprint}:old-1`;
+    const secondId = `member-work-sync:team-a:bob:${current.agenda.fingerprint}:old-2`;
+    const baseItem = outbox.items.get(`member-work-sync:team-a:bob:${current.agenda.fingerprint}`);
+    expect(baseItem).toBeDefined();
+    for (const id of [firstId, secondId]) {
+      outbox.items.set(id, {
+        ...(baseItem as NonNullable<typeof baseItem>),
+        id,
+        status: 'delivered',
+        deliveredMessageId: id,
+        updatedAt: '2026-04-29T00:00:00.000Z',
+      });
+    }
+
+    clock.set('2026-04-29T00:59:00.000Z');
     const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
       teamNames: ['team-a'],
       claimedBy: 'test-dispatcher',

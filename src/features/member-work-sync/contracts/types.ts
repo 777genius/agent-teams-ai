@@ -440,6 +440,11 @@ export interface MemberWorkSyncOutboxCountRecentDeliveredInput {
   workSyncIntentKeyPrefix?: string;
 }
 
+export interface MemberWorkSyncOutboxRecentDeliveredSummary {
+  count: number;
+  oldestUpdatedAt?: string;
+}
+
 export interface MemberWorkSyncOutboxCountDeliveredForAgendaInput {
   teamName: string;
   memberName: string;
