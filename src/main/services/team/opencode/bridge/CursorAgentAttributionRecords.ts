@@ -212,7 +212,10 @@ export async function readAttributedCursorAgentProcesses(
         : left.attributionId.localeCompare(right.attributionId)
     );
     return records.map((record) => {
-      const host = hosts.get(record.attributionId) ?? null;
+      let host = hosts.get(record.attributionId) ?? null;
+      // Matching IDs cannot validate contradictory spawn identities. A missing
+      // optional agent hostPid remains compatible with older record writers.
+      if (host && record.hostPid !== null && record.hostPid !== host.hostPid) host = null;
       return { record, host, owners: host?.owners ?? [UNNAMED_OWNER] };
     });
   } catch (error) {

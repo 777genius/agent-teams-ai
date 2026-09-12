@@ -202,32 +202,55 @@ describe('CursorAgentAttributionRecords', () => {
     expect(await readAttributedCursorAgentProcesses()).toEqual([]);
   });
 
-  it.each(['missing', 'invalid JSON', 'unsupported schema', 'mismatched id', 'foreign profile'])(
-    'reports an unknown owner for a host with %s',
-    async (scenario) => {
-      const overrides: Record<string, unknown> = {};
-      if (scenario === 'unsupported schema') overrides.schemaVersion = 7;
-      if (scenario === 'mismatched id') overrides.attributionId = SECOND_ATTRIBUTION_ID;
-      if (scenario === 'foreign profile') overrides.appProfileScope = 'another-install';
-      if (scenario !== 'missing') {
-        await writeHostFile(
-          FIRST_ATTRIBUTION_ID,
-          scenario === 'invalid JSON' ? '{' : hostRecord(overrides)
-        );
-      }
-      await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
-
-      const attributed = await readAttributedCursorAgentProcesses();
-
-      expect(attributed).toHaveLength(1);
-      expect(attributed[0].host).toBeNull();
-      expect(attributed[0].owners).toEqual([UNKNOWN_OWNER]);
-      expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
-        total: 1,
-        withRecordedOwner: 0,
-      });
+  it.each([
+    'missing',
+    'invalid JSON',
+    'unsupported schema',
+    'mismatched id',
+    'foreign profile',
+    'conflicting host pid',
+  ])('reports an unknown owner for a host with %s', async (scenario) => {
+    const overrides: Record<string, unknown> = {};
+    if (scenario === 'unsupported schema') overrides.schemaVersion = 7;
+    if (scenario === 'mismatched id') overrides.attributionId = SECOND_ATTRIBUTION_ID;
+    if (scenario === 'foreign profile') overrides.appProfileScope = 'another-install';
+    if (scenario === 'conflicting host pid') overrides.hostPid = 1000;
+    if (scenario !== 'missing') {
+      await writeHostFile(
+        FIRST_ATTRIBUTION_ID,
+        scenario === 'invalid JSON' ? '{' : hostRecord(overrides)
+      );
     }
-  );
+    await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(attributed).toHaveLength(1);
+    expect(attributed[0].host).toBeNull();
+    expect(attributed[0].owners).toEqual([UNKNOWN_OWNER]);
+    expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+      total: 1,
+      withRecordedOwner: 0,
+    });
+  });
+
+  it('joins a matching host when the optional agent host PID is absent', async () => {
+    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord());
+    await writeAgentFile(
+      FIRST_ATTRIBUTION_ID,
+      '4321-1757500000123.json',
+      agentRecord({ hostPid: undefined })
+    );
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(attributed[0].record.hostPid).toBeNull();
+    expect(attributed[0].host?.hostPid).toBe(999);
+    expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+      total: 1,
+      withRecordedOwner: 1,
+    });
+  });
 
   it('preserves an explicitly empty lease set from a valid host', async () => {
     await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ owners: [] }));
