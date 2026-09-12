@@ -37,6 +37,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
   private binding: {
     attempts: TeamWorkSyncRestoreAttemptOwner;
     participant: MemberWorkSyncRestoreParticipant;
+    operationGate: TeamWorkSyncRestoreAttemptPorts['operationGate'];
   } | null = null;
   private readonly pending: TeamWorkSyncRestorePending;
 
@@ -58,11 +59,26 @@ export class TeamBackupWorkSyncRestoreCoordinator {
         withIdentityFence: (name, operation) => this.ports.withIdentityFence(name, operation),
       }),
       participant,
+      operationGate,
     };
   }
 
   isRestoreActive(teamName: string): boolean {
     return this.binding?.attempts.isActive(teamName) ?? false;
+  }
+
+  async runWhileQuiesced<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    const gate = this.binding?.operationGate;
+    if (!gate) {
+      return operation();
+    }
+    const closure = gate.beginOwnedTeamQuiesce(teamName);
+    try {
+      await gate.awaitTeamIdle(teamName);
+      return await operation();
+    } finally {
+      closure.release();
+    }
   }
 
   async restoreIfNeeded(): Promise<string[]> {

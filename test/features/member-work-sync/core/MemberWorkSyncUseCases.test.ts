@@ -1755,7 +1755,10 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
       busySignal: {
-        isBusy: async () => {
+        isBusy: async (input) => {
+          if (!input.workSyncIntent) {
+            return { busy: false };
+          }
           busyChecks += 1;
           return busyChecks > 1 ? { busy: true, reason: 'recent_tool_activity' } : { busy: false };
         },
@@ -2357,7 +2360,7 @@ describe('MemberWorkSync use cases', () => {
     expect(outbox.items.has(intentId!)).toBe(true);
   });
 
-  it('allocates a fresh Continue item when the unresolved intent is already delivered', async () => {
+  it('keeps an unresolved delivered status-only turn instead of allocating Continue', async () => {
     const outbox = new InMemoryOutboxStore();
     outbox.rejectPayloadConflicts = true;
     const { deps, store } = createDeps({
@@ -2422,13 +2425,13 @@ describe('MemberWorkSync use cases', () => {
     if (!continued.ok) {
       return;
     }
-    expect(continued.status.recoveryHealth?.unresolvedIntentId).not.toBe(staleId);
+    expect(continued.status.recoveryHealth?.unresolvedIntentId).toBe(staleId);
     expect(outbox.items.get(staleId)?.status).toBe('delivered');
     expect(
       [...outbox.items.values()].some((item) =>
         item.payload.workSyncIntentKey?.includes('manual-continue:after-status-only')
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('keeps a delivered Continue intent until the recovery slot is released', async () => {
@@ -4195,6 +4198,11 @@ describe('MemberWorkSync use cases', () => {
     expect(summary).toMatchObject({ claimed: 1, delivered: 1, superseded: 0 });
     expect(inbox.inserted).toHaveLength(1);
     expect(busyCalls).toEqual([
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:00:00.000Z',
+      },
       {
         teamName: 'team-a',
         memberName: 'bob',

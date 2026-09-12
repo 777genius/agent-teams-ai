@@ -187,8 +187,10 @@ export class TeamBackupService {
   async backupTeam(teamName: string): Promise<void> {
     await this.awaitInitialization();
     if (this.isShuttingDown) return;
-    await this.withTeamIdentityFence(teamName, () =>
-      this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+    await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+      this.withTeamIdentityFence(teamName, () =>
+        this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+      )
     );
   }
 
@@ -391,8 +393,10 @@ export class TeamBackupService {
         if (this.isShuttingDown) return;
         if (await this.isRestoreSourceProtected(teamName)) continue;
         if (this.workSyncRestore.isRestoreActive(teamName)) continue;
-        await this.withTeamIdentityFence(teamName, () =>
-          this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+        await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+          this.withTeamIdentityFence(teamName, () =>
+            this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+          )
         );
       }
     } finally {
@@ -416,9 +420,7 @@ export class TeamBackupService {
       if ((error as NodeJS.ErrnoException).code !== 'EISDIR') throw error;
     }
     if (manifest?.workSyncRestorePending) return;
-    // Reset stale manifest from a previously deleted team with the same name.
-    // The backup dir may already contain the new team's files (copied by FileWatcher),
-    // but the manifest was never updated because the deletion guard blocked it.
+    // Reset a leftover deleted-team manifest so a same-name replacement can publish.
     if (
       manifest?.status === 'deleted_by_user' ||
       (manifest &&

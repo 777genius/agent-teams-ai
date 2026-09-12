@@ -158,8 +158,7 @@ export class MemberWorkSyncRecoveryCommands {
         const preserveExistingEnvelope =
           existingItem != null &&
           existingKey !== undefined &&
-          (existingItem.status === 'pending' || existingItem.status === 'delivered') &&
-          !existingKey.startsWith('status-only');
+          (existingItem.status === 'pending' || existingItem.status === 'delivered');
         recoveryInput =
           existingItem && existingKey && preserveExistingEnvelope
             ? {
