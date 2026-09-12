@@ -29,7 +29,6 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CliInstallWarningBanner } from '../common/CliInstallWarningBanner';
-import { UpdateBanner } from '../common/UpdateBanner';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { WorkspaceIndicator } from '../common/WorkspaceIndicator';
 import { CommandPalette } from '../search/CommandPalette';
@@ -161,7 +160,6 @@ export const TabbedLayout = (): React.JSX.Element => {
       }
     >
       <CustomTitleBar />
-      <UpdateBanner />
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
