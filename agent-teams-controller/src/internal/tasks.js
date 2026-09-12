@@ -150,11 +150,11 @@ function getOpenBlockers(context, task) {
     for (const id of blockerIds) {
         try {
             const blocker = taskStore.readTask(context.paths, id, { includeDeleted: true });
-            if (blocker.status !== 'completed' && blocker.status !== 'deleted') {
+            if (isTaskOpen(blocker)) {
                 blockers.push(blocker);
             }
-        } catch {
-            // missing task = not blocking
+        } catch (error) {
+            if (error.code !== 'TASK_NOT_FOUND') throw error;
         }
     }
     return blockers;
@@ -470,6 +470,7 @@ function startTask(context, taskId, actor) {
  * and `options.resolution` decides which of the two the owner is told about.
  */
 function notifyUnblockedOwners(context, resolvedTask, options = {}) {
+    if (isTaskOpen(resolvedTask)) return;
     const blockedIds = Array.isArray(resolvedTask.blocks) ? resolvedTask.blocks : [];
     if (blockedIds.length === 0) return;
 
@@ -483,16 +484,7 @@ function notifyUnblockedOwners(context, resolvedTask, options = {}) {
             if (!normalizeActorName(blockedTask.owner)) continue;
 
             const allBlockerIds = Array.isArray(blockedTask.blockedBy) ? blockedTask.blockedBy : [];
-            const pendingBlockerTasks = [];
-            for (const id of allBlockerIds) {
-                if (id === resolvedTask.id) continue;
-                try {
-                    const t = taskStore.readTask(context.paths, id, { includeDeleted: true });
-                    if (t.status !== 'completed' && t.status !== 'deleted') {
-                        pendingBlockerTasks.push(t);
-                    }
-                } catch { /* missing task = not blocking */ }
-            }
+            const pendingBlockerTasks = getOpenBlockers(context, blockedTask);
 
             const allResolved = pendingBlockerTasks.length === 0;
             const blockedLabel = `#${blockedTask.displayId || blockedTask.id}`;
@@ -525,7 +517,7 @@ function notifyUnblockedOwners(context, resolvedTask, options = {}) {
                 context,
                 blockedTask.id,
                 {
-                    id: `dep-resolved-${resolvedTask.id}-${blockedTask.id}`,
+                    id: `dep-resolved-${resolvedTask.id}-${blockedTask.id}${options.reviewCycleId ? `-${options.reviewCycleId}` : ''}`,
                     text: lines.join('\n'),
                     from: 'system',
                 },
@@ -1139,6 +1131,7 @@ module.exports = {
     MEMBER_DELEGATE_DESCRIPTION,
     buildProcessProtocolText,
     memberBriefing,
+    notifyUnblockedOwners,
     taskBriefing,
     unlinkTask,
     updateTask: (context, taskRef, updater) =>

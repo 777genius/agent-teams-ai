@@ -1,3 +1,4 @@
+const { unreadableTaskAnomaly, taskNotFound, assertReadableTaskRef } = require('./taskReadErrors.js');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -161,16 +162,11 @@ function buildTaskScanSnapshot(paths) {
     try {
       rawTask = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     } catch (error) {
-      anomalies.push({
-        code: 'unreadable_task',
-        taskId: path.basename(fileName, '.json'),
-        filePath,
-        detail: error instanceof Error ? error.message : 'Unreadable task row',
-      });
+      anomalies.push(unreadableTaskAnomaly(filePath, error));
       continue;
     }
-    if (!rawTask) continue;
-    if (rawTask.metadata && rawTask.metadata._internal === true) continue;
+
+    if (rawTask && rawTask.metadata && rawTask.metadata._internal === true) continue;
     const canonicalTaskId = path.basename(fileName, '.json');
     const persistedTaskId = getPersistedTaskId(rawTask);
     if (persistedTaskId) {
@@ -193,13 +189,7 @@ function buildTaskScanSnapshot(paths) {
         task,
       });
     } catch (error) {
-      const taskId = getPersistedTaskId(rawTask) || path.basename(fileName, '.json');
-      anomalies.push({
-        code: 'unreadable_task',
-        taskId,
-        filePath,
-        detail: error instanceof Error ? error.message : 'Unreadable task row',
-      });
+      anomalies.push(unreadableTaskAnomaly(filePath, error));
     }
   }
 
@@ -409,11 +399,12 @@ function resolveTaskRow(paths, taskRef, options = {}) {
 
   const includeDeleted = options.includeDeleted === true;
   const scan = scanTaskRows(paths);
+  assertReadableTaskRef(scan, normalizedRef);
   const exact = scan.rowsByCanonicalId.get(normalizedRef);
 
   if (exact) {
     if (!includeDeleted && exact.task.status === 'deleted') {
-      throw new Error(`Task not found: ${normalizedRef}`);
+      throw taskNotFound(normalizedRef);
     }
     assertTaskRowHasUnambiguousIdentity(scan, exact, normalizedRef);
     return exact;
@@ -449,7 +440,7 @@ function resolveTaskRow(paths, taskRef, options = {}) {
     return byDisplay[0];
   }
 
-  throw new Error(`Task not found: ${normalizedRef}`);
+  throw taskNotFound(normalizedRef);
 }
 
 function resolveTaskRef(paths, taskRef, options = {}) {

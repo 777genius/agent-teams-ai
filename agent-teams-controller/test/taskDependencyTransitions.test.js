@@ -51,6 +51,24 @@ describe('issue-618 dependency transitions', () => {
       expect(snapshot()).toEqual(before);
     });
 
+    it.each(['review', 'needsFix'])('keeps completed blockers in %s open', (reviewState) => {
+      const blocker = create();
+      const dependent = create([blocker.id]);
+      rewrite(blocker, { status: 'completed', reviewState });
+      const before = snapshot();
+      expect(() => transition(tasks, dependent.id)).toThrow(/unresolved dependencies/);
+      expect(snapshot()).toEqual(before);
+    });
+
+    it.each(['{', 'null', 'false', '0', '{}'])('rejects unreadable blocker %s without writes', (payload) => {
+      const blocker = create();
+      const dependent = create([blocker.id]);
+      fs.writeFileSync(path.join(dir, 'tasks', 'fixture', `${blocker.id}.json`), payload);
+      const before = snapshot();
+      expect(() => transition(tasks, dependent.id)).toThrow(/Cannot read task/);
+      expect(snapshot()).toEqual(before);
+    });
+
     it.each(['completed', 'deleted', 'missing', 'empty'])('allows %s dependencies', (resolution) => {
       const blocker = create();
       const dependent = create(resolution === 'empty' ? [] : [blocker.id]);
@@ -71,6 +89,37 @@ describe('issue-618 dependency transitions', () => {
       expect(error.message).not.toContain(`#${first.displayId}`);
       expect(snapshot()).toEqual(before);
     });
+  });
+
+  it('wakes dependents again after approval and deduplicates approval retries', () => {
+    const blocker = create();
+    const dependent = create([blocker.id]);
+    tasks.completeTask(blocker.id, 'bob');
+    expect(tasks.getTask(dependent.id).comments).toHaveLength(1);
+    tasks.requestReview(blocker.id, { from: 'bob', reviewer: 'alice' });
+    expect(() => tasks.startTask(dependent.id, 'bob')).toThrow(/unresolved dependencies/);
+    tasks.completeTask(blocker.id, 'bob');
+    expect(tasks.getTask(dependent.id).comments).toHaveLength(1);
+    const assignedDuringReview = create([blocker.id]);
+    const beforeInbox = inbox('bob').length;
+    tasks.approveReview(blocker.id, { from: 'alice' });
+    expect(tasks.getTask(dependent.id).comments).toHaveLength(2);
+    expect(tasks.getTask(assignedDuringReview.id).comments).toHaveLength(1);
+    expect(inbox('bob').length).toBeGreaterThan(beforeInbox);
+    const afterInbox = inbox('bob').length;
+    tasks.approveReview(blocker.id, { from: 'alice' });
+    expect(tasks.getTask(dependent.id).comments).toHaveLength(2);
+    expect(inbox('bob')).toHaveLength(afterInbox);
+    expect(tasks.startTask(dependent.id, 'bob').status).toBe('in_progress');
+  });
+
+  it('does not resolve a malformed canonical file through another task display ID', () => {
+    const blocker = create();
+    const dependent = create([blocker.id]);
+    const other = create();
+    rewrite(other, { displayId: blocker.id, status: 'completed' });
+    fs.writeFileSync(path.join(dir, 'tasks', 'fixture', `${blocker.id}.json`), 'null');
+    expect(() => tasks.startTask(dependent.id, 'bob')).toThrow(/Cannot read task/);
   });
 
   it('preserves administrative transitions, restore and owner checks', () => {
