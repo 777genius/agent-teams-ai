@@ -115,7 +115,7 @@ export function createMemberWorkSyncFeature(deps: {
   resolveControlUrl?: () => Promise<string | null> | string | null;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
-  /** Qualified D0 protocol-1 recovery allocation. Off until that checkpoint. */
+  /** Qualified D0 protocol-1 recovery allocation. Desktop wiring turns this on. */
   recoveryAllocation?: { enabled: boolean };
   recoveryProtocol?: { version: number };
   /**

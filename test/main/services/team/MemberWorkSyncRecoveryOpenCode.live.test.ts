@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMemberWorkSyncFeature,
+  MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
@@ -17,6 +18,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
 import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
@@ -225,12 +227,11 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     teamName = `member-work-sync-recovery-opencode-d-${Date.now()}`;
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
-    const createFeature = (svc: OpenCodeLiveHarness['svc'], incarnation: string) =>
+    const createFeature = (svc: OpenCodeLiveHarness['svc']) =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        lifecycleIdentity: createSandboxWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
-        recoveryAllocation: { enabled: true },
-        recoveryProtocol: { version: 1 },
+        ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
         taskReader: new TeamTaskReader(),
         kanbanManager: new TeamKanbanManager(),
@@ -247,7 +248,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       timeoutMs: 360_000,
       launchTimeoutMs: 360_000,
       configureServices: (svc) => {
-        feature = createFeature(svc, 'inc-a');
+        feature = createFeature(svc);
         svc.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
         svc.setRuntimeTurnSettledEnvironmentProvider((input) =>
           feature!.buildRuntimeTurnSettledEnvironment(input)
@@ -329,7 +330,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       .sort();
 
     await feature!.dispose();
-    feature = createFeature(harness.svc, 'inc-a');
+    feature = createFeature(harness.svc);
     harness.svc.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     harness.svc.setRuntimeTurnSettledEnvironmentProvider((input) =>
       feature!.buildRuntimeTurnSettledEnvironment(input)
@@ -375,12 +376,11 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
       teamName = `member-work-sync-recovery-opencode-progress-${Date.now()}`;
       const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
-      const createFeature = (svc: OpenCodeLiveHarness['svc'], incarnation: string, busy = false) =>
+      const createFeature = (svc: OpenCodeLiveHarness['svc'], busy = false) =>
         createMemberWorkSyncFeature({
-          lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+          lifecycleIdentity: createSandboxWorkSyncIdentity(),
           teamsBasePath: getTeamsBasePath(),
-          recoveryAllocation: { enabled: true },
-          recoveryProtocol: { version: 1 },
+          ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
           configReader: new TeamConfigReader(),
           taskReader: new TeamTaskReader(),
           kanbanManager: new TeamKanbanManager(),
@@ -406,7 +406,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
         timeoutMs: 360_000,
         launchTimeoutMs: 360_000,
         configureServices: (svc) => {
-          feature = createFeature(svc, 'inc-a');
+          feature = createFeature(svc);
           svc.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
           svc.setRuntimeTurnSettledEnvironmentProvider((input) =>
             feature!.buildRuntimeTurnSettledEnvironment(input)
@@ -470,7 +470,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       feature!.noteTeamChange({ type: 'task', teamName, taskId: task.id });
       await feature!.refreshStatus({ teamName, memberName });
 
-      const busyFeature = createFeature(harness.svc, 'inc-a', true);
+      const busyFeature = createFeature(harness.svc, true);
       try {
         await expect(
           busyFeature.continueManually({

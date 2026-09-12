@@ -50,6 +50,7 @@ import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
+  MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   getMemberWorkSyncAcceptedReport,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
@@ -2636,6 +2637,7 @@ async function initializeServices(): Promise<void> {
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,
+    ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
     bindRestoreParticipant: (participant) =>
       initializedBackupOwner.configureWorkSyncRestore(workSyncRestoreGate, participant),
     teamsBasePath: getTeamsBasePath(),
@@ -3706,9 +3708,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-/**
- * Before quit handler - cleanup.
- */
 app.on('before-quit', (event) => {
   if (shutdownComplete) {
     return;

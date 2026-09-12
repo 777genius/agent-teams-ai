@@ -6,12 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMemberWorkSyncFeature,
+  MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
 import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
@@ -407,8 +409,7 @@ liveDescribe('Member work sync recovery live canary', () => {
       createMemberWorkSyncFeature({
         lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
         teamsBasePath: getTeamsBasePath(),
-        recoveryAllocation: { enabled: true },
-        recoveryProtocol: { version: 1 },
+        ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
         taskReader: new TeamTaskReader(),
         kanbanManager: new TeamKanbanManager(),
@@ -631,12 +632,11 @@ liveDescribe('Member work sync recovery live canary', () => {
       svc = new TeamProvisioningService();
       const activeService = svc;
       const teamDataService = new TeamDataService();
-      const createFeature = (incarnation: string, busy = false) =>
+      const createFeature = (busy = false) =>
         createMemberWorkSyncFeature({
-          lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+          lifecycleIdentity: createSandboxWorkSyncIdentity(),
           teamsBasePath: getTeamsBasePath(),
-          recoveryAllocation: { enabled: true },
-          recoveryProtocol: { version: 1 },
+          ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
           configReader: new TeamConfigReader(),
           taskReader: new TeamTaskReader(),
           kanbanManager: new TeamKanbanManager(),
@@ -670,7 +670,7 @@ liveDescribe('Member work sync recovery live canary', () => {
             : {}),
         });
 
-      feature = createFeature('inc-a');
+      feature = createFeature();
       activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
         feature!.noteTeamChange(event)
       );
@@ -752,7 +752,7 @@ liveDescribe('Member work sync recovery live canary', () => {
       feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
       await feature.refreshStatus({ teamName, memberName });
 
-      const busyFeature = createFeature('inc-a', true);
+      const busyFeature = createFeature(true);
       try {
         await expect(
           busyFeature.continueManually({
