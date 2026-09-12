@@ -155,8 +155,13 @@ export class MemberWorkSyncRecoveryCommands {
           id: existing,
         });
         const existingKey = existingItem?.payload.workSyncIntentKey;
+        const preserveExistingEnvelope =
+          existingItem != null &&
+          existingKey !== undefined &&
+          (existingItem.status === 'pending' || existingItem.status === 'delivered') &&
+          !existingKey.startsWith('status-only');
         recoveryInput =
-          existingItem && existingKey?.startsWith('manual-continue:')
+          existingItem && existingKey && preserveExistingEnvelope
             ? {
                 ...baseInput,
                 id: existingItem.id,

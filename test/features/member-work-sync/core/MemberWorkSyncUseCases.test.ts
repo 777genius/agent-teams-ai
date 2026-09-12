@@ -2457,6 +2457,80 @@ describe('MemberWorkSync use cases', () => {
     ).toHaveLength(1);
   });
 
+  it('keeps a pending automatic recovery slot instead of allocating a second Continue', async () => {
+    const outbox = new InMemoryOutboxStore();
+    outbox.rejectPayloadConflicts = true;
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const automaticId = `${status.agenda.fingerprint}:agenda-sync-still-stuck`;
+    const automaticKey = 'agenda-sync-still-stuck:episode-1';
+    outbox.items.set(automaticId, {
+      id: automaticId,
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: status.agenda.fingerprint,
+      payloadHash: 'automatic-recovery-hash',
+      payload: {
+        from: 'system',
+        to: 'bob',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'agenda_sync',
+        text: 'automatic recovery',
+        workSyncIntentKey: automaticKey,
+        taskRefs: [],
+      },
+      status: 'pending',
+      attemptGeneration: 1,
+      createdAt: status.evaluatedAt,
+      updatedAt: status.evaluatedAt,
+    });
+    store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: automaticId,
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: automaticId,
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'reserved',
+            payloadHash: 'automatic-recovery-hash',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const continued = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(continued.ok).toBe(true);
+    if (!continued.ok) {
+      return;
+    }
+    expect(continued.status.recoveryHealth?.unresolvedIntentId).toBe(automaticId);
+    expect(outbox.items.get(automaticId)?.status).toBe('pending');
+    expect(outbox.items.get(automaticId)?.payload.workSyncIntentKey).toBe(automaticKey);
+    expect(
+      [...outbox.items.values()].filter((item) =>
+        item.payload.workSyncIntentKey?.includes('manual-continue')
+      )
+    ).toEqual([]);
+  });
+
   it('allocates a fresh Continue item after a delivered default key is released', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({
