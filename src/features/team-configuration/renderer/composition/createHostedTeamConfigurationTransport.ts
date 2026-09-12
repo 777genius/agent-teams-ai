@@ -4,6 +4,7 @@ import {
   HOSTED_TEAM_CONFIGURATION_ROUTES,
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
   type HostedSavedTeamRequest,
+  type HostedTeamConfigurationDraftMetadata,
   type HostedTeamConfigurationIdentity,
   parseHostedCreateDraftTeamRequest,
   parseHostedDeleteDraftTeamRequest,
@@ -11,6 +12,10 @@ import {
   parseHostedTeamConfigurationIdentity,
   parseHostedUpdateDraftTeamRequest,
 } from '../../contracts/hosted';
+import {
+  assertHostedRosterMatches,
+  parseHostedRosterConfiguration,
+} from '../../contracts/hostedRosterConfiguration';
 
 import type {
   HostedTeamConfigurationHttpResponse,
@@ -85,12 +90,66 @@ function parseIdentity(value: unknown, expected: HostedTeamConfigurationIdentity
     : null;
 }
 
-function parseDraft(value: unknown, expected: HostedTeamConfigurationIdentity) {
+function isValidMetadataField(value: unknown, limit: number): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length >= 1 &&
+    value.length <= limit &&
+    value === value.trim()
+  );
+}
+
+function parseDraftMetadata(value: unknown): HostedTeamConfigurationDraftMetadata | null {
+  if (!isRecord(value)) return null;
+  const metadataKeys = Reflect.ownKeys(value);
+  if (
+    !Object.hasOwn(value, 'name') ||
+    metadataKeys.some((key) => typeof key !== 'string' || !Object.hasOwn(METADATA_LIMITS, key)) ||
+    !isValidMetadataField(value.name, METADATA_LIMITS.name)
+  ) {
+    return null;
+  }
+
+  let description: string | undefined;
+  if (Object.hasOwn(value, 'description')) {
+    if (!isValidMetadataField(value.description, METADATA_LIMITS.description)) return null;
+    description = value.description;
+  }
+  let color: string | undefined;
+  if (Object.hasOwn(value, 'color')) {
+    if (!isValidMetadataField(value.color, METADATA_LIMITS.color)) return null;
+    color = value.color;
+  }
+  let language: string | undefined;
+  if (Object.hasOwn(value, 'language')) {
+    if (!isValidMetadataField(value.language, METADATA_LIMITS.language)) return null;
+    language = value.language;
+  }
+
+  return Object.freeze({
+    name: value.name,
+    ...(description === undefined ? {} : { description }),
+    ...(color === undefined ? {} : { color }),
+    ...(language === undefined ? {} : { language }),
+  });
+}
+
+function parseDraft(
+  value: unknown,
+  expected: HostedTeamConfigurationIdentity
+): HostedSavedTeamRequest | null {
+  const draftKeys = [
+    'workspaceId',
+    'teamId',
+    'revision',
+    'metadata',
+    'members',
+    ...(isRecord(value) && Object.hasOwn(value, 'configuration') ? ['configuration'] : []),
+  ];
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ['workspaceId', 'teamId', 'revision', 'metadata', 'members']) ||
+    !hasExactKeys(value, draftKeys) ||
     parseIdentity({ workspaceId: value.workspaceId, teamId: value.teamId }, expected) === null ||
-    !isRecord(value.metadata) ||
     !Array.isArray(value.members) ||
     value.members.length < 1 ||
     value.members.length > 32
@@ -99,26 +158,8 @@ function parseDraft(value: unknown, expected: HostedTeamConfigurationIdentity) {
   }
   const revision = tryParseRevision(value.revision);
   if (revision === null) return null;
-  const metadataKeys = Reflect.ownKeys(value.metadata);
-  if (
-    !Object.hasOwn(value.metadata, 'name') ||
-    metadataKeys.some((key) => typeof key !== 'string' || !Object.hasOwn(METADATA_LIMITS, key))
-  ) {
-    return null;
-  }
-  const metadata: Record<string, string> = {};
-  for (const key of metadataKeys as (keyof typeof METADATA_LIMITS)[]) {
-    const field = value.metadata[key];
-    if (
-      typeof field !== 'string' ||
-      field.length < 1 ||
-      field.length > METADATA_LIMITS[key] ||
-      field !== field.trim()
-    ) {
-      return null;
-    }
-    metadata[key] = field;
-  }
+  const metadata = parseDraftMetadata(value.metadata);
+  if (metadata === null) return null;
   const names = new Set<string>();
   const members: { readonly name: string }[] = [];
   for (const member of value.members) {
@@ -135,12 +176,21 @@ function parseDraft(value: unknown, expected: HostedTeamConfigurationIdentity) {
     names.add(member.name);
     members.push(Object.freeze({ name: member.name }));
   }
-  return Object.freeze({
-    ...expected,
-    revision,
-    metadata: Object.freeze(metadata),
-    members: Object.freeze(members),
-  }) as unknown as HostedSavedTeamRequest;
+  try {
+    const configuration = Object.hasOwn(value, 'configuration')
+      ? parseHostedRosterConfiguration(value.configuration)
+      : undefined;
+    if (configuration) assertHostedRosterMatches(configuration, members);
+    return Object.freeze({
+      ...expected,
+      revision,
+      metadata,
+      members: Object.freeze(members),
+      ...(configuration ? { configuration } : {}),
+    });
+  } catch {
+    return null;
+  }
 }
 
 function parseError(value: unknown, status: number | undefined) {

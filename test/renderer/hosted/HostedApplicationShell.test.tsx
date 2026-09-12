@@ -318,6 +318,10 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await click(button(host, 'Workspace 1'));
     const name = host.querySelector<HTMLInputElement>('[aria-label="Team name"]')!;
     await act(async () => change(name, 'New Browser Team'));
+    const instructions = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Lane 1 member 1 instructions"]'
+    )!;
+    await act(async () => change(instructions, 'Coordinate the browser team.'));
     await click(button(host, 'Create draft'));
     await vi.waitFor(() => expect(transport.createDraft).toHaveBeenCalledTimes(1));
     await click(button(host, 'Create draft'));
@@ -331,6 +335,24 @@ describe('HostedApplicationShell team configuration workflow', () => {
         idempotencyKey: CREATE_KEY,
         name: 'New Browser Team',
         members: [{ name: 'lead' }],
+        configuration: {
+          schemaVersion: 1,
+          toolApprovalMode: 'auto',
+          lanes: [
+            {
+              kind: 'native',
+              provider: 'codex',
+              members: [
+                {
+                  name: 'lead',
+                  prompt: 'Coordinate the browser team.',
+                  model: 'gpt-5.6-sol',
+                  effort: 'medium',
+                },
+              ],
+            },
+          ],
+        },
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
@@ -340,6 +362,14 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await vi.waitFor(() => expect(host.textContent).toContain(`Server revision: ${REVISION_ONE}`));
     expect(host.textContent).toContain('remains readable and unchanged');
     expect(host.textContent).toContain('updates and activation are unavailable in Hosted MVP');
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="Lane 1 runtime"]')).not.toBeNull();
+    expect(
+      host.querySelector<HTMLTextAreaElement>('[aria-label="Lane 1 member 1 instructions"]')?.value
+    ).toBe('Coordinate.');
+    expect(
+      host.querySelector<HTMLInputElement>('[aria-label="Lane 1 member 1 model"]')?.value
+    ).toBe('gpt-6');
+    expect(host.textContent).not.toContain('Add OpenCode lane');
 
     const editName = host.querySelector<HTMLInputElement>('[aria-label="Team name"]')!;
     await act(async () => change(editName, 'Renamed Team'));

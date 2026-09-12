@@ -23,6 +23,15 @@ import {
   parseHostedTeamConfigurationIdempotencyKey,
 } from '../../contracts/hosted';
 import { HOSTED_MVP_TOOL_APPROVAL_MODE } from '../../contracts/hostedRosterConfiguration';
+import {
+  buildHostedRosterConfiguration,
+  createHostedInitialRosterDraft,
+  hostedConfigurationToRosterDraft,
+  type HostedInitialRosterDraft,
+  hostedRosterCreateFingerprint,
+} from '../view-models/hostedInitialRoster';
+
+import { HostedInitialRosterEditor } from './HostedInitialRosterEditor';
 
 import type { HostedTeamConfigurationTransport } from '../ports/HostedTeamConfigurationRendererPorts';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
@@ -48,14 +57,6 @@ function defaultIdempotencyKey(): HostedTeamConfigurationIdempotencyKey {
   return parseHostedTeamConfigurationIdempotencyKey(
     `idempotency_team-configuration-renderer-${suffix}`
   );
-}
-
-function memberNames(value: string): readonly { readonly name: string }[] {
-  return value
-    .split(/[\s,]+/u)
-    .map((name) => name.trim())
-    .filter(Boolean)
-    .map((name) => Object.freeze({ name }));
 }
 
 function errorText(code: string): string {
@@ -84,7 +85,8 @@ export const HostedTeamConfigurationPanel = ({
   } | null>(null);
   const [draft, setDraft] = useState<HostedSavedTeamRequest | null>(null);
   const [name, setName] = useState('');
-  const [members, setMembers] = useState('lead');
+  const [roster, setRoster] = useState<HostedInitialRosterDraft>(createHostedInitialRosterDraft);
+  const [rosterErrors, setRosterErrors] = useState<readonly string[]>([]);
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('');
   const [language, setLanguage] = useState('');
@@ -94,7 +96,8 @@ export const HostedTeamConfigurationPanel = ({
   const applyDraft = useCallback((value: HostedSavedTeamRequest): void => {
     setDraft(value);
     setName(value.metadata.name);
-    setMembers(value.members.map((member) => member.name).join(', '));
+    if (value.configuration) setRoster(hostedConfigurationToRosterDraft(value.configuration));
+    setRosterErrors([]);
     setDescription(value.metadata.description ?? '');
     setColor(value.metadata.color ?? '');
     setLanguage(value.metadata.language ?? '');
@@ -137,7 +140,8 @@ export const HostedTeamConfigurationPanel = ({
     setFeedback(null);
     setDraft(null);
     setName('');
-    setMembers('lead');
+    setRoster(createHostedInitialRosterDraft());
+    setRosterErrors([]);
     setDescription('');
     setColor('');
     setLanguage('');
@@ -149,9 +153,18 @@ export const HostedTeamConfigurationPanel = ({
   }, [identityKey, load]);
 
   const createDraft = (): void => {
-    const normalizedMembers = memberNames(members);
+    const rosterResult = buildHostedRosterConfiguration(roster);
+    if (!rosterResult.ok) {
+      setRosterErrors(rosterResult.errors);
+      setFeedback({
+        tone: 'error',
+        text: 'Complete the initial roster before creating the draft.',
+      });
+      return;
+    }
+    setRosterErrors([]);
     const normalizedName = name.trim();
-    const fingerprint = JSON.stringify({ name: normalizedName, members: normalizedMembers });
+    const fingerprint = hostedRosterCreateFingerprint(normalizedName, rosterResult.configuration);
     const intent =
       createIntent.current?.fingerprint === fingerprint
         ? createIntent.current
@@ -170,7 +183,8 @@ export const HostedTeamConfigurationPanel = ({
           workspaceId,
           idempotencyKey: intent.key,
           name: normalizedName,
-          members: normalizedMembers,
+          members: rosterResult.members,
+          configuration: rosterResult.configuration,
         },
         { signal: controller.signal }
       )
@@ -317,18 +331,28 @@ export const HostedTeamConfigurationPanel = ({
         />
       </div>
 
-      {editing ? null : (
-        <div className="space-y-1.5">
-          <Label htmlFor="hosted-team-members">Initial member names</Label>
-          <Input
-            id="hosted-team-members"
-            aria-label="Initial member names"
-            value={members}
-            disabled={busy}
-            onChange={(event) => setMembers(event.target.value)}
-            placeholder="lead, researcher"
-          />
-        </div>
+      {editing ? (
+        draft?.configuration ? (
+          <HostedInitialRosterEditor value={roster} readOnly disabled={busy} />
+        ) : draft ? (
+          <div role="alert" className="space-y-1 text-sm">
+            <p>
+              Initial roster configuration is missing. This historical names-only draft remains
+              readable but is incomplete and cannot be launched.
+            </p>
+            <p>Saved member order: {draft.members.map((member) => member.name).join(', ')}</p>
+          </div>
+        ) : null
+      ) : (
+        <HostedInitialRosterEditor
+          value={roster}
+          onChange={(value) => {
+            setRoster(value);
+            setRosterErrors([]);
+          }}
+          disabled={busy}
+          errors={rosterErrors}
+        />
       )}
 
       {editing ? (
@@ -385,9 +409,7 @@ export const HostedTeamConfigurationPanel = ({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          disabled={
-            busy || name.trim().length === 0 || (!editing && memberNames(members).length === 0)
-          }
+          disabled={busy || name.trim().length === 0 || (editing && draft === null)}
           onClick={editing ? updateDraft : createDraft}
         >
           {editing ? 'Save configuration' : 'Create draft'}
