@@ -101,7 +101,7 @@ function recoverGate(gate: string): void {
   }
   if (entries.length !== 1) return; // Unknown state fails closed.
   const entry = entries[0];
-  const match = /^owner-([1-9][0-9]*)-([a-f0-9-]{36})$/.exec(entry);
+  const match = /^owner-([1-9][0-9]*)-((?:strict:)?[a-f0-9-]{36})$/.exec(entry);
   if (!match) return;
   const pid = parsePid(match[1]);
   if (pid === null) return;
@@ -267,9 +267,7 @@ export function withFileLockSync<T>(
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-  const token = resolvedOptions.preventLiveOwnerTakeover
-    ? `strict:${randomUUID()}`
-    : randomUUID();
+  const token = resolvedOptions.preventLiveOwnerTakeover ? `strict:${randomUUID()}` : randomUUID();
 
   while (!tryAcquire(lockPath, resolvedOptions, token)) {
     if (Date.now() >= deadline) {
@@ -293,9 +291,7 @@ export async function withFileLock<T>(
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-  const token = resolvedOptions.preventLiveOwnerTakeover
-    ? `strict:${randomUUID()}`
-    : randomUUID();
+  const token = resolvedOptions.preventLiveOwnerTakeover ? `strict:${randomUUID()}` : randomUUID();
 
   while (!tryAcquire(lockPath, resolvedOptions, token)) {
     if (Date.now() >= deadline) {

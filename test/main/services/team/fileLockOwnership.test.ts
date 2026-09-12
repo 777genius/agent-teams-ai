@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -57,5 +57,20 @@ describe('file lock physical owner mode', () => {
       { preventLiveOwnerTakeover: true }
     );
     expect(await readFile(`${path}.lock`, 'utf8')).toBe(replacement);
+  });
+
+  it('recovers a dead strict transition gate so later acquisition can proceed', async () => {
+    const gate = `${path}.lock-transition-v2`;
+    const token = 'strict:00000000-0000-4000-8000-000000000001';
+    const entry = `owner-999999999-${token}`;
+    await mkdir(gate);
+    await writeFile(join(gate, entry), `file-lock-transition-v2\n999999999\n${token}\n`);
+    await expect(
+      withFileLock(path, async () => 'ok', {
+        preventLiveOwnerTakeover: true,
+        acquireTimeoutMs: 200,
+        retryIntervalMs: 5,
+      })
+    ).resolves.toBe('ok');
   });
 });
