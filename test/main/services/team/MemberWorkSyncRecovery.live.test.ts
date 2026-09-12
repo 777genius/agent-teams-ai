@@ -1459,6 +1459,14 @@ liveDescribe('Member work sync recovery live canary', () => {
             .relayInboxFileToLiveRecipient(teamName!, memberName)
             .catch(() => undefined);
           kickLeadInboxRelay(activeService, teamName!, leadRelay);
+          const status = await feature!.getStatus({ teamName: teamName!, memberName });
+          if (
+            status.state === 'caught_up' &&
+            status.agenda.items.length === 0 &&
+            status.report?.accepted === true
+          ) {
+            return true;
+          }
           try {
             await feature!.continueManually({
               teamName: teamName!,
