@@ -46,7 +46,7 @@ function move<T>(values: readonly T[], index: number, offset: -1 | 1): readonly 
   const target = index + offset;
   if (target < 0 || target >= values.length) return values;
   const next = [...values];
-  [next[index], next[target]] = [next[target] as T, next[index] as T];
+  [next[index], next[target]] = [next[target], next[index]];
   return Object.freeze(next);
 }
 
