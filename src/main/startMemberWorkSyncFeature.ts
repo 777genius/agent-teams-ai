@@ -6,6 +6,13 @@ type StallObservation = Parameters<TeamTaskStallObservationPort['record']>[0];
 
 const DEFAULT_STALL_RETRY_MS = 2_000;
 
+function isPermanentStallObservationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'MemberWorkSyncStallEpisodeMissingError' || error.message === 'episode_missing')
+  );
+}
+
 export function createDeferredWorkSyncStallObservation(options?: {
   retryDelayMs?: number;
 }): TeamTaskStallObservationPort & {
@@ -47,7 +54,13 @@ export function createDeferredWorkSyncStallObservation(options?: {
         if (pending[0] === observation) {
           pending.shift();
         }
-      } catch {
+      } catch (error) {
+        if (isPermanentStallObservationError(error)) {
+          if (pending[0] === observation) {
+            pending.shift();
+          }
+          continue;
+        }
         scheduleRetry();
         break;
       }

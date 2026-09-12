@@ -79,7 +79,7 @@ describe('createDeferredWorkSyncStallObservation', () => {
       recordStallObservation: async (input: { taskId: string }) => {
         attempts += 1;
         if (attempts === 1) {
-          throw new Error('episode_missing');
+          throw new Error('status_missing');
         }
         recorded.push(input.taskId);
       },
@@ -89,5 +89,38 @@ describe('createDeferredWorkSyncStallObservation', () => {
       expect(recorded).toEqual(['task-1']);
     });
     expect(attempts).toBe(2);
+  });
+
+  it('drops permanently stale episode_missing observations and continues the queue', async () => {
+    const recorded: string[] = [];
+    const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 20 });
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:00:00.000Z',
+    });
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'alice',
+      taskId: 'task-2',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:01:00.000Z',
+    });
+    observation.attach({
+      recordStallObservation: async (input: { taskId: string }) => {
+        if (input.taskId === 'task-1') {
+          const error = new Error('episode_missing');
+          error.name = 'MemberWorkSyncStallEpisodeMissingError';
+          throw error;
+        }
+        recorded.push(input.taskId);
+      },
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+
+    await vi.waitFor(() => {
+      expect(recorded).toEqual(['task-2']);
+    });
   });
 });
