@@ -22,6 +22,7 @@ function statusForResult(input: {
     return 'accepted';
   }
   if (
+    input.code === 'superseded' ||
     input.code === 'member_inactive' ||
     input.code === 'team_runtime_inactive' ||
     input.code === 'member_runtime_inactive'

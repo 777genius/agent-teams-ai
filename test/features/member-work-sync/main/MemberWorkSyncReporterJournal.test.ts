@@ -11,7 +11,10 @@ import {
   MemberWorkSyncReconciler,
 } from '@features/member-work-sync/core/application/MemberWorkSyncReconciler';
 import { MemberWorkSyncReporter } from '@features/member-work-sync/core/application/MemberWorkSyncReporter';
-import { buildMemberWorkSyncReportRequestDigest } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalProtocol';
+import {
+  buildMemberWorkSyncReportRequestDigest,
+  createMemberWorkSyncReportJournalInput,
+} from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalProtocol';
 import { MemberWorkSyncTeamOperationGate } from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { createAdmittedMemberWorkSyncStatusPort } from '@features/member-work-sync/main/composition/createAdmittedMemberWorkSyncStatusPort';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
@@ -221,6 +224,46 @@ describe.each(['json', 'sqlite'] as const)(
       expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
         second.status.lastAcceptedReport?.expiresAt
       );
+    });
+
+    it('does not let an older pending I1 replay replace a newer accepted I2', async () => {
+      const h = await setup(kind);
+      const i1 = createMemberWorkSyncReportJournalInput({
+        request: h.request,
+        incarnation,
+        receivedAt: initialTime,
+        hash: h.hash,
+      });
+      expect((await h.reportJournal.ensure(i1)).state).toBe('present');
+      expect((await h.read()).lastAcceptedReport).toBeUndefined();
+
+      h.setTime('2026-09-10T00:01:00.000Z');
+      const second = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute({ ...h.request, note: 'accepted I2' })
+      );
+      expect(second.accepted).toBe(true);
+      expect(second.status.lastAcceptedReport?.note).toBe('accepted I2');
+      const i2 = second.status.pendingReportReceipt;
+      expect(i2?.intentId).toBeTruthy();
+      expect(i2?.intentId).not.toBe(i1.intentId);
+
+      const replayed = await h.run((deps) =>
+        new MemberWorkSyncReporter(deps).execute(h.request, {
+          intentId: i1.intentId,
+          incarnation,
+          requestDigest: i1.requestDigest,
+          receivedAt: i1.receivedAt,
+          origin: 'online',
+        })
+      );
+      expect(replayed.accepted).toBe(false);
+      expect(replayed.code).toBe('superseded');
+      expect(replayed.status.pendingReportReceipt?.intentId).toBe(i2?.intentId);
+      expect(replayed.status.lastAcceptedReport?.note).toBe('accepted I2');
+      expect(replayed.status.lastAcceptedReport?.expiresAt).toBe(
+        second.status.lastAcceptedReport?.expiresAt
+      );
+      expect((await h.read()).lastAcceptedReport?.note).toBe('accepted I2');
     });
 
     it('reuses a digest-stable intent ID when the same online report is retried', async () => {

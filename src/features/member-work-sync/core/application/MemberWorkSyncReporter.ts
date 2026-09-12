@@ -9,6 +9,7 @@ import {
 } from './MemberWorkSyncReconciler';
 import {
   createMemberWorkSyncReportJournalInput,
+  isOlderThanAcceptedMemberWorkSyncReportReplay,
   matchingPendingReportCheckpoint,
   reportReceiptDraftFromJournal,
   transferAcceptedReportReceipt,
@@ -80,6 +81,20 @@ export class MemberWorkSyncReporter {
         replay,
         read,
         checkpoint,
+      });
+    }
+    if (
+      replay &&
+      isOlderThanAcceptedMemberWorkSyncReportReplay(
+        replay.receivedAt,
+        getMemberWorkSyncAcceptedReport(read.status)?.reportedAt
+      )
+    ) {
+      return this.completeHistoricalReplay({
+        request,
+        mutationId,
+        replay,
+        read,
       });
     }
     const source = await this.deps.agendaSource.loadAgenda(request);
@@ -332,6 +347,83 @@ export class MemberWorkSyncReporter {
       ...(status.providerId ? { providerId: status.providerId } : {}),
     });
     return committed.status;
+  }
+
+  private async completeHistoricalReplay(input: {
+    request: MemberWorkSyncReportRequest;
+    mutationId: string | undefined;
+    replay: MemberWorkSyncReportJournalReplay;
+    read: Awaited<ReturnType<typeof readMemberWorkSyncStatus>>;
+  }): Promise<MemberWorkSyncReportResult> {
+    const { request, mutationId, replay } = input;
+    const status = input.read.status;
+    if (!status?.statusRevision) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    const journal = this.deps.reportJournal;
+    const superseded = {
+      accepted: false as const,
+      code: 'superseded',
+      message: 'Older pending report replay was superseded by a newer accepted report.',
+      status,
+    };
+    if (!journal) {
+      return superseded;
+    }
+    const incarnation = input.read.snapshot?.incarnation;
+    if (!incarnation) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    const journalInput = createMemberWorkSyncReportJournalInput({
+      request,
+      incarnation,
+      receivedAt: replay.receivedAt,
+      hash: this.deps.hash,
+      replay,
+    });
+    const ensured = await journal.ensure(journalInput);
+    if (ensured.state !== 'present') {
+      throw new MemberWorkSyncStatusMutationError(
+        ensured.state === 'conflict' ? 'conflict' : 'unavailable',
+        mutationId
+      );
+    }
+    const trustedAt = ensured.intent.journal?.firstRecordedAt ?? replay.receivedAt;
+    if (
+      !isOlderThanAcceptedMemberWorkSyncReportReplay(
+        trustedAt,
+        getMemberWorkSyncAcceptedReport(status)?.reportedAt
+      )
+    ) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    if (ensured.intent.status === 'accepted' || ensured.intent.status === 'superseded') {
+      return {
+        accepted: true,
+        code: 'accepted',
+        message: 'Member work sync report accepted.',
+        status,
+      };
+    }
+    const transferred = await transferAcceptedReportReceipt(
+      journal,
+      {
+        ...journalInput,
+        receivedAt: trustedAt,
+        origin: ensured.intent.journal?.origin ?? journalInput.origin,
+      },
+      {
+        intentId: replay.intentId,
+        incarnation: replay.incarnation,
+        requestDigest: replay.requestDigest,
+        acceptedAt: trustedAt,
+        appliedStatusRevision: status.statusRevision,
+      }
+    );
+    if (!transferred) {
+      throw new MemberWorkSyncStatusMutationError('unavailable', mutationId);
+    }
+    return superseded;
   }
 
   private async completeCheckpointBackedReplay(input: {

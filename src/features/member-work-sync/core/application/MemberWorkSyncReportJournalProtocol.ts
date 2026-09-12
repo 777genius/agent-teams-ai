@@ -59,6 +59,18 @@ export function createMemberWorkSyncReportJournalInput(input: {
   };
 }
 
+export function isOlderThanAcceptedMemberWorkSyncReportReplay(
+  replayReceivedAt: string,
+  acceptedReportedAt: string | undefined
+): boolean {
+  if (!acceptedReportedAt) {
+    return false;
+  }
+  const replayMs = Date.parse(replayReceivedAt);
+  const acceptedMs = Date.parse(acceptedReportedAt);
+  return Number.isFinite(replayMs) && Number.isFinite(acceptedMs) && replayMs < acceptedMs;
+}
+
 export function matchingPendingReportCheckpoint(
   status: MemberWorkSyncStatus | null | undefined,
   replay: MemberWorkSyncReportJournalReplay | undefined
