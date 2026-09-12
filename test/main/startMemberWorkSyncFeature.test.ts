@@ -187,9 +187,12 @@ describe('createDeferredWorkSyncStallObservation', () => {
 });
 
 describe('runShutdownBackupAfterWorkSyncDrain', () => {
-  it('drains work-sync writers before copying backup state', async () => {
+  it('closes ingress, then drains work-sync writers, then copies backup state', async () => {
     const order: string[] = [];
     await runShutdownBackupAfterWorkSyncDrain({
+      closeIngress: async () => {
+        order.push('close-ingress');
+      },
       drainWorkSync: async () => {
         order.push('drain');
       },
@@ -199,6 +202,6 @@ describe('runShutdownBackupAfterWorkSyncDrain', () => {
         },
       },
     });
-    expect(order).toEqual(['drain', 'backup']);
+    expect(order).toEqual(['close-ingress', 'drain', 'backup']);
   });
 });

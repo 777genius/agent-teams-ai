@@ -163,9 +163,11 @@ export async function startPreparedMemberWorkSyncFeature(input: {
 }
 
 export async function runShutdownBackupAfterWorkSyncDrain(input: {
+  closeIngress?: () => void | Promise<void>;
   drainWorkSync: () => Promise<void>;
   backup?: { runShutdownBackupSync(): void } | null;
 }): Promise<void> {
+  await input.closeIngress?.();
   await input.drainWorkSync();
   input.backup?.runShutdownBackupSync();
 }

@@ -132,3 +132,29 @@ it('owned restore drain retains early-return physical work and leaves another te
   expect(drained).toBe(true);
   await expect(gate.run('team-a', async () => 'safe')).resolves.toBe('safe');
 });
+
+it('closes all admission and drains remaining operations', async () => {
+  const gate = new MemberWorkSyncTeamOperationGate();
+  const admitted = createDeferred<string>();
+  const admittedRun = gate.run('team-a', () => admitted.promise);
+  gate.close();
+
+  await expect(gate.run('team-b', async () => 'must-not-run')).rejects.toEqual(
+    new MemberWorkSyncTeamQuiescedError('team-b')
+  );
+
+  let idle = false;
+  const idlePromise = gate.awaitIdle().then(() => {
+    idle = true;
+  });
+  await Promise.resolve();
+  expect(idle).toBe(false);
+
+  admitted.resolve('done');
+  await expect(admittedRun).resolves.toBe('done');
+  await idlePromise;
+  expect(idle).toBe(true);
+  await expect(gate.run('team-a', async () => 'reopened')).rejects.toBeInstanceOf(
+    MemberWorkSyncTeamQuiescedError
+  );
+});

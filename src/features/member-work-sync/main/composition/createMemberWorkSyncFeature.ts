@@ -779,13 +779,12 @@ export function createMemberWorkSyncFeature(deps: {
     },
     dispose: () => {
       if (!disposePromise) {
-        // Close admission synchronously. An active drain may outlive the
-        // scheduler's bounded dispose wait, so it must not acknowledge a
-        // spool item after queue.stop() has discarded the accepted work.
         acceptsRuntimeTurnSettledReconcile = false;
+        operationGate.close();
         disposePromise = Promise.allSettled([
           runtimeTurnSettledDrainScheduler.dispose(),
           nudgeDispatchScheduler?.dispose(),
+          operationGate.awaitIdle(),
         ])
           .then(() => queue.stop())
           .then(() => undefined);

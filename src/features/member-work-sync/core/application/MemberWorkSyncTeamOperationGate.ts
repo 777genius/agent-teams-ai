@@ -27,6 +27,7 @@ export interface MemberWorkSyncTeamOperationAdmission {
  * one team without delaying unrelated teams.
  */
 export class MemberWorkSyncTeamOperationGate {
+  private closed = false;
   private readonly quiescedTeams = new Set<string>();
   private readonly ownedQuiesces = new Map<string, Set<symbol>>();
   private readonly inFlightByTeam = new Map<string, Set<Promise<unknown>>>();
@@ -36,7 +37,7 @@ export class MemberWorkSyncTeamOperationGate {
     operation: (admission: MemberWorkSyncTeamOperationAdmission) => Promise<T>
   ): Promise<T> {
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-    if (this.quiescedTeams.has(teamKey) || this.ownedQuiesces.has(teamKey)) {
+    if (this.closed || this.quiescedTeams.has(teamKey) || this.ownedQuiesces.has(teamKey)) {
       throw new MemberWorkSyncTeamQuiescedError(teamName.trim());
     }
 
@@ -117,5 +118,19 @@ export class MemberWorkSyncTeamOperationGate {
 
   resumeTeam(teamName: string): void {
     this.quiescedTeams.delete(normalizeMemberWorkSyncTeamOperationKey(teamName));
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  async awaitIdle(): Promise<void> {
+    while (true) {
+      const inFlight = [...this.inFlightByTeam.values()].flatMap((set) => [...set]);
+      if (inFlight.length === 0) {
+        return;
+      }
+      await Promise.allSettled(inFlight);
+    }
   }
 }

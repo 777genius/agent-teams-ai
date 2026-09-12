@@ -3117,8 +3117,11 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());
 
-    // Copy team files only after SIGKILL and a physical work-sync writer drain.
     await runShutdownBackupAfterWorkSyncDrain({
+      closeIngress: () => {
+        removeMemberWorkSyncIpc(ipcMain);
+        return httpServer?.isRunning() ? httpServer.stop() : undefined;
+      },
       drainWorkSync: () =>
         disposeInternalStorageAfterWriterDrains({
           teamDataService,
@@ -3130,9 +3133,6 @@ async function shutdownServices(): Promise<void> {
     });
     teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
 
-    if (httpServer?.isRunning()) {
-      await runShutdownStep('HTTP server stop', () => httpServer.stop());
-    }
     await runShutdownStep('team control state cleanup', () => clearTeamControlApiState());
 
     await runShutdownStep('file watcher event cleanup', () => {
