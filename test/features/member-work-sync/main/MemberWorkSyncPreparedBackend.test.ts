@@ -428,6 +428,12 @@ describe('prepared backend production storage path', () => {
     const restored = await h.store.read(member);
     expect(restored?.reportToken).toBeTruthy();
     expect(restored?.reportToken).not.toBe(backupIssued.token);
+    expect(restored?.statusRevision).toMatchObject({
+      incarnation: identity.incarnation,
+      lineageId: status().statusRevision?.lineageId,
+      sequence: (status().statusRevision?.sequence ?? 0) + 1,
+    });
+    expect(restored?.statusRevision?.nonce).not.toBe(status().statusRevision?.nonce);
     await expect(
       liveTokens.verify({
         teamName: identity.teamName,

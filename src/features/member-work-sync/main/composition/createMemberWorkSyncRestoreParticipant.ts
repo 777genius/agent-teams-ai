@@ -1,4 +1,5 @@
 import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
+import { createMemberWorkSyncStatusVersion } from '../infrastructure/memberWorkSyncStatusVersion';
 import { readMemberWorkSyncBackupCandidate } from '../infrastructure/readMemberWorkSyncBackupCandidate';
 import { restoreMemberWorkSyncJsonBackup } from '../infrastructure/restoreMemberWorkSyncJsonBackup';
 
@@ -35,11 +36,22 @@ async function reissueRestoredReportTokens(
       agendaFingerprint: current.agenda.fingerprint,
       issuedAt,
     });
-    await store.write({
-      ...current,
-      reportToken: issued.token,
-      reportTokenExpiresAt: issued.expiresAt,
-    });
+    await store.write(
+      createMemberWorkSyncStatusVersion(
+        current,
+        {
+          ...current,
+          reportToken: issued.token,
+          reportTokenExpiresAt: issued.expiresAt,
+        },
+        {
+          teamName: current.teamName,
+          memberName: current.memberName,
+          incarnation: candidate.identity.incarnation,
+          backend: store instanceof BackendSelectingMemberWorkSyncStore ? 'sqlite' : 'json',
+        }
+      )
+    );
   }
 }
 
