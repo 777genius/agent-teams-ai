@@ -572,6 +572,212 @@ liveDescribe('Member work sync recovery live canary', () => {
     feature.completeTeamDeletion(teamName);
   }, 420_000);
 
+  it('restores the same Codex recovery intent after a crash between inbox write and restart (D)', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
+
+    const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+    teamName = `member-work-sync-recovery-codex-d-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync recovery Codex live crash canary\n\nDisposable sandbox only.\n',
+      'utf8'
+    );
+
+    const [
+      { TeamProvisioningService },
+      { TeamDataService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+      { createCodexAccountFeature },
+      { ProviderConnectionService },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamDataService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+      import('../../../../src/features/codex-account/main/composition/createCodexAccountFeature'),
+      import('../../../../src/main/services/runtime/ProviderConnectionService'),
+    ]);
+
+    codexAccountFeature = createCodexAccountFeature({
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+      configManager: {
+        getConfig: () => ({
+          providerConnections: {
+            codex: {
+              preferredAuthMode: hasCodexApiKey ? 'auto' : ('chatgpt' as const),
+            },
+          },
+        }),
+      },
+    });
+    providerConnectionService = ProviderConnectionService.getInstance();
+    providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const teamDataService = new TeamDataService();
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = () =>
+      createMemberWorkSyncFeature({
+        lifecycleIdentity,
+        teamsBasePath: getTeamsBasePath(),
+        ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+        configReader: new TeamConfigReader(),
+        taskReader: new TeamTaskReader(),
+        kanbanManager: new TeamKanbanManager(),
+        membersMetaStore: new TeamMembersMetaStore(),
+        isTeamActive: (name) =>
+          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+        listLifecycleActiveTeamNames: async () => [teamName!],
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        queueQuietWindowMs: 500,
+        nudgeDeliveryWake: {
+          schedule: async (input) => {
+            const timer = setTimeout(
+              () => {
+                void activeService
+                  .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
+                  .catch(() => undefined);
+              },
+              Math.max(0, input.delayMs ?? 0)
+            );
+            timer.unref?.();
+          },
+        },
+      });
+
+    feature = createFeature();
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    await fs.writeFile(
+      path.join(tempClaudeRoot, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+      'utf8'
+    );
+
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model,
+        effort: DEFAULT_EFFORT,
+        fastMode: 'off',
+        skipPermissions: true,
+        prompt: [
+          'Keep launch work minimal.',
+          'Do not edit files.',
+          'If you receive a task, wait for instructions and do not complete it.',
+        ].join(' '),
+        members: [],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
+
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new FatalWaitError(formatProgressDump(progressEvents));
+      }
+      const dump = formatProgressDump(progressEvents);
+      if (/usage limit/i.test(dump)) {
+        throw new FatalWaitError(dump);
+      }
+      if (teamName) {
+        const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName);
+        if (fatalRuntimeMessage) {
+          throw new FatalWaitError(fatalRuntimeMessage);
+        }
+      }
+      return last?.state === 'ready';
+    }, 240_000);
+    expect(activeService.isTeamAlive(teamName)).toBe(true);
+
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+    await seedShadowReadyMetrics({ teamName, memberName });
+    const task = await teamDataService.createTask(teamName, {
+      subject: `Recovery Codex live crash canary ${Date.now()}`,
+      owner: memberName,
+      startImmediately: false,
+      prompt: 'Do not complete this task. Wait for operator instructions.',
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+
+    await waitUntil(
+      async () => {
+        const inbox = await readInboxMessages(teamName!, memberName);
+        return inbox.some(
+          (message) =>
+            message.messageKind === 'member_work_sync_nudge' &&
+            typeof message.messageId === 'string'
+        );
+      },
+      60_000,
+      500
+    );
+    const messageIdsBeforeCrash = (await readInboxMessages(teamName, memberName))
+      .filter((message) => message.messageKind === 'member_work_sync_nudge')
+      .map((message) => message.messageId)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+    expect(messageIdsBeforeCrash.length).toBeGreaterThanOrEqual(1);
+    const recoveryIdsBeforeCrash = await readRecoveryIntentKeys(teamName, memberName);
+
+    await feature.dispose();
+    await controlServer.close().catch(() => undefined);
+    feature = createFeature();
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
+      feature!.buildRuntimeTurnSettledEnvironment(input)
+    );
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+
+    await waitUntil(async () => {
+      const inbox = await readInboxMessages(teamName!, memberName);
+      return inbox.some((message) => message.messageKind === 'member_work_sync_nudge');
+    }, 30_000);
+    expect(
+      (await readInboxMessages(teamName, memberName))
+        .filter((message) => message.messageKind === 'member_work_sync_nudge')
+        .map((message) => message.messageId)
+        .filter((value): value is string => Boolean(value))
+        .sort()
+    ).toEqual(messageIdsBeforeCrash);
+    expect(await readRecoveryIntentKeys(teamName, memberName)).toEqual(recoveryIdsBeforeCrash);
+
+    await feature.prepareTeamDeletion(teamName);
+    feature.completeTeamDeletion(teamName);
+  }, 420_000);
+
   remainingWorkIt(
     'continues remaining Codex work after a settled status-only turn (A/B/C)',
     async () => {
