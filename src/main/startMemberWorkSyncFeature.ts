@@ -17,8 +17,10 @@ export function createDeferredWorkSyncStallObservation(options?: {
   retryDelayMs?: number;
 }): TeamTaskStallObservationPort & {
   attach(feature: MemberWorkSyncFeatureFacade | null): void;
+  dispose(): void;
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
+  let disposed = false;
   const pendingByTeam = new Map<string, StallObservation[]>();
   const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const retryDelayMs = options?.retryDelayMs ?? DEFAULT_STALL_RETRY_MS;
@@ -46,7 +48,7 @@ export function createDeferredWorkSyncStallObservation(options?: {
   };
   const flushTeam = async (teamName: string): Promise<void> => {
     const current = feature;
-    if (!current) {
+    if (disposed || !current) {
       return;
     }
     clearRetry(teamName);
@@ -68,7 +70,7 @@ export function createDeferredWorkSyncStallObservation(options?: {
           }
           continue;
         }
-        if (!retryTimers.has(teamName) && feature && pending.length > 0) {
+        if (!disposed && !retryTimers.has(teamName) && feature && pending.length > 0) {
           retryTimers.set(
             teamName,
             setTimeout(() => {
@@ -86,6 +88,9 @@ export function createDeferredWorkSyncStallObservation(options?: {
   };
   return {
     record: async (input) => {
+      if (disposed) {
+        return;
+      }
       pendingFor(input.teamName).push(input);
       if (!feature) {
         return;
@@ -93,12 +98,20 @@ export function createDeferredWorkSyncStallObservation(options?: {
       await flushTeam(input.teamName);
     },
     attach(next) {
+      if (disposed) {
+        return;
+      }
       feature = next;
       if (!next) {
         clearAllRetries();
         return;
       }
       void Promise.all([...pendingByTeam.keys()].map((teamName) => flushTeam(teamName)));
+    },
+    dispose() {
+      disposed = true;
+      feature = null;
+      clearAllRetries();
     },
   };
 }

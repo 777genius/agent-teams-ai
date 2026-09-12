@@ -39,6 +39,7 @@ export class MemberWorkSyncNudgeDispatchScheduler {
   private readonly listings = new Set<Promise<void>>();
   private lastDiscovery: { teams: string[]; observedAt: number } | null = null;
   private readonly dispatches = new Map<string, Promise<void>>();
+  private readonly observations = new Map<string, Promise<void>>();
   private stopped = false;
   private disposePromise: Promise<void> | null = null;
 
@@ -94,7 +95,7 @@ export class MemberWorkSyncNudgeDispatchScheduler {
 
   private async drainForDisposal(): Promise<void> {
     await this.running?.catch(() => undefined);
-    await Promise.all([...this.dispatches.values()]);
+    await Promise.all([...this.dispatches.values(), ...this.observations.values()]);
   }
 
   private schedule(delayMs: number): void {
@@ -210,10 +211,22 @@ export class MemberWorkSyncNudgeDispatchScheduler {
     if (!this.deps.observeDue) {
       return;
     }
+    if (this.observations.has(teamName)) {
+      return;
+    }
     let timeout: ReturnType<typeof setTimeout> | null = null;
+    const work = Promise.resolve().then(() => this.deps.observeDue?.(teamName));
+    const settled = work.then(
+      () => undefined,
+      () => undefined
+    );
+    this.observations.set(teamName, settled);
+    void settled.then(() => {
+      if (this.observations.get(teamName) === settled) this.observations.delete(teamName);
+    });
     try {
       await Promise.race([
-        Promise.resolve().then(() => this.deps.observeDue?.(teamName)),
+        work,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
             reject(

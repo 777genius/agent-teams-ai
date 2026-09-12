@@ -293,6 +293,58 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
+  it('retains one timed-out observation and waits for it during disposal', async () => {
+    vi.useFakeTimers();
+    try {
+      let releaseObservation!: () => void;
+      const timedOutObservation = new Promise<void>((resolve) => {
+        releaseObservation = resolve;
+      });
+      const observeDue = vi.fn(async () => {
+        await timedOutObservation;
+      });
+      let releaseDispatch!: () => void;
+      const timedOutDispatch = new Promise<void>((resolve) => {
+        releaseDispatch = resolve;
+      });
+      const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+        listLifecycleActiveTeamNames: async () => ['team-a'],
+        dispatchDue: async () => {
+          await timedOutDispatch;
+          return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+        },
+        observeDue,
+        dispatchTimeoutMs: 20,
+      });
+
+      const first = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(20);
+      await first;
+
+      const second = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(20);
+      await second;
+
+      expect(observeDue).toHaveBeenCalledTimes(1);
+
+      let disposed = false;
+      const dispose = scheduler.dispose().then(() => {
+        disposed = true;
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(disposed).toBe(false);
+
+      releaseObservation();
+      releaseDispatch();
+      await dispose;
+      expect(disposed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not wait for timed-out active team listing work during disposal', async () => {
     vi.useFakeTimers();
     try {

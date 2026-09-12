@@ -156,6 +156,34 @@ describe('createDeferredWorkSyncStallObservation', () => {
 
     expect(recorded).toEqual(['team-b:task-b']);
   });
+
+  it('cancels stall-observation retries on dispose', async () => {
+    vi.useFakeTimers();
+    try {
+      let attempts = 0;
+      const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 20 });
+      await observation.record({
+        teamName: 'team-a',
+        memberName: 'bob',
+        taskId: 'task-1',
+        reason: 'no_progress_deadline',
+        observedAt: '2026-09-12T00:00:00.000Z',
+      });
+      observation.attach({
+        recordStallObservation: async () => {
+          attempts += 1;
+          throw new Error('status_missing');
+        },
+      } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(attempts).toBe(1);
+      observation.dispose();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(attempts).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('runShutdownBackupAfterWorkSyncDrain', () => {

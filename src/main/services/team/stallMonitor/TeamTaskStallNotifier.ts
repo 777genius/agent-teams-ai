@@ -14,6 +14,7 @@ export interface TeamTaskStallObservationPort {
     reason: string;
     observedAt: string;
   }): Promise<void>;
+  dispose?(): void;
 }
 
 function buildLeadAlertText(alerts: TaskStallAlert[]): string {
@@ -45,6 +46,10 @@ export class TeamTaskStallNotifier {
       text: buildLeadAlertText(alerts),
       taskRefs: alerts.map((alert) => alert.taskRef),
     });
+  }
+
+  dispose(): void {
+    this.stallObservation?.dispose?.();
   }
 
   /**

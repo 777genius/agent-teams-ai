@@ -113,6 +113,7 @@ export class TeamTaskStallMonitor {
     }
 
     this.started = false;
+    this.notifier.dispose?.();
     if (this.scanTimer) {
       clearTimeout(this.scanTimer);
       this.scanTimer = null;
