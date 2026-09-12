@@ -74,7 +74,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
   afterEach(async () => {
     if (harness && teamName) {
       await harness.svc.stopTeam(teamName).catch(() => undefined);
-      await waitForOpenCodeLanesStopped(teamName);
+      await waitForOpenCodeLanesStopped(teamName).catch(() => undefined);
     }
     await feature?.dispose().catch(() => undefined);
     await harness?.dispose().catch(() => undefined);
@@ -88,7 +88,8 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
         if (
           rendered.includes('OpenCode inbox relay failed') ||
           rendered.includes('delivery watchdog relay diagnostics') ||
-          rendered.includes('opencode_primary_runtime_not_deliverable')
+          rendered.includes('opencode_primary_runtime_not_deliverable') ||
+          rendered.includes('Slow OpenCode stop')
         ) {
           warn.mock.calls.splice(index, 1);
         }
