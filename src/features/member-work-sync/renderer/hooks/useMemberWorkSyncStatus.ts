@@ -27,6 +27,7 @@ export interface UseMemberWorkSyncStatusResult {
   continueManually: () => void;
   stopAutoResume: () => void;
   resumeAutoResume: () => void;
+  recoveryActionsAvailable: boolean;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -152,5 +153,6 @@ export function useMemberWorkSyncStatus({
     continueManually: () => runStatusCommand('continueManually'),
     stopAutoResume: () => runStatusCommand('stopAutoResume'),
     resumeAutoResume: () => runStatusCommand('resumeAutoResume'),
+    recoveryActionsAvailable: isElectronMode(),
   };
 }

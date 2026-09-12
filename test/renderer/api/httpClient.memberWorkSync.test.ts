@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { HttpAPIClient } from '@renderer/api/httpClient';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class FakeEventSource {
   onopen: (() => void) | null = null;

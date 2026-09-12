@@ -1,5 +1,4 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { isElectronMode } from '@renderer/api';
 
 import { useMemberWorkSyncStatus } from '../hooks/useMemberWorkSyncStatus';
 
@@ -22,19 +21,27 @@ export const MemberWorkSyncStatusPanel = ({
   showDiagnostics = false,
 }: MemberWorkSyncStatusPanelProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
-  const { status, viewModel, loading, error, continueManually, stopAutoResume, resumeAutoResume } =
-    useMemberWorkSyncStatus({
-      teamName,
-      memberName,
-      enabled,
-    });
+  const {
+    status,
+    viewModel,
+    loading,
+    error,
+    continueManually,
+    stopAutoResume,
+    resumeAutoResume,
+    recoveryActionsAvailable,
+  } = useMemberWorkSyncStatus({
+    teamName,
+    memberName,
+    enabled,
+  });
 
   if (!enabled) {
     return null;
   }
 
   if (status) {
-    const recoveryActions = isElectronMode()
+    const recoveryActions = recoveryActionsAvailable
       ? {
           onContinue: continueManually,
           onStop: stopAutoResume,
