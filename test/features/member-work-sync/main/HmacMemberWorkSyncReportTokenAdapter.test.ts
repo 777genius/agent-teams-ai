@@ -32,10 +32,12 @@ describe('HmacMemberWorkSyncReportTokenAdapter', () => {
       incarnation: 'inc-a',
       secret: 'b'.repeat(32),
     });
-    await adapter.restoreBackupSecret('team-a', backup, {
-      teamName: 'team-a',
-      incarnation: 'inc-a',
-    });
+    expect(
+      await adapter.restoreBackupSecret('team-a', backup, {
+        teamName: 'team-a',
+        incarnation: 'inc-a',
+      })
+    ).toEqual({ rotated: true });
     expect(
       JSON.parse(await readFile(paths.getReportTokenSecretPath('team-a'), 'utf8'))
     ).toMatchObject({ schemaVersion: 2, incarnation: 'inc-a' });
@@ -47,10 +49,12 @@ describe('HmacMemberWorkSyncReportTokenAdapter', () => {
     };
     const old = await adapter.create(request);
     await writeFile(paths.getReportTokenSecretPath('team-a'), live);
-    await adapter.restoreBackupSecret('team-a', backup, {
-      teamName: 'team-a',
-      incarnation: 'inc-a',
-    });
+    expect(
+      await adapter.restoreBackupSecret('team-a', backup, {
+        teamName: 'team-a',
+        incarnation: 'inc-a',
+      })
+    ).toEqual({ rotated: false });
     expect(await readFile(paths.getReportTokenSecretPath('team-a'), 'utf8')).toBe(live);
     expect(await adapter.create(request)).not.toEqual(old);
     expect(await adapter.create(request)).toEqual(

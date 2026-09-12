@@ -158,7 +158,8 @@ export class MemberWorkSyncRecoveryCommands {
         const preserveExistingEnvelope =
           existingItem != null &&
           existingKey !== undefined &&
-          (existingItem.status === 'pending' || existingItem.status === 'delivered');
+          existingItem.status !== 'superseded' &&
+          existingItem.status !== 'failed_terminal';
         recoveryInput =
           existingItem && existingKey && preserveExistingEnvelope
             ? {

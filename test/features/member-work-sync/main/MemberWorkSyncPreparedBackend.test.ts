@@ -391,6 +391,54 @@ describe('prepared backend production storage path', () => {
     }
   );
 
+  it('reissues restored report tokens when restore rotates the signing key', async () => {
+    const h = await setup('sqlite');
+    const backupRoot = join(h.root, 'backup-teams');
+    const backupPaths = new MemberWorkSyncStorePaths(backupRoot);
+    const backupTokens = new HmacMemberWorkSyncReportTokenAdapter(
+      backupPaths,
+      createTestWorkSyncIdentity('inc-1')
+    );
+    await backupTokens.restoreBackupSecret(
+      identity.teamName,
+      JSON.stringify({ schemaVersion: 1, secret: 'a'.repeat(32) }),
+      { teamName: identity.teamName, incarnation: identity.incarnation }
+    );
+    const backupIssued = await backupTokens.create({
+      teamName: identity.teamName,
+      memberName: member.memberName,
+      agendaFingerprint: 'f',
+      issuedAt: '2026-09-10T00:00:00.000Z',
+    });
+    await new JsonMemberWorkSyncStore(backupPaths).write({
+      ...status(),
+      reportToken: backupIssued.token,
+      reportTokenExpiresAt: backupIssued.expiresAt,
+    });
+    const liveTokens = new HmacMemberWorkSyncReportTokenAdapter(
+      h.paths,
+      createTestWorkSyncIdentity('inc-1')
+    );
+    const prepared = await createMemberWorkSyncRestoreParticipant(
+      h.store,
+      liveTokens,
+      h.paths
+    ).prepare({ ...identity, backupTeamsRoot: backupRoot });
+    await prepared.importAndVerify();
+    const restored = await h.store.read(member);
+    expect(restored?.reportToken).toBeTruthy();
+    expect(restored?.reportToken).not.toBe(backupIssued.token);
+    await expect(
+      liveTokens.verify({
+        teamName: identity.teamName,
+        memberName: member.memberName,
+        agendaFingerprint: 'f',
+        token: restored?.reportToken ?? '',
+        nowIso: '2026-09-10T00:00:00.000Z',
+      })
+    ).resolves.toMatchObject({ ok: true });
+  });
+
   it.each(['json', 'sqlite'] as const)(
     'restores external clean backup into %s and preserves revision',
     async (kind) => {

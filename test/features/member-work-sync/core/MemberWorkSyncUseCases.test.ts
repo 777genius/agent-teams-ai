@@ -2522,7 +2522,9 @@ describe('MemberWorkSync use cases', () => {
     ).toHaveLength(1);
   });
 
-  it('keeps a pending automatic recovery slot instead of allocating a second Continue', async () => {
+  it.each(['pending', 'claimed', 'failed_retryable'] as const)(
+    'keeps a %s automatic recovery slot instead of allocating a second Continue',
+    async (outboxStatus) => {
     const outbox = new InMemoryOutboxStore();
     outbox.rejectPayloadConflicts = true;
     const { deps, store } = createDeps({
@@ -2553,7 +2555,7 @@ describe('MemberWorkSync use cases', () => {
         workSyncIntentKey: automaticKey,
         taskRefs: [],
       },
-      status: 'pending',
+      status: outboxStatus,
       attemptGeneration: 1,
       createdAt: status.evaluatedAt,
       updatedAt: status.evaluatedAt,
@@ -2587,7 +2589,7 @@ describe('MemberWorkSync use cases', () => {
       return;
     }
     expect(continued.status.recoveryHealth?.unresolvedIntentId).toBe(automaticId);
-    expect(outbox.items.get(automaticId)?.status).toBe('pending');
+    expect(outbox.items.get(automaticId)?.status).toBe(outboxStatus);
     expect(outbox.items.get(automaticId)?.payload.workSyncIntentKey).toBe(automaticKey);
     expect(
       [...outbox.items.values()].filter((item) =>

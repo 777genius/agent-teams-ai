@@ -134,7 +134,7 @@ export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncRepor
     teamName: string,
     backupJson: string | null,
     identity: TokenSecretIdentity
-  ): Promise<void> {
+  ): Promise<{ rotated: boolean }> {
     if (
       !identity.incarnation ||
       identity.incarnation.trim() !== identity.incarnation ||
@@ -149,7 +149,15 @@ export class HmacMemberWorkSyncReportTokenAdapter implements MemberWorkSyncRepor
       if ((JSON.parse(key) as [string, string])[0] === normalizeTokenSecretTeam(teamName))
         this.secretCache.delete(key);
     }
+    const target = this.paths.getReportTokenSecretPath(teamName);
+    let before: string | undefined;
+    try {
+      before = await readFile(target, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     await this.loadOrCreateSecret(teamName, identity);
+    return { rotated: before !== (await readFile(target, 'utf8')) };
   }
 
   private async sign(teamName: string, encodedPayload: string): Promise<string> {
