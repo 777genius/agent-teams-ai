@@ -546,6 +546,86 @@ describe('prepared backend production storage path', () => {
     }
   );
 
+  it('reissues leftover live tokens on restore retry after the key already rotated', async () => {
+    const h = await setup('sqlite');
+    const backupRoot = join(h.root, 'backup-teams');
+    const backupPaths = new MemberWorkSyncStorePaths(backupRoot);
+    const backupTokens = new HmacMemberWorkSyncReportTokenAdapter(
+      backupPaths,
+      createTestWorkSyncIdentity('inc-1')
+    );
+    await backupTokens.restoreBackupSecret(
+      identity.teamName,
+      JSON.stringify({ schemaVersion: 1, secret: 'a'.repeat(32) }),
+      { teamName: identity.teamName, incarnation: identity.incarnation }
+    );
+    const backupIssued = await backupTokens.create({
+      teamName: identity.teamName,
+      memberName: member.memberName,
+      agendaFingerprint: 'f',
+      issuedAt: '2026-09-10T00:00:00.000Z',
+    });
+    await new JsonMemberWorkSyncStore(backupPaths).write({
+      ...status(),
+      reportToken: backupIssued.token,
+      reportTokenExpiresAt: backupIssued.expiresAt,
+    });
+    const liveTokens = new HmacMemberWorkSyncReportTokenAdapter(
+      h.paths,
+      createTestWorkSyncIdentity('inc-1')
+    );
+    await liveTokens.restoreBackupSecret(
+      identity.teamName,
+      JSON.stringify({ schemaVersion: 1, secret: 'c'.repeat(32) }),
+      { teamName: identity.teamName, incarnation: identity.incarnation }
+    );
+    const liveOnly = {
+      ...status(2),
+      memberName: 'bob',
+      evaluatedAt: '2026-09-11T00:00:00.000Z',
+      agenda: { ...status(2).agenda, memberName: 'bob' },
+      statusRevision: {
+        incarnation: identity.incarnation,
+        lineageId: 'bob-lineage',
+        sequence: 2,
+        nonce: 'nonce-bob',
+      },
+    };
+    await h.store.write({
+      ...liveOnly,
+      reportToken: backupIssued.token,
+      reportTokenExpiresAt: backupIssued.expiresAt,
+    });
+    const secretSpy = vi.spyOn(liveTokens, 'restoreBackupSecret');
+    const participant = createMemberWorkSyncRestoreParticipant(h.store, liveTokens, h.paths);
+    const first = await participant.prepare({ ...identity, backupTeamsRoot: backupRoot });
+    await first.importAndVerify();
+    await expect(secretSpy.mock.results.at(-1)?.value).resolves.toEqual({ rotated: false });
+    const afterFirst = await h.store.read({
+      teamName: identity.teamName,
+      memberName: liveOnly.memberName,
+    });
+    expect(afterFirst?.reportToken).toBeTruthy();
+    expect(afterFirst?.reportToken).not.toBe(backupIssued.token);
+    await expect(
+      liveTokens.verify({
+        teamName: identity.teamName,
+        memberName: liveOnly.memberName,
+        agendaFingerprint: liveOnly.agenda.fingerprint,
+        token: afterFirst?.reportToken ?? '',
+        nowIso: '2026-09-10T00:00:00.000Z',
+      })
+    ).resolves.toMatchObject({ ok: true });
+    const second = await participant.prepare({ ...identity, backupTeamsRoot: backupRoot });
+    await second.importAndVerify();
+    const afterSecond = await h.store.read({
+      teamName: identity.teamName,
+      memberName: liveOnly.memberName,
+    });
+    expect(afterSecond?.reportToken).toBe(afterFirst?.reportToken);
+    expect(afterSecond?.statusRevision).toEqual(afterFirst?.statusRevision);
+  });
+
   it.each(['json', 'sqlite'] as const)(
     'restores external clean backup into %s and preserves revision',
     async (kind) => {

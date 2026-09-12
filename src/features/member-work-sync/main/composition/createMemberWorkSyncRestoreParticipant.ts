@@ -33,6 +33,14 @@ async function reissueRestoredReportTokens(
   for (const memberName of await listLiveStatusMemberNames(store, identity.teamName)) {
     const current = await store.read({ teamName: identity.teamName, memberName });
     if (!current?.reportToken?.trim()) continue;
+    const verified = await tokens.verify({
+      teamName: current.teamName,
+      memberName: current.memberName,
+      agendaFingerprint: current.agenda.fingerprint,
+      token: current.reportToken,
+      nowIso: issuedAt,
+    });
+    if (verified.ok) continue;
     const issued = await tokens.create({
       teamName: current.teamName,
       memberName: current.memberName,
@@ -76,12 +84,12 @@ export function createMemberWorkSyncRestoreParticipant(
           if (store instanceof BackendSelectingMemberWorkSyncStore)
             await store.restoreValidatedBackup(candidate);
           else await restoreMemberWorkSyncJsonBackup(store, paths, candidate);
-          const { rotated } = await tokens.restoreBackupSecret(
+          await tokens.restoreBackupSecret(
             input.teamName,
             candidate.secretJson,
             candidate.identity
           );
-          if (rotated) await reissueRestoredReportTokens(store, tokens, candidate.identity);
+          await reissueRestoredReportTokens(store, tokens, candidate.identity);
         },
       };
     },
