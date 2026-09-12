@@ -213,9 +213,17 @@ export async function readAttributedCursorAgentProcesses(
     );
     return records.map((record) => {
       let host = hosts.get(record.attributionId) ?? null;
-      // Matching IDs cannot validate contradictory spawn identities. A missing
-      // optional agent hostPid remains compatible with older record writers.
-      if (host && record.hostPid !== null && record.hostPid !== host.hostPid) host = null;
+      // Reject contradictory spawn identities without tying previous-run
+      // records to the current app instance. Optional identity fields may be absent.
+      if (
+        host &&
+        ((record.hostPid !== null && record.hostPid !== host.hostPid) ||
+          (record.appInstanceId !== null &&
+            host.appInstanceId !== null &&
+            record.appInstanceId !== host.appInstanceId))
+      ) {
+        host = null;
+      }
       return { record, host, owners: host?.owners ?? [UNNAMED_OWNER] };
     });
   } catch (error) {

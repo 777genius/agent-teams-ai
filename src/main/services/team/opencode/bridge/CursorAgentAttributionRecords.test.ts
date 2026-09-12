@@ -209,12 +209,14 @@ describe('CursorAgentAttributionRecords', () => {
     'mismatched id',
     'foreign profile',
     'conflicting host pid',
+    'conflicting app instance',
   ])('reports an unknown owner for a host with %s', async (scenario) => {
     const overrides: Record<string, unknown> = {};
     if (scenario === 'unsupported schema') overrides.schemaVersion = 7;
     if (scenario === 'mismatched id') overrides.attributionId = SECOND_ATTRIBUTION_ID;
     if (scenario === 'foreign profile') overrides.appProfileScope = 'another-install';
     if (scenario === 'conflicting host pid') overrides.hostPid = 1000;
+    if (scenario === 'conflicting app instance') overrides.appInstanceId = 'another-instance';
     if (scenario !== 'missing') {
       await writeHostFile(
         FIRST_ATTRIBUTION_ID,
@@ -251,6 +253,30 @@ describe('CursorAgentAttributionRecords', () => {
       withRecordedOwner: 1,
     });
   });
+
+  it.each([
+    { agentInstance: 'previous-run', hostInstance: 'previous-run' },
+    { agentInstance: null, hostInstance: 'previous-run' },
+    { agentInstance: 'previous-run', hostInstance: null },
+  ])(
+    'joins compatible optional app instances: $agentInstance / $hostInstance',
+    async ({ agentInstance, hostInstance }) => {
+      await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ appInstanceId: hostInstance }));
+      await writeAgentFile(
+        FIRST_ATTRIBUTION_ID,
+        '4321-1757500000123.json',
+        agentRecord({ appInstanceId: agentInstance })
+      );
+
+      const attributed = await readAttributedCursorAgentProcesses();
+
+      expect(attributed[0].host).not.toBeNull();
+      expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+        total: 1,
+        withRecordedOwner: 1,
+      });
+    }
+  );
 
   it('preserves an explicitly empty lease set from a valid host', async () => {
     await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ owners: [] }));
