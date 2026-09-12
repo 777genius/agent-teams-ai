@@ -85,6 +85,12 @@ describe('MemberWorkSyncReportJournalProtocol', () => {
       incarnation: 'inc-1',
       requestDigest: 'digest',
       acceptedAt: '2026-09-10T00:00:00.000Z',
+      appliedStatusRevision: {
+        incarnation: 'inc-1',
+        lineageId: 'lineage',
+        sequence: 1,
+        nonce: 'n1',
+      },
     };
     await expect(
       transferAcceptedReportReceipt(
