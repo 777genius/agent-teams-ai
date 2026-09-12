@@ -140,6 +140,17 @@ export class SqliteMemberWorkSyncStore
     return record ? recordToStatus(record) : null;
   }
 
+  async listStatusMemberNames(teamName: string): Promise<string[]> {
+    await this.ready(teamName);
+    return [
+      ...new Set(
+        (await this.deps.gateway.statusList(teamName)).map(
+          (record) => recordToStatus(record).memberName
+        )
+      ),
+    ];
+  }
+
   async write(status: MemberWorkSyncStatus): Promise<void> {
     await this.ready(status.teamName);
     await this.deps.gateway.statusWrite(statusToRecord(status), statusToMetricEventRecords(status));

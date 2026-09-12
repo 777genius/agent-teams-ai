@@ -445,6 +445,107 @@ describe('prepared backend production storage path', () => {
     ).resolves.toMatchObject({ ok: true });
   });
 
+  it.each(['plain-json', 'sqlite'] as const)(
+    'reissues live-only merged statuses after restore rotates the signing key %s',
+    async (kind) => {
+      const h = await setup('sqlite');
+      const liveStore = kind === 'plain-json' ? h.json : h.store;
+      const backupRoot = join(h.root, 'backup-teams');
+      const backupPaths = new MemberWorkSyncStorePaths(backupRoot);
+      const backupTokens = new HmacMemberWorkSyncReportTokenAdapter(
+        backupPaths,
+        createTestWorkSyncIdentity('inc-1')
+      );
+      await backupTokens.restoreBackupSecret(
+        identity.teamName,
+        JSON.stringify({ schemaVersion: 1, secret: 'a'.repeat(32) }),
+        { teamName: identity.teamName, incarnation: identity.incarnation }
+      );
+      const backupIssued = await backupTokens.create({
+        teamName: identity.teamName,
+        memberName: member.memberName,
+        agendaFingerprint: 'f',
+        issuedAt: '2026-09-10T00:00:00.000Z',
+      });
+      await new JsonMemberWorkSyncStore(backupPaths).write({
+        ...status(),
+        reportToken: backupIssued.token,
+        reportTokenExpiresAt: backupIssued.expiresAt,
+      });
+      await mkdir(h.paths.getTeamDir(identity.teamName), { recursive: true });
+      await writeFile(
+        h.paths.getReportTokenSecretPath(identity.teamName),
+        JSON.stringify({
+          schemaVersion: 2,
+          teamName: identity.teamName,
+          incarnation: 'old-incarnation',
+          secret: 'b'.repeat(32),
+        })
+      );
+      const staleTokens = new HmacMemberWorkSyncReportTokenAdapter(
+        h.paths,
+        createTestWorkSyncIdentity('old-incarnation')
+      );
+      const liveOnly = {
+        ...status(2),
+        memberName: 'bob',
+        evaluatedAt: '2026-09-11T00:00:00.000Z',
+        agenda: { ...status(2).agenda, memberName: 'bob' },
+        statusRevision: {
+          incarnation: identity.incarnation,
+          lineageId: 'bob-lineage',
+          sequence: 2,
+          nonce: 'nonce-bob',
+        },
+      };
+      const liveIssued = await staleTokens.create({
+        teamName: identity.teamName,
+        memberName: liveOnly.memberName,
+        agendaFingerprint: liveOnly.agenda.fingerprint,
+        issuedAt: '2026-09-10T00:00:00.000Z',
+      });
+      await liveStore.write({
+        ...liveOnly,
+        reportToken: liveIssued.token,
+        reportTokenExpiresAt: liveIssued.expiresAt,
+      });
+      const liveTokens = new HmacMemberWorkSyncReportTokenAdapter(
+        h.paths,
+        createTestWorkSyncIdentity('inc-1')
+      );
+      const prepared = await createMemberWorkSyncRestoreParticipant(
+        liveStore,
+        liveTokens,
+        h.paths
+      ).prepare({ ...identity, backupTeamsRoot: backupRoot });
+      await prepared.importAndVerify();
+      const restoredLive = await liveStore.read({
+        teamName: identity.teamName,
+        memberName: liveOnly.memberName,
+      });
+      expect(restoredLive?.reportToken).toBeTruthy();
+      expect(restoredLive?.reportToken).not.toBe(liveIssued.token);
+      await expect(
+        liveTokens.verify({
+          teamName: identity.teamName,
+          memberName: liveOnly.memberName,
+          agendaFingerprint: liveOnly.agenda.fingerprint,
+          token: restoredLive?.reportToken ?? '',
+          nowIso: '2026-09-10T00:00:00.000Z',
+        })
+      ).resolves.toMatchObject({ ok: true });
+      await expect(
+        liveTokens.verify({
+          teamName: identity.teamName,
+          memberName: liveOnly.memberName,
+          agendaFingerprint: liveOnly.agenda.fingerprint,
+          token: liveIssued.token,
+          nowIso: '2026-09-10T00:00:00.000Z',
+        })
+      ).resolves.toMatchObject({ ok: false, reason: 'invalid' });
+    }
+  );
+
   it.each(['json', 'sqlite'] as const)(
     'restores external clean backup into %s and preserves revision',
     async (kind) => {

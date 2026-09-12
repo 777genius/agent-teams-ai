@@ -1,34 +1,37 @@
 import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
+import { JsonMemberWorkSyncStore } from '../infrastructure/JsonMemberWorkSyncStore';
 import { createMemberWorkSyncStatusVersion } from '../infrastructure/memberWorkSyncStatusVersion';
 import { readMemberWorkSyncBackupCandidate } from '../infrastructure/readMemberWorkSyncBackupCandidate';
 import { restoreMemberWorkSyncJsonBackup } from '../infrastructure/restoreMemberWorkSyncJsonBackup';
 
 import type { HmacMemberWorkSyncReportTokenAdapter } from '../infrastructure/HmacMemberWorkSyncReportTokenAdapter';
-import type { JsonMemberWorkSyncStore } from '../infrastructure/JsonMemberWorkSyncStore';
 import type { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
-import type { MemberWorkSyncBackupCandidate } from '../infrastructure/mergeMemberWorkSyncBackupHistory';
+import type { TokenSecretIdentity } from '../infrastructure/memberWorkSyncTokenSecret';
 
-function restoredMemberNames(candidate: MemberWorkSyncBackupCandidate): string[] {
-  const names = new Set<string>();
-  for (const status of candidate.history.statuses) names.add(status.memberName);
-  const replica =
-    candidate.replica.state === 'clean'
-      ? candidate.replica.snapshot
-      : candidate.replica.state === 'dirty'
-        ? candidate.replica.candidate
-        : null;
-  for (const status of replica?.statuses ?? []) names.add(status.memberName);
-  return [...names];
+type RestoreStore = BackendSelectingMemberWorkSyncStore | JsonMemberWorkSyncStore;
+
+async function listLiveStatusMemberNames(store: RestoreStore, teamName: string): Promise<string[]> {
+  if (store instanceof JsonMemberWorkSyncStore) {
+    return [
+      ...new Set(
+        (await store.readSnapshotForImport(teamName))?.statuses.map(
+          (status) => status.memberName
+        ) ?? []
+      ),
+    ];
+  }
+  return store.listLiveStatusMemberNames(teamName);
 }
 
 async function reissueRestoredReportTokens(
-  store: BackendSelectingMemberWorkSyncStore | JsonMemberWorkSyncStore,
+  store: RestoreStore,
   tokens: HmacMemberWorkSyncReportTokenAdapter,
-  candidate: MemberWorkSyncBackupCandidate
+  identity: TokenSecretIdentity
 ): Promise<void> {
   const issuedAt = new Date().toISOString();
-  for (const memberName of restoredMemberNames(candidate)) {
-    const current = await store.read({ teamName: candidate.identity.teamName, memberName });
+  const backend = store instanceof BackendSelectingMemberWorkSyncStore ? 'sqlite' : 'json';
+  for (const memberName of await listLiveStatusMemberNames(store, identity.teamName)) {
+    const current = await store.read({ teamName: identity.teamName, memberName });
     if (!current?.reportToken?.trim()) continue;
     const issued = await tokens.create({
       teamName: current.teamName,
@@ -47,8 +50,8 @@ async function reissueRestoredReportTokens(
         {
           teamName: current.teamName,
           memberName: current.memberName,
-          incarnation: candidate.identity.incarnation,
-          backend: store instanceof BackendSelectingMemberWorkSyncStore ? 'sqlite' : 'json',
+          incarnation: identity.incarnation,
+          backend,
         }
       )
     );
@@ -57,7 +60,7 @@ async function reissueRestoredReportTokens(
 
 /** Bound only to the backup owner, never exposed through IPC or the model tool facade. */
 export function createMemberWorkSyncRestoreParticipant(
-  store: BackendSelectingMemberWorkSyncStore | JsonMemberWorkSyncStore,
+  store: RestoreStore,
   tokens: HmacMemberWorkSyncReportTokenAdapter,
   paths: MemberWorkSyncStorePaths
 ) {
@@ -78,7 +81,7 @@ export function createMemberWorkSyncRestoreParticipant(
             candidate.secretJson,
             candidate.identity
           );
-          if (rotated) await reissueRestoredReportTokens(store, tokens, candidate);
+          if (rotated) await reissueRestoredReportTokens(store, tokens, candidate.identity);
         },
       };
     },

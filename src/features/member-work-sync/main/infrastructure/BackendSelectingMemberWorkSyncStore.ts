@@ -94,7 +94,6 @@ export interface BackendSelectingMemberWorkSyncStoreOptions {
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 
-/** Routes persistence through the session SQLite/JSON backend decision. */
 export class BackendSelectingMemberWorkSyncStore
   implements
     MemberWorkSyncStatusStorePort,
@@ -160,7 +159,6 @@ export class BackendSelectingMemberWorkSyncStore
       await this.sqliteStore.invalidateCanonicalStatusPreparation(teamName);
     });
   }
-  /** Read-only admission; selector is immutable for the session, caller holds lifecycle fence. */
   async preflightValidatedBackup(backup: MemberWorkSyncBackupCandidate): Promise<void> {
     await this.withPreparedBackend(
       { ...backup.identity, mutation: false },
@@ -169,7 +167,6 @@ export class BackendSelectingMemberWorkSyncStore
       true
     );
   }
-  /** Privileged backup owner already holds lifecycle fence and has drained admission. */
   async restoreValidatedBackup(backup: MemberWorkSyncBackupCandidate): Promise<void> {
     await this.invalidatePreparedTeam(backup.identity.teamName);
     await this.withPreparedBackend(
@@ -205,7 +202,6 @@ export class BackendSelectingMemberWorkSyncStore
       if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
       let prepared = false;
       try {
-        // Purge is privileged lifecycle work. Normal authority cannot guess or replay its proof.
         if (await this.readPendingPrimaryPurge(teamName))
           throw new MemberWorkSyncSafetyJsonReadError('unavailable');
         const source = await replica.readForAuthorityPreparation(teamName, incarnation);
@@ -250,7 +246,6 @@ export class BackendSelectingMemberWorkSyncStore
             return await operation(createJsonPreparedStatusBackend(teamName, this.jsonStore));
           if (backup || candidate || active || archived)
             await this.jsonStore.restoreReplicaSnapshot(teamName, merged);
-          // Read-back is strict; a missing historical member cannot become a fresh insertion.
           for (const status of merged.statuses) {
             const stored = await this.jsonStore.readCanonicalStatusSnapshot({
               teamName,
@@ -296,7 +291,6 @@ export class BackendSelectingMemberWorkSyncStore
         const finalizeRequired = importRequired || filesToArchive.length > 0;
         const mutationRequired = identity.mutation || finalizeRequired;
         if (mutationRequired) {
-          // Preserve the entire candidate before the first primary mutation, never for a no-op read.
           await replica.markDirtyWithRecoveryCandidate(
             teamName,
             incarnation,
@@ -305,7 +299,6 @@ export class BackendSelectingMemberWorkSyncStore
         }
         if (importRequired) await gateway.importTeam(teamName, expected);
         if (finalizeRequired) {
-          // Finalize exactly the preflighted snapshot; do not recompute it from changing legacy inputs.
           await this.sqliteStore.prepareCanonicalStatus(teamName, incarnation, {
             records: expected,
             filesToArchive,
@@ -328,12 +321,10 @@ export class BackendSelectingMemberWorkSyncStore
           validateMemberWorkSyncPrimaryRecords(identity, committed);
           const snapshot = recordsToSnapshot(teamName, committed);
           validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
-          // Propagate errors: authority retains known commit and tracks worker retirement.
           await replica.writeClean(teamName, snapshot, incarnation);
         }
         return result;
       } catch (error) {
-        // A still-live interrupted writer remains owned by the authority fence, not a cooldown entry.
         if (
           !preflightOnly &&
           !prepared &&
@@ -788,6 +779,16 @@ export class BackendSelectingMemberWorkSyncStore
     );
   }
 
+  async listLiveStatusMemberNames(teamName: string): Promise<string[]> {
+    return this.run(
+      teamName,
+      false,
+      () => this.sqliteStore.listStatusMemberNames(teamName),
+      async () =>
+        (await this.jsonStore.readSnapshotForImport(teamName))?.statuses.map((s) => s.memberName) ??
+        []
+    );
+  }
   runReplicaFenced<T>(
     teamName: string,
     mutation: boolean,
