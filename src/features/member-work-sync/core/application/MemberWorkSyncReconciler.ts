@@ -11,6 +11,7 @@ import { observeMemberWorkSyncRecoveryHealth } from '../domain/MemberWorkSyncRec
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
 import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
+import { invalidateStaleMemberWorkSyncInboxNudges } from './MemberWorkSyncRecoveryCommands';
 import {
   repairMemberWorkSyncDispatchOutcome,
   retireMemberWorkSyncSettledReservation,
@@ -278,6 +279,15 @@ export class MemberWorkSyncReconciler {
     assertReconcileNotCancelled(context);
     const committed = await commitMemberWorkSyncStatus(this.deps, read, status, mutationId);
     assertReconcileNotCancelled(context);
+    try {
+      await invalidateStaleMemberWorkSyncInboxNudges(this.deps, committed.status);
+    } catch (error) {
+      this.deps.logger?.warn('member work sync stale inbox nudge invalidation failed', {
+        teamName: committed.status.teamName,
+        memberName: committed.status.memberName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
     if (committed.canProject) await this.planNudgeOutbox(committed.status);
     return committed.status;
   }

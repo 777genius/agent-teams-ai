@@ -281,6 +281,76 @@ describe('member work sync recovery lifecycle e2e', () => {
     }
   });
 
+  it('revokes leftover pre-stop inbox nudges on restart after the stop latch is already durable', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lifecycle-stop-inbox-repair';
+    const memberName = 'bob';
+    const inboxPath = path.join(teamsBasePath, teamName, 'inboxes', `${memberName}.json`);
+    const first = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      first.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(1);
+      });
+      await first.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
+      const parsed = JSON.parse(await fs.promises.readFile(inboxPath, 'utf8')) as Array<
+        Record<string, unknown>
+      >;
+      await fs.promises.writeFile(
+        inboxPath,
+        JSON.stringify(
+          parsed.map((row) => ({
+            ...row,
+            read: false,
+            messageKind: 'member_work_sync_nudge',
+            workSyncControlRevision: 0,
+          })),
+          null,
+          2
+        )
+      );
+    } finally {
+      await first.dispose();
+    }
+
+    expect(
+      (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge' && message.read !== true
+      )
+    ).toHaveLength(1);
+
+    const restarted = createFeature({ teamsBasePath, teamName, memberName });
+    try {
+      restarted.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const status = await restarted.getStatus({ teamName, memberName });
+        expect(status.recoveryHealth?.autoResumeStopLatch?.reason).toBe('user_stop');
+        expect(
+          (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          )
+        ).toHaveLength(0);
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) =>
+            message.read === true &&
+            message.messageKind === 'default' &&
+            message.workSyncIntent === 'agenda_sync'
+        )
+      ).toHaveLength(1);
+    } finally {
+      await restarted.dispose();
+    }
+  });
+
   it('does not mint a new recovery ID after unknown delivery when D0 is off', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);

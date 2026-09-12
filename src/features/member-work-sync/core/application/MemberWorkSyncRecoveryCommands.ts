@@ -53,7 +53,7 @@ export class MemberWorkSyncRecoveryCommands {
         evaluatedAt: nowIso,
       }))
     ).then(async (status) => {
-      await this.invalidatePersistedInboxNudges(input, status);
+      await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
       return { ok: true as const, status, code: 'stopped' as const };
     });
   }
@@ -69,7 +69,7 @@ export class MemberWorkSyncRecoveryCommands {
         evaluatedAt: nowIso,
       }))
     ).then(async (status) => {
-      await this.invalidatePersistedInboxNudges(input, status);
+      await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
       return { ok: true as const, status, code: 'resumed' as const };
     });
   }
@@ -304,21 +304,21 @@ export class MemberWorkSyncRecoveryCommands {
     );
     return committed.status;
   }
+}
 
-  private async invalidatePersistedInboxNudges(
-    input: { teamName: string; memberName: string },
-    status: MemberWorkSyncStatus
-  ): Promise<void> {
-    const beforeControlRevision = status.recoveryHealth?.controlRevision;
-    if (typeof beforeControlRevision !== 'number') {
-      return;
-    }
-    await this.deps.inboxNudge?.invalidateDeliveredNudges?.({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      beforeControlRevision,
-    });
+export async function invalidateStaleMemberWorkSyncInboxNudges(
+  deps: MemberWorkSyncUseCaseDeps,
+  status: MemberWorkSyncStatus
+): Promise<void> {
+  const beforeControlRevision = status.recoveryHealth?.controlRevision;
+  if (typeof beforeControlRevision !== 'number') {
+    return;
   }
+  await deps.inboxNudge?.invalidateDeliveredNudges?.({
+    teamName: status.teamName,
+    memberName: status.memberName,
+    beforeControlRevision,
+  });
 }
 
 export function isAutomaticRecoveryAllocationEnabled(deps: MemberWorkSyncUseCaseDeps): boolean {

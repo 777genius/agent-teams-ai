@@ -2717,6 +2717,40 @@ describe('MemberWorkSync use cases', () => {
     expect(planned).toEqual({ planned: false, code: 'member_stopped' });
   });
 
+  it('revokes stale inbox nudges on reconcile after a stop latch is already durable', async () => {
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        controlRevision: 2,
+        autoResumeStopLatch: {
+          stoppedAt: '2026-05-05T12:00:00.000Z',
+          reason: 'user_stop',
+          controlRevision: 2,
+        },
+      },
+    });
+    inbox.invalidated.length = 0;
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(inbox.invalidated).toEqual([
+      { teamName: 'team-a', memberName: 'bob', beforeControlRevision: 2 },
+    ]);
+  });
+
   it('supersedes a recovery intent reserved before a Stop/Resume cycle', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();
