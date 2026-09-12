@@ -533,6 +533,15 @@ function approveReview(context, taskId, flags = {}) {
     };
   });
 
+  try {
+    const approvedTask = tasks.getTask(context, taskId);
+    const history = Array.isArray(approvedTask.historyEvents) ? approvedTask.historyEvents : [];
+    const approval = [...history].reverse().find((event) => event && event.type === 'review_approved');
+    tasks.notifyUnblockedOwners(context, approvedTask, { reviewCycleId: approval && approval.id });
+  } catch (error) {
+    warnNonCritical('[review] dependency approval notification failed', error);
+  }
+
   if (result.alreadyApproved) {
     return result.payload;
   }
