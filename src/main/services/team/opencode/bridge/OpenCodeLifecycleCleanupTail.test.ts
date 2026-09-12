@@ -97,7 +97,19 @@ function attributedProcess(
       writtenAtMs: APP_STARTED_AT_MS - 59_000,
       exitedAtMs: null,
     },
-    host: null,
+    host: {
+      schemaVersion: 1,
+      attributionId: 'aaaa1111aaaa1111aaaa1111aaaa1111',
+      hostPid: 999,
+      hostStartedAtNative: null,
+      hostStartTimeFormat: null,
+      projectPath: OWNED_WORKSPACES[0],
+      appInstanceId: '9100-1756803000000',
+      appProfileScope: 'this-install',
+      runtimeVersion: '0.0.95',
+      owners,
+      updatedAt: null,
+    },
     owners,
   };
 }
@@ -433,6 +445,40 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
    * exactly what it said before, and - with the command-line path off - reads no
    * process table at all, which is the state this app ships in today.
    */
+  it.each(['unknown-only', 'missing host', 'empty owners'])(
+    'reports zero recorded owners for %s',
+    async (scenario) => {
+      vi.clearAllMocks();
+      recordSteps();
+      const ports = createPorts();
+      const entry = attributedProcess(
+        4321,
+        scenario === 'empty owners'
+          ? []
+          : [
+              {
+                teamId: null,
+                teamName: scenario === 'missing host' ? 'alpha' : null,
+                laneId: null,
+                memberName: null,
+                runId: null,
+                sessionId: null,
+                createdAt: null,
+                updatedAt: null,
+              },
+            ]
+      );
+      if (scenario === 'missing host') entry.host = null;
+      readAttributedProcesses.mockResolvedValueOnce([entry]);
+
+      await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+
+      expect(ports.sweepResults).toContain(
+        'opencode_cursor_agent_attribution_records sweep=startup count=1 owned=0'
+      );
+    }
+  );
+
   it('says nothing about attribution when the runtime recorded none', async () => {
     vi.clearAllMocks();
     recordSteps();

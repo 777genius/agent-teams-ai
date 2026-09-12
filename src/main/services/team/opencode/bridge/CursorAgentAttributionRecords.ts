@@ -227,7 +227,11 @@ export function summarizeAttributedCursorAgentProcesses(
 ): { total: number; withRecordedOwner: number } {
   return {
     total: processes.length,
-    withRecordedOwner: processes.filter((entry) => entry.owners.length > 0).length,
+    withRecordedOwner: processes.filter(
+      (entry) =>
+        entry.host !== null &&
+        entry.owners.some((owner) => Boolean(owner.teamName?.trim() || owner.teamId?.trim()))
+    ).length,
   };
 }
 

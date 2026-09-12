@@ -191,7 +191,7 @@ describe('CursorAgentAttributionRecords', () => {
     expect(attributed[2].owners).toEqual([UNKNOWN_OWNER]);
     expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
       total: 3,
-      withRecordedOwner: 3,
+      withRecordedOwner: 2,
     });
   });
 
@@ -222,6 +222,10 @@ describe('CursorAgentAttributionRecords', () => {
       expect(attributed).toHaveLength(1);
       expect(attributed[0].host).toBeNull();
       expect(attributed[0].owners).toEqual([UNKNOWN_OWNER]);
+      expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+        total: 1,
+        withRecordedOwner: 0,
+      });
     }
   );
 
@@ -234,6 +238,27 @@ describe('CursorAgentAttributionRecords', () => {
     expect(attributed).toHaveLength(1);
     expect(attributed[0].host).not.toBeNull();
     expect(attributed[0].owners).toEqual([]);
+    expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+      total: 1,
+      withRecordedOwner: 0,
+    });
+  });
+
+  it.each([
+    { owners: [UNKNOWN_OWNER], owned: 0 },
+    { owners: [{ teamName: 'alpha' }], owned: 1 },
+    { owners: [{ teamId: 'team-1' }], owned: 1 },
+    { owners: [{ teamName: 'alpha' }, { teamId: 'team-2' }], owned: 1 },
+  ])('counts processes with named recorded teams: $owners', async ({ owners, owned }) => {
+    await writeHostFile(FIRST_ATTRIBUTION_ID, hostRecord({ owners }));
+    await writeAgentFile(FIRST_ATTRIBUTION_ID, '4321-1757500000123.json', agentRecord());
+
+    const attributed = await readAttributedCursorAgentProcesses();
+
+    expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
+      total: 1,
+      withRecordedOwner: owned,
+    });
   });
 
   it('ignores corrupt and malformed records and keeps their readable neighbour', async () => {
@@ -345,7 +370,7 @@ describe('CursorAgentAttributionRecords', () => {
     expect(attributed[1]?.owners.map((owner) => owner.teamId)).toEqual([null, 'team-2']);
     expect(summarizeAttributedCursorAgentProcesses(attributed)).toEqual({
       total: 2,
-      withRecordedOwner: 2,
+      withRecordedOwner: 1,
     });
   });
 
