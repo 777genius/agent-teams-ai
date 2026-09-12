@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import { TeamMemberStoragePaths } from '@main/services/team/TeamMemberStoragePaths';
 import { dirname, join } from 'path';
 
@@ -34,6 +36,10 @@ export class MemberWorkSyncStorePaths {
 
   getPendingReportsPath(teamName: string): string {
     return join(this.getTeamDir(teamName), 'pending-reports.json');
+  }
+
+  hasPendingReportsFile(teamName: string): boolean {
+    return existsSync(this.getPendingReportsPath(teamName));
   }
 
   getOutboxPath(teamName: string): string {

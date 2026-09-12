@@ -549,7 +549,10 @@ export function createMemberWorkSyncFeature(deps: {
   const nudgeDispatchScheduler = deps.listLifecycleActiveTeamNames
     ? new MemberWorkSyncNudgeDispatchScheduler({
         listLifecycleActiveTeamNames: deps.listLifecycleActiveTeamNames,
-        replayPendingReports,
+        replayPendingReports: (teamNames) =>
+          replayPendingReports(
+            teamNames.filter((teamName) => storePaths.hasPendingReportsFile(teamName))
+          ),
         dispatchDue: (teamNames, signal) =>
           startScheduledDispatch((trackSettling) =>
             dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}:scheduled`, {
