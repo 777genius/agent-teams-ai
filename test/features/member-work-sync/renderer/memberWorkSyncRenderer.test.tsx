@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   continueManually: vi.fn(),
   stopAutoResume: vi.fn(),
   resumeAutoResume: vi.fn(),
+  isElectronMode: vi.fn(() => true),
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -28,7 +29,7 @@ vi.mock('@renderer/api', () => ({
       resumeAutoResume: apiMocks.resumeAutoResume,
     },
   },
-  isElectronMode: () => true,
+  isElectronMode: () => apiMocks.isElectronMode(),
 }));
 
 function makeStatus(overrides: Partial<MemberWorkSyncStatus> = {}): MemberWorkSyncStatus {
@@ -69,6 +70,7 @@ function makeStatus(overrides: Partial<MemberWorkSyncStatus> = {}): MemberWorkSy
 describe('member work sync renderer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiMocks.isElectronMode.mockReturnValue(true);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
@@ -211,6 +213,54 @@ describe('member work sync renderer', () => {
       teamName: 'team-a',
       memberName: 'bob',
     });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('hides recovery controls in browser mode even when status would permit them', async () => {
+    apiMocks.isElectronMode.mockReturnValue(false);
+    apiMocks.getStatus.mockResolvedValue(
+      makeStatus({
+        recoveryHealth: {
+          schemaVersion: 1,
+          attentionAt: '2026-04-29T00:20:00.000Z',
+          episodes: [
+            {
+              episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+              workKey: 'task-1:bob',
+              taskId: 'task-1',
+              firstObservedAt: '2026-04-29T00:00:00.000Z',
+              dueAt: '2026-04-29T00:20:00.000Z',
+              phase: 'attention',
+              reason: 'no_progress_deadline',
+            },
+          ],
+        },
+      })
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncStatusPanel, {
+          teamName: 'team-a',
+          memberName: 'bob',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-attention"]')).toBeTruthy();
+    expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stop"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-resume"]')).toBeNull();
+    expect(apiMocks.continueManually).not.toHaveBeenCalled();
+    expect(apiMocks.stopAutoResume).not.toHaveBeenCalled();
+    expect(apiMocks.resumeAutoResume).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

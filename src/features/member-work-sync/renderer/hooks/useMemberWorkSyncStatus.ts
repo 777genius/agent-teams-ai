@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 
 import { normalizeMemberName } from '../../core/domain/memberName';
 import {
@@ -108,6 +108,9 @@ export function useMemberWorkSyncStatus({
   }, [enabled, memberName, teamName]);
 
   const runStatusCommand = (method: 'continueManually' | 'stopAutoResume' | 'resumeAutoResume') => {
+    if (!isElectronMode()) {
+      return;
+    }
     const normalizedTeamName = normalizeMemberName(teamName);
     const normalizedMemberName = normalizeMemberName(memberName);
     if (!normalizedTeamName || !normalizedMemberName) {

@@ -92,6 +92,20 @@ describe('HttpAPIClient memberWorkSync', () => {
       })
     );
   });
+
+  it('rejects recovery commands that have no browser-mode HTTP route', async () => {
+    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    await expect(
+      client.memberWorkSync.stopAutoResume({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    await expect(
+      client.memberWorkSync.resumeAutoResume({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    await expect(
+      client.memberWorkSync.continueManually({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 function jsonResponse(body: unknown): Response {

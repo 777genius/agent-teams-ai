@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
 
 import { useMemberWorkSyncStatus } from '../hooks/useMemberWorkSyncStatus';
 
@@ -33,14 +34,19 @@ export const MemberWorkSyncStatusPanel = ({
   }
 
   if (status) {
+    const recoveryActions = isElectronMode()
+      ? {
+          onContinue: continueManually,
+          onStop: stopAutoResume,
+          onResume: resumeAutoResume,
+        }
+      : {};
     return (
       <MemberWorkSyncDetails
         status={status}
         actionError={error}
         showDiagnostics={showDiagnostics}
-        onContinue={continueManually}
-        onStop={stopAutoResume}
-        onResume={resumeAutoResume}
+        {...recoveryActions}
       />
     );
   }
