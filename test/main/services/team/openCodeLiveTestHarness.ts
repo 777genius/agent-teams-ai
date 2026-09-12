@@ -65,6 +65,8 @@ export async function createOpenCodeLiveHarness(input: {
   selectedModel: string;
   projectPath?: string;
   runtimeAdapterOptions?: OpenCodeTeamRuntimeAdapterOptions;
+  timeoutMs?: number;
+  launchTimeoutMs?: number;
   configureServices?: (
     svc: TeamProvisioningService
   ) => Partial<HttpServices> | Promise<Partial<HttpServices> | void> | void;
@@ -116,8 +118,8 @@ export async function createOpenCodeLiveHarness(input: {
   });
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
-    timeoutMs: 180_000,
-    launchTimeoutMs: 180_000,
+    timeoutMs: input.timeoutMs ?? 180_000,
+    launchTimeoutMs: input.launchTimeoutMs ?? 180_000,
     reconcileTimeoutMs: 90_000,
     stopTimeoutMs: 90_000,
   });
@@ -237,7 +239,9 @@ export async function waitForOpenCodePeerRelay(
         replyRecipient: 'user',
       },
     });
-    if (lastRelay.delivered >= 1) {
+    // lastDelivery.delivered is true once a relay is in-flight, including
+    // queued-behind. Stop re-relaying so OpenCode can finish the one active turn.
+    if (lastRelay.delivered >= 1 || lastRelay.lastDelivery?.delivered === true) {
       return;
     }
     if (lastRelay.failed > 0 && lastRelay.lastDelivery?.responsePending !== true) {
