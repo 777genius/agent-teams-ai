@@ -149,22 +149,21 @@ export class MemberWorkSyncRecoveryCommands {
         existing ?? `${baseInput.id}:${defaultIntentKey}`
       );
       let committedStatus = read.status;
-      if (!existing) {
-        committedStatus = await attachReservation(recoveryInput, read.status);
-      }
       let ensured = await outboxStore.ensurePending(recoveryInput);
-      // Delivered/failed unresolved intents cannot carry a new Continue payload,
-      // including a second UI click that reuses manual-continue:default.
-      const existingUnusable =
-        Boolean(existing) &&
-        (!ensured.ok ||
-          ensured.item.status === 'delivered' ||
-          ensured.item.status === 'failed_terminal');
-      if (existingUnusable) {
+      // Inbox delivery is not settlement. Keep an unresolved delivered slot.
+      // Allocate a new id only after terminal failure, payload conflict, or a
+      // leftover delivered row whose slot was already released.
+      const needsFreshIntent =
+        !ensured.ok ||
+        ensured.item.status === 'failed_terminal' ||
+        (!existing && ensured.item.status === 'delivered');
+      if (needsFreshIntent) {
         const retryKey = `${defaultIntentKey}:${mutationId}`;
         recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
         committedStatus = await attachReservation(recoveryInput, committedStatus);
         ensured = await outboxStore.ensurePending(recoveryInput);
+      } else if (!existing) {
+        committedStatus = await attachReservation(recoveryInput, read.status);
       }
       if (!ensured.ok) {
         return { ok: false as const, code: 'payload_conflict' as const };
@@ -190,6 +189,7 @@ export class MemberWorkSyncRecoveryCommands {
                 ...episode,
                 lastEvidenceId: `stall:${input.reason}:${observedAt}`,
                 reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
+                phase: episode.phase === 'expected_wait' ? 'expected_wait' : 'attention',
               }
             : episode
         );

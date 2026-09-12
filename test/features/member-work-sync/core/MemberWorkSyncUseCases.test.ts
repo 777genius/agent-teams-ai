@@ -2199,7 +2199,7 @@ describe('MemberWorkSync use cases', () => {
     ).toBe(true);
   });
 
-  it('allocates a fresh Continue item when the default UI key was already delivered', async () => {
+  it('keeps a delivered Continue intent until the recovery slot is released', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({
       providerId: 'codex',
@@ -2235,11 +2235,108 @@ describe('MemberWorkSync use cases', () => {
     if (!second.ok) {
       return;
     }
+    expect(second.status.recoveryHealth?.unresolvedIntentId).toBe(firstIntentId);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+    expect(
+      [...outbox.items.values()].filter((item) =>
+        item.payload.workSyncIntentKey?.includes('manual-continue')
+      )
+    ).toHaveLength(1);
+  });
+
+  it('allocates a fresh Continue item after a delivered default key is released', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const first = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const firstItem = outbox.items.get(firstIntentId!);
+    expect(firstItem).toBeTruthy();
+    outbox.items.set(firstIntentId!, {
+      ...firstItem!,
+      status: 'delivered',
+      deliveredMessageId: firstIntentId,
+    });
+    const current = await store.read();
+    store.write({
+      ...current!,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: current?.recoveryHealth?.episodes ?? [],
+        controlRevision: current?.recoveryHealth?.controlRevision ?? 1,
+        reservations: (current?.recoveryHealth?.reservations ?? []).map((reservation) =>
+          reservation.intentId === firstIntentId
+            ? { ...reservation, state: 'resolved' as const }
+            : reservation
+        ),
+      },
+    });
+    const second = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
     expect(second.status.recoveryHealth?.unresolvedIntentId).not.toBe(firstIntentId);
     expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
     expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
       'pending'
     );
+  });
+
+  it('promotes a watchdog stall into attention and keeps it across reconcile', async () => {
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    const first = await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const observing = first.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1');
+    expect(observing?.phase).toBe('observing');
+    expect(first.recoveryHealth?.attentionAt).toBeUndefined();
+    const observed = await new MemberWorkSyncRecoveryCommands(deps).recordStallObservation({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'pending_pickup',
+    });
+    expect(observed.ok).toBe(true);
+    if (!observed.ok) {
+      return;
+    }
+    const stalled = observed.status.recoveryHealth?.episodes.find(
+      (episode) => episode.taskId === 'task-1'
+    );
+    expect(stalled?.phase).toBe('attention');
+    expect(stalled?.reason).toBe('no_progress_deadline');
+    expect(observed.status.recoveryHealth?.attentionAt).toBeTruthy();
+    const next = await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const kept = next.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1');
+    expect(kept?.phase).toBe('attention');
+    expect(next.recoveryHealth?.attentionAt).toBe(observed.status.recoveryHealth?.attentionAt);
   });
 
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {
