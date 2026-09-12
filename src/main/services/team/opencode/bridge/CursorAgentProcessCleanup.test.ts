@@ -1385,6 +1385,82 @@ describe('the runtime records that prove a root', () => {
   });
 
   /**
+   * Where the record carries the kernel's own start tick, a start time read in
+   * whole seconds stops being the identity test: the live token has to be the
+   * recorded one. A replacement that took the pid inside the tolerance window
+   * reads the same rounded start time and a different tick, and is kept.
+   */
+  it('holds a record that carries an exact start token to it, verbatim', async () => {
+    const attempt = async (liveToken: string | null) => {
+      const killTree = vi.fn(reapedTree);
+      const result = await cleanupCursorAgentProcessTrees({
+        ownedWorkspaceCwds: [POSIX_WORKSPACE],
+        platform: 'linux',
+        listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+        attributedProcesses: [record({ nativeStartToken: 'proc:8712334' })],
+        requireAttributionProof: true,
+        allowUnattributedReap: false,
+        readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+        readProcessStartToken: (pid: number) => Promise.resolve(pid === 10 ? liveToken : null),
+        killTree,
+      });
+      return { killed: killTree.mock.calls.length, kept: result.keptRecent };
+    };
+
+    expect(await attempt('proc:8712334')).toEqual({ killed: 1, kept: [] });
+    // Same rounded start time, different process.
+    expect(await attempt('proc:8712401')).toEqual({ killed: 0, kept: [10] });
+    // A token that cannot be read is not the recorded one either.
+    expect(await attempt(null)).toEqual({ killed: 0, kept: [10] });
+  });
+
+  /** A record written off Linux carries no token, and the window still decides. */
+  it('does not demand a token from a record that carries none', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record({ nativeStartToken: null })],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+      readProcessStartToken: () => Promise.resolve(null),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+
+  /** And the token is asked for again after the re-read, like the start time. */
+  it('asks for the token again after the re-read, and keeps a root whose token moved', async () => {
+    const killTree = vi.fn(reapedTree);
+    let reads = 0;
+    const readProcessStartToken = vi.fn(() => {
+      reads += 1;
+      return Promise.resolve(reads === 1 ? 'proc:8712334' : 'proc:8712401');
+    });
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'linux',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record({ nativeStartToken: 'proc:8712334' })],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      reconfirmAttribution: () => Promise.resolve(true),
+      readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+      readProcessStartToken,
+      killTree,
+    });
+
+    expect(reads).toBe(2);
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+  });
+
+  /**
    * A record without the `--workspace` argument proves nothing about a
    * workspace. The directory the process started in is not a substitute: any
    * agent launched from that directory would carry the same cwd, and the sweep

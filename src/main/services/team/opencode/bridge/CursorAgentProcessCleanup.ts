@@ -7,6 +7,7 @@ import {
   killExternalProcessTree,
 } from '@main/utils/externalProcessTreeKill';
 import { createProcessStartTimeCache, readProcessStartTimeMs } from '@main/utils/processStartTime';
+import { readLinuxProcessStartToken } from '@main/utils/unixProcessTable';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { createLogger } from '@shared/utils/logger';
 
@@ -160,6 +161,8 @@ export interface CursorAgentProcessCleanupOptions {
   reconfirmAttribution?: (record: CursorAgentAttributionRecord) => Promise<boolean>;
   readProcessDetails?: (pid: number) => Promise<string | null>;
   readProcessStartTimeMs?: (pid: number) => Promise<number | null>;
+  /** The platform's exact start identity of a pid, where it has one (Linux). */
+  readProcessStartToken?: (pid: number) => Promise<string | null>;
   listProcessRows?: () => Promise<RuntimeProcessTableRow[]>;
   /**
    * Reaps one whole tree. It reports rather than throws, because a tree that
@@ -535,6 +538,10 @@ export async function cleanupCursorAgentProcessTrees(
   const readStartTimeMsUncached =
     options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform));
   const readStartTimeMs = createProcessStartTimeCache(readStartTimeMsUncached);
+  const readStartToken =
+    options.readProcessStartToken ??
+    ((pid: number) =>
+      Promise.resolve(platform === 'linux' ? readLinuxProcessStartToken(pid) : null));
   const startedBeforeMs =
     typeof options.startedBeforeMs === 'number' && Number.isFinite(options.startedBeforeMs)
       ? options.startedBeforeMs
@@ -599,6 +606,7 @@ export async function cleanupCursorAgentProcessTrees(
             ownsWorkspacePath: (value) =>
               [...ownedWorkspaces].some((owned) => isSameWorkspacePath(value, owned, platform)),
             readStartTimeMs,
+            readStartToken,
           });
     if (options.canAdmitStartupWork?.() === false) break;
     if (attribution.outcome === 'declined') {
@@ -695,6 +703,7 @@ export async function cleanupCursorAgentProcessTrees(
         row,
         readCachedStartTimeMs: readStartTimeMs,
         readStartTimeMs: readStartTimeMsUncached,
+        readStartToken,
       });
       if (options.canAdmitStartupWork?.() === false) break;
       if (!identityHeld) {

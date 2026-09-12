@@ -90,6 +90,12 @@ export async function proveCursorAgentRootFromAttributionRecords(input: {
   /** The caller's own exact workspace comparison, over the workspaces it owns. */
   ownsWorkspacePath: (workspacePath: string) => boolean;
   readStartTimeMs: (pid: number) => Promise<number | null>;
+  /**
+   * The exact start identity of a live pid where the platform has one - the
+   * `proc:<ticks>` token Linux exposes - or `null` where it has none or cannot
+   * read it. Compared verbatim against what the record carries.
+   */
+  readStartToken?: (pid: number) => Promise<string | null>;
 }): Promise<CursorAgentAttributionVerdict> {
   for (const record of input.records) {
     // A writer that recorded an exit is describing history. `exitedAtMs` is set
@@ -111,6 +117,13 @@ export async function proveCursorAgentRootFromAttributionRecords(input: {
     if (liveStartedAtMs === null || Math.abs(liveStartedAtMs - record.startedAtMs) > toleranceMs) {
       continue;
     }
+    // Where the record carries the platform's exact start identity, the window
+    // above is not the test any more: the live token has to be the recorded one,
+    // verbatim. A start time read in whole seconds cannot tell the recorded
+    // process from a replacement that took its pid within the same window; the
+    // kernel's own start tick can, and a token that cannot be read now is a
+    // process that cannot be shown to be the recorded one.
+    if (!(await recordedStartTokenHolds(record, input.readStartToken))) continue;
     if (hop === 'parent') {
       // A parent cannot be younger than its own child. When it reads as younger,
       // this row is a new process holding a recycled pid that the record's
@@ -157,7 +170,9 @@ export async function provenIdentityStillHolds(input: {
   readCachedStartTimeMs: (pid: number) => Promise<number | null>;
   /** The same reader without the cache: one fresh probe per pid. */
   readStartTimeMs: (pid: number) => Promise<number | null>;
+  readStartToken?: (pid: number) => Promise<string | null>;
 }): Promise<boolean> {
+  if (!(await recordedStartTokenHolds(input.record, input.readStartToken))) return false;
   for (const pid of new Set([input.row.pid, input.record.pid])) {
     const proven = await input.readCachedStartTimeMs(pid);
     if (proven === null) return false;
@@ -170,4 +185,24 @@ export async function provenIdentityStillHolds(input: {
     if (fresh !== proven) return false;
   }
   return true;
+}
+
+/**
+ * Whether the live process still carries the exact start identity the record
+ * wrote down. A record without one - written off Linux - has nothing to hold
+ * and passes; a record with one is held to it, and a reader that answers
+ * nothing (the pid is gone, or this platform has no such identity) fails it.
+ */
+async function recordedStartTokenHolds(
+  record: CursorAgentAttributionRecord,
+  readStartToken: ((pid: number) => Promise<string | null>) | undefined
+): Promise<boolean> {
+  if (record.nativeStartToken === null) return true;
+  let live: string | null;
+  try {
+    live = readStartToken ? await readStartToken(record.pid) : null;
+  } catch {
+    live = null;
+  }
+  return live !== null && live === record.nativeStartToken;
 }
