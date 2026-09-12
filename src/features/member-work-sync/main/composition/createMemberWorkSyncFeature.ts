@@ -515,9 +515,41 @@ export function createMemberWorkSyncFeature(deps: {
     drain: () => runtimeTurnSettledIngestor.drainPending(),
     logger: deps.logger,
   });
+  const replayPendingReports = async (
+    teamNames: string[]
+  ): Promise<MemberWorkSyncPendingReportReplaySummary> => {
+    const accumulator: MemberWorkSyncPendingReportReplaySummary = {
+      processed: 0,
+      accepted: 0,
+      rejected: 0,
+      superseded: 0,
+    };
+    for (const teamName of teamNames) {
+      try {
+        const summary = await operationGate.run(teamName, (admission) =>
+          new MemberWorkSyncPendingReportIntentReplayer(bindDeps(teamName, admission)).replayTeam(
+            teamName
+          )
+        );
+        accumulator.processed += summary.processed;
+        accumulator.accepted += summary.accepted;
+        accumulator.rejected += summary.rejected;
+        accumulator.superseded += summary.superseded;
+      } catch (error) {
+        if (!(error instanceof MemberWorkSyncTeamQuiescedError)) {
+          deps.logger?.warn('member work sync pending report replay failed', {
+            teamName,
+            error: String(error),
+          });
+        }
+      }
+    }
+    return accumulator;
+  };
   const nudgeDispatchScheduler = deps.listLifecycleActiveTeamNames
     ? new MemberWorkSyncNudgeDispatchScheduler({
         listLifecycleActiveTeamNames: deps.listLifecycleActiveTeamNames,
+        replayPendingReports,
         dispatchDue: (teamNames, signal) =>
           startScheduledDispatch((trackSettling) =>
             dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}:scheduled`, {
@@ -706,37 +738,12 @@ export function createMemberWorkSyncFeature(deps: {
       toolActivityBusySignal.noteTeamChange(event);
       if (deletionCoordinator.interceptTeamChange(event)) return;
       router.noteTeamChange(event);
+      if (event.type === 'process' || event.type === 'member-spawn') {
+        void replayPendingReports([event.teamName]);
+      }
     },
     enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
-    replayPendingReports: async (teamNames) => {
-      const accumulator: MemberWorkSyncPendingReportReplaySummary = {
-        processed: 0,
-        accepted: 0,
-        rejected: 0,
-        superseded: 0,
-      };
-      for (const teamName of teamNames) {
-        try {
-          const summary = await operationGate.run(teamName, (admission) =>
-            new MemberWorkSyncPendingReportIntentReplayer(bindDeps(teamName, admission)).replayTeam(
-              teamName
-            )
-          );
-          accumulator.processed += summary.processed;
-          accumulator.accepted += summary.accepted;
-          accumulator.rejected += summary.rejected;
-          accumulator.superseded += summary.superseded;
-        } catch (error) {
-          if (!(error instanceof MemberWorkSyncTeamQuiescedError)) {
-            deps.logger?.warn('member work sync pending report replay failed', {
-              teamName,
-              error: String(error),
-            });
-          }
-        }
-      }
-      return accumulator;
-    },
+    replayPendingReports,
     dispatchDueNudges: (teamNames) =>
       dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}`),
     buildRuntimeTurnSettledHookSettings: async ({ provider }) =>

@@ -25,6 +25,7 @@ export interface MemberWorkSyncNudgeDispatchSchedulerDeps {
     teamNames: string[],
     signal?: AbortSignal
   ): Promise<MemberWorkSyncNudgeDispatchSummary> | MemberWorkSyncScheduledDispatch;
+  replayPendingReports?(teamNames: string[]): Promise<unknown>;
   observeDue?(teamName: string): Promise<void>;
   intervalMs?: number;
   dispatchTimeoutMs?: number;
@@ -117,6 +118,15 @@ export class MemberWorkSyncNudgeDispatchScheduler {
       const teamNames = uniqueNonEmpty(await this.listLifecycleActiveTeamNamesWithTimeout());
       if (teamNames.length === 0) {
         return;
+      }
+      if (this.deps.replayPendingReports) {
+        try {
+          await this.deps.replayPendingReports(teamNames);
+        } catch (error) {
+          this.deps.logger?.warn('member work sync scheduled pending report replay failed', {
+            error: String(error),
+          });
+        }
       }
       let cursor = 0;
       const consume = async (): Promise<void> => {

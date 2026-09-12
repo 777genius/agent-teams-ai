@@ -48,6 +48,61 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     expect(dispatchDue).not.toHaveBeenCalled();
   });
 
+  it('replays pending reports for discovered teams before dispatching nudges', async () => {
+    const order: string[] = [];
+    const replayPendingReports = vi.fn(async (teamNames: string[]) => {
+      order.push(`replay:${teamNames.join(',')}`);
+    });
+    const dispatchDue = vi.fn(async (teamNames: string[]) => {
+      order.push(`dispatch:${teamNames.join(',')}`);
+      return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+    });
+    const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+      listLifecycleActiveTeamNames: async () => ['team-a', 'team-a'],
+      replayPendingReports,
+      dispatchDue,
+    });
+
+    await scheduler.runOnce();
+
+    expect(replayPendingReports).toHaveBeenCalledWith(['team-a']);
+    expect(order[0]).toBe('replay:team-a');
+    expect(order.slice(1)).toEqual(['dispatch:team-a']);
+  });
+
+  it('still dispatches nudges when pending report replay fails', async () => {
+    const warn = vi.fn();
+    const dispatchDue = vi.fn(async () => ({
+      claimed: 0,
+      delivered: 0,
+      superseded: 0,
+      retryable: 0,
+      terminal: 0,
+    }));
+    const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+      listLifecycleActiveTeamNames: async () => ['team-a'],
+      replayPendingReports: async () => {
+        throw new Error('replay failed');
+      },
+      dispatchDue,
+      logger: {
+        debug: vi.fn(),
+        warn,
+        error: vi.fn(),
+      },
+    });
+
+    await expect(scheduler.runOnce()).resolves.toBeUndefined();
+    expect(dispatchDue).toHaveBeenCalledWith(
+      ['team-a'],
+      expect.objectContaining({ aborted: false })
+    );
+    expect(warn).toHaveBeenCalledWith(
+      'member work sync scheduled pending report replay failed',
+      expect.objectContaining({ error: 'Error: replay failed' })
+    );
+  });
+
   it('logs and survives list failures without throwing', async () => {
     const warn = vi.fn();
     const scheduler = new MemberWorkSyncNudgeDispatchScheduler({

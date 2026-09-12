@@ -87,6 +87,36 @@ it('resumes a deleted same-name team only after config is materialized again', a
   }
 });
 
+it('replays pending reports when a team process or teammate spawn becomes active', async () => {
+  const listPendingReports = vi
+    .spyOn(JsonMemberWorkSyncStore.prototype, 'listPendingReports')
+    .mockResolvedValue([]);
+  const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
+    teamsBasePath: path.join(makeTempRoot(), 'teams'),
+    configReader: { getConfig: vi.fn(async () => null) } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+
+  try {
+    feature.noteTeamChange({ type: 'process', teamName: 'team-a' });
+    await vi.waitFor(() => expect(listPendingReports).toHaveBeenCalledWith('team-a'));
+    listPendingReports.mockClear();
+    feature.noteTeamChange({ type: 'member-spawn', teamName: 'team-b', detail: 'bob' });
+    await vi.waitFor(() => expect(listPendingReports).toHaveBeenCalledWith('team-b'));
+    listPendingReports.mockClear();
+    feature.noteTeamChange({ type: 'task', teamName: 'team-a', taskId: 'task-1' } as never);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(listPendingReports).not.toHaveBeenCalled();
+  } finally {
+    await feature.dispose();
+    listPendingReports.mockRestore();
+  }
+});
+
 it('creates a deleted tombstone when durable recovery completes without local preparation', async () => {
   const teamsBasePath = path.join(makeTempRoot(), 'teams');
   const teamName = 'recovered-team';
