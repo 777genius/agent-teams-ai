@@ -306,6 +306,20 @@ describe('registerMemberWorkSyncIpc', () => {
     expect(feature.getStatus).not.toHaveBeenCalled();
   });
 
+  it('rejects a non-string Continue idempotency key before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_CONTINUE)?.(
+        {},
+        { teamName: 'team-a', memberName: 'bob', idempotencyKey: 12 }
+      )
+    ).rejects.toThrow(/idempotencyKey must be a string/i);
+    expect(feature.continueManually).not.toHaveBeenCalled();
+  });
+
   it('removes exactly the member work sync handlers', () => {
     const { handlers, ipcMain } = makeIpcMain();
     const feature = makeFeature();

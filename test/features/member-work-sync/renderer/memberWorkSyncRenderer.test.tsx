@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import {
+  MEMBER_WORK_SYNC_STATUS_POLL_MS,
   MemberWorkSyncBadge,
   MemberWorkSyncDetails,
   MemberWorkSyncStatusPanel,
@@ -311,5 +312,76 @@ describe('member work sync renderer', () => {
     await act(async () => {
       root.unmount();
     });
+  });
+
+  it('refreshes the status panel while it remains enabled', async () => {
+    vi.useFakeTimers();
+    const observing = makeStatus({
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [
+          {
+            episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:bob',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'expected_wait',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+    const attention = makeStatus({
+      recoveryHealth: {
+        schemaVersion: 1,
+        attentionAt: '2026-04-29T00:20:00.000Z',
+        episodes: [
+          {
+            episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:bob',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+    apiMocks.getStatus.mockResolvedValueOnce(observing).mockResolvedValueOnce(attention);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MemberWorkSyncStatusPanel, {
+            teamName: 'team-a',
+            memberName: 'bob',
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Needs sync');
+      expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+      expect(apiMocks.getStatus).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(MEMBER_WORK_SYNC_STATUS_POLL_MS);
+        await Promise.resolve();
+      });
+      expect(apiMocks.getStatus).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('[data-testid="member-work-sync-attention"]')?.textContent).toContain(
+        'No confirmed task progress'
+      );
+      expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeTruthy();
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+      vi.useRealTimers();
+    }
   });
 });

@@ -9,6 +9,8 @@ import {
 
 import type { MemberWorkSyncStatus } from '../../contracts';
 
+export const MEMBER_WORK_SYNC_STATUS_POLL_MS = 15_000;
+
 export interface UseMemberWorkSyncStatusOptions {
   teamName?: string | null;
   memberName?: string | null;
@@ -38,7 +40,9 @@ export function useMemberWorkSyncStatus({
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const selectionRef = useRef({ teamName, memberName });
+  const statusRef = useRef(status);
   selectionRef.current = { teamName, memberName };
+  statusRef.current = status;
 
   useEffect(() => {
     const normalizedTeamName = teamName?.trim();
@@ -52,13 +56,14 @@ export function useMemberWorkSyncStatus({
     }
 
     let cancelled = false;
-    setLoading(true);
+    const current = statusRef.current;
+    const sameMember =
+      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName;
+    if (!sameMember) {
+      setStatus(null);
+      setLoading(true);
+    }
     setError(null);
-    setStatus((current) =>
-      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName
-        ? current
-        : null
-    );
 
     api.memberWorkSync
       .getStatus({ teamName: normalizedTeamName, memberName: normalizedMemberName })
@@ -69,7 +74,9 @@ export function useMemberWorkSyncStatus({
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
-          setStatus(null);
+          if (!sameMember) {
+            setStatus(null);
+          }
           setError(getErrorMessage(nextError));
         }
       })
@@ -83,6 +90,18 @@ export function useMemberWorkSyncStatus({
       cancelled = true;
     };
   }, [enabled, memberName, refreshKey, teamName]);
+
+  useEffect(() => {
+    if (!enabled || !teamName?.trim() || !memberName?.trim()) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRefreshKey((current) => current + 1);
+    }, MEMBER_WORK_SYNC_STATUS_POLL_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [enabled, memberName, teamName]);
 
   return {
     status,

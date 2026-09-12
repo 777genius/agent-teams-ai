@@ -197,9 +197,13 @@ export function registerMemberWorkSyncIpc(
     ): Promise<MemberWorkSyncStatus> => {
       try {
         const identity = requireStatusIdentity(request);
+        const idempotencyKey = requireOptionalString(
+          request?.idempotencyKey,
+          'idempotencyKey'
+        )?.trim();
         return await feature.continueManually({
           ...identity,
-          ...(request.idempotencyKey ? { idempotencyKey: request.idempotencyKey } : {}),
+          ...(idempotencyKey ? { idempotencyKey } : {}),
         });
       } catch (error) {
         logger.error('Failed to continue member work sync', error);
