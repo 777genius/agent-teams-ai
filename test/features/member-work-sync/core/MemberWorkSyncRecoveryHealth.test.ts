@@ -96,6 +96,67 @@ describe('member work sync recovery health observation', () => {
     expect(health?.unresolvedIntentId).toBeUndefined();
   });
 
+  it('restarts the no-progress deadline when queued work becomes runnable', () => {
+    const queued = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [
+        {
+          ...work,
+          taskId: 'task-a',
+          evidenceStatus: 'in_progress',
+          reason: 'owned_in_progress_task',
+        },
+        { ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' },
+      ],
+      expectedWaiting: false,
+      memberBusy: true,
+      instrumentationKnown: true,
+    });
+    const overdueMs =
+      Date.parse('2026-09-11T00:00:00.000Z') + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS + 1;
+    const stillQueued = observeMemberWorkSyncRecoveryHealth({
+      previous: queued,
+      nowIso: new Date(overdueMs).toISOString(),
+      nowMs: overdueMs,
+      items: [
+        {
+          ...work,
+          taskId: 'task-a',
+          evidenceStatus: 'in_progress',
+          reason: 'owned_in_progress_task',
+        },
+        { ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' },
+      ],
+      expectedWaiting: false,
+      memberBusy: true,
+      instrumentationKnown: true,
+    });
+    expect(stillQueued?.episodes.find((episode) => episode.taskId === 'task-b')).toMatchObject({
+      phase: 'expected_wait',
+      reason: 'queued',
+      firstObservedAt: '2026-09-11T00:00:00.000Z',
+    });
+
+    const becameRunnableAt = overdueMs + 60_000;
+    const runnable = observeMemberWorkSyncRecoveryHealth({
+      previous: stillQueued,
+      nowIso: new Date(becameRunnableAt).toISOString(),
+      nowMs: becameRunnableAt,
+      items: [{ ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' }],
+      expectedWaiting: false,
+      memberBusy: false,
+      instrumentationKnown: true,
+    });
+    expect(runnable?.episodes.find((episode) => episode.taskId === 'task-b')).toMatchObject({
+      phase: 'observing',
+      firstObservedAt: new Date(becameRunnableAt).toISOString(),
+    });
+    expect(runnable?.episodes.find((episode) => episode.taskId === 'task-b')?.phase).not.toBe(
+      'attention'
+    );
+  });
+
   it('records unconfirmed no-start when native instrumentation is unknown', () => {
     const health = observeMemberWorkSyncRecoveryHealth({
       nowIso: '2026-09-11T00:00:00.000Z',

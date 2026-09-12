@@ -780,7 +780,6 @@ export function createMemberWorkSyncFeature(deps: {
     dispose: () => {
       if (!disposePromise) {
         acceptsRuntimeTurnSettledReconcile = false;
-        operationGate.close();
         disposePromise = Promise.allSettled([
           runtimeTurnSettledDrainScheduler.dispose(),
           nudgeDispatchScheduler?.dispose(),

@@ -240,9 +240,15 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
       evidenceId === 'in_progress' &&
       existing?.lastEvidenceId !== 'in_progress' &&
       existing?.lastEvidenceId?.startsWith('stall:') !== true;
-    let firstObservedAt = progressedToActiveWork
-      ? input.nowIso
-      : (existing?.firstObservedAt ?? input.nowIso);
+    const remainingExpectedWait =
+      input.expectedWaiting ||
+      (item.evidenceStatus === 'pending' &&
+        (input.memberBusy === true || inProgressAssignees.has(item.assignee)));
+    const leavingExpectedWait = existing?.phase === 'expected_wait' && !remainingExpectedWait;
+    let firstObservedAt =
+      progressedToActiveWork || leavingExpectedWait
+        ? input.nowIso
+        : (existing?.firstObservedAt ?? input.nowIso);
     let firstObservedMs = Date.parse(firstObservedAt);
     if (!Number.isFinite(firstObservedMs) || firstObservedMs > input.nowMs) {
       firstObservedAt = input.nowIso;
@@ -273,7 +279,7 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
     const lastEvidenceId = evidenceId ?? existing?.lastEvidenceId;
     return {
       episodeId:
-        progressedToActiveWork || !existing
+        progressedToActiveWork || leavingExpectedWait || !existing
           ? `episode:${workKey}:${firstObservedAt}`
           : existing.episodeId,
       workKey,
@@ -327,13 +333,16 @@ function classifyRecoveryObservation(input: {
   if (input.expectedWaiting) {
     return { reason: 'expected_waiting', queued: false };
   }
+  if (
+    input.item.evidenceStatus === 'pending' &&
+    (input.memberBusy === true || input.hasInProgressSibling)
+  ) {
+    return { reason: 'queued', queued: true };
+  }
   if (input.overdue) {
     return { reason: 'no_progress_deadline', queued: false };
   }
   if (input.item.evidenceStatus === 'pending') {
-    if (input.memberBusy === true || input.hasInProgressSibling) {
-      return { reason: 'queued', queued: true };
-    }
     if (input.memberBusy === 'unknown' || !input.instrumentationKnown) {
       return { reason: 'no_start_unconfirmed', queued: false };
     }
