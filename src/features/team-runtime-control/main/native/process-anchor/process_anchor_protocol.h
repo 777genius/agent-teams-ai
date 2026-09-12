@@ -10,6 +10,14 @@
 #include <unistd.h>
 
 #define PA_PROTOCOL_VERSION 1
+#define PA_PROVIDER_STDIO_CAPABILITY_VERSION 1
+/* SHA-256 of the fixed control/status/launch/material/provider fd declaration. */
+#define PA_PROVIDER_STDIO_CAPABILITY_HASH \
+  "sha256:8ef0fab620172bdb761af87fc471cb3a1abb46710f148037762cee5d403720b5"
+/* Private launch ABI: lifecycle remains on fd0/fd1 and provider bytes use only these slots. */
+#define PA_PROVIDER_STDIN_FD 6
+#define PA_PROVIDER_STDOUT_FD 7
+#define PA_PROVIDER_STDERR_FD 8
 #define PA_MAX_LAUNCH_BYTES (512U * 1024U)
 #define PA_MAX_CONTROL_BYTES 4096U
 #define PA_MAX_STATUS_BYTES 4096U
@@ -58,6 +66,9 @@ struct pa_launch {
   uint64_t max_runtime_ms;
   uint64_t graceful_stop_ms;
   uint64_t max_process_count;
+  uint64_t transport_capability_version;
+  char *transport_capability_hash;
+  char *provider_stdio;
 };
 
 struct pa_control {
@@ -96,6 +107,8 @@ static void pa_free_launch(struct pa_launch *launch) {
   free(launch->executable_path);
   for (index = 0; index < launch->argc; index++) free(launch->argv[index]);
   free(launch->workdir_path);
+  free(launch->transport_capability_hash);
+  free(launch->provider_stdio);
   for (index = 0; index < launch->envc; index++) {
     free(launch->environment[index].name);
     free(launch->environment[index].value);
@@ -472,7 +485,9 @@ static int pa_parse_launch(const char *bytes, size_t length, struct pa_launch *l
     uint32_t bit = 0;
     if (next <= 0) {
       pa_json_whitespace(&cursor);
-      if (next < 0 || seen != 0x7ffffU || cursor.offset != cursor.length) goto invalid;
+      if (next < 0 || (seen != 0x7ffffU && seen != 0x3fffffU) ||
+          cursor.offset != cursor.length)
+        goto invalid;
       break;
     }
 #define PA_LAUNCH_STRING(name, member, index, maximum)     \
@@ -492,6 +507,9 @@ static int pa_parse_launch(const char *bytes, size_t length, struct pa_launch *l
                           PA_MAX_ID_BYTES)
     else PA_LAUNCH_STRING("executablePath", executable_path, 12, PA_MAX_PATH_BYTES)
     else PA_LAUNCH_STRING("workdirPath", workdir_path, 14, PA_MAX_PATH_BYTES)
+    else PA_LAUNCH_STRING("transportCapabilityHash", transport_capability_hash, 20,
+                          PA_MAX_ID_BYTES)
+    else PA_LAUNCH_STRING("providerStdio", provider_stdio, 21, PA_MAX_ID_BYTES)
     else if (strcmp(key, "protocolVersion") == 0) {
       bit = 1U << 0;
       result = pa_json_uint(&cursor, &launch->protocol_version);
@@ -516,6 +534,9 @@ static int pa_parse_launch(const char *bytes, size_t length, struct pa_launch *l
     } else if (strcmp(key, "maxProcessCount") == 0) {
       bit = 1U << 18;
       result = pa_json_uint(&cursor, &launch->max_process_count);
+    } else if (strcmp(key, "transportCapabilityVersion") == 0) {
+      bit = 1U << 19;
+      result = pa_json_uint(&cursor, &launch->transport_capability_version);
     } else {
       result = -1;
     }
@@ -531,6 +552,11 @@ static int pa_parse_launch(const char *bytes, size_t length, struct pa_launch *l
       launch->max_process_count == 0 || launch->max_process_count > PA_MAX_PROCESS_COUNT ||
       launch->executable_path[0] != '/' || launch->workdir_path[0] != '/' ||
       !pa_is_sha256(launch->plan_hash) || !pa_is_sha256(launch->spawn_nonce_digest))
+    goto invalid;
+  if (seen == 0x3fffffU &&
+      (launch->transport_capability_version != PA_PROVIDER_STDIO_CAPABILITY_VERSION ||
+       strcmp(launch->transport_capability_hash, PA_PROVIDER_STDIO_CAPABILITY_HASH) != 0 ||
+       strcmp(launch->provider_stdio, "pipe") != 0))
     goto invalid;
   return 0;
 invalid:

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { Readable, Writable } from 'node:stream';
+import { Readable, Transform, Writable } from 'node:stream';
 
 import {
   parseAnchorChannelRef,
@@ -35,8 +35,12 @@ import type { NodeAnchorControlSink } from './NodeAnchorControlChannel';
 import type { NodeAnchorStatusSource } from './NodeAnchorStatusDecoder';
 
 export const NODE_ANCHOR_MAX_LAUNCH_FRAME_BYTES = 512 * 1_024;
+export const NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION = 1 as const;
+export const NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH =
+  'sha256:8ef0fab620172bdb761af87fc471cb3a1abb46710f148037762cee5d403720b5' as const;
 const NODE_ANCHOR_GRACEFUL_CLEANUP_MS = 1_000;
 const NODE_ANCHOR_FORCED_CLEANUP_MS = 5_000;
+const NODE_ANCHOR_PROVIDER_OUTPUT_FINISH_MS = 1_000;
 
 export type NodeAnchorSpawnProcess = (
   command: string,
@@ -52,6 +56,24 @@ export interface NodeAnchorSpawnerOptions {
   readonly spawnProcess?: NodeAnchorSpawnProcess;
   readonly monotonicNow?: () => number;
   readonly ownerBinding?: ProcessOwnerBinding;
+  /** Opts this spawner into the private fd6/fd7/fd8 provider transport. */
+  readonly providerStdio?: 'pipe';
+}
+
+/** Boot-local provider pipes. These are never persisted or reconstructed from a process id. */
+export interface NodeAnchorProviderStdio {
+  readonly processRef: string;
+  readonly capabilityVersion: typeof NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION;
+  readonly capabilityHash: typeof NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH;
+  readonly stdin: Writable;
+  readonly stdout: Readable;
+  readonly stderr: Readable;
+  readonly maxOutputBytes: number;
+  close(): void;
+}
+
+interface ManagedNodeAnchorProviderStdio extends NodeAnchorProviderStdio {
+  finishAfterAnchorExit(): void;
 }
 
 interface AnchorLaunchWireFrame {
@@ -82,6 +104,9 @@ interface AnchorLaunchWireFrame {
   readonly maxRuntimeMs: number;
   readonly gracefulStopMs: number;
   readonly maxProcessCount: number;
+  readonly transportCapabilityVersion?: typeof NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION;
+  readonly transportCapabilityHash?: typeof NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH;
+  readonly providerStdio?: 'pipe';
 }
 
 /** Linux Node implementation of the adapter-owned AnchorSpawnPort. */
@@ -90,6 +115,7 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
   private readonly spawnProcess: NodeAnchorSpawnProcess;
   private readonly monotonicNow: () => number;
   private readonly ownerBinding: ProcessOwnerBinding | undefined;
+  private readonly providerStdio = new Map<string, NodeAnchorProviderStdio>();
 
   constructor(private readonly options: NodeAnchorSpawnerOptions) {
     this.maxLaunchFrameBytes = options.maxLaunchFrameBytes ?? NODE_ANCHOR_MAX_LAUNCH_FRAME_BYTES;
@@ -107,6 +133,22 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
       options.ownerBinding === undefined
         ? undefined
         : parseProcessOwnerBinding(options.ownerBinding);
+    if (options.providerStdio !== undefined && options.providerStdio !== 'pipe') {
+      throw new TypeError('node-anchor-provider-stdio-mode-invalid');
+    }
+  }
+
+  /** Returns only the live, exact processRef-owned transport from this controller boot. */
+  providerStdioFor(processRef: string): NodeAnchorProviderStdio | undefined {
+    return this.providerStdio.get(processRef);
+  }
+
+  /** Closes and forgets one exact boot-local transport without any PID fallback. */
+  closeProviderStdio(processRef: string): void {
+    const transport = this.providerStdio.get(processRef);
+    if (!transport) return;
+    this.providerStdio.delete(processRef);
+    transport.close();
   }
 
   async spawn(
@@ -127,6 +169,7 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
     let control: Writable | null | undefined;
     let status: Readable | null | undefined;
     let launch: Writable | null | undefined;
+    let providerStdio: ManagedNodeAnchorProviderStdio | undefined;
     try {
       let materialization: Promise<MaterializedNodeAnchorLaunch> | undefined;
       try {
@@ -187,35 +230,81 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
         maxRuntimeMs: request.resourcePolicy.maxRuntimeMs,
         gracefulStopMs: request.resourcePolicy.gracefulStopMs,
         maxProcessCount: request.resourcePolicy.maxProcessCount,
+        ...(this.options.providerStdio === 'pipe'
+          ? {
+              transportCapabilityVersion: NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION,
+              transportCapabilityHash: NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH,
+              providerStdio: 'pipe' as const,
+            }
+          : {}),
       });
       const launchBytes = encodeLaunchFrame(launchFrame, this.maxLaunchFrameBytes);
       requireActiveDeadline(deadline, options.cancellation);
 
+      const stdio: SpawnOptions['stdio'] = [
+        'pipe',
+        'pipe',
+        'ignore',
+        'pipe',
+        materialized.executableDescriptor,
+        materialized.workdirDescriptor,
+        ...(this.options.providerStdio === 'pipe' ? (['pipe', 'pipe', 'pipe'] as const) : []),
+      ];
       child = this.spawnProcess(anchorExecutablePath, [], {
         cwd: neutralWorkingDirectory,
         env: {},
         shell: false,
         detached: false,
         windowsHide: true,
-        stdio: [
-          'pipe',
-          'pipe',
-          'ignore',
-          'pipe',
-          materialized.executableDescriptor,
-          materialized.workdirDescriptor,
-        ],
+        stdio,
       });
       childClose = observeChildClose(child);
+      const childStdio = normalizeChildStdio(child);
       control = child.stdin;
       status = child.stdout;
-      launch = child.stdio[3] as Writable | null;
+      const launchPipe = childStdio[3];
+      launch = launchPipe instanceof Writable ? launchPipe : undefined;
       if (
         !(control instanceof Writable) ||
         !(status instanceof Readable) ||
         !(launch instanceof Writable)
       ) {
         throw new NodeAnchorUnavailableError('node-anchor-stdio-unavailable');
+      }
+      if (this.options.providerStdio === 'pipe') {
+        const providerInput = childStdio[6];
+        const providerOutput = childStdio[7];
+        const providerError = childStdio[8];
+        if (
+          !(providerInput instanceof Writable) ||
+          !(providerOutput instanceof Readable) ||
+          !(providerError instanceof Readable)
+        ) {
+          throw new NodeAnchorUnavailableError('node-anchor-provider-stdio-unavailable');
+        }
+        providerStdio = createProviderStdio(
+          request.intent.processRef,
+          providerInput,
+          providerOutput,
+          providerError,
+          request.resourcePolicy.maxOutputBytes
+        );
+        if (this.providerStdio.has(request.intent.processRef)) {
+          throw new NodeAnchorUnavailableError('node-anchor-provider-stdio-ref-collision');
+        }
+        this.providerStdio.set(request.intent.processRef, providerStdio);
+        const exactTransport = providerStdio;
+        const finishExactTransport = (): void => {
+          if (this.providerStdio.get(request.intent.processRef) === exactTransport) {
+            this.providerStdio.delete(request.intent.processRef);
+          }
+          exactTransport.finishAfterAnchorExit();
+        };
+        // `exit` is intentionally used for transport disposal: unlike `close`, it does not wait
+        // for fd7/fd8 to reach EOF through an unread, backpressured destination. Lifecycle status
+        // and attested EOF remain separate proofs on fd1 and the ChildProcess `close` event.
+        child.once('exit', finishExactTransport);
+        child.once('close', finishExactTransport);
       }
 
       const spawnedChild = child;
@@ -249,7 +338,14 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
       };
     } catch (error) {
       await materialized?.close().catch(() => undefined);
+      if (providerStdio) {
+        if (this.providerStdio.get(request.intent.processRef) === providerStdio) {
+          this.providerStdio.delete(request.intent.processRef);
+        }
+        providerStdio.close();
+      }
       if (child) {
+        destroyChildProviderStdio(child);
         await terminateAndReapAnchor(child, childClose!, control, status, launch);
       }
       if (error instanceof NodeAnchorCancelledError || isCancelled(options.cancellation)) {
@@ -259,6 +355,118 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
       return { status: 'unavailable' };
     }
   }
+}
+
+function normalizeChildStdio(
+  child: ChildProcess
+): readonly (Readable | Writable | null | undefined)[] {
+  return Array.from(child.stdio);
+}
+
+function destroyChildProviderStdio(child: ChildProcess): void {
+  const stdio = normalizeChildStdio(child);
+  for (const descriptor of [6, 7, 8] as const) {
+    const stream = stdio[descriptor];
+    if ((stream instanceof Readable || stream instanceof Writable) && !stream.destroyed) {
+      stream.destroy();
+    }
+  }
+}
+
+function createProviderStdio(
+  processRef: string,
+  stdin: Writable,
+  rawStdout: Readable,
+  rawStderr: Readable,
+  maxOutputBytes: number
+): ManagedNodeAnchorProviderStdio {
+  const outputBudget = { remaining: maxOutputBytes };
+  const stdout = createBoundedProviderOutput(rawStdout, outputBudget);
+  const stderr = createBoundedProviderOutput(rawStderr, outputBudget);
+  // These transforms and their kernel pipes stay paused until Owner consumes them. Their fixed
+  // high-water marks propagate backpressure, while the shared budget bounds total delivered bytes.
+  stdout.pause();
+  stderr.pause();
+  let closed = false;
+  let finishing = false;
+  return Object.freeze({
+    processRef,
+    capabilityVersion: NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION,
+    capabilityHash: NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH,
+    stdin,
+    stdout,
+    stderr,
+    maxOutputBytes,
+    finishAfterAnchorExit(): void {
+      if (closed || finishing) return;
+      finishing = true;
+      if (!stdin.destroyed) stdin.destroy();
+      finishProviderOutput(rawStdout, stdout);
+      finishProviderOutput(rawStderr, stderr);
+    },
+    close(): void {
+      if (closed) return;
+      closed = true;
+      if (!stdin.destroyed) stdin.destroy();
+      if (!rawStdout.destroyed) rawStdout.destroy();
+      if (!rawStderr.destroyed) rawStderr.destroy();
+      if (!stdout.destroyed) stdout.destroy();
+      if (!stderr.destroyed) stderr.destroy();
+    },
+  });
+}
+
+function finishProviderOutput(source: Readable, output: Transform): void {
+  const subscribed =
+    output.listenerCount('data') > 0 ||
+    output.listenerCount('readable') > 0;
+  if (output.destroyed) {
+    if (!source.destroyed) source.destroy();
+    return;
+  }
+  if (!subscribed) {
+    source.unpipe(output);
+    if (!source.destroyed) source.destroy();
+    output.destroy();
+    return;
+  }
+  // Keep the pipe intact so an active Owner receives bytes still queued in the raw Node/kernel
+  // stream. A subscribed but stalled Owner is still bounded after the exact child exit.
+  const timer = setTimeout(() => {
+    source.unpipe(output);
+    if (!source.destroyed) source.destroy();
+    if (!output.destroyed) output.destroy();
+  }, NODE_ANCHOR_PROVIDER_OUTPUT_FINISH_MS);
+  const cancelTimer = (): void => clearTimeout(timer);
+  output.once('end', cancelTimer);
+  output.once('close', cancelTimer);
+  timer.unref();
+  if (source.destroyed) output.end();
+  else source.resume();
+}
+
+function createBoundedProviderOutput(
+  source: Readable,
+  budget: { remaining: number }
+): Transform {
+  const output = new Transform({
+    highWaterMark: Math.max(1, Math.min(budget.remaining, 64 * 1_024)),
+    transform(chunk: Buffer, _encoding, callback): void {
+      if (chunk.byteLength > budget.remaining) {
+        budget.remaining = 0;
+        callback(new Error('node-anchor-provider-output-limit'));
+        return;
+      }
+      budget.remaining -= chunk.byteLength;
+      callback(null, chunk);
+    },
+  });
+  // The internal listener prevents a pre-consumer limit violation from becoming an uncaught event.
+  // Owner may attach its own listener and still receives the same terminal stream error.
+  output.on('error', () => source.destroy());
+  source.on('error', (error) => output.destroy(error));
+  source.pipe(output);
+  return output;
 }
 
 class NodeWritableAnchorControlSink implements NodeAnchorControlSink {

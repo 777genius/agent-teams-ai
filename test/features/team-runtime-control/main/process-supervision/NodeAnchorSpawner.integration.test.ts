@@ -232,14 +232,16 @@ describe.skipIf(process.platform !== 'linux')('NodeAnchorSpawner integration', (
   }, 10_000);
 
   it('reaps the exact spawned child before returning a timeout result', async () => {
+    const request = harness.request('normal');
     let deadlineExpired = false;
-    let observedChild: ChildProcess | undefined;
+    const observed: { child?: ChildProcess } = {};
     let closeObserved = false;
     const spawner = harness.createSpawner({
+      providerStdio: 'pipe',
       monotonicNow: () => (deadlineExpired ? 10_000 : 0),
       spawnProcess(command, args, options) {
         const child = spawnChildProcess(command, args, options);
-        observedChild = child;
+        observed.child = child;
         child.once('close', () => {
           closeObserved = true;
         });
@@ -249,16 +251,23 @@ describe.skipIf(process.platform !== 'linux')('NodeAnchorSpawner integration', (
     });
 
     await expect(
-      spawner.spawn(harness.request('normal'), {
+      spawner.spawn(request, {
         remainingTimeMs: 5_000,
         cancellation: harness.cancellation,
       })
     ).resolves.toEqual({ status: 'timed_out' });
+    const observedChild = observed.child;
     expect(observedChild).toBeDefined();
+    if (!observedChild) throw new Error('process-anchor-timeout-child-missing');
+    const observedStdio = Array.from(observedChild.stdio);
     expect(closeObserved).toBe(true);
-    expect(observedChild?.stdin?.destroyed).toBe(true);
-    expect(observedChild?.stdout?.destroyed).toBe(true);
-    expect(observedChild?.stdio[3]?.destroyed).toBe(true);
+    expect(observedChild.stdin?.destroyed).toBe(true);
+    expect(observedChild.stdout?.destroyed).toBe(true);
+    expect(observedStdio[3]?.destroyed).toBe(true);
+    expect(observedStdio[6]?.destroyed).toBe(true);
+    expect(observedStdio[7]?.destroyed).toBe(true);
+    expect(observedStdio[8]?.destroyed).toBe(true);
+    expect(spawner.providerStdioFor(request.intent.processRef)).toBeUndefined();
   }, 10_000);
 
   it('reaps the exact spawned child before returning a cancellation result', async () => {
