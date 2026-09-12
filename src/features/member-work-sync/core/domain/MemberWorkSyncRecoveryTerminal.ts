@@ -80,6 +80,7 @@ export function applyMemberWorkSyncTerminalRetirement(input: {
   intentId: string;
   receiptId: string;
   outcome?: MemberWorkSyncRecoveryTerminalOutcome;
+  pendingAck?: boolean;
 }): MemberWorkSyncRecoveryHealth | undefined {
   return patchMemberWorkSyncReservation(
     input.health,
@@ -89,7 +90,7 @@ export function applyMemberWorkSyncTerminalRetirement(input: {
       state: 'resolved',
       terminalOutcome: input.outcome ?? 'terminal_refusal',
       terminalReceiptId: input.receiptId,
-      pendingAck: true,
+      ...(input.pendingAck === false ? {} : { pendingAck: true }),
     }),
     { clearUnresolved: true }
   );

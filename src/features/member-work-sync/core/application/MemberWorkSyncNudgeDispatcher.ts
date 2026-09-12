@@ -3,7 +3,7 @@ import {
   buildMemberWorkSyncPhase2ReadinessAuditFields,
   reasonToAuditEvent,
 } from './MemberWorkSyncAudit';
-import { startMemberWorkSyncRuntimeTicketForOutboxItem } from './MemberWorkSyncEarlyContinuationPlanner';
+import { insertMemberWorkSyncInboxAfterRuntimeTicket } from './MemberWorkSyncEarlyContinuationPlanner';
 import {
   addNudgeDispatchSummary,
   emptyNudgeDispatchSummary,
@@ -481,15 +481,43 @@ export class MemberWorkSyncNudgeDispatcher {
       if (isDispatchRunCancelled(run)) {
         return 'retryable';
       }
-      const started = await startMemberWorkSyncRuntimeTicketForOutboxItem(
-        this.deps.runtimeTicketAdmission,
-        item
-      );
-      if (!started.ok) {
+      const delivery = await insertMemberWorkSyncInboxAfterRuntimeTicket({
+        admission: this.deps.runtimeTicketAdmission,
+        inbox,
+        item,
+        nowIso,
+        shouldAbort: async () => {
+          if (isDispatchRunCancelled(run)) {
+            return true;
+          }
+          const current = await readMemberWorkSyncStatus(this.deps, {
+            teamName: item.teamName,
+            memberName: item.memberName,
+          });
+          return Boolean(current.status?.recoveryHealth?.autoResumeStopLatch);
+        },
+      });
+      if (delivery.status === 'busy') {
+        await outbox.markFailed({
+          teamName: item.teamName,
+          id: item.id,
+          attemptGeneration: item.attemptGeneration,
+          error: 'runtime_ticket_busy',
+          retryable: true,
+          nowIso,
+          nextAttemptAt: nextNudgeRetryAt(item, nowIso),
+        });
+        return 'retryable';
+      }
+      if (
+        delivery.status === 'stale' ||
+        delivery.status === 'stopped' ||
+        delivery.status === 'aborted'
+      ) {
         await outbox.markSuperseded({
           teamName: item.teamName,
           id: item.id,
-          reason: `runtime_ticket_${started.code}`,
+          reason: `runtime_ticket_${delivery.status}`,
           nowIso,
         });
         return 'superseded';
@@ -497,18 +525,7 @@ export class MemberWorkSyncNudgeDispatcher {
       if (isDispatchRunCancelled(run)) {
         return 'retryable';
       }
-      const inserted = await inbox.insertIfAbsent({
-        teamName: item.teamName,
-        memberName: item.memberName,
-        messageId: item.id,
-        payloadHash: item.payloadHash,
-        payload: item.payload,
-        timestamp: nowIso,
-      });
-      if (isDispatchRunCancelled(run)) {
-        return 'retryable';
-      }
-      if (inserted.conflict) {
+      if (delivery.status === 'conflict') {
         await outbox.markFailed({
           teamName: item.teamName,
           id: item.id,
@@ -526,8 +543,8 @@ export class MemberWorkSyncNudgeDispatcher {
       if (isReviewPickupOutboxItem(item)) {
         return await this.deliverReviewPickupNudge(
           item,
-          inserted.messageId,
-          inserted.inserted,
+          delivery.messageId,
+          delivery.inserted,
           revalidation.providerId,
           nowIso,
           run
@@ -537,7 +554,7 @@ export class MemberWorkSyncNudgeDispatcher {
         teamName: item.teamName,
         id: item.id,
         attemptGeneration: item.attemptGeneration,
-        deliveredMessageId: inserted.messageId,
+        deliveredMessageId: delivery.messageId,
         nowIso,
       });
       if (isDispatchRunCancelled(run)) {
@@ -549,8 +566,8 @@ export class MemberWorkSyncNudgeDispatcher {
       }
       await this.scheduleDeliveryWake(
         item,
-        inserted.messageId,
-        inserted.inserted,
+        delivery.messageId,
+        delivery.inserted,
         revalidation.providerId,
         run
       );

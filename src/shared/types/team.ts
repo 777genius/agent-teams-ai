@@ -505,6 +505,9 @@ export interface InboxMessage {
   workSyncIntentKey?: string;
   /** Concrete review_requested event IDs covered by this nudge. */
   workSyncReviewRequestEventIds?: string[];
+  /** Protocol-2 early-continuation ticket identity. */
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
   /** Durable hash for idempotent hidden member-work-sync automation rows. */
   workSyncPayloadHash?: string;
   /** Structured slash-command metadata for sent command rows. */
@@ -556,6 +559,8 @@ export interface SendMessageRequest {
   workSyncIntent?: InboxMessage['workSyncIntent'];
   workSyncIntentKey?: string;
   workSyncReviewRequestEventIds?: string[];
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
   workSyncPayloadHash?: string;
   slashCommand?: SlashCommandMeta;
   commandOutput?: CommandOutputMeta;

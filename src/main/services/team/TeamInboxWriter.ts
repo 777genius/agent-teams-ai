@@ -175,6 +175,12 @@ export class TeamInboxWriter {
       ...(request.workSyncReviewRequestEventIds?.length
         ? { workSyncReviewRequestEventIds: request.workSyncReviewRequestEventIds }
         : {}),
+      ...(request.workSyncRuntimeTicketId
+        ? { workSyncRuntimeTicketId: request.workSyncRuntimeTicketId }
+        : {}),
+      ...(request.workSyncRuntimeGeneration != null
+        ? { workSyncRuntimeGeneration: request.workSyncRuntimeGeneration }
+        : {}),
       ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
@@ -309,6 +315,8 @@ export class TeamInboxWriter {
       workSyncIntent: message.workSyncIntent,
       workSyncIntentKey: message.workSyncIntentKey,
       workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
+      workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
+      workSyncRuntimeGeneration: message.workSyncRuntimeGeneration,
       workSyncPayloadHash: message.workSyncPayloadHash,
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,

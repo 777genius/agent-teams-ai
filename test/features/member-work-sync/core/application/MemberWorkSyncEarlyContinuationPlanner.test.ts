@@ -1,4 +1,5 @@
 import {
+  insertMemberWorkSyncInboxAfterRuntimeTicket,
   MemberWorkSyncNudgeOutboxPlanner,
   startMemberWorkSyncRuntimeTicketForOutboxItem,
 } from '@features/member-work-sync/core/application';
@@ -430,5 +431,149 @@ describe('protocol-2 early continuation', () => {
       ok: false,
       code: 'stale',
     });
+  });
+
+  it('refuses D1 items that never carried a runtime ticket', async () => {
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(startMemberWorkSyncRuntimeTicketForOutboxItem(admittingTicket(), item)).resolves.toEqual(
+      { ok: false, code: 'stale' }
+    );
+  });
+
+  it('cancels an admitted ticket when a later planner check throws', async () => {
+    const cancelled: MemberWorkSyncRuntimeTicket[] = [];
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket({
+        cancel: async (ticket) => {
+          cancelled.push(ticket);
+        },
+      }),
+      busy: true,
+    });
+    deps.busySignal = {
+      isBusy: async () => {
+        throw new Error('busy lookup failed');
+      },
+    };
+    await expect(
+      new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(status())
+    ).rejects.toThrow('busy lookup failed');
+    expect(outbox.items.size).toBe(0);
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
+  });
+
+  it('cancels a started ticket when stop aborts before inbox insert', async () => {
+    const cancelled: MemberWorkSyncRuntimeTicket[] = [];
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 1,
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(
+      insertMemberWorkSyncInboxAfterRuntimeTicket({
+        admission: admittingTicket({
+          cancel: async (ticket) => {
+            cancelled.push(ticket);
+          },
+        }),
+        inbox: {
+          insertIfAbsent: async () => {
+            throw new Error('inbox insert must not run after abort');
+          },
+        },
+        item,
+        nowIso: '2026-05-06T00:05:00.000Z',
+        shouldAbort: () => true,
+      })
+    ).resolves.toEqual({ status: 'aborted' });
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
+  });
+
+  it('cancels a started ticket when inbox insert conflicts after start', async () => {
+    const cancelled: MemberWorkSyncRuntimeTicket[] = [];
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 1,
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(
+      insertMemberWorkSyncInboxAfterRuntimeTicket({
+        admission: admittingTicket({
+          cancel: async (ticket) => {
+            cancelled.push(ticket);
+          },
+        }),
+        inbox: {
+          insertIfAbsent: async () => ({
+            inserted: false,
+            messageId: item.id,
+            conflict: true,
+          }),
+        },
+        item,
+        nowIso: '2026-05-06T00:05:00.000Z',
+        shouldAbort: () => false,
+      })
+    ).resolves.toEqual({ status: 'conflict' });
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
   });
 });

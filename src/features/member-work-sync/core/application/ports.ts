@@ -203,7 +203,8 @@ export interface MemberWorkSyncInboxNudgePort {
     payloadHash: string;
     payload: MemberWorkSyncOutboxItem['payload'];
     timestamp: string;
-  }): Promise<{ inserted: boolean; messageId: string; conflict?: boolean }>;
+    shouldAbort?: () => boolean | Promise<boolean>;
+  }): Promise<{ inserted: boolean; messageId: string; conflict?: boolean; aborted?: boolean }>;
   repairIfPresent?(input: {
     teamName: string;
     memberName: string;

@@ -17,6 +17,7 @@ import {
   MemberWorkSyncReporter,
   type MemberWorkSyncReviewPickupDeliveryPort,
   type MemberWorkSyncReviewPickupEscalationPort,
+  type MemberWorkSyncRuntimeTicketAdmissionPort,
   type MemberWorkSyncStatusStorePort,
   type MemberWorkSyncUseCaseDeps,
   recordMemberWorkSyncDispatchOutcome,
@@ -373,6 +374,9 @@ class InMemoryInboxNudge implements MemberWorkSyncInboxNudgePort {
   repairConflict = false;
 
   async insertIfAbsent(input: Parameters<MemberWorkSyncInboxNudgePort['insertIfAbsent']>[0]) {
+    if (await input.shouldAbort?.()) {
+      return { inserted: false, messageId: input.messageId, aborted: true };
+    }
     if (this.fail) {
       throw new Error('inbox unavailable');
     }
@@ -413,6 +417,8 @@ function createDeps(options?: {
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
   recoveryAllocation?: { enabled: boolean };
+  recoveryProtocol?: { version: number };
+  runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
 }) {
   const clock = new MutableClock();
   const store = new InMemoryStatusStore();
@@ -472,6 +478,10 @@ function createDeps(options?: {
       },
     },
     recoveryAllocation: options?.recoveryAllocation ?? { enabled: true },
+    ...(options?.recoveryProtocol ? { recoveryProtocol: options.recoveryProtocol } : {}),
+    ...(options?.runtimeTicketAdmission
+      ? { runtimeTicketAdmission: options.runtimeTicketAdmission }
+      : {}),
   };
   return { auditEvents, clock, deps, source, store };
 }
@@ -2135,6 +2145,65 @@ describe('MemberWorkSync use cases', () => {
     expect(protocol2).toEqual({ planned: false, code: 'early_continuation_disabled' });
   });
 
+  it('releases the recovery slot when D1 start refuses before send', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, source, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+      recoveryProtocol: { version: 2 },
+      runtimeTicketAdmission: {
+        admit: async () => ({ admitted: true, ticketId: 'ticket-1', generation: 1 }),
+        start: async () => ({ ok: false, code: 'stale' }),
+        cancel: async () => undefined,
+      },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    const firstStatus = await reconciler.execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(firstStatus);
+    const early = [...outbox.items.values()].find((item) =>
+      item.payload.workSyncIntentKey?.startsWith('early-continuation:')
+    );
+    expect(early).toBeTruthy();
+    expect(store.writes.at(-1)?.recoveryHealth?.unresolvedIntentId).toBe(early?.id);
+
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(summary).toMatchObject({ claimed: 1, delivered: 0, superseded: 1 });
+    expect(inbox.inserted).toHaveLength(0);
+    const afterStartRefusal = await store.read({ teamName: 'team-a', memberName: 'bob' });
+    expect(afterStartRefusal?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(afterStartRefusal?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
+
+    source.agenda = {
+      ...source.agenda,
+      generatedAt: '2026-04-29T00:10:00.000Z',
+      items: [
+        ...source.agenda.items,
+        {
+          ...source.agenda.items[0]!,
+          taskId: 'task-2',
+          displayId: '44444444',
+          subject: 'More work',
+        },
+      ],
+    };
+    const nextStatus = await reconciler.execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(nextStatus);
+    expect(planned.code).not.toBe('slot_occupied');
+    expect(planned.planned).toBe(true);
+  });
+
   it('records runtime-stall diagnostics when a settled turn leaves the same agenda needing sync', async () => {
     const outbox = new InMemoryOutboxStore();
     const { auditEvents, deps, store } = createDeps({
@@ -2191,7 +2260,7 @@ describe('MemberWorkSync use cases', () => {
     store.phase2ReadinessState = 'shadow_ready';
 
     const reconciler = new MemberWorkSyncReconciler(deps);
-    const firstStatus = await reconciler.execute(
+    await reconciler.execute(
       {
         teamName: 'team-a',
         memberName: 'bob',
@@ -2253,7 +2322,7 @@ describe('MemberWorkSync use cases', () => {
     store.phase2ReadinessState = 'shadow_ready';
 
     const reconciler = new MemberWorkSyncReconciler(deps);
-    const firstStatus = await reconciler.execute(
+    await reconciler.execute(
       {
         teamName: 'team-a',
         memberName: 'bob',

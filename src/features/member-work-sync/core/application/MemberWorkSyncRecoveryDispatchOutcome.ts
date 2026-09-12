@@ -76,6 +76,7 @@ export async function recordMemberWorkSyncDispatchOutcome(input: {
                 health: status.recoveryHealth,
                 intentId: input.item.id,
                 receiptId: `dispatch-${input.outcome}:${input.item.id}`,
+                pendingAck: input.outcome === 'terminal',
               })
             : applyMemberWorkSyncRetryableDispatch({
                 health: status.recoveryHealth,

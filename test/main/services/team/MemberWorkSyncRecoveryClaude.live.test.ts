@@ -111,10 +111,12 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     previousDisableRuntimeBootstrap = process.env.CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP;
     usingConnectedClaudeAccount =
       allowConnectedClaudeAccount && !process.env.ANTHROPIC_API_KEY?.trim();
-    const connectedHome = os.userInfo().homedir;
-    const tempHome = usingConnectedClaudeAccount ? connectedHome : path.join(tempDir, 'home');
+    // Keep HOME and the Claude root in the temp sandbox. Connected-account
+    // Keychain OAuth is a different namespace than CLAUDE_CONFIG_DIR=temp; do
+    // not retarget HOME or CLAUDE_CONFIG_DIR at the real ~/.claude spool.
+    const tempHome = path.join(tempDir, 'home');
     tempClaudeRoot = path.join(tempDir, '.claude');
-    claudeJsonConfigRoot = usingConnectedClaudeAccount ? tempHome : tempClaudeRoot;
+    claudeJsonConfigRoot = tempClaudeRoot;
     await fs.mkdir(tempHome, { recursive: true });
     await fs.mkdir(tempClaudeRoot, { recursive: true });
     setClaudeBasePathOverride(tempClaudeRoot);

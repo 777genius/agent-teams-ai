@@ -928,18 +928,6 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     await feature.prepareTeamDeletion(teamName, firstIdentity.identityId);
     feature.completeTeamDeletion(teamName);
     await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
-    await feature.dispose();
-    await controlServer.close().catch(() => undefined);
-    feature = createFeature();
-    controlServer = await startMemberWorkSyncControlServer(feature);
-    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-    wireLiveFeature(activeService, feature);
-    await fs.writeFile(
-      path.join(tempClaudeRoot, 'team-control-api.json'),
-      JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
-      'utf8'
-    );
     feature.resumeTeam(teamName);
 
     await launchTeam('Codex teammate C21 recreate launch');
@@ -958,8 +946,11 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     expect(recreated.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
     expect(recreated.recoveryHealth?.unresolvedIntentId).toBeUndefined();
     expect(recreated.agenda.fingerprint).toBe(firstFingerprint);
-    expect(recreated.reportToken).toBeTruthy();
-    expect(recreated.reportToken).not.toBe(firstToken);
+    const secondToken = recreated.reportToken;
+    if (!secondToken) {
+      throw new Error('expected report token after recreate');
+    }
+    expect(secondToken).not.toBe(firstToken);
     await expect(
       feature.report({
         teamName,
@@ -972,6 +963,18 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     ).resolves.toMatchObject({
       accepted: false,
       code: 'invalid_report_token',
+    });
+    await expect(
+      feature.report({
+        teamName,
+        memberName: TEAMMATE_NAME,
+        state: 'still_working',
+        agendaFingerprint: recreated.agenda.fingerprint,
+        reportToken: secondToken,
+        source: 'test',
+      })
+    ).resolves.toMatchObject({
+      accepted: true,
     });
 
     await feature.prepareTeamDeletion(teamName);

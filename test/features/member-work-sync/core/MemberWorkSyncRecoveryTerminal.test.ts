@@ -1,5 +1,3 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   applyMemberWorkSyncRetryableDispatch,
   applyMemberWorkSyncTerminalAck,
@@ -7,6 +5,7 @@ import {
   findMemberWorkSyncCompactWitness,
   isMemberWorkSyncEarlyContinuationEnabled,
 } from '@features/member-work-sync/core/domain/MemberWorkSyncRecoveryTerminal';
+import { describe, expect, it } from 'vitest';
 
 import type { MemberWorkSyncRecoveryHealth } from '@features/member-work-sync/contracts';
 
@@ -77,6 +76,18 @@ describe('member work sync recovery terminal protocol', () => {
       intentId: 'intent-1',
     });
     expect(lateI1?.unresolvedIntentId).toBe('intent-2');
+  });
+
+  it('does not require ack after a proven pre-send refusal', () => {
+    const retired = applyMemberWorkSyncTerminalRetirement({
+      health,
+      intentId: 'intent-1',
+      receiptId: 'dispatch-superseded:intent-1',
+      pendingAck: false,
+    });
+    expect(retired?.unresolvedIntentId).toBeUndefined();
+    expect(retired?.reservations?.[0]?.pendingAck).toBeUndefined();
+    expect(retired?.reservations?.[0]?.state).toBe('resolved');
   });
 
   it('fails closed for early continuation without protocol 2 and a ticket port', () => {

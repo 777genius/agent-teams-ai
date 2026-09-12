@@ -112,10 +112,22 @@ describe('prepared backend production storage path', () => {
     value.reportIntents.push({...member, id: 'journal-i1', request: {...member, state: 'still_working', agendaFingerprint: 'f'}, reason: 'journal', status: 'pending', recordedAt: status().evaluatedAt, journal});
     const records = snapshotToRecords(identity.teamName, value);
     await h.gateway.importTeam(identity.teamName, records);
-    await h.gateway.reportsAppend({...records.reportIntents[0], journalJson: null, requestJson: JSON.stringify({...member, state: 'caught_up', agendaFingerprint: 'f'})});
-    await h.gateway.reportsMarkProcessed(identity.teamName, 'journal-i1', {status: 'accepted', resultCode: 'accepted', processedAt: status().evaluatedAt});
-    const restored = recordsToSnapshot(identity.teamName, await h.gateway.listTeamSnapshot(identity.teamName));
-    expect(restored.reportIntents[0]).toMatchObject({status: 'pending', journal, request: {state: 'still_working'}});
+    await expect(async () =>
+      h.gateway.reportsAppend({
+        ...records.reportIntents[0],
+        journalJson: null,
+        requestJson: JSON.stringify({ ...member, state: 'caught_up', agendaFingerprint: 'f' }),
+      })
+    ).rejects.toThrow('Bound report intent requires strict journal API');
+    const restored = recordsToSnapshot(
+      identity.teamName,
+      await h.gateway.listTeamSnapshot(identity.teamName)
+    );
+    expect(restored.reportIntents[0]).toMatchObject({
+      status: 'pending',
+      journal,
+      request: { state: 'still_working' },
+    });
     await h.store.withPreparedBackend(identity, async () => undefined);
   });
 

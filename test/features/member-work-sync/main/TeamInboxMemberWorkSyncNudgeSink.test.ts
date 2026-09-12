@@ -551,4 +551,82 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
 
     await expect(sink.insertIfAbsent(input)).rejects.toThrow('writer failed');
   });
+
+  it('does not publish after a stop that lands during inbox read', async () => {
+    const input = makeInput({
+      payload: {
+        from: 'system',
+        to: 'bob',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'agenda_sync',
+        workSyncIntentKey: 'early-continuation:agenda:v1:test',
+        workSyncRuntimeTicketId: 'ticket-1',
+        workSyncRuntimeGeneration: 1,
+        text: 'Please reconcile your current work state.',
+        taskRefs: [{ teamName: 'team-a', taskId: 'task-1', displayId: '11111111' }],
+      },
+    });
+    let stopped = false;
+    const inboxReader = {
+      getMessagesFor: vi.fn(async () => {
+        stopped = true;
+        return [];
+      }),
+    };
+    const inboxWriter = {
+      sendMessage: vi.fn(),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(inboxReader as never, inboxWriter as never);
+
+    await expect(
+      sink.insertIfAbsent({
+        ...input,
+        shouldAbort: () => stopped,
+      })
+    ).resolves.toEqual({
+      inserted: false,
+      messageId: input.messageId,
+      aborted: true,
+    });
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('puts the runtime ticket on the inbox envelope', async () => {
+    const input = makeInput({
+      payload: {
+        from: 'system',
+        to: 'bob',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'agenda_sync',
+        workSyncIntentKey: 'early-continuation:agenda:v1:test',
+        workSyncRuntimeTicketId: 'ticket-1',
+        workSyncRuntimeGeneration: 7,
+        text: 'Please reconcile your current work state.',
+        taskRefs: [{ teamName: 'team-a', taskId: 'task-1', displayId: '11111111' }],
+      },
+    });
+    const inboxReader = {
+      getMessagesFor: vi.fn(async () => []),
+    };
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ messageId: input.messageId })),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(inboxReader as never, inboxWriter as never);
+
+    await expect(sink.insertIfAbsent(input)).resolves.toEqual({
+      inserted: true,
+      messageId: input.messageId,
+    });
+    expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({
+        workSyncRuntimeTicketId: 'ticket-1',
+        workSyncRuntimeGeneration: 7,
+      })
+    );
+  });
 });

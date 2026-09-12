@@ -27,7 +27,13 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
   ) {}
 
   async insertIfAbsent(input: TeamInboxMemberWorkSyncNudgeInput) {
+    if (await input.shouldAbort?.()) {
+      return { inserted: false, messageId: input.messageId, aborted: true };
+    }
     const existing = await this.inboxReader.getMessagesFor(input.teamName, input.memberName);
+    if (await input.shouldAbort?.()) {
+      return { inserted: false, messageId: input.messageId, aborted: true };
+    }
     const existingMessage = existing.find((message) => message.messageId === input.messageId);
     if (existingMessage) {
       if (
@@ -45,6 +51,9 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
     const controlUrl = await this.resolveControlUrl({
       required: Boolean(this.controlUrlResolver),
     });
+    if (await input.shouldAbort?.()) {
+      return { inserted: false, messageId: input.messageId, aborted: true };
+    }
     const text = controlUrl
       ? this.withControlUrl(input.payload.text, controlUrl)
       : input.payload.text;
@@ -63,6 +72,8 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
       workSyncIntent: input.payload.workSyncIntent,
       workSyncIntentKey: input.payload.workSyncIntentKey,
       workSyncReviewRequestEventIds: input.payload.workSyncReviewRequestEventIds,
+      workSyncRuntimeTicketId: input.payload.workSyncRuntimeTicketId,
+      workSyncRuntimeGeneration: input.payload.workSyncRuntimeGeneration,
       workSyncPayloadHash: input.payloadHash,
     });
 

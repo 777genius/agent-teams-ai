@@ -1,8 +1,11 @@
 import {
+  MEMBER_WORK_SYNC_CONTINUE,
   MEMBER_WORK_SYNC_GET_METRICS,
   MEMBER_WORK_SYNC_GET_STATUS,
   MEMBER_WORK_SYNC_REFRESH_STATUS,
   MEMBER_WORK_SYNC_REPORT,
+  MEMBER_WORK_SYNC_RESUME,
+  MEMBER_WORK_SYNC_STOP,
 } from '@features/member-work-sync/contracts';
 import {
   registerMemberWorkSyncIpc,
@@ -150,6 +153,11 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
     buildRuntimeTurnSettledEnvironment: vi.fn(),
     drainRuntimeTurnSettledEvents: vi.fn(),
     getQueueDiagnostics: vi.fn(),
+    getSchedulerHealth: vi.fn(),
+    stopAutoResume: vi.fn(),
+    resumeAutoResume: vi.fn(),
+    continueManually: vi.fn(),
+    recordStallObservation: vi.fn(),
     dispose: vi.fn(),
   };
 }
@@ -161,13 +169,16 @@ describe('registerMemberWorkSyncIpc', () => {
 
     registerMemberWorkSyncIpc(ipcMain, feature);
 
-    expect(ipcMain.handle).toHaveBeenCalledTimes(4);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(7);
     expect([...handlers.keys()].sort()).toEqual(
       [
+        MEMBER_WORK_SYNC_CONTINUE,
         MEMBER_WORK_SYNC_GET_METRICS,
         MEMBER_WORK_SYNC_GET_STATUS,
         MEMBER_WORK_SYNC_REFRESH_STATUS,
         MEMBER_WORK_SYNC_REPORT,
+        MEMBER_WORK_SYNC_RESUME,
+        MEMBER_WORK_SYNC_STOP,
       ].sort()
     );
 
@@ -244,11 +255,14 @@ describe('registerMemberWorkSyncIpc', () => {
 
     removeMemberWorkSyncIpc(ipcMain);
 
-    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(4);
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(7);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_GET_STATUS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_REFRESH_STATUS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_GET_METRICS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_REPORT);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_STOP);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_RESUME);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_CONTINUE);
     expect([...handlers.keys()]).toEqual(['unrelated:channel']);
   });
 });

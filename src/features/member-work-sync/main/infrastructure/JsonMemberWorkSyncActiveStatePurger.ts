@@ -28,6 +28,9 @@ export async function listJsonMemberWorkSyncActiveFilePaths(
   paths: MemberWorkSyncStorePaths,
   teamName: string
 ): Promise<string[]> {
+  // The SQLite compatibility replica is replaced by writeClean, not deleted
+  // here. Removing it before the empty publication would leave ENOENT if
+  // purge crashes in that window and would resurrect or drop crash evidence.
   const files = [
     paths.getLegacyStatusPath(teamName),
     paths.getLegacyPendingReportsPath(teamName),
@@ -36,7 +39,6 @@ export async function listJsonMemberWorkSyncActiveFilePaths(
     paths.getOutboxIndexPath(teamName),
     paths.getPendingReportsIndexPath(teamName),
     paths.getReportTokenSecretPath(teamName),
-    paths.getSqliteFallbackReplicaPath(teamName),
   ];
   const membersDir = join(paths.getTeamRootDir(teamName), 'members');
   const entries = await readdir(membersDir, { withFileTypes: true }).catch(() => []);
