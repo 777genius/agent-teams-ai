@@ -141,7 +141,7 @@ describe('internal storage shutdown order', () => {
     await vi.advanceTimersByTimeAsync(5);
     await vi.advanceTimersByTimeAsync(5);
     await vi.advanceTimersByTimeAsync(5);
-    await shutdown;
+    await flushPromises();
 
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       '[App] Shutdown step timed out after 5ms: team task stall monitor stop',
@@ -157,6 +157,7 @@ describe('internal storage shutdown order', () => {
 
     memberWorkSyncDrain.resolve();
     await flushPromises();
+    await shutdown;
     expect(internalStorageDispose).toHaveBeenCalledOnce();
     expect(order.at(-1)).toBe('internal-storage-dispose');
   });
@@ -177,7 +178,7 @@ describe('internal storage shutdown order', () => {
           dispose: () => Promise.resolve(),
         },
       },
-      { stepTimeoutMs: 5, waitForWriterCompletion: true }
+      { stepTimeoutMs: 5 }
     ).then(() => {
       finished = true;
     });

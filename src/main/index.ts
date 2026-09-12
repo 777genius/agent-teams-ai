@@ -1492,7 +1492,7 @@ function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
  */
 export async function disposeInternalStorageAfterWriterDrains(
   services: InternalStorageShutdownServices,
-  options: { stepTimeoutMs?: number; waitForWriterCompletion?: boolean } = {}
+  options: { stepTimeoutMs?: number } = {}
 ): Promise<void> {
   const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
 
@@ -1529,9 +1529,7 @@ export async function disposeInternalStorageAfterWriterDrains(
       stepTimeoutMs
     );
   }
-  if (options.waitForWriterCompletion) {
-    await internalStorageDispose;
-  }
+  await internalStorageDispose;
 }
 
 /**
@@ -3119,24 +3117,18 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());
 
-    // Sync backup after SIGKILL and after work-sync writers have drained, so
-    // .member-work-sync status/report/replica/outbox files are copied together.
+    // Copy team files only after SIGKILL and a physical work-sync writer drain.
     await runShutdownBackupAfterWorkSyncDrain({
       drainWorkSync: () =>
-        disposeInternalStorageAfterWriterDrains(
-          {
-            teamDataService,
-            teamTaskStallMonitor,
-            memberWorkSyncFeature,
-            internalStorageFeature,
-          },
-          { waitForWriterCompletion: true }
-        ),
+        disposeInternalStorageAfterWriterDrains({
+          teamDataService,
+          teamTaskStallMonitor,
+          memberWorkSyncFeature,
+          internalStorageFeature,
+        }),
       backup: teamBackupService,
     });
-    teamTaskStallMonitor = null;
-    memberWorkSyncFeature = null;
-    internalStorageFeature = null;
+    teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
 
     if (httpServer?.isRunning()) {
       await runShutdownStep('HTTP server stop', () => httpServer.stop());
