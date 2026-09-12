@@ -554,6 +554,41 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('waits for a timed-out reconcile to settle during stop', async () => {
+    let releaseFirst!: () => void;
+    let settled = false;
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      reconcileTimeoutMs: 20,
+      maxRetryAttempts: 1,
+      reconcile: async () => {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        settled = true;
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(20);
+
+    let stopped = false;
+    const stop = queue.stop().then(() => {
+      stopped = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stopped).toBe(false);
+    expect(settled).toBe(false);
+
+    releaseFirst();
+    await stop;
+    expect(stopped).toBe(true);
+    expect(settled).toBe(true);
+  });
+
   it('releases global concurrency after timeout while keeping the same member locked', async () => {
     let releaseFirst!: () => void;
     const reconciles: string[] = [];

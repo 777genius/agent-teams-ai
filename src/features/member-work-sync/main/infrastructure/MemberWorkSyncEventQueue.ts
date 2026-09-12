@@ -129,6 +129,8 @@ export class MemberWorkSyncEventQueue {
   private readonly activeKeys = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
   private readonly inFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly settling = new Set<Promise<void>>();
+  private readonly settlingByTeam = new Map<string, Set<Promise<void>>>();
   private readonly auditInFlightByTeam = new Map<string, Set<Promise<void>>>();
   private readonly quiescedTeams = new Set<string>();
   private readonly quietWindowMs: number;
@@ -303,6 +305,7 @@ export class MemberWorkSyncEventQueue {
     while (true) {
       const pending = [
         ...(this.inFlightByTeam.get(normalizedTeamName) ?? []),
+        ...(this.settlingByTeam.get(normalizedTeamName) ?? []),
         ...(this.auditInFlightByTeam.get(normalizedTeamName) ?? []),
       ];
       if (pending.length === 0) break;
@@ -372,7 +375,9 @@ export class MemberWorkSyncEventQueue {
     this.items.clear();
     this.running.clear();
     this.activeKeys.clear();
-    await Promise.allSettled([...this.inFlight]);
+    while (this.inFlight.size > 0 || this.settling.size > 0) {
+      await Promise.allSettled([...this.inFlight, ...this.settling]);
+    }
   }
 
   private schedule(): void {
@@ -601,6 +606,12 @@ export class MemberWorkSyncEventQueue {
       () => undefined,
       () => undefined
     );
+    this.settling.add(settlePromise);
+    this.addTrackedPromise(this.settlingByTeam, input.teamName, settlePromise);
+    void settlePromise.finally(() => {
+      this.settling.delete(settlePromise);
+      this.removeTrackedPromise(this.settlingByTeam, input.teamName, settlePromise);
+    });
     try {
       await Promise.race([
         reconcilePromise,
