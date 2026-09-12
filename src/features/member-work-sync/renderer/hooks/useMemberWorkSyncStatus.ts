@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import { normalizeMemberName } from '../../core/domain/memberName';
 import {
   type MemberWorkSyncStatusViewModel,
   toMemberWorkSyncStatusViewModel,
@@ -45,8 +46,8 @@ export function useMemberWorkSyncStatus({
   statusRef.current = status;
 
   useEffect(() => {
-    const normalizedTeamName = teamName?.trim();
-    const normalizedMemberName = memberName?.trim();
+    const normalizedTeamName = normalizeMemberName(teamName);
+    const normalizedMemberName = normalizeMemberName(memberName);
 
     if (!enabled || !normalizedTeamName || !normalizedMemberName) {
       setStatus(null);
@@ -58,7 +59,8 @@ export function useMemberWorkSyncStatus({
     let cancelled = false;
     const current = statusRef.current;
     const sameMember =
-      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName;
+      normalizeMemberName(current?.teamName) === normalizedTeamName &&
+      normalizeMemberName(current?.memberName) === normalizedMemberName;
     if (!sameMember) {
       setStatus(null);
       setLoading(true);
@@ -92,7 +94,7 @@ export function useMemberWorkSyncStatus({
   }, [enabled, memberName, refreshKey, teamName]);
 
   useEffect(() => {
-    if (!enabled || !teamName?.trim() || !memberName?.trim()) {
+    if (!enabled || !normalizeMemberName(teamName) || !normalizeMemberName(memberName)) {
       return;
     }
     const timer = window.setInterval(() => {
@@ -110,8 +112,8 @@ export function useMemberWorkSyncStatus({
     error,
     refresh: () => setRefreshKey((current) => current + 1),
     continueManually: () => {
-      const normalizedTeamName = teamName?.trim();
-      const normalizedMemberName = memberName?.trim();
+      const normalizedTeamName = normalizeMemberName(teamName);
+      const normalizedMemberName = normalizeMemberName(memberName);
       if (!normalizedTeamName || !normalizedMemberName) {
         return;
       }
@@ -123,8 +125,8 @@ export function useMemberWorkSyncStatus({
         .then((nextStatus) => {
           const current = selectionRef.current;
           if (
-            current.teamName?.trim() !== normalizedTeamName ||
-            current.memberName?.trim() !== normalizedMemberName
+            normalizeMemberName(current.teamName) !== normalizedTeamName ||
+            normalizeMemberName(current.memberName) !== normalizedMemberName
           ) {
             return;
           }
@@ -134,8 +136,8 @@ export function useMemberWorkSyncStatus({
         .catch((nextError: unknown) => {
           const current = selectionRef.current;
           if (
-            current.teamName?.trim() !== normalizedTeamName ||
-            current.memberName?.trim() !== normalizedMemberName
+            normalizeMemberName(current.teamName) !== normalizedTeamName ||
+            normalizeMemberName(current.memberName) !== normalizedMemberName
           ) {
             return;
           }

@@ -384,4 +384,76 @@ describe('member work sync renderer', () => {
       vi.useRealTimers();
     }
   });
+
+  it('keeps Continue visible when a mixed-case member name polls lowercase status', async () => {
+    vi.useFakeTimers();
+    const attention = makeStatus({
+      memberName: 'olla',
+      agenda: {
+        teamName: 'team-a',
+        memberName: 'olla',
+        generatedAt: '2026-04-29T00:00:00.000Z',
+        fingerprint: 'agenda:v1:abcdef1234567890',
+        items: [
+          {
+            taskId: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship UI',
+            kind: 'work',
+            assignee: 'olla',
+            priority: 'normal',
+            reason: 'owned_pending_task',
+            evidence: { status: 'pending', owner: 'olla' },
+          },
+        ],
+        diagnostics: [],
+      },
+      recoveryHealth: {
+        schemaVersion: 1,
+        attentionAt: '2026-04-29T00:20:00.000Z',
+        episodes: [
+          {
+            episodeId: 'episode:task-1:olla:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:olla',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+    apiMocks.getStatus.mockResolvedValue(attention);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MemberWorkSyncStatusPanel, {
+            teamName: 'team-a',
+            memberName: 'Olla',
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(apiMocks.getStatus).toHaveBeenCalledWith({ teamName: 'team-a', memberName: 'olla' });
+      expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeTruthy();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(MEMBER_WORK_SYNC_STATUS_POLL_MS);
+        await Promise.resolve();
+      });
+      expect(apiMocks.getStatus).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeTruthy();
+      expect(host.querySelector('[data-testid="member-work-sync-attention"]')).toBeTruthy();
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+      vi.useRealTimers();
+    }
+  });
 });
