@@ -15,7 +15,7 @@ export function statusNeedsBackgroundRefresh(status: MemberWorkSyncStatus, nowMs
     return true;
   }
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
-  if (!Number.isFinite(evaluatedAtMs)) {
+  if (!Number.isFinite(evaluatedAtMs) || evaluatedAtMs > nowMs) {
     return true;
   }
   if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {
@@ -45,6 +45,8 @@ export function getStatusStalenessDiagnostics(
   const evaluatedAtMs = Date.parse(status.evaluatedAt);
   if (!Number.isFinite(evaluatedAtMs)) {
     diagnostics.push('status_evaluated_at_invalid');
+  } else if (evaluatedAtMs > nowMs) {
+    diagnostics.push('status_evaluated_at_in_future');
   } else if (isEmptyAgendaStaleState(status)) {
     diagnostics.push('empty_agenda_state_refresh_enqueued');
   } else if (status.state === 'caught_up' && nowMs - evaluatedAtMs > CAUGHT_UP_STATUS_MAX_AGE_MS) {

@@ -1859,6 +1859,29 @@ describe('MemberWorkSync use cases', () => {
     );
   });
 
+  it('keeps pending work in expected wait while the member runtime is busy', async () => {
+    const { clock, deps, store } = createDeps({
+      providerId: 'codex',
+      busySignal: {
+        isBusy: async () => ({ busy: true, reason: 'runtime_busy' }),
+      },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    const first = await reconciler.execute({ teamName: 'team-a', memberName: 'bob' });
+    expect(first.recoveryHealth?.episodes[0]).toMatchObject({
+      phase: 'expected_wait',
+      reason: 'queued',
+    });
+    clock.set(new Date(Date.parse('2026-04-29T00:00:00.000Z') + 21 * 60_000).toISOString());
+    const later = await reconciler.execute({ teamName: 'team-a', memberName: 'bob' });
+    expect(later.recoveryHealth?.episodes[0]).toMatchObject({
+      phase: 'expected_wait',
+      reason: 'queued',
+      firstObservedAt: first.recoveryHealth?.episodes[0]?.firstObservedAt,
+    });
+  });
+
   it('honors an explicit recoveryAllocation disable even when protocol version is 1', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({

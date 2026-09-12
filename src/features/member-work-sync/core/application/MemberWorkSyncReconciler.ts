@@ -154,6 +154,20 @@ export class MemberWorkSyncReconciler {
       triggerReasons: context.triggerReasons,
     });
     const decisionDiagnostics = [...decision.diagnostics, ...runtimeStall.diagnostics];
+    let memberBusy: boolean | 'unknown' = 'unknown';
+    if (this.deps.busySignal) {
+      try {
+        const busy = await this.deps.busySignal.isBusy({
+          teamName: agenda.teamName,
+          memberName: agenda.memberName,
+          nowIso,
+        });
+        memberBusy = busy.busy === true;
+      } catch {
+        memberBusy = 'unknown';
+      }
+    }
+    assertReconcileNotCancelled(context);
     const recoveryHealth = observeMemberWorkSyncRecoveryHealth({
       previous: previous?.recoveryHealth,
       nowIso,
@@ -168,6 +182,7 @@ export class MemberWorkSyncReconciler {
       })),
       expectedWaiting:
         agenda.items.length > 0 && agenda.items.every((item) => item.kind === 'blocked_dependency'),
+      memberBusy,
       instrumentationKnown: source.providerId === 'opencode',
     });
     await appendMemberWorkSyncAudit(this.deps, {
