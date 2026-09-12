@@ -145,9 +145,25 @@ export class MemberWorkSyncRecoveryCommands {
       };
       const defaultIntentKey = `manual-continue:${input.idempotencyKey?.trim() || 'default'}`;
       let recoveryInput = buildRecoveryInput(
-        existing ?? defaultIntentKey,
-        existing ?? `${baseInput.id}:${defaultIntentKey}`
+        defaultIntentKey,
+        `${baseInput.id}:${defaultIntentKey}`
       );
+      if (existing) {
+        const existingItem = await outboxStore.readItem?.({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          id: existing,
+        });
+        recoveryInput = existingItem?.payload.workSyncIntentKey?.startsWith('manual-continue:')
+          ? {
+              ...baseInput,
+              id: existingItem.id,
+              agendaFingerprint: existingItem.agendaFingerprint,
+              payload: existingItem.payload,
+              payloadHash: existingItem.payloadHash,
+            }
+          : buildRecoveryInput(defaultIntentKey, existing);
+      }
       let committedStatus = read.status;
       const candidateId = recoveryInput.id;
       if (!existing) {

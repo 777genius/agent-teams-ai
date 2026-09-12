@@ -10,7 +10,10 @@ import { observeMemberWorkSyncRecoveryHealth } from '../domain/MemberWorkSyncRec
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
 import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
-import { repairMemberWorkSyncDispatchOutcome } from './MemberWorkSyncRecoveryDispatchOutcome';
+import {
+  repairMemberWorkSyncDispatchOutcome,
+  retireMemberWorkSyncSettledReservation,
+} from './MemberWorkSyncRecoveryDispatchOutcome';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 import { observeMemberWorkSyncRuntimeStall } from './MemberWorkSyncRuntimeStallDiagnostics';
 import {
@@ -116,6 +119,16 @@ export class MemberWorkSyncReconciler {
         status: read.status,
       });
       if (repaired) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+      const settled =
+        read.status &&
+        (await retireMemberWorkSyncSettledReservation({
+          deps: this.deps,
+          status: read.status,
+          triggerReasons: context.triggerReasons,
+        }));
+      if (settled) {
         read = await readMemberWorkSyncStatus(this.deps, request);
       }
     }

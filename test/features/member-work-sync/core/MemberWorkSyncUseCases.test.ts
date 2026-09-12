@@ -2176,6 +2176,80 @@ describe('MemberWorkSync use cases', () => {
     expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
   });
 
+  it('releases an awaiting recovery reservation when the delivered turn settles', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        unresolvedIntentId: 'intent-settled',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-settled',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-settled',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
+    );
+    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalReceiptId: 'turn-settled:intent-settled',
+    });
+  });
+
+  it('releases an awaiting recovery reservation when the delivered turn settles', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        unresolvedIntentId: 'intent-settled',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-settled',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-settled',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
+    );
+    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalReceiptId: 'turn-settled:intent-settled',
+    });
+  });
+
   it('writes a durable stop latch that blocks automatic recovery planning', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();
@@ -2372,6 +2446,10 @@ describe('MemberWorkSync use cases', () => {
     }
     expect(second.status.recoveryHealth?.unresolvedIntentId).toBe(firstIntentId);
     expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+    expect(outbox.items.get(firstIntentId!)?.payload.workSyncIntentKey).toBe(
+      firstItem?.payload.workSyncIntentKey
+    );
+    expect(outbox.items.get(firstIntentId!)?.payloadHash).toBe(firstItem?.payloadHash);
     expect(
       [...outbox.items.values()].filter((item) =>
         item.payload.workSyncIntentKey?.includes('manual-continue')

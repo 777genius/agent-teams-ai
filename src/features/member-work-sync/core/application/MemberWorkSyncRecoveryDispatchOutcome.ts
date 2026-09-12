@@ -167,6 +167,31 @@ export async function repairMemberWorkSyncDispatchOutcome(input: {
   return true;
 }
 
+export async function retireMemberWorkSyncSettledReservation(input: {
+  deps: MemberWorkSyncUseCaseDeps;
+  status: MemberWorkSyncStatus;
+  triggerReasons?: string[];
+}): Promise<boolean> {
+  if (!input.triggerReasons?.includes('turn_settled')) {
+    return false;
+  }
+  const intentId = input.status.recoveryHealth?.unresolvedIntentId;
+  const reservation = input.status.recoveryHealth?.reservations?.find(
+    (entry) => entry.intentId === intentId
+  );
+  if (!intentId || reservation?.state !== 'awaiting_outcome') {
+    return false;
+  }
+  await retireMemberWorkSyncRecoveryIntent({
+    deps: input.deps,
+    teamName: input.status.teamName,
+    memberName: input.status.memberName,
+    intentId,
+    receiptId: `turn-settled:${intentId}`,
+  });
+  return true;
+}
+
 export async function retireMemberWorkSyncRecoveryIntent(input: {
   deps: MemberWorkSyncUseCaseDeps;
   teamName: string;
