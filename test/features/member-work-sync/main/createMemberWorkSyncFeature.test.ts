@@ -2038,6 +2038,74 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('observes stale member work before the team is ready for nudge dispatch', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const getTasks = vi.fn(async () => [
+      {
+        id: 'task-1',
+        displayId: '11111111',
+        subject: 'Ship sync',
+        status: 'pending',
+        owner: memberName,
+      },
+    ]);
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks,
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      canDispatchNudges: vi.fn(async () => false),
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      expect(status.state).toBe('needs_sync');
+      const taskReadsAfterRefresh = getTasks.mock.calls.length;
+      const staleEvaluatedAt = new Date(Date.now() - 3 * 60_000).toISOString();
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.write({
+        ...status,
+        evaluatedAt: staleEvaluatedAt,
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 0,
+        delivered: 0,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      expect(getTasks.mock.calls.length).toBeGreaterThan(taskReadsAfterRefresh);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      const observed = await store.read({ teamName, memberName });
+      expect(Date.parse(observed?.evaluatedAt ?? '')).toBeGreaterThan(Date.parse(staleEvaluatedAt));
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('checks nudge dispatch readiness sequentially', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);

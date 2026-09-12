@@ -3189,6 +3189,53 @@ describe('MemberWorkSync use cases', () => {
     expect(store.writes.at(-1)?.diagnostics).toContain(MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC);
   });
 
+  it('delivers an explicit Continue after repeated deliveries are suppressed', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+
+    const firstStatus = await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const baseId = `member-work-sync:team-a:bob:${firstStatus.agenda.fingerprint}`;
+    const baseItem = outbox.items.get(baseId);
+    expect(baseItem).toBeDefined();
+    seedDeliveredAgendaNudges(outbox, baseItem!, 4);
+
+    const continued = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(continued.ok).toBe(true);
+    if (!continued.ok) {
+      return;
+    }
+
+    const continueId = continued.status.recoveryHealth?.unresolvedIntentId;
+    expect(continueId).toBeTruthy();
+    expect(outbox.items.get(continueId!)).toMatchObject({
+      status: 'pending',
+      payload: { workSyncIntentKey: expect.stringMatching(/^manual-continue:/) },
+    });
+
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(summary.delivered).toBeGreaterThanOrEqual(1);
+    expect(inbox.inserted.some((item) => item.messageId === continueId)).toBe(true);
+    expect(outbox.items.get(continueId!)).toMatchObject({ status: 'delivered' });
+  });
+
   it('creates an agenda-sync refresh recovery when a delivered nudge has a stale payload hash', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();

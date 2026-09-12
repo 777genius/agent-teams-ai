@@ -12,6 +12,7 @@ import {
   type MemberWorkSyncMetricsRequest,
   type MemberWorkSyncReportRequest,
   type MemberWorkSyncReportResult,
+  type MemberWorkSyncReportState,
   type MemberWorkSyncStatus,
   type MemberWorkSyncStatusRequest,
   type MemberWorkSyncTeamMetrics,
@@ -42,6 +43,66 @@ function requireStatusIdentity(request: MemberWorkSyncStatusRequest): MemberWork
   return {
     teamName: requireTeamName(request?.teamName),
     memberName: requireMemberName(request?.memberName),
+  };
+}
+
+function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
+  return value === 'still_working' || value === 'blocked' || value === 'caught_up';
+}
+
+function requireOptionalString(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be a string`);
+  }
+  return value;
+}
+
+function requireReportRequest(request: MemberWorkSyncReportRequest): MemberWorkSyncReportRequest {
+  const identity = requireStatusIdentity(request);
+  const state = typeof request?.state === 'string' ? request.state.trim() : '';
+  const agendaFingerprint =
+    typeof request?.agendaFingerprint === 'string' ? request.agendaFingerprint.trim() : '';
+  if (!state || !agendaFingerprint) {
+    throw new Error('state and agendaFingerprint are required');
+  }
+  if (!isMemberWorkSyncReportState(state)) {
+    throw new Error('state must be still_working, blocked, or caught_up');
+  }
+  if (request?.taskIds !== undefined) {
+    if (
+      !Array.isArray(request.taskIds) ||
+      request.taskIds.some((taskId) => typeof taskId !== 'string')
+    ) {
+      throw new Error('taskIds must be an array of strings');
+    }
+  }
+  const taskIds = Array.isArray(request?.taskIds)
+    ? [...new Set(request.taskIds.map((taskId) => taskId.trim()).filter(Boolean))]
+    : undefined;
+  const source = request?.source;
+  if (source !== undefined && source !== 'mcp' && source !== 'app' && source !== 'test') {
+    throw new Error('source must be mcp, app, or test');
+  }
+  const note = requireOptionalString(request?.note, 'note');
+  const reportToken = requireOptionalString(request?.reportToken, 'reportToken');
+  const reportedAt = requireOptionalString(request?.reportedAt, 'reportedAt');
+  const leaseTtlMs = request?.leaseTtlMs;
+  if (leaseTtlMs !== undefined && typeof leaseTtlMs !== 'number') {
+    throw new Error('leaseTtlMs must be a number');
+  }
+  return {
+    ...identity,
+    state,
+    agendaFingerprint,
+    ...(reportToken !== undefined ? { reportToken } : {}),
+    ...(taskIds?.length ? { taskIds } : {}),
+    ...(note !== undefined ? { note } : {}),
+    ...(reportedAt !== undefined ? { reportedAt } : {}),
+    ...(typeof leaseTtlMs === 'number' ? { leaseTtlMs } : {}),
+    ...(source ? { source } : {}),
   };
 }
 
@@ -89,12 +150,7 @@ export function registerMemberWorkSyncIpc(
     MEMBER_WORK_SYNC_REPORT,
     async (_event, request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult> => {
       try {
-        const identity = requireStatusIdentity(request);
-        return await feature.report({
-          ...request,
-          teamName: identity.teamName,
-          memberName: identity.memberName,
-        });
+        return await feature.report(requireReportRequest(request));
       } catch (error) {
         logger.error('Failed to submit member work sync report', error);
         throw error;

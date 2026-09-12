@@ -148,12 +148,15 @@ export class MemberWorkSyncNudgeRevalidator {
     if (decision.state !== 'needs_sync' || agenda.items.length === 0 || !agendaStillMatches) {
       return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
     }
+    const manualContinue = isManualContinueOutboxItem(item);
     const suppressionStatus = await applyMemberWorkSyncNudgeSuppression(this.deps, {
       status: revalidatedStatus,
       previousStatus: previous,
       source: 'nudge_dispatcher',
+      ...(manualContinue ? { forceNudge: true } : {}),
     });
     if (
+      !manualContinue &&
       suppressionStatus.shadow?.wouldNudge !== true &&
       suppressionStatus.diagnostics.includes(MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC)
     ) {
@@ -173,7 +176,6 @@ export class MemberWorkSyncNudgeRevalidator {
       status: suppressionStatus,
       metrics,
     });
-    const manualContinue = isManualContinueOutboxItem(item);
     if (!activation.active && !manualContinue) {
       const reason =
         activation.reason === 'blocking_metrics'

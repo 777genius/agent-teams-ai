@@ -210,6 +210,50 @@ describe('registerMemberWorkSyncIpc', () => {
     expect(feature.report).toHaveBeenCalledWith(reportRequest);
   });
 
+  it('rejects malformed report payloads before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+    const report = handlers.get(MEMBER_WORK_SYNC_REPORT);
+
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        taskIds: [1],
+      })
+    ).rejects.toThrow(/taskIds must be an array of strings/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'done',
+        agendaFingerprint: 'agenda:v1:test',
+      })
+    ).rejects.toThrow(/state must be still_working, blocked, or caught_up/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        note: 12,
+      })
+    ).rejects.toThrow(/note must be a string/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        source: 'hook',
+      })
+    ).rejects.toThrow(/source must be mcp, app, or test/i);
+    expect(feature.report).not.toHaveBeenCalled();
+  });
+
   it('propagates feature errors so the renderer receives the real status failure', async () => {
     const { handlers, ipcMain } = makeIpcMain();
     const feature = makeFeature();

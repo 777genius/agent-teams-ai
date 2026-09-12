@@ -352,10 +352,13 @@ export function createMemberWorkSyncFeature(deps: {
       signal?: AbortSignal;
     } = {}
   ): Promise<MemberWorkSyncNudgeDispatchSummary> => {
+    const bound = bindDeps(teamName, admission);
     if (!(await isNudgeDispatchReady(teamName, options.signal)) || options.signal?.aborted) {
+      if (options.refreshBackgroundStaleStatuses !== false && !options.signal?.aborted) {
+        await refreshBackgroundStaleStatuses(teamName, bound, options.signal);
+      }
       return emptyNudgeDispatchSummary();
     }
-    const bound = bindDeps(teamName, admission);
     const dispatchReadyNudges = (): Promise<MemberWorkSyncNudgeDispatchSummary> =>
       new MemberWorkSyncNudgeDispatcher(bound).dispatchDue({
         teamNames: [teamName],
