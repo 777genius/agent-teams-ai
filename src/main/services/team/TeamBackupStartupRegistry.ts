@@ -24,6 +24,22 @@ function validTeamName(name: string): boolean {
   return !!name && name.trim() === name && name !== '.' && name !== '..' && !/[\\/\0]/.test(name);
 }
 
+function registryEntryFromManifest(manifest: {
+  teamName: string;
+  identityId: string;
+  status: BackupRegistryEntry['status'];
+  deletedByUserAt?: string;
+  lastBackupAt: string;
+}): BackupRegistryEntry {
+  return {
+    teamName: manifest.teamName,
+    identityId: manifest.identityId,
+    status: manifest.status,
+    ...(manifest.deletedByUserAt ? { deletedByUserAt: manifest.deletedByUserAt } : {}),
+    lastBackupAt: manifest.lastBackupAt,
+  };
+}
+
 /** Strict read for registry publication; discovery is reserved for startup. */
 export async function readTeamBackupRegistry(registryPath: string): Promise<BackupRegistry> {
   let raw: string;
@@ -89,30 +105,43 @@ export async function loadTeamBackupStartupRegistry(
       continue;
     }
     if (!validTeamName(entry.name)) throw new Error('Invalid backup team directory name');
-    // Existing registry ownership wins. Its malformed manifest fails locally at restore.
-    if (Object.hasOwn(registry.teams, entry.name)) continue;
-    const manifest = await readBackupManifestStrict(
-      path.join(teamsDir, entry.name, 'manifest.json'),
-      entry.name
-    );
+    const current = Object.hasOwn(registry.teams, entry.name)
+      ? registry.teams[entry.name]
+      : undefined;
+    let manifest;
+    try {
+      manifest = await readBackupManifestStrict(
+        path.join(teamsDir, entry.name, 'manifest.json'),
+        entry.name
+      );
+    } catch (error) {
+      // Known ownership keeps a malformed backup for local restore failure.
+      if (current) continue;
+      throw error;
+    }
     if (!manifest) {
+      if (current) continue;
       await quarantineUnownedIncompleteBackupDir(backupsBasePath, teamsDir, entry.name);
       continue;
     }
     if (manifest.identityId !== manifest.identityId.trim()) {
       throw new Error('Invalid backup manifest canonical identity');
     }
+    if (current && current.identityId === manifest.identityId) {
+      continue;
+    }
+    if (
+      current &&
+      current.status !== 'deleted_by_user' &&
+      manifest.lastBackupAt < current.lastBackupAt
+    ) {
+      continue;
+    }
     Object.defineProperty(registry.teams, entry.name, {
       enumerable: true,
       configurable: true,
       writable: true,
-      value: {
-        teamName: manifest.teamName,
-        identityId: manifest.identityId,
-        status: manifest.status,
-        ...(manifest.deletedByUserAt ? { deletedByUserAt: manifest.deletedByUserAt } : {}),
-        lastBackupAt: manifest.lastBackupAt,
-      },
+      value: registryEntryFromManifest(manifest),
     });
   }
   return registry;

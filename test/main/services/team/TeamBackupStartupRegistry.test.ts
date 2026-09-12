@@ -241,6 +241,31 @@ describe('strict backup startup registry', () => {
     expect(registry.teams['sandbox-new']?.identityId).toBe('identity-sandbox-new');
   });
 
+  it('reconciles a replacement manifest when registry still has the deleted predecessor', async () => {
+    const predecessor = {
+      teamName: 'sandbox-known',
+      identityId: 'predecessor-identity',
+      status: 'deleted_by_user' as const,
+      lastBackupAt: '2026-09-11',
+      deletedByUserAt: '2026-09-11',
+    };
+    const replacement = await writeManifest('sandbox-known');
+    await fs.promises.writeFile(
+      path.join(backups(), 'registry.json'),
+      JSON.stringify({
+        version: 1,
+        teams: { 'sandbox-known': predecessor },
+      })
+    );
+    const registry = await loadTeamBackupStartupRegistry(backups());
+    expect(registry.teams['sandbox-known']).toEqual({
+      teamName: replacement.teamName,
+      identityId: replacement.identityId,
+      status: replacement.status,
+      lastBackupAt: replacement.lastBackupAt,
+    });
+  });
+
   it('quarantines an unowned incomplete first-backup directory without blocking startup', async () => {
     const incompleteDir = path.join(backups(), 'teams', 'sandbox-crash');
     await fs.promises.mkdir(incompleteDir, { recursive: true });
