@@ -191,6 +191,53 @@ describe('member work sync renderer', () => {
     });
   });
 
+  it('hides Continue when auto-resume is stopped', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const status = makeStatus({
+      recoveryHealth: {
+        schemaVersion: 1,
+        attentionAt: '2026-04-29T00:20:00.000Z',
+        autoResumeStopLatch: {
+          stoppedAt: '2026-04-29T00:21:00.000Z',
+          reason: 'user_stop',
+          controlRevision: 1,
+        },
+        episodes: [
+          {
+            episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:bob',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncDetails, {
+          status,
+          onContinue: apiMocks.continueManually,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+    expect(host.querySelector('[data-testid="member-work-sync-stopped"]')?.textContent).toContain(
+      'Automatic continuation is stopped'
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('shows a Continue failure next to the details panel', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -17,6 +17,7 @@ export interface MemberWorkSyncStatusViewModel {
   wouldNudge?: boolean;
   attention?: boolean;
   attentionSummary?: string;
+  autoResumeStopped?: boolean;
 }
 
 function describeAgenda(count: number): string {
@@ -68,6 +69,7 @@ export function toMemberWorkSyncStatusViewModel(
   const actionableCount = status.agenda.items.length;
   const report = getMemberWorkSyncAcceptedReport(status);
   const attentionSummary = describeRecoveryAttention(status);
+  const autoResumeStopped = Boolean(status.recoveryHealth?.autoResumeStopLatch);
   const base = {
     actionableCount,
     fingerprint: status.agenda.fingerprint,
@@ -75,6 +77,7 @@ export function toMemberWorkSyncStatusViewModel(
     ...(report?.state ? { reportState: report.state } : {}),
     ...(status.shadow ? { wouldNudge: status.shadow.wouldNudge } : {}),
     ...(attentionSummary ? { attention: true, attentionSummary } : {}),
+    ...(autoResumeStopped ? { autoResumeStopped: true } : {}),
   };
 
   if (attentionSummary) {

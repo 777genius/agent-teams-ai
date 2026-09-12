@@ -86,7 +86,14 @@ export const MemberWorkSyncDetails = ({
           >
             {viewModel.attentionSummary}
           </p>
-          {status && onContinue ? (
+          {viewModel.autoResumeStopped ? (
+            <p
+              className="text-xs text-[var(--color-text-muted)]"
+              data-testid="member-work-sync-stopped"
+            >
+              Automatic continuation is stopped.
+            </p>
+          ) : status && onContinue ? (
             <Button
               type="button"
               variant="outline"

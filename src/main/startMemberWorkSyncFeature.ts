@@ -168,12 +168,13 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   backup: TeamBackupService;
   prepared: MemberWorkSyncFeatureFacade;
   stallObservation: { attach(feature: MemberWorkSyncFeatureFacade): void };
-}): Promise<MemberWorkSyncFeatureFacade> {
+}): Promise<MemberWorkSyncFeatureFacade | null> {
   try {
     await input.backup.initialize();
   } catch (error) {
     startupLogger.warn(`[Init] Team backup initialization failed: ${String(error)}`);
-    return input.prepared;
+    await input.prepared.dispose();
+    return null;
   }
   input.prepared.startBackground();
   input.stallObservation.attach(input.prepared);

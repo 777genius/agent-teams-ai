@@ -363,4 +363,13 @@ describe('registerMemberWorkSyncIpc', () => {
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_CONTINUE);
     expect([...handlers.keys()]).toEqual(['unrelated:channel']);
   });
+
+  it('registers unavailable handlers when work-sync did not start', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    registerMemberWorkSyncIpc(ipcMain, null);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(7);
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_GET_STATUS)?.({}, { teamName: 'team-a', memberName: 'bob' })
+    ).rejects.toThrow(/member_work_sync_unavailable/);
+  });
 });

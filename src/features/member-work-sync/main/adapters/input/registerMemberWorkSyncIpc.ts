@@ -22,6 +22,15 @@ import type { MemberWorkSyncFeatureFacade } from '../../composition/createMember
 import type { IpcMain } from 'electron';
 
 const logger = createLogger('Feature:MemberWorkSync:IPC');
+const MEMBER_WORK_SYNC_IPC_CHANNELS = [
+  MEMBER_WORK_SYNC_GET_STATUS,
+  MEMBER_WORK_SYNC_REFRESH_STATUS,
+  MEMBER_WORK_SYNC_GET_METRICS,
+  MEMBER_WORK_SYNC_REPORT,
+  MEMBER_WORK_SYNC_STOP,
+  MEMBER_WORK_SYNC_RESUME,
+  MEMBER_WORK_SYNC_CONTINUE,
+] as const;
 
 function requireTeamName(teamName: unknown): string {
   const result = validateTeamName(teamName);
@@ -119,8 +128,17 @@ function requireReportRequest(request: MemberWorkSyncReportRequest): MemberWorkS
 
 export function registerMemberWorkSyncIpc(
   ipcMain: IpcMain,
-  feature: MemberWorkSyncFeatureFacade
+  feature: MemberWorkSyncFeatureFacade | null
 ): void {
+  if (!feature) {
+    const unavailable = async () => {
+      throw new Error('member_work_sync_unavailable');
+    };
+    for (const channel of MEMBER_WORK_SYNC_IPC_CHANNELS) {
+      ipcMain.handle(channel, unavailable);
+    }
+    return;
+  }
   ipcMain.handle(
     MEMBER_WORK_SYNC_GET_STATUS,
     async (_event, request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus> => {
@@ -226,11 +244,7 @@ export function registerMemberWorkSyncIpc(
 }
 
 export function removeMemberWorkSyncIpc(ipcMain: IpcMain): void {
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_GET_STATUS);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_REFRESH_STATUS);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_GET_METRICS);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_REPORT);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_STOP);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_RESUME);
-  ipcMain.removeHandler(MEMBER_WORK_SYNC_CONTINUE);
+  for (const channel of MEMBER_WORK_SYNC_IPC_CHANNELS) {
+    ipcMain.removeHandler(channel);
+  }
 }

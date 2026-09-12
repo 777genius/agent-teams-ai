@@ -296,8 +296,8 @@ describe('startPreparedMemberWorkSyncFeature', () => {
         prepared: prepared as never,
         stallObservation: { attach },
       })
-    ).resolves.toBe(prepared);
-    expect(dispose).not.toHaveBeenCalled();
+    ).resolves.toBeNull();
+    expect(dispose).toHaveBeenCalledOnce();
     expect(startBackground).not.toHaveBeenCalled();
     expect(attach).not.toHaveBeenCalled();
     vi.mocked(console.warn).mockClear();
