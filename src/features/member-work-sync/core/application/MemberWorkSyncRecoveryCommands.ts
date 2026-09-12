@@ -189,7 +189,10 @@ export class MemberWorkSyncRecoveryCommands {
                 ...episode,
                 lastEvidenceId: `stall:${input.reason}:${observedAt}`,
                 reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
-                phase: episode.phase === 'expected_wait' ? 'expected_wait' : 'attention',
+                phase:
+                  episode.phase === 'expected_wait'
+                    ? ('expected_wait' as const)
+                    : ('attention' as const),
               }
             : episode
         );
