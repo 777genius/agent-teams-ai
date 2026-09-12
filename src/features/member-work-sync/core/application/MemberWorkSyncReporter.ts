@@ -42,11 +42,13 @@ export class MemberWorkSyncReporter {
 
   async execute(
     request: MemberWorkSyncReportRequest,
-    replay?: MemberWorkSyncReportJournalReplay
+    replay?: MemberWorkSyncReportJournalReplay | { receivedAt: string }
   ): Promise<MemberWorkSyncReportResult> {
     const receivedAt = replay?.receivedAt ?? this.deps.clock.now().toISOString();
+    const journalReplay =
+      replay && 'intentId' in replay && 'incarnation' in replay ? replay : undefined;
     return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
-      this.executeAttempt(request, mutationId, receivedAt, replay)
+      this.executeAttempt(request, mutationId, receivedAt, journalReplay)
     );
   }
 

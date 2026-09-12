@@ -94,9 +94,10 @@ export class MemberWorkSyncPendingReportIntentReplayer {
       source: intent.request.source ?? 'mcp',
     };
     const journal = intent.journal;
-    // Legacy unbound pending never receives a backfilled incarnation or receivedAt.
+    // Legacy unbound pending never receives a backfilled incarnation. Keep the
+    // durable receipt time so a late replay cannot mint a fresh still_working lease.
     if (!journal) {
-      return this.reporter.execute(request);
+      return this.reporter.execute(request, { receivedAt: intent.recordedAt });
     }
     return this.reporter.execute(request, {
       intentId: intent.id,

@@ -497,6 +497,28 @@ liveDescribe('Member work sync recovery live canary', () => {
     providerConnectionService = ProviderConnectionService.getInstance();
     providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
+    const accountSnapshot = (await codexAccountFeature.getSnapshot()) as {
+      launchAllowed?: boolean;
+      launchIssueMessage?: string | null;
+      appServerState?: string | null;
+      requiresOpenaiAuth?: boolean | null;
+      localActiveChatgptAccountPresent?: boolean;
+      localAccountArtifactsPresent?: boolean;
+      managedAccount?: { type?: string } | null;
+    };
+    if (!accountSnapshot.launchAllowed) {
+      throw new Error(
+        [
+          accountSnapshot.launchIssueMessage ?? 'Codex account snapshot is not launchable.',
+          `appServerState=${accountSnapshot.appServerState ?? 'unknown'}`,
+          `requiresOpenaiAuth=${String(accountSnapshot.requiresOpenaiAuth)}`,
+          `localActive=${String(accountSnapshot.localActiveChatgptAccountPresent)}`,
+          `artifacts=${String(accountSnapshot.localAccountArtifactsPresent)}`,
+          `managedType=${accountSnapshot.managedAccount?.type ?? 'none'}`,
+        ].join(' ')
+      );
+    }
+
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
@@ -1297,6 +1319,8 @@ liveDescribe('Member work sync recovery live canary', () => {
           `Then call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and this task id.`,
           'Do not write CANARY.txt in this first turn.',
           'After the report is accepted, stop.',
+          'Only after a later member_work_sync_nudge for remaining work, write CANARY.txt in the project root with exactly: done',
+          'On that remaining-work turn do not report still_working again. Write the file, then complete the task.',
         ].join('\n'),
       });
       feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });

@@ -238,6 +238,49 @@ describe('member work sync renderer', () => {
     });
   });
 
+  it('keeps the attention explanation without Continue when status is not nudgeable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const status = makeStatus({
+      state: 'still_working',
+      recoveryHealth: {
+        schemaVersion: 1,
+        attentionAt: '2026-04-29T00:20:00.000Z',
+        episodes: [
+          {
+            episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+            workKey: 'task-1:bob',
+            taskId: 'task-1',
+            firstObservedAt: '2026-04-29T00:00:00.000Z',
+            dueAt: '2026-04-29T00:20:00.000Z',
+            phase: 'attention',
+            reason: 'no_progress_deadline',
+          },
+        ],
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberWorkSyncDetails, {
+          status,
+          onContinue: apiMocks.continueManually,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-attention"]')?.textContent).toContain(
+      'No confirmed task progress'
+    );
+    expect(host.querySelector('[data-testid="member-work-sync-continue"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('shows a Continue failure next to the details panel', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

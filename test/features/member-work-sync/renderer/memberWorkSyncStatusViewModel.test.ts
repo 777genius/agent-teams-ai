@@ -131,6 +131,33 @@ describe('memberWorkSyncStatusViewModel', () => {
     });
     expect(viewModel.attentionSummary).toContain('Start of work is not confirmed');
     expect(viewModel.tooltip).toContain('Start of work is not confirmed');
+    expect(viewModel.canContinue).toBe(true);
+  });
+
+  it('does not offer Continue when attention survives a non-nudgeable state', () => {
+    const viewModel = toMemberWorkSyncStatusViewModel(
+      makeStatus({
+        state: 'still_working',
+        recoveryHealth: {
+          schemaVersion: 1,
+          episodes: [
+            {
+              episodeId: 'episode:task-1:bob:2026-04-29T00:00:00.000Z',
+              workKey: 'task-1:bob',
+              taskId: 'task-1',
+              firstObservedAt: '2026-04-29T00:00:00.000Z',
+              dueAt: '2026-04-29T00:20:00.000Z',
+              phase: 'attention',
+              reason: 'no_progress_deadline',
+            },
+          ],
+          attentionAt: '2026-04-29T00:20:00.000Z',
+        },
+      })
+    );
+
+    expect(viewModel.attentionSummary).toContain('No confirmed task progress');
+    expect(viewModel.canContinue).toBeUndefined();
   });
 });
 

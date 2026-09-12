@@ -93,7 +93,7 @@ export const MemberWorkSyncDetails = ({
             >
               Automatic continuation is stopped.
             </p>
-          ) : status && onContinue ? (
+          ) : viewModel.canContinue && status && onContinue ? (
             <Button
               type="button"
               variant="outline"

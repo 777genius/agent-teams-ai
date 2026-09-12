@@ -5068,6 +5068,39 @@ describe('MemberWorkSync use cases', () => {
     expect(store.writes.at(-1)?.state).toBe('still_working');
   });
 
+  it('rejects a late unbound still_working replay against the original lease', async () => {
+    const { deps, store } = createDeps();
+    const reader = new MemberWorkSyncReconciler(deps);
+    const current = await reader.execute({ teamName: 'team-a', memberName: 'bob' });
+    store.pendingIntents.set('intent-1', {
+      id: 'intent-1',
+      teamName: 'team-a',
+      memberName: 'bob',
+      status: 'pending',
+      reason: 'control_api_unavailable',
+      recordedAt: '2026-04-29T00:00:01.000Z',
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: current.agenda.fingerprint,
+        reportToken: current.reportToken,
+        leaseTtlMs: 60_000,
+        source: 'mcp',
+      },
+    });
+    (deps.clock as unknown as { set(iso: string): void }).set('2026-04-29T00:10:00.000Z');
+
+    const summary = await new MemberWorkSyncPendingReportIntentReplayer(deps).replayTeam('team-a');
+
+    expect(summary).toEqual({ processed: 1, accepted: 0, rejected: 1, superseded: 0 });
+    expect(store.pendingIntents.get('intent-1')).toMatchObject({
+      status: 'rejected',
+      resultCode: 'report_lease_expired',
+    });
+    expect(store.writes.at(-1)?.state).not.toBe('still_working');
+  });
+
   it('rejects expired fallback reports without substituting a fresh token', async () => {
     const { deps, store } = createDeps();
     const reader = new MemberWorkSyncReconciler(deps);
