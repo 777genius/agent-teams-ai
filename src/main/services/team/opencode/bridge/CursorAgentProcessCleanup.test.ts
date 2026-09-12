@@ -1264,6 +1264,84 @@ describe('the runtime records that prove a root', () => {
   });
 
   /**
+   * The records handed in are a snapshot, and the table scan and start-time
+   * probes between that snapshot and a kill are long enough for the lease set
+   * behind a record to change. A caller that can re-read asks here, in the
+   * moment before the signal, and a no keeps the tree.
+   */
+  it('asks the caller to reconfirm a proven record before the signal, and keeps the tree on a no', async () => {
+    const killTree = vi.fn(reapedTree);
+    const reconfirmAttribution = vi.fn(() => Promise.resolve(false));
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record()],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      reconfirmAttribution,
+      readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+      killTree,
+    });
+
+    expect(reconfirmAttribution).toHaveBeenCalledExactlyOnceWith(record());
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+    expect(result.diagnostics).toContain(
+      'Kept cursor-agent tree pid=10: its record no longer selects for this stop - the host ' +
+        'gained another owner, or the record is gone'
+    );
+  });
+
+  it('reaps that same tree when the caller reconfirms it', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record()],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      reconfirmAttribution: () => Promise.resolve(true),
+      readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+    expect(result.killed).toEqual([10]);
+  });
+
+  /**
+   * A record without the `--workspace` argument proves nothing about a
+   * workspace. The directory the process started in is not a substitute: any
+   * agent launched from that directory would carry the same cwd, and the sweep
+   * would then reap on a command line it was told not to trust.
+   */
+  it('does not let a record without a workspace argument borrow its cwd', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_WRAPPER }]),
+      attributedProcesses: [record({ workspacePath: null, cwd: POSIX_WORKSPACE })],
+      requireAttributionProof: true,
+      allowUnattributedReap: false,
+      readProcessStartTimeMs: startTimes([[10, AGENT_STARTED_AT_MS]]),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+    expect(result.diagnostics).toContain(
+      'Kept cursor-agent tree pid=10: no runtime record names it, and a command line alone is ' +
+        'not attribution'
+    );
+  });
+
+  /**
    * The recycling case the start-time fence could only half close. The table
    * named pid 10 as a lead; the record says what pid 10 was when the runtime
    * spawned it, and the live process disagrees by half a minute.

@@ -127,7 +127,12 @@ export async function proveCursorAgentRootFromAttributionRecords(input: {
         reason: `the runtime records pid=${record.pid} as its own readiness probe`,
       };
     }
-    const workspacePath = record.workspacePath ?? record.cwd;
+    // The workspace is the record's own `--workspace` argument and nothing
+    // else. The directory a process STARTED in is not it: an agent the runtime
+    // spawned for something else, or the user started by hand, sits in
+    // whatever directory it was launched from, and a record without the
+    // argument proves nothing about a workspace.
+    const workspacePath = record.workspacePath;
     if (workspacePath === null) continue;
     if (!input.ownsWorkspacePath(workspacePath)) continue;
     return { outcome: 'proven', record };

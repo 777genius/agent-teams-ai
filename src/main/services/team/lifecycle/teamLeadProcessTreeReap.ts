@@ -47,15 +47,12 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
   cursorAgentAttribution?: CursorAgentAttributionPort;
 }): Promise<{ killedPids: number[]; incomplete: boolean; diagnostics: string[] }> {
-  const attributed = await (
-    input.cursorAgentAttribution ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT
-  ).readAttributedProcesses();
+  const attributionPort = input.cursorAgentAttribution ?? DEFAULT_CURSOR_AGENT_ATTRIBUTION_PORT;
+  const attributed = await attributionPort.readAttributedProcesses();
   // The records this stop is allowed to decide on, and the count of the ones it
   // could actually reap. A runtime that writes none leaves both empty, which is
   // how every branch below stays exactly what it is today.
-  const usableRecords = selectRecordsThisStopMayUse(attributed, input.teamName, [
-    ...input.otherAliveTeams,
-  ]);
+  const usableRecords = selectRecordsThisStopMayUse(attributed, input.teamName);
   const reapableRecords = usableRecords.filter((record) => record.kind === 'cursor-agent').length;
   const attributionNotes =
     attributed.length === 0
@@ -164,8 +161,24 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
     ownedWorkspaceCwds: [workspace],
     startedBeforeMs: input.requestedAtMs ?? Date.now(),
     // Identity written by the spawned process itself, filtered to the records
-    // whose host holds a lease for no OTHER live team.
+    // whose host holds no lease for any OTHER team.
     attributedProcesses: usableRecords,
+    // Asked again in the moment before a proven tree is signalled, from the
+    // records as they are THEN. The selection above is a snapshot, and between
+    // it and the kill this stop reads workspaces, a process table and start
+    // times - long enough for another team to start on the same host and take
+    // a lease the snapshot never saw. A record that no longer selects keeps its
+    // tree; the sweep reports why.
+    reconfirmAttribution: async (record) =>
+      selectRecordsThisStopMayUse(
+        await attributionPort.readAttributedProcesses(),
+        input.teamName
+      ).some(
+        (fresh) =>
+          fresh.attributionId === record.attributionId &&
+          fresh.pid === record.pid &&
+          fresh.startedAtMs === record.startedAtMs
+      ),
     requireAttributionProof: reapableRecords > 0,
     allowUnattributedReap,
     // The env marker separates this app's lead from a `cursor-agent --print` the
@@ -207,19 +220,14 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
 /**
  * The records a stop of this team is allowed to put in front of the sweep.
  *
- * Two questions about the host's lease set, which is what the record joins to.
- *
- * Is every team the recorded host still works for one this stop may clear? It
- * has to be this team, or a team that is not running any more. One live OTHER
- * owner is a veto, because the host that spawned the agent is shared and
- * stopping one of its teams says nothing about the rest. An owner this app
- * cannot even name is a veto for the same reason - a lease it cannot read is
- * not a lease it can clear.
- *
- * And does anything in that set actually name THIS team? "No other live owner"
- * is satisfied by a host whose only owner is a team that stopped an hour ago,
- * and a lead belonging to that team is not this team's to hand to a sweep. So a
- * named owner set travels only when this team is in it.
+ * One question about the host's lease set, which is what the record joins to:
+ * is every lease the recorded host holds this team's own? The set is what the
+ * host holds NOW - the runtime removes a lease from it the moment the lease is
+ * released - so a name in it that is not this team's is a live claim on the
+ * host, whatever the caller's list of running teams says about that team, and
+ * stopping one of a shared host's teams says nothing about the rest. An owner
+ * this app cannot even name is a veto for the same reason: a lease it cannot
+ * read is not a lease it can clear.
  *
  * A validated host with an explicitly empty lease set is the exception. Its
  * record is passed on, and the exact workspace, live start time and shared-
@@ -233,21 +241,14 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
  */
 function selectRecordsThisStopMayUse(
   attributed: readonly AttributedCursorAgentProcess[],
-  teamName: string,
-  otherAliveTeams: readonly string[]
+  teamName: string
 ): readonly CursorAgentAttributionRecord[] {
-  const aliveElsewhere = new Set(otherAliveTeams);
   return attributed
-    .filter((entry) => {
-      if (entry.record.kind === 'readiness-probe') return true;
-      const ownerTeams = entry.owners.map(readOwnerTeam);
-      const noOtherLiveOwner = ownerTeams.every(
-        (ownerTeam) =>
-          ownerTeam !== null && (ownerTeam === teamName || !aliveElsewhere.has(ownerTeam))
-      );
-      if (!noOtherLiveOwner) return false;
-      return ownerTeams.length === 0 || ownerTeams.includes(teamName);
-    })
+    .filter(
+      (entry) =>
+        entry.record.kind === 'readiness-probe' ||
+        entry.owners.map(readOwnerTeam).every((ownerTeam) => ownerTeam === teamName)
+    )
     .map((entry) => entry.record);
 }
 
@@ -256,10 +257,14 @@ function selectRecordsThisStopMayUse(
  *
  * The lease set is written by the runtime, which carries ONE team field per
  * owner - `teamId` - and this app is what fills it, with the team NAME it
- * launched under. `teamName` is the second spelling of the same thing, read
- * first so a writer that supplies both is taken at its word rather than by
- * position.
+ * launched under. `teamName` is the second spelling of the same thing. A writer
+ * that supplies both has to agree with itself: an entry naming one team in one
+ * field and another in the other is not "the first one", it is an owner this
+ * app cannot name - and, above, a claim it cannot clear.
  */
 function readOwnerTeam(owner: CursorAgentAttributionOwner): string | null {
-  return owner.teamName ?? owner.teamId;
+  const teamName = owner.teamName?.trim() || null;
+  const teamId = owner.teamId?.trim() || null;
+  if (teamName !== null && teamId !== null && teamName !== teamId) return null;
+  return teamName ?? teamId;
 }

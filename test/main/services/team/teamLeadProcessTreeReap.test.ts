@@ -8,11 +8,13 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   AttributedCursorAgentProcess,
   CursorAgentAttributionOwner,
+  CursorAgentAttributionRecord,
 } from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
 
 interface CursorAgentSweepInput {
   ownedWorkspaceCwds: readonly string[];
   startedBeforeMs?: number | null;
+  reconfirmAttribution?: (record: CursorAgentAttributionRecord) => Promise<boolean>;
 }
 interface CursorAgentSweepOutcome {
   scanned: number;
@@ -135,6 +137,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
       // owns, so an orphan-only fence would spare the lead for being exactly
       // what it is.
       orphanedOnly: false,
+      reconfirmAttribution: expect.any(Function),
       // Nothing recorded here, so the sweep is asked for exactly what it did
       // before records existed: the command-line path this operator switch
       // admits.
@@ -222,6 +225,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
       // owns, so an orphan-only fence would spare the lead for being exactly
       // what it is.
       orphanedOnly: false,
+      reconfirmAttribution: expect.any(Function),
       // Nothing recorded here, so the sweep is asked for exactly what it did
       // before records existed: the command-line path this operator switch
       // admits.
@@ -254,6 +258,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
       // owns, so an orphan-only fence would spare the lead for being exactly
       // what it is.
       orphanedOnly: false,
+      reconfirmAttribution: expect.any(Function),
       // Nothing recorded here, so the sweep is asked for exactly what it did
       // before records existed: the command-line path this operator switch
       // admits.
@@ -374,9 +379,10 @@ describe('a live team whose directory cannot be told apart on a command line', (
  * teams and stopping one of them says nothing about the rest.
  */
 describe('the positive attribution records the runtime writes', () => {
+  /** An owner carrying both spellings of the team, agreeing with itself. */
   function owner(teamName: string | null): CursorAgentAttributionOwner {
     return {
-      teamId: teamName === null ? null : `${teamName}-id`,
+      teamId: teamName,
       teamName,
       laneId: 'primary',
       memberName: 'lead',
@@ -471,8 +477,8 @@ describe('the positive attribution records the runtime writes', () => {
     });
     const workspaceRead = vi
       .spyOn(teamProjectWorkspaces, 'readTeamProjectWorkspace')
-      .mockImplementation(async (_basePath, teamName) =>
-        teamName === 'team-a' ? workspace : null
+      .mockImplementation((_basePath, teamName) =>
+        Promise.resolve(teamName === 'team-a' ? workspace : null)
       );
     try {
       const { readAttributedCursorAgentProcesses } = await vi.importActual<
@@ -569,6 +575,7 @@ describe('the positive attribution records the runtime writes', () => {
       requireOwnershipProof: false,
       orphanedOnly: false,
       attributedProcesses: [mine.record],
+      reconfirmAttribution: expect.any(Function),
       requireAttributionProof: true,
       // The operator never turned the command-line path on, and a record does
       // not need them to.
@@ -846,6 +853,102 @@ describe('the positive attribution records the runtime writes', () => {
     expect(result.diagnostics.join(' ')).toContain(
       'so only a tree the runtime recorded for this team is reaped'
     );
+  });
+
+  /**
+   * One owner entry, two spellings, two different teams: not "the first one".
+   * A writer that disagrees with itself is an owner this app cannot name, and
+   * the lease it stands for is not one this stop can clear - even when the
+   * spelling read first is this team's own.
+   */
+  it('withholds an owner whose two spellings name different teams', async () => {
+    writeTeamConfig('spelledteam', { projectPath: 'C:\\workspaces\\example' });
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [{ ...runtimeOwner('some-other-team'), teamName: 'spelledteam' }]),
+    ]);
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'spelledteam',
+      otherAliveTeams: [],
+      requestedAtMs: 1_700_000_000_000,
+      cursorAgentTreeSweep: recordOnlyPort,
+    });
+
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(result.diagnostics[0]).toBe(
+      'cursor-agent attribution: 1 runtime process record(s) available, 0 this stop may reap'
+    );
+  });
+
+  /**
+   * The lease set is what the host holds now, and a released lease leaves it.
+   * A second name in it is therefore a live claim whether or not the caller's
+   * snapshot of running teams has caught up - and the snapshot is exactly what
+   * a team that started while this stop was already in flight is missing from.
+   */
+  it('withholds a host leased by a team the caller does not yet know is running', async () => {
+    writeTeamConfig('stoppingteam', { projectPath: 'C:\\workspaces\\example' });
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [runtimeOwner('stoppingteam'), runtimeOwner('newcomer')]),
+    ]);
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'stoppingteam',
+      otherAliveTeams: [],
+      requestedAtMs: 1_700_000_000_000,
+      cursorAgentTreeSweep: recordOnlyPort,
+    });
+
+    expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+    expect(result.killedPids).toEqual([]);
+    expect(result.diagnostics[0]).toBe(
+      'cursor-agent attribution: 1 runtime process record(s) available, 0 this stop may reap'
+    );
+  });
+
+  /**
+   * And the moment before the signal, the lease set is read again rather than
+   * trusted from the selection made before the process table was scanned. A
+   * host that gained another team's lease in between, or a record that is gone,
+   * answers no; the same record under the same single lease answers yes.
+   */
+  it('re-reads the lease set for the sweep in the moment before it signals', async () => {
+    writeTeamConfig('rereadteam', { projectPath: 'C:\\workspaces\\example' });
+    const mine = attributedProcess(4321, [runtimeOwner('rereadteam')]);
+    readAttributedProcesses.mockResolvedValueOnce([mine]);
+    let reconfirm: ((record: CursorAgentAttributionRecord) => Promise<boolean>) | undefined;
+    sweepCursorAgentTrees.mockImplementationOnce((input) => {
+      reconfirm = input.reconfirmAttribution;
+      return Promise.resolve({
+        scanned: 1,
+        killed: [],
+        keptRecent: [],
+        incomplete: false,
+        diagnostics: [],
+      });
+    });
+
+    await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'rereadteam',
+      otherAliveTeams: [],
+      requestedAtMs: 1_700_000_000_000,
+      cursorAgentTreeSweep: recordOnlyPort,
+    });
+    expect(reconfirm).toBeTypeOf('function');
+    expect(readAttributedProcesses).toHaveBeenCalledTimes(1);
+
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [runtimeOwner('rereadteam'), runtimeOwner('newcomer')]),
+    ]);
+    await expect(reconfirm!(mine.record)).resolves.toBe(false);
+    readAttributedProcesses.mockResolvedValueOnce([]);
+    await expect(reconfirm!(mine.record)).resolves.toBe(false);
+    readAttributedProcesses.mockResolvedValueOnce([
+      attributedProcess(4321, [runtimeOwner('rereadteam')]),
+    ]);
+    await expect(reconfirm!(mine.record)).resolves.toBe(true);
+    // Each answer came from a fresh read, never from the selection above.
+    expect(readAttributedProcesses).toHaveBeenCalledTimes(4);
   });
 
   /** And the veto stands when the only record belongs to the live neighbour. */

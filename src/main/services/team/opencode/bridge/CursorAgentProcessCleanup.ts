@@ -148,6 +148,15 @@ export interface CursorAgentProcessCleanupOptions {
    * before records existed keeps exactly the behaviour they turned on.
    */
   allowUnattributedReap?: boolean;
+  /**
+   * Asked about a proven record in the moment before its tree is signalled.
+   *
+   * The records handed in are a snapshot, and the sweep reads a process table
+   * and probes start times before it reaches a kill - long enough for the
+   * lease set behind a record to change. A caller that can re-read the records
+   * answers here whether this one still selects; `false` keeps the tree.
+   */
+  reconfirmAttribution?: (record: CursorAgentAttributionRecord) => Promise<boolean>;
   readProcessDetails?: (pid: number) => Promise<string | null>;
   readProcessStartTimeMs?: (pid: number) => Promise<number | null>;
   listProcessRows?: () => Promise<RuntimeProcessTableRow[]>;
@@ -199,6 +208,7 @@ export interface CursorAgentTreeSweepPort {
     attributedProcesses?: readonly CursorAgentAttributionRecord[];
     requireAttributionProof?: boolean;
     allowUnattributedReap?: boolean;
+    reconfirmAttribution?: (record: CursorAgentAttributionRecord) => Promise<boolean>;
   }): Promise<CursorAgentProcessCleanupResult>;
 }
 
@@ -657,6 +667,24 @@ export async function cleanupCursorAgentProcessTrees(
           `cursor-agent tree pid=${row.pid}: ownership marker unavailable, falling back to the ` +
             'command line and the time fence'
         );
+      }
+    }
+    if (attribution.outcome === 'proven' && options.reconfirmAttribution) {
+      // Ownership, re-read now rather than trusted from the snapshot: the lease
+      // set behind this record may have gained another team while the table
+      // was read and the start times probed. It sits before the time fence, not
+      // after it, so the pid identity check stays the last thing before the
+      // signal - the mistake that one prevents kills a stranger's process, and
+      // this one only ever keeps a tree.
+      const stillOwned = await options.reconfirmAttribution(attribution.record);
+      if (options.canAdmitStartupWork?.() === false) break;
+      if (!stillOwned) {
+        result.keptRecent.push(row.pid);
+        result.diagnostics.push(
+          `Kept cursor-agent tree pid=${row.pid}: its record no longer selects for this stop - ` +
+            'the host gained another owner, or the record is gone'
+        );
+        continue;
       }
     }
     if (startedBeforeMs !== null) {
