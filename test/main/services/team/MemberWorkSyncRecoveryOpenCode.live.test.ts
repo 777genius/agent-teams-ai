@@ -19,7 +19,6 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   FatalWaitError,
@@ -107,13 +106,14 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     const memberName = 'bob';
     teamName = `member-work-sync-recovery-opencode-${Date.now()}`;
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
     harness = await createOpenCodeLiveHarness({
       tempDir,
       selectedModel,
       projectPath,
       configureServices: (svc) => {
         feature = createMemberWorkSyncFeature({
-          lifecycleIdentity: createTestWorkSyncIdentity('inc-a'),
+          lifecycleIdentity,
           teamsBasePath: getTeamsBasePath(),
           recoveryAllocation: { enabled: false },
           configReader: new TeamConfigReader(),
@@ -184,7 +184,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     await feature!.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
     await feature!.dispose();
     feature = createMemberWorkSyncFeature({
-      lifecycleIdentity: createTestWorkSyncIdentity('inc-a'),
+      lifecycleIdentity,
       teamsBasePath: getTeamsBasePath(),
       recoveryAllocation: { enabled: false },
       configReader: new TeamConfigReader(),

@@ -14,7 +14,6 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -239,9 +238,10 @@ liveDescribe('Member work sync recovery live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const createFeature = (incarnation: string) =>
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = () =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        lifecycleIdentity,
         teamsBasePath: getTeamsBasePath(),
         recoveryAllocation: { enabled: false },
         configReader: new TeamConfigReader(),
@@ -254,7 +254,7 @@ liveDescribe('Member work sync recovery live canary', () => {
         resolveControlUrl: async () => controlServer?.baseUrl ?? null,
       });
 
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
       feature!.buildRuntimeTurnSettledEnvironment(input)
@@ -313,7 +313,7 @@ liveDescribe('Member work sync recovery live canary', () => {
 
     await feature.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
     await feature.dispose();
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
 
@@ -405,9 +405,10 @@ liveDescribe('Member work sync recovery live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const createFeature = (incarnation: string, options: { busy?: boolean } = {}) =>
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = (options: { busy?: boolean } = {}) =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        lifecycleIdentity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
@@ -443,7 +444,7 @@ liveDescribe('Member work sync recovery live canary', () => {
           : {}),
       });
 
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
       feature!.buildRuntimeTurnSettledEnvironment(input)
@@ -516,7 +517,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     const status = await feature.refreshStatus({ teamName, memberName });
     expect(status.agenda.items.some((item) => item.taskId === task.id)).toBe(true);
 
-    const busyFeature = createFeature('inc-a', { busy: true });
+    const busyFeature = createFeature({ busy: true });
     try {
       await expect(
         busyFeature.continueManually({
@@ -742,9 +743,9 @@ liveDescribe('Member work sync recovery live canary', () => {
         prompt: [
           `This is a live recovery canary. Marker: ${marker}.`,
           'Do not edit files and do not complete this task in the first still_working turn.',
-          'Call task_start for this task.',
-          `Then call member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
-          `Then call member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by member_work_sync_status, and this task id.`,
+          'Call mcp__agent-teams__task_start (or task_start) for this task.',
+          `Then call mcp__agent-teams__member_work_sync_status (or member_work_sync_status) with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+          `Then call mcp__agent-teams__member_work_sync_report (or member_work_sync_report) with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken returned by status, and this task id.`,
           'Do not write CANARY.txt in this first turn.',
           'After the report is accepted, stop.',
         ].join('\n'),
@@ -767,6 +768,21 @@ liveDescribe('Member work sync recovery live canary', () => {
 
       await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
       await activeService.relayLeadInboxMessages(teamName).catch(() => 0);
+      await activeService.sendMessageToTeam(
+        teamName,
+        [
+          `Live recovery canary instruction. Marker: ${marker}.`,
+          'For Agent Teams task and work-sync tools in this Codex-native handoff, call the exposed MCP tool directly.',
+          'If tool search exposes prefixed names, use mcp__agent-teams__task_get, mcp__agent-teams__task_start, mcp__agent-teams__member_work_sync_status, and mcp__agent-teams__member_work_sync_report.',
+          'Do not run shell searches just to discover these tools.',
+          `Call mcp__agent-teams__task_start for this task.`,
+          `Then call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${memberName}", and controlUrl "${controlServer.baseUrl}".`,
+          `Then call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${memberName}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and taskIds ["${task.id}"].`,
+          'Do not write CANARY.txt in this first turn.',
+          'Do not complete this task.',
+          'After the report is accepted, stop.',
+        ].join('\n')
+      );
 
       await waitUntil(
         async () => {

@@ -15,7 +15,6 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 import { createSandboxWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createSandboxWorkSyncIdentity';
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -233,9 +232,10 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     svc = new TeamProvisioningService();
     const activeService = svc;
     const teamDataService = new TeamDataService();
-    const createFeature = (incarnation: string) =>
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = () =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        lifecycleIdentity,
         teamsBasePath: getTeamsBasePath(),
         recoveryAllocation: { enabled: false },
         configReader: new TeamConfigReader(),
@@ -248,7 +248,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
         resolveControlUrl: async () => controlServer?.baseUrl ?? null,
       });
 
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     activeService.setRuntimeTurnSettledHookSettingsProvider((input) =>
       feature!.buildRuntimeTurnSettledHookSettings(input)
@@ -304,7 +304,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
 
     await feature.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
     await feature.dispose();
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
 
@@ -360,9 +360,10 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
 
     svc = new TeamProvisioningService();
     const activeService = svc;
-    const createFeature = (incarnation: string) =>
+    const lifecycleIdentity = createSandboxWorkSyncIdentity();
+    const createFeature = () =>
       createMemberWorkSyncFeature({
-        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        lifecycleIdentity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
@@ -376,7 +377,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
         queueQuietWindowMs: 500,
       });
 
-    feature = createFeature('inc-a');
+    feature = createFeature();
     activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
     activeService.setRuntimeTurnSettledHookSettingsProvider((input) =>
       feature!.buildRuntimeTurnSettledHookSettings(input)
@@ -453,7 +454,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
 
     await feature.dispose();
     await controlServer.close().catch(() => undefined);
-    feature = createFeature('inc-a');
+    feature = createFeature();
     controlServer = await startMemberWorkSyncControlServer(feature);
     process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
     activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
