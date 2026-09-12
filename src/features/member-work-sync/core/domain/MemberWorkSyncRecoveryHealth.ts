@@ -7,9 +7,17 @@ import type {
 } from '../../contracts';
 
 export const MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS = 20 * 60_000;
+export const MEMBER_WORK_SYNC_MAX_AUTOMATIC_CONTINUATIONS = 2;
 
-export function recoveryWorkKey(input: { taskId: string; assignee: string }): string {
-  return `${input.taskId.trim()}:${input.assignee.trim().toLowerCase()}`;
+export function recoveryWorkKey(input: {
+  taskId: string;
+  assignee: string;
+  reviewCycleId?: string;
+}): string {
+  const cycle = input.reviewCycleId?.trim();
+  return cycle
+    ? `${input.taskId.trim()}:${input.assignee.trim().toLowerCase()}:${cycle}`
+    : `${input.taskId.trim()}:${input.assignee.trim().toLowerCase()}`;
 }
 
 export class MemberWorkSyncRecoveryHealthError extends Error {
@@ -203,6 +211,7 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
     kind: string;
     reason: string;
     evidenceStatus?: string;
+    reviewCycleId?: string;
   }[];
   expectedWaiting: boolean;
   memberBusy?: boolean | 'unknown';

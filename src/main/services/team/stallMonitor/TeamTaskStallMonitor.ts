@@ -367,6 +367,9 @@ export class TeamTaskStallMonitor {
     const routableAlerts = [...ownerAlerts, ...leadOnlyAlerts];
 
     const alertedEpochKeys = new Set<string>();
+    if (alerts.length > 0) {
+      await this.notifier.recordWorkSyncObservations?.(teamName, alerts);
+    }
     if (openCodeRemediationEnabled && ownerAlerts.length > 0) {
       const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, ownerAlerts);
       if (!this.shouldContinueScan(scanRun)) {

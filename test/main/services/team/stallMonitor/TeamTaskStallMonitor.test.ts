@@ -138,6 +138,83 @@ describe('TeamTaskStallMonitor', () => {
     expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
+  it('records work-sync stall observations when OpenCode remediation is disabled', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_OPENCODE_TASK_STALL_REMEDIATION_ENABLED', 'false');
+
+    const registry = {
+      start: vi.fn(),
+      stop: vi.fn(async () => undefined),
+      noteTeamChange: vi.fn(),
+      listActiveTeams: vi.fn(async () => ['demo']),
+    };
+    const snapshot = {
+      teamName: 'demo',
+      inProgressTasks: [{ id: 'task-a', displayId: 'abcd1234', subject: 'Task A' }],
+      reviewOpenTasks: [],
+      allTasksById: new Map([
+        ['task-a', { id: 'task-a', displayId: 'abcd1234', subject: 'Task A' }],
+      ]),
+    };
+    const snapshotSource = {
+      getSnapshot: vi.fn(async () => snapshot),
+    };
+    const policy = {
+      evaluateWork: vi.fn(() => ({
+        status: 'alert',
+        taskId: 'task-a',
+        branch: 'work',
+        signal: 'turn_ended_after_touch',
+        epochKey: 'work-a:epoch',
+        reason: 'Potential work stall.',
+      })),
+      evaluateReview: vi.fn(),
+    };
+    const journal = {
+      reconcileScan: vi
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            status: 'alert',
+            taskId: 'task-a',
+            branch: 'work',
+            signal: 'turn_ended_after_touch',
+            epochKey: 'work-a:epoch',
+            reason: 'Potential work stall.',
+          },
+        ]),
+      markAlerted: vi.fn(async () => undefined),
+    };
+    const notifier = {
+      notifyLead: vi.fn(async () => undefined),
+      notifyOpenCodeOwners: vi.fn(async () => []),
+      recordWorkSyncObservations: vi.fn(async () => undefined),
+    };
+
+    const monitor = new TeamTaskStallMonitor(
+      registry as never,
+      snapshotSource as never,
+      policy as never,
+      journal as never,
+      notifier as never
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(2_100);
+    await vi.advanceTimersByTimeAsync(2_100);
+
+    expect(notifier.notifyOpenCodeOwners).not.toHaveBeenCalled();
+    expect(notifier.recordWorkSyncObservations).toHaveBeenCalledWith(
+      'demo',
+      expect.arrayContaining([expect.objectContaining({ taskId: 'task-a' })])
+    );
+    expect(notifier.notifyLead).toHaveBeenCalledTimes(1);
+  });
+
   it('journals a lead rung it could not send because lead alerts are disabled', async () => {
     // Without this, `priorAlertCount` never moves: the pickup ladder stays on
     // the lead rung for the rest of the run, rebuilding the same alert on every

@@ -141,6 +141,7 @@ export class MemberWorkSyncReconciler {
         kind: item.kind,
         reason: item.reason,
         evidenceStatus: item.evidence.status,
+        ...(item.evidence.reviewCycleId ? { reviewCycleId: item.evidence.reviewCycleId } : {}),
       })),
       expectedWaiting:
         agenda.items.length > 0 && agenda.items.every((item) => item.kind === 'blocked_dependency'),

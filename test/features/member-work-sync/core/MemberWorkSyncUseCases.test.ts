@@ -23,6 +23,8 @@ import {
   recordMemberWorkSyncDispatchOutcome,
   retireMemberWorkSyncRecoveryIntent,
 } from '@features/member-work-sync/core/application';
+import { reserveMemberWorkSyncRecoveryIntent } from '@features/member-work-sync/core/application/MemberWorkSyncRecoveryAllocator';
+import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -2359,6 +2361,64 @@ describe('MemberWorkSync use cases', () => {
     ).rejects.toMatchObject({ name: 'MemberWorkSyncStallEpisodeMissingError' });
     expect(await store.read()).toEqual(before);
     expect(before?.recoveryHealth?.attentionAt).toBeUndefined();
+  });
+
+  it('refuses a third automatic continuation for the same recovery episode', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const episodeId = status.recoveryHealth?.episodes[0]?.episodeId;
+    expect(episodeId).toBeTruthy();
+    outbox.items.clear();
+    store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: status.recoveryHealth?.episodes ?? [],
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'auto-1',
+            episodeId: episodeId!,
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'resolved',
+            payloadHash: 'h1',
+            controlRevision: 1,
+          },
+          {
+            intentId: 'auto-2',
+            episodeId: episodeId!,
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'resolved',
+            payloadHash: 'h2',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const current = (await store.read()) ?? status;
+    const recoveryInput = buildMemberWorkSyncOutboxEnsureInput({
+      status: current,
+      hash: deps.hash,
+      nowIso: deps.clock.now().toISOString(),
+    });
+    expect(recoveryInput).toBeTruthy();
+    const reserved = await reserveMemberWorkSyncRecoveryIntent({
+      deps,
+      status: current,
+      recoveryInput: recoveryInput!,
+      trigger: 'automatic',
+    });
+    expect(reserved).toEqual({ ok: false, code: 'slot_occupied' });
   });
 
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {

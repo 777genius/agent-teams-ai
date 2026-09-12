@@ -39,7 +39,7 @@ describe('TeamTaskStallNotifier', () => {
       { record }
     );
 
-    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
+    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
     expect(record).toHaveBeenCalledWith({
       teamName: 'demo',
       memberName: 'alice',
@@ -62,7 +62,7 @@ describe('TeamTaskStallNotifier', () => {
     );
 
     await expect(
-      notifier.notifyOpenCodeOwners('demo', [
+      notifier.recordWorkSyncObservations('demo', [
         createAlert({
           branch: 'review',
           owner: 'alice',
@@ -70,7 +70,7 @@ describe('TeamTaskStallNotifier', () => {
           reason: 'Potential started-review stall after turn ended after touch.',
         }),
       ])
-    ).resolves.toEqual([]);
+    ).resolves.toBeUndefined();
     expect(record).toHaveBeenCalledWith({
       teamName: 'demo',
       memberName: 'carol',

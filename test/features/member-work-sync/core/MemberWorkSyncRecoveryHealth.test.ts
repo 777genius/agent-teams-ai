@@ -140,4 +140,40 @@ describe('member work sync recovery health observation', () => {
     expect(later?.episodes[0]?.firstObservedAt).toBe(started?.episodes[0]?.firstObservedAt);
     expect(later?.episodes[0]?.phase).toBe('observing');
   });
+
+  it('starts a new recovery episode when the review cycle changes', () => {
+    const review = {
+      taskId: 'task-a',
+      assignee: 'carol',
+      kind: 'review',
+      reason: 'review_open',
+      reviewCycleId: 'cycle-1',
+    };
+    const first = observeMemberWorkSyncRecoveryHealth({
+      nowIso: '2026-09-11T00:00:00.000Z',
+      nowMs: Date.parse('2026-09-11T00:00:00.000Z'),
+      items: [review],
+      expectedWaiting: false,
+    });
+    const overdueMs =
+      Date.parse('2026-09-11T00:00:00.000Z') + MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS + 1;
+    const overdue = observeMemberWorkSyncRecoveryHealth({
+      previous: first,
+      nowIso: new Date(overdueMs).toISOString(),
+      nowMs: overdueMs,
+      items: [review],
+      expectedWaiting: false,
+    });
+    expect(overdue?.episodes[0]?.phase).toBe('attention');
+    const nextCycle = observeMemberWorkSyncRecoveryHealth({
+      previous: overdue,
+      nowIso: new Date(overdueMs + 60_000).toISOString(),
+      nowMs: overdueMs + 60_000,
+      items: [{ ...review, reviewCycleId: 'cycle-2' }],
+      expectedWaiting: false,
+    });
+    expect(nextCycle?.episodes[0]?.workKey).not.toBe(overdue?.episodes[0]?.workKey);
+    expect(nextCycle?.episodes[0]?.phase).toBe('observing');
+    expect(nextCycle?.episodes[0]?.firstObservedAt).toBe(new Date(overdueMs + 60_000).toISOString());
+  });
 });

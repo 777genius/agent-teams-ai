@@ -48,13 +48,11 @@ export class TeamTaskStallNotifier {
   }
 
   /**
-   * Stall observations stay with member-work-sync. Automatic owner work/no-start
-   * commands are not sent from this watchdog, including OpenCode relay.
+   * Stall observations stay with member-work-sync even when OpenCode owner
+   * remediation is switched off. Automatic owner work/no-start commands are
+   * not sent from this watchdog.
    */
-  async notifyOpenCodeOwners(
-    teamName: string,
-    alerts: TaskStallAlert[]
-  ): Promise<TaskStallAlert[]> {
+  async recordWorkSyncObservations(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
     const observedAt = new Date().toISOString();
     for (const alert of alerts) {
       const memberName = (alert.branch === 'review' ? alert.reviewer : alert.owner)?.trim();
@@ -75,6 +73,12 @@ export class TeamTaskStallNotifier {
         );
       }
     }
+  }
+
+  async notifyOpenCodeOwners(
+    teamName: string,
+    alerts: TaskStallAlert[]
+  ): Promise<TaskStallAlert[]> {
     if (alerts.length > 0) {
       logger.debug(
         `Task stall observations for ${teamName} are owned by member-work-sync; skipping automatic owner work commands (${alerts.length})`

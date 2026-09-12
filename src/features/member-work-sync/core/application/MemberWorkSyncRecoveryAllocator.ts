@@ -1,4 +1,5 @@
 import { attachMemberWorkSyncRecoveryReservation } from '../domain/MemberWorkSyncRecoveryControl';
+import { MEMBER_WORK_SYNC_MAX_AUTOMATIC_CONTINUATIONS } from '../domain/MemberWorkSyncRecoveryHealth';
 import { findMemberWorkSyncCompactWitness } from '../domain/MemberWorkSyncRecoveryTerminal';
 
 import {
@@ -57,6 +58,15 @@ export async function reserveMemberWorkSyncRecoveryIntent(input: {
       return { ok: false, code: 'slot_occupied' };
     }
     const nowIso = input.deps.clock.now().toISOString();
+    const episodeId = current.recoveryHealth?.episodes[0]?.episodeId ?? `recovery:${nowIso}`;
+    if (input.trigger === 'automatic') {
+      const automaticAttempts = (current.recoveryHealth?.reservations ?? []).filter(
+        (reservation) => reservation.trigger === 'automatic' && reservation.episodeId === episodeId
+      ).length;
+      if (automaticAttempts >= MEMBER_WORK_SYNC_MAX_AUTOMATIC_CONTINUATIONS) {
+        return { ok: false, code: 'slot_occupied' };
+      }
+    }
     const controlRevision =
       current.recoveryHealth?.controlRevision ??
       current.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
@@ -67,7 +77,7 @@ export async function reserveMemberWorkSyncRecoveryIntent(input: {
         previous: current.recoveryHealth,
         reservation: {
           intentId: input.recoveryInput.id,
-          episodeId: current.recoveryHealth?.episodes[0]?.episodeId ?? `recovery:${nowIso}`,
+          episodeId,
           trigger: input.trigger,
           reservedAt: nowIso,
           state: 'reserved',
