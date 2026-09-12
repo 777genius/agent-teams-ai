@@ -806,6 +806,43 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('retries turn-settled reconcile after backup quiescence instead of dropping it', async () => {
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath: path.join(makeTempRoot(), 'teams'),
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          teamName: 'team-a',
+          members: [{ name: 'bob' }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: { getState: vi.fn(async () => null) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      operationGate: gate,
+      queueQuietWindowMs: 1,
+    });
+    try {
+      const closure = gate.beginOwnedTeamQuiesce('team-a');
+      feature.noteTeamChange({
+        type: 'member-turn-settled',
+        teamName: 'team-a',
+        detail: JSON.stringify({ memberName: 'bob' }),
+      });
+      await waitForAssertion(() => {
+        const diagnostics = feature.getQueueDiagnostics();
+        expect(diagnostics.reconciled).toBe(0);
+        expect(diagnostics.failed).toBeGreaterThanOrEqual(1);
+        expect(diagnostics.dropped).toBe(0);
+        expect(diagnostics.queued + diagnostics.running).toBeGreaterThan(0);
+      });
+      closure.release();
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('rejects a late turn-settled enqueue after bounded scheduler disposal', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);

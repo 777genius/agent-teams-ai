@@ -29,6 +29,7 @@ import {
   formatMemberWorkSyncDiagnostics,
   formatProgressDump,
   type MemberWorkSyncLiveControlServer,
+  reportWithConflictRetry,
   restoreEnv,
   startMemberWorkSyncControlServer,
   throwIfClaudeTranscriptApiError,
@@ -952,7 +953,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     }
     expect(secondToken).not.toBe(firstToken);
     await expect(
-      feature.report({
+      reportWithConflictRetry(feature, {
         teamName,
         memberName: TEAMMATE_NAME,
         state: 'caught_up',
@@ -975,7 +976,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     }
     const t2HasWork = t2Status.agenda.items.length > 0;
     await expect(
-      feature.report({
+      reportWithConflictRetry(feature, {
         teamName,
         memberName: TEAMMATE_NAME,
         state: t2HasWork ? 'still_working' : 'caught_up',

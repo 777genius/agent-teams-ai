@@ -1,8 +1,10 @@
-import type {
-  MemberWorkSyncAuditEvent,
-  MemberWorkSyncAuditJournalPort,
-  MemberWorkSyncLoggerPort,
+import {
+  type MemberWorkSyncAuditEvent,
+  type MemberWorkSyncAuditJournalPort,
+  type MemberWorkSyncLoggerPort,
+  MemberWorkSyncTeamQuiescedError,
 } from '../../core/application';
+
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
 
 export type MemberWorkSyncTriggerReason =
@@ -460,18 +462,24 @@ export class MemberWorkSyncEventQueue {
           this.activeKeys.delete(key);
           this.pump();
           void settlePromise.finally(() => {
-            this.finishItem(key, item, running, failed);
+            this.finishItem(key, item, running, failed, failure);
           });
           return;
         }
-        this.finishItem(key, item, running, failed);
+        this.finishItem(key, item, running, failed, failure);
       });
 
     this.inFlight.add(promise);
     this.addTrackedPromise(this.inFlightByTeam, item.teamName, promise);
   }
 
-  private finishItem(key: string, item: QueueItem, running: RunningItem, failed: boolean): void {
+  private finishItem(
+    key: string,
+    item: QueueItem,
+    running: RunningItem,
+    failed: boolean,
+    failure: unknown
+  ): void {
     if (this.running.get(key) !== running) {
       return;
     }
@@ -480,13 +488,19 @@ export class MemberWorkSyncEventQueue {
     if (running.rerunRequested && !this.stopped && !this.quiescedTeams.has(item.teamName)) {
       this.enqueueFollowUp(item, running);
     } else if (failed && !this.stopped) {
-      this.enqueueRetryAfterFailure(key, item, running);
+      this.enqueueRetryAfterFailure(key, item, running, failure);
     }
     this.pump();
   }
 
-  private enqueueRetryAfterFailure(key: string, item: QueueItem, running: RunningItem): void {
-    if (item.retryCount >= this.maxRetryAttempts) {
+  private enqueueRetryAfterFailure(
+    key: string,
+    item: QueueItem,
+    running: RunningItem,
+    failure: unknown
+  ): void {
+    const quiesced = failure instanceof MemberWorkSyncTeamQuiescedError;
+    if (!quiesced && item.retryCount >= this.maxRetryAttempts) {
       this.counters.dropped += 1;
       this.appendAudit({
         teamName: item.teamName,
@@ -504,7 +518,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     const now = this.now();
-    const retryCount = item.retryCount + 1;
+    const retryCount = quiesced ? item.retryCount : item.retryCount + 1;
     const recovery = running.recovery ?? item.recovery;
     this.items.set(key, {
       ...item,
@@ -521,7 +535,7 @@ export class MemberWorkSyncEventQueue {
       memberName: item.memberName,
       event: 'queue_retry_scheduled',
       source: 'event_queue',
-      reason: 'reconcile_failed',
+      reason: quiesced ? 'team_quiesced' : 'reconcile_failed',
       triggerReasons: [...running.triggerReasons].sort(),
       metadata: {
         retryCount,

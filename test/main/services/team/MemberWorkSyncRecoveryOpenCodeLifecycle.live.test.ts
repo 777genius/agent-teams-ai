@@ -35,6 +35,7 @@ import {
   FatalWaitError,
   formatProgressDump,
   readMemberWorkSyncOutboxItems,
+  reportWithConflictRetry,
   waitUntil,
 } from './memberWorkSyncLiveHarness';
 import {
@@ -195,7 +196,7 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
       throw new Error('expected report token after recreate');
     }
     await expect(
-      feature!.report({
+      reportWithConflictRetry(feature!, {
         teamName,
         memberName,
         state: 'caught_up',
@@ -214,7 +215,7 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     }
     const t2HasWork = t2Status.agenda.items.length > 0;
     await expect(
-      feature!.report({
+      reportWithConflictRetry(feature!, {
         teamName,
         memberName,
         state: t2HasWork ? 'still_working' : 'caught_up',

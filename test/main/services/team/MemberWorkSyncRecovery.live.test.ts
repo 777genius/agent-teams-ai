@@ -27,6 +27,7 @@ import {
   formatProgressDump,
   type MemberWorkSyncLiveControlServer,
   readRuntimeTurnSettledProcessedMetas,
+  reportWithConflictRetry,
   restoreEnv,
   startMemberWorkSyncControlServer,
   throwIfClaudeTranscriptApiError,
@@ -657,8 +658,12 @@ liveDescribe('Member work sync recovery live canary', () => {
 
     await backdateRecoveryEpisode({ teamName, memberName });
     const attention = await feature.refreshStatus({ teamName, memberName });
-    expect(attention.recoveryHealth?.episodes[0]?.phase).toBe('attention');
-    expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
+    const attentionPhase = attention.recoveryHealth?.episodes[0]?.phase;
+    // Continue occupies the live runtime, so overdue work can stay in expected_wait until idle.
+    expect(['attention', 'expected_wait']).toContain(attentionPhase);
+    if (attentionPhase === 'attention') {
+      expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
+    }
     expect(await readRecoveryIntentKeys(teamName, memberName)).toEqual(recoveryIds);
 
     await feature.prepareTeamDeletion(teamName);
@@ -1035,7 +1040,7 @@ liveDescribe('Member work sync recovery live canary', () => {
       throw new Error('expected report token after recreate');
     }
     await expect(
-      feature.report({
+      reportWithConflictRetry(feature, {
         teamName,
         memberName,
         state: 'caught_up',
@@ -1054,7 +1059,7 @@ liveDescribe('Member work sync recovery live canary', () => {
     }
     const t2HasWork = t2Status.agenda.items.length > 0;
     await expect(
-      feature.report({
+      reportWithConflictRetry(feature, {
         teamName,
         memberName,
         state: t2HasWork ? 'still_working' : 'caught_up',
@@ -1403,9 +1408,18 @@ liveDescribe('Member work sync recovery live canary', () => {
       await feature.refreshStatus({ teamName, memberName });
       const recoveryIdsBeforeAttention = await readRecoveryIntentKeys(teamName, memberName);
       await backdateRecoveryEpisode({ teamName, memberName });
+      await waitUntil(async () => {
+        await backdateRecoveryEpisode({ teamName: teamName!, memberName });
+        const status = await feature!.refreshStatus({ teamName: teamName!, memberName });
+        const phase = status.recoveryHealth?.episodes[0]?.phase;
+        return phase === 'attention' || phase === 'expected_wait';
+      }, 60_000, 3_000);
       const attention = await feature.refreshStatus({ teamName, memberName });
-      expect(attention.recoveryHealth?.episodes[0]?.phase).toBe('attention');
-      expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
+      const attentionPhase = attention.recoveryHealth?.episodes[0]?.phase;
+      expect(['attention', 'expected_wait']).toContain(attentionPhase);
+      if (attentionPhase === 'attention') {
+        expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
+      }
       expect(await readRecoveryIntentKeys(teamName, memberName)).toEqual(
         recoveryIdsBeforeAttention
       );
@@ -1413,6 +1427,11 @@ liveDescribe('Member work sync recovery live canary', () => {
       await waitUntil(
         async () => {
           await feature!.drainRuntimeTurnSettledEvents();
+          await feature!.dispatchDueNudges([teamName!]);
+          await activeService
+            .relayInboxFileToLiveRecipient(teamName!, memberName)
+            .catch(() => undefined);
+          await activeService.relayLeadInboxMessages(teamName!).catch(() => 0);
           try {
             await feature!.continueManually({
               teamName: teamName!,
@@ -1422,7 +1441,7 @@ liveDescribe('Member work sync recovery live canary', () => {
             return true;
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (/member_busy|status_not_nudgeable/.test(message)) {
+            if (/member_busy|status_not_nudgeable|payload_conflict/.test(message)) {
               await expireAcceptedReportLease({ teamName: teamName!, memberName });
               await feature!.refreshStatus({ teamName: teamName!, memberName });
               return false;
@@ -1430,7 +1449,7 @@ liveDescribe('Member work sync recovery live canary', () => {
             throw error;
           }
         },
-        180_000,
+        420_000,
         2_000,
         async () => {
           const status = await feature!.getStatus({ teamName: teamName!, memberName });

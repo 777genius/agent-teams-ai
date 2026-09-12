@@ -436,27 +436,21 @@ export function createMemberWorkSyncFeature(deps: {
   };
   const queue = new MemberWorkSyncEventQueue({
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
-      try {
-        await operationGate.run(request.teamName, async (admission) => {
-          await new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(
-            request,
-            context
-          );
-          if (context.isCancelled?.()) {
-            return;
-          }
-          await dispatchNudgesForAdmittedTeam(
-            request.teamName,
-            `member-work-sync:${process.pid}`,
-            admission,
-            { refreshBackgroundStaleStatuses: false }
-          );
-        });
-      } catch (error) {
-        if (!(error instanceof MemberWorkSyncTeamQuiescedError)) {
-          throw error;
+      await operationGate.run(request.teamName, async (admission) => {
+        await new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(
+          request,
+          context
+        );
+        if (context.isCancelled?.()) {
+          return;
         }
-      }
+        await dispatchNudgesForAdmittedTeam(
+          request.teamName,
+          `member-work-sync:${process.pid}`,
+          admission,
+          { refreshBackgroundStaleStatuses: false }
+        );
+      });
     },
     isTeamActive: deps.isTeamActive ?? (() => true),
     reconcileInactiveTeams: true,

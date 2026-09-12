@@ -1,3 +1,4 @@
+import { MemberWorkSyncTeamQuiescedError } from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -481,6 +482,48 @@ describe('MemberWorkSyncEventQueue', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(reconciles).toHaveLength(2);
     expect(queue.getDiagnostics()).toMatchObject({ failed: 1, queued: 0, reconciled: 1 });
+
+    await queue.stop();
+  });
+
+  it('retries a quiesced reconcile without consuming retry attempts', async () => {
+    const reconciles: unknown[] = [];
+    const auditReasons: Array<string | undefined> = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      maxRetryAttempts: 0,
+      reconcile: async (request) => {
+        reconciles.push(request);
+        throw new MemberWorkSyncTeamQuiescedError('team-a');
+      },
+      isTeamActive: () => true,
+      auditJournal: {
+        append: async (event) => {
+          auditReasons.push(event.reason);
+        },
+      },
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reconciles).toHaveLength(1);
+    expect(queue.getDiagnostics()).toMatchObject({
+      failed: 1,
+      queued: 1,
+      dropped: 0,
+      reconciled: 0,
+    });
+    expect(auditReasons).toEqual(['turn_settled', 'team_quiesced']);
+
+    await vi.advanceTimersByTimeAsync(10);
+    expect(reconciles).toHaveLength(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      failed: 2,
+      queued: 1,
+      dropped: 0,
+      reconciled: 0,
+    });
 
     await queue.stop();
   });

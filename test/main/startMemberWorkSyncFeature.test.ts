@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createDeferredWorkSyncStallObservation,
   runShutdownBackupAfterWorkSyncDrain,
+  startPreparedMemberWorkSyncFeature,
 } from '../../src/main/startMemberWorkSyncFeature';
 
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
@@ -276,5 +277,46 @@ describe('runShutdownBackupAfterWorkSyncDrain', () => {
       },
     });
     expect(order).toEqual(['close-ingress', 'drain', 'backup']);
+  });
+});
+
+describe('startPreparedMemberWorkSyncFeature', () => {
+  it('keeps desktop startup alive when backup initialization fails', async () => {
+    const dispose = vi.fn(async () => undefined);
+    const startBackground = vi.fn();
+    const attach = vi.fn();
+    const prepared = { dispose, startBackground };
+    await expect(
+      startPreparedMemberWorkSyncFeature({
+        backup: {
+          initialize: async () => {
+            throw new Error('registry.json malformed');
+          },
+        } as never,
+        prepared: prepared as never,
+        stallObservation: { attach },
+      })
+    ).resolves.toBe(prepared);
+    expect(dispose).not.toHaveBeenCalled();
+    expect(startBackground).not.toHaveBeenCalled();
+    expect(attach).not.toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('starts work-sync after a successful backup initialize', async () => {
+    const dispose = vi.fn(async () => undefined);
+    const startBackground = vi.fn();
+    const attach = vi.fn();
+    const prepared = { dispose, startBackground };
+    await expect(
+      startPreparedMemberWorkSyncFeature({
+        backup: { initialize: async () => undefined } as never,
+        prepared: prepared as never,
+        stallObservation: { attach },
+      })
+    ).resolves.toBe(prepared);
+    expect(dispose).not.toHaveBeenCalled();
+    expect(startBackground).toHaveBeenCalledOnce();
+    expect(attach).toHaveBeenCalledOnce();
   });
 });

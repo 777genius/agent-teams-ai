@@ -1,6 +1,10 @@
+import { createLogger } from '@shared/utils/logger';
+
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { TeamTaskStallObservationPort } from '@main/services/team/stallMonitor/TeamTaskStallNotifier';
 import type { TeamBackupService } from '@main/services/team/TeamBackupService';
+
+const startupLogger = createLogger('MemberWorkSyncStartup');
 
 type StallObservation = Parameters<TeamTaskStallObservationPort['record']>[0];
 
@@ -168,8 +172,8 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   try {
     await input.backup.initialize();
   } catch (error) {
-    await input.prepared.dispose();
-    throw error;
+    startupLogger.warn(`[Init] Team backup initialization failed: ${String(error)}`);
+    return input.prepared;
   }
   input.prepared.startBackground();
   input.stallObservation.attach(input.prepared);

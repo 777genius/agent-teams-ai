@@ -15,6 +15,27 @@ export class FatalWaitError extends Error {
   }
 }
 
+export async function reportWithConflictRetry(
+  feature: MemberWorkSyncFeatureFacade,
+  request: Parameters<MemberWorkSyncFeatureFacade['report']>[0],
+  attempts = 4
+) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await feature.report(request);
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/conflict/i.test(message) || attempt === attempts - 1) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export interface MemberWorkSyncLiveControlServer {
   baseUrl: string;
   close(): Promise<void>;
