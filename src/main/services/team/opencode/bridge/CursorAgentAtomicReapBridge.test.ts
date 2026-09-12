@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -40,7 +42,18 @@ describe('CursorAgentAtomicReapBridge', () => {
     expect(execute).toHaveBeenCalledExactlyOnceWith(
       'opencode.reapUnleasedCursorAgentTrees',
       request,
-      { cwd: '/fixture/workspace', timeoutMs: 15000, canDispatch }
+      { cwd: tmpdir(), timeoutMs: 15000, canDispatch }
+    );
+  });
+
+  it('keeps all cleanup scopes while dispatching outside a missing first workspace', async () => {
+    const { execute, port } = fixture({ ok: true, data: completed });
+    const input = { ...request, ownedWorkspaceCwds: ['/missing/moved-workspace', '/fixture/live'] };
+    expect(await port.reapUnleasedCursorAgentTrees(input)).toEqual(completed);
+    expect(execute).toHaveBeenCalledWith(
+      'opencode.reapUnleasedCursorAgentTrees',
+      input,
+      expect.objectContaining({ cwd: tmpdir() })
     );
   });
 

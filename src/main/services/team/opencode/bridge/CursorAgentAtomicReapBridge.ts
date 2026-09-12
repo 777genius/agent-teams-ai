@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+
 import type { OpenCodeReadinessBridgeCommandExecutor } from './OpenCodeReadinessBridge';
 
 export interface CursorAgentAtomicReapRequest {
@@ -90,7 +92,7 @@ export function createCursorAgentAtomicReapPort(
         const reply = await executor.execute<CursorAgentAtomicReapRequest, unknown>(
           'opencode.reapUnleasedCursorAgentTrees',
           body,
-          { cwd: body.ownedWorkspaceCwds[0], timeoutMs: 15_000, canDispatch: input.canDispatch }
+          { cwd: tmpdir(), timeoutMs: 15_000, canDispatch: input.canDispatch }
         );
         if (!reply || reply.ok !== true) {
           return unavailable(
