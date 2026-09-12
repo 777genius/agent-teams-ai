@@ -779,6 +779,33 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('closes operation-gate admission before draining dispose', async () => {
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const close = vi.spyOn(gate, 'close');
+    const awaitIdle = vi.spyOn(gate, 'awaitIdle');
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath: path.join(makeTempRoot(), 'teams'),
+      configReader: { getConfig: vi.fn(async () => null) } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: { getState: vi.fn(async () => null) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      listLifecycleActiveTeamNames: async () => [],
+      operationGate: gate,
+    });
+    try {
+      await feature.dispose();
+      expect(close).toHaveBeenCalledOnce();
+      expect(awaitIdle).toHaveBeenCalledOnce();
+      expect(close.mock.invocationCallOrder[0]!).toBeLessThan(awaitIdle.mock.invocationCallOrder[0]!);
+      await expect(gate.run('team-a', async () => 'late')).rejects.toBeInstanceOf(
+        MemberWorkSyncTeamQuiescedError
+      );
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('rejects a late turn-settled enqueue after bounded scheduler disposal', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
