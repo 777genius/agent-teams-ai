@@ -551,7 +551,7 @@ export function createMemberWorkSyncFeature(deps: {
         listLifecycleActiveTeamNames: deps.listLifecycleActiveTeamNames,
         replayPendingReports: (teamNames) =>
           replayPendingReports(
-            teamNames.filter((teamName) => storePaths.hasPendingReportsFile(teamName))
+            teamNames.filter((teamName) => storePaths.hasReplayablePendingReports(teamName))
           ),
         dispatchDue: (teamNames, signal) =>
           startScheduledDispatch((trackSettling) =>
