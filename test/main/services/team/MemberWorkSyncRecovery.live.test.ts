@@ -1515,6 +1515,7 @@ liveDescribe('Member work sync recovery live canary', () => {
           }
           await throwIfTranscriptApiError('Codex remaining-work canary');
           await expireAcceptedReportLease({ teamName: teamName!, memberName });
+          await feature!.refreshStatus({ teamName: teamName!, memberName });
           await feature!.dispatchDueNudges([teamName!]);
           await feature!.drainRuntimeTurnSettledEvents();
           await activeService
