@@ -240,4 +240,21 @@ describe('strict backup startup registry', () => {
     expect(registry.teams['sandbox-known']).toEqual(known);
     expect(registry.teams['sandbox-new']?.identityId).toBe('identity-sandbox-new');
   });
+
+  it('quarantines an unowned incomplete first-backup directory without blocking startup', async () => {
+    const incompleteDir = path.join(backups(), 'teams', 'sandbox-crash');
+    await fs.promises.mkdir(incompleteDir, { recursive: true });
+    await fs.promises.writeFile(path.join(incompleteDir, 'config.json'), '{"copied":true}');
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{"version":1,"teams":{}}');
+
+    await expect(service().initialize()).resolves.toBeUndefined();
+
+    const registry = JSON.parse(
+      await fs.promises.readFile(path.join(backups(), 'registry.json'), 'utf8')
+    ) as { teams: Record<string, unknown> };
+    expect(registry.teams['sandbox-crash']).toBeUndefined();
+    await expect(fs.promises.stat(incompleteDir)).rejects.toMatchObject({ code: 'ENOENT' });
+    const quarantined = await fs.promises.readdir(path.join(backups(), 'incomplete-teams'));
+    expect(quarantined.some((name) => name.startsWith('sandbox-crash-'))).toBe(true);
+  });
 });

@@ -55,6 +55,21 @@ export async function readTeamBackupRegistry(registryPath: string): Promise<Back
   return parsed as unknown as BackupRegistry;
 }
 
+async function quarantineUnownedIncompleteBackupDir(
+  backupsBasePath: string,
+  teamsDir: string,
+  teamName: string
+): Promise<void> {
+  const source = path.join(teamsDir, teamName);
+  const quarantineRoot = path.join(backupsBasePath, 'incomplete-teams');
+  try {
+    await fs.promises.mkdir(quarantineRoot, { recursive: true });
+    await fs.promises.rename(source, path.join(quarantineRoot, `${teamName}-${Date.now()}`));
+  } catch {
+    // Leave the crash artifact in place. Startup still continues without it.
+  }
+}
+
 /** An incomplete inventory cannot establish startup readiness. */
 export async function loadTeamBackupStartupRegistry(
   backupsBasePath: string
@@ -80,7 +95,10 @@ export async function loadTeamBackupStartupRegistry(
       path.join(teamsDir, entry.name, 'manifest.json'),
       entry.name
     );
-    if (!manifest) throw new Error(`Missing backup ownership manifest for ${entry.name}`);
+    if (!manifest) {
+      await quarantineUnownedIncompleteBackupDir(backupsBasePath, teamsDir, entry.name);
+      continue;
+    }
     if (manifest.identityId !== manifest.identityId.trim()) {
       throw new Error('Invalid backup manifest canonical identity');
     }

@@ -19,31 +19,38 @@ export function createDeferredWorkSyncStallObservation(options?: {
   attach(feature: MemberWorkSyncFeatureFacade | null): void;
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
-  const pending: StallObservation[] = [];
+  const pendingByTeam = new Map<string, StallObservation[]>();
+  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const retryDelayMs = options?.retryDelayMs ?? DEFAULT_STALL_RETRY_MS;
-  let retryTimer: ReturnType<typeof setTimeout> | null = null;
-  const clearRetry = (): void => {
-    if (!retryTimer) {
+  const pendingFor = (teamName: string): StallObservation[] => {
+    const current = pendingByTeam.get(teamName);
+    if (current) {
+      return current;
+    }
+    const next: StallObservation[] = [];
+    pendingByTeam.set(teamName, next);
+    return next;
+  };
+  const clearRetry = (teamName: string): void => {
+    const timer = retryTimers.get(teamName);
+    if (!timer) {
       return;
     }
-    clearTimeout(retryTimer);
-    retryTimer = null;
+    clearTimeout(timer);
+    retryTimers.delete(teamName);
   };
-  const scheduleRetry = (): void => {
-    if (retryTimer || !feature || pending.length === 0) {
-      return;
+  const clearAllRetries = (): void => {
+    for (const teamName of [...retryTimers.keys()]) {
+      clearRetry(teamName);
     }
-    retryTimer = setTimeout(() => {
-      retryTimer = null;
-      void flush();
-    }, retryDelayMs);
   };
-  const flush = async (): Promise<void> => {
+  const flushTeam = async (teamName: string): Promise<void> => {
     const current = feature;
     if (!current) {
       return;
     }
-    clearRetry();
+    clearRetry(teamName);
+    const pending = pendingFor(teamName);
     while (pending.length > 0) {
       const observation = pending[0];
       if (!observation) {
@@ -61,26 +68,37 @@ export function createDeferredWorkSyncStallObservation(options?: {
           }
           continue;
         }
-        scheduleRetry();
-        break;
+        if (!retryTimers.has(teamName) && feature && pending.length > 0) {
+          retryTimers.set(
+            teamName,
+            setTimeout(() => {
+              retryTimers.delete(teamName);
+              void flushTeam(teamName);
+            }, retryDelayMs)
+          );
+        }
+        return;
       }
+    }
+    if (pending.length === 0) {
+      pendingByTeam.delete(teamName);
     }
   };
   return {
     record: async (input) => {
-      pending.push(input);
+      pendingFor(input.teamName).push(input);
       if (!feature) {
         return;
       }
-      await flush();
+      await flushTeam(input.teamName);
     },
     attach(next) {
       feature = next;
       if (!next) {
-        clearRetry();
+        clearAllRetries();
         return;
       }
-      void flush();
+      void Promise.all([...pendingByTeam.keys()].map((teamName) => flushTeam(teamName)));
     },
   };
 }

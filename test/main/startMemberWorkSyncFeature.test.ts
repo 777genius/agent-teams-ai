@@ -123,4 +123,34 @@ describe('createDeferredWorkSyncStallObservation', () => {
       expect(recorded).toEqual(['task-2']);
     });
   });
+
+  it('retries one team without blocking another team stall observation', async () => {
+    const recorded: string[] = [];
+    const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 50 });
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-a',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:00:00.000Z',
+    });
+    observation.attach({
+      recordStallObservation: async (input: { teamName: string; taskId: string }) => {
+        if (input.teamName === 'team-a') {
+          throw new Error('status_missing');
+        }
+        recorded.push(`${input.teamName}:${input.taskId}`);
+      },
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+
+    await observation.record({
+      teamName: 'team-b',
+      memberName: 'alice',
+      taskId: 'task-b',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:01:00.000Z',
+    });
+
+    expect(recorded).toEqual(['team-b:task-b']);
+  });
 });
