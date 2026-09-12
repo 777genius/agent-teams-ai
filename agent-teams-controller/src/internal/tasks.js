@@ -144,19 +144,35 @@ function mergeTaskRefs(primaryTaskRef, extraTaskRefs) {
     return merged.length > 0 ? merged : undefined;
 }
 
-function hasOpenBlockers(context, task) {
+function getOpenBlockers(context, task) {
+    const blockers = [];
     const blockerIds = Array.isArray(task.blockedBy) ? task.blockedBy : [];
     for (const id of blockerIds) {
         try {
             const blocker = taskStore.readTask(context.paths, id, { includeDeleted: true });
             if (blocker.status !== 'completed' && blocker.status !== 'deleted') {
-                return true;
+                blockers.push(blocker);
             }
         } catch {
             // missing task = not blocking
         }
     }
-    return false;
+    return blockers;
+}
+
+function hasOpenBlockers(context, task) {
+    return getOpenBlockers(context, task).length > 0;
+}
+
+function assertDependenciesResolved(context, task, status) {
+    const blockers = getOpenBlockers(context, task);
+    if (blockers.length > 0) {
+        const labels = blockers.map((blocker) => `#${blocker.displayId || blocker.id} (${blocker.status})`);
+        throw new Error(
+            `Cannot set task #${task.displayId || task.id} to ${status}: unresolved dependencies ${labels.join(', ')}. ` +
+            `Wait or work on another task, then retry once dependencies are resolved. Ask the lead if a dependency is incorrect.`
+        );
+    }
 }
 
 function maybeNotifyAssignedOwner(context, task, options = {}) {
@@ -362,6 +378,9 @@ function setTaskStatus(context, taskId, status, actor, options = {}) {
                       allowLeadOverride:
                           normalizedStatus !== 'in_progress' && normalizedStatus !== 'completed',
                   });
+        if (normalizedStatus === 'in_progress' || normalizedStatus === 'completed') {
+            assertDependenciesResolved(context, before, normalizedStatus);
+        }
         let task = taskStore.setTaskStatus(context.paths, taskId, status, actorForWrite);
         if (normalizedStatus === 'deleted' || normalizedStatus === 'in_progress' || normalizedStatus === 'pending') {
             const state = kanbanStore.readKanbanState(context.paths, context.teamName);
@@ -372,6 +391,9 @@ function setTaskStatus(context, taskId, status, actor, options = {}) {
         }
         return { task, becameDeleted: before.status !== 'deleted' && task.status === 'deleted' };
     });
+    if (task.status === 'completed') {
+        runCompletedTaskFollowUps(context, task);
+    }
     if (becameDeleted) {
         runDeletedTaskFollowUps(context, task);
     }
@@ -431,6 +453,7 @@ function startTask(context, taskId, actor) {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         assertTaskNotDeleted(before, 'starting work');
         const actorForWrite = assertTaskOwnerMutation(context, before, actor, 'start it');
+        assertDependenciesResolved(context, before, 'in_progress');
         let task = taskStore.setTaskStatus(context.paths, taskId, 'in_progress', actorForWrite);
         const state = kanbanStore.readKanbanState(context.paths, context.teamName);
         if (hasKanbanReference(state, task.id)) {
@@ -576,8 +599,7 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
     }
 }
 
-function completeTask(context, taskId, actor) {
-    const task = setTaskStatus(context, taskId, 'completed', actor);
+function runCompletedTaskFollowUps(context, task) {
     try {
         notifyUnblockedOwners(context, task);
     } catch (error) {
@@ -588,7 +610,10 @@ function completeTask(context, taskId, actor) {
     } catch (error) {
         warnNonCritical(`[tasks] board-completion follow-up failed for task ${task.id}`, error);
     }
-    return task;
+}
+
+function completeTask(context, taskId, actor) {
+    return setTaskStatus(context, taskId, 'completed', actor);
 }
 
 function softDeleteTask(context, taskId, actor) {
