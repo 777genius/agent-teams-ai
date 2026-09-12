@@ -26,7 +26,9 @@ describe('file lock physical owner mode', () => {
         expect(() => withFileLockSync(path, () => 'stolen', { acquireTimeoutMs: 0 })).toThrow(
           'File lock timeout'
         );
-        expect(await readFile(`${path}.lock`, 'utf8')).toContain('strict:');
+        expect(await readFile(`${path}.lock`, 'utf8')).toMatch(
+          /^[1-9][0-9]*\n[0-9]+\nstrict-[0-9a-f-]{36}\n$/
+        );
       },
       { preventLiveOwnerTakeover: true }
     );
@@ -61,7 +63,7 @@ describe('file lock physical owner mode', () => {
 
   it('recovers a dead strict transition gate so later acquisition can proceed', async () => {
     const gate = `${path}.lock-transition-v2`;
-    const token = 'strict:00000000-0000-4000-8000-000000000001';
+    const token = 'strict-00000000-0000-4000-8000-000000000001';
     const entry = `owner-999999999-${token}`;
     await mkdir(gate);
     await writeFile(join(gate, entry), `file-lock-transition-v2\n999999999\n${token}\n`);
