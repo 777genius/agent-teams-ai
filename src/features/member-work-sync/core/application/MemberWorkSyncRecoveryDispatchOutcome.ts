@@ -12,7 +12,11 @@ import {
   runMemberWorkSyncStatusMutation,
 } from './MemberWorkSyncStatusMutation';
 
-import type { MemberWorkSyncOutboxItem, MemberWorkSyncStatus } from '../../contracts';
+import type {
+  MemberWorkSyncOutboxItem,
+  MemberWorkSyncRecoveryReservation,
+  MemberWorkSyncStatus,
+} from '../../contracts';
 import type { MemberWorkSyncSettlementTrigger } from './MemberWorkSyncReconciler';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
@@ -178,16 +182,51 @@ export async function repairMemberWorkSyncDispatchOutcome(input: {
   return true;
 }
 
+function settlementIdentityIds(settlement: MemberWorkSyncSettlementTrigger | undefined): string[] {
+  if (!settlement?.sourceId) {
+    return [];
+  }
+  return [
+    ...new Set(
+      [settlement.turnId, settlement.threadId]
+        .map((id) => id?.trim())
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+}
+
+function reservationBoundTurnIds(
+  reservation: MemberWorkSyncRecoveryReservation,
+  item?: Pick<MemberWorkSyncOutboxItem, 'deliveredMessageId' | 'payload'> | null
+): string[] {
+  const intentKey = item?.payload.workSyncIntentKey?.trim();
+  const originalMessageId = intentKey?.startsWith('proof-missing:')
+    ? intentKey.slice('proof-missing:'.length).trim()
+    : undefined;
+  return [
+    ...new Set(
+      [
+        reservation.boundTurnId,
+        item?.deliveredMessageId,
+        originalMessageId,
+        item?.payload.workSyncRuntimeTicketId,
+      ]
+        .map((id) => id?.trim())
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+}
+
 export function settlementBelongsToReservation(
   settlement: MemberWorkSyncSettlementTrigger | undefined,
-  reservedAt: string
+  boundTurnIds: readonly string[]
 ): boolean {
-  if (!settlement?.sourceId || !settlement.recordedAt) {
+  const settlementIds = settlementIdentityIds(settlement);
+  if (settlementIds.length === 0) {
     return false;
   }
-  const settledAt = Date.parse(settlement.recordedAt);
-  const reservedMs = Date.parse(reservedAt);
-  return Number.isFinite(settledAt) && Number.isFinite(reservedMs) && settledAt >= reservedMs;
+  const bound = new Set(boundTurnIds.map((id) => id.trim()).filter(Boolean));
+  return settlementIds.some((id) => bound.has(id));
 }
 
 export async function retireMemberWorkSyncSettledReservation(input: {
@@ -206,9 +245,14 @@ export async function retireMemberWorkSyncSettledReservation(input: {
   if (!intentId || reservation?.state !== 'awaiting_outcome') {
     return false;
   }
+  const item = await input.deps.outboxStore?.readItem?.({
+    teamName: input.status.teamName,
+    memberName: input.status.memberName,
+    id: intentId,
+  });
   if (
     !input.settlement ||
-    !settlementBelongsToReservation(input.settlement, reservation.reservedAt)
+    !settlementBelongsToReservation(input.settlement, reservationBoundTurnIds(reservation, item))
   ) {
     return false;
   }

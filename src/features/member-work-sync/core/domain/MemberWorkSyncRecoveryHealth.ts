@@ -122,6 +122,9 @@ function readReservation(value: unknown): MemberWorkSyncRecoveryReservation {
   if (reservation.compactWitness !== undefined && typeof reservation.compactWitness !== 'boolean') {
     throw new MemberWorkSyncRecoveryHealthError();
   }
+  if (reservation.boundTurnId !== undefined && !identifier(reservation.boundTurnId)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
   return {
     intentId: reservation.intentId,
     episodeId: reservation.episodeId,
@@ -130,6 +133,9 @@ function readReservation(value: unknown): MemberWorkSyncRecoveryReservation {
     state: reservation.state,
     payloadHash: reservation.payloadHash,
     controlRevision,
+    ...(typeof reservation.boundTurnId === 'string'
+      ? { boundTurnId: reservation.boundTurnId }
+      : {}),
     ...(terminalOutcome ? { terminalOutcome } : {}),
     ...(reservation.terminalReceiptId ? { terminalReceiptId: reservation.terminalReceiptId } : {}),
     ...(reservation.pendingAck ? { pendingAck: true } : {}),

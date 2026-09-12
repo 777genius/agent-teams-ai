@@ -29,6 +29,7 @@ export interface MemberWorkSyncSettlementTrigger {
   sourceId: string;
   recordedAt: string;
   turnId?: string;
+  threadId?: string;
 }
 
 export interface MemberWorkSyncReconcileContext {

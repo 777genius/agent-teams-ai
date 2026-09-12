@@ -181,6 +181,7 @@ export interface MemberWorkSyncRecoveryReservation {
   state: 'reserved' | 'awaiting_outcome' | 'resolved' | 'cancelled' | 'uncertain';
   payloadHash: string;
   controlRevision: number;
+  boundTurnId?: string;
   terminalOutcome?: MemberWorkSyncRecoveryTerminalOutcome;
   terminalReceiptId?: string;
   pendingAck?: boolean;

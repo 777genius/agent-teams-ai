@@ -304,7 +304,7 @@ export class MemberWorkSyncEventQueue {
   enqueueTurnSettled(input: {
     teamName: string;
     memberName: string;
-    event: { sourceId: string; recordedAt: string; turnId?: string };
+    event: { sourceId: string; recordedAt: string; turnId?: string; threadId?: string };
   }): boolean {
     return this.enqueue({
       teamName: input.teamName,
@@ -314,6 +314,7 @@ export class MemberWorkSyncEventQueue {
         sourceId: input.event.sourceId,
         recordedAt: input.event.recordedAt,
         ...(input.event.turnId ? { turnId: input.event.turnId } : {}),
+        ...(input.event.threadId ? { threadId: input.event.threadId } : {}),
       },
     });
   }
