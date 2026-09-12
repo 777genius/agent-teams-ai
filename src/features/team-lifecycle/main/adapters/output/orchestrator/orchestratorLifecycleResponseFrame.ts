@@ -91,7 +91,8 @@ export function listenForOrchestratorLifecycleResponseFrame(
   socket.once('end', () => {
     readableEnded = true;
     if (options.isSettled() || validatingResponse) return;
-    if (response.indexOf('\n') !== response.length - 1) {
+    const newline = response.indexOf('\n');
+    if (newline < 0 || newline !== response.length - 1) {
       options.finish(new Error('orchestrator-lifecycle-response-incomplete'));
       return;
     }

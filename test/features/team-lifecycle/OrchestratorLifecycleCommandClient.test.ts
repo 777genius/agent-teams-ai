@@ -1480,6 +1480,47 @@ describe('OrchestratorLifecycleCommandClient', () => {
     client.close();
   });
 
+  it('treats a zero-data EOF as incomplete without retiring the client owner', async () => {
+    const onOwnerMismatch = vi.fn();
+    let responses = 0;
+    const fake = await createFakeUnixSocket((request, socket) => {
+      responses += 1;
+      if (responses === 1) {
+        socket.end();
+        return;
+      }
+      socket.end(
+        `${JSON.stringify(
+          responseEnvelope(
+            request,
+            { schemaVersion: 2, kind: 'authorized', authorization: authorizationWire() },
+            REVISION
+          )
+        )}\n`
+      );
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath: fake.socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      onOwnerMismatch,
+      inspectSocketIdentity: fake.inspectSocketIdentity,
+      connect: fake.connect,
+    });
+
+    await expect(client.authorize(command(), context())).rejects.toThrow(
+      'orchestrator-lifecycle-response-incomplete'
+    );
+    expect(onOwnerMismatch).not.toHaveBeenCalled();
+    await expect(client.authorize(command(), context())).resolves.toMatchObject({
+      kind: 'authorized',
+    });
+    expect(fake.requests).toHaveLength(2);
+    client.close();
+  });
+
   it('fails closed on an execution conflict whose nested revision mismatches settlement authority', async () => {
     const fake = await createFakeUnixSocket((request, socket) => {
       if (request.operation === 'authorize') {
