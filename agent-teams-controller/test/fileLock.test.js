@@ -16,6 +16,17 @@ afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+it('recovers a dead desktop strict transition gate so later acquisition can proceed', () => {
+  const gate = `${resource}.lock-transition-v2`;
+  const token = 'strict-00000000-0000-4000-8000-000000000001';
+  const entry = `owner-999999999-${token}`;
+  fs.mkdirSync(gate);
+  fs.writeFileSync(path.join(gate, entry), `file-lock-transition-v2\n999999999\n${token}\n`);
+  expect(
+    withFileLockSync(resource, () => 'ok', { acquireTimeoutMs: 200, retryIntervalMs: 5 })
+  ).toBe('ok');
+});
+
 it('holds a complete token until callback return and releases on callback failure', () => {
   expect(() =>
     withFileLockSync(resource, () => {

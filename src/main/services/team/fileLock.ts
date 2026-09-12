@@ -101,6 +101,8 @@ function recoverGate(gate: string): void {
   }
   if (entries.length !== 1) return; // Unknown state fails closed.
   const entry = entries[0];
+  // Same grammar as agent-teams-controller/src/internal/fileLock.js: UUID or
+  // Windows-safe `strict-`/`strict:` + UUID. Dead strict gates must be reclaimable.
   const match = /^owner-([1-9][0-9]*)-((?:strict[-:])?[a-f0-9-]{36})$/.exec(entry);
   if (!match) return;
   const pid = parsePid(match[1]);

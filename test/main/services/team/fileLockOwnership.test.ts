@@ -1,9 +1,14 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { withFileLockSync: withControllerFileLockSync } = createRequire(import.meta.url)(
+  '../../../../agent-teams-controller/src/internal/fileLock.js'
+) as { withFileLockSync: typeof withFileLockSync };
 
 describe('file lock physical owner mode', () => {
   let root: string;
@@ -59,6 +64,17 @@ describe('file lock physical owner mode', () => {
       { preventLiveOwnerTakeover: true }
     );
     expect(await readFile(`${path}.lock`, 'utf8')).toBe(replacement);
+  });
+
+  it('lets the controller reclaim a dead desktop strict transition gate', async () => {
+    const gate = `${path}.lock-transition-v2`;
+    const token = 'strict-00000000-0000-4000-8000-000000000001';
+    const entry = `owner-999999999-${token}`;
+    await mkdir(gate);
+    await writeFile(join(gate, entry), `file-lock-transition-v2\n999999999\n${token}\n`);
+    expect(
+      withControllerFileLockSync(path, () => 'ok', { acquireTimeoutMs: 200, retryIntervalMs: 5 })
+    ).toBe('ok');
   });
 
   it('recovers a dead strict transition gate so later acquisition can proceed', async () => {
