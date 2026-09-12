@@ -1810,6 +1810,51 @@ describe('MemberWorkSync use cases', () => {
     expect(inbox.inserted[1]?.messageId).toContain('status-only');
   });
 
+  it('aborts inbox delivery when a still_working report is accepted before the write', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reporter = new MemberWorkSyncReporter(deps);
+    const originalInsert = inbox.insertIfAbsent.bind(inbox);
+    inbox.insertIfAbsent = async (input) => {
+      const current = await store.read();
+      if (current && !current.lastAcceptedReport) {
+        await reporter.execute({
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: current.agenda.fingerprint,
+          reportToken: current.reportToken,
+          taskIds: ['task-1'],
+          leaseTtlMs: 120_000,
+          source: 'test',
+        });
+      }
+      return originalInsert(input);
+    };
+
+    await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    expect(summary).toMatchObject({ claimed: 1, delivered: 0, superseded: 1 });
+    expect(inbox.inserted).toHaveLength(0);
+    expect([...outbox.items.values()].map((item) => item.status)).toEqual(['superseded']);
+    expect([...outbox.items.values()][0]?.lastError).toBe('runtime_ticket_aborted');
+  });
+
   it('keeps recovery observations across 100 ticks and restart without allocating recovery outbox while D0 is disabled', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();

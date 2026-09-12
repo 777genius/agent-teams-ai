@@ -8,6 +8,7 @@ import {
   addNudgeDispatchSummary,
   emptyNudgeDispatchSummary,
   getPayloadReviewRequestEventIds,
+  isMemberWorkSyncNudgeDeliveryStale,
   isReviewPickupOutboxItem,
   nextNudgeRetryAt,
   unrefNudgeDispatchTimer,
@@ -452,18 +453,20 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     try {
-      if (isDispatchRunCancelled(run)) {
-        return 'retryable';
-      }
       const preDelivery = await readMemberWorkSyncStatus(this.deps, {
         teamName: item.teamName,
         memberName: item.memberName,
       });
-      if (preDelivery.status?.recoveryHealth?.autoResumeStopLatch) {
+      const staleDelivery = isMemberWorkSyncNudgeDeliveryStale({
+        status: preDelivery.status,
+        item,
+        nowIso,
+      });
+      if (staleDelivery.abort) {
         await outbox.markSuperseded({
           teamName: item.teamName,
           id: item.id,
-          reason: 'member_stopped',
+          reason: staleDelivery.reason,
           nowIso,
         });
         return 'superseded';
@@ -484,7 +487,11 @@ export class MemberWorkSyncNudgeDispatcher {
             teamName: item.teamName,
             memberName: item.memberName,
           });
-          return Boolean(current.status?.recoveryHealth?.autoResumeStopLatch);
+          return isMemberWorkSyncNudgeDeliveryStale({
+            status: current.status,
+            item,
+            nowIso,
+          }).abort;
         },
       });
       if (delivery.status === 'busy') {

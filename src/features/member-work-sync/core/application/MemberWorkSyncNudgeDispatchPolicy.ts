@@ -1,3 +1,6 @@
+import { decideMemberWorkSyncStatus } from '../domain';
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+
 import type {
   MemberWorkSyncAgenda,
   MemberWorkSyncOutboxItem,
@@ -140,4 +143,34 @@ export function reviewPickupRequestIdsStillMatch(
   const payloadIds = getPayloadReviewRequestEventIds(item);
   const agendaIds = getAgendaReviewPickupRequestEventIds(agenda);
   return payloadIds.length > 0 && payloadIds.every((id) => agendaIds.includes(id));
+}
+
+export function isMemberWorkSyncNudgeDeliveryStale(input: {
+  status: MemberWorkSyncStatus | null | undefined;
+  item: MemberWorkSyncOutboxItem;
+  nowIso: string;
+}): { abort: false } | { abort: true; reason: string } {
+  if (!input.status) {
+    return { abort: true, reason: 'status_missing' };
+  }
+  if (input.status.recoveryHealth?.autoResumeStopLatch) {
+    return { abort: true, reason: 'member_stopped' };
+  }
+  const decision = decideMemberWorkSyncStatus({
+    agenda: input.status.agenda,
+    latestAcceptedReport: getMemberWorkSyncAcceptedReport(input.status),
+    nowIso: input.nowIso,
+  });
+  const agendaStillMatches =
+    input.status.agenda.fingerprint === input.item.agendaFingerprint ||
+    (isReviewPickupOutboxItem(input.item) &&
+      reviewPickupRequestIdsStillMatch(input.item, input.status.agenda));
+  if (
+    decision.state !== 'needs_sync' ||
+    input.status.agenda.items.length === 0 ||
+    !agendaStillMatches
+  ) {
+    return { abort: true, reason: 'status_no_longer_matches_outbox' };
+  }
+  return { abort: false };
 }
