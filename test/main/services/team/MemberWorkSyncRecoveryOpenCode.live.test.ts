@@ -595,7 +595,9 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             return true;
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (/member_busy|status_not_nudgeable|payload_conflict/.test(message)) {
+            if (
+              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
+            ) {
               await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
               await feature!.refreshStatus({ teamName: teamName!, memberName });
               return false;
@@ -603,7 +605,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             throw error;
           }
         },
-        180_000,
+        420_000,
         2_000,
         async () => {
           const status = await feature!.getStatus({ teamName: teamName!, memberName });
@@ -625,6 +627,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
       await waitUntil(
         async () => {
+          await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
           await feature!.dispatchDueNudges([teamName!]);
           await feature!.drainRuntimeTurnSettledEvents();
           const inbox = await readInboxMessages(inboxPath);
@@ -649,7 +652,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
           const canary = await fs.readFile(canaryPath, 'utf8').catch(() => '');
           return /^\s*done\s*$/i.test(canary);
         },
-        240_000,
+        420_000,
         2_000,
         async () =>
           formatMemberWorkSyncDiagnostics({

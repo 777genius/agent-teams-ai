@@ -21,6 +21,7 @@ export function createDeferredWorkSyncStallObservation(options?: {
   retryDelayMs?: number;
 }): TeamTaskStallObservationPort & {
   attach(feature: MemberWorkSyncFeatureFacade | null): void;
+  isAttached(): boolean;
   dispose(): void;
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
