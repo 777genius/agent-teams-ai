@@ -80,6 +80,41 @@ describe('TeamTaskStallNotifier', () => {
     });
   });
 
+  it('does not queue stall observations when the work-sync consumer is detached', async () => {
+    const record = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record, isAttached: () => false }
+    );
+
+    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('skips automatic owner commands only while work-sync is attached', async () => {
+    const attached = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record: vi.fn(async () => undefined), isAttached: () => true }
+    );
+    const detached = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record: vi.fn(async () => undefined), isAttached: () => false }
+    );
+    const alert = createAlert();
+
+    await expect(attached.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([]);
+    await expect(detached.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([]);
+  });
+
   it('still notifies the lead for user-visible stall attention', async () => {
     const sendSystemNotificationToLead = vi.fn(async () => undefined);
     const notifier = new TeamTaskStallNotifier({ sendSystemNotificationToLead } as never);

@@ -14,7 +14,15 @@ export interface TeamTaskStallObservationPort {
     reason: string;
     observedAt: string;
   }): Promise<void>;
+  isAttached?(): boolean;
   dispose?(): void;
+}
+
+function isWorkSyncConsumerAttached(port?: TeamTaskStallObservationPort): boolean {
+  if (!port) {
+    return false;
+  }
+  return typeof port.isAttached === 'function' ? port.isAttached() : true;
 }
 
 function buildLeadAlertText(alerts: TaskStallAlert[]): string {
@@ -58,6 +66,9 @@ export class TeamTaskStallNotifier {
    * not sent from this watchdog.
    */
   async recordWorkSyncObservations(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
+    if (!isWorkSyncConsumerAttached(this.stallObservation)) {
+      return;
+    }
     const observedAt = new Date().toISOString();
     for (const alert of alerts) {
       const memberName = (alert.branch === 'review' ? alert.reviewer : alert.owner)?.trim();
@@ -84,11 +95,18 @@ export class TeamTaskStallNotifier {
     teamName: string,
     alerts: TaskStallAlert[]
   ): Promise<TaskStallAlert[]> {
-    if (alerts.length > 0) {
+    if (alerts.length === 0) {
+      return [];
+    }
+    if (isWorkSyncConsumerAttached(this.stallObservation)) {
       logger.debug(
         `Task stall observations for ${teamName} are owned by member-work-sync; skipping automatic owner work commands (${alerts.length})`
       );
+      return [];
     }
+    logger.debug(
+      `Member work-sync is not attached for ${teamName}; leaving ${alerts.length} OpenCode stall alerts for lead fallback`
+    );
     return [];
   }
 }

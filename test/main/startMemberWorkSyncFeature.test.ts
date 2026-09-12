@@ -9,6 +9,25 @@ import {
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 
 describe('createDeferredWorkSyncStallObservation', () => {
+  it('is attached only while a live work-sync feature is bound', () => {
+    const observation = createDeferredWorkSyncStallObservation();
+    expect(observation.isAttached()).toBe(false);
+
+    observation.attach({
+      recordStallObservation: async () => undefined,
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    expect(observation.isAttached()).toBe(true);
+
+    observation.attach(null);
+    expect(observation.isAttached()).toBe(false);
+
+    observation.attach({
+      recordStallObservation: async () => undefined,
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    observation.dispose();
+    expect(observation.isAttached()).toBe(false);
+  });
+
   it('buffers stall observations until work-sync attaches and then flushes them', async () => {
     const recorded: string[] = [];
     const observation = createDeferredWorkSyncStallObservation();

@@ -126,6 +126,7 @@ export function createDeferredWorkSyncStallObservation(options?: {
       }
       void Promise.all([...pendingByTeam.keys()].map((teamName) => flushTeam(teamName)));
     },
+    isAttached: () => Boolean(feature) && !disposed,
     dispose() {
       disposed = true;
       feature = null;
