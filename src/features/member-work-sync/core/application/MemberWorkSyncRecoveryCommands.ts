@@ -180,51 +180,44 @@ export class MemberWorkSyncRecoveryCommands {
     reason: string;
     observedAt?: string;
   }): Promise<MemberWorkSyncRecoveryCommandResult> {
-    try {
-      return await runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
-        this.mutate(input, mutationId, (status, nowIso) => {
-          const observedAt = input.observedAt ?? nowIso;
-          const episodes = status.recoveryHealth?.episodes ?? [];
-          const nextEpisodes = episodes.map((episode) =>
-            episode.taskId === input.taskId
-              ? {
-                  ...episode,
-                  lastEvidenceId: `stall:${input.reason}:${observedAt}`,
-                  reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
-                }
-              : episode
-          );
-          return {
-            ...status,
-            recoveryHealth: {
-              schemaVersion: 1 as const,
-              episodes: nextEpisodes,
-              ...(status.recoveryHealth?.unresolvedIntentId
-                ? { unresolvedIntentId: status.recoveryHealth.unresolvedIntentId }
-                : {}),
-              ...(status.recoveryHealth?.attentionAt
-                ? { attentionAt: status.recoveryHealth.attentionAt }
-                : { attentionAt: observedAt }),
-              ...(status.recoveryHealth?.autoResumeStopLatch
-                ? { autoResumeStopLatch: status.recoveryHealth.autoResumeStopLatch }
-                : {}),
-              ...(typeof status.recoveryHealth?.controlRevision === 'number'
-                ? { controlRevision: status.recoveryHealth.controlRevision }
-                : {}),
-              ...(status.recoveryHealth?.reservations
-                ? { reservations: status.recoveryHealth.reservations }
-                : {}),
-            },
-            evaluatedAt: nowIso,
-          };
-        })
-      ).then((status) => ({ ok: true as const, status, code: 'observed' as const }));
-    } catch (error) {
-      if (error instanceof Error && error.name === 'MemberWorkSyncStatusMissingError') {
-        return { ok: false, code: 'status_missing' };
-      }
-      throw error;
-    }
+    return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
+      this.mutate(input, mutationId, (status, nowIso) => {
+        const observedAt = input.observedAt ?? nowIso;
+        const episodes = status.recoveryHealth?.episodes ?? [];
+        const nextEpisodes = episodes.map((episode) =>
+          episode.taskId === input.taskId
+            ? {
+                ...episode,
+                lastEvidenceId: `stall:${input.reason}:${observedAt}`,
+                reason: episode.reason === 'queued' ? episode.reason : 'no_progress_deadline',
+              }
+            : episode
+        );
+        return {
+          ...status,
+          recoveryHealth: {
+            schemaVersion: 1 as const,
+            episodes: nextEpisodes,
+            ...(status.recoveryHealth?.unresolvedIntentId
+              ? { unresolvedIntentId: status.recoveryHealth.unresolvedIntentId }
+              : {}),
+            ...(status.recoveryHealth?.attentionAt
+              ? { attentionAt: status.recoveryHealth.attentionAt }
+              : { attentionAt: observedAt }),
+            ...(status.recoveryHealth?.autoResumeStopLatch
+              ? { autoResumeStopLatch: status.recoveryHealth.autoResumeStopLatch }
+              : {}),
+            ...(typeof status.recoveryHealth?.controlRevision === 'number'
+              ? { controlRevision: status.recoveryHealth.controlRevision }
+              : {}),
+            ...(status.recoveryHealth?.reservations
+              ? { reservations: status.recoveryHealth.reservations }
+              : {}),
+          },
+          evaluatedAt: nowIso,
+        };
+      })
+    ).then((status) => ({ ok: true as const, status, code: 'observed' as const }));
   }
 
   private async mutate(

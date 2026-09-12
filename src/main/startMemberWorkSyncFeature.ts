@@ -9,25 +9,41 @@ export function createDeferredWorkSyncStallObservation(): TeamTaskStallObservati
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
   const pending: StallObservation[] = [];
+  const flush = async (): Promise<void> => {
+    const current = feature;
+    if (!current) {
+      return;
+    }
+    while (pending.length > 0) {
+      const observation = pending[0];
+      if (!observation) {
+        break;
+      }
+      try {
+        await current.recordStallObservation(observation);
+        if (pending[0] === observation) {
+          pending.shift();
+        }
+      } catch {
+        break;
+      }
+    }
+  };
   return {
     record: async (input) => {
-      if (feature) {
-        await feature.recordStallObservation(input);
+      if (!feature) {
+        pending.push(input);
         return;
       }
-      pending.push(input);
+      await flush();
+      await feature.recordStallObservation(input);
     },
     attach(next) {
       feature = next;
       if (!next || pending.length === 0) {
         return;
       }
-      const queued = pending.splice(0);
-      void (async () => {
-        for (const observation of queued) {
-          await next.recordStallObservation(observation);
-        }
-      })();
+      void flush();
     },
   };
 }

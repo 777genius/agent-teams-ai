@@ -1966,6 +1966,7 @@ describe('MemberWorkSync use cases', () => {
       receiptId: `receipt:${recovery!.id}`,
     });
     expect(retired?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(retired?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
     const nextStatus = await new MemberWorkSyncReconciler(deps).execute(
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
@@ -1984,6 +1985,60 @@ describe('MemberWorkSync use cases', () => {
       const afterLate = await deps.statusStore.read({ teamName: 'team-a', memberName: 'bob' });
       expect(afterLate?.recoveryHealth?.unresolvedIntentId).toBe(second[0].id);
     }
+  });
+
+  it('does not leave pendingAck after a terminal delivery failure', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: 'intent-terminal',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-terminal',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-terminal',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    await recordMemberWorkSyncDispatchOutcome({
+      deps,
+      item: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        id: 'intent-terminal',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'review_pickup',
+          workSyncIntentKey: 'review-pickup:evt',
+          text: 'pickup',
+          taskRefs: [],
+        },
+      },
+      outcome: 'terminal',
+    });
+    const after = await store.read();
+    expect(after?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after?.recoveryHealth?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+    });
+    expect(after?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
   });
 
   it('writes a durable stop latch that blocks automatic recovery planning', async () => {
