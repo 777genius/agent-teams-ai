@@ -99,6 +99,10 @@ export function isStatusOnlyRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): 
   return item.payload.workSyncIntentKey?.startsWith('status-only:') === true;
 }
 
+export function isManualContinueOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
+  return item.payload.workSyncIntentKey?.startsWith('manual-continue:') === true;
+}
+
 export function isAgendaSyncStillStuckRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
   return (
     item.payload.workSyncIntentKey?.startsWith(AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX) ===

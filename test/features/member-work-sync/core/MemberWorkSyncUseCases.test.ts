@@ -2040,6 +2040,79 @@ describe('MemberWorkSync use cases', () => {
     expect(outbox.items.has(intentId!)).toBe(true);
   });
 
+  it('allocates a fresh Continue item when the unresolved intent is already delivered', async () => {
+    const outbox = new InMemoryOutboxStore();
+    outbox.rejectPayloadConflicts = true;
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const staleId = `${status.agenda.fingerprint}:status-only`;
+    outbox.items.set(staleId, {
+      id: staleId,
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: status.agenda.fingerprint,
+      payloadHash: 'stale-status-only-hash',
+      payload: {
+        from: 'system',
+        to: 'bob',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'agenda_sync',
+        text: 'status-only recovery',
+        workSyncIntentKey: 'status-only',
+      },
+      status: 'delivered',
+      attemptGeneration: 1,
+      createdAt: status.evaluatedAt,
+      updatedAt: status.evaluatedAt,
+      deliveredMessageId: staleId,
+    });
+    store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: staleId,
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: staleId,
+            episodeId: 'episode-status-only',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'stale-status-only-hash',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const continued = await new MemberWorkSyncRecoveryCommands(deps).continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+      idempotencyKey: 'after-status-only',
+    });
+    expect(continued.ok).toBe(true);
+    if (!continued.ok) {
+      return;
+    }
+    expect(continued.status.recoveryHealth?.unresolvedIntentId).not.toBe(staleId);
+    expect(outbox.items.get(staleId)?.status).toBe('delivered');
+    expect(
+      [...outbox.items.values()].some((item) =>
+        item.payload.workSyncIntentKey?.includes('manual-continue:after-status-only')
+      )
+    ).toBe(true);
+  });
+
   it('fails closed for protocol-2 early continuation without a runtime ticket port', async () => {
     const { deps, store } = createDeps({
       providerId: 'codex',

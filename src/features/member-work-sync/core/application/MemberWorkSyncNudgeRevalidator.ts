@@ -7,6 +7,7 @@ import {
   AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX,
   getProofMissingRecoveryOriginalMessageId,
   isAgendaSyncStillStuckRecoveryOutboxItem,
+  isManualContinueOutboxItem,
   isReviewPickupOutboxItem,
   isStatusOnlyRecoveryOutboxItem,
   preserveCurrentRuntimeStallDiagnostics,
@@ -172,7 +173,8 @@ export class MemberWorkSyncNudgeRevalidator {
       status: suppressionStatus,
       metrics,
     });
-    if (!activation.active) {
+    const manualContinue = isManualContinueOutboxItem(item);
+    if (!activation.active && !manualContinue) {
       const reason =
         activation.reason === 'blocking_metrics'
           ? 'blocking_metrics'
@@ -218,6 +220,7 @@ export class MemberWorkSyncNudgeRevalidator {
         : {}),
     });
     if (
+      !manualContinue &&
       recentDelivered != null &&
       recentDelivered >= MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR
     ) {
@@ -239,7 +242,10 @@ export class MemberWorkSyncNudgeRevalidator {
     });
     if (
       busy?.busy &&
-      !(isStatusOnlyRecoveryOutboxItem(item) && busy.reason === 'recent_tool_activity')
+      !(
+        (isStatusOnlyRecoveryOutboxItem(item) || isManualContinueOutboxItem(item)) &&
+        busy.reason === 'recent_tool_activity'
+      )
     ) {
       return {
         ok: false,
@@ -250,7 +256,9 @@ export class MemberWorkSyncNudgeRevalidator {
     }
 
     const taskIds = item.payload.taskRefs.map((taskRef) => taskRef.taskId);
-    const watchdogCooldown = await this.resolveWatchdogCooldown(item, taskIds, nowIso);
+    const watchdogCooldown = manualContinue
+      ? { active: false as const }
+      : await this.resolveWatchdogCooldown(item, taskIds, nowIso);
     if (watchdogCooldown.active) {
       return {
         ok: false,

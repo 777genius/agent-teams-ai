@@ -104,44 +104,62 @@ export class MemberWorkSyncRecoveryCommands {
       if (!baseInput) {
         return { ok: false as const, code: 'status_not_nudgeable' as const };
       }
-      const intentKey = existing ?? `manual-continue:${input.idempotencyKey?.trim() || 'default'}`;
-      const payload = {
-        ...baseInput.payload,
-        workSyncIntentKey: intentKey,
+      const buildRecoveryInput = (intentKey: string, id: string) => {
+        const payload = {
+          ...baseInput.payload,
+          workSyncIntentKey: intentKey,
+        };
+        return {
+          ...baseInput,
+          payload,
+          payloadHash: buildMemberWorkSyncNudgePayloadHash(this.deps.hash, payload),
+          id,
+        };
       };
-      const recoveryInput = {
-        ...baseInput,
-        payload,
-        payloadHash: buildMemberWorkSyncNudgePayloadHash(this.deps.hash, payload),
-        id: existing ?? `${baseInput.id}:${intentKey}`,
-      };
-      let committedStatus = read.status;
-      if (!existing) {
+      const attachReservation = async (
+        recoveryInput: ReturnType<typeof buildRecoveryInput>,
+        previous: MemberWorkSyncStatus
+      ) => {
         const nowIso = this.deps.clock.now().toISOString();
         const controlRevision =
-          read.status.recoveryHealth?.controlRevision ??
-          read.status.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
+          previous.recoveryHealth?.controlRevision ??
+          previous.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
           1;
         const reserved = {
-          ...read.status,
+          ...previous,
           recoveryHealth: attachMemberWorkSyncRecoveryReservation({
-            previous: read.status.recoveryHealth,
+            previous: previous.recoveryHealth,
             reservation: {
               intentId: recoveryInput.id,
-              episodeId: read.status.recoveryHealth?.episodes[0]?.episodeId ?? `manual:${nowIso}`,
-              trigger: 'manual',
+              episodeId: previous.recoveryHealth?.episodes[0]?.episodeId ?? `manual:${nowIso}`,
+              trigger: 'manual' as const,
               reservedAt: nowIso,
-              state: 'reserved',
+              state: 'reserved' as const,
               payloadHash: recoveryInput.payloadHash,
               controlRevision,
             },
           }),
           evaluatedAt: nowIso,
         };
-        committedStatus = (await commitMemberWorkSyncStatus(this.deps, read, reserved, mutationId))
-          .status;
+        return (await commitMemberWorkSyncStatus(this.deps, read, reserved, mutationId)).status;
+      };
+      const defaultIntentKey = `manual-continue:${input.idempotencyKey?.trim() || 'default'}`;
+      let recoveryInput = buildRecoveryInput(
+        existing ?? defaultIntentKey,
+        existing ?? `${baseInput.id}:${defaultIntentKey}`
+      );
+      let committedStatus = read.status;
+      if (!existing) {
+        committedStatus = await attachReservation(recoveryInput, read.status);
       }
-      const ensured = await outboxStore.ensurePending(recoveryInput);
+      let ensured = await outboxStore.ensurePending(recoveryInput);
+      // A delivered/failed status-only intent cannot carry a new Continue payload.
+      // Allocate a fresh manual-continue item instead of failing closed.
+      if (!ensured.ok && existing) {
+        recoveryInput = buildRecoveryInput(defaultIntentKey, `${baseInput.id}:${defaultIntentKey}`);
+        committedStatus = await attachReservation(recoveryInput, committedStatus);
+        ensured = await outboxStore.ensurePending(recoveryInput);
+      }
       if (!ensured.ok) {
         return { ok: false as const, code: 'payload_conflict' as const };
       }
