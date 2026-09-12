@@ -297,6 +297,26 @@ describe('runShutdownBackupAfterWorkSyncDrain', () => {
     });
     expect(order).toEqual(['close-ingress', 'drain', 'backup']);
   });
+
+  it('drains work-sync and copies backup when ingress close fails', async () => {
+    const order: string[] = [];
+    await runShutdownBackupAfterWorkSyncDrain({
+      closeIngress: async () => {
+        order.push('close-ingress');
+        throw new Error('server already closed');
+      },
+      drainWorkSync: async () => {
+        order.push('drain');
+      },
+      backup: {
+        runShutdownBackupSync: () => {
+          order.push('backup');
+        },
+      },
+    });
+    expect(order).toEqual(['close-ingress', 'drain', 'backup']);
+    vi.mocked(console.warn).mockClear();
+  });
 });
 
 describe('startPreparedMemberWorkSyncFeature', () => {

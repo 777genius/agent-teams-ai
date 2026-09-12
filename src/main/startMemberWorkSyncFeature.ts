@@ -188,7 +188,11 @@ export async function runShutdownBackupAfterWorkSyncDrain(input: {
   drainWorkSync: () => Promise<void>;
   backup?: { runShutdownBackupSync(): void } | null;
 }): Promise<void> {
-  await input.closeIngress?.();
+  try {
+    await input.closeIngress?.();
+  } catch (error) {
+    startupLogger.warn(`[Shutdown] Ingress close failed: ${String(error)}`);
+  }
   await input.drainWorkSync();
   input.backup?.runShutdownBackupSync();
 }

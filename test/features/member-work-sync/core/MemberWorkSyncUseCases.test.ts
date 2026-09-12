@@ -2943,6 +2943,52 @@ describe('MemberWorkSync use cases', () => {
     expect(active?.firstObservedAt).toBe('2026-04-29T00:21:00.000Z');
   });
 
+  it('does not promote a newer episode from a stall observed before it started', async () => {
+    const { clock, deps, source, store } = createDeps({
+      providerId: 'codex',
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    const reconciler = new MemberWorkSyncReconciler(deps);
+    await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const observed = await new MemberWorkSyncRecoveryCommands(deps).recordStallObservation({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'no_start',
+    });
+    expect(observed.ok).toBe(true);
+    if (!observed.ok) {
+      return;
+    }
+    clock.set('2026-04-29T00:21:00.000Z');
+    source.agenda.items = [inProgressWorkItem];
+    const started = await reconciler.execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const active = started.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1');
+    expect(active?.phase).toBe('observing');
+    await expect(
+      new MemberWorkSyncRecoveryCommands(deps).recordStallObservation({
+        teamName: 'team-a',
+        memberName: 'bob',
+        taskId: 'task-1',
+        reason: 'no_progress_deadline',
+        observedAt: '2026-04-29T00:00:00.000Z',
+      })
+    ).rejects.toMatchObject({ name: 'MemberWorkSyncStallEpisodeMissingError' });
+    const unchanged = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(
+      unchanged.recoveryHealth?.episodes.find((episode) => episode.taskId === 'task-1')?.phase
+    ).toBe('observing');
+  });
+
   it('does not acknowledge a stall observation without a matching recovery episode', async () => {
     const { deps, store } = createDeps({
       providerId: 'codex',

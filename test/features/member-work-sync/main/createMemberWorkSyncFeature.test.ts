@@ -6910,7 +6910,7 @@ describe('createMemberWorkSyncFeature composition', () => {
                 memberName,
                 status: 'pending',
                 reason: 'control_api_unavailable',
-                recordedAt: '2026-05-05T12:00:00.000Z',
+                recordedAt: new Date().toISOString(),
                 request: {
                   teamName,
                   memberName,

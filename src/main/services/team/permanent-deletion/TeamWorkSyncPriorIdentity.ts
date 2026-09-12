@@ -40,8 +40,10 @@ export async function observeTeamWorkSyncPriorIdentity(
 ): Promise<TeamWorkSyncPriorIdentity> {
   assertSafeTeamName(teamName);
   if (!owner.isInitialized() || owner.isShuttingDown()) return 'unavailable';
-  const registryEntry = owner.registry()[teamName];
-  if (registryEntry !== undefined) return hasIdentity(registryEntry) ? 'known' : 'unavailable';
+  const registry = owner.registry();
+  if (Object.hasOwn(registry, teamName)) {
+    return hasIdentity(registry[teamName]) ? 'known' : 'unavailable';
+  }
   try {
     const root = getBackupsBasePath();
     const registry = await readOptional(join(root, 'registry.json'));

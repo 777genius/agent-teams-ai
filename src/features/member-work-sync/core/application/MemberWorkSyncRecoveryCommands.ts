@@ -231,6 +231,9 @@ export class MemberWorkSyncRecoveryCommands {
           if (episode.taskId !== input.taskId) {
             return episode;
           }
+          if (Date.parse(observedAt) < Date.parse(episode.firstObservedAt)) {
+            return episode;
+          }
           matched = true;
           if (episode.phase === 'expected_wait') {
             return episode;
