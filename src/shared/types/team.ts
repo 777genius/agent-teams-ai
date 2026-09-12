@@ -508,6 +508,8 @@ export interface InboxMessage {
   /** Protocol-2 early-continuation ticket identity. */
   workSyncRuntimeTicketId?: string;
   workSyncRuntimeGeneration?: number;
+  /** Recovery control revision that bound this protocol-1/2 inbox nudge. */
+  workSyncControlRevision?: number;
   /** Durable hash for idempotent hidden member-work-sync automation rows. */
   workSyncPayloadHash?: string;
   /** Structured slash-command metadata for sent command rows. */
@@ -561,6 +563,7 @@ export interface SendMessageRequest {
   workSyncReviewRequestEventIds?: string[];
   workSyncRuntimeTicketId?: string;
   workSyncRuntimeGeneration?: number;
+  workSyncControlRevision?: number;
   workSyncPayloadHash?: string;
   slashCommand?: SlashCommandMeta;
   commandOutput?: CommandOutputMeta;

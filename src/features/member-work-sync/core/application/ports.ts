@@ -220,6 +220,11 @@ export interface MemberWorkSyncInboxNudgePort {
     payloadHash: string;
     payload: MemberWorkSyncOutboxItem['payload'];
   }): Promise<{ found: boolean; repaired: boolean; conflict?: boolean }>;
+  invalidateDeliveredNudges?(input: {
+    teamName: string;
+    memberName: string;
+    beforeControlRevision: number;
+  }): Promise<{ invalidated: number }>;
 }
 
 export interface MemberWorkSyncWatchdogCooldownPort {

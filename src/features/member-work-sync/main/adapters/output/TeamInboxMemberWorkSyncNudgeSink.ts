@@ -11,7 +11,7 @@ type TeamInboxMemberWorkSyncNudgeRepairInput = Parameters<
 >[0];
 
 type TeamInboxMemberWorkSyncNudgeWriter = Pick<TeamInboxWriter, 'sendMessage'> &
-  Partial<Pick<TeamInboxWriter, 'updateMessageText'>>;
+  Partial<Pick<TeamInboxWriter, 'updateMessageText' | 'invalidateMemberWorkSyncNudges'>>;
 
 function isStoredMemberWorkSyncNudge(
   message: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>>[number]
@@ -76,6 +76,7 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
         workSyncReviewRequestEventIds: input.payload.workSyncReviewRequestEventIds,
         workSyncRuntimeTicketId: input.payload.workSyncRuntimeTicketId,
         workSyncRuntimeGeneration: input.payload.workSyncRuntimeGeneration,
+        workSyncControlRevision: input.payload.workSyncControlRevision,
         workSyncPayloadHash: input.payloadHash,
       },
       {
@@ -108,6 +109,19 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
       required: Boolean(this.controlUrlResolver),
     });
     return { found: true, repaired };
+  }
+
+  async invalidateDeliveredNudges(input: {
+    teamName: string;
+    memberName: string;
+    beforeControlRevision: number;
+  }): Promise<{ invalidated: number }> {
+    if (typeof this.inboxWriter.invalidateMemberWorkSyncNudges !== 'function') {
+      return { invalidated: 0 };
+    }
+    return this.inboxWriter.invalidateMemberWorkSyncNudges(input.teamName, input.memberName, {
+      beforeControlRevision: input.beforeControlRevision,
+    });
   }
 
   private async repairExistingControlUrlIfNeeded(

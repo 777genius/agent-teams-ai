@@ -188,6 +188,9 @@ export class TeamInboxWriter {
       ...(request.workSyncRuntimeGeneration != null
         ? { workSyncRuntimeGeneration: request.workSyncRuntimeGeneration }
         : {}),
+      ...(request.workSyncControlRevision != null
+        ? { workSyncControlRevision: request.workSyncControlRevision }
+        : {}),
       ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
@@ -360,6 +363,7 @@ export class TeamInboxWriter {
       workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
       workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
       workSyncRuntimeGeneration: message.workSyncRuntimeGeneration,
+      workSyncControlRevision: message.workSyncControlRevision,
       workSyncPayloadHash: message.workSyncPayloadHash,
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,
@@ -436,6 +440,46 @@ export class TeamInboxWriter {
     });
 
     return result;
+  }
+
+  async invalidateMemberWorkSyncNudges(
+    teamName: string,
+    member: string,
+    input: { beforeControlRevision: number }
+  ): Promise<{ invalidated: number }> {
+    const inboxPath = resolveInboxPath(teamName, member);
+    let invalidated = 0;
+    await withFileLock(inboxPath, async () => {
+      await withInboxLock(inboxPath, async () => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(await fs.promises.readFile(inboxPath, 'utf8')) as unknown;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          return;
+        }
+        if (!Array.isArray(parsed)) return;
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object') continue;
+          const row = item as Record<string, unknown>;
+          const revision =
+            typeof row.workSyncControlRevision === 'number' ? row.workSyncControlRevision : -1;
+          if (
+            row.messageKind !== 'member_work_sync_nudge' ||
+            revision >= input.beforeControlRevision
+          ) {
+            continue;
+          }
+          row.read = true;
+          row.messageKind = 'default';
+          invalidated += 1;
+        }
+        if (invalidated > 0) {
+          await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+        }
+      });
+    });
+    return { invalidated };
   }
 
   async mergeRuntimeDeliveryTaskRefs(

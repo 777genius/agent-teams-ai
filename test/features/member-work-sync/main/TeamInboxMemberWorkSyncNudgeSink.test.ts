@@ -665,4 +665,26 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
       aborted: true,
     });
   });
+
+  it('tombstones delivered nudges older than the current control revision', async () => {
+    const inboxWriter = {
+      sendMessage: vi.fn(),
+      invalidateMemberWorkSyncNudges: vi.fn(async () => ({ invalidated: 2 })),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(
+      { getMessagesFor: vi.fn(async () => []) } as never,
+      inboxWriter as never
+    );
+
+    await expect(
+      sink.invalidateDeliveredNudges({
+        teamName: 'team-a',
+        memberName: 'bob',
+        beforeControlRevision: 3,
+      })
+    ).resolves.toEqual({ invalidated: 2 });
+    expect(inboxWriter.invalidateMemberWorkSyncNudges).toHaveBeenCalledWith('team-a', 'bob', {
+      beforeControlRevision: 3,
+    });
+  });
 });

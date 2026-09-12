@@ -121,6 +121,7 @@ function buildReviewPickupNudgePayload(status: MemberWorkSyncStatus): MemberWork
     workSyncIntent: 'review_pickup',
     ...(intentKey ? { workSyncIntentKey: intentKey } : {}),
     workSyncReviewRequestEventIds: reviewRequestEventIds,
+    workSyncControlRevision: status.recoveryHealth?.controlRevision ?? 0,
     taskRefs,
     text: [
       'Review pickup required: a current review request is waiting for you.',
@@ -165,6 +166,7 @@ export function buildMemberWorkSyncNudgePayload(
     ...(status.shadow?.recovery?.intentKey
       ? { workSyncIntentKey: status.shadow.recovery.intentKey }
       : {}),
+    workSyncControlRevision: status.recoveryHealth?.controlRevision ?? 0,
     taskRefs,
     text: [
       'Work sync check: you have current actionable work assigned.',
@@ -193,7 +195,8 @@ export function buildMemberWorkSyncNudgePayloadHash(
   hash: MemberWorkSyncNudgeHash,
   payload: MemberWorkSyncNudgePayload
 ): string {
-  return hash.sha256Hex(stableJson(payload));
+  const { workSyncControlRevision: _controlRevision, ...hashed } = payload;
+  return hash.sha256Hex(stableJson(hashed));
 }
 
 export function buildMemberWorkSyncOutboxEnsureInput(input: {

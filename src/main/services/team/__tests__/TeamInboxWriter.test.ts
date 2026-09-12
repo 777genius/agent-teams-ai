@@ -190,3 +190,69 @@ describe('TeamInboxWriter runtime delivery dedup', () => {
     ).rejects.toThrow(/messageId collision/);
   });
 });
+
+describe('TeamInboxWriter work-sync nudge invalidation', () => {
+  let writer: TeamInboxWriter;
+
+  beforeEach(() => {
+    hoisted.teamsBase = fs.mkdtempSync(path.join(os.tmpdir(), 'team-inbox-writer-'));
+    writer = new TeamInboxWriter();
+  });
+
+  afterEach(() => {
+    fs.rmSync(hoisted.teamsBase, { recursive: true, force: true });
+  });
+
+  function readInbox(member: string): InboxMessage[] {
+    const inboxPath = path.join(hoisted.teamsBase, 'team', 'inboxes', `${member}.json`);
+    return JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as InboxMessage[];
+  }
+
+  it('tombstones persisted protocol-1 nudges from before the current control revision', async () => {
+    await writer.sendMessage('team', {
+      member: 'worker',
+      from: 'system',
+      text: 'old continuation',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncControlRevision: 0,
+      messageId: 'nudge-old',
+    });
+    await writer.sendMessage('team', {
+      member: 'worker',
+      from: 'lead',
+      text: 'user ping',
+      messageId: 'user-ping',
+    });
+    await writer.sendMessage('team', {
+      member: 'worker',
+      from: 'system',
+      text: 'fresh continuation',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncControlRevision: 2,
+      messageId: 'nudge-new',
+    });
+
+    const result = await writer.invalidateMemberWorkSyncNudges('team', 'worker', {
+      beforeControlRevision: 2,
+    });
+    expect(result).toEqual({ invalidated: 1 });
+
+    const inbox = readInbox('worker');
+    expect(inbox.find((row) => row.messageId === 'nudge-old')).toMatchObject({
+      read: true,
+      messageKind: 'default',
+    });
+    expect(inbox.find((row) => row.messageId === 'user-ping')).toMatchObject({
+      read: false,
+      text: 'user ping',
+    });
+    expect(inbox.find((row) => row.messageId === 'nudge-new')).toMatchObject({
+      read: false,
+      messageKind: 'member_work_sync_nudge',
+    });
+  });
+});

@@ -376,6 +376,9 @@ class InMemoryInboxNudge implements MemberWorkSyncInboxNudgePort {
   readonly repaired: Array<
     Parameters<NonNullable<MemberWorkSyncInboxNudgePort['repairIfPresent']>>[0]
   > = [];
+  readonly invalidated: Array<
+    Parameters<NonNullable<MemberWorkSyncInboxNudgePort['invalidateDeliveredNudges']>>[0]
+  > = [];
   fail = false;
   conflict = false;
   repairFail = false;
@@ -406,6 +409,13 @@ class InMemoryInboxNudge implements MemberWorkSyncInboxNudgePort {
     }
     this.repaired.push(input);
     return { found: true, repaired: true };
+  }
+
+  async invalidateDeliveredNudges(
+    input: Parameters<NonNullable<MemberWorkSyncInboxNudgePort['invalidateDeliveredNudges']>>[0]
+  ) {
+    this.invalidated.push(input);
+    return { invalidated: 1 };
   }
 }
 
@@ -2700,6 +2710,9 @@ describe('MemberWorkSync use cases', () => {
       return;
     }
     expect(stopped.status.recoveryHealth?.autoResumeStopLatch?.controlRevision).toBe(1);
+    expect(inbox.invalidated).toEqual([
+      { teamName: 'team-a', memberName: 'bob', beforeControlRevision: 1 },
+    ]);
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(stopped.status);
     expect(planned).toEqual({ planned: false, code: 'member_stopped' });
   });

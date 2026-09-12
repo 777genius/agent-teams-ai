@@ -52,7 +52,10 @@ export class MemberWorkSyncRecoveryCommands {
         }),
         evaluatedAt: nowIso,
       }))
-    ).then((status) => ({ ok: true as const, status, code: 'stopped' as const }));
+    ).then(async (status) => {
+      await this.invalidatePersistedInboxNudges(input, status);
+      return { ok: true as const, status, code: 'stopped' as const };
+    });
   }
 
   async resume(input: {
@@ -65,7 +68,10 @@ export class MemberWorkSyncRecoveryCommands {
         recoveryHealth: clearMemberWorkSyncStopLatch({ previous: status.recoveryHealth }),
         evaluatedAt: nowIso,
       }))
-    ).then((status) => ({ ok: true as const, status, code: 'resumed' as const }));
+    ).then(async (status) => {
+      await this.invalidatePersistedInboxNudges(input, status);
+      return { ok: true as const, status, code: 'resumed' as const };
+    });
   }
 
   async continueManually(input: {
@@ -297,6 +303,21 @@ export class MemberWorkSyncRecoveryCommands {
       mutationId
     );
     return committed.status;
+  }
+
+  private async invalidatePersistedInboxNudges(
+    input: { teamName: string; memberName: string },
+    status: MemberWorkSyncStatus
+  ): Promise<void> {
+    const beforeControlRevision = status.recoveryHealth?.controlRevision;
+    if (typeof beforeControlRevision !== 'number') {
+      return;
+    }
+    await this.deps.inboxNudge?.invalidateDeliveredNudges?.({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      beforeControlRevision,
+    });
   }
 }
 
