@@ -16,8 +16,6 @@ export function isRecentlyReleasedModel(
   catalogModel: CliProviderModelCatalogItem | null | undefined,
   nowMs = Date.now()
 ): boolean {
-  const releaseDate = catalogModel?.metadata?.releaseDate?.trim();
-  if (!releaseDate) return catalogModel?.metadata?.recentlyReleased === true;
   const releasedAt = getModelReleaseTimestamp(catalogModel, nowMs);
   return releasedAt !== null && nowMs - releasedAt < NEW_MODEL_BADGE_WINDOW_MS;
 }

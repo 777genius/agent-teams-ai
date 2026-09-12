@@ -47,7 +47,7 @@ export function buildEffectiveTeamMemberSpec(
   }
 ): TeamMemberInput {
   const memberProviderId = normalizeTeamMemberProviderId(member.providerId);
-  const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId);
+  const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId) ?? 'anthropic';
   const effectiveProviderId = memberProviderId ?? defaultProviderId ?? 'anthropic';
   const explicitMemberModel = getExplicitLaunchModelSelection(member.model);
   const usesDefaultProvider = memberProviderId == null || memberProviderId === defaultProviderId;

@@ -25,7 +25,7 @@ import {
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
-import type { TeamLaunchStateReadResult } from '../TeamLaunchStateStore';
+import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
 import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
@@ -95,7 +95,7 @@ export interface TeamForceStopFlowPorts {
    * team the user stopped. Optional so a caller that only wants the process
    * cleanup - a diagnostic sweep, say - leaves the publication alone.
    */
-  markTeamStopped?(teamName: string): Promise<void>;
+  markTeamStopped?(teamName: string, authority: TeamLaunchStopAuthority): Promise<void>;
   /**
    * Runs once the team is down, on both paths: after a stop that confirmed on
    * its own, and after the force path finished killing. A running team
@@ -289,6 +289,13 @@ async function runTeamStopFlow(
   const cleanupIsUnconditional = options.cleanup === 'always';
   const diagnostics: string[] = [];
   const stopStartedAtMs = Date.now();
+  const publicationAuthority = ports.markTeamStopped
+    ? await new TeamLaunchStateStore().beginStop(teamName).catch((error: unknown) => {
+        ports.logWarning(`[${teamName}] Stopped-state admission failed: ${String(error)}`);
+        diagnostics.push(`Stopped-state admission failed: ${String(error)}`);
+        return undefined;
+      })
+    : undefined;
   let ownedRunIds: readonly string[] = [];
   try {
     ownedRunIds = await ports.observeOwnedRuntimeRunIds(teamName);
@@ -438,7 +445,7 @@ async function runTeamStopFlow(
   // After the kills, never before them: a startup lock a live host still holds
   // open cannot be unlinked, so it is the kill that turns it into an orphan.
   await releaseSharedRuntimeResources(teamName, ports, diagnostics);
-  await markStopped(teamName, ports, diagnostics);
+  await markStopped(teamName, ports, diagnostics, publicationAuthority);
   return {
     stopOutcome,
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
@@ -499,13 +506,14 @@ async function releaseSharedRuntimeResources(
 async function markStopped(
   teamName: string,
   ports: TeamForceStopFlowPorts,
-  diagnostics: string[]
+  diagnostics: string[],
+  authority: TeamLaunchStopAuthority | undefined
 ): Promise<void> {
-  if (!ports.markTeamStopped) {
+  if (!ports.markTeamStopped || !authority) {
     return;
   }
   try {
-    await ports.markTeamStopped(teamName);
+    await ports.markTeamStopped(teamName, authority);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ports.logWarning(`[${teamName}] Could not persist stopped launch state: ${message}`);

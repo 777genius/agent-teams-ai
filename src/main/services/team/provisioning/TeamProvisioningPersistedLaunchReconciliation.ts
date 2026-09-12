@@ -128,8 +128,10 @@ export interface ReconcilePersistedLaunchStatePorts {
 /**
  * Reconcile the persisted launch state of a team.
  *
- * Every write and clear is scoped to `expectedRunId` - the caller's, or the
- * tracked run when the port supplies one. Unscoped,
+ * Every write and clear is scoped to `expectedRunId` - the caller's, the tracked
+ * run, or the persisted publication identity after restart. The store checks
+ * that persisted identity inside publication serialization for untracked clears.
+ * Unscoped,
  * `writeLaunchStateSnapshotNow` skips its stale-run guards and
  * `clearPersistedLaunchStateNow` takes the branch that also wipes bootstrap
  * state, which lets a reconcile started for one run delete the launch state a
@@ -140,7 +142,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
   ports: ReconcilePersistedLaunchStatePorts,
   options?: { expectedRunId?: string | null }
 ): Promise<PersistedLaunchReconciliationResult> {
-  const expectedRunId = options?.expectedRunId ?? ports.getTrackedRunId?.(teamName) ?? undefined;
+  let expectedRunId = options?.expectedRunId ?? ports.getTrackedRunId?.(teamName) ?? undefined;
   const writeSnapshot = (
     snapshot: PersistedTeamLaunchSnapshot
   ): Promise<PersistedTeamLaunchSnapshot> =>
@@ -153,6 +155,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
       : ports.clearPersistedLaunchState(teamName);
   const bootstrapSnapshot = await ports.readBootstrapLaunchSnapshot(teamName);
   const persisted = await ports.readLaunchState(teamName);
+  expectedRunId ??= persisted?.publicationRunId;
   const metaMembers = await ports.readMembersMeta(teamName).catch(() => []);
   const recoveredMixedSnapshot = await ports.recoverStaleMixedSecondaryLaunchSnapshot(
     teamName,

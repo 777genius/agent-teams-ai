@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { beginOpenCodeStartupRuntimeSweep } from '../../opencode/bridge/OpenCodeStartupSweepGate';
 import {
@@ -1181,6 +1181,11 @@ describe('TeamProvisioning API binders', () => {
 });
 
 describe('the OpenCode start preparation both entry points install', () => {
+  beforeEach(() => {
+    vi.stubGlobal('process', { ...process, platform: 'linux' });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
   function startApiFor(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void

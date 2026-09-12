@@ -16,6 +16,7 @@ import * as path from 'path';
 
 import { JsonTaskChangeSummaryCacheRepository } from './cache/JsonTaskChangeSummaryCacheRepository';
 import { OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION } from './opencode/bridge/OpenCodeBridgeCommandContract';
+import { OpenCodeBackfillRetry } from './opencode/OpenCodeBackfillRetry';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeTeamRuntimeDirectory,
@@ -47,6 +48,7 @@ import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type {
   AgentChangeSet,
   ChangeStats,
+  TaskChangeRequestOptions,
   TaskChangeReviewability,
   TaskChangeSetV2,
   TeamConfig,
@@ -110,16 +112,6 @@ interface TaskChangeSummaryCacheEntry {
   expiresAt: number;
 }
 
-interface TaskChangeRequestOptions {
-  owner?: string;
-  status?: string;
-  intervals?: { startedAt: string; completedAt?: string }[];
-  since?: string;
-  stateBucket?: TaskChangeStateBucket;
-  summaryOnly?: boolean;
-  forceFresh?: boolean;
-}
-
 interface LogFileRef {
   filePath: string;
   memberName: string;
@@ -167,7 +159,7 @@ export class ChangeExtractorService {
   private taskChangeSummaryInFlight = new Map<string, Promise<TaskChangeSetV2>>();
   private taskChangeSummaryVersionByTask = new Map<string, number>();
   private taskChangeSummaryValidationInFlight = new Set<string>();
-  private openCodeBackfillInFlight = new Map<string, Promise<OpenCodeBackfillAttempt>>();
+  private readonly openCodeBackfillRetry = new OpenCodeBackfillRetry();
   private openCodeBackfillCache = new Map<string, OpenCodeBackfillCacheEntry>();
   private openCodeTeamEligibilityCache = new Map<string, { value: boolean; expiresAt: number }>();
   private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
@@ -241,7 +233,7 @@ export class ChangeExtractorService {
     options?: TaskChangeRequestOptions
   ): Promise<TaskChangeSetV2> {
     const includeDetails = options?.summaryOnly !== true;
-    if (!includeDetails && options?.forceFresh !== true) {
+    if (!includeDetails && options?.forceFresh !== true && options?.retryBackfill !== true) {
       const earlyInFlightKey = this.buildEarlyTaskChangeSummaryInFlightKey(
         teamName,
         taskId,
@@ -296,6 +288,9 @@ export class ChangeExtractorService {
     const summaryCacheableState = isTaskChangeSummaryCacheable(effectiveStateBucket);
     const shouldUseSummaryCache = !includeDetails && summaryCacheableState;
 
+    if (options?.retryBackfill === true) {
+      this.openCodeBackfillRetry.reset(JSON.stringify([teamName, taskId]));
+    }
     let version = initialVersion;
     if (!summaryCacheableState || options?.forceFresh === true) {
       await this.invalidateTaskChangeSummaries(teamName, [taskId], {
@@ -785,25 +780,27 @@ export class ChangeExtractorService {
       return { attempted: false, backfilled: false };
     }
 
-    const existing = this.openCodeBackfillInFlight.get(cacheKey);
-    if (existing) {
-      return existing;
+    const runtimeIdentity = await this.openCodeLedgerBackfillPort.getRuntimeIdentity?.().catch(() => null);
+    // Another refresh may finish successfully while runtime metadata is being read.
+    const refreshed = this.openCodeBackfillCache.get(cacheKey);
+    if (refreshed && refreshed.expiresAt > Date.now()) {
+      return { attempted: false, backfilled: refreshed.backfilledAt > 0 };
     }
-
-    const promise = this.runOpenCodeBackfill(
-      input,
-      projectDir,
-      workspaceRoot,
-      cacheKey,
-      deliveryContextRecords,
-      deliveryContextPayload,
-      sourceGeneration,
-      backfillMemberName
-    ).finally(() => {
-      this.openCodeBackfillInFlight.delete(cacheKey);
-    });
-    this.openCodeBackfillInFlight.set(cacheKey, promise);
-    return promise;
+    return this.openCodeBackfillRetry.run(
+      JSON.stringify([input.teamName, input.taskId]),
+      JSON.stringify([cacheKey, runtimeIdentity ?? null]),
+      () =>
+        this.runOpenCodeBackfill(
+          input,
+          projectDir,
+          workspaceRoot,
+          cacheKey,
+          deliveryContextRecords,
+          deliveryContextPayload,
+          sourceGeneration,
+          backfillMemberName
+        )
+    );
   }
 
   private async runOpenCodeBackfill(
@@ -818,6 +815,13 @@ export class ChangeExtractorService {
     sourceGeneration: string | null,
     backfillMemberName?: string
   ): Promise<OpenCodeBackfillAttempt> {
+    const cacheAtStart = this.openCodeBackfillCache.get(cacheKey);
+    const clearOwnedCache = (): void => {
+      // A replaced runtime may have published a successful entry while this attempt awaited.
+      if (this.openCodeBackfillCache.get(cacheKey) === cacheAtStart) {
+        this.openCodeBackfillCache.delete(cacheKey);
+      }
+    };
     const deliveryContext = await this.createOpenCodeDeliveryContextTempFile(
       input.teamName,
       input.taskId,
@@ -902,7 +906,7 @@ export class ChangeExtractorService {
           expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
         });
       } else {
-        this.openCodeBackfillCache.delete(cacheKey);
+        clearOwnedCache();
       }
 
       if (diagnostics.length > 0 && result.outcome !== 'no-history') {
@@ -929,14 +933,7 @@ export class ChangeExtractorService {
         evidencePipeline: OPEN_CODE_AUTO_BACKFILL_EVIDENCE_PIPELINE,
         error: error instanceof Error ? error.message : String(error),
       }).catch(() => undefined);
-      if (deliveryContextRecords.length === 0) {
-        this.openCodeBackfillCache.set(cacheKey, {
-          backfilledAt: 0,
-          expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
-        });
-      } else {
-        this.openCodeBackfillCache.delete(cacheKey);
-      }
+      clearOwnedCache();
       return { attempted: true, backfilled: false };
     } finally {
       await deliveryContext.cleanup();

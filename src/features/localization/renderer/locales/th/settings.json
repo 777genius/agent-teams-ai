@@ -59,9 +59,12 @@
       "testAndUseProject": "ทดสอบและใช้กับโปรเจกต์นี้"
     },
     "diagnostics": {
+      "previousPage": "หน้าก่อนหน้า",
+      "nextPage": "หน้าถัดไป",
       "copied": "คัดลอกการวินิจฉัยแล้ว",
       "copiedShort": "คัดลอกแล้ว",
       "copy": "คัดลอกการวินิจฉัย",
+      "copyAll": "คัดลอกทั้งหมด",
       "hints": "คำใบ้",
       "likelyCause": "สาเหตุที่เป็นไปได้:",
       "windowsSymlinkAdminHint": "Windows: รัน Agent Teams AI ในฐานะผู้ดูแลระบบ"

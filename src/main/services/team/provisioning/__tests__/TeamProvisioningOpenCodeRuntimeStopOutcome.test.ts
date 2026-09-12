@@ -94,7 +94,7 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
     expect(isRuntimeProcessAlive).not.toHaveBeenCalled();
   });
 
-  it('settles an unconfirmed stop whose recorded hosts are all gone', () => {
+  it('rejects an unconfirmed stop even when recorded hosts are gone', () => {
     const outcome = resolveOpenCodeRuntimeStopOutcome({
       result: { stopped: false, diagnostics: ['session abort not confirmed'] },
       laneId: 'lane-a',
@@ -103,9 +103,9 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
     });
 
     expect(outcome).toEqual({
-      kind: 'already_stopped',
+      kind: 'failed',
       detail: 'session abort not confirmed',
-      checkedPids: [101],
+      alivePids: [],
     });
   });
 
@@ -139,7 +139,7 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
     ['OpenCode bridge capability snapshot mismatch'],
     ['OpenCode lifecycle command requires the exact persisted lane run and capability snapshot'],
     ['OpenCode lifecycle capability snapshot does not match the persisted lane manifest'],
-  ])('settles a snapshot-mismatch stop with no recorded host: %s', (detail) => {
+  ])('rejects a snapshot-mismatch stop with no recorded host: %s', (detail) => {
     const outcome = resolveOpenCodeRuntimeStopOutcome({
       result: { stopped: false, diagnostics: [detail] },
       laneId: 'lane-a',
@@ -147,7 +147,7 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
       isRuntimeProcessAlive: () => false,
     });
 
-    expect(outcome).toEqual({ kind: 'already_stopped', detail, checkedPids: [] });
+    expect(outcome).toEqual({ kind: 'failed', detail, alivePids: [] });
   });
 
   it('still fails a snapshot-mismatch stop whose lane has a live recorded host', () => {
@@ -191,7 +191,7 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
       },
     });
 
-    expect(outcome.kind).toBe('already_stopped');
+    expect(outcome.kind).toBe('failed');
   });
 });
 
@@ -212,21 +212,19 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
     expect(logWarning).not.toHaveBeenCalled();
   });
 
-  it('records why an unconfirmed stop was accepted as already stopped', () => {
+  it('rejects false outcomes without treating missing hosts as historical Stop evidence', () => {
     const logWarning = vi.fn();
-
-    assertOpenCodeRuntimeStopEffective({
-      result: { stopped: false, diagnostics: ['session abort not confirmed'] },
-      laneId: 'lane-a',
-      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a', runtimePid: 101 } }),
-      message: 'OpenCode lane lane-a did not confirm stop',
-      logWarning,
-      isRuntimeProcessAlive: () => false,
-    });
-
-    expect(logWarning).toHaveBeenCalledWith(
-      'OpenCode lane lane-a did not confirm stop, but no recorded host process is alive (checked pid 101); treating the runtime as already stopped: session abort not confirmed'
-    );
+    expect(() =>
+      assertOpenCodeRuntimeStopEffective({
+        result: { stopped: false, diagnostics: ['session abort not confirmed'] },
+        laneId: 'lane-a',
+        previousLaunchState: snapshot({ Worker: { laneId: 'lane-a', runtimePid: 101 } }),
+        message: 'unconfirmed',
+        logWarning,
+        isRuntimeProcessAlive: () => false,
+      })
+    ).toThrow('unconfirmed: session abort not confirmed');
+    expect(logWarning).not.toHaveBeenCalled();
   });
 
   it('throws with the live pid when a recorded host survived the stop', () => {
@@ -241,28 +239,6 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
       })
     ).toThrow(
       'OpenCode lane lane-a did not confirm stop: lease still held (host process still alive: pid 101)'
-    );
-  });
-
-  it('says the mismatch is why nothing could be verified when it settles one', () => {
-    const logWarning = vi.fn();
-
-    assertOpenCodeRuntimeStopEffective({
-      result: {
-        stopped: false,
-        diagnostics: [
-          'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',
-        ],
-      },
-      laneId: 'lane-a',
-      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a' } }),
-      message: 'OpenCode lane lane-a did not confirm stop',
-      logWarning,
-      isRuntimeProcessAlive: () => false,
-    });
-
-    expect(logWarning).toHaveBeenCalledWith(
-      'OpenCode lane lane-a did not confirm stop, but the capability snapshot mismatch left no recorded host pid to verify; treating the runtime as already stopped: OpenCode lifecycle command requires the exact persisted lane run and capability snapshot'
     );
   });
 

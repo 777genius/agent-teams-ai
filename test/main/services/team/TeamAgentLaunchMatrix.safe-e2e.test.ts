@@ -101,6 +101,7 @@ import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
 } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
@@ -597,8 +598,19 @@ describe(
             await cleanupEntered;
             expect(lifecycle.runTracking.getTrackedRunId(teamName)).toBeNull();
             const successorRunId = `${candidateRunId}-successor`;
+            // A fresh successor must acquire publication authority after Stop.
+            // A late snapshot write alone must never resurrect the stopped run.
+            await expect(
+              new TeamLaunchStateStore().beginLaunch(
+                teamName,
+                successorRunId,
+                publishedSnapshot.expectedMembers,
+                () => true
+              )
+            ).resolves.toBe(true);
             successorSnapshot = {
               ...publishedSnapshot,
+              publicationRunId: successorRunId,
               members: Object.fromEntries(
                 Object.entries(publishedSnapshot.members).map(([name, member]) => [
                   name,
@@ -813,9 +825,12 @@ describe(
           laneId: 'primary',
         }),
       ]);
+      const restartedPrimaryRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      expect(restartedPrimaryRunId).toBeTruthy();
+      expect(restartedPrimaryRunId).not.toBe(runId);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: restartedPrimaryRunId,
           teamName,
           laneId: 'primary',
           expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
@@ -839,56 +854,13 @@ describe(
             id: 'session-team-lead',
             memberName: 'team-lead',
             laneId: 'primary',
-            runId,
+            runId: restartedPrimaryRunId,
           }),
         ],
       });
 
-      // Restart preserves the accepted prompt; a new message must wait for its reply.
-      await expect(
-        svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'team-lead',
-          text: 'lead remains addressable after primary teammate restart',
-          messageId: 'msg-opencode-lead-after-primary-restart',
-        })
-      ).resolves.toMatchObject({
-        delivered: true,
-        accepted: false,
-        responsePending: true,
-        queuedBehindMessageId: 'msg-opencode-lead-primary-lane',
-      });
-      expect(adapter.messageInputs).toHaveLength(1);
-      const ledger = createOpenCodePromptDeliveryLedger(teamName, 'primary', {
-        teamsBasePath: getTeamsBasePath(),
-      });
-      const priorDelivery = await ledger.getActiveForMember({
-        teamName,
-        laneId: 'primary',
-        memberName: 'team-lead',
-      });
-      expect(priorDelivery).toMatchObject({
-        runId,
-        inboxMessageId: 'msg-opencode-lead-primary-lane',
-        inboxReadCommittedAt: null,
-      });
-      expect(priorDelivery?.cancelledAt).toBeFalsy();
-      // A correlated reply must recover the preserved prompt through production proof lookup.
-      const userInboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', 'user.json');
-      await fs.mkdir(path.dirname(userInboxPath), { recursive: true });
-      const replies: InboxMessage[] = await readInboxRows(teamName, 'user').catch(() => []);
-      replies.push({
-        from: 'team-lead',
-        to: 'user',
-        text: 'The primary lane is ready.',
-        summary: 'Primary lane ready',
-        timestamp: new Date().toISOString(),
-        read: false,
-        messageId: 'reply-opencode-lead-primary-lane',
-        relayOfMessageId: 'msg-opencode-lead-primary-lane',
-        source: 'runtime_delivery',
-      });
-      await fs.writeFile(userInboxPath, JSON.stringify(replies), 'utf8');
-
+      // Confirmed Stop creates a fresh run. The old pending prompt remains
+      // evidence, but must not block or be redispatched into the new runtime.
       await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'team-lead',
@@ -896,20 +868,35 @@ describe(
           messageId: 'msg-opencode-lead-after-primary-restart',
         })
       );
-      const recoveredDelivery = await ledger.getByInboxMessage({
-        memberName: 'team-lead',
-        teamName,
-        laneId: 'primary',
+      const ledger = createOpenCodePromptDeliveryLedger(teamName, 'primary', {
+        teamsBasePath: getTeamsBasePath(),
+      });
+      await expect(
+        ledger.getByInboxMessage({
+          memberName: 'team-lead',
+          teamName,
+          laneId: 'primary',
+          inboxMessageId: 'msg-opencode-lead-primary-lane',
+        })
+      ).resolves.toMatchObject({
+        runId,
         inboxMessageId: 'msg-opencode-lead-primary-lane',
+        inboxReadCommittedAt: null,
       });
-      expect(recoveredDelivery).toMatchObject({
-        status: 'responded',
-        visibleReplyMessageId: 'reply-opencode-lead-primary-lane',
+      await expect(
+        ledger.getActiveForMember({
+          runId: restartedPrimaryRunId,
+          teamName,
+          laneId: 'primary',
+          memberName: 'team-lead',
+        })
+      ).resolves.toMatchObject({
+        runId: restartedPrimaryRunId,
+        inboxMessageId: 'msg-opencode-lead-after-primary-restart',
       });
-      expect(recoveredDelivery?.cancelledAt).toBeFalsy();
       expect(adapter.messageInputs).toHaveLength(2);
       expect(adapter.messageInputs[1]).toMatchObject({
-        runId,
+        runId: restartedPrimaryRunId,
         teamName,
         laneId: 'primary',
         memberName: 'team-lead',
@@ -970,14 +957,20 @@ describe(
       await stopPromise;
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
+      const restartedPrimaryRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      expect(restartedPrimaryRunId).toBeTruthy();
+      expect(restartedPrimaryRunId).not.toBe(runId);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: restartedPrimaryRunId,
           laneId: 'primary',
           expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
         }),
       ]);
       expect(adapter.stopInputs.filter((input) => input.laneId === 'primary')).toHaveLength(2);
+      expect(
+        adapter.stopInputs.filter((input) => input.laneId === 'primary').map((input) => input.runId)
+      ).toEqual([runId, restartedPrimaryRunId]);
       expect(adapter.stopInputs).toEqual(
         expect.arrayContaining([expect.objectContaining({ laneId: 'secondary:opencode:alice' })])
       );
@@ -1154,9 +1147,12 @@ describe(
       primaryGate.release();
       await firstRestart;
 
+      const restartedPrimaryRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      expect(restartedPrimaryRunId).toBeTruthy();
+      expect(restartedPrimaryRunId).not.toBe(runId);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: restartedPrimaryRunId,
           laneId: 'primary',
           expectedMembers: [
             expect.objectContaining({ name: 'team-lead' }),
@@ -1566,14 +1562,19 @@ describe(
       await detachPromise;
 
       expect(detachSettled).toBe(true);
+      const candidateRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      const rollbackRunId = adapter.launchInputs[launchCountBeforeRestart + 1].runId;
+      expect(candidateRunId).toBeTruthy();
+      expect(rollbackRunId).toBeTruthy();
+      expect(new Set([runId, candidateRunId, rollbackRunId]).size).toBe(3);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: candidateRunId,
           laneId: 'primary',
           expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
         }),
         expect.objectContaining({
-          runId,
+          runId: rollbackRunId,
           laneId: 'primary',
           expectedMembers: [
             expect.objectContaining({ name: 'team-lead' }),
@@ -1724,9 +1725,12 @@ describe(
       primaryGate.release();
       await restartPromise;
 
+      const restartedPrimaryRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      expect(restartedPrimaryRunId).toBeTruthy();
+      expect(restartedPrimaryRunId).not.toBe(runId);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: restartedPrimaryRunId,
           laneId: 'primary',
           expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
         }),
@@ -1780,14 +1784,19 @@ describe(
         'transient primary relaunch failure'
       );
 
+      const candidateRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      const rollbackRunId = adapter.launchInputs[launchCountBeforeRestart + 1].runId;
+      expect(candidateRunId).toBeTruthy();
+      expect(rollbackRunId).toBeTruthy();
+      expect(new Set([runId, candidateRunId, rollbackRunId]).size).toBe(3);
       expect(adapter.launchInputs.slice(launchCountBeforeRestart)).toEqual([
         expect.objectContaining({
-          runId,
+          runId: candidateRunId,
           laneId: 'primary',
           expectedMembers: [expect.objectContaining({ name: 'team-lead' })],
         }),
         expect.objectContaining({
-          runId,
+          runId: rollbackRunId,
           laneId: 'primary',
           expectedMembers: [
             expect.objectContaining({ name: 'team-lead' }),
@@ -1826,8 +1835,8 @@ describe(
       ).resolves.toMatchObject({
         committed: true,
         sessions: expect.arrayContaining([
-          expect.objectContaining({ memberName: 'team-lead', runId }),
-          expect.objectContaining({ memberName: 'tom', runId }),
+          expect.objectContaining({ memberName: 'team-lead', runId: rollbackRunId }),
+          expect.objectContaining({ memberName: 'tom', runId: rollbackRunId }),
         ]),
       });
 
@@ -1839,7 +1848,7 @@ describe(
         })
       );
       expect(adapter.messageInputs.at(-1)).toMatchObject({
-        runId,
+        runId: rollbackRunId,
         teamName,
         laneId: 'primary',
         memberName: 'team-lead',
@@ -1901,10 +1910,17 @@ describe(
         }
       );
 
+      const launchCountBeforeRestart = adapter.launchInputs.length;
       await expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
         'primary candidate post-persistence index failed'
       );
 
+      const candidateRunId = adapter.launchInputs[launchCountBeforeRestart].runId;
+      const rollbackRunId = adapter.launchInputs[launchCountBeforeRestart + 1].runId;
+      expect(candidateRunId).toBeTruthy();
+      expect(rollbackRunId).toBeTruthy();
+      expect(new Set([runId, candidateRunId, rollbackRunId]).size).toBe(3);
+      expect(adapter.stopInputs[0]).toMatchObject({ runId, laneId: 'primary' });
       expect(events).toEqual([
         `stop:primary:${projectPath}`,
         'launch:primary:team-lead',
@@ -1912,7 +1928,7 @@ describe(
         'launch:primary:team-lead,tom',
       ]);
       expect(adapter.stopInputs.at(-1)).toMatchObject({
-        runId,
+        runId: candidateRunId,
         teamName,
         laneId: 'primary',
         cwd: projectPath,

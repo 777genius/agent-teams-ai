@@ -1,3 +1,5 @@
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -30,7 +32,96 @@ describe('OpenCodeBridgeCommandClient', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('bounds exit-1 process calls and diagnostics, and observes executable replacement through the port', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const binaryPath = path.join(tempDir, 'runtime.exe');
+    await fs.writeFile(binaryPath, 'old runtime');
+    const client = new OpenCodeBridgeCommandClient({ binaryPath, tempDirectory: tempDir,
+      processRunner: runner, diagnostics });
+    const bridge = new OpenCodeReadinessBridge(client);
+    const retry = new OpenCodeBackfillRetry();
+    runner.nextResult = { stdout: '', stderr: 'expected 1 argument, got 2', exitCode: 1, timedOut: false };
+    const refresh = async () => retry.run('task', await bridge.getRuntimeIdentity() ?? '', async () => {
+      const result = await bridge.backfillOpenCodeTaskLedger({ teamName: 'test-team', teamId: 'test-team',
+        taskId: 'task', projectDir: tempDir, workspaceRoot: tempDir });
+      expect(result.outcome).toBe('transient-error');
+      return { attempted: true, backfilled: false };
+    });
+    const identity = await bridge.getRuntimeIdentity();
+    await Promise.all(Array.from({ length: 20 }, refresh));
+    await refresh();
+    expect(runner.calls).toHaveLength(1);
+    expect(diagnostics.events).toHaveLength(1);
+    expect(JSON.stringify(diagnostics.events[0])).toContain('expected 1 argument, got 2');
+    vi.setSystemTime(Date.now() + 5_000);
+    await refresh();
+    expect(runner.calls).toHaveLength(2);
+    expect(diagnostics.events).toHaveLength(2);
+    await fs.writeFile(binaryPath, 'replacement runtime with different bytes');
+    expect(await bridge.getRuntimeIdentity()).not.toBe(identity);
+    await refresh();
+    expect(runner.calls).toHaveLength(3);
+    expect(diagnostics.events).toHaveLength(3);
+  });
+
+  it.each([false, true])('retains correlated startup evidence on unknown drainage (watchdog=%s)', async (timedOut) => {
+    const payload = bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
+      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
+      startupCleanup: { completion: 'unknown', coverage: 'partial', survivingPids: [55] },
+    } });
+    runner.nextResult = { stdout: JSON.stringify(payload), stderr: '', exitCode: timedOut ? null : 0, timedOut };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result.requestId).toBe('req-1');
+    const files = await fs.readdir(tempDir);
+    expect(files.some(name => name.endsWith('.observed-output.json'))).toBe(true);
+    expect(await fs.readFile(path.join(tempDir, files.find(name => name.endsWith('.observed-output.json'))!), 'utf8')).toBe(JSON.stringify(payload));
+    expect(runner.calls).toHaveLength(1);
+    if (timedOut) expect(result).toMatchObject({ ok: false, error: { kind: 'transport_watchdog_timeout' } });
+    else expect(result).toEqual(payload);
+  });
+
+  it('consumes normal drained partial evidence, but never infers it from watchdog exit', async () => {
+    runner.nextResult = { stdout: JSON.stringify(bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
+      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
+      startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [55] },
+    } })), stderr: '', exitCode: 0, timedOut: false };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result.ok).toBe(true);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+    expect(runner.calls).toHaveLength(1);
+  });
+
+  it.each(['req-1', 'different-request'])('trusts only correlated pre-mutation rejection even on abnormal exit (%s)', async (requestId) => {
+    const rejection = { ...bridgeSuccess({ command: 'opencode.cleanupStartupHosts', requestId }), ok: false,
+      error: { kind: 'unsupported_command', message: 'old runtime', retryable: false } };
+    runner.nextResult = { stdout: JSON.stringify(rejection), stderr: '', exitCode: 1, timedOut: true };
+    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result).toMatchObject({ ok: false, error: { kind: requestId === 'req-1' ? 'unsupported_command' : 'transport_watchdog_timeout' } });
+    expect((await fs.readdir(tempDir)).length === 0).toBe(requestId === 'req-1');
+    expect(runner.calls).toHaveLength(1);
+  });
+
+  it('reports preparation rejection as terminal pre-mutation failure', async () => {
+    const client = createClient({ envProvider: async () => { throw new Error('test env unavailable'); } });
+    const result = await client.execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input', details: { mutationStarted: false } } });
+    expect(runner.calls).toHaveLength(0);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+  });
+
+  it('checks shutdown admission after asynchronous environment preparation before CLI dispatch', async () => {
+    let allowed = true;
+    const client = createClient({ envProvider: async () => { allowed = false; return {}; } });
+    const result = await client.execute('opencode.cleanupStartupHosts', {}, {
+      cwd: tempDir, timeoutMs: 100, canDispatch: () => allowed,
+    });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
+    expect(runner.calls).toHaveLength(0);
+    expect(await fs.readdir(tempDir)).toEqual([]);
   });
 
   it('writes a private input envelope, executes the bridge command, and removes the input file', async () => {
@@ -710,7 +801,7 @@ describe('OpenCodeBridgeCommandClient', () => {
     });
   });
 
-  it('keeps the sealed HTTP MCP transport when a later env refresh falls back locally', async () => {
+  it('does not revive an initial HTTP MCP endpoint after Host selects local fallback', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
       stderr: '',
@@ -740,14 +831,14 @@ describe('OpenCodeBridgeCommandClient', () => {
       }
     );
 
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
     expect(runner.calls[0].env).toMatchObject({
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     });
   });
 
-  it('retains an HTTP MCP transport first discovered by the lazy env provider', async () => {
+  it('does not revive an HTTP MCP endpoint retired by the lazy Host env provider', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
       stderr: '',
@@ -784,9 +875,12 @@ describe('OpenCodeBridgeCommandClient', () => {
       );
     }
 
+    expect(runner.calls[0].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe(
+      'http://127.0.0.1:5001/mcp'
+    );
+    expect(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
     expect(runner.calls[1].env).toMatchObject({
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     });
   });

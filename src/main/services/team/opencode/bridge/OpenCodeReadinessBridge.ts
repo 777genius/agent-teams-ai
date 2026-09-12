@@ -20,6 +20,7 @@ import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
+import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -52,15 +53,23 @@ import type {
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
+import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
+import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
+import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
+  getRuntimeIdentity?(): Promise<string | null>;
   backfillOpenCodeTaskLedger(
     input: OpenCodeBackfillTaskLedgerCommandBody
   ): Promise<OpenCodeBackfillTaskLedgerCommandData>;
 }
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
+  getRuntimeIdentity?(): Promise<string | null>;
+  observeStartupCleanup?(
+    requestId: string
+  ): Promise<OpenCodeBridgeResult<OpenCodeStartupCleanupData> | null>;
   execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
@@ -68,6 +77,7 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -108,6 +118,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     private readonly bridge: OpenCodeReadinessBridgeCommandExecutor,
     private readonly options: OpenCodeReadinessBridgeOptions = {}
   ) {}
+
+  getRuntimeIdentity(): Promise<string | null> {
+    return this.bridge.getRuntimeIdentity?.() ?? Promise.resolve(null);
+  }
 
   async checkOpenCodeTeamLaunchReadiness(
     input: OpenCodeReadinessBridgeCommandBody
@@ -219,11 +233,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
 
-  async stopOpenCodeTeam(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData> {
+  async stopOpenCodeTeam(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
     const cwd = input.projectPath ?? process.cwd();
     const result = await this.executeStateChangingCommand<
       OpenCodeStopTeamCommandBody,
-      OpenCodeStopTeamCommandData
+      OpenCodeStopTeamCommandData | RuntimeStopObservation
     >('opencode.stopTeam', input, {
       teamName: input.teamName,
       laneId: input.laneId,
@@ -293,6 +307,19 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         ...result.diagnostics.map(formatDiagnosticEvent),
       ],
     };
+  }
+
+  observeOpenCodeStartupCleanup(requestId: string) {
+    return this.bridge.observeStartupCleanup?.(requestId) ?? Promise.resolve(null);
+  }
+
+  cleanupOpenCodeStartupHosts(
+    budget: OpenCodeStartupCleanupBudget,
+    appStartedAtMs = Date.now(),
+    canDispatch?: () => boolean,
+    requestId?: string
+  ) {
+    return executeOpenCodeStartupCleanup(this.bridge, budget, appStartedAtMs, canDispatch, requestId);
   }
 
   async cleanupOpenCodeHosts(

@@ -1,6 +1,7 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
 import { isPersistedOpenCodeSecondaryLaneMember } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { findPersistedLaunchMemberForLane } from './TeamProvisioningOpenCodeRuntimePermissions';
@@ -9,6 +10,10 @@ import {
   normalizeRuntimePositiveInteger,
 } from './TeamProvisioningRuntimeMetadata';
 
+import type {
+  LaunchStateWriteOptions,
+  LaunchStateWriteResult,
+} from './TeamProvisioningLaunchStateStoreBoundary';
 import type { PersistedTeamLaunchSnapshot, TeamChangeEvent } from '@shared/types';
 
 export interface RememberOpenCodeRuntimePidFromBridgeInput {
@@ -32,7 +37,8 @@ export interface RememberOpenCodeRuntimePidFromBridgePorts {
   readLaunchState: (teamName: string) => Promise<PersistedTeamLaunchSnapshot | null>;
   writeLaunchStateSnapshot: (
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
   ) => Promise<void>;
   invalidateRuntimeSnapshotCaches: (teamName: string) => void;
   emitTeamChange: (event: TeamChangeEvent) => void;
@@ -46,8 +52,9 @@ export interface RememberOpenCodeRuntimePidFromBridgeServiceHost {
   enqueueLaunchStateStoreOperation: RememberOpenCodeRuntimePidFromBridgePorts['enqueueLaunchStateStoreOperation'];
   writeLaunchStateSnapshotNow(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
-  ): Promise<unknown>;
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
+  ): Promise<LaunchStateWriteResult>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   teamChangeEmitter?: ((event: TeamChangeEvent) => void) | null;
 }
@@ -70,8 +77,9 @@ export function createRememberOpenCodeRuntimePidFromBridgePortsFromService(
     enqueueLaunchStateStoreOperation: (teamName, operation) =>
       service.enqueueLaunchStateStoreOperation(teamName, operation),
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
-    writeLaunchStateSnapshot: async (teamName, snapshot) => {
-      await service.writeLaunchStateSnapshotNow(teamName, snapshot);
+    writeLaunchStateSnapshot: async (teamName, snapshot, options) => {
+      const result = await service.writeLaunchStateSnapshotNow(teamName, snapshot, options);
+      if (!result.wrote) throw new Error('OpenCode runtime PID publication was superseded');
     },
     invalidateRuntimeSnapshotCaches: (teamName) =>
       service.invalidateRuntimeSnapshotCaches(teamName),
@@ -98,6 +106,7 @@ export async function rememberOpenCodeRuntimePidFromBridge(
   }
 
   const observedAt = ports.nowIso();
+  const isAuthorized = captureTeamLaunchPublicationAuthority(input.teamName);
   try {
     const changed = await ports.enqueueLaunchStateStoreOperation(input.teamName, async () => {
       const previous = await ports.readLaunchState(input.teamName).catch(() => null);
@@ -164,7 +173,11 @@ export async function rememberOpenCodeRuntimePidFromBridge(
         },
         updatedAt: observedAt,
       });
-      await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot);
+      nextSnapshot.publicationRunId = previous.publicationRunId;
+      await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot, {
+        isAuthorized,
+        republishesExistingLaunch: true,
+      });
       return true;
     });
     if (changed) {

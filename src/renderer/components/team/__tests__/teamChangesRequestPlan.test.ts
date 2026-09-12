@@ -31,6 +31,16 @@ function changedTasks(count: number): TeamTaskWithKanban[] {
 }
 
 describe('buildTeamChangeRequestPlan', () => {
+  it('separates automatic fresh summaries from explicit manual backfill retry', () => {
+    const tasks = changedTasks(3);
+    const automatic = buildTeamChangeRequestPlan(tasks, 0, true);
+    expect(automatic.requests.every((request) => request.options?.forceFresh === true)).toBe(true);
+    expect(automatic.requests.every((request) => request.options?.retryBackfill !== true)).toBe(true);
+    const manual = buildTeamChangeRequestPlan(tasks, 0, true, { retryBackfill: true });
+    expect(manual.requests.every((request) => request.options?.retryBackfill === true)).toBe(true);
+    expect(manual.requests.every((request) => request.options?.forceFresh === true)).toBe(true);
+  });
+
   it('scans unknown pending tasks only when they have work evidence', () => {
     const plan = buildTeamChangeRequestPlan(
       [

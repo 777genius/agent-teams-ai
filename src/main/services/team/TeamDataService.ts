@@ -1,5 +1,6 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
+import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -7,7 +8,7 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
@@ -1094,6 +1095,7 @@ export class TeamDataService {
       color: meta.color,
       cwd: meta.cwd,
       prompt: meta.prompt,
+      savedSettingsFingerprint: fingerprintSavedLaunchSettings(meta),
       providerId: resolvedProviderId,
       providerBackendId: migrateProviderBackendId(
         resolvedProviderId,
@@ -1108,7 +1110,7 @@ export class TeamDataService {
       extraCliArgs: meta.extraCliArgs,
       limitContext: meta.limitContext,
       members: members
-        .filter((member) => !member.removedAt)
+        .filter((member) => !member.removedAt && !isCanonicalSettingsLeadMember(member))
         .map((member) => ({
           name: member.name,
           role: member.role,

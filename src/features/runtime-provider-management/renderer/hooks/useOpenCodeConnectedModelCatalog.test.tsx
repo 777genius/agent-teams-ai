@@ -113,6 +113,128 @@ afterEach(async () => {
 });
 
 describe('connected OpenCode dashboard catalog', () => {
+  const typedError = (reportId: string) => ({
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    error: {
+      code: 'runtime-unhealthy',
+      recoverable: true,
+      message: 'catalog failed',
+      diagnostics: { reportId, stage: 'runtime_command', exitCode: 7 },
+    },
+  });
+
+  it.each(['directory', 'models'] as const)(
+    'preserves typed %s failure and clears it on retry',
+    async (operation) => {
+      if (operation === 'directory')
+        mocks.directory.mockResolvedValueOnce(typedError('oc-directory'));
+      else
+        mocks.models.mockImplementation(async ({ providerId }) =>
+          providerId === 'openrouter' ? typedError('oc-models') : models(providerId)
+        );
+      await act(async () => root.render(<Probe />));
+      expect(observed.failures).toEqual([
+        expect.objectContaining({
+          operation: operation === 'directory' ? 'provider_directory' : 'provider_models',
+          sourceProviderId: operation === 'directory' ? null : 'openrouter',
+          origin: 'main',
+          diagnostics: typedError(`oc-${operation}`).error.diagnostics,
+        }),
+      ]);
+      expect(observed.providerStatus?.models).toEqual(
+        operation === 'directory' ? [] : ['opencode/model-0']
+      );
+      mocks.models.mockImplementation(async ({ providerId }) => models(providerId));
+      await act(async () => observed.refresh());
+      expect(observed.failures).toEqual([]);
+      expect(observed.providerStatus?.models).toHaveLength(2);
+      expect(observed.providerStatus?.capabilities.teamLaunch).toBe(false);
+    }
+  );
+
+  it('keeps stale models as data without inventing process diagnostics', async () => {
+    mocks.models.mockImplementation(async ({ providerId }) => {
+      const response = models(providerId);
+      response.models.catalogState = 'stale';
+      return response;
+    });
+    await act(async () => root.render(<Probe />));
+    expect(observed.providerStatus?.models).toHaveLength(2);
+    expect(observed.failures).toHaveLength(2);
+    expect(
+      observed.failures.every((failure) => failure.origin === 'stale' && !failure.diagnostics)
+    ).toBe(true);
+  });
+
+  it.each(['directory', 'models'] as const)('keeps the failed %s page ID', async (operation) => {
+    if (operation === 'directory') {
+      const first = directory();
+      mocks.directory
+        .mockResolvedValueOnce({ ...first, directory: { ...first.directory, nextCursor: 'next' } })
+        .mockResolvedValueOnce(typedError('oc-page-two'));
+    } else {
+      mocks.models.mockImplementation(async ({ providerId, cursor }) =>
+        providerId !== 'openrouter'
+          ? models(providerId)
+          : cursor
+            ? typedError('oc-page-two')
+            : {
+                ...models(providerId),
+                models: { ...models(providerId).models, nextCursor: 'next' },
+              }
+      );
+    }
+    await act(async () => root.render(<Probe />));
+    expect(observed.failures[0]?.diagnostics?.reportId).toBe('oc-page-two');
+    expect(observed.failures[0]?.origin).toBe('main');
+    expect(observed.providerStatus?.models).toEqual(
+      operation === 'directory' ? [] : ['opencode/model-0']
+    );
+  });
+
+  it.each(['directory', 'models'] as const)(
+    'distinguishes %s client validation from transport without a main ID',
+    async (operation) => {
+      const mock = operation === 'directory' ? mocks.directory : mocks.models;
+      mock.mockResolvedValue({ schemaVersion: 99, runtimeId: 'opencode' });
+      await act(async () => root.render(<Probe />));
+      expect(observed.failures.length).toBeGreaterThan(0);
+      expect(
+        observed.failures.every(
+          (failure) => failure.origin === 'client_validation' && !failure.diagnostics
+        )
+      ).toBe(true);
+      mock.mockRejectedValue(new Error('transport token=private-value'));
+      await act(async () => observed.refresh());
+      expect(
+        observed.failures.every((failure) => failure.origin === 'transport' && !failure.diagnostics)
+      ).toBe(true);
+      expect(JSON.stringify(observed.failures)).not.toContain('private-value');
+    }
+  );
+
+  it.each(['retry', 'project'] as const)(
+    'ignores an old typed failure after a newer %s succeeds',
+    async (action) => {
+      let completeOld!: (value: unknown) => void;
+      mocks.models.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            completeOld = resolve;
+          })
+      );
+      await act(async () => root.render(<Probe />));
+      if (action === 'retry') await act(async () => observed.refresh());
+      else await act(async () => root.render(<Probe projectPath="/sandbox/b" />));
+      expect(observed.providerStatus?.models).toHaveLength(2);
+      await act(async () => completeOld(typedError('oc-obsolete')));
+      expect(observed.failures).toEqual([]);
+      expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+      expect(mocks.cancel).toHaveBeenCalled();
+    }
+  );
+
   it('does not pause catalog I/O for an abandoned status-checking render', async () => {
     let completeDirectory!: (value: ReturnType<typeof directory>) => void;
     mocks.directory.mockReturnValue(
@@ -283,6 +405,17 @@ describe('connected OpenCode dashboard catalog', () => {
           .entries as RuntimeProviderDirectoryEntryDto[]
       )
     ).toEqual(['opencode', 'openrouter', 'xai']);
+  });
+
+  it('keeps available local OpenCode sources in the dashboard catalog inventory', () => {
+    expect(
+      connectedCatalogSourceIds([
+        { providerId: 'opencode', state: 'connected', metadata: {} },
+        { providerId: 'ollama', state: 'available', metadata: {} },
+        { providerId: 'lmstudio', state: 'available', metadata: { configuredAuthless: true } },
+        { providerId: 'openrouter', state: 'not-connected', metadata: {} },
+      ] as RuntimeProviderDirectoryEntryDto[])
+    ).toEqual(['opencode', 'lmstudio', 'ollama']);
   });
 
   it('recovers an initial failure on the periodic tick and reloads changed connected sources', async () => {

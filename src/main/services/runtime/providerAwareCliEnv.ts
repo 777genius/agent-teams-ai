@@ -11,7 +11,10 @@ import {
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
-import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
+import {
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
 import {
   applyOpenCodeRuntimeBinaryEnv,
@@ -94,6 +97,7 @@ export function buildPassiveProviderStatusCliEnv(
       delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
     }
     applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? knownOpenCodeBinary);
+    applyAgentTeamsMcpAppContext(env);
   }
   if (!options.providerId || options.providerId === 'codex') {
     const appManagedCodexBinary = resolveAppManagedCodexRuntimeBinaryPath();
@@ -176,6 +180,7 @@ export async function buildProviderAwareCliEnv(
   }
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     await ensureAgentTeamsMcpLocalLaunchEnv(env);
+    applyAgentTeamsMcpAppContext(env);
   }
 
   if (options.providerId) {

@@ -150,6 +150,7 @@ function createHost(
       calls.push('recordCancelledLaunch');
       return { runId: 'cancelled-run' };
     },
+    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
     resetTeamScopedTransientStateForNewRun: () => {
       calls.push('resetTransientState');
     },
@@ -233,6 +234,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       appShellBoundary: {
         getOpenCodeRuntimeAdapter: baseHost.getOpenCodeRuntimeAdapter,
       },
+      defaultLaunchStateStore: { beginLaunch: baseHost.beginLaunchPublication },
       launchStateStore: {
         read: baseHost.readLaunchState,
       },
@@ -351,7 +353,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'progress:validating',
       'resetTransientState',
       'readLaunchState',
-      'clearPersistedLaunchState',
+      'beginLaunchPublication',
       'getLaunchCwd',
       'progress:spawning',
       'adapter.launch',
@@ -394,7 +396,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'readLaunchState',
       'progress:validating',
       'resetTransientState',
-      'clearPersistedLaunchState',
+      'beginLaunchPublication',
       'invalidateCaches',
       'progress:spawning',
       'launchPrimary',

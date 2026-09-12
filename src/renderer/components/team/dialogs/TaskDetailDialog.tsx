@@ -455,20 +455,6 @@ export const TaskDetailDialog = ({
     currentTaskChangeSummaryKeyRef.current = currentTaskChangeSummaryKey;
   }, [currentTaskChangeSummaryKey]);
 
-  const loadTaskChangeSummary = useCallback(
-    async (forceFresh = false): Promise<TaskChangeSetV2 | null> => {
-      if (!currentTask || !taskChangeSummaryOptions || variant !== 'team' || !canShowTaskChanges) {
-        return null;
-      }
-      const data = await api.review.getTaskChanges(teamName, currentTask.id, {
-        ...taskChangeSummaryOptions,
-        forceFresh,
-      });
-      return data;
-    },
-    [canShowTaskChanges, currentTask, taskChangeSummaryOptions, teamName, variant]
-  );
-
   const syncTaskChangeSummaryResult = useCallback(
     (data: TaskChangeSetV2 | null) => {
       setTaskChangesFiles(data?.files ?? null);
@@ -501,10 +487,12 @@ export const TaskDetailDialog = ({
   const requestTaskChangeSummary = useCallback(
     async ({
       forceFresh = false,
+      retryBackfill = false,
       showSpinner = false,
       preserveFilesOnError = false,
     }: {
       forceFresh?: boolean;
+      retryBackfill?: boolean;
       showSpinner?: boolean;
       preserveFilesOnError?: boolean;
     } = {}): Promise<void> => {
@@ -519,7 +507,13 @@ export const TaskDetailDialog = ({
       setTaskChangesError(null);
 
       try {
-        const data = await loadTaskChangeSummary(forceFresh);
+        const data = taskChangeSummaryOptions
+          ? await api.review.getTaskChanges(teamName, currentTask.id, {
+              ...taskChangeSummaryOptions,
+              forceFresh,
+              retryBackfill,
+            })
+          : null;
         if (currentTaskChangeSummaryKeyRef.current !== requestKey) {
           return;
         }
@@ -546,7 +540,8 @@ export const TaskDetailDialog = ({
     [
       canShowTaskChanges,
       currentTask,
-      loadTaskChangeSummary,
+      taskChangeSummaryOptions,
+      teamName,
       syncTaskChangeSummaryResult,
       t,
       variant,
@@ -656,6 +651,7 @@ export const TaskDetailDialog = ({
   const handleRefreshChanges = useCallback(() => {
     void requestTaskChangeSummary({
       forceFresh: true,
+      retryBackfill: true,
       showSpinner: true,
       preserveFilesOnError: false,
     });

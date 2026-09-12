@@ -23,6 +23,10 @@ import {
   parseSingleBridgeJsonResult,
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
+import {
+  isStartupCleanupData,
+  type OpenCodeStartupCleanupData,
+} from './OpenCodeStartupCleanupBridge';
 
 export interface OpenCodeBridgeProcessRunInput {
   binaryPath: string;
@@ -177,6 +181,14 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
 }
 
 export class OpenCodeBridgeCommandClient {
+  private readonly startupObservations = new Map<
+    string,
+    {
+      envelope: OpenCodeBridgeCommandEnvelope<unknown>;
+      inputPath: string;
+      outputPath: string;
+    }
+  >();
   private readonly binaryPath: string;
   private readonly tempDirectory: string;
   private readonly processRunner: OpenCodeBridgeProcessRunner;
@@ -186,8 +198,6 @@ export class OpenCodeBridgeCommandClient {
   private readonly clock: () => Date;
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
-  private lastKnownMcpUrl: string | null;
-  private lastKnownMcpUrlHash: string | null;
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -205,11 +215,50 @@ export class OpenCodeBridgeCommandClient {
     this.clock = options.clock ?? (() => new Date());
     this.env = applyOpenCodeAutoUpdatePolicy(options.env ?? process.env);
     this.envProvider = options.envProvider ?? null;
-    this.lastKnownMcpUrl = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim() || null;
-    this.lastKnownMcpUrlHash = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH?.trim() || null;
     this.keepInputFile = options.keepInputFile ?? false;
     this.ensureWindowsNodeModulesJunction =
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
+  }
+
+  /** Read only the original request's retained response; never launch another CLI. */
+  async observeStartupCleanup(
+    requestId: string
+  ): Promise<OpenCodeBridgeResult<OpenCodeStartupCleanupData> | null> {
+    const observation = this.startupObservations.get(requestId);
+    if (!observation) return null;
+    for (const candidate of [
+      observation.outputPath,
+      `${observation.inputPath}.observed-output.json`,
+    ]) {
+      const output = await this.readBridgeOutput('', candidate);
+      const parsed = parseSingleBridgeJsonResult<OpenCodeStartupCleanupData>(output.content);
+      if (!parsed.ok || !validateBridgeResultEnvelope(parsed.value, observation.envelope).ok)
+        continue;
+      const result = parsed.value;
+      const terminal = result.ok
+        ? isStartupCleanupData(result.data) && result.data.startupCleanup.completion === 'drained'
+        : ['unsupported_command', 'unsupported_schema', 'invalid_input'].includes(
+            result.error.kind
+          );
+      if (!terminal) continue;
+      // Only request-correlated terminal evidence acknowledges drainage. An
+      // absent/unknown response or launcher exit leaves this observation intact.
+      this.startupObservations.delete(requestId);
+      if (!this.keepInputFile) await fs.unlink(observation.inputPath).catch(() => undefined);
+      await fs.unlink(observation.outputPath).catch(() => undefined);
+      await fs.unlink(`${observation.inputPath}.observed-output.json`).catch(() => undefined);
+      return result;
+    }
+    return null;
+  }
+
+  /** Replacement-sensitive identity without launching the runtime or reading binary contents. */
+  async getRuntimeIdentity(): Promise<string | null> {
+    const metadata = await fs.stat(this.binaryPath).catch(() => null);
+    return JSON.stringify([
+      this.binaryPath,
+      metadata && [metadata.dev, metadata.ino, metadata.size, metadata.mtimeMs, metadata.ctimeMs],
+    ]);
   }
 
   async execute<TBody, TData>(
@@ -219,6 +268,7 @@ export class OpenCodeBridgeCommandClient {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -229,7 +279,11 @@ export class OpenCodeBridgeCommandClient {
     const requestId = options.requestId ?? this.requestIdFactory();
     const requestOptions = { ...options, requestId };
     const result = await this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
-    if (result.ok || !(await this.tryRecoverWindowsNodeModulesJunction(result))) {
+    if (
+      result.ok ||
+      command === 'opencode.cleanupStartupHosts' ||
+      !(await this.tryRecoverWindowsNodeModulesJunction(result))
+    ) {
       return result;
     }
     return this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
@@ -275,6 +329,7 @@ export class OpenCodeBridgeCommandClient {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -288,8 +343,25 @@ export class OpenCodeBridgeCommandClient {
       timeoutMs: options.timeoutMs,
       body,
     };
-    const inputPath = await this.writeInputFile(envelope);
+    let inputPath: string;
+    try {
+      inputPath = await this.writeInputFile(envelope);
+    } catch (error) {
+      if (command !== 'opencode.cleanupStartupHosts') throw error;
+      return this.contractFailure(
+        envelope,
+        'invalid_input',
+        'Startup cleanup input preparation failed before dispatch',
+        false,
+        {
+          mutationStarted: false,
+          preparationError: getBridgeOutputReadError(error),
+        }
+      );
+    }
     const outputPath = `${inputPath}.output.json`;
+    let retainStartupEvidence = command === 'opencode.cleanupStartupHosts';
+    let dispatched = false;
 
     try {
       const maxAttempts = isReadOnlyRetryableBridgeCommand(command)
@@ -305,6 +377,18 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
+        const env = await this.resolveEnv();
+        if (command === 'opencode.cleanupStartupHosts' && options.canDispatch?.() === false) {
+          retainStartupEvidence = false;
+          return this.contractFailure(
+            envelope,
+            'invalid_input',
+            'Startup cleanup admission closed before dispatch',
+            false,
+            {}
+          );
+        }
+        dispatched = true;
         const processResult = await this.processRunner.run({
           binaryPath: this.binaryPath,
           args: bridgeArgs,
@@ -312,10 +396,27 @@ export class OpenCodeBridgeCommandClient {
           timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-          env: await this.resolveEnv(),
+          env,
         });
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
+        let observedOutputWriteError: string | null = null;
+        if (retainStartupEvidence && bridgeOutput.content) {
+          // Snapshot separately: a late runtime writer may still publish to outputPath.
+          await atomicWriteAsync(`${inputPath}.observed-output.json`, bridgeOutput.content, {
+            mode: 0o600,
+          }).catch((error: unknown) => {
+            observedOutputWriteError = getBridgeOutputReadError(error);
+          });
+        }
         const processDetails = {
+          ...(retainStartupEvidence
+            ? {
+                inputPath,
+                outputPath,
+                observedOutputWriteError,
+                observedOutputPath: `${inputPath}.observed-output.json`,
+              }
+            : {}),
           exitCode: processResult.exitCode,
           timedOut: processResult.timedOut,
           stdoutBytes: bridgeOutput.stdoutBytes,
@@ -325,6 +426,20 @@ export class OpenCodeBridgeCommandClient {
           outputReadError: bridgeOutput.outputReadError,
         };
 
+        if (command === 'opencode.cleanupStartupHosts') {
+          const evidence = parseSingleBridgeJsonResult<TData>(bridgeOutput.content);
+          if (
+            evidence.ok &&
+            validateBridgeResultEnvelope(evidence.value, envelope).ok &&
+            !evidence.value.ok &&
+            ['unsupported_command', 'unsupported_schema', 'invalid_input'].includes(
+              evidence.value.error.kind
+            )
+          ) {
+            retainStartupEvidence = false;
+            return evidence.value;
+          }
+        }
         if (processResult.timedOut) {
           const unknownOutcomeMessage =
             processResult.outcomeUnknownReason === 'output_limit'
@@ -387,6 +502,14 @@ export class OpenCodeBridgeCommandClient {
           });
         }
 
+        if (
+          command === 'opencode.cleanupStartupHosts' &&
+          parsed.value.ok &&
+          isStartupCleanupData(parsed.value.data) &&
+          parsed.value.data.startupCleanup.completion === 'drained'
+        ) {
+          retainStartupEvidence = false;
+        }
         return parsed.value;
       }
 
@@ -397,11 +520,30 @@ export class OpenCodeBridgeCommandClient {
         false,
         { attempts: maxAttempts }
       );
+    } catch (error) {
+      if (command !== 'opencode.cleanupStartupHosts' || dispatched) throw error;
+      retainStartupEvidence = false;
+      return this.contractFailure(
+        envelope,
+        'invalid_input',
+        'Startup cleanup preparation failed before dispatch',
+        false,
+        {
+          mutationStarted: false,
+          preparationError: getBridgeOutputReadError(error),
+        }
+      );
     } finally {
-      if (!this.keepInputFile) {
+      if (retainStartupEvidence)
+        this.startupObservations.set(envelope.requestId, { envelope, inputPath, outputPath });
+      if (!this.keepInputFile && !retainStartupEvidence) {
         await fs.unlink(inputPath).catch(() => undefined);
       }
-      await fs.unlink(outputPath).catch(() => undefined);
+      if (!retainStartupEvidence) {
+        await fs.unlink(outputPath).catch(() => undefined);
+        if (command === 'opencode.cleanupStartupHosts')
+          await fs.unlink(`${inputPath}.observed-output.json`).catch(() => undefined);
+      }
     }
   }
 
@@ -462,23 +604,9 @@ export class OpenCodeBridgeCommandClient {
     if (!this.envProvider) {
       return this.env;
     }
-    const resolved = applyOpenCodeAutoUpdatePolicy(await this.envProvider());
-    const resolvedMcpUrl = resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim();
-    if (resolvedMcpUrl) {
-      this.lastKnownMcpUrl = resolvedMcpUrl;
-      this.lastKnownMcpUrlHash =
-        resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH?.trim() || null;
-    } else if (this.lastKnownMcpUrl) {
-      // A transient HTTP MCP refresh failure must not silently switch an active
-      // OpenCode launch from its sealed remote transport to the local fallback.
-      // The next command can recover the endpoint, while changing transport
-      // here would invalidate every already-running selected session.
-      resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = this.lastKnownMcpUrl;
-      if (this.lastKnownMcpUrlHash) {
-        resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = this.lastKnownMcpUrlHash;
-      }
-    }
-    return resolved;
+    // Host publication is authoritative, including removal. A cached URL can name
+    // a retired server and must never override the current transport selection.
+    return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
   }
 
   private async writeInputFile<TBody>(

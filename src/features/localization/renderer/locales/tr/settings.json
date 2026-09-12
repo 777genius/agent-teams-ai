@@ -59,9 +59,12 @@
       "testAndUseProject": "Bu proje için test et ve kullan"
     },
     "diagnostics": {
+      "previousPage": "Önceki sayfa",
+      "nextPage": "Sonraki sayfa",
       "copied": "Tanılama kopyalandı",
       "copiedShort": "Kopyalandı",
       "copy": "Tanılamayı kopyala",
+      "copyAll": "Tüm tanılamaları kopyala",
       "hints": "İpuçları",
       "likelyCause": "Olası neden:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI'yi Yönetici olarak çalıştırın"

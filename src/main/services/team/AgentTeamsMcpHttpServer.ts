@@ -14,6 +14,7 @@ import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { forceKillProcessByPidNoWait, killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
 
+import { createOpenCodeMcpAppContext } from './opencode/bridge/OpenCodeMcpBridgeEnv';
 import { type FileLockOptions, withFileLock } from './fileLock';
 import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpConfigBuilder';
 
@@ -682,6 +683,9 @@ function execFileText(
 }
 
 export class AgentTeamsMcpHttpServer {
+  readonly appContext = createOpenCodeMcpAppContext(() =>
+    this.preventFutureStarts ? null : this.getCurrentHandle()
+  );
   private startPromise: Promise<AgentTeamsMcpHttpServerHandle> | null = null;
   private child: ChildProcess | null = null;
   private handle: AgentTeamsMcpHttpServerHandle | null = null;
@@ -690,15 +694,12 @@ export class AgentTeamsMcpHttpServer {
   private readonly ownerInstanceId = randomUUID();
   private readonly startedAtMs = Date.now();
   private preventFutureStarts = false;
-
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
-
   async ensureStarted(): Promise<AgentTeamsMcpHttpServerHandle> {
     this.throwIfStartsPrevented();
     if (this.startPromise) {
       return this.startPromise;
     }
-
     this.startPromise = (
       this.handle ? this.reuseOrRestartExistingHandle(this.handle) : this.startOnce()
     ).finally(() => {
@@ -735,7 +736,6 @@ export class AgentTeamsMcpHttpServer {
   getCurrentHandle(): AgentTeamsMcpHttpServerHandle | null {
     return this.handle;
   }
-
   private resolveStatePath(): string | null {
     if (this.deps.statePath === null) {
       return null;

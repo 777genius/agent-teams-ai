@@ -15,6 +15,11 @@ import { createLogger } from '@shared/utils/logger';
 import { type BackupManifest } from './teamBackupManifest';
 import { TeamConfigReader } from './TeamConfigReader';
 import {
+  canRestoreTeamStopMarker,
+  readTeamLaunchFreshness,
+  TEAM_LAUNCH_FRESHNESS_FILE,
+} from './TeamLaunchFreshness';
+import {
   TEAM_LAUNCH_STOPPED_MARKER_FILE,
   withTeamLaunchStatePublicationLock,
 } from './TeamLaunchStateStore';
@@ -158,7 +163,12 @@ export class TeamBackupRestoreService {
     // Restore remaining files
     const launchStateFrozen = await this.isLaunchStateFrozenByStop(teamName, backupFiles);
     for (const relPath of backupFiles) {
-      if (relPath === 'config.json' || relPath === 'manifest.json') continue;
+      if (
+        relPath === 'config.json' ||
+        relPath === 'manifest.json' ||
+        relPath === TEAM_LAUNCH_FRESHNESS_FILE
+      )
+        continue;
       if (launchStateFrozen && LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
         logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team is stopped`);
         continue;
@@ -201,7 +211,7 @@ export class TeamBackupRestoreService {
         }
         await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         if (
-          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, () =>
+          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, content, () =>
             this.commitRestoredFile(
               dest,
               content,
@@ -234,7 +244,7 @@ export class TeamBackupRestoreService {
     let count = 0;
 
     for (const relPath of backupFiles) {
-      if (relPath === 'manifest.json') continue;
+      if (relPath === 'manifest.json' || relPath === TEAM_LAUNCH_FRESHNESS_FILE) continue;
       if (launchStateFrozen && LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
         logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team is stopped`);
         continue;
@@ -282,7 +292,7 @@ export class TeamBackupRestoreService {
         const src = path.join(backupDir, relPath);
         const content = await fs.promises.readFile(src);
         if (
-          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, () =>
+          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, content, () =>
             this.commitRestoredFile(
               dest,
               content,
@@ -326,12 +336,26 @@ export class TeamBackupRestoreService {
     teamName: string,
     relPath: string,
     backupFiles: readonly string[],
+    content: Buffer,
     commit: () => Promise<boolean>
   ): Promise<boolean> {
-    if (!LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
+    if (
+      !LAUNCH_STATE_PUBLICATION_FILES.has(relPath) &&
+      relPath !== TEAM_LAUNCH_STOPPED_MARKER_FILE
+    ) {
       return commit();
     }
     return withTeamLaunchStatePublicationLock(teamName, async () => {
+      if (relPath === TEAM_LAUNCH_STOPPED_MARKER_FILE) {
+        return (await canRestoreTeamStopMarker(teamName, content)) ? commit() : false;
+      }
+      const freshness = await readTeamLaunchFreshness(teamName);
+      if (
+        freshness?.kind === 'launch' &&
+        JSON.parse(content.toString('utf8')).publicationRunId !== freshness.runId
+      ) {
+        return false;
+      }
       if (await this.isLaunchStateFrozenByStop(teamName, backupFiles)) {
         logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team stopped during restore`);
         return false;
@@ -344,7 +368,13 @@ export class TeamBackupRestoreService {
     teamName: string,
     backupFiles: readonly string[]
   ): Promise<boolean> {
-    if (backupFiles.includes(TEAM_LAUNCH_STOPPED_MARKER_FILE)) return true;
+    try {
+      const freshness = await readTeamLaunchFreshness(teamName);
+      if (freshness?.kind === 'stop') return true;
+      if (backupFiles.includes(TEAM_LAUNCH_STOPPED_MARKER_FILE) && !freshness) return true;
+    } catch {
+      return true;
+    }
     const liveMarker = this.ports.getSourcePathForRelPath(
       teamName,
       TEAM_LAUNCH_STOPPED_MARKER_FILE

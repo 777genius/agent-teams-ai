@@ -1,19 +1,20 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
+import {
+  countLiveRecordedRuntimeHostsForTeam,
+  releaseLoopbackRuntimesReservedByTeam,
+  releaseSharedRuntimeResourcesAfterStop,
+  runTeamForceStopFlow,
+  RUNTIME_HOSTS_POLL_INTERVAL_MS,
+  STOP_ESCALATION_TIMEOUT_MS,
+  stopTeamWithEscalation,
+} from '@main/services/team/lifecycle/teamForceStopFlow';
 import {
   PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
   purgeStaleOpenCodeHostStartupLocks,
 } from '@main/services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
-import {
-  countLiveRecordedRuntimeHostsForTeam,
-  RUNTIME_HOSTS_POLL_INTERVAL_MS,
-  releaseLoopbackRuntimesReservedByTeam,
-  releaseSharedRuntimeResourcesAfterStop,
-  runTeamForceStopFlow,
-  STOP_ESCALATION_TIMEOUT_MS,
-  stopTeamWithEscalation,
-} from '@main/services/team/lifecycle/teamForceStopFlow';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const releaseLoopbackRuntimeModels = vi.hoisted(() =>
@@ -26,10 +27,11 @@ vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', ()
   reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
 import type { TeamLaunchStateReadResult } from '@main/services/team/TeamLaunchStateStore';
+import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
   [K in keyof TeamForceStopFlowPorts]: TeamForceStopFlowPorts[K];
@@ -81,6 +83,31 @@ function launchStateStore(result: TeamLaunchStateReadResult): {
 }
 
 describe('runTeamForceStopFlow', () => {
+  it.each([stopTeamWithEscalation, runTeamForceStopFlow])(
+    'logs failed stopped-state admission while continuing scoped runtime Stop',
+    async (runStop) => {
+      const admission = vi
+        .spyOn(TeamLaunchStateStore.prototype, 'beginStop')
+        .mockRejectedValue(new Error('freshness unreadable'));
+      const markTeamStopped = vi.fn(async () => undefined);
+      const ports = createPorts({ markTeamStopped });
+      try {
+        const result = await runStop('admission-test', ports);
+        expect(result.stopOutcome).toBe('stopped');
+        expect(ports.stopTeam).toHaveBeenCalledWith('admission-test');
+        expect(markTeamStopped).not.toHaveBeenCalled();
+        expect(ports.logWarning).toHaveBeenCalledWith(
+          '[admission-test] Stopped-state admission failed: Error: freshness unreadable'
+        );
+        expect(result.diagnostics).toContain(
+          'Stopped-state admission failed: Error: freshness unreadable'
+        );
+      } finally {
+        admission.mockRestore();
+      }
+    }
+  );
+
   it('completes confirmed scoped stop and cancels deliveries without hard cleanup', async () => {
     const ports = createPorts();
 
@@ -290,7 +317,10 @@ describe('runTeamForceStopFlow', () => {
 
     await runTeamForceStopFlow('fixteam', ports);
 
-    expect(markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
     expect(order).toEqual(['clearPendingPromptDeliveries', 'markTeamStopped']);
   });
 
@@ -304,7 +334,10 @@ describe('runTeamForceStopFlow', () => {
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(result.stopOutcome).toBe('stop_failed');
-    expect(markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
   });
 
   it('reports a failing stopped-state write as a diagnostic instead of failing the force stop', async () => {
@@ -340,7 +373,10 @@ describe('stopTeamWithEscalation', () => {
       clearedPendingDeliveries: 0,
       diagnostics: [],
     });
-    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(ports.markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
   });
 
   it('does not cancel deliveries up front the way the force stop does', async () => {
@@ -791,7 +827,10 @@ describe('post-stop external lead process tree reap', () => {
     expect(result.diagnostics).toEqual([
       'Lead process tree reap failed: process table unavailable',
     ]);
-    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(ports.markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
   });
 });
 
@@ -856,7 +895,10 @@ describe('post-stop shared runtime release', () => {
       clearedPendingDeliveries: 0,
       diagnostics: [],
     });
-    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(ports.markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
     expect(ports.logWarning).not.toHaveBeenCalled();
   });
 
@@ -870,7 +912,10 @@ describe('post-stop shared runtime release', () => {
 
     expect(result.stopOutcome).toBe('stopped');
     expect(result.diagnostics).toEqual(['Post-stop resource release failed: data dir gone']);
-    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(ports.markTeamStopped).toHaveBeenCalledWith(
+      'fixteam',
+      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
+    );
   });
 });
 

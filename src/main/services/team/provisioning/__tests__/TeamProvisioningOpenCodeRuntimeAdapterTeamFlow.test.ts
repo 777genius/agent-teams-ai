@@ -184,6 +184,31 @@ function createPorts(
 }
 
 describe('OpenCode runtime adapter team flow', () => {
+  it('persists inherited intent before runtime materialization and keeps explicit same-model choices', async () => {
+    const model = 'zai-coding-plan/glm-5.3';
+    const request = createRequest({ model, syncModelsWithLead: true, members: [
+      { name: 'inherit-one' }, { name: 'inherit-two' },
+      { name: 'explicit-same', model },
+      { name: 'explicit-other', model: 'zai-coding-plan/glm-5.3-flash' },
+    ] });
+    const writeMembersMeta = vi.fn(async () => undefined);
+    await createOpenCodeTeamThroughRuntimeAdapterFlow(request, vi.fn(), createPorts([], {
+      writeMembersMeta,
+      prepareOpenCodeRuntimeAdapterLaunch: async ({ request: launchRequest, members }) => prepared({
+        request: launchRequest,
+        effectiveMembers: members.map(member => ({ ...member,
+          providerId: 'opencode', model: member.model ?? model, cwd: '/project/synthetic-worktree',
+        })),
+      }),
+    }));
+    expect(writeMembersMeta).toHaveBeenCalledWith('alpha', [
+      expect.objectContaining({ name: 'inherit-one', model: undefined, providerId: undefined, cwd: '/project/synthetic-worktree' }),
+      expect.objectContaining({ name: 'inherit-two', model: undefined }),
+      expect.objectContaining({ name: 'explicit-same', model }),
+      expect.objectContaining({ name: 'explicit-other', model: 'zai-coding-plan/glm-5.3-flash' }),
+    ], { providerBackendId: 'adapter' });
+  });
+
   it('detects duplicate teams across configured and default team bases before preparing launch', async () => {
     const calls: string[] = [];
     const ports = createPorts(calls, {

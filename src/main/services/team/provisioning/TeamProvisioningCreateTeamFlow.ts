@@ -13,6 +13,7 @@ import {
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
 import { buildMembersMetaWritePayload } from './TeamProvisioningConfigLaunchNormalization';
+import { buildConfiguredMembersForPersistence } from './TeamProvisioningConfiguredMemberSpecs';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   mergeProvisioningWarnings,
@@ -318,7 +319,7 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   );
   await membersMetaStore.writeMembers(
     request.teamName,
-    buildMembersMetaWritePayload(allEffectiveMemberSpecs),
+    buildMembersMetaWritePayload(buildConfiguredMembersForPersistence(request.members, allEffectiveMemberSpecs)),
     {
       providerBackendId: request.providerBackendId,
     }

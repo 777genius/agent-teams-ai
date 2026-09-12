@@ -23,8 +23,14 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal
 
 const markStopped = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
+vi.mock('electron', () => ({ app: { getPath: () => '/tmp', isPackaged: false } }));
+
 vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
-  TeamLaunchStateStore: vi.fn(() => ({ read: vi.fn(() => Promise.resolve(null)), markStopped })),
+  TeamLaunchStateStore: vi.fn(() => ({
+    read: vi.fn(() => Promise.resolve(null)),
+    beginStop: async (teamName: string) => ({ teamName, stopIntent: 1, freshness: null }),
+    markStopped,
+  })),
 }));
 
 import type { HttpServices } from '@main/http';
@@ -76,7 +82,11 @@ describe('POST /api/teams/:teamName/force-stop', () => {
     // The route records the team as stopped itself. Without that write,
     // reconciliation is free to re-derive a launch snapshot for a team the
     // user just tore down.
-    expect(markStopped).toHaveBeenCalledWith('fixteam');
+    expect(markStopped).toHaveBeenCalledWith('fixteam', {
+      teamName: 'fixteam',
+      stopIntent: 1,
+      freshness: null,
+    });
   });
 
   it('still answers 200 with stop_failed when the regular stop throws', async () => {

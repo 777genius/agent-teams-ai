@@ -59,9 +59,12 @@
       "testAndUseProject": "Перевірити й використовувати для цього проєкту"
     },
     "diagnostics": {
+      "previousPage": "Попередня сторінка",
+      "nextPage": "Наступна сторінка",
       "copied": "Діагностику скопійовано",
       "copiedShort": "Скопійовано",
       "copy": "Копіювати діагностику",
+      "copyAll": "Копіювати всю діагностику",
       "hints": "Підказки",
       "likelyCause": "Імовірна причина:",
       "windowsSymlinkAdminHint": "Windows: запустіть Agent Teams AI від імені адміністратора"

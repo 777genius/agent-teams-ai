@@ -59,9 +59,12 @@
       "testAndUseProject": "इस प्रोजेक्ट के लिए जाँचें और उपयोग करें"
     },
     "diagnostics": {
+      "previousPage": "पिछला पृष्ठ",
+      "nextPage": "अगला पृष्ठ",
       "copied": "निदान करना",
       "copiedShort": "Copied",
       "copy": "निदान की प्रतिलिपि",
+      "copyAll": "सभी कॉपी करें",
       "hints": "हिंट",
       "likelyCause": "समान कारण:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI को Administrator के रूप में चलाएं"

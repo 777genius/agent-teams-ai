@@ -1,5 +1,7 @@
 import * as path from 'path';
 
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+
 import {
   resolveOpenCodeAggregateLaunchStateForLeadBootstrap,
   resolveOpenCodeAggregatePrimaryLeadBootstrap,
@@ -101,9 +103,11 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   ports: OpenCodeWorktreeRootAggregateLaunchPorts
 ): Promise<TeamLaunchResponse> {
   const teamName = input.request.teamName;
+  const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
   const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
   const stopTeamGenerationAtStart = ports.getStopTeamGeneration(teamName);
   const stopRequested = (): boolean =>
+    !publicationIsCurrent() ||
     ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
     ports.getStopTeamGeneration(teamName) !== stopTeamGenerationAtStart;
 
@@ -219,7 +223,16 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     return { runId };
   };
 
-  await ports.clearPersistedLaunchState(teamName, { expectedRunId: runId });
+  if (
+    !(await ports.beginLaunchPublication(
+      teamName,
+      runId,
+      run.effectiveMembers.map((member) => member.name),
+      () => !aggregateLaunchNoLongerCurrent()
+    ))
+  ) {
+    return await finishCancelledAggregateLaunch();
+  }
   if (aggregateLaunchNoLongerCurrent()) {
     return await finishCancelledAggregateLaunch();
   }

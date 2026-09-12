@@ -2745,7 +2745,11 @@ describe('TeamProvisioningService', () => {
 
       await (svc as any).clearPersistedLaunchState(teamName);
 
-      expect((svc as any).launchStateStore.clear).toHaveBeenCalledWith(teamName);
+      expect((svc as any).launchStateStore.clear).toHaveBeenCalledTimes(1);
+      const [clearedTeam, isAuthorized] = (svc as any).launchStateStore.clear.mock.calls[0];
+      expect(clearedTeam).toBe(teamName);
+      expect(isAuthorized).toEqual(expect.any(Function));
+      expect(isAuthorized()).toBe(true);
       expect(invalidateRuntime).toHaveBeenCalledTimes(1);
     });
 
@@ -2770,7 +2774,12 @@ describe('TeamProvisioningService', () => {
         expectedMembers: ['alice'],
         memberSpawnStatuses: new Map([['alice', status]]),
       });
+      previousSnapshot.publicationRunId = run.runId;
       run.isLaunch = true;
+      // Persistence requires a live publication owner and an existing team directory.
+      (svc as any).aliveRunByTeam.set(teamName, run.runId);
+      (svc as any).runs.set(run.runId, run);
+      fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
       (svc as any).launchStateStore = {
         read: vi.fn(async () => previousSnapshot),
         write: vi.fn(async () => {}),
@@ -2808,12 +2817,18 @@ describe('TeamProvisioningService', () => {
         expectedMembers: ['alice'],
         memberSpawnStatuses: new Map([['alice', status]]),
       });
+      previousSnapshot.publicationRunId = run.runId;
       run.isLaunch = true;
+      // Persistence requires a live publication owner and an existing team directory.
+      (svc as any).aliveRunByTeam.set(teamName, run.runId);
+      (svc as any).runs.set(run.runId, run);
+      fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
       (svc as any).launchStateStore = {
         read: vi.fn(async () => previousSnapshot),
         write: vi.fn(async () => {}),
         clear: vi.fn(async () => {}),
       };
+      (svc as any).launchStateWrittenRunIdByTeam.set(teamName, run.runId);
       (svc as any).membersMetaStore = { getMembers: vi.fn(async () => []) };
       const invalidateRuntime = vi.spyOn(svc as any, 'invalidateRuntimeSnapshotCaches');
 
@@ -2845,7 +2860,12 @@ describe('TeamProvisioningService', () => {
         expectedMembers: ['alice'],
         memberSpawnStatuses: new Map([['alice', status]]),
       });
+      previousSnapshot.publicationRunId = run.runId;
       run.isLaunch = true;
+      // Persistence requires a live publication owner and an existing team directory.
+      (svc as any).aliveRunByTeam.set(teamName, run.runId);
+      (svc as any).runs.set(run.runId, run);
+      fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
       (svc as any).launchStateStore = {
         read: vi.fn(async () => previousSnapshot),
         write: vi.fn(async () => {}),
@@ -2881,7 +2901,12 @@ describe('TeamProvisioningService', () => {
         expectedMembers: ['alice'],
         memberSpawnStatuses: new Map([['alice', status]]),
       });
+      previousSnapshot.publicationRunId = run.runId;
       run.isLaunch = true;
+      // Persistence requires a live publication owner and an existing team directory.
+      (svc as any).aliveRunByTeam.set(teamName, run.runId);
+      (svc as any).runs.set(run.runId, run);
+      fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
       (svc as any).launchStateStore = {
         read: vi.fn(async () => previousSnapshot),
         write: vi.fn(async () => {}),
@@ -2932,7 +2957,12 @@ describe('TeamProvisioningService', () => {
         expectedMembers: ['alice'],
         memberSpawnStatuses: new Map([['alice', nextStatus]]),
       });
+      previousSnapshot.publicationRunId = run.runId;
       run.isLaunch = true;
+      // Persistence requires a live publication owner and an existing team directory.
+      (svc as any).aliveRunByTeam.set(teamName, run.runId);
+      (svc as any).runs.set(run.runId, run);
+      fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
       (svc as any).launchStateStore = {
         read: vi.fn(async () => previousSnapshot),
         write: vi.fn(async () => {}),
@@ -16742,7 +16772,7 @@ describe('TeamProvisioningService', () => {
 
       stopRelease.resolve(undefined);
       await stopping;
-      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBe(exactOwner);
+      expect(harness.runtimeAdapterRunByTeam.get(teamName)).toBeUndefined();
     });
 
     it.each([

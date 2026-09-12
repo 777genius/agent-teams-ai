@@ -13,6 +13,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import { RuntimeProviderCatalogDiagnostics } from './runtimeProviderCatalogDiagnostics';
 import {
   appendBoundedSpawnOutput,
   appendOptionalArg,
@@ -33,6 +34,7 @@ import {
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
 import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
+import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
@@ -215,7 +217,10 @@ function sanitizeRuntimeProviderError(error: unknown): RuntimeProviderManagement
     RUNTIME_PROVIDER_ERROR_CODES.has(rawCode as RuntimeProviderManagementErrorDto['code'])
       ? (rawCode as RuntimeProviderManagementErrorDto['code'])
       : 'runtime-unhealthy';
-  const diagnostics = sanitizeRuntimeProviderDiagnostics(error.diagnostics);
+  const diagnostics = sanitizeRuntimeProviderDiagnostics(
+    error.diagnostics,
+    RUNTIME_PROVIDER_ERROR_CODES
+  );
   const message =
     sanitizeNullableRuntimeProviderText(error.message) ??
     'Runtime provider management command failed';
@@ -250,36 +255,6 @@ function sanitizeRuntimeProviderOutputValue(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [key, sanitizeRuntimeProviderOutputValue(entry)])
   );
-}
-
-function sanitizeRuntimeProviderDiagnostics(
-  diagnostics: unknown
-): RuntimeProviderManagementErrorDto['diagnostics'] {
-  if (!isRecord(diagnostics)) {
-    return null;
-  }
-  return {
-    errorCode:
-      typeof diagnostics.errorCode === 'string' &&
-      RUNTIME_PROVIDER_ERROR_CODES.has(
-        diagnostics.errorCode as RuntimeProviderManagementErrorDto['code']
-      )
-        ? (diagnostics.errorCode as RuntimeProviderManagementErrorDto['code'])
-        : null,
-    summary: sanitizeNullableRuntimeProviderText(diagnostics.summary),
-    likelyCause: sanitizeNullableRuntimeProviderText(diagnostics.likelyCause),
-    binaryPath: sanitizeNullableRuntimeProviderText(diagnostics.binaryPath),
-    command: sanitizeNullableRuntimeProviderText(diagnostics.command),
-    projectPath: sanitizeNullableRuntimeProviderText(diagnostics.projectPath),
-    exitCode: typeof diagnostics.exitCode === 'number' ? diagnostics.exitCode : null,
-    stderrPreview: sanitizeNullableRuntimeProviderText(diagnostics.stderrPreview),
-    stdoutPreview: sanitizeNullableRuntimeProviderText(diagnostics.stdoutPreview),
-    hints: Array.isArray(diagnostics.hints)
-      ? diagnostics.hints
-          .filter((hint): hint is string => typeof hint === 'string')
-          .map(sanitizeRuntimeProviderText)
-      : [],
-  };
 }
 
 function sanitizeNullableRuntimeProviderText(value: unknown): string | null {
@@ -1636,17 +1611,20 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       return existingRequest;
     }
 
+    const attempt = new RuntimeProviderCatalogDiagnostics('provider_directory', projectPath);
     const generation = this.directoryResponseCacheGeneration;
     const normalize = (response: RuntimeProviderManagementDirectoryResponse) =>
       normalizeRuntimeProviderDirectoryResponse(response, input.summary === true, previous);
-    const request = this.loadProviderDirectoryUncached(input, projectPath, (response) =>
+    const request = this.loadProviderDirectoryUncached(input, projectPath, attempt, (response) =>
       this.writeDirectoryResponseCache(
         cacheKey,
         normalize(response),
         this.getDirectoryResponseCacheTtlMs(input),
         generation
       )
-    ).then(normalize);
+    )
+      .then(normalize)
+      .then((response) => attempt.finish(response));
     this.directoryResponseInFlight.set(inFlightKey, request);
     try {
       return await request;
@@ -1660,6 +1638,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private async loadProviderDirectoryUncached(
     input: RuntimeProviderManagementLoadDirectoryInput,
     projectPath: string | null,
+    attempt: RuntimeProviderCatalogDiagnostics,
     onSuccess: (
       response: RuntimeProviderManagementDirectoryResponse
     ) => RuntimeProviderManagementDirectoryResponse
@@ -1694,7 +1673,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
 
     try {
-      const { stdout, stderr } = await execCli(
+      const { stdout, stderr } = await attempt.exec(
         binaryPath,
         args,
         runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
@@ -1718,7 +1697,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           );
           if (junctionReady) {
             try {
-              const retryResult = await execCli(
+              const retryResult = await attempt.exec(
                 binaryPath,
                 args,
                 runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
@@ -1730,8 +1709,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
                   retryResult.stderr
                 )
               );
-            } catch {
-              // Retry also failed; fall through to return the original error.
+            } catch (retryError) {
+              return (
+                extractJsonObjectFromError<RuntimeProviderManagementDirectoryResponse>(
+                  retryError
+                ) ??
+                commandFailureResponse<RuntimeProviderManagementDirectoryResponse>(
+                  input.runtimeId,
+                  normalizeCommandFailure(retryError, context)
+                )
+              );
             }
           }
         }
@@ -2249,14 +2236,20 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
     const cacheKeyGeneration = this.modelRequests.getGeneration(cacheKey);
+    const attempt = new RuntimeProviderCatalogDiagnostics(
+      'provider_models',
+      projectPath,
+      input.providerId
+    );
     const promise = this.loadModelsUncached(
       input,
       projectPath,
       cacheKey,
       cacheGeneration,
       cacheKeyGeneration,
-      controller.signal
-    );
+      controller.signal,
+      attempt
+    ).then((response) => (controller.signal.aborted ? response : attempt.finish(response)));
     const inFlightEntry = {
       controller,
       refresh: input.refresh === true,
@@ -2284,7 +2277,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheKey: string,
     cacheGeneration: number,
     cacheKeyGeneration: number,
-    signal: AbortSignal
+    signal: AbortSignal,
+    attempt: RuntimeProviderCatalogDiagnostics
   ): Promise<RuntimeProviderManagementModelsResponse> {
     const { binaryPath, env } = await resolveCliEnv();
     if (!binaryPath) {
@@ -2323,7 +2317,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
     const cacheTtlMs = this.getModelResponseCacheTtlMs(input);
     try {
-      const { stdout, stderr } = await execCli(binaryPath, args, {
+      const { stdout, stderr } = await attempt.exec(binaryPath, args, {
         ...runtimeProviderCommandOptions({ env }, projectPath),
         timeout: COMMAND_TIMEOUT_MS,
         signal,

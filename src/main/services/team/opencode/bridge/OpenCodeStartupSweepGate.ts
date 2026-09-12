@@ -6,13 +6,24 @@
  * bridge command ran, and the user saw a launch fail for no reason they could
  * see.
  *
- * This gate lets such a launch serialise behind the sweep instead of racing
- * it. It is belt and braces on top of the start-time fence the sweep itself
+ * Windows rejects such launches for manual retry; Unix waits behind the sweep.
+ * This protects admission only while the startup owner marks cleanup pending.
+ * Windows owners settle only after destructive work has drained.
+ * It is belt and braces on top of the start-time fence the sweep itself
  * applies, because the sweep is reachable from more than one lifecycle path
  * and a fence can only protect processes that already exist when it is read.
  */
 
-/** A stuck sweep must never park launches forever. */
+export class OpenCodeStartupCleanupBusyError extends Error {
+  constructor(message?: string) {
+    super(
+      message ?? 'OpenCode startup cleanup is still running. Check cleanup in OpenCode runtime settings, then retry starting the team manually.'
+    );
+    this.name = 'OpenCodeStartupCleanupBusyError';
+  }
+}
+
+/** A stuck Unix sweep must never park launches forever. */
 export const OPEN_CODE_STARTUP_SWEEP_WAIT_TIMEOUT_MS = 60_000;
 
 interface PendingStartupSweep {
@@ -21,14 +32,19 @@ interface PendingStartupSweep {
 }
 
 let pendingStartupSweep: PendingStartupSweep | null = null;
+let startupOperationFailure: string | undefined;
+
+export function reportOpenCodeStartupCleanupFailure(message: string): void {
+  startupOperationFailure = message;
+}
+
 
 /**
  * Marks the startup runtime sweep as pending. Call it when the sweep is
  * scheduled, not when it starts running, so a launch requested during the
  * scheduling delay also waits. The returned callback must be invoked from a
- * `finally`: a sweep that throws still has to release the launches waiting on
- * it, and that is the only reason this is a callback rather than a promise the
- * gate awaits itself.
+ * terminal completion path on Windows; read-only failures can also settle.
+ * Unix retains its legacy finally settlement.
  */
 export function beginOpenCodeStartupRuntimeSweep(): () => void {
   if (!pendingStartupSweep) {
@@ -36,6 +52,7 @@ export function beginOpenCodeStartupRuntimeSweep(): () => void {
     const promise = new Promise<void>((resolve) => {
       settle = resolve;
     });
+    startupOperationFailure = undefined;
     pendingStartupSweep = { promise, settle };
   }
   const current = pendingStartupSweep;
@@ -58,7 +75,8 @@ export interface WhenOpenCodeStartupRuntimeSweepSettledOptions {
 
 /**
  * Resolves immediately when no startup sweep is pending. Otherwise waits for
- * it and records the observed wait, so a launch that was slow because it
+ * it on Unix; Windows rejects with a busy error for manual retry. Records the
+ * observed Unix wait, so a launch that was slow because it
  * queued behind the sweep says so instead of leaving it to be inferred from
  * timestamps.
  */
@@ -68,6 +86,11 @@ export async function whenOpenCodeStartupRuntimeSweepSettled(
   const current = pendingStartupSweep;
   if (!current) {
     return;
+  }
+  if (process.platform === 'win32') {
+    // No waiter, progress run, or deferred launch survives this refusal.
+    // Only the startup completion owner may release the Windows gate.
+    throw new OpenCodeStartupCleanupBusyError(startupOperationFailure);
   }
   options.onWaitStart?.();
   const nowMs = options.nowMs ?? (() => Date.now());

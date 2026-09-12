@@ -253,8 +253,45 @@ jobs:
       - name: Test Windows CLI shell fallback
         run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
 
+      - name: Test crash-safe app lock publication
+        run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
+
+      - name: Test controller lock compatibility
+        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+
       - name: Test task change ledger
         run: pnpm test:task-change-ledger
 
       - name: Test OpenCode nvm-windows runtime resolution
         run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+
+      - name: Test Windows cleanup probe diagnostics
+        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+
+      - name: Test startup cleanup admission and IPC recovery
+        run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
+
+      - name: Test startup cleanup budget and recovery payloads
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/main/services/team/OpenCodeStartupCleanupBudget.test.ts
+          test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx
+          test/main/services/team/OpenCodeBridgeCommandClient.test.ts
+          test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts
+          test/main/utils/processKill.test.ts
+
+      - name: Test startup cleanup deadline and late-response lifecycle
+        run: node --experimental-transform-types --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
+
+      - name: Test delayed provider summaries through real subprocesses
+        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
+
+      - name: Test OpenCode catalog diagnostic boundaries
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
+          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
+          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts

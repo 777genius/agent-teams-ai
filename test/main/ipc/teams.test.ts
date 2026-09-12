@@ -1,3 +1,10 @@
+import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
+import {
+  beginOpenCodeStartupRuntimeSweep,
+  OpenCodeStartupCleanupBusyError,
+  whenOpenCodeStartupRuntimeSweepSettled,
+} from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
+import type { ElectronAPI } from '@shared/types/api';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
@@ -22,7 +29,22 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types/team';
 
+const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
+vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
+  persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
+}));
+
+const cleanupPreload = vi.hoisted(() => ({
+  exposeInMainWorld: vi.fn(),
+  invoke: vi.fn(),
+}));
+vi.mock('@preload/installRendererLogForwarding', () => ({
+  installRendererLogForwarding: vi.fn(),
+}));
 vi.mock('electron', () => ({
+  contextBridge: { exposeInMainWorld: cleanupPreload.exposeInMainWorld },
+  ipcRenderer: { invoke: cleanupPreload.invoke, send: vi.fn(), on: vi.fn() },
+  webUtils: { getPathForFile: vi.fn() },
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
   Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
   BrowserWindow: { fromWebContents: vi.fn(() => null), getAllWindows: vi.fn(() => []) },
@@ -2452,6 +2474,69 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Delegate mode is only supported when messaging the team lead');
+  });
+
+  it('propagates cleanup busy through main IPC and preload without deferred starts; explicit retry works', async () => {
+    vi.useFakeTimers();
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cleanup-ipc-'));
+    setClaudeBasePathOverride(fixtureRoot);
+    const originalStart = { ...teamHandlerApis.provisioningStart };
+    const release = beginOpenCodeStartupRuntimeSweep();
+    // Stub only the platform observed by admission; all source actions remain mocks.
+    vi.stubGlobal('process', { ...process, platform: 'win32' });
+    Object.assign(
+      teamHandlerApis.provisioningStart,
+      bindTeamProvisioningStartApi(originalStart, {
+        beforeStart: () => whenOpenCodeStartupRuntimeSweepSettled(),
+      })
+    );
+    try {
+      await import('../../../src/preload/index');
+      const api = cleanupPreload.exposeInMainWorld.mock.calls.find(
+        ([name]) => name === 'electronAPI'
+      )![1] as ElectronAPI;
+      cleanupPreload.invoke.mockImplementation(async (channel: string, request: unknown) => {
+        const result = await handlers.get(channel)!({ sender: {} } as never, request);
+        // Electron transports a plain result, not the original Error instance.
+        return JSON.parse(JSON.stringify(result)) as unknown;
+      });
+      const request = { teamName: 'cleanup-fixture', cwd: fixtureRoot, members: [] };
+      const message = new OpenCodeStartupCleanupBusyError().message;
+      for (const operation of ['createTeam', 'launchTeam'] as const) {
+        await expect(api.teams[operation](request)).rejects.toThrow(message);
+        expect(await cleanupPreload.invoke.mock.results.at(-1)!.value).toEqual({
+          success: false,
+          error: message,
+        });
+      }
+      await vi.advanceTimersByTimeAsync(120_000);
+      // Passing the Unix timeout must not admit a Windows launch while cleanup is active.
+      await expect(api.teams.createTeam(request)).rejects.toThrow(message);
+      await expect(api.teams.launchTeam(request)).rejects.toThrow(message);
+      expect(originalStart.createTeam).not.toHaveBeenCalled();
+      expect(originalStart.launchTeam).not.toHaveBeenCalled();
+      release();
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(originalStart.createTeam).not.toHaveBeenCalled();
+      expect(originalStart.launchTeam).not.toHaveBeenCalled();
+      await expect(api.teams.createTeam(request)).resolves.toEqual({ runId: 'run-1' });
+      await expect(api.teams.launchTeam(request)).resolves.toEqual({ runId: 'run-2' });
+      expect(originalStart.createTeam).toHaveBeenCalledTimes(1);
+      expect(originalStart.launchTeam).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.error).mock.calls).toEqual([
+        ['[IPC:teams]', '[teams:create] ' + message],
+        ['[IPC:teams]', '[teams:launch] ' + message],
+        ['[IPC:teams]', '[teams:create] ' + message],
+        ['[IPC:teams]', '[teams:launch] ' + message],
+      ]);
+      vi.mocked(console.error).mockClear();
+    } finally {
+      release();
+      Object.assign(teamHandlerApis.provisioningStart, originalStart);
+      vi.unstubAllGlobals();
+      vi.clearAllTimers();
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 
   it('calls service and returns success on happy paths', async () => {
@@ -5657,6 +5742,48 @@ describe('ipc teams handlers', () => {
   });
 
   describe('replaceMembers', () => {
+    it.each([false, true])(
+      'routes guarded model relaunch persistence without unguarded fallback (conflict=%s)',
+      async (conflict) => {
+        teamHandlerMocks.isTeamAlive.mockReturnValue(false);
+        modelRelaunchPersistence.mockReset();
+        if (conflict) modelRelaunchPersistence.mockRejectedValueOnce(new Error('target conflict'));
+        else modelRelaunchPersistence.mockResolvedValueOnce(undefined);
+        const intent = {
+          memberName: 'alice',
+          targetKind: 'member',
+          expectedFingerprint: 'original',
+          baseline: [{ memberName: 'alice', expectedFingerprint: 'original' }],
+          model: 'glm-5.3-flash',
+          effort: null,
+        };
+        const result = (await handlers.get(TEAM_REPLACE_MEMBERS)!({} as never, 'draft-team', {
+          members: [{ name: 'alice', model: 'glm-5.3-flash' }],
+          memberSettingsRelaunch: intent,
+        })) as { success: boolean; error?: string };
+        expect(result.success).toBe(!conflict);
+        if (conflict) {
+          expect(result.error).toContain('target conflict');
+          expect(console.error).toHaveBeenCalledWith(
+            '[IPC:teams]',
+            expect.stringContaining('target conflict')
+          );
+          vi.mocked(console.error).mockClear();
+        }
+        expect(modelRelaunchPersistence).toHaveBeenCalledWith(
+          'draft-team',
+          [expect.objectContaining({ name: 'alice', model: 'glm-5.3-flash' })],
+          intent,
+          expect.objectContaining({
+            isTeamAlive: expect.any(Function),
+            invalidateWorkerCache: expect.any(Function),
+          })
+        );
+        expect(service.replaceMembers).not.toHaveBeenCalled();
+        expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+      }
+    );
+
     it('updates non-live draft members without requiring a full team snapshot', async () => {
       teamHandlerMocks.isTeamAlive.mockReturnValue(false);
       service.getTeamData.mockRejectedValueOnce(new Error('Team not found: draft-team'));

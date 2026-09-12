@@ -59,9 +59,12 @@
       "testAndUseProject": "இந்தத் திட்டத்திற்குச் சோதித்துப் பயன்படுத்து"
     },
     "diagnostics": {
+      "previousPage": "முந்தைய பக்கம்",
+      "nextPage": "அடுத்த பக்கம்",
       "copied": "Diagnostics நகலெடுக்கப்பட்டது",
       "copiedShort": "நகலெடுக்கப்பட்டது",
       "copy": "Diagnostics ஐ நகலெடு",
+      "copyAll": "அனைத்தையும் நகலெடு",
       "hints": "குறிப்புகள்",
       "likelyCause": "சாத்தியமான காரணம்:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI ஐ Administrator ஆக இயக்கவும்"

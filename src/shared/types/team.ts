@@ -1041,6 +1041,8 @@ export interface PersistedTeamLaunchSummary {
 }
 
 export interface PersistedTeamLaunchSnapshot {
+  /** App publication authority; independent of per-lane runtime run IDs. */
+  publicationRunId?: string;
   version: 2;
   teamName: string;
   updatedAt: string;
@@ -1314,6 +1316,8 @@ export interface TeamWorktreeGitStatus {
 }
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** Read-only saved defaults token returned by getSavedRequest. */
+  savedSettingsFingerprint?: string;
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1587,6 +1591,16 @@ export interface UpdateMemberRoleRequest {
 
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
+  /** Optional compare-and-swap intent from the member settings relaunch dialog. */
+  memberSettingsRelaunch?: {
+    memberName: string;
+    targetKind: 'lead' | 'member';
+    expectedFingerprint: string;
+    expectedTeamSettingsFingerprint: string;
+    baseline: { memberName: string; expectedFingerprint: string }[];
+    model: string | null;
+    effort: EffortLevel | null;
+  };
 }
 
 /** Data sent from renderer to main for native OS team message notification. */

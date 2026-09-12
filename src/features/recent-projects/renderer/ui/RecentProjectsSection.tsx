@@ -142,7 +142,13 @@ export const RecentProjectsSection = ({
           <FolderGit2 className="size-6 text-text-muted" />
         </div>
         <p className="mb-1 text-sm text-text-secondary">{t('recentProjects.noRecentProjects')}</p>
-        <p className="text-xs text-text-muted">{t('recentProjects.emptyDescription')}</p>
+        <p className="mb-4 text-xs text-text-muted">{t('recentProjects.emptyDescription')}</p>
+        {isElectron && (
+          <Button size="sm" onClick={() => void selectProjectFolder()}>
+            <FolderOpen className="size-4" />
+            {t('recentProjects.selectFolder')}
+          </Button>
+        )}
       </div>
     );
   }

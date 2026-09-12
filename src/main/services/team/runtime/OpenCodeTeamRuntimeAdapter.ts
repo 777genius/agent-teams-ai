@@ -23,6 +23,8 @@ import { buildMemberBootstrapPrompt } from './OpenCodeMemberBootstrapPrompt';
 import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
 import { buildOpenCodeRuntimeMessageText } from './OpenCodeRuntimeMessageText';
 
+import type { RuntimeStopObservation } from '../opencode/bridge/OpenCodeRuntimeStopProtocol';
+
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 import type {
@@ -87,7 +89,9 @@ export interface OpenCodeTeamRuntimeBridgePort {
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
   ): Promise<OpenCodeLaunchTeamCommandData>;
-  stopOpenCodeTeam?(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData>;
+  stopOpenCodeTeam?(
+    input: OpenCodeStopTeamCommandBody
+  ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation>;
   sendOpenCodeTeamMessage?(
     input: OpenCodeSendMessageCommandBody
   ): Promise<OpenCodeSendMessageCommandData>;
@@ -826,6 +830,30 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         reason: input.reason,
         force: input.force,
       });
+      if ('status' in data) {
+        // Current exact-target observation, not a replayed historical Stop result.
+        // The provisioning flow consumes it under the existing app lane run/session CAS.
+        this.lastProjectPathByTeamName.delete(input.teamName);
+        return {
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: Object.fromEntries(
+            data.binding.map((member) => [
+              member.memberName,
+              {
+                memberName: member.memberName,
+                providerId: this.providerId,
+                sessionId: member.sessionId,
+                stopped: true,
+                diagnostics: ['Current original session reconciled stopped'],
+              },
+            ])
+          ),
+          warnings: [],
+          diagnostics: ['Original Stop outcome unknown; current exact target reconciled stopped'],
+        };
+      }
       if (data.stopped) {
         this.lastProjectPathByTeamName.delete(input.teamName);
       }
@@ -845,7 +873,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             } satisfies TeamRuntimeMemberStopEvidence,
           ])
         ),
-        warnings: data.warnings.map((warning) => warning.message),
+        warnings: data.warnings,
         diagnostics: data.diagnostics.map(formatOpenCodeBridgeDiagnostic),
       };
     }
@@ -857,7 +885,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             {
               memberName,
               providerId: this.providerId,
-              stopped: true,
+              stopped: false,
               diagnostics: [
                 'No live OpenCode session stop command is wired in this adapter shell.',
               ],
@@ -869,11 +897,11 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     return {
       runId: input.runId,
       teamName: input.teamName,
-      stopped: true,
+      stopped: false,
       members,
       warnings: [],
       diagnostics: input.previousLaunchState
-        ? ['OpenCode stop was acknowledged without live session ownership changes.']
+        ? ['OpenCode Stop outcome unknown: runtime Stop command is unavailable.']
         : ['No previous OpenCode launch snapshot was available to stop.'],
     };
   }

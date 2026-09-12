@@ -1,3 +1,6 @@
+import { getOpenCodeRuntimeManifestPath } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { readOpenCodeStopSessionIdentity } from '../opencode/store/OpenCodeStopSessionIdentity';
+
 import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
 
@@ -49,6 +52,7 @@ export interface OpenCodeRuntimeStopFlowPorts {
     teamName: string;
     laneId: string;
     expectedRunId?: string;
+    expectedSessionIdentityHash?: string;
   }): Promise<boolean>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   clearSecondaryRuntimeRuns(teamName: string): void;
@@ -94,6 +98,7 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
     teamName: string;
     laneId: string;
     expectedRunId?: string;
+    expectedSessionIdentityHash?: string;
   }): Promise<boolean>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   logger: StopLogger;
@@ -138,6 +143,9 @@ export async function stopSingleMixedSecondaryRuntimeLane(
     run.progress = pendingStopProgress;
     run.onProgress?.(pendingStopProgress);
 
+    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(
+      ports.teamsBasePath, run.teamName, lane.laneId
+    ));
     const result = await adapter.stop({
       runId: targetRunId,
       laneId: lane.laneId,
@@ -162,6 +170,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       teamName: run.teamName,
       laneId: lane.laneId,
       expectedRunId: targetRunId,
+      expectedSessionIdentityHash: targetSessionIdentity,
     });
     if (!cleared) {
       if (lane.runId !== targetRunId) {
@@ -250,7 +259,11 @@ export async function stopMixedSecondaryRuntimeLanes(
       secondaryRun: (typeof secondaryRuns)[number]
     ): Promise<void> => {
       const laneStartedAtMs = Date.now();
+      let targetSessionIdentity: string;
       try {
+        targetSessionIdentity = await readOpenCodeStopSessionIdentity(
+          getOpenCodeRuntimeManifestPath(ports.teamsBasePath, teamName, secondaryRun.laneId)
+        );
         const result = await adapter.stop({
           runId: secondaryRun.runId,
           laneId: secondaryRun.laneId,
@@ -291,7 +304,8 @@ export async function stopMixedSecondaryRuntimeLanes(
             teamName,
             secondaryRun.laneId,
             secondaryRun.runId,
-            ports
+            ports,
+            targetSessionIdentity
           );
           if (!cleared) {
             if (!isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
@@ -356,6 +370,9 @@ export async function stopOpenCodeRuntimeAdapterTeam(
   ports.invalidateRuntimeSnapshotCaches(teamName);
   try {
     const previousLaunchState = await ports.readLaunchState(teamName);
+    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(
+      ports.teamsBasePath, teamName, 'primary'
+    ));
     const stopStartedAtMs = Date.now();
     const result = await adapter.stop({
       runId,
@@ -387,12 +404,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
       return;
     }
-    ports.clearOpenCodeRuntimeToolApprovals(teamName, {
-      runId,
-      laneId: 'primary',
-      emitDismiss: true,
-    });
-    const cleared = await clearPrimaryRuntimeLaneStorage(teamName, runId, ports);
+    const cleared = await clearPrimaryRuntimeLaneStorage(teamName, runId, ports, targetSessionIdentity);
     if (!cleared) {
       if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
         return;
@@ -402,6 +414,11 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
       return;
     }
+    ports.clearOpenCodeRuntimeToolApprovals(teamName, {
+      runId,
+      laneId: 'primary',
+      emitDismiss: true,
+    });
     if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
       ports.runtimeAdapterRunByTeam.delete(teamName);
     }
@@ -465,13 +482,15 @@ async function clearSecondaryRuntimeLaneStorage(
   teamName: string,
   laneId: string,
   runId: string,
-  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>
+  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>,
+  expectedSessionIdentityHash?: string
 ): Promise<boolean> {
   return ports.clearOpenCodeRuntimeLaneStorage({
     teamsBasePath: ports.teamsBasePath,
     teamName,
     laneId,
     expectedRunId: runId,
+    expectedSessionIdentityHash,
   });
 }
 
@@ -494,12 +513,14 @@ function ownsPrimaryRuntimeLane(
 async function clearPrimaryRuntimeLaneStorage(
   teamName: string,
   runId: string,
-  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>
+  ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>,
+  expectedSessionIdentityHash?: string
 ): Promise<boolean> {
   return ports.clearOpenCodeRuntimeLaneStorage({
     teamsBasePath: ports.teamsBasePath,
     teamName,
     laneId: 'primary',
     expectedRunId: runId,
+    expectedSessionIdentityHash,
   });
 }

@@ -37,6 +37,7 @@ import { Loader2 } from 'lucide-react';
 import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
+  getEditTeamConfiguredMember,
   getLiveRosterIdentityChanges,
   getMembersRequiringRuntimeRestart,
 } from './editTeamRuntimeChanges';
@@ -72,7 +73,9 @@ interface EditTeamDialogProps {
 }
 
 function membersToDrafts(members: ResolvedTeamMember[]) {
-  return createMemberDraftsFromInputs(filterEditableMemberInputs(members));
+  return createMemberDraftsFromInputs(
+    filterEditableMemberInputs(members).map(getEditTeamConfiguredMember)
+  );
 }
 
 function deriveTeammateWorktreeDefault(members: readonly ResolvedTeamMember[]): boolean {

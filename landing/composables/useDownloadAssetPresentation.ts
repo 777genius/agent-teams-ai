@@ -3,7 +3,8 @@ import { downloadAssets, type DownloadArch } from "~/data/downloads";
 type DownloadAsset = (typeof downloadAssets)[number];
 type DownloadAssetLike = Pick<DownloadAsset, "id" | "os" | "arch" | "archLabel">;
 
-export type PresentedDownloadAsset = DownloadAsset & {
+export type PresentedDownloadAsset = Omit<DownloadAsset, "archLabel" | "fileName"> & {
+  fileName: string;
   archLabel: string;
   actionSubtitle: string;
   resolvedArch: DownloadArch | "unknown";
@@ -13,14 +14,22 @@ export function useDownloadAssetPresentation() {
   const downloadStore = useDownloadStore();
 
   const getDownloadArch = (asset: Pick<DownloadAsset, "os" | "arch">): DownloadArch | "unknown" => (
-    asset.os === "macos" ? downloadStore.macArch : asset.arch
+    asset.os === "macos"
+      ? downloadStore.macArch
+      : asset.os === "windows"
+        ? downloadStore.windowsArch
+        : asset.arch
   );
 
   const getDownloadArchLabel = (asset: DownloadAssetLike) => {
-    if (asset.os === "macos" && downloadStore.isMacOs) {
+    if (asset.os === "macos") {
       if (downloadStore.macArch === "arm64") return "Apple Silicon";
       if (downloadStore.macArch === "x64") return "Intel";
       return asset.archLabel;
+    }
+
+    if (asset.os === "windows") {
+      return downloadStore.windowsArch === "arm64" ? "ARM64" : "64-bit";
     }
 
     return asset.archLabel;
@@ -41,6 +50,9 @@ export function useDownloadAssetPresentation() {
 
   const presentDownloadAsset = (asset: DownloadAsset): PresentedDownloadAsset => ({
     ...asset,
+    fileName: asset.os === "windows" && downloadStore.windowsArch === "arm64"
+      ? "Agent.Teams.AI.Setup-arm64.exe"
+      : asset.fileName,
     archLabel: getDownloadArchLabel(asset),
     actionSubtitle: getDownloadActionSubtitle(asset),
     resolvedArch: getDownloadArch(asset),

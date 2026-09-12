@@ -117,7 +117,10 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
-import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import {
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -149,7 +152,6 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
-  retainOpenCodeHttpMcpBridgeEnv,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -213,6 +215,7 @@ import { join } from 'path';
 
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
@@ -254,10 +257,12 @@ import {
   buildOpenCodeProcessOwnershipMarkers,
   cleanupOpenCodeHostProcessFallback,
   runOpenCodeLifecycleCleanupTail,
+  runOpenCodeStartupCleanupMaintenance,
   type OpenCodeLifecycleCleanupTailPorts,
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
 import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import { OpenCodeWindowsStartupCleanup, stopAdmittingOpenCodeStartupCleanup } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -510,6 +515,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
+  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
   if (explicitLocalMcpLaunchEnv) {
@@ -620,6 +627,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     const nextEnv = { ...bridgeEnv };
     await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
     if (!useHttpMcpBridge) {
+      applyAgentTeamsMcpAppContext(nextEnv);
       return nextEnv;
     }
     try {
@@ -635,17 +643,16 @@ async function createOpenCodeRuntimeAdapterRegistry(
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
-      if (!retainOpenCodeHttpMcpBridgeEnv(bridgeEnv, nextEnv)) {
-        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-      }
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
     }
+    applyAgentTeamsMcpAppContext(nextEnv);
     return nextEnv;
   };
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -1024,6 +1031,7 @@ let appStartupHandlersRegistered = false;
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
 let teamChangeCleanup: (() => void) | null = null;
+let revokeMcpAppContext: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -1309,6 +1317,7 @@ function registerAppStartupHandlers(): void {
   }
   appStartupHandlersRegistered = true;
   registerRendererLogHandlers(ipcMain);
+  registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
 }
@@ -1862,6 +1871,8 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -2053,7 +2064,16 @@ async function initializeServices(): Promise<void> {
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
   });
-  await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+  const windowsStartupCleanup = process.platform === 'win32'
+    ? new OpenCodeWindowsStartupCleanup({
+        appStartedAtMs,
+        profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+        ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+        maintenance: (canAdmitStartupWork) => runOpenCodeStartupCleanupMaintenance({ appStartedAtMs, ports: openCodeLifecycleCleanupTailPorts, canAdmitStartupWork }),
+        logWarning: (message) => logger.warn(message),
+      }) : null;
+  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  else await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
     appStartedAtMs,
     requiredProfileScope: buildOpenCodeAppProfileScope(
       app.getPath('userData'),
@@ -2075,15 +2095,19 @@ async function initializeServices(): Promise<void> {
   teamRuntimeRecoveryFeature.start();
   // Armed before the delay, not inside the task, so a launch requested during
   // the scheduling delay serialises behind the sweep as well.
-  const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
-  scheduleStartupTask(() => {
-    void cleanupOpenCodeHostsForLifecycle('startup')
-      .catch((error: unknown) =>
-        logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-      )
-      .finally(settleStartupRuntimeSweep);
-  }, STARTUP_RECOVERY_DELAY_MS);
-  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
+  }
+  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted() ? null : startPeriodicOpenCodeHostStartupLockPurge({
     logInfo: (message) => logger.info(message),
     logWarning: (message) => logger.warn(message),
   });
@@ -2191,9 +2215,8 @@ async function initializeServices(): Promise<void> {
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
   teamProvisioningService.setControlApiBaseUrlResolver(async () => {
-    if (!httpServer.isRunning()) {
-      await startHttpServer(handleModeSwitch);
-    }
+    // Listening alone does not prove that Host publication has committed.
+    await startHttpServer(handleModeSwitch);
 
     return getTeamControlApiBaseUrl();
   });
@@ -2603,9 +2626,7 @@ async function initializeServices(): Promise<void> {
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
     ...createTeamProvisioningMemberWorkSyncBusySignals(teamProvisioningService),
     resolveControlUrl: async () => {
-      if (!httpServer.isRunning()) {
-        await startHttpServer(handleModeSwitch);
-      }
+      await startHttpServer(handleModeSwitch);
       return getTeamControlApiBaseUrl();
     },
     proofMissingRecoveryGuard: {
@@ -3018,6 +3039,7 @@ async function startHttpServer(
  * Shuts down all services.
  */
 async function shutdownServices(): Promise<void> {
+  stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
     return shutdownPromise;
   }
@@ -3051,9 +3073,11 @@ async function shutdownServices(): Promise<void> {
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
-      agentTeamsMcpHttpServer.stop({ preventRestart: true })
-    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
+      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
+      revokeMcpAppContext = null;
+      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
+    });
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );

@@ -99,6 +99,8 @@ export interface OpenCodeLaunchWiringRuntimeRunEntry {
 }
 
 export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
+  beginLaunchPublication(teamName: string, runId: string, members: string[], isAuthorized: () => boolean): Promise<boolean>;
+
   runtimeAdapterRunByTeam: Map<string, OpenCodeLaunchWiringRuntimeRunEntry>;
   provisioningRunByTeam: Map<string, string>;
   runtimeAdapterProgressByRunId: Map<string, TeamProvisioningProgress>;
@@ -205,6 +207,9 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeAdapter'];
   };
+  defaultLaunchStateStore: {
+    beginLaunch: TeamProvisioningOpenCodeLaunchWiringHost<Run>['beginLaunchPublication'];
+  };
   launchStateStore: {
     read: TeamProvisioningOpenCodeLaunchWiringHost<Run>['readLaunchState'];
   };
@@ -286,6 +291,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
       ),
     resetTeamScopedTransientStateForNewRun: (teamName) =>
       service.resetTeamScopedTransientStateForNewRun(teamName),
+    beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+      service.defaultLaunchStateStore.beginLaunch(teamName, runId, members, isAuthorized),
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
     clearPersistedLaunchState: (teamName, options) =>
       options === undefined
@@ -376,6 +383,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
+          beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+            host.beginLaunchPublication(teamName, runId, members, isAuthorized),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
           clearPersistedLaunchState: (teamName, options) =>
             host.clearPersistedLaunchState(teamName, options),
@@ -451,6 +460,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           sharedRuntimeFailureScope,
           logWarning: (message) => logger.warn(message),
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
+          getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
           stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
             host.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
@@ -469,6 +479,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
+          beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+            host.beginLaunchPublication(teamName, runId, members, isAuthorized),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
           clearPersistedLaunchState: (teamName, options) =>
             options === undefined

@@ -5,6 +5,7 @@ import {
   snapshotToMemberSpawnStatuses,
 } from '../TeamLaunchStateEvaluator';
 
+import { recordOpenCodePrimaryCleanup } from './OpenCodeAggregatePrimaryLaneStopHelpers';
 import {
   buildUncommittableOpenCodeSessionDiagnostic,
   describeBlockedOpenCodePrimaryLaneLaunch,
@@ -350,6 +351,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
         // evidence wipe was completely silent.
         ports.logDiagnostic?.(describeClearedOpenCodePrimaryLaneStorage({ teamName, runId }));
         ports.deleteRuntimeAdapterRunByTeamIfOwned?.(teamName, exactCleanupOwner);
+        recordOpenCodePrimaryCleanup(params.run, runId);
       } catch (error) {
         ports.logWarning?.(
           `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
