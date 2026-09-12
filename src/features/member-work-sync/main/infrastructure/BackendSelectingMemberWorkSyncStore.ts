@@ -769,18 +769,21 @@ export class BackendSelectingMemberWorkSyncStore
     memberName: string;
     intentKey: string;
     sinceIso: string;
-  }): Promise<{
-    id: string;
-    status: MemberWorkSyncOutboxItem['status'];
-    deliveredMessageId?: string;
-    payloadHash: string;
-    updatedAt: string;
-  } | null> {
+  }) {
     return this.run(
       input.teamName,
       false,
       (store) => store.findRecentRecoveryByIntent(input),
       (store) => store.findRecentRecoveryByIntent(input)
+    );
+  }
+
+  async readItem(input: { teamName: string; memberName: string; id: string }) {
+    return this.run(
+      input.teamName,
+      false,
+      (store) => store.readItem(input),
+      (store) => store.readItem(input)
     );
   }
 

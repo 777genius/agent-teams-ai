@@ -21,6 +21,24 @@ export type MemberWorkSyncRecoveryDispatchKind =
   | 'delivered'
   | 'superseded';
 
+function dispatchOutcomeFromOutboxStatus(
+  status: MemberWorkSyncOutboxItem['status']
+): MemberWorkSyncRecoveryDispatchKind | undefined {
+  if (status === 'delivered') {
+    return 'delivered';
+  }
+  if (status === 'superseded') {
+    return 'superseded';
+  }
+  if (status === 'failed_terminal') {
+    return 'terminal';
+  }
+  if (status === 'failed_retryable') {
+    return 'retryable';
+  }
+  return undefined;
+}
+
 async function mutateOwnedReservation(
   deps: MemberWorkSyncUseCaseDeps,
   input: {
@@ -57,41 +75,96 @@ export async function recordMemberWorkSyncDispatchOutcome(input: {
   if (!input.item.payload.workSyncIntentKey) {
     return;
   }
-  await mutateOwnedReservation(
-    input.deps,
-    {
-      teamName: input.item.teamName,
-      memberName: input.item.memberName,
-      intentId: input.item.id,
-    },
-    (status) => {
-      const health =
-        input.outcome === 'delivered'
-          ? applyMemberWorkSyncDeliveredDispatch({
-              health: status.recoveryHealth,
-              intentId: input.item.id,
-            })
-          : input.outcome === 'terminal' || input.outcome === 'superseded'
-            ? applyMemberWorkSyncTerminalRetirement({
-                health: status.recoveryHealth,
-                intentId: input.item.id,
-                receiptId: `dispatch-${input.outcome}:${input.item.id}`,
-                pendingAck: false,
-              })
-            : applyMemberWorkSyncRetryableDispatch({
-                health: status.recoveryHealth,
-                intentId: input.item.id,
-              });
-      if (!health) {
-        return undefined;
-      }
-      return {
-        ...status,
-        recoveryHealth: health,
-        evaluatedAt: input.deps.clock.now().toISOString(),
-      };
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await mutateOwnedReservation(
+        input.deps,
+        {
+          teamName: input.item.teamName,
+          memberName: input.item.memberName,
+          intentId: input.item.id,
+        },
+        (status) => {
+          const health =
+            input.outcome === 'delivered'
+              ? applyMemberWorkSyncDeliveredDispatch({
+                  health: status.recoveryHealth,
+                  intentId: input.item.id,
+                })
+              : input.outcome === 'terminal' || input.outcome === 'superseded'
+                ? applyMemberWorkSyncTerminalRetirement({
+                    health: status.recoveryHealth,
+                    intentId: input.item.id,
+                    receiptId: `dispatch-${input.outcome}:${input.item.id}`,
+                    pendingAck: false,
+                  })
+                : applyMemberWorkSyncRetryableDispatch({
+                    health: status.recoveryHealth,
+                    intentId: input.item.id,
+                  });
+          if (!health) {
+            return undefined;
+          }
+          return {
+            ...status,
+            recoveryHealth: health,
+            evaluatedAt: input.deps.clock.now().toISOString(),
+          };
+        }
+      );
+      return;
+    } catch (error) {
+      lastError = error;
     }
+  }
+  input.deps.logger?.warn('member work sync recovery dispatch outcome failed', {
+    teamName: input.item.teamName,
+    memberName: input.item.memberName,
+    outboxId: input.item.id,
+    outcome: input.outcome,
+    error: String(lastError),
+  });
+}
+
+export async function repairMemberWorkSyncDispatchOutcome(input: {
+  deps: MemberWorkSyncUseCaseDeps;
+  status: MemberWorkSyncStatus;
+}): Promise<boolean> {
+  const intentId = input.status.recoveryHealth?.unresolvedIntentId;
+  const outboxStore = input.deps.outboxStore;
+  if (!intentId || !outboxStore?.readItem) {
+    return false;
+  }
+  const reservation = input.status.recoveryHealth?.reservations?.find(
+    (entry) => entry.intentId === intentId
   );
+  if (
+    !reservation ||
+    reservation.state === 'awaiting_outcome' ||
+    reservation.state === 'resolved' ||
+    reservation.state === 'cancelled'
+  ) {
+    return false;
+  }
+  const item = await outboxStore.readItem({
+    teamName: input.status.teamName,
+    memberName: input.status.memberName,
+    id: intentId,
+  });
+  if (!item?.payload.workSyncIntentKey) {
+    return false;
+  }
+  const outcome = dispatchOutcomeFromOutboxStatus(item.status);
+  if (!outcome) {
+    return false;
+  }
+  await recordMemberWorkSyncDispatchOutcome({
+    deps: input.deps,
+    item,
+    outcome,
+  });
+  return true;
 }
 
 export async function retireMemberWorkSyncRecoveryIntent(input: {

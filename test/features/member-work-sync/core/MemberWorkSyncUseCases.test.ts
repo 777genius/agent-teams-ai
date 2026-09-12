@@ -296,6 +296,18 @@ class InMemoryOutboxStore implements MemberWorkSyncOutboxStorePort {
     }
   }
 
+  async readItem(input: {
+    teamName: string;
+    memberName: string;
+    id: string;
+  }): Promise<MemberWorkSyncOutboxItem | null> {
+    const item = this.items.get(input.id);
+    if (!item || item.teamName !== input.teamName || item.memberName !== input.memberName) {
+      return null;
+    }
+    return item;
+  }
+
   async countRecentDelivered(input: {
     memberName: string;
     sinceIso: string;
@@ -2043,6 +2055,127 @@ describe('MemberWorkSync use cases', () => {
     expect(after?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
   });
 
+  it('retries a durable recovery-outcome write after a transient status mutation failure', async () => {
+    const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: 'intent-retry',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-retry',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'awaiting_outcome',
+            payloadHash: 'hash-retry',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    let writes = 0;
+    const originalWrite = store.write.bind(store);
+    store.write = async (next) => {
+      writes += 1;
+      if (writes < 3) {
+        throw new Error('transient');
+      }
+      return originalWrite(next);
+    };
+    await recordMemberWorkSyncDispatchOutcome({
+      deps,
+      item: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        id: 'intent-retry',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'review_pickup',
+          workSyncIntentKey: 'review-pickup:retry',
+          text: 'pickup',
+          taskRefs: [],
+        },
+      },
+      outcome: 'terminal',
+    });
+    expect(writes).toBe(3);
+    const after = await store.read();
+    expect(after?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after?.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
+  });
+
+  it('repairs a stuck recovery reservation from a terminal outbox row', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      recoveryAllocation: { enabled: true },
+      outboxStore: outbox,
+    });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: 'intent-stuck',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-stuck',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'reserved',
+            payloadHash: 'hash-stuck',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    outbox.items.set('intent-stuck', {
+      id: 'intent-stuck',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: status.agenda.fingerprint,
+      payloadHash: 'hash-stuck',
+      payload: {
+        from: 'system',
+        to: 'bob',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'review_pickup',
+        workSyncIntentKey: 'review-pickup:stuck',
+        text: 'pickup',
+        taskRefs: [],
+      },
+      status: 'failed_terminal',
+      attemptGeneration: 1,
+      createdAt: status.evaluatedAt,
+      updatedAt: status.evaluatedAt,
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
+  });
+
   it('writes a durable stop latch that blocks automatic recovery planning', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();
@@ -2620,7 +2753,7 @@ describe('MemberWorkSync use cases', () => {
     store.phase2ReadinessState = 'shadow_ready';
 
     const reconciler = new MemberWorkSyncReconciler(deps);
-    await reconciler.execute(
+    const firstStatus = await reconciler.execute(
       {
         teamName: 'team-a',
         memberName: 'bob',
@@ -2666,10 +2799,10 @@ describe('MemberWorkSync use cases', () => {
       { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
     );
 
-    const stillStuck = [...outbox.items.values()].find((item) =>
+    const stillStuckAtTenMinutes = [...outbox.items.values()].find((item) =>
       item.payload.workSyncIntentKey?.startsWith('agenda-sync-still-stuck:')
     );
-    expect(stillStuck).toBeUndefined();
+    expect(stillStuckAtTenMinutes).toBeUndefined();
 
     const recoverySummary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
       teamNames: ['team-a'],
@@ -2683,7 +2816,7 @@ describe('MemberWorkSync use cases', () => {
     await reconciler.execute(
       {
         teamName: 'team-a',
-        memberName: 'team-lead',
+        memberName: 'bob',
       },
       { reconciledBy: 'queue', triggerReasons: ['manual_refresh'] }
     );
@@ -2691,15 +2824,26 @@ describe('MemberWorkSync use cases', () => {
     const recoveryItems = [...outbox.items.values()].filter((item) =>
       item.payload.workSyncIntentKey?.startsWith('agenda-sync-still-stuck:')
     );
-    expect(recoveryItems).toHaveLength(0);
+    expect(recoveryItems).toHaveLength(1);
+    expect(recoveryItems[0]).toMatchObject({
+      status: 'pending',
+      agendaFingerprint: firstStatus.agenda.fingerprint,
+      payload: {
+        workSyncIntent: 'agenda_sync',
+        workSyncIntentKey: expect.stringContaining(
+          `agenda-sync-still-stuck:${firstStatus.agenda.fingerprint}:`
+        ),
+      },
+    });
 
     const secondRecoverySummary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
       teamNames: ['team-a'],
       claimedBy: 'test-dispatcher',
     });
 
-    expect(secondRecoverySummary).toMatchObject({ claimed: 0, delivered: 0 });
-    expect(inbox.inserted).toHaveLength(1);
+    expect(secondRecoverySummary).toMatchObject({ claimed: 1, delivered: 1, retryable: 0 });
+    expect(inbox.inserted).toHaveLength(2);
+    expect(inbox.inserted[1]?.messageId).toContain('agenda-sync-still-stuck');
   });
 
   it('suppresses new work-sync nudges after repeated deliveries without an accepted report', async () => {

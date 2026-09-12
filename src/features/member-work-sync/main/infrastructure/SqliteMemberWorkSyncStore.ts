@@ -349,4 +349,18 @@ export class SqliteMemberWorkSyncStore
       updatedAt: item.updatedAt,
     };
   }
+
+  async readItem(input: {
+    teamName: string;
+    memberName: string;
+    id: string;
+  }): Promise<MemberWorkSyncOutboxItem | null> {
+    await this.ready(input.teamName);
+    const snapshot = await this.deps.gateway.listTeamSnapshot(input.teamName);
+    const memberKey = normalizeMemberKey(input.memberName);
+    const record = snapshot.outboxItems.find(
+      (entry) => entry.id === input.id && entry.memberKey === memberKey
+    );
+    return record ? recordToOutboxItem(record) : null;
+  }
 }

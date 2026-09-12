@@ -10,6 +10,7 @@ import { observeMemberWorkSyncRecoveryHealth } from '../domain/MemberWorkSyncRec
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
 import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
+import { repairMemberWorkSyncDispatchOutcome } from './MemberWorkSyncRecoveryDispatchOutcome';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 import { observeMemberWorkSyncRuntimeStall } from './MemberWorkSyncRuntimeStallDiagnostics';
 import {
@@ -108,7 +109,16 @@ export class MemberWorkSyncReconciler {
       diagnostics: agenda.diagnostics,
     });
     assertReconcileNotCancelled(context);
-    const read = await readMemberWorkSyncStatus(this.deps, request);
+    let read = await readMemberWorkSyncStatus(this.deps, request);
+    if (read.status) {
+      const repaired = await repairMemberWorkSyncDispatchOutcome({
+        deps: this.deps,
+        status: read.status,
+      });
+      if (repaired) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+    }
     const previous = read.status;
     const lastAcceptedReport = getMemberWorkSyncAcceptedReport(previous);
     const nowIso = this.deps.clock.now().toISOString();

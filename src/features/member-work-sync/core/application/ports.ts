@@ -193,6 +193,11 @@ export interface MemberWorkSyncOutboxStorePort {
     payloadHash: string;
     updatedAt: string;
   } | null>;
+  readItem?(input: {
+    teamName: string;
+    memberName: string;
+    id: string;
+  }): Promise<MemberWorkSyncOutboxItem | null>;
 }
 
 export interface MemberWorkSyncInboxNudgePort {

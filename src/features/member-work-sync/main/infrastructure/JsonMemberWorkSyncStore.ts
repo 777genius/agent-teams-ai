@@ -1345,6 +1345,15 @@ export class JsonMemberWorkSyncStore
     };
   }
 
+  async readItem(input: {
+    teamName: string;
+    memberName: string;
+    id: string;
+  }): Promise<MemberWorkSyncOutboxItem | null> {
+    const outbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
+    return outbox.items[input.id] ?? null;
+  }
+
   async purgeActiveState(
     teamName: string,
     lifecycle: Parameters<typeof purgeJsonMemberWorkSyncActiveState>[1]

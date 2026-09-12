@@ -387,21 +387,11 @@ export class MemberWorkSyncNudgeDispatcher {
     item: MemberWorkSyncOutboxItem,
     outcome: keyof Omit<MemberWorkSyncNudgeDispatchSummary, 'claimed'>
   ): Promise<void> {
-    try {
-      await recordMemberWorkSyncDispatchOutcome({
-        deps: this.deps,
-        item,
-        outcome,
-      });
-    } catch (error) {
-      this.deps.logger?.warn('member work sync recovery dispatch outcome failed', {
-        teamName: item.teamName,
-        memberName: item.memberName,
-        outboxId: item.id,
-        outcome,
-        error: String(error),
-      });
-    }
+    await recordMemberWorkSyncDispatchOutcome({
+      deps: this.deps,
+      item,
+      outcome,
+    });
   }
 
   private async dispatchItem(
