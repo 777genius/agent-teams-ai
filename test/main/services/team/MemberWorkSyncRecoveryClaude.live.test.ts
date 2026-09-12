@@ -321,6 +321,169 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     feature.completeTeamDeletion(teamName);
   }, 420_000);
 
+  it('restores the same Claude recovery intent after a crash between inbox write and restart (D)', async () => {
+    const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    expect(orchestratorCli).toBeTruthy();
+    await assertExecutable(orchestratorCli!);
+
+    const model = process.env.MEMBER_WORK_SYNC_CLAUDE_MODEL?.trim() || DEFAULT_MODEL;
+    teamName = `member-work-sync-recovery-claude-d-${Date.now()}`;
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# Member work sync recovery Claude live crash canary\n\nDisposable sandbox only.\n',
+      'utf8'
+    );
+    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+      claudeJsonConfigRoot,
+      projectPath
+    );
+
+    const [
+      { TeamProvisioningService },
+      { TeamDataService },
+      { TeamConfigReader },
+      { TeamTaskReader },
+      { TeamKanbanManager },
+      { TeamMembersMetaStore },
+    ] = await Promise.all([
+      import('../../../../src/main/services/team/TeamProvisioningService'),
+      import('../../../../src/main/services/team/TeamDataService'),
+      import('../../../../src/main/services/team/TeamConfigReader'),
+      import('../../../../src/main/services/team/TeamTaskReader'),
+      import('../../../../src/main/services/team/TeamKanbanManager'),
+      import('../../../../src/main/services/team/TeamMembersMetaStore'),
+    ]);
+
+    svc = new TeamProvisioningService();
+    const activeService = svc;
+    const createFeature = (incarnation: string) =>
+      createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(incarnation),
+        teamsBasePath: getTeamsBasePath(),
+        recoveryAllocation: { enabled: true },
+        recoveryProtocol: { version: 1 },
+        configReader: new TeamConfigReader(),
+        taskReader: new TeamTaskReader(),
+        kanbanManager: new TeamKanbanManager(),
+        membersMetaStore: new TeamMembersMetaStore(),
+        isTeamActive: (name) =>
+          activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+        listLifecycleActiveTeamNames: async () => [teamName!],
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        queueQuietWindowMs: 500,
+      });
+
+    feature = createFeature('inc-a');
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledHookSettingsProvider((input) =>
+      feature!.buildRuntimeTurnSettledHookSettings(input)
+    );
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+
+    const progressEvents: TeamProvisioningProgress[] = [];
+    await activeService.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'anthropic',
+        model,
+        skipPermissions: true,
+        prompt: [
+          'Keep launch work minimal.',
+          'Do not edit files.',
+          'If you receive a task, wait for instructions and do not complete it.',
+        ].join(' '),
+        members: [],
+      },
+      (progress) => {
+        progressEvents.push(progress);
+      }
+    );
+    await waitUntil(async () => {
+      const last = progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new FatalWaitError(formatProgressDump(progressEvents));
+      }
+      return last?.state === 'ready';
+    }, 240_000);
+
+    const config = await new TeamConfigReader().getConfig(teamName);
+    const memberName =
+      config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
+      config?.members?.[0]?.name?.trim() ||
+      'team-lead';
+    await seedClaudeShadowReadyMetrics({ teamName, memberName });
+    const task = await new TeamDataService().createTask(teamName, {
+      subject: `Recovery Claude live crash canary ${Date.now()}`,
+      owner: memberName,
+      startImmediately: false,
+      prompt: 'Do not complete this task. Wait for operator instructions.',
+    });
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+
+    await waitUntil(
+      async () => {
+        const inbox = await readClaudeInboxMessages(teamName!, memberName);
+        return inbox.some(
+          (message) =>
+            message.messageKind === 'member_work_sync_nudge' &&
+            typeof message.messageId === 'string'
+        );
+      },
+      60_000,
+      500
+    );
+    const messageIdsBeforeCrash = (await readClaudeInboxMessages(teamName, memberName))
+      .filter((message) => message.messageKind === 'member_work_sync_nudge')
+      .map((message) => message.messageId)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+    expect(messageIdsBeforeCrash.length).toBeGreaterThanOrEqual(1);
+    const recoveryIdsBeforeCrash = Object.values(
+      await readMemberWorkSyncOutboxItems(teamName, memberName)
+    )
+      .map((item) => item.payload?.workSyncIntentKey)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+
+    await feature.dispose();
+    await controlServer.close().catch(() => undefined);
+    feature = createFeature('inc-a');
+    controlServer = await startMemberWorkSyncControlServer(feature);
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+    activeService.setTeamChangeEmitter((event: TeamChangeEvent) => feature!.noteTeamChange(event));
+    activeService.setRuntimeTurnSettledHookSettingsProvider((input) =>
+      feature!.buildRuntimeTurnSettledHookSettings(input)
+    );
+    feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+
+    await waitUntil(async () => {
+      const inbox = await readClaudeInboxMessages(teamName!, memberName);
+      return inbox.some((message) => message.messageKind === 'member_work_sync_nudge');
+    }, 30_000);
+    expect(
+      (await readClaudeInboxMessages(teamName, memberName))
+        .filter((message) => message.messageKind === 'member_work_sync_nudge')
+        .map((message) => message.messageId)
+        .filter((value): value is string => Boolean(value))
+        .sort()
+    ).toEqual(messageIdsBeforeCrash);
+    expect(
+      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName))
+        .map((item) => item.payload?.workSyncIntentKey)
+        .filter((value): value is string => Boolean(value))
+        .sort()
+    ).toEqual(recoveryIdsBeforeCrash);
+
+    await feature.prepareTeamDeletion(teamName);
+    feature.completeTeamDeletion(teamName);
+  }, 420_000);
+
   it('continues remaining Claude work after a settled status-only turn (A/B/C)', async () => {
     const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
     expect(orchestratorCli).toBeTruthy();
