@@ -152,7 +152,17 @@ export async function repairMemberWorkSyncDispatchOutcome(input: {
     memberName: input.status.memberName,
     id: intentId,
   });
-  if (!item?.payload.workSyncIntentKey) {
+  if (!item) {
+    await retireMemberWorkSyncRecoveryIntent({
+      deps: input.deps,
+      teamName: input.status.teamName,
+      memberName: input.status.memberName,
+      intentId,
+      receiptId: `missing-outbox:${intentId}`,
+    });
+    return true;
+  }
+  if (!item.payload.workSyncIntentKey) {
     return false;
   }
   const outcome = dispatchOutcomeFromOutboxStatus(item.status);

@@ -2285,6 +2285,44 @@ describe('MemberWorkSync use cases', () => {
     expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
   });
 
+  it('repairs a reserved recovery slot whose outbox row was never published', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      recoveryAllocation: { enabled: true },
+      outboxStore: outbox,
+    });
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await store.write({
+      ...status,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: 'intent-missing-outbox',
+        controlRevision: 1,
+        reservations: [
+          {
+            intentId: 'intent-missing-outbox',
+            episodeId: 'episode-1',
+            trigger: 'automatic',
+            reservedAt: status.evaluatedAt,
+            state: 'reserved',
+            payloadHash: 'hash-missing',
+            controlRevision: 1,
+          },
+        ],
+      },
+    });
+    const after = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(after.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(after.recoveryHealth?.reservations?.[0]).toMatchObject({ state: 'resolved' });
+  });
+
   it('releases an awaiting recovery reservation when the delivered turn settles', async () => {
     const { deps, store } = createDeps({ recoveryAllocation: { enabled: true } });
     const status = await new MemberWorkSyncReconciler(deps).execute({
