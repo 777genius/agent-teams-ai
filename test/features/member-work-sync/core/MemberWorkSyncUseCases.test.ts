@@ -2751,6 +2751,25 @@ describe('MemberWorkSync use cases', () => {
     ]);
   });
 
+  it('does not revoke inbox nudges on reconcile while automatic recovery is still allowed', async () => {
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    inbox.invalidated.length = 0;
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(inbox.invalidated).toEqual([]);
+  });
+
   it('supersedes a recovery intent reserved before a Stop/Resume cycle', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();
