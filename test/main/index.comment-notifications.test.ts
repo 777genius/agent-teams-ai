@@ -12,21 +12,21 @@ async function inboxHarness(kind: 'inbox' | 'sent' = 'inbox') {
   const end = source.indexOf(kind === 'inbox' ? '\n/**' : '\nprocess.on(', start);
   const { code } = await transformWithEsbuild(source.slice(start, end), 'inbox.ts');
   let messages: Record<string, unknown>[] = [];
-  const addTeamNotification = vi.fn(async () => undefined);
+  const addTeamNotification = vi.fn(() => Promise.resolve(undefined));
   const dependencies = {
-    logger: { debug() {}, warn() {} },
+    logger: { debug: vi.fn(), warn: vi.fn() },
     configManager: {
       getConfig: () => ({ notifications: { enabled: true, notifyOnLeadInbox: true } }),
     },
     existsSync: () => true,
     join: (...parts: string[]) => parts.join('/'),
     getTeamsBasePath: () => 'fixture',
-    teamDataService: { getLeadMemberName: async () => 'team-lead' },
-    teamInboxReader: { getMessagesFor: async () => messages },
+    teamDataService: { getLeadMemberName: () => Promise.resolve('team-lead') },
+    teamInboxReader: { getMessagesFor: () => Promise.resolve(messages) },
     inboxMessageCounts: new Map(),
     sentMessageCounts: new Map(),
-    sentMessagesStore: { readMessages: async () => messages },
-    resolveTeamDisplayName: async () => 'Fixture',
+    sentMessagesStore: { readMessages: () => Promise.resolve(messages) },
+    resolveTeamDisplayName: () => Promise.resolve('Fixture'),
     suppressedSources: new Set(['user_sent']),
     isTeamInternalControlMessageEnvelope: () => false,
     isReviewPickupEscalationMessage: () => false,
@@ -34,6 +34,8 @@ async function inboxHarness(kind: 'inbox' | 'sent' = 'inbox') {
     extractNotificationContent: (text: string) => ({ summary: text, body: text }),
     notificationManager: { addTeamNotification },
   };
+  // Compile only the fixed, trusted repository entrypoint; no external input is evaluated.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, sonarjs/code-eval
   const notify = new Function(...Object.keys(dependencies), `${code}; return ${functionName};`)(
     ...Object.values(dependencies)
   ) as (team: string, detail: string) => Promise<void>;

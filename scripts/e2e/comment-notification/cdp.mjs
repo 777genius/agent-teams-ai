@@ -83,7 +83,7 @@ export class CdpClient {
         lastTransientError = null;
       } catch (error) {
         if (
-          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
             String(error)
           )
         ) {
