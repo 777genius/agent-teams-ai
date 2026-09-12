@@ -57,7 +57,7 @@ it('bounds discovery to two physical reads and ignores the late older response',
   }
 });
 
-it('observes a late discovery rejection and retains it in disposal until settled', async () => {
+it('does not keep disposal waiting on a timed-out discovery read', async () => {
   vi.useFakeTimers();
   let reject!: (error: Error) => void;
   const pending = new Promise<string[]>((_resolve, fail) => {
@@ -72,15 +72,10 @@ it('observes a late discovery rejection and retains it in disposal until settled
     const run = scheduler.runOnce();
     await vi.advanceTimersByTimeAsync(20);
     await run;
-    let drained = false;
-    const disposal = scheduler.dispose().then(() => {
-      drained = true;
-    });
-    await vi.advanceTimersByTimeAsync(0);
-    expect(drained).toBe(false);
+    await scheduler.dispose();
+    expect(scheduler.getHealth().pendingDiscovery).toBe(1);
     reject(new Error('late failure'));
-    await disposal;
-    expect(drained).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
     expect(scheduler.getHealth().pendingDiscovery).toBe(0);
   } finally {
     reject(new Error('cleanup'));

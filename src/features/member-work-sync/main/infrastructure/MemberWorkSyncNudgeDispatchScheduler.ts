@@ -94,7 +94,6 @@ export class MemberWorkSyncNudgeDispatchScheduler {
 
   private async drainForDisposal(): Promise<void> {
     await this.running?.catch(() => undefined);
-    await Promise.all([...this.listings]);
     await Promise.all([...this.dispatches.values()]);
   }
 

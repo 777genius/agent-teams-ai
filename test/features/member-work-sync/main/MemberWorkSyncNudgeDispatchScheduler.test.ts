@@ -293,13 +293,10 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
-  it('waits for timed-out active team listing work during disposal', async () => {
+  it('does not wait for timed-out active team listing work during disposal', async () => {
     vi.useFakeTimers();
     try {
-      let release!: (teamNames: string[]) => void;
-      const timedOutListing = new Promise<string[]>((resolve) => {
-        release = resolve;
-      });
+      const timedOutListing = new Promise<string[]>(() => undefined);
       const dispatchDue = vi.fn(async () => ({
         claimed: 0,
         delivered: 0,
@@ -317,17 +314,9 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
       await vi.advanceTimersByTimeAsync(20);
       await run;
 
-      let disposed = false;
-      const dispose = scheduler.dispose().then(() => {
-        disposed = true;
-      });
-      await vi.advanceTimersByTimeAsync(0);
-      expect(disposed).toBe(false);
-
-      release(['team-a']);
-      await dispose;
-      expect(disposed).toBe(true);
+      await scheduler.dispose();
       expect(dispatchDue).not.toHaveBeenCalled();
+      expect(scheduler.getHealth().pendingDiscovery).toBe(1);
     } finally {
       vi.useRealTimers();
     }
