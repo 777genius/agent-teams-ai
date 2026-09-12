@@ -1843,6 +1843,24 @@ describe('MemberWorkSync use cases', () => {
     );
   });
 
+  it('honors an explicit recoveryAllocation disable even when protocol version is 1', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      recoveryAllocation: { enabled: false },
+      recoveryProtocol: { version: 1 },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute(
+      { teamName: 'team-a', memberName: 'bob' },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    expect(
+      [...outbox.items.values()].filter((item) => Boolean(item.payload.workSyncIntentKey))
+    ).toEqual([]);
+  });
+
   it('allocates at most one recovery reservation after D0 is enabled following missed ticks', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();

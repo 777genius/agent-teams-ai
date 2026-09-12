@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { syncDirectoryDurably } from '@main/utils/atomicWrite';
 
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+import type { Dirent } from 'node:fs';
 
 const MEMBER_WORK_SYNC_FILE_NAMES = [
   'status.json',
@@ -41,7 +42,15 @@ export async function listJsonMemberWorkSyncActiveFilePaths(
     paths.getReportTokenSecretPath(teamName),
   ];
   const membersDir = join(paths.getTeamRootDir(teamName), 'members');
-  const entries = await readdir(membersDir, { withFileTypes: true }).catch(() => []);
+  let entries: Dirent[];
+  try {
+    entries = await readdir(membersDir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+    entries = [];
+  }
   for (const entry of entries) {
     if (!entry.isDirectory()) {
       continue;

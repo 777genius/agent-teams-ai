@@ -10,6 +10,7 @@ import {
   isOutboxItemAwaitingDelivery,
 } from './MemberWorkSyncNudgeOutboxPlanHelpers';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
+import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -22,7 +23,7 @@ import type {
   MemberWorkSyncUseCaseDeps,
 } from './ports';
 
-type EarlyContinuationPlanResult = {
+interface EarlyContinuationPlanResult {
   planned: boolean;
   code:
     | 'outbox_unavailable'
@@ -35,7 +36,7 @@ type EarlyContinuationPlanResult = {
     | 'payload_conflict'
     | 'created'
     | 'existing';
-};
+}
 
 function buildEarlyContinuationInput(
   status: MemberWorkSyncStatus,
@@ -271,6 +272,13 @@ export async function planMemberWorkSyncEarlyContinuation(
     persistOutcome = ensured.ok ? 'written' : 'none';
     if (!ensured.ok) {
       await cancelAdmittedTicket(admission, ticket, ticketedInput.id);
+      await retireMemberWorkSyncRecoveryIntent({
+        deps,
+        teamName: status.teamName,
+        memberName: status.memberName,
+        intentId: ticketedInput.id,
+        receiptId: `payload-conflict:${ticketedInput.id}`,
+      });
       return { planned: false, code: 'payload_conflict' };
     }
     return {

@@ -888,4 +888,23 @@ describe('TeamInboxWriter', () => {
       );
     }
   );
+
+  it('rechecks shouldStillWrite immediately before the atomic inbox append', async () => {
+    let stillCurrent = true;
+    hoisted.readFile.mockImplementationOnce(async () => {
+      stillCurrent = false;
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    });
+
+    const result = await writer.sendMessage(
+      'my-team',
+      { member: 'alice', text: 'late stop' },
+      { shouldStillWrite: () => stillCurrent }
+    );
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result.deliveredToInbox).toBe(false);
+    expect(persisted).toEqual([]);
+  });
 });

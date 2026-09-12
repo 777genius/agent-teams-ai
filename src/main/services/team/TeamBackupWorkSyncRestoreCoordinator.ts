@@ -15,7 +15,10 @@ import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttem
 import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
 
 const logger = createLogger('TeamBackupService');
-type RegistryEntry = { identityId: string; status: 'active' | 'deleted_by_user' };
+interface RegistryEntry {
+  identityId: string;
+  status: 'active' | 'deleted_by_user';
+}
 
 interface RestorePorts {
   registry(): Record<string, RegistryEntry>;

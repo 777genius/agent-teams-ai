@@ -214,6 +214,7 @@ import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternal
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import {
+  bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
   startPreparedMemberWorkSyncFeature,
 } from './startMemberWorkSyncFeature';
@@ -2843,21 +2844,7 @@ async function initializeServices(): Promise<void> {
     prepared: preparedMemberWorkSyncFeature,
     stallObservation: memberWorkSyncStallObservation,
   });
-  teamProvisioningService.setRuntimeTurnSettledHookSettingsProvider((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.buildRuntimeTurnSettledHookSettings(input)
-      : Promise.resolve(null)
-  );
-  teamProvisioningService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.buildRuntimeTurnSettledEnvironment(input)
-      : Promise.resolve(null)
-  );
-  teamProvisioningService.setMemberWorkSyncProofMissingRecoveryScheduler((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.scheduleProofMissingRecovery(input)
-      : Promise.resolve({ scheduled: false, reason: 'invalid' })
-  );
+  bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
   teamProvisioningService.setMemberWorkSyncAcceptedReportChecker(async (input) => {
     if (!memberWorkSyncFeature) {
       return false;

@@ -2,16 +2,64 @@ import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/mai
 import type { TeamTaskStallObservationPort } from '@main/services/team/stallMonitor/TeamTaskStallNotifier';
 import type { TeamBackupService } from '@main/services/team/TeamBackupService';
 
+type StallObservation = Parameters<TeamTaskStallObservationPort['record']>[0];
+
 export function createDeferredWorkSyncStallObservation(): TeamTaskStallObservationPort & {
   attach(feature: MemberWorkSyncFeatureFacade | null): void;
 } {
   let feature: MemberWorkSyncFeatureFacade | null = null;
+  const pending: StallObservation[] = [];
   return {
-    record: (input) => feature?.recordStallObservation(input) ?? Promise.resolve(),
+    record: async (input) => {
+      if (feature) {
+        await feature.recordStallObservation(input);
+        return;
+      }
+      pending.push(input);
+    },
     attach(next) {
       feature = next;
+      if (!next || pending.length === 0) {
+        return;
+      }
+      const queued = pending.splice(0);
+      void (async () => {
+        for (const observation of queued) {
+          await next.recordStallObservation(observation);
+        }
+      })();
     },
   };
+}
+
+export function bindMemberWorkSyncProvisioningRuntime(
+  provisioning: {
+    setRuntimeTurnSettledHookSettingsProvider(
+      provider: MemberWorkSyncFeatureFacade['buildRuntimeTurnSettledHookSettings']
+    ): void;
+    setRuntimeTurnSettledEnvironmentProvider(
+      provider: MemberWorkSyncFeatureFacade['buildRuntimeTurnSettledEnvironment']
+    ): void;
+    setMemberWorkSyncProofMissingRecoveryScheduler(
+      scheduler: MemberWorkSyncFeatureFacade['scheduleProofMissingRecovery']
+    ): void;
+  },
+  getFeature: () => MemberWorkSyncFeatureFacade | null
+): void {
+  provisioning.setRuntimeTurnSettledHookSettingsProvider((input) => {
+    const current = getFeature();
+    return current ? current.buildRuntimeTurnSettledHookSettings(input) : Promise.resolve(null);
+  });
+  provisioning.setRuntimeTurnSettledEnvironmentProvider((input) => {
+    const current = getFeature();
+    return current ? current.buildRuntimeTurnSettledEnvironment(input) : Promise.resolve(null);
+  });
+  provisioning.setMemberWorkSyncProofMissingRecoveryScheduler((input) => {
+    const current = getFeature();
+    return current
+      ? current.scheduleProofMissingRecovery(input)
+      : Promise.resolve({ scheduled: false, reason: 'invalid' });
+  });
 }
 
 export async function startPreparedMemberWorkSyncFeature(input: {

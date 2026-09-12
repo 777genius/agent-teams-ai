@@ -17,7 +17,10 @@ const record = (value: unknown): value is Record<string, unknown> =>
 const identifier = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.trim() === value;
 
-type Reports = { schemaVersion: 2; intents: Record<string, MemberWorkSyncReportIntent> };
+interface Reports {
+  schemaVersion: 2;
+  intents: Record<string, MemberWorkSyncReportIntent>;
+}
 
 export type MemberWorkSyncReportJournalSnapshot =
   | { state: 'present'; file: Reports }

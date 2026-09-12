@@ -38,6 +38,7 @@ import {
   shouldPlanDeliveredStillStuckRecovery,
 } from './MemberWorkSyncNudgeRecoveryPolicy';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
+import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -254,8 +255,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         existingPayloadHash: recoveryResult.existingPayloadHash,
         requestedPayloadHash: recoveryResult.requestedPayloadHash,
       });
-      await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
-      return { planned: false, code: 'payload_conflict' };
+      return this.rejectReservedPayloadConflict(status, recoveryInput.id);
     }
     await this.repairDeliveredAgendaSyncNudgeIfNeeded(status, recoveryInput, recoveryResult.item);
 
@@ -321,8 +321,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         existingPayloadHash: repairResult.existingPayloadHash,
         requestedPayloadHash: repairResult.requestedPayloadHash,
       });
-      await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
-      return { planned: false, code: 'payload_conflict' };
+      return this.rejectReservedPayloadConflict(status, repairInput.id);
     }
     await this.repairDeliveredAgendaSyncNudgeIfNeeded(status, repairInput, repairResult.item);
 
@@ -405,8 +404,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         existingPayloadHash: recoveryResult.existingPayloadHash,
         requestedPayloadHash: recoveryResult.requestedPayloadHash,
       });
-      await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
-      return { planned: false, code: 'payload_conflict' };
+      return this.rejectReservedPayloadConflict(status, recoveryInput.id);
     }
     await this.repairDeliveredAgendaSyncNudgeIfNeeded(status, recoveryInput, recoveryResult.item);
 
@@ -551,8 +549,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
             existingPayloadHash: recoveryResult.existingPayloadHash,
             requestedPayloadHash: recoveryResult.requestedPayloadHash,
           });
-          await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
-          return { planned: false, code: 'payload_conflict' };
+          return this.rejectReservedPayloadConflict(status, recoveryInput.id);
         }
         await this.repairDeliveredAgendaSyncNudgeIfNeeded(
           status,
@@ -759,6 +756,21 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         error: String(error),
       });
     }
+  }
+
+  private async rejectReservedPayloadConflict(
+    status: MemberWorkSyncStatus,
+    intentId: string
+  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
+    await retireMemberWorkSyncRecoveryIntent({
+      deps: this.deps,
+      teamName: status.teamName,
+      memberName: status.memberName,
+      intentId,
+      receiptId: `payload-conflict:${intentId}`,
+    });
+    await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
+    return { planned: false, code: 'payload_conflict' };
   }
 
   private async appendPlanAudit(

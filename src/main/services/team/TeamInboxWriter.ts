@@ -191,12 +191,21 @@ export class TeamInboxWriter {
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
-        if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
-          rejectedByPrecondition = true;
+        const shouldAbortWrite = async (): Promise<boolean> => {
+          if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
+            rejectedByPrecondition = true;
+            return true;
+          }
+          return false;
+        };
+        if (await shouldAbortWrite()) {
           return;
         }
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
+          if (await shouldAbortWrite()) {
+            return;
+          }
           const explicitDuplicateIndex = explicitMessageId
             ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
             : -1;
@@ -217,6 +226,9 @@ export class TeamInboxWriter {
                 ...duplicate,
                 taskRefs: merged.taskRefs,
               };
+              if (await shouldAbortWrite()) {
+                return;
+              }
               await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
               const written = await this.readInbox(inboxPath);
               const writtenDuplicateIndex = matchedExplicitMessageId
@@ -236,6 +248,9 @@ export class TeamInboxWriter {
             return;
           }
           list.push(payload);
+          if (await shouldAbortWrite()) {
+            return;
+          }
           await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
           const written = await this.readInbox(inboxPath);
           if (written.some((msg) => msg.messageId === messageId)) {

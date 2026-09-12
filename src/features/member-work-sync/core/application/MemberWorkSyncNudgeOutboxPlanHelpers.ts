@@ -131,5 +131,8 @@ export function isMemberWorkSyncRecoveryAllocationEnabled(deps: {
   recoveryAllocation?: { enabled: boolean };
   recoveryProtocol?: { version: number };
 }): boolean {
-  return deps.recoveryAllocation?.enabled === true || (deps.recoveryProtocol?.version ?? 0) >= 1;
+  if (deps.recoveryAllocation) {
+    return deps.recoveryAllocation.enabled === true;
+  }
+  return (deps.recoveryProtocol?.version ?? 0) >= 1;
 }

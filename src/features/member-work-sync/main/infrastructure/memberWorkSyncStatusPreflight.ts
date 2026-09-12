@@ -11,7 +11,10 @@ import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
 import type { MemberWorkSyncStatusRecord } from '@features/internal-storage/contracts/internalStorageContracts';
 
-type Identity = { teamName: string; incarnation: string };
+interface Identity {
+  teamName: string;
+  incarnation: string;
+}
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

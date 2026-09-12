@@ -33,13 +33,13 @@ import {
   readBackupManifest,
   readBackupManifestStrict,
   readBackupManifestStrictSync,
-  writeBackupManifestSync,
   writeBackupManifestStrictAware,
+  writeBackupManifestSync,
 } from './teamBackupManifest';
 import { isValidConfig, isValidJson, TeamBackupRestoreService } from './TeamBackupRestoreService';
-import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 import { loadTeamBackupStartupRegistry, readTeamBackupRegistry } from './TeamBackupStartupRegistry';
 import { TeamBackupWorkSyncRestoreCoordinator } from './TeamBackupWorkSyncRestoreCoordinator';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';

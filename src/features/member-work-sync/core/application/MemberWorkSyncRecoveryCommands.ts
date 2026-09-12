@@ -244,7 +244,5 @@ export class MemberWorkSyncRecoveryCommands {
 }
 
 export function isAutomaticRecoveryAllocationEnabled(deps: MemberWorkSyncUseCaseDeps): boolean {
-  return (
-    isMemberWorkSyncRecoveryAllocationEnabled(deps) || (deps.recoveryProtocol?.version ?? 0) >= 1
-  );
+  return isMemberWorkSyncRecoveryAllocationEnabled(deps);
 }
