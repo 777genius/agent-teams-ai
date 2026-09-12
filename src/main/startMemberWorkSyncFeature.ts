@@ -23,6 +23,7 @@ export function createDeferredWorkSyncStallObservation(options?: {
   let disposed = false;
   const pendingByTeam = new Map<string, StallObservation[]>();
   const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const materialized = new WeakSet<StallObservation>();
   const retryDelayMs = options?.retryDelayMs ?? DEFAULT_STALL_RETRY_MS;
   const pendingFor = (teamName: string): StallObservation[] => {
     const current = pendingByTeam.get(teamName);
@@ -65,10 +66,23 @@ export function createDeferredWorkSyncStallObservation(options?: {
         }
       } catch (error) {
         if (isPermanentStallObservationError(error)) {
-          if (pending[0] === observation) {
-            pending.shift();
+          if (!materialized.has(observation) && current.refreshStatus) {
+            try {
+              await current.refreshStatus({
+                teamName: observation.teamName,
+                memberName: observation.memberName,
+              });
+              materialized.add(observation);
+              continue;
+            } catch {
+              // Refresh failed; fall through to the same delayed retry as other transients.
+            }
+          } else {
+            if (pending[0] === observation) {
+              pending.shift();
+            }
+            continue;
           }
-          continue;
         }
         if (!disposed && !retryTimers.has(teamName) && feature && pending.length > 0) {
           retryTimers.set(

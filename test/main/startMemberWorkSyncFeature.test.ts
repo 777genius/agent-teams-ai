@@ -127,6 +127,79 @@ describe('createDeferredWorkSyncStallObservation', () => {
     });
   });
 
+  it('materializes missing episodes and records the stall on retry', async () => {
+    const recorded: string[] = [];
+    const refreshed: string[] = [];
+    const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 20 });
+    const missing = new Set(['task-1']);
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:00:00.000Z',
+    });
+    observation.attach({
+      refreshStatus: async (input: { memberName: string }) => {
+        refreshed.push(input.memberName);
+        missing.clear();
+        return {} as never;
+      },
+      recordStallObservation: async (input: { taskId: string }) => {
+        if (missing.has(input.taskId)) {
+          const error = new Error('episode_missing');
+          error.name = 'MemberWorkSyncStallEpisodeMissingError';
+          throw error;
+        }
+        recorded.push(input.taskId);
+      },
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation' | 'refreshStatus'> as MemberWorkSyncFeatureFacade);
+
+    await vi.waitFor(() => {
+      expect(recorded).toEqual(['task-1']);
+    });
+    expect(refreshed).toEqual(['bob']);
+  });
+
+  it('drops episode_missing only after a failed materialize retry and continues the queue', async () => {
+    const recorded: string[] = [];
+    const refreshed: string[] = [];
+    const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 20 });
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'bob',
+      taskId: 'task-1',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:00:00.000Z',
+    });
+    await observation.record({
+      teamName: 'team-a',
+      memberName: 'alice',
+      taskId: 'task-2',
+      reason: 'no_progress_deadline',
+      observedAt: '2026-09-12T00:01:00.000Z',
+    });
+    observation.attach({
+      refreshStatus: async (input: { memberName: string }) => {
+        refreshed.push(input.memberName);
+        return {} as never;
+      },
+      recordStallObservation: async (input: { taskId: string }) => {
+        if (input.taskId === 'task-1') {
+          const error = new Error('episode_missing');
+          error.name = 'MemberWorkSyncStallEpisodeMissingError';
+          throw error;
+        }
+        recorded.push(input.taskId);
+      },
+    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation' | 'refreshStatus'> as MemberWorkSyncFeatureFacade);
+
+    await vi.waitFor(() => {
+      expect(recorded).toEqual(['task-2']);
+    });
+    expect(refreshed).toEqual(['bob']);
+  });
+
   it('retries one team without blocking another team stall observation', async () => {
     const recorded: string[] = [];
     const observation = createDeferredWorkSyncStallObservation({ retryDelayMs: 50 });
