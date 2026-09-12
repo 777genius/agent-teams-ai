@@ -1,12 +1,14 @@
 import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
-import type {
-  AttributedCursorAgentProcess,
-  CursorAgentAttributionOwner,
-} from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
+import * as teamProjectWorkspaces from '@main/services/team/TeamProjectWorkspaces';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+import type {
+  AttributedCursorAgentProcess,
+  CursorAgentAttributionOwner,
+} from '@main/services/team/opencode/bridge/CursorAgentAttributionRecords';
 
 interface CursorAgentSweepInput {
   ownedWorkspaceCwds: readonly string[];
@@ -410,7 +412,19 @@ describe('the positive attribution records the runtime writes', () => {
         exitedAtMs: null,
         ...overrides,
       },
-      host: null,
+      host: {
+        schemaVersion: 1,
+        attributionId: overrides.attributionId ?? 'aaaa1111aaaa1111aaaa1111aaaa1111',
+        hostPid: 999,
+        hostStartedAtNative: null,
+        hostStartTimeFormat: null,
+        projectPath: overrides.workspacePath ?? 'C:\\workspaces\\example',
+        appInstanceId: '9100-1699999999000',
+        appProfileScope: overrides.appProfileScope ?? 'this-install',
+        runtimeVersion: '0.0.95',
+        owners,
+        updatedAt: null,
+      },
       owners,
     };
   }
@@ -439,6 +453,88 @@ describe('the positive attribution records the runtime writes', () => {
     allowsUnattributedReap: () => false,
     sweepCursorAgentTrees,
   };
+
+  it.each([
+    'missing',
+    'invalid JSON',
+    'unsupported schema',
+    'mismatched id',
+    'foreign profile',
+    'other live owner',
+    'released',
+  ])('checks real reader lease evidence through stop selection: %s', async (scenario) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lead-reap-attribution-'));
+    const workspace = path.join(directory, 'workspace');
+    const fixture = attributedProcess(4321, [runtimeOwner('team-b')], {
+      workspacePath: workspace,
+      cwd: workspace,
+    });
+    const workspaceRead = vi
+      .spyOn(teamProjectWorkspaces, 'readTeamProjectWorkspace')
+      .mockImplementation(async (_basePath, teamName) =>
+        teamName === 'team-a' ? workspace : null
+      );
+    try {
+      const { readAttributedCursorAgentProcesses } = await vi.importActual<
+        typeof import('@main/services/team/opencode/bridge/CursorAgentAttributionRecords')
+      >('@main/services/team/opencode/bridge/CursorAgentAttributionRecords');
+      const agentDirectory = path.join(directory, 'v1', 'agents', fixture.record.attributionId);
+      const hostDirectory = path.join(directory, 'v1', 'hosts');
+      fs.mkdirSync(agentDirectory, { recursive: true });
+      fs.mkdirSync(hostDirectory, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentDirectory, '4321-1700000000000.json'),
+        JSON.stringify(fixture.record)
+      );
+      const host = {
+        ...fixture.host,
+        ...(scenario === 'unsupported schema' ? { schemaVersion: 7 } : {}),
+        ...(scenario === 'mismatched id' ? { attributionId: 'another-host' } : {}),
+        ...(scenario === 'foreign profile' ? { appProfileScope: 'another-install' } : {}),
+        ...(scenario === 'released' ? { owners: [] } : {}),
+      };
+      if (scenario !== 'missing') {
+        fs.writeFileSync(
+          path.join(hostDirectory, `${fixture.record.attributionId}.json`),
+          scenario === 'invalid JSON' ? '{' : JSON.stringify(host)
+        );
+      }
+
+      const result = await reapCursorAgentLeadTreesForStoppedTeam({
+        teamName: 'team-a',
+        otherAliveTeams: ['team-b'],
+        requestedAtMs: 1_700_000_001_000,
+        cursorAgentTreeSweep: recordOnlyPort,
+        cursorAgentAttribution: {
+          readAttributedProcesses: () =>
+            readAttributedCursorAgentProcesses({ directory, appProfileScope: 'this-install' }),
+        },
+      });
+
+      expect(workspaceRead).toHaveBeenCalledWith(teamsBasePath, 'team-b');
+      expect(readAttributedProcesses).not.toHaveBeenCalled();
+      expect(result.killedPids).toEqual([]);
+      if (scenario === 'released') {
+        expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            ownedWorkspaceCwds: [workspace],
+            startedBeforeMs: 1_700_000_001_000,
+            attributedProcesses: [fixture.record],
+            requireAttributionProof: true,
+            allowUnattributedReap: false,
+          })
+        );
+      } else {
+        expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+        expect(result.diagnostics[0]).toBe(
+          'cursor-agent attribution: 1 runtime process record(s) available, 0 this stop may reap'
+        );
+      }
+    } finally {
+      workspaceRead.mockRestore();
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
 
   it('hands the sweep the records this team may reap, and demands their proof', async () => {
     writeTeamConfig('attributedteam', { projectPath: 'C:\\workspaces\\example' });
@@ -573,8 +669,8 @@ describe('the positive attribution records the runtime writes', () => {
 
   /**
    * The documented exception, and the control on the rule above: a record whose
-   * host holds no lease at all - a crashed host, or one whose last lease was
-   * released - travels, because the fences behind this one are what decide it.
+   * validated host explicitly reports no remaining leases travels, because the
+   * fences behind this one are what decide it. A missing host is not released.
    */
   it('passes on a record whose host has no owner left', async () => {
     writeTeamConfig('ownerlessteam', { projectPath: 'C:\\workspaces\\example' });

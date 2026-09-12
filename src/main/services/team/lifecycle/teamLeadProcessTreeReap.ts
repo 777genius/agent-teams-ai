@@ -221,11 +221,11 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
  * and a lead belonging to that team is not this team's to hand to a sweep. So a
  * named owner set travels only when this team is in it.
  *
- * A record with NO owner is the documented exception, and not "unowned,
- * therefore free": it is a record whose host file is gone or whose last lease
- * was released, which is what a crashed host leaves behind. It is passed on, and
- * the fences behind this one - the exact workspace in the record, the live start
- * time, and the shared-directory veto above - are what decide it.
+ * A validated host with an explicitly empty lease set is the exception. Its
+ * record is passed on, and the exact workspace, live start time and shared-
+ * directory veto still decide whether it may be reaped. A missing, unreadable
+ * or rejected host yields an unnamed owner from the reader and is vetoed; it
+ * is not evidence that the host released its last lease.
  *
  * A readiness probe is passed on deliberately although nothing may reap it: the
  * sweep needs the record in hand to recognise the runtime's own probe tree and
