@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath, stat } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { isolatedEnvironment } from './platform.mjs';
 
@@ -135,6 +135,15 @@ async function createProfileDirectory(directory, root) {
   );
   await mkdir(directory, { recursive: true });
   assert(containedPath(await realpath(directory), ownedRoot), 'Profile junction escapes sandbox');
+}
+
+export async function prepareExistingProject(data) {
+  assert(data.project && containedPath(data.project, data.root), 'Project escapes sandbox');
+  await createProfileDirectory(data.project, data.root);
+  const sentinel = path.join(data.project, 'existing-project-sentinel.txt');
+  await writeFile(sentinel, 'preserve-existing-project\n', { flag: 'wx' });
+  assert(containedPath(await realpath(sentinel), await realpath(data.project)));
+  return sentinel;
 }
 
 export async function preparePackagedProfile(data, inherited = process.env) {

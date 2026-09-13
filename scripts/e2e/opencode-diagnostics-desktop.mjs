@@ -11,6 +11,7 @@ import {
   packagedArguments,
   packagedArtifact,
   preparePackagedProfile,
+  prepareExistingProject,
   packagedTarget,
   packagedStopOrder,
   closePackagedBrowser,
@@ -158,12 +159,14 @@ if (mode === 'seed-packaged') {
     home: path.join(dir, 'home'),
     userData: path.join(dir, 'user-data'),
     temp: path.join(dir, 'tmp'),
+    project: path.join(dir, 'existing-project'),
     platform: process.platform,
     packaged: true,
     artifact,
     runtimeSetup: options.runtimeSetup,
   };
   await preparePackagedProfile(data);
+  data.projectSentinel = await prepareExistingProject(data);
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'seed') {
