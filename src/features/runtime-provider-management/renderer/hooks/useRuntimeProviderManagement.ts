@@ -39,7 +39,8 @@ import {
   replaceProvider,
 } from './runtimeProviderManagementPresentation';
 import {
-  applyModelTestResultToModel,
+  applyModelTestResultToModels,
+  startModelTest,
   applyModelTestResultToView,
   buildFailedModelTestResult,
 } from './runtimeProviderModelTestState';
@@ -148,6 +149,7 @@ export interface RuntimeProviderManagementState {
   modelsErrorDiagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null;
   selectedModelId: string | null;
   testingModelIds: readonly string[];
+  cancelledModelTestIds?: readonly string[];
   modelTestStartedAt?: Readonly<Record<string, number>>;
   savingDefaultModelId: string | null;
   clearingProjectDefault: boolean;
@@ -1561,12 +1563,13 @@ export function useRuntimeProviderManagement(
     setErrorDiagnostics(null);
   }, []);
 
-  const stopModelTest = useModelTestStop(
+  const [stopModelTest, cancelledModelTestIds] = useModelTestStop(
     options.runtimeId,
+    modelProbeGenerationRef.current,
+    modelTestStartedAt,
     activeModelTestRequestGroupsRef,
     pendingModelStopsRef,
     setTestingModelIds,
-    setModelTestStartedAt,
     setError,
     withUiTimeout
   );
@@ -1583,10 +1586,8 @@ export function useRuntimeProviderManagement(
         modelProbeGenerationRef.current === probeGeneration &&
         (activeProviderAtStart === null || activeModelPickerProviderRef.current === providerId) &&
         isProjectContextCurrent(projectContext);
-      setModelTestStartedAt((current) => ({ ...current, [modelId]: Date.now() }));
-      setTestingModelIds((current) =>
-        current.includes(modelId) ? current : [...current, modelId]
-      );
+      setModelTestStartedAt((current) => startModelTest(current, modelId));
+      setTestingModelIds((ids) => (ids.includes(modelId) ? ids : [...ids, modelId]));
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
@@ -1612,9 +1613,7 @@ export function useRuntimeProviderManagement(
           }
           if (shouldRecordProbeResult()) {
             setModelResults((current) => ({ ...current, [modelId]: result }));
-            setModels((current) =>
-              current.map((model) => applyModelTestResultToModel(model, result))
-            );
+            setModels((current) => applyModelTestResultToModels(current, result));
             setView((current) => applyModelTestResultToView(current, result));
           }
           return result;
@@ -1622,7 +1621,7 @@ export function useRuntimeProviderManagement(
         if (response.result && shouldRecordProbeResult()) {
           const result = response.result;
           setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => current.map((model) => applyModelTestResultToModel(model, result)));
+          setModels((current) => applyModelTestResultToModels(current, result));
           setView((current) => applyModelTestResultToView(current, result));
         }
         return (
@@ -1638,7 +1637,7 @@ export function useRuntimeProviderManagement(
         );
         if (shouldRecordProbeResult()) {
           setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => current.map((model) => applyModelTestResultToModel(model, result)));
+          setModels((current) => applyModelTestResultToModels(current, result));
           setView((current) => applyModelTestResultToView(current, result));
         }
         return result;
@@ -1968,6 +1967,7 @@ export function useRuntimeProviderManagement(
       modelsErrorDiagnostics,
       selectedModelId,
       testingModelIds,
+      cancelledModelTestIds,
       modelTestStartedAt,
       savingDefaultModelId,
       clearingProjectDefault,
@@ -2027,6 +2027,7 @@ export function useRuntimeProviderManagement(
       successMessage,
       warningMessage,
       testingModelIds,
+      cancelledModelTestIds,
       modelTestStartedAt,
       view,
     ]

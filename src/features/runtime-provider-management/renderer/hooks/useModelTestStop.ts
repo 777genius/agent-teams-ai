@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -7,15 +7,19 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 export function useModelTestStop(
   runtimeId: string,
+  generation: number,
+  startedAt: Readonly<Record<string, number>>,
   activeModelTestRequestGroupsRef: RefObject<Map<string, number>>,
   pendingModelStopsRef: RefObject<Map<string, Promise<boolean>>>,
   setTestingModelIds: Dispatch<SetStateAction<readonly string[]>>,
-  setModelTestStartedAt: Dispatch<SetStateAction<Readonly<Record<string, number>>>>,
   setError: Dispatch<SetStateAction<string | null>>,
   withUiTimeout: <T>(promise: Promise<T>, message: string, timeoutMs: number) => Promise<T>
-): (providerId: string, modelId: string) => Promise<boolean> {
+): readonly [(providerId: string, modelId: string) => Promise<boolean>, readonly string[]] {
+  const [cancelled, setCancelled] = useState<
+    Record<string, { generation: number; startedAt: number }>
+  >({});
   const { t } = useAppTranslation('settings');
-  return useCallback(
+  const stop = useCallback(
     (providerId: string, modelId: string): Promise<boolean> => {
       const requestGroupId = `runtime-provider-management:${runtimeId}:model-test:${providerId}:${modelId}`;
       const token = activeModelTestRequestGroupsRef.current.get(requestGroupId);
@@ -37,7 +41,10 @@ export function useModelTestStop(
           if (activeModelTestRequestGroupsRef.current.get(requestGroupId) !== token) return false;
           activeModelTestRequestGroupsRef.current.delete(requestGroupId);
           setTestingModelIds((current) => current.filter((id) => id !== modelId));
-          setModelTestStartedAt((current) => withoutModelTestStart(current, modelId));
+          setCancelled((current) => ({
+            ...current,
+            [modelId]: { generation, startedAt: startedAt[modelId] },
+          }));
           return true;
         } catch (error) {
           if (activeModelTestRequestGroupsRef.current.get(requestGroupId) !== token) return false;
@@ -52,16 +59,23 @@ export function useModelTestStop(
       return operation;
     },
     [
+      generation,
+      startedAt,
       withUiTimeout,
       runtimeId,
       t,
       activeModelTestRequestGroupsRef,
       pendingModelStopsRef,
       setTestingModelIds,
-      setModelTestStartedAt,
       setError,
     ]
   );
+  return [
+    stop,
+    Object.keys(cancelled).filter(
+      (id) => cancelled[id].generation === generation && cancelled[id].startedAt === startedAt[id]
+    ),
+  ];
 }
 
 export function withoutModelTestStart(

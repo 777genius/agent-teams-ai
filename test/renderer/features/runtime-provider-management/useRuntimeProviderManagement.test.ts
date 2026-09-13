@@ -262,11 +262,12 @@ describe('useRuntimeProviderManagement', () => {
       requestGroupId: 'runtime-provider-management:opencode:model-test:test:a:1',
     });
     expect(state?.testingModelIds).toEqual(['b']);
-    expect(state?.modelTestStartedAt?.a).toBeUndefined();
+    expect(state?.cancelledModelTestIds).toEqual(['a']);
     expect(state?.modelResults.a).toBeUndefined();
     await act(async () => {
       void actions?.testModel('test', 'a');
     });
+    expect(state?.cancelledModelTestIds).toEqual([]);
     const restartedAt = state?.modelTestStartedAt?.a;
     await act(async () => {
       pending[0](response('a'));
@@ -280,6 +281,19 @@ describe('useRuntimeProviderManagement', () => {
     });
     expect(state?.testingModelIds).toEqual([]);
     expect(state?.modelResults.a?.ok).toBe(true);
+    await act(async () => {
+      void actions?.testModel('test', 'a');
+    });
+    await act(async () => {
+      expect(await actions?.stopModelTest?.('test', 'a')).toBe(true);
+    });
+    expect(state?.cancelledModelTestIds).toEqual(['a']);
+    expect(state?.modelResults.a?.ok).toBe(true);
+    await act(async () => {
+      pending[3](response('a'));
+    });
+    expect(state?.cancelledModelTestIds).toEqual(['a']);
+
     await act(async () => root.unmount());
   });
 

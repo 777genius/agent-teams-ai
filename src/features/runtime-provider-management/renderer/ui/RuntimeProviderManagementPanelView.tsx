@@ -1908,12 +1908,15 @@ const ProviderModelList = ({
       selected={
         (defaultTarget === 'all_projects'
           ? state.view?.allProjectsDefaultModel
-          : state.view?.defaultModel) === model.modelId
+          : defaultTarget === 'project'
+            ? state.view?.projectDefaultModel
+            : state.view?.defaultModel) === model.modelId
       }
       disabled={disabled}
       hasProjectContext={hasProjectContext}
       testing={state.testingModelIds.includes(model.modelId)}
       testStartedAt={state.modelTestStartedAt?.[model.modelId]}
+      cancelled={state.cancelledModelTestIds?.includes(model.modelId)}
       result={state.modelResults[model.modelId]}
       defaultTarget={defaultTarget}
       intendedProjectPath={intendedProjectPath}

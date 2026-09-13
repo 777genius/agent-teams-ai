@@ -77,5 +77,25 @@ it('shows elapsed time from test start across remounts and clears its timer', as
   expect(
     host.querySelector('[data-testid="runtime-provider-model-test-hint-test/model"]')?.textContent
   ).toBeTruthy();
+  await act(async () => {
+    root.render(
+      <ModelRow
+        {...props}
+        key="stopped-remount"
+        testing={false}
+        cancelled
+        result={{
+          providerId: 'test',
+          modelId: 'test/model',
+          ok: true,
+          availability: 'available',
+          message: 'Old success',
+          diagnostics: [],
+        }}
+      />
+    );
+  });
+  expect(host.querySelector('[role="status"]')?.textContent).toBe('Test stopped.');
+  expect(host.textContent).not.toContain('Old success');
   await act(async () => root.unmount());
 });

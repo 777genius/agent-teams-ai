@@ -1418,6 +1418,66 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(selectedButtons[0]?.textContent).toBe('Selected');
   });
 
+  it('allows pinning the inherited model as an explicit project override', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const model = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/inherited',
+      displayName: 'Inherited',
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: true,
+      availability: 'available' as const,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        projectPath: '/tmp/project-a',
+        projectDefaultModel: null,
+        allProjectsDefaultModel: model.modelId,
+        defaultModel: model.modelId,
+        defaultModelSource: 'all_projects',
+      },
+      providers: [{ ...createState().view!.providers[0]!, state: 'connected', actions: [] }],
+      modelPickerProviderId: 'openrouter',
+      modelPickerMode: 'runtime-default',
+      models: [model],
+    });
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    await selectOpenCodeTab(host, 'Models');
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('button[aria-label^="Use another model: This project"]')
+        ?.click();
+    });
+    const select = host.querySelector<HTMLButtonElement>('button[aria-label="Select: Inherited"]');
+    expect(select).not.toBeNull();
+    expect(select?.disabled).toBe(false);
+    await act(async () => {
+      select?.click();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      model.modelId,
+      'project',
+      '/tmp/project-a'
+    );
+    await act(async () => root.unmount());
+  });
+
   it('clears a project override through the explicit Use default action', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -4418,7 +4478,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       host.querySelector('[data-testid="runtime-provider-project-context-select"]')
     ).not.toBeNull();
     expect(
-      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')?.textContent
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+        ?.textContent
     ).toContain('Select a project context before testing models.');
     const disabledTest = host.querySelector<HTMLButtonElement>(
       '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'

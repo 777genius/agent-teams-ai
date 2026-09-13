@@ -29,6 +29,7 @@ export const ModelRow = ({
   disabled,
   hasProjectContext,
   testing,
+  cancelled = false,
   testStartedAt,
   result,
   defaultTarget,
@@ -45,6 +46,7 @@ export const ModelRow = ({
   readonly disabled: boolean;
   readonly hasProjectContext: boolean;
   readonly testing: boolean;
+  readonly cancelled?: boolean;
   readonly testStartedAt?: number;
   readonly result: RuntimeProviderModelTestResultDto | undefined;
   readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
@@ -65,10 +67,6 @@ export const ModelRow = ({
   const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
   const modelTarget = model.displayName || model.modelId;
   const [stopping, setStopping] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
-  useEffect(() => {
-    if (testing) setCancelled(false);
-  }, [testing, testStartedAt]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   useEffect(() => {
     const startedAt = testStartedAt ?? Date.now();
@@ -176,8 +174,7 @@ export const ModelRow = ({
                 setStopping(true);
                 void actions
                   .stopModelTest?.(provider.providerId, model.modelId)
-                  .then((stopped) => setCancelled(stopped))
-                  .catch(() => setCancelled(false))
+                  .catch(() => undefined)
                   .finally(() => setStopping(false));
               }}
             >
