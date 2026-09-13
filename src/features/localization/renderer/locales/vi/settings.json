@@ -54,6 +54,8 @@
       "choosingAllProjects": "Chọn mô hình cho các dự án không có ghi đè.",
       "choosingProject": "Chỉ chọn mô hình cho {{project}}.",
       "cancelChoosing": "Hủy",
+      "select": "Chọn",
+      "selected": "Đã chọn",
       "testAndUse": "Kiểm tra và dùng",
       "testAndUseAllProjects": "Kiểm tra và dùng cho tất cả dự án",
       "testAndUseProject": "Kiểm tra và dùng cho dự án này"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: chạy Agent Teams AI với quyền Quản trị viên"
     },
     "models": {
+      "testingElapsed": "Đang chờ kết quả kiểm tra... {{seconds}} giây",
       "alreadyDefault": "Đây đã là mặc định OpenCode được chọn.",
       "empty": "Không tìm thấy mô hình nào.",
       "emptyFree": "Không tìm thấy mô hình miễn phí nào.",

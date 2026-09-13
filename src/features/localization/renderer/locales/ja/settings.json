@@ -54,6 +54,8 @@
       "choosingAllProjects": "上書きのないプロジェクト用のモデルを選択してください。",
       "choosingProject": "{{project}} のみに使用するモデルを選択してください。",
       "cancelChoosing": "キャンセル",
+      "select": "選択",
+      "selected": "選択済み",
       "testAndUse": "テストして使用",
       "testAndUseAllProjects": "すべてのプロジェクトでテストして使用",
       "testAndUseProject": "このプロジェクトでテストして使用"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI を管理者として実行してください"
     },
     "models": {
+      "testingElapsed": "テスト結果を待機中... {{seconds}}秒",
       "alreadyDefault": "これは既に選択したOpenCodeのデフォルトです。",
       "empty": "モデルが見つかりません。",
       "emptyFree": "無料モデルが見つかりません。",

@@ -54,6 +54,8 @@
       "choosingAllProjects": "Chagua muundo kwa miradi isiyo na ubatilishaji.",
       "choosingProject": "Chagua muundo kwa {{project}} pekee.",
       "cancelChoosing": "Ghairi",
+      "select": "Chagua",
+      "selected": "Imechaguliwa",
       "testAndUse": "Jaribu na utumie",
       "testAndUseAllProjects": "Jaribu na utumie kwa miradi yote",
       "testAndUseProject": "Jaribu na utumie kwa mradi huu"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: endesha Agent Teams AI kama Msimamizi"
     },
     "models": {
+      "testingElapsed": "Inasubiri matokeo ya jaribio... {{seconds}} s",
       "alreadyDefault": "Hii tayari ni chaguo-msingi la OpenCode lililochaguliwa.",
       "empty": "Hakuna modeli zilizopatikana.",
       "emptyFree": "Hakuna modeli za bure zilizopatikana.",
@@ -93,7 +96,16 @@
       "routeUnavailableAuth": "Mtoa huduma huyu anahitaji uthibitishaji kabla ya modeli hii kutumika.",
       "routeUnavailableFailed": "Njia hii ya modeli imeshindwa jaribio lake la mwisho la utekelezaji.",
       "routeUnavailableGeneric": "Njia hii ya modeli haiwezi kutumika sasa hivi.",
-      "routeUnavailableUnknown": "Modeli hii ni chaguo-msingi la sasa la OpenCode, lakini bado haipatikani katika katalogi hai."
+      "routeUnavailableUnknown": "Modeli hii ni chaguo-msingi la sasa la OpenCode, lakini bado haipatikani katika katalogi hai.",
+      "shown": "Zinazoonyeshwa: {{shown}}",
+      "shownFree": "Modeli za bure zinazoonyeshwa: {{shown}}",
+      "loaded": "Zimepakiwa {{loaded}} kati ya {{total}}",
+      "searchingRemaining": "Hakuna zinazolingana katika modeli zilizopakiwa bado. Inakagua katalogi iliyobaki...",
+      "stopTest": "Simamisha",
+      "stoppingTest": "Inasimamisha...",
+      "testCancelled": "Jaribio limesimamishwa.",
+      "testCancelFailed": "Imeshindwa kusimamisha jaribio. Jaribu tena.",
+      "testCancelUnsupported": "Mazingira haya ya utekelezaji hayaruhusu kusimamisha majaribio."
     },
     "providers": {
       "catalog": "Katalogi ya watoa huduma wa OpenCode",
@@ -109,7 +121,13 @@
       "description_few": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
       "description_many": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
       "description_one": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
-      "description_other": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza."
+      "description_other": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
+      "ownership": {
+        "managed": "Imehifadhiwa katika programu hii",
+        "local": "Kutoka mipangilio ya OpenCode",
+        "env": "Kutoka vigezo vya mazingira",
+        "project": "Kutoka mipangilio ya mradi"
+      }
     },
     "reconnect": {
       "apiDescription": "Weka kitambulisho kipya. Kitambulisho cha sasa kilichohifadhiwa kitaendelea kutumika hadi kipya kipite uthibitishaji wa modeli.",

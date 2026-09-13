@@ -54,6 +54,8 @@
       "choosingAllProjects": "برای پروژه‌های بدون بازنویسی یک مدل انتخاب کنید.",
       "choosingProject": "فقط برای {{project}} یک مدل انتخاب کنید.",
       "cancelChoosing": "لغو",
+      "select": "انتخاب",
+      "selected": "انتخاب‌شده",
       "testAndUse": "آزمایش و استفاده",
       "testAndUseAllProjects": "آزمایش و استفاده برای همه پروژه‌ها",
       "testAndUseProject": "آزمایش و استفاده برای این پروژه"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI را به‌عنوان مدیر اجرا کنید"
     },
     "models": {
+      "testingElapsed": "در انتظار نتیجه آزمایش... {{seconds}} ثانیه",
       "alreadyDefault": "این از قبل پیش‌فرض انتخاب‌شده OpenCode است.",
       "empty": "هیچ مدلی یافت نشد.",
       "emptyFree": "هیچ مدل رایگانی یافت نشد.",

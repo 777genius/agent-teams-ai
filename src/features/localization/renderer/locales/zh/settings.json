@@ -54,6 +54,8 @@
       "choosingAllProjects": "为没有覆盖设置的项目选择模型。",
       "choosingProject": "仅为 {{project}} 选择模型。",
       "cancelChoosing": "取消",
+      "select": "选择",
+      "selected": "已选择",
       "testAndUse": "测试并使用",
       "testAndUseAllProjects": "为所有项目测试并使用",
       "testAndUseProject": "为此项目测试并使用"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows：以管理员身份运行 Agent Teams AI"
     },
     "models": {
+      "testingElapsed": "等待测试结果... {{seconds}} 秒",
       "alreadyDefault": "这已经是选定的 OpenCode 默认值。",
       "empty": "未找到模型。",
       "emptyFree": "未找到免费模型。",

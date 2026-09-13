@@ -54,6 +54,8 @@
       "choosingAllProjects": "Pumili ng modelo para sa mga proyektong walang override.",
       "choosingProject": "Pumili ng modelo para lamang sa {{project}}.",
       "cancelChoosing": "Kanselahin",
+      "select": "Piliin",
+      "selected": "Napili",
       "testAndUse": "Subukan at gamitin",
       "testAndUseAllProjects": "Subukan at gamitin para sa lahat ng proyekto",
       "testAndUseProject": "Subukan at gamitin para sa proyektong ito"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: patakbuhin ang Agent Teams AI bilang Administrator"
     },
     "models": {
+      "testingElapsed": "Naghihintay ng resulta ng pagsubok... {{seconds}} s",
       "alreadyDefault": "Ito na ang napiling OpenCode default.",
       "empty": "Walang nahanap na model.",
       "emptyFree": "Walang nahanap na libreng model.",
