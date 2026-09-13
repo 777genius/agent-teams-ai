@@ -96,7 +96,16 @@
       "routeUnavailableAuth": "Acest furnizor necesită autentificare înainte ca acest model să poată fi folosit.",
       "routeUnavailableFailed": "Această rută de model a eșuat la ultimul test de execuție.",
       "routeUnavailableGeneric": "Această rută de model nu poate fi folosită în acest moment.",
-      "routeUnavailableUnknown": "Acest model este valoarea implicită OpenCode curentă, dar nu este încă disponibil în catalogul live."
+      "routeUnavailableUnknown": "Acest model este valoarea implicită OpenCode curentă, dar nu este încă disponibil în catalogul live.",
+      "shown": "Afișate: {{shown}}",
+      "shownFree": "Modele gratuite afișate: {{shown}}",
+      "loaded": "Încărcate {{loaded}} din {{total}}",
+      "searchingRemaining": "Nu există încă rezultate în modelele încărcate. Se verifică restul catalogului...",
+      "stopTest": "Oprește",
+      "stoppingTest": "Se oprește...",
+      "testCancelled": "Test oprit.",
+      "testCancelFailed": "Testul nu a putut fi oprit. Încearcă din nou.",
+      "testCancelUnsupported": "Acest runtime nu permite oprirea testelor."
     },
     "providers": {
       "catalog": "Catalog de furnizori OpenCode",
@@ -112,7 +121,13 @@
       "description_few": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
       "description_many": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
       "description_one": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
-      "description_other": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii."
+      "description_other": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
+      "ownership": {
+        "managed": "Salvat în această aplicație",
+        "local": "Din setările OpenCode",
+        "env": "Din variabilele de mediu",
+        "project": "Din setările proiectului"
+      }
     },
     "reconnect": {
       "apiDescription": "Introdu noile acreditări. Acreditările salvate curente rămân active până când cele noi trec verificarea modelului.",

@@ -40,9 +40,9 @@ import {
 } from './runtimeProviderManagementPresentation';
 import {
   applyModelTestResultToModels,
-  startModelTest,
   applyModelTestResultToView,
   buildFailedModelTestResult,
+  startModelTest,
 } from './runtimeProviderModelTestState';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
 
@@ -442,6 +442,7 @@ export function useRuntimeProviderManagement(
   );
 
   const closeModelPickerState = useCallback((): void => {
+    cancelModelTestBestEffort();
     modelLoadRequestSeq.current += 1;
     modelProbeGenerationRef.current += 1;
     activeModelPickerProviderRef.current = null;
@@ -460,7 +461,7 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setTestingModelIds([]);
     setModelTestStartedAt({});
-  }, []);
+  }, [cancelModelTestBestEffort]);
 
   useEffect(() => {
     cancelModelTestBestEffort();
@@ -1549,10 +1550,7 @@ export function useRuntimeProviderManagement(
     if (url) await api.openExternal(url);
   }, []);
 
-  const closeModelPicker = useCallback((): void => {
-    cancelModelTestBestEffort();
-    closeModelPickerState();
-  }, [cancelModelTestBestEffort, closeModelPickerState]);
+  const closeModelPicker = closeModelPickerState;
 
   const useModelForNewTeams = useCallback((modelId: string): void => {
     saveOpenCodeModelForNewTeams(modelId);

@@ -218,6 +218,62 @@ describe('useRuntimeProviderManagement', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(['startConnect', 'startReconnect', 'closeModelPicker'] as const)(
+    'cancels all active probe attempts when %s closes the picker',
+    async (action) => {
+      let resolve!: (response: RuntimeProviderManagementModelTestResponse) => void;
+      const cancelModelTest = vi.fn(async () => ({ ok: true }));
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            testModel: vi.fn(
+              () =>
+                new Promise<RuntimeProviderManagementModelTestResponse>((done) => {
+                  resolve = done;
+                })
+            ),
+            cancelModelTest,
+            loadSetupForm: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              setupForm: null,
+            })),
+          },
+        },
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(React.createElement(Harness));
+      });
+      await act(async () => {
+        void actions?.testModel('test', 'a');
+      });
+      await act(async () => {
+        actions?.[action]('test');
+      });
+      expect(cancelModelTest).toHaveBeenCalledExactlyOnceWith({
+        requestGroupId: 'runtime-provider-management:opencode:model-test:test:a:1',
+      });
+      expect(state?.testingModelIds).toEqual([]);
+      await act(async () => {
+        resolve({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'test',
+            modelId: 'a',
+            ok: true,
+            availability: 'available',
+            message: 'Late success',
+            diagnostics: [],
+          },
+        });
+      });
+      expect(state?.modelResults.a).toBeUndefined();
+    }
+  );
+
   it('stops only one probe and ignores its late response after immediate restart', async () => {
     const pending: ((value: RuntimeProviderManagementModelTestResponse) => void)[] = [];
     const cancelModelTest = vi.fn(async () => ({ ok: true }));
