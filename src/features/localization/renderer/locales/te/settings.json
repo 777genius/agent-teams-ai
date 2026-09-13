@@ -54,6 +54,8 @@
       "choosingAllProjects": "ఓవర్‌రైడ్ లేని ప్రాజెక్ట్‌ల కోసం మోడల్‌ను ఎంచుకోండి.",
       "choosingProject": "{{project}} కోసం మాత్రమే మోడల్‌ను ఎంచుకోండి.",
       "cancelChoosing": "రద్దు చేయి",
+      "select": "ఎంచుకోండి",
+      "selected": "ఎంచుకోబడింది",
       "testAndUse": "పరీక్షించి ఉపయోగించు",
       "testAndUseAllProjects": "అన్ని ప్రాజెక్ట్‌ల కోసం పరీక్షించి ఉపయోగించు",
       "testAndUseProject": "ఈ ప్రాజెక్ట్ కోసం పరీక్షించి ఉపయోగించు"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI ను Administrator గా అమలు చేయండి"
     },
     "models": {
+      "testingElapsed": "పరీక్ష ఫలితం కోసం వేచి ఉంది... {{seconds}} సె",
       "alreadyDefault": "ఇది ఇప్పటికే ఎంచుకున్న OpenCode డిఫాల్ట్.",
       "empty": "మోడల్‌లు ఏవీ కనుగొనబడలేదు.",
       "emptyFree": "ఉచిత మోడల్‌లు ఏవీ కనుగొనబడలేదు.",

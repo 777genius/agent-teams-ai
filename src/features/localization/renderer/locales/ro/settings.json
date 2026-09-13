@@ -54,6 +54,8 @@
       "choosingAllProjects": "Alege un model pentru proiectele fără suprascriere.",
       "choosingProject": "Alege un model doar pentru {{project}}.",
       "cancelChoosing": "Anulează",
+      "select": "Selectează",
+      "selected": "Selectat",
       "testAndUse": "Testează și folosește",
       "testAndUseAllProjects": "Testează și folosește pentru toate proiectele",
       "testAndUseProject": "Testează și folosește pentru acest proiect"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: rulează Agent Teams AI ca Administrator"
     },
     "models": {
+      "testingElapsed": "Se așteaptă rezultatul testului... {{seconds}} s",
       "alreadyDefault": "Acesta este deja modelul OpenCode implicit selectat.",
       "empty": "Niciun model găsit.",
       "emptyFree": "Niciun model gratuit găsit.",

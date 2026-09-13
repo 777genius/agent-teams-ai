@@ -54,6 +54,8 @@
       "choosingAllProjects": "Chagua muundo kwa miradi isiyo na ubatilishaji.",
       "choosingProject": "Chagua muundo kwa {{project}} pekee.",
       "cancelChoosing": "Ghairi",
+      "select": "Chagua",
+      "selected": "Imechaguliwa",
       "testAndUse": "Jaribu na utumie",
       "testAndUseAllProjects": "Jaribu na utumie kwa miradi yote",
       "testAndUseProject": "Jaribu na utumie kwa mradi huu"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: endesha Agent Teams AI kama Msimamizi"
     },
     "models": {
+      "testingElapsed": "Inasubiri matokeo ya jaribio... {{seconds}} s",
       "alreadyDefault": "Hii tayari ni chaguo-msingi la OpenCode lililochaguliwa.",
       "empty": "Hakuna modeli zilizopatikana.",
       "emptyFree": "Hakuna modeli za bure zilizopatikana.",

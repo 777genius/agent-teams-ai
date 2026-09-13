@@ -54,6 +54,8 @@
       "choosingAllProjects": "बिना ओवरराइड वाले प्रोजेक्ट के लिए मॉडल चुनें।",
       "choosingProject": "केवल {{project}} के लिए मॉडल चुनें।",
       "cancelChoosing": "रद्द करें",
+      "select": "चुनें",
+      "selected": "चुना गया",
       "testAndUse": "जाँचें और उपयोग करें",
       "testAndUseAllProjects": "सभी प्रोजेक्ट के लिए जाँचें और उपयोग करें",
       "testAndUseProject": "इस प्रोजेक्ट के लिए जाँचें और उपयोग करें"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI को Administrator के रूप में चलाएं"
     },
     "models": {
+      "testingElapsed": "परीक्षण परिणाम की प्रतीक्षा... {{seconds}} सेकंड",
       "alreadyDefault": "यह पहले से ही चयनित OpenCode डिफ़ॉल्ट है।",
       "empty": "कोई मॉडल नहीं मिला।",
       "emptyFree": "कोई मुफ्त मॉडल नहीं मिला।",

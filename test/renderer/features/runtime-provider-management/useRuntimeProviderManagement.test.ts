@@ -212,9 +212,121 @@ describe('useRuntimeProviderManagement', () => {
       for (const root of roots) root.unmount();
     });
     roots.clear();
+
     Reflect.deleteProperty(window, 'electronAPI');
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('stops only one probe and ignores its late response after immediate restart', async () => {
+    const pending: ((value: RuntimeProviderManagementModelTestResponse) => void)[] = [];
+    const cancelModelTest = vi.fn(async () => ({ ok: true }));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          testModel: vi.fn(
+            () =>
+              new Promise<RuntimeProviderManagementModelTestResponse>((resolve) =>
+                pending.push(resolve)
+              )
+          ),
+          cancelModelTest,
+        },
+      },
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+    });
+    const response = (modelId: string): RuntimeProviderManagementModelTestResponse => ({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      result: {
+        providerId: 'test',
+        modelId,
+        ok: true,
+        availability: 'available',
+        message: 'Passed',
+        diagnostics: [],
+      },
+    });
+    await act(async () => {
+      void actions?.testModel('test', 'a');
+      void actions?.testModel('test', 'b');
+    });
+    await act(async () => {
+      expect(await actions?.stopModelTest?.('test', 'a')).toBe(true);
+    });
+    expect(cancelModelTest).toHaveBeenCalledWith({
+      requestGroupId: 'runtime-provider-management:opencode:model-test:test:a:1',
+    });
+    expect(state?.testingModelIds).toEqual(['b']);
+    expect(state?.modelTestStartedAt?.a).toBeUndefined();
+    expect(state?.modelResults.a).toBeUndefined();
+    await act(async () => {
+      void actions?.testModel('test', 'a');
+    });
+    const restartedAt = state?.modelTestStartedAt?.a;
+    await act(async () => {
+      pending[0](response('a'));
+    });
+    expect(state?.testingModelIds).toEqual(['b', 'a']);
+    expect(state?.modelTestStartedAt?.a).toBe(restartedAt);
+    expect(state?.modelResults.a).toBeUndefined();
+    await act(async () => {
+      pending[1](response('b'));
+      pending[2](response('a'));
+    });
+    expect(state?.testingModelIds).toEqual([]);
+    expect(state?.modelResults.a?.ok).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it('keeps the probe running when stop is rejected', async () => {
+    let resolve!: (response: RuntimeProviderManagementModelTestResponse) => void;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          testModel: vi.fn(
+            () =>
+              new Promise<RuntimeProviderManagementModelTestResponse>((done) => {
+                resolve = done;
+              })
+          ),
+          cancelModelTest: vi.fn(async () => ({ ok: false, error: 'Cannot stop' })),
+        },
+      },
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+    });
+    await act(async () => {
+      void actions?.testModel('test', 'a');
+    });
+    await act(async () => {
+      expect(await actions?.stopModelTest?.('test', 'a')).toBe(false);
+    });
+    expect(state?.testingModelIds).toEqual(['a']);
+    expect(state?.error).toBe('Cannot stop');
+    await act(async () => {
+      resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'test',
+          modelId: 'a',
+          ok: true,
+          availability: 'available',
+          message: 'Passed',
+          diagnostics: [],
+        },
+      });
+    });
+    expect(state?.modelResults.a?.ok).toBe(true);
+    await act(async () => root.unmount());
   });
 
   it('uses a clicked model as the app default for new teams without a global success banner', async () => {
@@ -1163,7 +1275,7 @@ describe('useRuntimeProviderManagement', () => {
       modelId,
       projectPath: '/tmp/project-a',
       requestGroupId:
-        'runtime-provider-management:opencode:model-test:llama.cpp:llama.cpp/qwen-test:0.5b',
+        'runtime-provider-management:opencode:model-test:llama.cpp:llama.cpp/qwen-test:0.5b:1',
     });
     expect(state?.testingModelIds).toEqual([modelId]);
 
@@ -1246,7 +1358,7 @@ describe('useRuntimeProviderManagement', () => {
       runtimeId: 'opencode',
       providerId: 'llama.cpp',
       modelId: projectAModelId,
-      probe: true,
+      probe: false,
       scope: 'project',
       projectPath: '/tmp/project-a',
     });
@@ -1706,9 +1818,7 @@ describe('useRuntimeProviderManagement', () => {
       })
     ).toHaveLength(1);
     expect(state?.savingProviderId).toBeNull();
-    expect(state?.successMessage).toBe(
-      'OpenAI connected and verified with openai/gpt-4.1.'
-    );
+    expect(state?.successMessage).toBe('OpenAI connected and verified with openai/gpt-4.1.');
 
     await act(async () => {
       root.unmount();
@@ -2064,21 +2174,18 @@ describe('useRuntimeProviderManagement', () => {
       'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'
     );
     expect(state?.apiKeyValue).toBe('sk-bad-value');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
-      'provider_setup:connection_end',
-      {
-        event_schema_version: 2,
-        runtime: 'opencode',
-        provider: 'openrouter',
-        auth_method: 'api_key',
-        connection_intent: 'connect',
-        outcome: 'failed',
-        model_verified: false,
-        success: false,
-        error_class: 'auth',
-        duration_ms_bucket: 'lt_1s',
-      }
-    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
+      event_schema_version: 2,
+      runtime: 'opencode',
+      provider: 'openrouter',
+      auth_method: 'api_key',
+      connection_intent: 'connect',
+      outcome: 'failed',
+      model_verified: false,
+      success: false,
+      error_class: 'auth',
+      duration_ms_bucket: 'lt_1s',
+    });
   });
 
   it('explains Copilot model access separately from GitHub authentication', async () => {
@@ -2108,8 +2215,7 @@ describe('useRuntimeProviderManagement', () => {
         runtimeId: 'opencode',
         error: {
           code: 'model-access-unavailable' as const,
-          message:
-            'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
+          message: 'GitHub sign-in succeeded, but no tested explicit Copilot model was usable.',
           recoverable: true,
         },
       })
@@ -2143,9 +2249,7 @@ describe('useRuntimeProviderManagement', () => {
       errorCode: 'model-access-unavailable',
       summary: 'GitHub authentication succeeded, but no tested explicit Copilot model was usable.',
     });
-    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain(
-      'plan name is not reported'
-    );
+    expect(state?.setupSubmitErrorDiagnostics?.likelyCause).toContain('plan name is not reported');
     expect(state?.setupSubmitErrorDiagnostics?.hints).toContain(
       'Copilot Free and Student accounts use Auto model selection, which Agent Teams does not support yet.'
     );
@@ -2294,21 +2398,18 @@ describe('useRuntimeProviderManagement', () => {
       'The change is saved, but the latest provider status could not be refreshed.'
     );
     expect(onProviderChanged).toHaveBeenCalledWith('connection');
-    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
-      'provider_setup:connection_end',
-      {
-        event_schema_version: 2,
-        runtime: 'opencode',
-        provider: 'openai',
-        auth_method: 'oauth',
-        connection_intent: 'connect',
-        outcome: 'connected_unverified',
-        model_verified: false,
-        success: true,
-        error_class: 'none',
-        duration_ms_bucket: 'lt_1s',
-      }
-    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
+      event_schema_version: 2,
+      runtime: 'opencode',
+      provider: 'openai',
+      auth_method: 'oauth',
+      connection_intent: 'connect',
+      outcome: 'connected_unverified',
+      model_verified: false,
+      success: true,
+      error_class: 'none',
+      duration_ms_bucket: 'lt_1s',
+    });
 
     await act(async () => {
       root.unmount();
@@ -2399,14 +2500,14 @@ describe('useRuntimeProviderManagement', () => {
       },
     };
     const initialDirectoryResponse: RuntimeProviderManagementDirectoryResponse = {
-        ...createEmptyDirectoryResponse(),
-        directory: {
-          ...createEmptyDirectoryResponse().directory!,
-          totalCount: 1,
-          returnedCount: 1,
-          entries: [xaiEntry],
-        },
-      };
+      ...createEmptyDirectoryResponse(),
+      directory: {
+        ...createEmptyDirectoryResponse().directory!,
+        totalCount: 1,
+        returnedCount: 1,
+        entries: [xaiEntry],
+      },
+    };
     const loadProviderDirectory = vi.fn((input: { refresh?: boolean }) =>
       Promise.resolve(
         input.refresh
@@ -2609,9 +2710,7 @@ describe('useRuntimeProviderManagement', () => {
       resolveCancel?.();
       await Promise.resolve();
     });
-    await vi.waitFor(() =>
-      expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled')
-    );
+    await vi.waitFor(() => expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled'));
 
     await act(async () => {
       resolveConnect?.({
@@ -3292,7 +3391,7 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.modelResults[modelId]?.message).toBe('Model probe passed');
   });
 
-  it('keeps a successful set-default probe visible as verified model state', async () => {
+  it('saves a default without probing or fabricating verified model state', async () => {
     const modelId = 'llama.cpp/qwen-test:0.5b';
     const setDefaultModel = vi.fn(() =>
       Promise.resolve({
@@ -3354,23 +3453,19 @@ describe('useRuntimeProviderManagement', () => {
       runtimeId: 'opencode',
       providerId: 'llama.cpp',
       modelId,
-      probe: true,
+      probe: false,
       scope: 'project',
       projectPath: '/tmp/project-a',
     });
     expect(state?.view?.configuredModels?.[0]).toMatchObject({
       modelId,
       default: true,
-      availability: 'available',
-      accessKind: 'verified',
-      proofState: 'verified',
-      requiresExecutionProof: false,
+      availability: 'untested',
+      accessKind: 'configured_authless',
+      proofState: 'needs_probe',
+      requiresExecutionProof: true,
     });
-    expect(state?.modelResults[modelId]).toMatchObject({
-      ok: true,
-      availability: 'available',
-      message: 'Model probe passed',
-    });
+    expect(state?.modelResults[modelId]).toBeUndefined();
   });
 
   it('keeps the effective project default selected when an all-projects default is shadowed', async () => {
@@ -3452,9 +3547,9 @@ describe('useRuntimeProviderManagement', () => {
       state?.view?.configuredModels?.find((model) => model.modelId === allProjectsModelId)
     ).toMatchObject({
       default: false,
-      availability: 'available',
-      accessKind: 'verified',
-      proofState: 'verified',
+      availability: 'untested',
+      accessKind: 'configured_authless',
+      proofState: 'needs_probe',
     });
     expect(
       state?.view?.configuredModels?.find((model) => model.modelId === projectModelId)
@@ -3525,7 +3620,7 @@ describe('useRuntimeProviderManagement', () => {
       runtimeId: 'opencode',
       providerId: 'openrouter',
       modelId,
-      probe: true,
+      probe: false,
       scope: 'all_projects',
       projectPath: '/tmp/project-a',
     });
@@ -3566,10 +3661,12 @@ describe('useRuntimeProviderManagement', () => {
     });
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(EnabledHarness, {
-        projectPath: '/tmp/project-a',
-        bundledRuntimeVersion: '0.0.74',
-      }));
+      root.render(
+        React.createElement(EnabledHarness, {
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.74',
+        })
+      );
       await Promise.resolve();
     });
 

@@ -54,6 +54,8 @@
       "choosingAllProjects": "Wybierz model dla projektów bez nadpisania.",
       "choosingProject": "Wybierz model tylko dla {{project}}.",
       "cancelChoosing": "Anuluj",
+      "select": "Wybierz",
+      "selected": "Wybrano",
       "testAndUse": "Przetestuj i użyj",
       "testAndUseAllProjects": "Przetestuj i użyj dla wszystkich projektów",
       "testAndUseProject": "Przetestuj i użyj dla tego projektu"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: uruchom Agent Teams AI jako administrator"
     },
     "models": {
+      "testingElapsed": "Oczekiwanie na wynik testu... {{seconds}} s",
       "alreadyDefault": "To już jest wybrane domyślne OpenCode.",
       "empty": "Nie znaleziono modeli.",
       "emptyFree": "Nie znaleziono darmowych modeli.",

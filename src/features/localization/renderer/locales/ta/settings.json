@@ -54,6 +54,8 @@
       "choosingAllProjects": "மேலெழுதல் இல்லாத திட்டங்களுக்கு ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.",
       "choosingProject": "{{project}} க்கு மட்டும் ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.",
       "cancelChoosing": "ரத்துசெய்",
+      "select": "தேர்ந்தெடு",
+      "selected": "தேர்ந்தெடுக்கப்பட்டது",
       "testAndUse": "சோதித்துப் பயன்படுத்து",
       "testAndUseAllProjects": "அனைத்து திட்டங்களுக்கும் சோதித்துப் பயன்படுத்து",
       "testAndUseProject": "இந்தத் திட்டத்திற்குச் சோதித்துப் பயன்படுத்து"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI ஐ Administrator ஆக இயக்கவும்"
     },
     "models": {
+      "testingElapsed": "சோதனை முடிவுக்காகக் காத்திருக்கிறது... {{seconds}} வி",
       "alreadyDefault": "இது ஏற்கனவே தேர்ந்தெடுக்கப்பட்ட OpenCode இயல்புநிலை.",
       "empty": "மாதிரிகள் எதுவும் கிடைக்கவில்லை.",
       "emptyFree": "இலவச மாதிரிகள் எதுவும் கிடைக்கவில்லை.",

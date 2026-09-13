@@ -49,7 +49,6 @@ import {
   getRuntimeProviderSetupPresentation,
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
-import { OPENROUTER_FREE_MODEL_ID } from '../view-models/openCodeDefaultModelInheritance';
 
 import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
@@ -58,12 +57,7 @@ import {
 } from './OpenCodeDefaultModelInheritanceCard';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import { RuntimeProviderErrorAlert } from './RuntimeProviderErrorAlert';
-import {
-  canAttemptOpenCodeDefaultSelection,
-  getOpenCodeRouteUnavailableTitle,
-} from './runtimeProviderModelAccess';
-import { RuntimeProviderModelTestButton } from './RuntimeProviderModelTestButton';
-import { RuntimeProviderModelTestResult } from './RuntimeProviderModelTestResult';
+import { ModelRow } from './RuntimeProviderModelRow';
 import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
 import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 import {
@@ -80,7 +74,6 @@ import type {
   RuntimeProviderDefaultScopeDto,
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderModelDto,
-  RuntimeProviderModelTestResultDto,
   RuntimeProviderSetupAuthOptionDto,
   RuntimeProviderSetupFormDto,
   RuntimeProviderSetupPromptDto,
@@ -119,7 +112,6 @@ interface ProviderRowProps {
   readonly hasProjectContext: boolean;
   readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
   readonly intendedProjectPath: string | null;
-  readonly onDefaultSaved: () => void;
   readonly actions: RuntimeProviderManagementActions;
 }
 
@@ -1062,7 +1054,6 @@ const ProviderRow = ({
   hasProjectContext,
   defaultTarget,
   intendedProjectPath,
-  onDefaultSaved,
   actions,
 }: ProviderRowProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
@@ -1146,7 +1137,7 @@ const ProviderRow = ({
                 variant="outline"
                 className="border-white/10 px-1.5 py-0 text-[10px]"
               >
-                {owner}
+                {t(`runtimeProvider.providers.ownership.${owner}`)}
               </Badge>
             ))}
           </div>
@@ -1191,7 +1182,6 @@ const ProviderRow = ({
               hasProjectContext={hasProjectContext}
               defaultTarget={defaultTarget}
               intendedProjectPath={intendedProjectPath}
-              onDefaultSaved={onDefaultSaved}
             />
           ) : null}
         </div>
@@ -1210,7 +1200,6 @@ const DirectoryProviderRow = ({
   hasProjectContext,
   defaultTarget,
   intendedProjectPath,
-  onDefaultSaved,
   actions,
 }: {
   readonly provider: RuntimeProviderDirectoryEntryDto;
@@ -1222,7 +1211,6 @@ const DirectoryProviderRow = ({
   readonly hasProjectContext: boolean;
   readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
   readonly intendedProjectPath: string | null;
-  readonly onDefaultSaved: () => void;
   readonly actions: RuntimeProviderManagementActions;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
@@ -1297,15 +1285,16 @@ const DirectoryProviderRow = ({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-text-secondary)]">
             <span>{getDirectoryModelsLabel(provider)}</span>
-            {provider.sourceLabel ? <span>{provider.sourceLabel}</span> : null}
-            {provider.providerSource ? <span>{provider.providerSource}</span> : null}
+            {provider.sourceLabel && provider.sourceLabel !== 'configured' ? (
+              <span>{provider.sourceLabel}</span>
+            ) : null}
             {provider.ownership.map((owner) => (
               <Badge
                 key={owner}
                 variant="outline"
                 className="border-white/10 px-1.5 py-0 text-[10px]"
               >
-                {owner}
+                {t(`runtimeProvider.providers.ownership.${owner}`)}
               </Badge>
             ))}
           </div>
@@ -1412,7 +1401,6 @@ const DirectoryProviderRow = ({
               hasProjectContext={hasProjectContext}
               defaultTarget={defaultTarget}
               intendedProjectPath={intendedProjectPath}
-              onDefaultSaved={onDefaultSaved}
             />
           ) : null}
         </div>
@@ -1747,122 +1735,6 @@ function formatModelResultMessage(message: string): {
   return { summary: decoded, details: null };
 }
 
-const ModelRow = ({
-  provider,
-  model,
-  selected,
-  disabled,
-  hasProjectContext,
-  testing,
-  result,
-  defaultTarget,
-  intendedProjectPath,
-  savingDefault,
-  onDefaultSaved,
-  actions,
-}: {
-  readonly provider: RuntimeProviderConnectionDto;
-  readonly model: RuntimeProviderModelDto;
-  readonly selected: boolean;
-  readonly disabled: boolean;
-  readonly hasProjectContext: boolean;
-  readonly testing: boolean;
-  readonly result: RuntimeProviderModelTestResultDto | undefined;
-  readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
-  readonly intendedProjectPath: string | null;
-  readonly savingDefault: boolean;
-  readonly onDefaultSaved: () => void;
-  readonly actions: RuntimeProviderManagementActions;
-}): JSX.Element => {
-  const { t } = useAppTranslation('settings');
-  const modelDisabled =
-    disabled ||
-    (defaultTarget !== null && !canAttemptOpenCodeDefaultSelection(model, defaultTarget));
-  const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
-  const modelTarget = model.displayName || model.modelId;
-
-  return (
-    <div
-      data-testid={`runtime-provider-model-row-${model.modelId}`}
-      className="rounded-md border px-3 py-2.5"
-      style={{
-        borderColor: selected ? 'rgba(96, 165, 250, 0.45)' : 'var(--color-border-subtle)',
-        backgroundColor: selected ? 'rgba(96, 165, 250, 0.06)' : 'rgba(255,255,255,0.02)',
-      }}
-    >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-        <div className="block w-full min-w-0 text-left">
-          <div
-            className="text-sm font-medium leading-5"
-            style={{ color: 'var(--color-text)', overflowWrap: 'anywhere' }}
-          >
-            {model.displayName}
-          </div>
-          <div
-            className="mt-1 text-[11px] leading-4"
-            style={{ color: 'var(--color-text-muted)', overflowWrap: 'anywhere' }}
-          >
-            {model.modelId}
-          </div>
-          <ModelBadges model={model} />
-          {model.modelId === OPENROUTER_FREE_MODEL_ID ? (
-            <div className="mt-2 text-xs leading-5 text-amber-200">
-              {t('runtimeProvider.defaults.freeRouterAdvisory')}
-            </div>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <RuntimeProviderModelTestButton
-            modelId={model.modelId}
-            modelTarget={modelTarget}
-            disabled={disabled}
-            hasProjectContext={hasProjectContext}
-            testing={testing}
-            onTest={() => {
-              void actions.testModel(provider.providerId, model.modelId);
-            }}
-          />
-          {defaultTarget ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-8"
-              disabled={
-                modelDisabled ||
-                savingDefault ||
-                (defaultTarget === 'project' && !hasProjectContext)
-              }
-              aria-label={`${t('runtimeProvider.defaults.testAndUse')}: ${modelTarget}${unavailableTitle ? `: ${unavailableTitle}` : ''}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                void actions
-                  .setDefaultModel(
-                    provider.providerId,
-                    model.modelId,
-                    defaultTarget,
-                    intendedProjectPath
-                  )
-                  .then(
-                    (saved) => saved && onDefaultSaved(),
-                    () => undefined
-                  );
-              }}
-            >
-              {savingDefault ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              {t('runtimeProvider.defaults.testAndUse')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {unavailableTitle ? (
-        <div className="mt-2 text-xs text-amber-200">{unavailableTitle}</div>
-      ) : null}
-      <RuntimeProviderModelTestResult result={result} formatMessage={formatModelResultMessage} />
-    </div>
-  );
-};
-
 const ProviderModelList = ({
   state,
   actions,
@@ -1871,7 +1743,6 @@ const ProviderModelList = ({
   hasProjectContext,
   defaultTarget,
   intendedProjectPath,
-  onDefaultSaved,
 }: {
   readonly state: RuntimeProviderManagementState;
   readonly actions: RuntimeProviderManagementActions;
@@ -1880,7 +1751,6 @@ const ProviderModelList = ({
   readonly hasProjectContext: boolean;
   readonly defaultTarget: RuntimeProviderDefaultScopeDto | null;
   readonly intendedProjectPath: string | null;
-  readonly onDefaultSaved: () => void;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
   const pickerOpen = state.modelPickerProviderId === provider.providerId;
@@ -1898,18 +1768,6 @@ const ProviderModelList = ({
     () => state.models.some((model) => isFreeRuntimeProviderModel(model)),
     [state.models]
   );
-  useEffect(() => {
-    if (!hasRecommendedModels) {
-      setRecommendedOnly(false);
-    }
-  }, [hasRecommendedModels]);
-
-  useEffect(() => {
-    if (!hasFreeModels) {
-      setFreeOnly(false);
-    }
-  }, [hasFreeModels]);
-
   const normalizedModelQuery = state.modelQuery.trim().toLowerCase();
   const visibleModels = useMemo(
     () =>
@@ -2047,15 +1905,22 @@ const ProviderModelList = ({
     <ModelRow
       provider={provider}
       model={model}
-      selected={state.selectedModelId === model.modelId}
+      selected={
+        (defaultTarget === 'all_projects'
+          ? state.view?.allProjectsDefaultModel
+          : state.view?.defaultModel) === model.modelId
+      }
       disabled={disabled}
       hasProjectContext={hasProjectContext}
       testing={state.testingModelIds.includes(model.modelId)}
+      testStartedAt={state.modelTestStartedAt?.[model.modelId]}
       result={state.modelResults[model.modelId]}
       defaultTarget={defaultTarget}
       intendedProjectPath={intendedProjectPath}
-      savingDefault={Boolean(state.savingDefaultModelId || state.clearingProjectDefault)}
-      onDefaultSaved={onDefaultSaved}
+      savingDefault={state.savingDefaultModelId === model.modelId}
+      defaultMutationBusy={Boolean(state.savingDefaultModelId || state.clearingProjectDefault)}
+      badges={<ModelBadges model={{ ...model, default: false }} />}
+      formatMessage={formatModelResultMessage}
       actions={actions}
     />
   );
@@ -2083,7 +1948,7 @@ const ProviderModelList = ({
             style={{ paddingLeft: 42 }}
           />
         </div>
-        {hasRecommendedModels ? (
+        {hasRecommendedModels || recommendedOnly || state.modelsNextCursor ? (
           <div
             className="flex h-10 items-center gap-2 rounded-md border border-white/10 px-3"
             onClick={(event) => event.stopPropagation()}
@@ -2104,7 +1969,7 @@ const ProviderModelList = ({
             </Label>
           </div>
         ) : null}
-        {hasFreeModels ? (
+        {hasFreeModels || freeOnly || state.modelsNextCursor ? (
           <div
             className="flex h-10 items-center gap-2 rounded-md border border-white/10 px-3"
             onClick={(event) => event.stopPropagation()}
@@ -2127,7 +1992,14 @@ const ProviderModelList = ({
         ) : null}
         {state.modelsTotalCount !== null ? (
           <div className="ml-auto text-xs tabular-nums text-[var(--color-text-muted)]">
-            {state.models.length} / {state.modelsTotalCount}
+            {t(freeOnly ? 'runtimeProvider.models.shownFree' : 'runtimeProvider.models.shown', {
+              shown: visibleModels.length,
+            })}
+            {' · '}
+            {t('runtimeProvider.models.loaded', {
+              loaded: state.models.length,
+              total: state.modelsTotalCount,
+            })}
           </div>
         ) : null}
       </div>
@@ -2160,7 +2032,11 @@ const ProviderModelList = ({
       >
         {!pickerOpen || state.modelsLoading ? <RuntimeProviderModelLoadingSkeleton /> : null}
         {pickerOpen && !state.modelsLoading && visibleModels.length === 0 && !state.modelsError ? (
-          <div className="text-sm text-[var(--color-text-muted)]">{emptyModelListMessage}</div>
+          <div className="text-sm text-[var(--color-text-muted)]">
+            {state.modelsNextCursor || state.modelsLoadingMore
+              ? t('runtimeProvider.models.searchingRemaining')
+              : emptyModelListMessage}
+          </div>
         ) : null}
         {pickerOpen && shouldVirtualize ? (
           <div
@@ -2196,7 +2072,10 @@ const ProviderModelList = ({
             className="flex items-center justify-center gap-2 py-3 text-xs text-[var(--color-text-muted)]"
           >
             <Loader2 className="size-3.5 animate-spin" />
-            {state.models.length} / {state.modelsTotalCount ?? state.models.length}
+            {t('runtimeProvider.models.loaded', {
+              loaded: state.models.length,
+              total: state.modelsTotalCount ?? state.models.length,
+            })}
           </div>
         ) : null}
       </div>
@@ -2565,9 +2444,6 @@ export const RuntimeProviderManagementPanelView = ({
                     hasProjectContext={hasProjectContext}
                     defaultTarget={defaultTarget?.scope ?? null}
                     intendedProjectPath={defaultTarget?.projectPath ?? null}
-                    onDefaultSaved={() => {
-                      finishDefaultSelection();
-                    }}
                     actions={actions}
                   />
                 ))}
@@ -2605,9 +2481,6 @@ export const RuntimeProviderManagementPanelView = ({
                     hasProjectContext={hasProjectContext}
                     defaultTarget={defaultTarget?.scope ?? null}
                     intendedProjectPath={defaultTarget?.projectPath ?? null}
-                    onDefaultSaved={() => {
-                      finishDefaultSelection();
-                    }}
                     actions={actions}
                   />
                 ))}

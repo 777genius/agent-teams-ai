@@ -1293,7 +1293,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent?.trim() === 'Cancel')
+        .find((button) => button.textContent?.trim() === 'Close')
         ?.click();
       await Promise.resolve();
     });
@@ -1347,10 +1347,10 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     const testAndUseButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Test and use'
+      (button) => button.textContent?.trim() === 'Select'
     );
     expect(testAndUseButton?.disabled).toBe(false);
-    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Test and use: qwen-test:0.5b');
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Select: qwen-test:0.5b');
     expect(testAndUseButton?.getAttribute('aria-label')).toContain(
       'Selected project has no matching credential'
     );
@@ -1365,9 +1365,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host
         .querySelector('[data-testid="runtime-provider-model-row-llama.cpp/unavailable:0.5b"]')
-        ?.querySelector('button[aria-label^="Test and use"]')
+        ?.querySelector('button[aria-label^="Select"]')
         ?.getAttribute('aria-label')
-    ).toContain('Test and use: Unavailable Model: OpenCode marks this model as deprecated');
+    ).toContain('Select: Unavailable Model: OpenCode marks this model as deprecated');
     vi.mocked(actions.setDefaultModel).mockRejectedValueOnce(new Error('write failed'));
     await act(async () => {
       testAndUseButton?.click();
@@ -1386,11 +1386,36 @@ describe('RuntimeProviderManagementPanelView', () => {
       'all_projects',
       null
     );
-    expect(document.activeElement).toBe(
-      Array.from(host.querySelectorAll('[role="tab"]')).find((tab) =>
-        tab.textContent?.includes('Models')
-      )
+    expect(host.querySelector('[data-testid="opencode-default-target-banner"]')).not.toBeNull();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              allProjectsDefaultModel: projectUnavailableModel.modelId,
+              projectDefaultModel: unavailableModel.modelId,
+              defaultModel: unavailableModel.modelId,
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'runtime-default',
+            selectedModelId: unavailableModel.modelId,
+            models: [projectUnavailableModel, unavailableModel],
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    const selectedButtons = host.querySelectorAll('button[aria-pressed="true"]');
+    expect(selectedButtons).toHaveLength(1);
+    expect(selectedButtons[0]?.getAttribute('aria-label')).toContain(
+      projectUnavailableModel.displayName
     );
+    expect(selectedButtons[0]?.textContent).toBe('Selected');
   });
 
   it('clears a project override through the explicit Use default action', async () => {
@@ -2470,13 +2495,13 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
-    expect(
-      buttons.some((button) => button.textContent?.includes('Remove managed credential'))
-    ).toBe(true);
+    expect(buttons.some((button) => button.textContent?.includes('Remove saved credentials'))).toBe(
+      true
+    );
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Remove managed credential'))
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
         ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await Promise.resolve();
     });
@@ -2485,7 +2510,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Remove managed credential'))
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
@@ -2532,7 +2557,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     const replaceButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Replace credential')
+      button.textContent?.includes('Replace API key')
     );
     expect(host.textContent).not.toContain('Connection');
     expect(host.textContent).not.toContain('API credential');
@@ -3951,6 +3976,57 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
     expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
+    const renderPaidPage = async (cursor: string | null): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: { ...createState().view!, providers: [connectedProvider] },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              modelsTotalCount: 4,
+              modelsNextCursor: cursor,
+              models: [
+                {
+                  providerId: 'openrouter',
+                  modelId: 'openrouter/paid',
+                  displayName: 'Paid model',
+                  sourceLabel: 'OpenRouter',
+                  free: false,
+                  default: false,
+                  availability: 'untested',
+                  routeKind: 'connected_provider',
+                },
+              ],
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+      });
+    };
+    await renderPaidPage('next-page');
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).not.toContain('Paid model');
+    expect(host.textContent).toContain('Free models shown: 0');
+    expect(host.textContent).toContain('Loaded 1 of 4');
+    expect(host.textContent).toContain('Checking the rest of the catalog');
+    expect(host.textContent).not.toContain('No free models found.');
+    await renderPaidPage(null);
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).toContain('No free models found.');
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+    });
+    expect(host.textContent).toContain('Paid model');
+    expect(host.textContent).toContain('Shown: 1');
+    await act(async () => root.unmount());
   });
 
   it('keeps the model search input enabled while model results are loading', async () => {

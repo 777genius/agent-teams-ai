@@ -54,6 +54,8 @@
       "choosingAllProjects": "Elige un modelo para los proyectos sin una anulación.",
       "choosingProject": "Elige un modelo solo para {{project}}.",
       "cancelChoosing": "Cancelar",
+      "select": "Seleccionar",
+      "selected": "Seleccionado",
       "testAndUse": "Probar y usar",
       "testAndUseAllProjects": "Probar y usar para todos los proyectos",
       "testAndUseProject": "Probar y usar para este proyecto"
@@ -70,6 +72,7 @@
       "windowsSymlinkAdminHint": "Windows: ejecuta Agent Teams AI como administrador"
     },
     "models": {
+      "testingElapsed": "Esperando el resultado de la prueba... {{seconds}} s",
       "alreadyDefault": "Este ya es el predeterminado OpenCode seleccionado.",
       "empty": "No hay modelos encontrados.",
       "emptyFree": "No hay modelos libres encontrados.",
