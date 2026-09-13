@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { isMemberWorkSyncBackupPath } from '@features/member-work-sync/main';
 import {
   atomicCreateAsync,
   atomicReplaceFileIfUnchangedAsync,
@@ -53,7 +54,7 @@ function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
 
-function isValidJson(content: string): boolean {
+export function isValidJson(content: string): boolean {
   try {
     JSON.parse(content);
     return true;
@@ -62,7 +63,7 @@ function isValidJson(content: string): boolean {
   }
 }
 
-function isValidConfig(content: string): boolean {
+export function isValidConfig(content: string): boolean {
   try {
     const parsed = JSON.parse(content) as Record<string, unknown>;
     return typeof parsed.name === 'string' && parsed.name.trim() !== '';
@@ -79,6 +80,15 @@ export class TeamBackupRestoreService {
   }
 
   async restoreTeam(teamName: string): Promise<boolean> {
+    return this.restore(teamName, false);
+  }
+
+  /** Owner-only phase: caller holds the restore lifecycle fence and imports feature data separately. */
+  async restoreGenericTeamPrivileged(teamName: string): Promise<boolean> {
+    return this.restore(teamName, true);
+  }
+
+  private async restore(teamName: string, genericOnly: boolean): Promise<boolean> {
     const manifest = await this.ports.loadManifest(teamName);
     if (!manifest) return false;
 
@@ -94,6 +104,20 @@ export class TeamBackupRestoreService {
       logger.warn(`[Backup] No backup config.json for ${teamName}, skipping restore`);
       return false;
     }
+
+    // A valid-looking config from another backup must not establish a new authority.
+    const backupConfig = JSON.parse(backupConfigContent) as Record<string, unknown>;
+    if (backupConfig._backupIdentityId !== manifest.identityId) {
+      throw new Error('Backup config identity does not match its manifest');
+    }
+
+    // Preflight the entire list before config or any other publication. The classifier
+    // rejects ambiguous paths even when they appear after otherwise restorable files.
+    const genericFiles = genericOnly
+      ? (await this.ports.enumerateBackupFiles(teamName)).filter(
+          (relPath) => !isMemberWorkSyncBackupPath(relPath)
+        )
+      : undefined;
 
     // Check source config
     const sourceConfigPath = path.join(getTeamsBasePath(), teamName, 'config.json');
@@ -113,7 +137,8 @@ export class TeamBackupRestoreService {
       const restoredCount = await this.restoreGenericPartial(
         teamName,
         manifest,
-        sourceConfigResult
+        sourceConfigResult,
+        genericFiles
       );
       if (restoredCount > 0) {
         logger.info(`[Backup] Partial restored ${teamName}: ${restoredCount} files`);
@@ -125,7 +150,7 @@ export class TeamBackupRestoreService {
     // Config missing or corrupted — full restore
     logger.info(`[Backup] Full restoring team ${teamName} (config ${sourceConfigResult.status})`);
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = await this.ports.enumerateBackupFiles(teamName);
+    const backupFiles = genericFiles ?? (await this.ports.enumerateBackupFiles(teamName));
     let count = 0;
 
     // Restore config.json first
@@ -236,10 +261,11 @@ export class TeamBackupRestoreService {
   private async restoreGenericPartial(
     teamName: string,
     manifest: BackupManifest,
-    sourceConfig: Extract<SourceConfigObservation, { status: 'valid' }>
+    sourceConfig: Extract<SourceConfigObservation, { status: 'valid' }>,
+    genericFiles?: readonly string[]
   ): Promise<number> {
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = await this.ports.enumerateBackupFiles(teamName);
+    const backupFiles = genericFiles ?? (await this.ports.enumerateBackupFiles(teamName));
     const launchStateFrozen = await this.isLaunchStateFrozenByStop(teamName, backupFiles);
     let count = 0;
 

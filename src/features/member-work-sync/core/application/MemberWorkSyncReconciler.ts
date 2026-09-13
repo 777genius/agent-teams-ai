@@ -4,12 +4,23 @@ import {
   decideMemberWorkSyncStatus,
   formatAgendaFingerprint,
 } from '../domain';
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+import { observeMemberWorkSyncRecoveryHealth } from '../domain/MemberWorkSyncRecoveryHealth';
 
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
 import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
+import {
+  repairMemberWorkSyncDispatchOutcome,
+  retireMemberWorkSyncSettledReservation,
+} from './MemberWorkSyncRecoveryDispatchOutcome';
 import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
 import { observeMemberWorkSyncRuntimeStall } from './MemberWorkSyncRuntimeStallDiagnostics';
+import {
+  commitMemberWorkSyncStatus,
+  readMemberWorkSyncStatus,
+  runMemberWorkSyncStatusMutation,
+} from './MemberWorkSyncStatusMutation';
 
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from './ports';
@@ -70,6 +81,16 @@ export class MemberWorkSyncReconciler {
     request: MemberWorkSyncStatusRequest,
     context: MemberWorkSyncReconcileContext = {}
   ): Promise<MemberWorkSyncStatus> {
+    return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
+      this.executeAttempt(request, context, mutationId)
+    );
+  }
+
+  private async executeAttempt(
+    request: MemberWorkSyncStatusRequest,
+    context: MemberWorkSyncReconcileContext,
+    mutationId: string | undefined
+  ): Promise<MemberWorkSyncStatus> {
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: request.teamName,
       memberName: request.memberName,
@@ -91,7 +112,28 @@ export class MemberWorkSyncReconciler {
       diagnostics: agenda.diagnostics,
     });
     assertReconcileNotCancelled(context);
-    const previous = await this.deps.statusStore.read(request);
+    let read = await readMemberWorkSyncStatus(this.deps, request);
+    if (read.status) {
+      const repaired = await repairMemberWorkSyncDispatchOutcome({
+        deps: this.deps,
+        status: read.status,
+      });
+      if (repaired) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+      const settled =
+        read.status &&
+        (await retireMemberWorkSyncSettledReservation({
+          deps: this.deps,
+          status: read.status,
+          triggerReasons: context.triggerReasons,
+        }));
+      if (settled) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+    }
+    const previous = read.status;
+    const lastAcceptedReport = getMemberWorkSyncAcceptedReport(previous);
     const nowIso = this.deps.clock.now().toISOString();
     const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
       teamName: agenda.teamName,
@@ -100,7 +142,7 @@ export class MemberWorkSyncReconciler {
     assertReconcileNotCancelled(context);
     const decision = decideMemberWorkSyncStatus({
       agenda,
-      latestAcceptedReport: previous?.report?.accepted ? previous.report : null,
+      latestAcceptedReport: lastAcceptedReport,
       nowIso,
       inactive: source.inactive || runtimeActivity.inactive,
     });
@@ -112,6 +154,37 @@ export class MemberWorkSyncReconciler {
       triggerReasons: context.triggerReasons,
     });
     const decisionDiagnostics = [...decision.diagnostics, ...runtimeStall.diagnostics];
+    let memberBusy: boolean | 'unknown' = 'unknown';
+    if (this.deps.busySignal) {
+      try {
+        const busy = await this.deps.busySignal.isBusy({
+          teamName: agenda.teamName,
+          memberName: agenda.memberName,
+          nowIso,
+        });
+        memberBusy = busy.busy === true;
+      } catch {
+        memberBusy = 'unknown';
+      }
+    }
+    assertReconcileNotCancelled(context);
+    const recoveryHealth = observeMemberWorkSyncRecoveryHealth({
+      previous: previous?.recoveryHealth,
+      nowIso,
+      nowMs: Date.parse(nowIso),
+      items: agenda.items.map((item) => ({
+        taskId: item.taskId,
+        assignee: item.assignee,
+        kind: item.kind,
+        reason: item.reason,
+        evidenceStatus: item.evidence.status,
+        ...(item.evidence.reviewCycleId ? { reviewCycleId: item.evidence.reviewCycleId } : {}),
+      })),
+      expectedWaiting:
+        agenda.items.length > 0 && agenda.items.every((item) => item.kind === 'blocked_dependency'),
+      memberBusy,
+      instrumentationKnown: source.providerId === 'opencode',
+    });
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: agenda.teamName,
       memberName: agenda.memberName,
@@ -144,11 +217,17 @@ export class MemberWorkSyncReconciler {
 
     assertReconcileNotCancelled(context);
     const statusWithToken = await attachMemberWorkSyncReportToken(this.deps, {
+      ...previous,
+      reportToken: undefined,
+      reportTokenExpiresAt: undefined,
+      providerId: source.providerId,
+      ...(lastAcceptedReport ? { lastAcceptedReport } : {}),
       teamName: agenda.teamName,
       memberName: agenda.memberName,
       state: decision.state,
       agenda,
-      ...(decision.acceptedReport ? { report: decision.acceptedReport } : {}),
+      ...(previous?.report ? { report: previous.report } : {}),
+      recoveryHealth,
       shadow: {
         reconciledBy: context.reconciledBy ?? 'request',
         wouldNudge: decision.state === 'needs_sync' && agenda.items.length > 0,
@@ -174,7 +253,6 @@ export class MemberWorkSyncReconciler {
       },
       evaluatedAt: nowIso,
       diagnostics: [...agenda.diagnostics, ...runtimeActivity.diagnostics, ...decisionDiagnostics],
-      ...(source.providerId ? { providerId: source.providerId } : {}),
     });
     const status = await applyMemberWorkSyncNudgeSuppression(this.deps, {
       status: statusWithToken,
@@ -184,10 +262,10 @@ export class MemberWorkSyncReconciler {
     });
 
     assertReconcileNotCancelled(context);
-    await this.deps.statusStore.write(status);
+    const committed = await commitMemberWorkSyncStatus(this.deps, read, status, mutationId);
     assertReconcileNotCancelled(context);
-    await this.planNudgeOutbox(status);
-    return status;
+    if (committed.canProject) await this.planNudgeOutbox(committed.status);
+    return committed.status;
   }
 
   private async planNudgeOutbox(status: MemberWorkSyncStatus): Promise<void> {

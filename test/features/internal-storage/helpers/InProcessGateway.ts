@@ -17,6 +17,9 @@ import type {
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
   MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncReportJournalOpResult,
+  MemberWorkSyncStatusCompareAndWriteInput,
+  MemberWorkSyncStatusCompareAndWriteResult,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -51,6 +54,12 @@ export class InProcessGateway
     return this.op('mws.status.write', { record, events });
   }
 
+  statusCompareAndWrite(
+    input: MemberWorkSyncStatusCompareAndWriteInput
+  ): Promise<MemberWorkSyncStatusCompareAndWriteResult> {
+    return this.op('mws.status.compareAndWrite', input);
+  }
+
   statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return this.op('mws.status.list', { teamName });
   }
@@ -73,6 +82,40 @@ export class InProcessGateway
     result: { status: string; resultCode: string; processedAt: string }
   ): Promise<void> {
     return this.op('mws.reports.markProcessed', { teamName, id, ...result });
+  }
+
+  reportsJournalRead(input: {
+    teamName: string;
+    memberKey: string;
+    id: string;
+    journalJson: string;
+    requestJson: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return this.op('mws.reports.journalRead', input);
+  }
+
+  reportsJournalEnsure(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return this.op('mws.reports.journalEnsure', input);
+  }
+
+  reportsJournalTransfer(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return this.op('mws.reports.journalTransfer', input);
   }
 
   outboxEnsurePending(
@@ -128,7 +171,7 @@ export class InProcessGateway
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number> {
+  }): Promise<{ count: number; oldestUpdatedAt?: string }> {
     return this.op('mws.outbox.countRecentDelivered', input);
   }
 

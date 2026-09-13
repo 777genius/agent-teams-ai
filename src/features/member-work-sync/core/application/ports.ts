@@ -9,6 +9,7 @@ import type {
   MemberWorkSyncOutboxMarkDeliveredInput,
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
+  MemberWorkSyncOutboxRecentDeliveredSummary,
   MemberWorkSyncProviderId,
   MemberWorkSyncReport,
   MemberWorkSyncReportIntent,
@@ -17,6 +18,8 @@ import type {
   MemberWorkSyncStatus,
   MemberWorkSyncTeamMetrics,
 } from '../../contracts';
+import type { MemberWorkSyncConditionalStatusPort } from './MemberWorkSyncConditionalStatusPort';
+import type { MemberWorkSyncReportJournalPort } from './MemberWorkSyncReportJournalPort';
 
 export interface MemberWorkSyncClockPort {
   now(): Date;
@@ -41,9 +44,15 @@ export interface MemberWorkSyncReportTokenVerifyInput {
   nowIso: string;
 }
 
+export interface MemberWorkSyncVerifiedReportTokenClaims {
+  expiresAt: string;
+  expiresAtMs: number;
+}
+
 export type MemberWorkSyncReportTokenVerification =
-  | { ok: true }
-  | { ok: false; reason: 'missing' | 'expired' | 'invalid' };
+  | { ok: true; claims?: MemberWorkSyncVerifiedReportTokenClaims }
+  | { ok: false; reason: 'expired'; claims?: MemberWorkSyncVerifiedReportTokenClaims }
+  | { ok: false; reason: 'missing' | 'invalid' };
 
 export interface MemberWorkSyncReportTokenPort {
   create(input: MemberWorkSyncReportTokenCreateInput): Promise<{
@@ -164,7 +173,9 @@ export interface MemberWorkSyncOutboxStorePort {
   markDelivered(input: MemberWorkSyncOutboxMarkDeliveredInput): Promise<void>;
   markSuperseded(input: MemberWorkSyncOutboxMarkSupersededInput): Promise<void>;
   markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void>;
-  countRecentDelivered(input: MemberWorkSyncOutboxCountRecentDeliveredInput): Promise<number>;
+  countRecentDelivered(
+    input: MemberWorkSyncOutboxCountRecentDeliveredInput
+  ): Promise<MemberWorkSyncOutboxRecentDeliveredSummary>;
   countDeliveredForAgenda?(
     input: MemberWorkSyncOutboxCountDeliveredForAgendaInput
   ): Promise<number>;
@@ -185,6 +196,11 @@ export interface MemberWorkSyncOutboxStorePort {
     payloadHash: string;
     updatedAt: string;
   } | null>;
+  readItem?(input: {
+    teamName: string;
+    memberName: string;
+    id: string;
+  }): Promise<MemberWorkSyncOutboxItem | null>;
 }
 
 export interface MemberWorkSyncInboxNudgePort {
@@ -195,7 +211,8 @@ export interface MemberWorkSyncInboxNudgePort {
     payloadHash: string;
     payload: MemberWorkSyncOutboxItem['payload'];
     timestamp: string;
-  }): Promise<{ inserted: boolean; messageId: string; conflict?: boolean }>;
+    shouldAbort?: () => boolean | Promise<boolean>;
+  }): Promise<{ inserted: boolean; messageId: string; conflict?: boolean; aborted?: boolean }>;
   repairIfPresent?(input: {
     teamName: string;
     memberName: string;
@@ -310,7 +327,10 @@ export interface MemberWorkSyncUseCaseDeps {
   hash: MemberWorkSyncHashPort;
   agendaSource: MemberWorkSyncAgendaSourcePort;
   statusStore: MemberWorkSyncStatusStorePort;
+  /** Bound by main admission; activated with the restore/replica ownership path. */
+  statusMutations?: MemberWorkSyncConditionalStatusPort;
   reportStore?: MemberWorkSyncReportStorePort;
+  reportJournal?: MemberWorkSyncReportJournalPort;
   outboxStore?: MemberWorkSyncOutboxStorePort;
   inboxNudge?: MemberWorkSyncInboxNudgePort;
   watchdogCooldown?: MemberWorkSyncWatchdogCooldownPort;
@@ -323,6 +343,51 @@ export interface MemberWorkSyncUseCaseDeps {
   auditJournal?: MemberWorkSyncAuditJournalPort;
   lifecycle?: MemberWorkSyncLifecyclePort;
   logger?: MemberWorkSyncLoggerPort;
+  /**
+   * Qualified D0 protocol-1 admission. Until enabled, planners record
+   * observation/attention only and must not create recovery reservations.
+   */
+  recoveryAllocation?: { enabled: boolean };
+  /** Declared runtime recovery protocol for this instance. Missing means 0. */
+  recoveryProtocol?: { version: number };
+  /**
+   * Protocol-2 ticket admission. Required together with recoveryProtocol.version >= 2
+   * before early continuation may allocate. Missing/not_early falls through to D0.
+   */
+  runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
+}
+
+export type MemberWorkSyncRuntimeTicketAdmissionCode =
+  | 'not_early'
+  | 'busy'
+  | 'user_input'
+  | 'approval'
+  | 'stopped'
+  | 'instance_mismatch'
+  | 'conflict'
+  | 'unknown';
+
+export interface MemberWorkSyncRuntimeTicket {
+  ticketId: string;
+  generation: number;
+  intentId: string;
+}
+
+export interface MemberWorkSyncRuntimeTicketAdmissionPort {
+  admit(input: {
+    teamName: string;
+    memberName: string;
+    intentId: string;
+    payloadHash: string;
+    controlRevision: number;
+  }): Promise<
+    | { admitted: true; ticketId: string; generation: number }
+    | { admitted: false; code: MemberWorkSyncRuntimeTicketAdmissionCode }
+  >;
+  start(
+    ticket: MemberWorkSyncRuntimeTicket
+  ): Promise<{ ok: true } | { ok: false; code: 'stale' | 'busy' | 'stopped' }>;
+  cancel(ticket: MemberWorkSyncRuntimeTicket): Promise<void>;
 }
 
 export interface LatestAcceptedReportLookup {

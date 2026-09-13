@@ -114,6 +114,10 @@ vi.mock('@renderer/components/team/members/MemberLogsTab', () => ({
   MemberLogsTab: () => React.createElement('div', null, 'logs-tab'),
 }));
 
+vi.mock('@features/member-work-sync/renderer', () => ({
+  MemberWorkSyncStatusPanel: () => null,
+}));
+
 vi.mock('@features/member-log-stream/renderer', async () => {
   const ReactModule = await import('react');
   return {

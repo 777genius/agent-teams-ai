@@ -431,10 +431,13 @@ describe('TeamProvisioningCancellationBoundary', () => {
 
       await boundary.cancelProvisioning(run.runId);
 
-      expect(stopInputs).toEqual([
-        { laneId: 'lane-a', runId: 'lane-run-a' },
-        { laneId: 'lane-b', runId: 'lane-run-b' },
-      ]);
+      expect(stopInputs).toHaveLength(2);
+      expect(stopInputs).toEqual(
+        expect.arrayContaining([
+          { laneId: 'lane-a', runId: 'lane-run-a' },
+          { laneId: 'lane-b', runId: 'lane-run-b' },
+        ])
+      );
       expect(liveProcesses.size).toBe(0);
       expect(laneArtifacts.size).toBe(0);
       expect(secondaryRuns.size).toBe(0);

@@ -21,13 +21,17 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 0);
     });
-    expect(dispatchDue).toHaveBeenCalledTimes(1);
+    expect(dispatchDue).toHaveBeenCalledTimes(2);
 
     release();
     await Promise.all([first, second]);
 
     expect(dispatchDue).toHaveBeenCalledWith(
-      ['team-a', 'team-b'],
+      ['team-a'],
+      expect.objectContaining({ aborted: false })
+    );
+    expect(dispatchDue).toHaveBeenCalledWith(
+      ['team-b'],
       expect.objectContaining({ aborted: false })
     );
   });
@@ -156,7 +160,7 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
-  it('does not overlap later scheduled runs while timed-out active team listing is still settling', async () => {
+  it('allows one replacement while timed-out discovery remains physically tracked', async () => {
     vi.useFakeTimers();
     try {
       let releaseFirst!: (teams: string[]) => void;
@@ -201,7 +205,8 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
       expect(dispatchDue).not.toHaveBeenCalled();
 
       await scheduler.runOnce();
-      expect(dispatchDue).not.toHaveBeenCalled();
+      expect(listCalls).toBe(2);
+      expect(dispatchDue).toHaveBeenCalledTimes(1);
 
       releaseFirst(['team-a']);
       await vi.advanceTimersByTimeAsync(0);
@@ -288,13 +293,62 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
-  it('waits for timed-out active team listing work during disposal', async () => {
+  it('retains one timed-out observation and waits for it during disposal', async () => {
     vi.useFakeTimers();
     try {
-      let release!: (teamNames: string[]) => void;
-      const timedOutListing = new Promise<string[]>((resolve) => {
-        release = resolve;
+      let releaseObservation!: () => void;
+      const timedOutObservation = new Promise<void>((resolve) => {
+        releaseObservation = resolve;
       });
+      const observeDue = vi.fn(async () => {
+        await timedOutObservation;
+      });
+      let releaseDispatch!: () => void;
+      const timedOutDispatch = new Promise<void>((resolve) => {
+        releaseDispatch = resolve;
+      });
+      const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+        listLifecycleActiveTeamNames: async () => ['team-a'],
+        dispatchDue: async () => {
+          await timedOutDispatch;
+          return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+        },
+        observeDue,
+        dispatchTimeoutMs: 20,
+      });
+
+      const first = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(20);
+      await first;
+
+      const second = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(20);
+      await second;
+
+      expect(observeDue).toHaveBeenCalledTimes(1);
+
+      let disposed = false;
+      const dispose = scheduler.dispose().then(() => {
+        disposed = true;
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(disposed).toBe(false);
+
+      releaseObservation();
+      releaseDispatch();
+      await dispose;
+      expect(disposed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not wait for timed-out active team listing work during disposal', async () => {
+    vi.useFakeTimers();
+    try {
+      const timedOutListing = new Promise<string[]>(() => undefined);
       const dispatchDue = vi.fn(async () => ({
         claimed: 0,
         delivered: 0,
@@ -312,17 +366,9 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
       await vi.advanceTimersByTimeAsync(20);
       await run;
 
-      let disposed = false;
-      const dispose = scheduler.dispose().then(() => {
-        disposed = true;
-      });
-      await vi.advanceTimersByTimeAsync(0);
-      expect(disposed).toBe(false);
-
-      release(['team-a']);
-      await dispose;
-      expect(disposed).toBe(true);
+      await scheduler.dispose();
       expect(dispatchDue).not.toHaveBeenCalled();
+      expect(scheduler.getHealth().pendingDiscovery).toBe(1);
     } finally {
       vi.useRealTimers();
     }

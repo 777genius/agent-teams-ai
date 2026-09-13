@@ -14,12 +14,18 @@ function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
   timer.unref?.();
 }
 
+export interface MemberWorkSyncScheduledDispatch {
+  result: Promise<MemberWorkSyncNudgeDispatchSummary>;
+  settled: Promise<void>;
+}
+
 export interface MemberWorkSyncNudgeDispatchSchedulerDeps {
   listLifecycleActiveTeamNames(): Promise<string[]>;
   dispatchDue(
     teamNames: string[],
     signal?: AbortSignal
-  ): Promise<MemberWorkSyncNudgeDispatchSummary>;
+  ): Promise<MemberWorkSyncNudgeDispatchSummary> | MemberWorkSyncScheduledDispatch;
+  observeDue?(teamName: string): Promise<void>;
   intervalMs?: number;
   dispatchTimeoutMs?: number;
   logger?: MemberWorkSyncLoggerPort;
@@ -30,7 +36,10 @@ export class MemberWorkSyncNudgeDispatchScheduler {
   private readonly dispatchTimeoutMs: number;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running: Promise<void> | null = null;
-  private timedOutWork: Promise<unknown> | null = null;
+  private readonly listings = new Set<Promise<void>>();
+  private lastDiscovery: { teams: string[]; observedAt: number } | null = null;
+  private readonly dispatches = new Map<string, Promise<void>>();
+  private readonly observations = new Map<string, Promise<void>>();
   private stopped = false;
   private disposePromise: Promise<void> | null = null;
 
@@ -51,9 +60,6 @@ export class MemberWorkSyncNudgeDispatchScheduler {
 
   async runOnce(): Promise<void> {
     if (this.stopped) {
-      return;
-    }
-    if (this.timedOutWork) {
       return;
     }
     if (this.running) {
@@ -89,7 +95,7 @@ export class MemberWorkSyncNudgeDispatchScheduler {
 
   private async drainForDisposal(): Promise<void> {
     await this.running?.catch(() => undefined);
-    await this.timedOutWork?.catch(() => undefined);
+    await Promise.all([...this.dispatches.values(), ...this.observations.values()]);
   }
 
   private schedule(delayMs: number): void {
@@ -112,13 +118,38 @@ export class MemberWorkSyncNudgeDispatchScheduler {
       if (teamNames.length === 0) {
         return;
       }
-      const summary = await this.runDispatchDueWithTimeout(teamNames);
-      if (summary.claimed > 0 || summary.delivered > 0 || summary.retryable > 0) {
-        this.deps.logger?.debug('member work sync scheduled nudge dispatch completed', {
-          teamCount: teamNames.length,
-          ...summary,
-        });
-      }
+      let cursor = 0;
+      const consume = async (): Promise<void> => {
+        while (!this.stopped && cursor < teamNames.length) {
+          const teamName = teamNames[cursor++];
+          if (this.dispatches.has(teamName)) {
+            await this.observeRetainedTeam(teamName);
+            continue;
+          }
+          if (this.dispatches.size >= 128) {
+            this.deps.logger?.warn('member work sync scheduler retained operation limit reached', {
+              retained: this.dispatches.size,
+            });
+            return;
+          }
+          try {
+            const summary = await this.runDispatchDueWithTimeout(teamName);
+            if (summary.claimed > 0 || summary.delivered > 0 || summary.retryable > 0) {
+              this.deps.logger?.debug('member work sync scheduled nudge dispatch completed', {
+                teamCount: 1,
+                teamName,
+                ...summary,
+              });
+            }
+          } catch (error) {
+            this.deps.logger?.warn('member work sync scheduled nudge dispatch failed', {
+              teamName,
+              error: String(error),
+            });
+          }
+        }
+      };
+      await Promise.all([consume(), consume()]);
     } catch (error) {
       this.deps.logger?.warn('member work sync scheduled nudge dispatch failed', {
         error: String(error),
@@ -127,19 +158,39 @@ export class MemberWorkSyncNudgeDispatchScheduler {
   }
 
   private async runDispatchDueWithTimeout(
-    teamNames: string[]
+    teamName: string
   ): Promise<MemberWorkSyncNudgeDispatchSummary> {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     const abortController = new AbortController();
-    const work = this.deps.dispatchDue(teamNames, abortController.signal);
-    void work.catch(() => undefined);
+    // Reserve synchronously before the deferred dispatch can perform any effect.
+    let physical: Promise<void> = Promise.resolve();
+    const work = Promise.resolve().then(() => {
+      const call = this.deps.dispatchDue([teamName], abortController.signal);
+      if ('result' in call) {
+        physical = call.settled.then(
+          () => undefined,
+          () => undefined
+        );
+        return call.result;
+      }
+      return call;
+    });
+    const settled = work
+      .then(
+        () => undefined,
+        () => undefined
+      )
+      .then(() => physical);
+    this.dispatches.set(teamName, settled);
+    void settled.then(() => {
+      if (this.dispatches.get(teamName) === settled) this.dispatches.delete(teamName);
+    });
     try {
       return await Promise.race([
         work,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
             abortController.abort();
-            this.trackTimedOutWork(work);
             reject(
               new Error(
                 `member work sync scheduled nudge dispatch timed out after ${this.dispatchTimeoutMs}ms`
@@ -156,16 +207,67 @@ export class MemberWorkSyncNudgeDispatchScheduler {
     }
   }
 
-  private async listLifecycleActiveTeamNamesWithTimeout(): Promise<string[]> {
+  private async observeRetainedTeam(teamName: string): Promise<void> {
+    if (!this.deps.observeDue) {
+      return;
+    }
+    if (this.observations.has(teamName)) {
+      return;
+    }
     let timeout: ReturnType<typeof setTimeout> | null = null;
-    const work = this.deps.listLifecycleActiveTeamNames();
-    void work.catch(() => undefined);
+    const work = Promise.resolve().then(() => this.deps.observeDue?.(teamName));
+    const settled = work.then(
+      () => undefined,
+      () => undefined
+    );
+    this.observations.set(teamName, settled);
+    void settled.then(() => {
+      if (this.observations.get(teamName) === settled) this.observations.delete(teamName);
+    });
     try {
-      return await Promise.race([
+      await Promise.race([
         work,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
-            this.trackTimedOutWork(work);
+            reject(
+              new Error(
+                `member work sync scheduled observation timed out after ${this.dispatchTimeoutMs}ms`
+              )
+            );
+          }, this.dispatchTimeoutMs);
+          unrefTimer(timeout);
+        }),
+      ]);
+    } catch (error) {
+      this.deps.logger?.warn('member work sync scheduled observation failed', {
+        teamName,
+        error: String(error),
+      });
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
+  private async listLifecycleActiveTeamNamesWithTimeout(): Promise<string[]> {
+    // At most one replacement for an unresolved read. No replacement ever starts a side effect.
+    if (this.listings.size >= 2) {
+      throw new Error('member work sync scheduled team discovery capacity exhausted');
+    }
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const work = Promise.resolve().then(() => this.deps.listLifecycleActiveTeamNames());
+    const settled = work.then(
+      () => undefined,
+      () => undefined
+    );
+    this.listings.add(settled);
+    void settled.then(() => this.listings.delete(settled));
+    try {
+      const teams = await Promise.race([
+        work,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
             reject(
               new Error(
                 `member work sync scheduled nudge team listing timed out after ${this.dispatchTimeoutMs}ms`
@@ -175,6 +277,10 @@ export class MemberWorkSyncNudgeDispatchScheduler {
           unrefTimer(timeout);
         }),
       ]);
+      // Only this logical pass can publish. A timed-out read has no cache-writing callback.
+      if (!this.stopped)
+        this.lastDiscovery = { teams: uniqueNonEmpty(teams), observedAt: Date.now() };
+      return teams;
     } finally {
       if (timeout) {
         clearTimeout(timeout);
@@ -182,14 +288,17 @@ export class MemberWorkSyncNudgeDispatchScheduler {
     }
   }
 
-  private trackTimedOutWork(work: Promise<unknown>): void {
-    const settling = work
-      .catch(() => undefined)
-      .finally(() => {
-        if (this.timedOutWork === settling) {
-          this.timedOutWork = null;
-        }
-      });
-    this.timedOutWork = settling;
+  getHealth(): {
+    pendingDiscovery: number;
+    retainedDispatches: number;
+    lastDiscoveryAt: number | null;
+    discoveryCapacityExhausted: boolean;
+  } {
+    return {
+      pendingDiscovery: this.listings.size,
+      retainedDispatches: this.dispatches.size,
+      lastDiscoveryAt: this.lastDiscovery?.observedAt ?? null,
+      discoveryCapacityExhausted: this.listings.size >= 2,
+    };
   }
 }

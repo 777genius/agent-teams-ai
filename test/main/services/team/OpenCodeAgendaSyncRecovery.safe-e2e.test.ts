@@ -1,3 +1,4 @@
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
@@ -313,6 +314,7 @@ function createFeature(input: {
 }) {
   const providerId = input.providerId ?? 'opencode';
   return createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: input.teamsBasePath,
     configReader: {
       getConfig: vi.fn(async () => ({

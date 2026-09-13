@@ -65,6 +65,8 @@ export async function createOpenCodeLiveHarness(input: {
   selectedModel: string;
   projectPath?: string;
   runtimeAdapterOptions?: OpenCodeTeamRuntimeAdapterOptions;
+  timeoutMs?: number;
+  launchTimeoutMs?: number;
   configureServices?: (
     svc: TeamProvisioningService
   ) => Partial<HttpServices> | Promise<Partial<HttpServices> | void> | void;
@@ -116,8 +118,8 @@ export async function createOpenCodeLiveHarness(input: {
   });
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
-    timeoutMs: 180_000,
-    launchTimeoutMs: 180_000,
+    timeoutMs: input.timeoutMs ?? 180_000,
+    launchTimeoutMs: input.launchTimeoutMs ?? 180_000,
     reconcileTimeoutMs: 90_000,
     stopTimeoutMs: 90_000,
   });
@@ -237,10 +239,21 @@ export async function waitForOpenCodePeerRelay(
         replyRecipient: 'user',
       },
     });
-    if (lastRelay.delivered >= 1) {
+    const delivery = lastRelay.lastDelivery;
+    if (lastRelay.delivered >= 1 && delivery?.accepted === true) {
       return;
     }
-    if (lastRelay.failed > 0 && lastRelay.lastDelivery?.responsePending !== true) {
+    // Our prompt is in-flight. Stop hammering so OpenCode can finish the turn.
+    // queued-behind is not ours — wait and retry after the active relay clears.
+    if (
+      delivery?.delivered === true &&
+      delivery.accepted !== true &&
+      delivery.responsePending === true &&
+      delivery.reason !== 'opencode_inbox_relay_queued_behind_active_relay'
+    ) {
+      return;
+    }
+    if (lastRelay.failed > 0 && delivery?.responsePending !== true) {
       break;
     }
     await new Promise((resolve) => setTimeout(resolve, 3_000));

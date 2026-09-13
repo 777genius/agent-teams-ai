@@ -86,6 +86,7 @@ export const memberWorkSyncReportIntents = sqliteTable(
     processedAt: text('processed_at'),
     resultCode: text('result_code'),
     requestJson: text('request_json').notNull(),
+    journalJson: text('journal_json'),
   },
   (table) => [
     primaryKey({ columns: [table.teamName, table.id] }),

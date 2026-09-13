@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { KeyedMutex } from '@features/internal-storage/main';
 import {
   type DurablePathIdentity,
   getDurablePathIdentity,
@@ -44,6 +45,9 @@ const PERMANENT_DELETION_LOCK_OWNER_PREFIX = 'owner-';
 const PERMANENT_DELETION_LOCK_DETACHED_PREFIX = 'detached-';
 const PERMANENT_DELETION_LOCK_ENTRY_SUFFIX = '.json';
 const PROCESS_INSTANCE_ID = crypto.randomUUID();
+// Shared by every lifecycle-owner instance in this desktop process. A failed
+// filesystem heartbeat cannot let another local owner overtake physical work.
+const localScopeDrain = new KeyedMutex();
 
 function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
@@ -434,6 +438,12 @@ export class TeamPermanentDeletionLock {
   }
 
   async withLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {
+    return localScopeDrain.run(this.getPermanentDeletionLockPath(scope), () =>
+      this.withAcquiredLock(scope, operation)
+    );
+  }
+
+  private async withAcquiredLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {
     const lock = await this.acquirePermanentDeletionLock(scope);
     let heartbeatError: unknown;
     let heartbeatRunning = false;

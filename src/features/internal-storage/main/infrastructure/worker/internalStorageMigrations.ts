@@ -165,6 +165,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
         ON application_command_ledger (namespace, scope_key, operation)`,
     ],
   },
+  {
+    version: 5,
+    statements: ['ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json TEXT'],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

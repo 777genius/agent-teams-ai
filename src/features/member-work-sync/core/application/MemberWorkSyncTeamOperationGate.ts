@@ -27,7 +27,9 @@ export interface MemberWorkSyncTeamOperationAdmission {
  * one team without delaying unrelated teams.
  */
 export class MemberWorkSyncTeamOperationGate {
+  private closed = false;
   private readonly quiescedTeams = new Set<string>();
+  private readonly ownedQuiesces = new Map<string, Set<symbol>>();
   private readonly inFlightByTeam = new Map<string, Set<Promise<unknown>>>();
 
   async run<T>(
@@ -35,7 +37,7 @@ export class MemberWorkSyncTeamOperationGate {
     operation: (admission: MemberWorkSyncTeamOperationAdmission) => Promise<T>
   ): Promise<T> {
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
-    if (this.quiescedTeams.has(teamKey)) {
+    if (this.closed || this.quiescedTeams.has(teamKey) || this.ownedQuiesces.has(teamKey)) {
       throw new MemberWorkSyncTeamQuiescedError(teamName.trim());
     }
 
@@ -80,6 +82,29 @@ export class MemberWorkSyncTeamOperationGate {
     this.quiescedTeams.add(normalizeMemberWorkSyncTeamOperationKey(teamName));
   }
 
+  /**
+   * Restore owns one closure independently of deletion and other restores. Release only
+   * after durable recovery completes; a timeout/failed drain does not grant permission.
+   * The caller must awaitTeamIdle outside lifecycle/backend locks before writing.
+   */
+  beginOwnedTeamQuiesce(teamName: string): { release(): void } {
+    const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
+    const owner = Symbol('member-work-sync-quiesce');
+    const owners = this.ownedQuiesces.get(teamKey) ?? new Set<symbol>();
+    owners.add(owner);
+    this.ownedQuiesces.set(teamKey, owners);
+    let released = false;
+    return {
+      release: () => {
+        if (released) return;
+        released = true;
+        owners.delete(owner);
+        if (owners.size === 0 && this.ownedQuiesces.get(teamKey) === owners)
+          this.ownedQuiesces.delete(teamKey);
+      },
+    };
+  }
+
   async awaitTeamIdle(teamName: string): Promise<void> {
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
     while (true) {
@@ -93,5 +118,19 @@ export class MemberWorkSyncTeamOperationGate {
 
   resumeTeam(teamName: string): void {
     this.quiescedTeams.delete(normalizeMemberWorkSyncTeamOperationKey(teamName));
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  async awaitIdle(): Promise<void> {
+    while (true) {
+      const inFlight = [...this.inFlightByTeam.values()].flatMap((set) => [...set]);
+      if (inFlight.length === 0) {
+        return;
+      }
+      await Promise.allSettled(inFlight);
+    }
   }
 }

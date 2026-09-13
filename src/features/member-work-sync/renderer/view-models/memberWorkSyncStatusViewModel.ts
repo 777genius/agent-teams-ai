@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from '../../core/domain/MemberWorkSyncAcceptedReport';
+
 import type { MemberWorkSyncStatus } from '../../contracts';
 
 export type MemberWorkSyncViewTone = 'neutral' | 'success' | 'working' | 'attention' | 'blocked';
@@ -5,7 +7,7 @@ export type MemberWorkSyncViewTone = 'neutral' | 'success' | 'working' | 'attent
 const MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC = 'work_sync_suppressed_no_accepted_report';
 
 export interface MemberWorkSyncStatusViewModel {
-  label: 'Synced' | 'Working' | 'Needs sync' | 'Blocked' | 'Unknown';
+  label: 'Synced' | 'Working' | 'Needs sync' | 'Blocked' | 'Needs attention' | 'Unknown';
   tone: MemberWorkSyncViewTone;
   actionableCount: number;
   tooltip: string;
@@ -13,6 +15,8 @@ export interface MemberWorkSyncStatusViewModel {
   leaseExpiresAt?: string;
   reportState?: string;
   wouldNudge?: boolean;
+  attention?: boolean;
+  attentionSummary?: string;
 }
 
 function describeAgenda(count: number): string {
@@ -23,6 +27,30 @@ function describeAgenda(count: number): string {
     return '1 actionable work item.';
   }
   return `${count} actionable work items.`;
+}
+
+function describeRecoveryAttention(status: MemberWorkSyncStatus): string | undefined {
+  const health = status.recoveryHealth;
+  if (!health?.attentionAt || health.attentionAcknowledgedAt) {
+    return undefined;
+  }
+  const reasons = [
+    ...new Set(
+      health.episodes
+        .filter((episode) => episode.phase === 'attention')
+        .map((episode) => episode.reason)
+    ),
+  ];
+  if (reasons.includes('no_start_unconfirmed')) {
+    return 'Start of work is not confirmed. Runtime may still be running; continue is available after the reason is reviewed.';
+  }
+  if (reasons.includes('no_start')) {
+    return 'Assigned work has not started. Automatic continuation is paused until recovery is admitted.';
+  }
+  if (reasons.includes('no_progress_deadline')) {
+    return 'No confirmed task progress for 20 minutes. Automatic continuation is paused until recovery is admitted.';
+  }
+  return 'Work recovery needs attention. Automatic continuation is paused.';
 }
 
 export function toMemberWorkSyncStatusViewModel(
@@ -38,13 +66,25 @@ export function toMemberWorkSyncStatusViewModel(
   }
 
   const actionableCount = status.agenda.items.length;
+  const report = getMemberWorkSyncAcceptedReport(status);
+  const attentionSummary = describeRecoveryAttention(status);
   const base = {
     actionableCount,
     fingerprint: status.agenda.fingerprint,
-    ...(status.report?.expiresAt ? { leaseExpiresAt: status.report.expiresAt } : {}),
-    ...(status.report?.state ? { reportState: status.report.state } : {}),
+    ...(report?.expiresAt ? { leaseExpiresAt: report.expiresAt } : {}),
+    ...(report?.state ? { reportState: report.state } : {}),
     ...(status.shadow ? { wouldNudge: status.shadow.wouldNudge } : {}),
+    ...(attentionSummary ? { attention: true, attentionSummary } : {}),
   };
+
+  if (attentionSummary) {
+    return {
+      ...base,
+      label: 'Needs attention',
+      tone: 'attention',
+      tooltip: `${attentionSummary} ${describeAgenda(actionableCount)}`,
+    };
+  }
 
   if (status.state === 'caught_up') {
     return {

@@ -1,3 +1,9 @@
+import {
+  decideMemberWorkSyncStatus,
+  isStaleMemberWorkSyncRecoveryControlRevision,
+} from '../domain';
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+
 import type {
   MemberWorkSyncAgenda,
   MemberWorkSyncOutboxItem,
@@ -36,6 +42,24 @@ export function addNudgeDispatchMinutes(iso: string, minutes: number): string {
 
 export function subtractNudgeDispatchMinutes(iso: string, minutes: number): string {
   return new Date(Date.parse(iso) - minutes * 60_000).toISOString();
+}
+
+export const MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES = 60;
+
+export function memberNudgeRateLimitRetryAt(nowIso: string, oldestUpdatedAt?: string): string {
+  const nowMs = Date.parse(nowIso);
+  const oldestMs = oldestUpdatedAt ? Date.parse(oldestUpdatedAt) : Number.NaN;
+  const windowMs = MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES * 60_000;
+  if (Number.isFinite(oldestMs) && Number.isFinite(nowMs)) {
+    const retryMs = oldestMs + windowMs;
+    if (retryMs > nowMs) {
+      return new Date(retryMs).toISOString();
+    }
+    if (retryMs === nowMs) {
+      return new Date(nowMs + 1).toISOString();
+    }
+  }
+  return addNudgeDispatchMinutes(nowIso, MEMBER_WORK_SYNC_NUDGE_RATE_LIMIT_WINDOW_MINUTES);
 }
 
 export function preserveCurrentRuntimeStallDiagnostics(input: {
@@ -99,6 +123,10 @@ export function isStatusOnlyRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): 
   return item.payload.workSyncIntentKey?.startsWith('status-only:') === true;
 }
 
+export function isManualContinueOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
+  return item.payload.workSyncIntentKey?.startsWith('manual-continue:') === true;
+}
+
 export function isAgendaSyncStillStuckRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
   return (
     item.payload.workSyncIntentKey?.startsWith(AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX) ===
@@ -136,4 +164,42 @@ export function reviewPickupRequestIdsStillMatch(
   const payloadIds = getPayloadReviewRequestEventIds(item);
   const agendaIds = getAgendaReviewPickupRequestEventIds(agenda);
   return payloadIds.length > 0 && payloadIds.every((id) => agendaIds.includes(id));
+}
+
+export function isMemberWorkSyncNudgeDeliveryStale(input: {
+  status: MemberWorkSyncStatus | null | undefined;
+  item: MemberWorkSyncOutboxItem;
+  nowIso: string;
+}): { abort: false } | { abort: true; reason: string } {
+  if (!input.status) {
+    return { abort: true, reason: 'status_missing' };
+  }
+  if (input.status.recoveryHealth?.autoResumeStopLatch) {
+    return { abort: true, reason: 'member_stopped' };
+  }
+  if (
+    isStaleMemberWorkSyncRecoveryControlRevision({
+      health: input.status.recoveryHealth,
+      intentId: input.item.id,
+    })
+  ) {
+    return { abort: true, reason: 'stale_control_revision' };
+  }
+  const decision = decideMemberWorkSyncStatus({
+    agenda: input.status.agenda,
+    latestAcceptedReport: getMemberWorkSyncAcceptedReport(input.status),
+    nowIso: input.nowIso,
+  });
+  const agendaStillMatches =
+    input.status.agenda.fingerprint === input.item.agendaFingerprint ||
+    (isReviewPickupOutboxItem(input.item) &&
+      reviewPickupRequestIdsStillMatch(input.item, input.status.agenda));
+  if (
+    decision.state !== 'needs_sync' ||
+    input.status.agenda.items.length === 0 ||
+    !agendaStillMatches
+  ) {
+    return { abort: true, reason: 'status_no_longer_matches_outbox' };
+  }
+  return { abort: false };
 }

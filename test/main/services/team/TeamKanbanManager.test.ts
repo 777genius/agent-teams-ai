@@ -150,4 +150,58 @@ describe('TeamKanbanManager', () => {
     await manager.garbageCollect('my-team', new Set(['12']));
     expect(hoisted.atomicWrite).not.toHaveBeenCalled();
   });
+  it.each([
+    '{bad',
+    'null',
+    '[]',
+    '{"tasks":[]}',
+    '{"teamName":"other","tasks":{}}',
+    '{"tasks":{"t":{"column":"unknown","movedAt":"2026-01-01T00:00:00Z"}}}',
+    '{"tasks":{"t":{"column":"review","movedAt":"invalid"}}}',
+    '{"tasks":{},"reviewers":[null]}',
+  ])('strict reads preserve invalid safety state instead of returning empty: %s', async (raw) => {
+    hoisted.files.set(statePath, raw);
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
+    expect(hoisted.files.get(statePath)).toBe(raw);
+    expect(hoisted.atomicWrite).not.toHaveBeenCalled();
+  });
+
+  it('strict reads accept a missing board and valid legacy optional metadata', async () => {
+    expect(await manager.getState('my-team', { strict: true })).toMatchObject({
+      tasks: {},
+      reviewers: [],
+    });
+    hoisted.files.set(
+      statePath,
+      JSON.stringify({ tasks: { t: { column: 'review', movedAt: '2026-01-01T00:00:00Z' } } })
+    );
+    expect(await manager.getState('my-team', { strict: true })).toMatchObject({
+      tasks: { t: { column: 'review' } },
+    });
+  });
+
+  it('strict reads propagate timeout while ordinary projection remains compatible', async () => {
+    hoisted.files.set(statePath, '{"tasks":{}}');
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    hoisted.readFile.mockRejectedValueOnce(abort);
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('Timed out');
+    hoisted.readFile.mockRejectedValueOnce(abort);
+    expect(await manager.getState('my-team')).toMatchObject({ tasks: {} });
+  });
+
+  it('strict reads reject disappearance after successful stat', async () => {
+    hoisted.files.set(statePath, '{"tasks":{}}');
+    hoisted.readFile.mockRejectedValueOnce(
+      Object.assign(new Error('disappeared'), { code: 'ENOENT' })
+    );
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('disappeared');
+  });
+
+  it('strict reads reject oversized evidence without deleting it', async () => {
+    const raw = ' '.repeat(512 * 1024 + 1);
+    hoisted.files.set(statePath, raw);
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('unavailable');
+    expect(hoisted.files.get(statePath)).toBe(raw);
+    expect(hoisted.readFile).not.toHaveBeenCalled();
+  });
 });

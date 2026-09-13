@@ -1,5 +1,8 @@
 import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
 
+import { decodeMemberWorkSyncReportJournalMetadata } from '../../core/domain/MemberWorkSyncReportJournalMetadata';
+import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/MemberWorkSyncReportJournalRow';
+
 import { buildMetricEvents, normalizeMemberKey } from './JsonMemberWorkSyncStore';
 
 import type {
@@ -18,6 +21,16 @@ import type {
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
 } from '@features/internal-storage/contracts/internalStorageContracts';
+
+export function emptyMemberWorkSyncStoreSnapshot(): MemberWorkSyncStoreSnapshot {
+  return {
+    statuses: [],
+    reportIntents: [],
+    outboxItems: [],
+    metricEvents: [],
+    filesToArchive: [],
+  };
+}
 
 export function statusToRecord(status: MemberWorkSyncStatus): MemberWorkSyncStatusRecord {
   const record: MemberWorkSyncStatusRecord = {
@@ -88,6 +101,7 @@ export function statusToMetricEventRecords(
 export function reportIntentToRecord(
   intent: MemberWorkSyncReportIntent
 ): MemberWorkSyncReportIntentRecord {
+  validateMemberWorkSyncReportJournalRow(intent);
   const record: MemberWorkSyncReportIntentRecord = {
     teamName: intent.teamName,
     id: intent.id,
@@ -99,6 +113,9 @@ export function reportIntentToRecord(
     processedAt: intent.processedAt ?? null,
     resultCode: intent.resultCode ?? null,
     requestJson: JSON.stringify(intent.request),
+    journalJson: intent.journal
+      ? JSON.stringify(decodeMemberWorkSyncReportJournalMetadata(intent.journal, intent.id))
+      : null,
   };
   return normalizeMemberWorkSyncSnapshotTeamIdentity(intent.teamName, {
     statuses: [],
@@ -111,6 +128,12 @@ export function reportIntentToRecord(
 export function recordToReportIntent(
   record: MemberWorkSyncReportIntentRecord
 ): MemberWorkSyncReportIntent {
+  if (record.journalJson != null)
+    validateMemberWorkSyncReportJournalRow({
+      ...record,
+      request: JSON.parse(record.requestJson),
+      journal: JSON.parse(record.journalJson),
+    });
   const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(record.teamName, {
     statuses: [],
     reportIntents: [record],
@@ -122,6 +145,14 @@ export function recordToReportIntent(
     teamName: normalized.teamName,
     memberName: normalized.memberName,
     request: JSON.parse(normalized.requestJson) as MemberWorkSyncReportIntent['request'],
+    ...(normalized.journalJson
+      ? {
+          journal: decodeMemberWorkSyncReportJournalMetadata(
+            JSON.parse(normalized.journalJson),
+            normalized.id
+          ),
+        }
+      : {}),
     reason: normalized.reason,
     status: normalized.status as MemberWorkSyncReportIntentStatus,
     recordedAt: normalized.recordedAt,
@@ -192,6 +223,8 @@ export function snapshotToRecords(
   teamName: string,
   snapshot: MemberWorkSyncStoreSnapshot
 ): MemberWorkSyncTeamSnapshotRecords {
+  for (const row of snapshot.reportIntents)
+    validateMemberWorkSyncReportJournalRow(row, { teamName });
   return normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, {
     statuses: snapshot.statuses.map(statusToRecord),
     reportIntents: snapshot.reportIntents.map(reportIntentToRecord),
@@ -204,6 +237,13 @@ export function recordsToSnapshot(
   teamName: string,
   records: MemberWorkSyncTeamSnapshotRecords
 ): MemberWorkSyncStoreSnapshot {
+  for (const row of records.reportIntents) {
+    if (row.journalJson != null)
+      validateMemberWorkSyncReportJournalRow(
+        { ...row, request: JSON.parse(row.requestJson), journal: JSON.parse(row.journalJson) },
+        { teamName }
+      );
+  }
   const normalized = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, records);
   return {
     statuses: normalized.statuses.map(recordToStatus),

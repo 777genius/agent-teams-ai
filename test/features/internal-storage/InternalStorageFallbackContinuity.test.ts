@@ -329,6 +329,36 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     });
   });
 
+  it('does not complete team purge while a rejected RPC still has a retiring writer', async () => {
+    const { databasePath, teamsBasePath } = await setup();
+    const gateway = openGateway(databasePath);
+    let release!: () => void;
+    const retirement = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const waitForSettling = vi.fn(() => retirement);
+    Object.assign(gateway, { waitForSettling });
+    const importTeam = vi.spyOn(gateway, 'importTeam');
+    const store = createMwsStore({
+      kind: 'sqlite',
+      gateway,
+      teamsBasePath,
+      fallbackRequiresReplica: false,
+    });
+    let purged = false;
+    const purge = store.purgeTeam(TEAM).then(() => {
+      purged = true;
+    });
+    await Promise.resolve();
+    expect(waitForSettling).toHaveBeenCalledTimes(1);
+    expect(importTeam).not.toHaveBeenCalled();
+    expect(purged).toBe(false);
+    release();
+    await purge;
+    expect(importTeam).toHaveBeenCalledTimes(1);
+    expect(purged).toBe(true);
+  });
+
   it('recovers a fenced SQLite purge crash without resurrecting stale JSON or replica state', async () => {
     const { databasePath, teamsBasePath } = await setup();
     const gateway = openGateway(databasePath);

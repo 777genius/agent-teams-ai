@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+
 import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
 
 import type { MemberWorkSyncStatus } from '../../contracts';
@@ -48,7 +50,7 @@ function withoutDiagnostic(status: MemberWorkSyncStatus, diagnostic: string): Me
 }
 
 function hasActiveAcceptedWorkLease(status: MemberWorkSyncStatus): boolean {
-  const report = status.report;
+  const report = getMemberWorkSyncAcceptedReport(status);
   if (
     report?.accepted !== true ||
     report.agendaFingerprint !== status.agenda.fingerprint ||
@@ -85,11 +87,9 @@ function resolveSuppressionResetAt(input: {
     return status.evaluatedAt;
   }
 
+  const accepted = getMemberWorkSyncAcceptedReport(previousStatus);
   const acceptedReportResetAt =
-    previousStatus.report?.accepted === true &&
-    previousStatus.report.agendaFingerprint === status.agenda.fingerprint
-      ? previousStatus.report.reportedAt
-      : undefined;
+    accepted?.agendaFingerprint === status.agenda.fingerprint ? accepted.reportedAt : undefined;
   const manualResetAt = previousStatus.shadow?.nudgeSuppressionResetAt;
 
   return latestIso([acceptedReportResetAt, manualResetAt]);

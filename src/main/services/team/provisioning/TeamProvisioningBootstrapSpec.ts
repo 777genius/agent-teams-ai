@@ -84,6 +84,13 @@ const DETERMINISTIC_BOOTSTRAP_MAX_TIMEOUT_MS = 900_000;
 const DETERMINISTIC_BOOTSTRAP_OUTER_TIMEOUT_GRACE_MS = 30_000;
 
 export function getDeterministicBootstrapTimeoutMs(memberCount: number): number {
+  const overrideMs = Number.parseInt(
+    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS ?? '',
+    10
+  );
+  if (Number.isFinite(overrideMs) && overrideMs > 0) {
+    return Math.min(DETERMINISTIC_BOOTSTRAP_MAX_TIMEOUT_MS, Math.trunc(overrideMs));
+  }
   const perMemberBudget = Math.max(0, memberCount) * DETERMINISTIC_BOOTSTRAP_TIMEOUT_PER_MEMBER_MS;
   return Math.min(
     DETERMINISTIC_BOOTSTRAP_MAX_TIMEOUT_MS,

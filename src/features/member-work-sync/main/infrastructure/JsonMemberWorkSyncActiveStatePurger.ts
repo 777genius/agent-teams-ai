@@ -1,7 +1,67 @@
-import { access, rm } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { access, readdir, rm } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 import { syncDirectoryDurably } from '@main/utils/atomicWrite';
+
+import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+import type { Dirent } from 'node:fs';
+
+const MEMBER_WORK_SYNC_FILE_NAMES = [
+  'status.json',
+  'reports.json',
+  'outbox.json',
+  'journal.jsonl',
+] as const;
+
+export function createAlwaysCurrentJsonMemberWorkSyncPurgeLifecycle(): {
+  establishPendingPrimaryPurge(): Promise<void>;
+  isPurgeGenerationCurrent(): Promise<boolean>;
+  confirmActiveStateCleared(): Promise<void>;
+} {
+  return {
+    establishPendingPrimaryPurge: async () => undefined,
+    isPurgeGenerationCurrent: async () => true,
+    confirmActiveStateCleared: async () => undefined,
+  };
+}
+
+export async function listJsonMemberWorkSyncActiveFilePaths(
+  paths: MemberWorkSyncStorePaths,
+  teamName: string
+): Promise<string[]> {
+  // The SQLite compatibility replica is replaced by writeClean, not deleted
+  // here. Removing it before the empty publication would leave ENOENT if
+  // purge crashes in that window and would resurrect or drop crash evidence.
+  const files = [
+    paths.getLegacyStatusPath(teamName),
+    paths.getLegacyPendingReportsPath(teamName),
+    paths.getLegacyOutboxPath(teamName),
+    paths.getMetricsIndexPath(teamName),
+    paths.getOutboxIndexPath(teamName),
+    paths.getPendingReportsIndexPath(teamName),
+    paths.getReportTokenSecretPath(teamName),
+  ];
+  const membersDir = join(paths.getTeamRootDir(teamName), 'members');
+  let entries: Dirent[];
+  try {
+    entries = await readdir(membersDir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+    entries = [];
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const workSyncDir = join(membersDir, entry.name, '.member-work-sync');
+    for (const fileName of MEMBER_WORK_SYNC_FILE_NAMES) {
+      files.push(join(workSyncDir, fileName));
+    }
+  }
+  return files;
+}
 
 export async function purgeJsonMemberWorkSyncActiveState(
   activeFilePaths: readonly string[],

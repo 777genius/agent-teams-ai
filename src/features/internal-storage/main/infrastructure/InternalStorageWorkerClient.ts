@@ -5,6 +5,8 @@ import { Worker } from 'node:worker_threads';
 
 import { createLogger } from '@shared/utils/logger';
 
+import { InternalStorageOperationInterruptedError } from '../../core/application/InternalStorageOperationInterruptedError';
+
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -13,6 +15,9 @@ import type {
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
   MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncReportJournalOpResult,
+  MemberWorkSyncStatusCompareAndWriteInput,
+  MemberWorkSyncStatusCompareAndWriteResult,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -96,7 +101,8 @@ function resolveWorkerPath(): string | null {
 /**
  * Async facade over the internal-storage worker thread. Requests run one at a
  * time (SQLite access is serialized anyway); a timeout or worker crash rejects
- * all in-flight requests and the worker is recreated on the next call.
+ * all in-flight requests. Replacement is allowed only after physical exit of
+ * the previous writer, not merely after its RPC promises have rejected.
  */
 export class InternalStorageWorkerClient
   implements
@@ -111,6 +117,12 @@ export class InternalStorageWorkerClient
   private activeCallId: string | null = null;
   private activeTimeout: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
+  private closePromise: Promise<void> | null = null;
+  private retirement: {
+    worker: Worker;
+    settled: Promise<void>;
+    finish(): void;
+  } | null = null;
 
   constructor(private readonly options: { databasePath: string }) {}
 
@@ -192,6 +204,15 @@ export class InternalStorageWorkerClient
     await this.call('mws.status.write', { record, events });
   }
 
+  async statusCompareAndWrite(
+    input: MemberWorkSyncStatusCompareAndWriteInput
+  ): Promise<MemberWorkSyncStatusCompareAndWriteResult> {
+    return (await this.call(
+      'mws.status.compareAndWrite',
+      input
+    )) as MemberWorkSyncStatusCompareAndWriteResult;
+  }
+
   async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
   }
@@ -218,6 +239,49 @@ export class InternalStorageWorkerClient
     result: { status: string; resultCode: string; processedAt: string }
   ): Promise<void> {
     await this.call('mws.reports.markProcessed', { teamName, id, ...result });
+  }
+
+  async reportsJournalRead(input: {
+    teamName: string;
+    memberKey: string;
+    id: string;
+    journalJson: string;
+    requestJson: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalRead',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
+  }
+
+  async reportsJournalEnsure(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalEnsure',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
+  }
+
+  async reportsJournalTransfer(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalTransfer',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
   }
 
   async outboxEnsurePending(
@@ -276,8 +340,11 @@ export class InternalStorageWorkerClient
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number> {
-    return (await this.call('mws.outbox.countRecentDelivered', input)) as number;
+  }): Promise<{ count: number; oldestUpdatedAt?: string }> {
+    return (await this.call('mws.outbox.countRecentDelivered', input)) as {
+      count: number;
+      oldestUpdatedAt?: string;
+    };
   }
 
   async outboxCountDeliveredForAgenda(input: {
@@ -367,10 +434,22 @@ export class InternalStorageWorkerClient
     )) as ApplicationCommandLedgerRecord<TOperation>[];
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise;
     this.closed = true;
+    this.closePromise = this.closeAndDrain();
+    return this.closePromise;
+  }
+
+  /** Used by deletion/drain even after the logical RPC has already failed. */
+  async waitForSettling(): Promise<void> {
+    while (this.retirement) await this.retirement.settled;
+  }
+
+  private async closeAndDrain(): Promise<void> {
     const worker = this.worker;
     if (!worker) {
+      await this.waitForSettling();
       return;
     }
     try {
@@ -382,13 +461,28 @@ export class InternalStorageWorkerClient
         }`
       );
     }
-    this.worker = null;
-    await worker.terminate().catch(() => undefined);
+    this.failWorker(worker, new Error('internal-storage client is closed'));
+    await this.waitForSettling();
   }
 
-  private failWorker(worker: Worker, error: Error): void {
-    if (this.worker !== worker) return;
+  private finishRetirement(worker: Worker): void {
+    const retirement = this.retirement;
+    if (retirement?.worker !== worker) return;
+    this.retirement = null;
+    retirement.finish();
+  }
 
+  private failWorker(worker: Worker, error: Error, exited = false): void {
+    if (this.worker !== worker) {
+      if (exited) this.finishRetirement(worker);
+      return;
+    }
+
+    let finish!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    this.retirement = { worker, settled, finish };
     this.worker = null;
     this.clearActiveCall();
     const pendingEntries = Array.from(this.pending.values());
@@ -397,14 +491,38 @@ export class InternalStorageWorkerClient
     this.queue = [];
 
     for (const entry of pendingEntries) {
-      entry.reject(error);
+      entry.reject(
+        new InternalStorageOperationInterruptedError(error.message, 'unknown', settled, error)
+      );
     }
     for (const entry of queuedEntries) {
-      entry.reject(error);
+      entry.reject(
+        new InternalStorageOperationInterruptedError(error.message, 'not_started', settled, error)
+      );
+    }
+    if (exited) {
+      this.finishRetirement(worker);
+    } else {
+      // A rejected terminate request is not proof of exit. Keep admission
+      // closed until an exit event or successful terminate confirms settlement.
+      void Promise.resolve()
+        .then(() => worker.terminate())
+        .then(
+          () => this.finishRetirement(worker),
+          (terminationError: unknown) =>
+            logger.error('internal-storage worker termination unconfirmed', terminationError)
+        );
     }
   }
 
   private ensureWorker(): Worker {
+    if (this.retirement) {
+      throw new InternalStorageOperationInterruptedError(
+        'internal-storage previous worker has not exited',
+        'not_started',
+        this.retirement.settled
+      );
+    }
     if (!this.workerPath) {
       throw new Error('internal-storage worker is not available in this environment');
     }
@@ -416,6 +534,7 @@ export class InternalStorageWorkerClient
     const worker = new Worker(this.workerPath, { workerData });
     this.worker = worker;
     worker.on('message', (msg: InternalStorageWorkerResponse) => {
+      if (this.worker !== worker) return;
       const entry = this.pending.get(msg.id);
       if (!entry) return;
       this.pending.delete(msg.id);
@@ -435,7 +554,7 @@ export class InternalStorageWorkerClient
       if (code !== 0) {
         logger.warn(`internal-storage worker exited with code ${code}`);
       }
-      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`));
+      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`), true);
     });
 
     return worker;
@@ -484,9 +603,6 @@ export class InternalStorageWorkerClient
         `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} pendingNow=${this.pending.size} queued=${this.queue.length}`
       );
       this.failWorker(worker, timeoutError);
-      // The worker may be stuck in native IO; terminate and recreate lazily.
-      // SQLite's journal makes a mid-transaction kill safe (auto-rollback).
-      void worker.terminate().catch(() => undefined);
     }, WORKER_CALL_TIMEOUT_MS);
 
     try {

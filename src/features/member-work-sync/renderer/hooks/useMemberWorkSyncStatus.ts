@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -8,6 +8,8 @@ import {
 } from '../view-models/memberWorkSyncStatusViewModel';
 
 import type { MemberWorkSyncStatus } from '../../contracts';
+
+export const MEMBER_WORK_SYNC_STATUS_POLL_MS = 15_000;
 
 export interface UseMemberWorkSyncStatusOptions {
   teamName?: string | null;
@@ -21,6 +23,7 @@ export interface UseMemberWorkSyncStatusResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  continueManually: () => void;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -36,6 +39,10 @@ export function useMemberWorkSyncStatus({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const selectionRef = useRef({ teamName, memberName });
+  const statusRef = useRef(status);
+  selectionRef.current = { teamName, memberName };
+  statusRef.current = status;
 
   useEffect(() => {
     const normalizedTeamName = teamName?.trim();
@@ -49,13 +56,14 @@ export function useMemberWorkSyncStatus({
     }
 
     let cancelled = false;
-    setLoading(true);
+    const current = statusRef.current;
+    const sameMember =
+      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName;
+    if (!sameMember) {
+      setStatus(null);
+      setLoading(true);
+    }
     setError(null);
-    setStatus((current) =>
-      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName
-        ? current
-        : null
-    );
 
     api.memberWorkSync
       .getStatus({ teamName: normalizedTeamName, memberName: normalizedMemberName })
@@ -66,7 +74,9 @@ export function useMemberWorkSyncStatus({
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
-          setStatus(null);
+          if (!sameMember) {
+            setStatus(null);
+          }
           setError(getErrorMessage(nextError));
         }
       })
@@ -81,11 +91,56 @@ export function useMemberWorkSyncStatus({
     };
   }, [enabled, memberName, refreshKey, teamName]);
 
+  useEffect(() => {
+    if (!enabled || !teamName?.trim() || !memberName?.trim()) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRefreshKey((current) => current + 1);
+    }, MEMBER_WORK_SYNC_STATUS_POLL_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [enabled, memberName, teamName]);
+
   return {
     status,
     viewModel: toMemberWorkSyncStatusViewModel(status),
     loading,
     error,
     refresh: () => setRefreshKey((current) => current + 1),
+    continueManually: () => {
+      const normalizedTeamName = teamName?.trim();
+      const normalizedMemberName = memberName?.trim();
+      if (!normalizedTeamName || !normalizedMemberName) {
+        return;
+      }
+      void api.memberWorkSync
+        .continueManually({
+          teamName: normalizedTeamName,
+          memberName: normalizedMemberName,
+        })
+        .then((nextStatus) => {
+          const current = selectionRef.current;
+          if (
+            current.teamName?.trim() !== normalizedTeamName ||
+            current.memberName?.trim() !== normalizedMemberName
+          ) {
+            return;
+          }
+          setStatus(nextStatus);
+          setError(null);
+        })
+        .catch((nextError: unknown) => {
+          const current = selectionRef.current;
+          if (
+            current.teamName?.trim() !== normalizedTeamName ||
+            current.memberName?.trim() !== normalizedMemberName
+          ) {
+            return;
+          }
+          setError(getErrorMessage(nextError));
+        });
+    },
   };
 }

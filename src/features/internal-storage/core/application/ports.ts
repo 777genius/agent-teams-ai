@@ -6,6 +6,9 @@ import type {
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
   MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncReportJournalOpResult,
+  MemberWorkSyncStatusCompareAndWriteInput,
+  MemberWorkSyncStatusCompareAndWriteResult,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -50,12 +53,17 @@ export interface InternalStorageGateway {
  * attemptGeneration is an optimistic lock, stale claims become claimable).
  */
 export interface MemberWorkSyncStorageGateway {
+  /** Physical writer retirement, distinct from logical RPC rejection. */
+  waitForSettling?(): Promise<void>;
   ping(): Promise<InternalStorageBackendInfo>;
   statusRead(teamName: string, memberKey: string): Promise<MemberWorkSyncStatusRecord | null>;
   statusWrite(
     record: MemberWorkSyncStatusRecord,
     events: MemberWorkSyncMetricEventRecord[]
   ): Promise<void>;
+  statusCompareAndWrite(
+    input: MemberWorkSyncStatusCompareAndWriteInput
+  ): Promise<MemberWorkSyncStatusCompareAndWriteResult>;
   statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]>;
   metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]>;
   reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void>;
@@ -65,6 +73,31 @@ export interface MemberWorkSyncStorageGateway {
     id: string,
     result: { status: string; resultCode: string; processedAt: string }
   ): Promise<void>;
+  reportsJournalRead(input: {
+    teamName: string;
+    memberKey: string;
+    id: string;
+    journalJson: string;
+    requestJson: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult>;
+  reportsJournalEnsure(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult>;
+  reportsJournalTransfer(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult>;
   outboxEnsurePending(
     input: MemberWorkSyncOutboxEnsureRecordInput
   ): Promise<MemberWorkSyncOutboxEnsureRecordResult>;
@@ -103,7 +136,7 @@ export interface MemberWorkSyncStorageGateway {
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number>;
+  }): Promise<{ count: number; oldestUpdatedAt?: string }>;
   outboxCountDeliveredForAgenda(input: {
     teamName: string;
     memberKey: string;

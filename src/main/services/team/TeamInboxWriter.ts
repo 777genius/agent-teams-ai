@@ -125,7 +125,7 @@ export interface SendInboxMessageOptions {
    * that only its successor sees. The check runs under the lock, so it observes
    * the state that holds at the moment this writer is allowed to append.
    */
-  shouldStillWrite?: () => boolean;
+  shouldStillWrite?: () => boolean | Promise<boolean>;
 }
 
 export class TeamInboxWriter {
@@ -175,6 +175,12 @@ export class TeamInboxWriter {
       ...(request.workSyncReviewRequestEventIds?.length
         ? { workSyncReviewRequestEventIds: request.workSyncReviewRequestEventIds }
         : {}),
+      ...(request.workSyncRuntimeTicketId
+        ? { workSyncRuntimeTicketId: request.workSyncRuntimeTicketId }
+        : {}),
+      ...(request.workSyncRuntimeGeneration != null
+        ? { workSyncRuntimeGeneration: request.workSyncRuntimeGeneration }
+        : {}),
       ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
@@ -185,12 +191,21 @@ export class TeamInboxWriter {
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
-        if (options?.shouldStillWrite && !options.shouldStillWrite()) {
-          rejectedByPrecondition = true;
+        const shouldAbortWrite = async (): Promise<boolean> => {
+          if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
+            rejectedByPrecondition = true;
+            return true;
+          }
+          return false;
+        };
+        if (await shouldAbortWrite()) {
           return;
         }
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
+          if (await shouldAbortWrite()) {
+            return;
+          }
           const explicitDuplicateIndex = explicitMessageId
             ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
             : -1;
@@ -211,6 +226,9 @@ export class TeamInboxWriter {
                 ...duplicate,
                 taskRefs: merged.taskRefs,
               };
+              if (await shouldAbortWrite()) {
+                return;
+              }
               await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
               const written = await this.readInbox(inboxPath);
               const writtenDuplicateIndex = matchedExplicitMessageId
@@ -230,6 +248,9 @@ export class TeamInboxWriter {
             return;
           }
           list.push(payload);
+          if (await shouldAbortWrite()) {
+            return;
+          }
           await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
           const written = await this.readInbox(inboxPath);
           if (written.some((msg) => msg.messageId === messageId)) {
@@ -309,6 +330,8 @@ export class TeamInboxWriter {
       workSyncIntent: message.workSyncIntent,
       workSyncIntentKey: message.workSyncIntentKey,
       workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
+      workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
+      workSyncRuntimeGeneration: message.workSyncRuntimeGeneration,
       workSyncPayloadHash: message.workSyncPayloadHash,
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,
