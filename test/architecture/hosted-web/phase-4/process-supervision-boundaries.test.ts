@@ -65,11 +65,14 @@ describe('Phase 4 process supervision architecture boundaries', () => {
     expect(spawner).toMatch(/shell:\s*false/);
     expect(spawner).toMatch(/detached:\s*false/);
     expect(spawner).toMatch(
-      /stdio:\s*\[\s*'pipe',\s*'pipe',\s*'ignore',\s*'pipe',\s*materialized\.executableDescriptor,\s*materialized\.workdirDescriptor,\s*\]/
+      /const stdio: SpawnOptions\['stdio'\] = \[\s*'pipe',\s*'pipe',\s*'ignore',\s*'pipe',\s*materialized\.executableDescriptor,\s*materialized\.workdirDescriptor,\s*\.\.\.\(this\.options\.providerStdio === 'pipe' \? \(\['pipe', 'pipe', 'pipe'\] as const\) : \[\]\),\s*\]/
     );
     expect(materializer).toContain('executableDescriptor: input.executableHandle.fd');
     expect(materializer).toContain('workdirDescriptor: input.workdirHandle.fd');
-    expect(spawner).toContain('launch = child.stdio[3] as Writable | null;');
+    expect(spawner).toMatch(/windowsHide:\s*true,\s*stdio,\s*\}\)/);
+    expect(spawner).toContain('const childStdio = normalizeChildStdio(child);');
+    expect(spawner).toContain('const launchPipe = childStdio[3];');
+    expect(spawner).toContain('launch = launchPipe instanceof Writable ? launchPipe : undefined;');
     expect(spawner).toMatch(/endWithBytes\(launchStream, launchBytes\)/);
   });
 

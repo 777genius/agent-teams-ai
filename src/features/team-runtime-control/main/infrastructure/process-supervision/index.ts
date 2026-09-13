@@ -13,8 +13,13 @@ export type {
   NodeWorkdirLaunchAuthority,
 } from './NodeAnchorLaunchMaterializer';
 export { NodeAnchorLaunchMaterializer } from './NodeAnchorLaunchMaterializer';
-export type { NodeAnchorSpawnerOptions } from './NodeAnchorSpawner';
-export { NODE_ANCHOR_MAX_LAUNCH_FRAME_BYTES, NodeAnchorSpawner } from './NodeAnchorSpawner';
+export type { NodeAnchorProviderStdio, NodeAnchorSpawnerOptions } from './NodeAnchorSpawner';
+export {
+  NODE_ANCHOR_MAX_LAUNCH_FRAME_BYTES,
+  NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH,
+  NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION,
+  NodeAnchorSpawner,
+} from './NodeAnchorSpawner';
 export type {
   AnchorDrainedStatusFrame,
   AnchorEscalationStatusFrame,

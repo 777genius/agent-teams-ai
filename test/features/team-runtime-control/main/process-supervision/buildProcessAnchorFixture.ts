@@ -72,10 +72,13 @@ export interface ProcessAnchorSpawnHarness {
   readonly registeredRootEvidence: NodeRegisteredWorkdirEvidence;
   createSpawner(
     options?: Partial<
-      Pick<NodeAnchorSpawnerOptions, 'maxLaunchFrameBytes' | 'monotonicNow' | 'spawnProcess'>
+      Pick<
+        NodeAnchorSpawnerOptions,
+        'maxLaunchFrameBytes' | 'monotonicNow' | 'providerStdio' | 'spawnProcess'
+      >
     >
   ): NodeAnchorSpawner;
-  request(mode: string): AnchorSpawnRequest;
+  request(mode: string, argvOverride?: readonly string[]): AnchorSpawnRequest;
 }
 
 export interface ProcessAnchorSpawnHarnessOptions {
@@ -232,13 +235,15 @@ export async function createProcessAnchorSpawnHarness(
     cancellation,
     registeredRootEvidence,
     createSpawner,
-    request(mode: string): AnchorSpawnRequest {
-      const argv = Object.freeze([
-        fixture.fakeRuntimePath,
-        mode,
-        fixture.runtimeMarkerPath,
-        fixture.sandboxPath,
-      ]);
+    request(mode: string, argvOverride?: readonly string[]): AnchorSpawnRequest {
+      const argv = Object.freeze(
+        argvOverride ?? [
+          fixture.fakeRuntimePath,
+          mode,
+          fixture.runtimeMarkerPath,
+          fixture.sandboxPath,
+        ]
+      );
       return Object.freeze({
         intent: createSpawnIntent({
           scope,

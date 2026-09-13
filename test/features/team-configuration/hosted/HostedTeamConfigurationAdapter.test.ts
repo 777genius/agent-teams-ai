@@ -258,6 +258,11 @@ describe('HostedTeamConfigurationAdapter', () => {
     vi.mocked(useCases.updateDraft).mockResolvedValueOnce({
       kind: 'error',
       error: createSafeAppError({ code: 'not_found', reason: 'team_configuration_not_found' }),
+    }).mockResolvedValueOnce({
+      kind: 'error',
+      error: createSafeAppError({
+        code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable',
+      }),
     });
     const adapter = createHostedTeamConfigurationFeature(useCases, authority(principal));
 
@@ -267,7 +272,17 @@ describe('HostedTeamConfigurationAdapter', () => {
         principal
       )
     ).resolves.toMatchObject({ kind: 'error', error: { code: 'not_found' } });
-    expect(useCases.updateDraft).toHaveBeenCalledTimes(1);
+    await expect(
+      adapter.updateDraft(
+        { ...identified(), expectedRevision: revision, updates: { name: 'Manual mode' } },
+        principal
+      )
+    ).resolves.toMatchObject({
+      kind: 'error', error: {
+        code: 'unsupported', reason: 'team_configuration_unsupported',
+      }, retryable: false,
+    });
+    expect(useCases.updateDraft).toHaveBeenCalledTimes(2);
     expect(useCases.getSavedRequest).not.toHaveBeenCalled();
   });
 

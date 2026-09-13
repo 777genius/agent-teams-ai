@@ -97,7 +97,7 @@ describe('hosted team configuration application authority', () => {
   it('hashes every configuration selection and preserves ordered, property-order-independent replay identity', async () => {
     const gateway = storage();
     const authority = createHostedTeamConfigurationAuthority(gateway);
-    const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+    const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
         members: [{ name: 'lead', prompt: 'Coordinate.' }, { name: 'reviewer', prompt: 'Review.' }] },
     ] } as const;
@@ -107,11 +107,10 @@ describe('hosted team configuration application authority', () => {
     const initial = vi.mocked(gateway.createHostedTeamConfiguration).mock.calls[0][0];
     expect(initial.configuration).toEqual(configuration);
     await authority.createDraft({ ...request, configuration: {
-      lanes: configuration.lanes, toolApprovalMode: 'manual', schemaVersion: 1,
+      lanes: configuration.lanes, toolApprovalMode: 'auto', schemaVersion: 1,
     } });
     expect(vi.mocked(gateway.createHostedTeamConfiguration).mock.calls.at(-1)?.[0].payloadHash).toBe(initial.payloadHash);
     for (const changed of [
-      { ...configuration, toolApprovalMode: 'auto' as const },
       { ...configuration, lanes: [{ ...configuration.lanes[0], selectedModel: 'openai/gpt-6' }] },
       { ...configuration, lanes: [{ ...configuration.lanes[0], effort: 'low' as const }] },
       { ...configuration, lanes: [{ ...configuration.lanes[0], members: [{ name: 'lead', prompt: 'Changed.' }, configuration.lanes[0].members[1]] }] },
@@ -124,6 +123,27 @@ describe('hosted team configuration application authority', () => {
     expect(gateway.updateHostedTeamConfiguration).toHaveBeenCalledWith({ workspaceId, teamId,
       expectedRevision: revision, updates: { configuration }, deadlineAtMs: context.deadlineAtMs,
     }, { signal: context.signal });
+  });
+
+  it('refuses manual mode on Hosted create and update without rewriting or reaching storage', async () => {
+    const gateway = storage();
+    const authority = createHostedTeamConfigurationAuthority(gateway);
+    const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+      { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5',
+        members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+    ] } as const;
+    const expected = { kind: 'error', error: {
+      code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable',
+    } };
+
+    await expect(authority.createDraft({ workspaceId,
+      idempotencyKey: 'idempotency_manual-mode-create' as never, name: 'Manual',
+      members: [{ name: 'lead' }], configuration, context })).resolves.toMatchObject(expected);
+    await expect(authority.updateDraft({ workspaceId, teamId }, revision,
+      { configuration }, context)).resolves.toMatchObject(expected);
+    expect(gateway.createHostedTeamConfiguration).not.toHaveBeenCalled();
+    expect(gateway.updateHostedTeamConfiguration).not.toHaveBeenCalled();
+    expect(configuration.toolApprovalMode).toBe('manual');
   });
 
   it('maps storage CAS and absence outcomes to the existing application contract', async () => {
@@ -146,6 +166,20 @@ describe('hosted team configuration application authority', () => {
     ).resolves.toEqual({
       kind: 'deleted',
       outcome: 'already_absent',
+    });
+  });
+
+  it('maps the atomic persisted-manual rejection to a safe unsupported result', async () => {
+    const gateway = storage();
+    vi.mocked(gateway.updateHostedTeamConfiguration).mockResolvedValueOnce({
+      kind: 'unavailable', reason: 'manual_approval_unavailable',
+    });
+    const authority = createHostedTeamConfigurationAuthority(gateway);
+    await expect(
+      authority.updateDraft({ workspaceId, teamId }, revision, { name: 'Renamed' }, context)
+    ).resolves.toMatchObject({
+      kind: 'error',
+      error: { code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable' },
     });
   });
 

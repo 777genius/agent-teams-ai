@@ -65,6 +65,70 @@ describe('hosted team configuration renderer transport', () => {
     expect(getCsrfToken).toHaveBeenCalledTimes(1);
   });
 
+  it('maps the complete mixed roster into the create HTTP body without field loss', async () => {
+    const fetch = vi.fn(async () => ({
+      status: 201,
+      json: async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'created',
+        identity: { workspaceId, teamId },
+        revision,
+        outcome: 'created',
+      }),
+    }));
+    const transport = createHostedTeamConfigurationTransport({
+      fetch,
+      getCsrfToken: () => csrfToken,
+    });
+    const configuration = {
+      schemaVersion: 1 as const,
+      toolApprovalMode: 'auto' as const,
+      lanes: [
+        {
+          kind: 'native' as const,
+          provider: 'codex' as const,
+          members: [
+            {
+              name: 'lead',
+              prompt: 'Coordinate.',
+              model: 'gpt-5.6-sol',
+              effort: 'medium' as const,
+            },
+          ],
+        },
+        {
+          kind: 'opencode' as const,
+          provider: 'opencode' as const,
+          selectedModel: 'openai/gpt-5.6',
+          effort: 'high' as const,
+          members: [
+            {
+              name: 'builder',
+              prompt: 'Build.',
+              model: 'github-copilot/gpt-5.6-sol',
+              effort: 'low' as const,
+            },
+          ],
+        },
+      ],
+    };
+    const request = {
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      workspaceId,
+      idempotencyKey,
+      name: 'Mixed Team',
+      members: [{ name: 'lead' }, { name: 'builder' }],
+      configuration,
+    };
+
+    await expect(transport.createDraft(request)).resolves.toMatchObject({ kind: 'created' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      HOSTED_TEAM_CONFIGURATION_ROUTES.createDraft,
+      expect.objectContaining({ body: JSON.stringify(request) })
+    );
+  });
+
   it('performs authenticated reads without reading or sending a CSRF token', async () => {
     const fetch = vi.fn(async () => ({
       status: 404,
@@ -94,6 +158,67 @@ describe('hosted team configuration renderer transport', () => {
         },
       })
     );
+  });
+
+  it('preserves the complete saved roster configuration and rejects member/configuration drift', async () => {
+    const configuration = {
+      schemaVersion: 1 as const,
+      toolApprovalMode: 'manual' as const,
+      lanes: [
+        {
+          kind: 'native' as const,
+          provider: 'codex' as const,
+          members: [
+            { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' as const },
+          ],
+        },
+        {
+          kind: 'opencode' as const,
+          provider: 'opencode' as const,
+          selectedModel: 'openai/gpt-5.6',
+          effort: 'high' as const,
+          members: [
+            { name: 'builder', prompt: 'Build.', model: 'github-copilot/gpt-5.6-sol' },
+          ],
+        },
+      ],
+    };
+    let drift = false;
+    const fetch = vi.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found',
+        draft: {
+          workspaceId,
+          teamId,
+          revision,
+          metadata: { name: 'Mixed Team' },
+          members: drift ? [{ name: 'builder' }, { name: 'lead' }] : [{ name: 'lead' }, { name: 'builder' }],
+          configuration,
+        },
+      }),
+    }));
+    const transport = createHostedTeamConfigurationTransport({ fetch, getCsrfToken: () => null });
+
+    await expect(transport.getSavedRequest(identified)).resolves.toEqual({
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      kind: 'found',
+      draft: {
+        workspaceId,
+        teamId,
+        revision,
+        metadata: { name: 'Mixed Team' },
+        members: [{ name: 'lead' }, { name: 'builder' }],
+        configuration,
+      },
+    });
+
+    drift = true;
+    await expect(transport.getSavedRequest(identified)).resolves.toMatchObject({
+      kind: 'error',
+      error: { code: 'unavailable' },
+    });
   });
 
   it('returns typed unavailable errors for network, malformed JSON, and identity mismatch', async () => {

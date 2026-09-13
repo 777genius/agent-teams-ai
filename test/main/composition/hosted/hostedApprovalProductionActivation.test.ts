@@ -114,6 +114,24 @@ describe('hosted approval production activation', () => {
     );
   });
 
+  it('defaults the actual Hosted server approval activation boundary to disabled', async () => {
+    const socket = new Socket();
+    await expect(
+      createHostedApprovalProductionCompositionFromEnvironment(
+        { AGENT_TEAMS_HOSTED_APPROVAL_ACTIVATION_ADMISSION_FILE: '/must-not-be-read' },
+        {
+          ...standaloneOptionalDependencies(),
+          inheritedCandidateActivation: {
+            transport: { socket },
+            expectedOpenCodeExecutableSha256: HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256,
+          },
+        }
+      )
+    ).resolves.toBeNull();
+    expect(socket.destroyed).toBe(true);
+    expect(() => socket.emit('error', new Error('queued-after-disabled'))).not.toThrow();
+  });
+
   it.each([
     ['malformed', 'not-json\n'],
     [
@@ -134,7 +152,9 @@ describe('hosted approval production activation', () => {
         const input = standaloneOptionalDependencies();
         expect(input.ownerAdmission).toBeNull();
         await expect(
-          createHostedApprovalProductionCompositionFromEnvironment(fixture.environment, input)
+          createHostedApprovalProductionCompositionFromEnvironment(
+            fixture.environment, input, undefined, true
+          )
         ).rejects.toThrow(/admission-file-invalid/u);
       } finally {
         await fixture.dispose();
@@ -146,7 +166,7 @@ describe('hosted approval production activation', () => {
     const input = standaloneOptionalDependencies();
     expect(input.ownerAdmission).toBeNull();
     await expect(
-      createHostedApprovalProductionCompositionFromEnvironment({}, input)
+      createHostedApprovalProductionCompositionFromEnvironment({}, input, undefined, true)
     ).resolves.toBeNull();
   });
 
@@ -156,7 +176,9 @@ describe('hosted approval production activation', () => {
       const input = standaloneOptionalDependencies();
       expect(input.ownerAdmission).toBeNull();
       await expect(
-        createHostedApprovalProductionCompositionFromEnvironment(fixture.environment, input)
+        createHostedApprovalProductionCompositionFromEnvironment(
+          fixture.environment, input, undefined, true
+        )
       ).resolves.toBeNull();
     } finally {
       await fixture.dispose();
@@ -187,7 +209,9 @@ describe('hosted approval production activation', () => {
             `${environment[HOSTED_APPROVAL_ACTIVATION_ADMISSION_FILE_ENV]}.missing`;
         }
         await expect(
-          createHostedApprovalProductionCompositionFromEnvironment(environment, input)
+          createHostedApprovalProductionCompositionFromEnvironment(
+            environment, input, undefined, true
+          )
         ).rejects.toThrow();
         expect(socket.destroyed).toBe(true);
         expect(() =>

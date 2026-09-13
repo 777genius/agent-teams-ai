@@ -90,4 +90,75 @@ describe('selected native socket-handle contract', () => {
         await rm(root, { recursive: true, force: true });
       }
     });
+
+  it.skipIf(process.platform !== 'linux' || !!process.versions.bun).each([
+    'pending',
+    'late',
+  ] as const)('closes %s native handles after the Hosted activation inbox is disabled', async mode => {
+    const root = await mkdtemp(join(tmpdir(), 'native-handle-disabled-r1534-'));
+    const server = createServer();
+    let client: Socket | undefined;
+    let retained: Socket | undefined;
+    const messages: unknown[] = [];
+    const child = fork(resolve('test/main/composition/hosted/fixtures/nativeActivationDisabledChild.ts'), [
+      NATIVE_ACTIVATION_ENTRY_ARGUMENT,
+      mode,
+    ], { execArgv: ['--import', 'tsx'], stdio: ['pipe', 'ignore', 'pipe', 'ipc'] });
+    child.on('message', message => messages.push(message));
+    const exited = once(child, 'exit');
+    try {
+      await new Promise<void>((resolveReady, rejectReady) => {
+        const ready = (message: unknown) => {
+          if ((message as { contract?: unknown })?.contract !==
+              'test.hosted-native-activation-disabled/ready') return;
+          child.off('exit', failed); resolveReady();
+        };
+        const failed = () => {
+          child.off('message', ready); rejectReady(new Error('disabled-native-child-exited'));
+        };
+        child.on('message', ready); child.once('exit', failed);
+      });
+      server.listen(join(root, 'socket'));
+      await once(server, 'listening');
+      const accepted = once(server, 'connection');
+      client = connect(join(root, 'socket'));
+      client.on('error', () => undefined);
+      const closed = once(client, 'close');
+      [retained] = await accepted as [Socket];
+      const ownedReply = mode === 'pending'
+        ? new Promise<void>((resolveOwned, rejectOwned) => {
+            const owned = (message: unknown) => {
+              if ((message as { contract?: unknown })?.contract !==
+                  `${NATIVE_ACTIVATION_HANDLE_CONTRACT}/owned`) return;
+              child.off('exit', failed); resolveOwned();
+            };
+            const failed = () => {
+              child.off('message', owned); rejectOwned(new Error('disabled-native-child-exited'));
+            };
+            child.on('message', owned); child.once('exit', failed);
+          })
+        : undefined;
+      await new Promise<void>((resolveSend, rejectSend) => {
+        child.send!(selection, retained, { keepOpen: false }, error =>
+          error ? rejectSend(error) : resolveSend());
+      });
+      if (mode === 'pending') {
+        await ownedReply;
+        child.stdin!.write('disable');
+      }
+      await closed;
+      const ownershipReplies = messages.filter(message =>
+        (message as { contract?: unknown })?.contract ===
+          `${NATIVE_ACTIVATION_HANDLE_CONTRACT}/owned`);
+      expect(ownershipReplies).toHaveLength(mode === 'pending' ? 1 : 0);
+      expect(client.destroyed).toBe(true);
+      child.disconnect();
+      expect((await exited)[0]).toBe(0);
+    } finally {
+      client?.destroy(); retained?.destroy();
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+      server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

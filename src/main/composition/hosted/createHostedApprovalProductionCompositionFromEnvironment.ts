@@ -2,6 +2,7 @@ import {
   clearProductHostedProducerProvenance,
   installProductHostedProducerProvenance,
 } from '@features/hosted-producer-provenance/main';
+import { isHostedMvpManualApprovalAvailable } from '@features/team-configuration/contracts';
 
 import {
   closeHostedApprovalRuntimeConnectedTransport,
@@ -12,8 +13,15 @@ import {
   createOptionalHostedApprovalProductionComposition,
   type CreateOptionalHostedApprovalProductionCompositionDependencies,
 } from './createHostedApprovalProductionComposition';
-import { HostedApprovalGenerationRuntime, type HostedApprovalGenerationRuntimeOptions } from './hostedApprovalGenerationRuntime';
-import { installHostedNativeActivationReplacementReceiver, takeHostedNativeActivationHandle } from './hostedNativeActivationHandle';
+import {
+  HostedApprovalGenerationRuntime,
+  type HostedApprovalGenerationRuntimeOptions,
+} from './hostedApprovalGenerationRuntime';
+import {
+  disableHostedNativeActivationInbox,
+  installHostedNativeActivationReplacementReceiver,
+  takeHostedNativeActivationHandle,
+} from './hostedNativeActivationHandle';
 import { createHostedProducerProvenanceFromEnvironment } from './hostedProducerProvenanceComposition';
 import { createProductHostedProducerSseWriteEmitter } from './hostedProducerProvenanceNodeOperations';
 
@@ -26,8 +34,21 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
     CreateOptionalHostedApprovalProductionCompositionDependencies,
     'activationPublication'
   >,
-  generationRuntime?: Pick<HostedApprovalGenerationRuntimeOptions, 'drainStreams' | 'revokeLifecycle' | 'createRouteAdmission'>
+  generationRuntime?: Pick<
+    HostedApprovalGenerationRuntimeOptions,
+    'drainStreams' | 'revokeLifecycle' | 'createRouteAdmission'
+  >,
+  manualApprovalAvailable = isHostedMvpManualApprovalAvailable()
 ): Promise<HostedOperatorProductionComposition | null> {
+  if (!manualApprovalAvailable) {
+    disableHostedNativeActivationInbox();
+    if (dependencies.inheritedCandidateActivation) {
+      closeHostedApprovalRuntimeConnectedTransport(
+        dependencies.inheritedCandidateActivation.transport
+      );
+    }
+    return null;
+  }
   const nativeHandle = await takeHostedNativeActivationHandle(dependencies.ownerAdmission);
   if (nativeHandle && dependencies.inheritedCandidateActivation) {
     closeHostedApprovalRuntimeConnectedTransport(nativeHandle.transport);
@@ -37,17 +58,21 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
   let producerProvenance: ReturnType<typeof createHostedProducerProvenanceFromEnvironment>;
   try {
     producerProvenance = createHostedProducerProvenanceFromEnvironment(environment, {
-      role: 'product-producer', modulePath: __filename,
+      role: 'product-producer',
+      modulePath: __filename,
     });
   } catch (error) {
-    if (inheritedCandidate) closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
+    if (inheritedCandidate)
+      closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
     throw error;
   }
   if (nativeHandle) {
     let runtime: HostedApprovalGenerationRuntime | undefined;
     try {
-      if (!generationRuntime || !producerProvenance) throw new Error('native_generation_runtime_required');
-      const activationPublication = readHostedApprovalRuntimeActivationPublicationContract(environment);
+      if (!generationRuntime || !producerProvenance)
+        throw new Error('native_generation_runtime_required');
+      const activationPublication =
+        readHostedApprovalRuntimeActivationPublicationContract(environment);
       runtime = new HostedApprovalGenerationRuntime({
         ...generationRuntime,
         dependencies: { ...dependencies, activationPublication },
@@ -55,17 +80,22 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
         serializedBootstrap: environment.AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP ?? '',
         provenance: producerProvenance,
         sseEmitter: createProductHostedProducerSseWriteEmitter(environment),
-        send: message => new Promise<void>((resolve, reject) => {
-          if (!process.send || !process.connected) { reject(new Error('native_generation_ipc_lost')); return; }
-          process.send(message, error => error ? reject(error) : resolve());
-        }),
+        send: (message) =>
+          new Promise<void>((resolve, reject) => {
+            if (!process.send || !process.connected) {
+              reject(new Error('native_generation_ipc_lost'));
+              return;
+            }
+            process.send(message, (error) => (error ? reject(error) : resolve()));
+          }),
       });
       installHostedNativeActivationReplacementReceiver(runtime);
       await runtime.start();
       return runtime;
     } catch (error) {
       closeHostedApprovalRuntimeConnectedTransport(nativeHandle.transport);
-      if (runtime) runtime.close(); else producerProvenance?.close();
+      if (runtime) runtime.close();
+      else producerProvenance?.close();
       throw error;
     }
   }
@@ -76,7 +106,8 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
     );
   } catch (error) {
     producerProvenance?.close();
-    if (inheritedCandidate) closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
+    if (inheritedCandidate)
+      closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
     throw error;
   }
   const candidateActivation =

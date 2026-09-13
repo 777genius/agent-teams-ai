@@ -6,7 +6,10 @@ import type {
   HostedTeamConfigurationMember,
   HostedUpdateDraftTeamRequest,
 } from '../../../contracts/hosted';
-import type { HostedDraftPublicationBinding, HostedDraftPublicationPort } from './HostedDraftPublicationPort';
+import type {
+  HostedDraftPublicationBinding,
+  HostedDraftPublicationPort,
+} from './HostedDraftPublicationPort';
 import type { QueryContext, Revision, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export type HostedTeamConfigurationStorageCreateResult =
@@ -25,6 +28,7 @@ export type HostedTeamConfigurationStorageReadResult =
 export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'updated'; draft: HostedSavedTeamRequest }>
   | Readonly<{ kind: 'not_found' }>
+  | Readonly<{ kind: 'unavailable'; reason: 'manual_approval_unavailable' }>
   | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export type HostedTeamConfigurationStorageDeleteResult =

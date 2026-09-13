@@ -42,14 +42,14 @@ Core v1 must provide one complete browser workflow:
 2. pair and authenticate a trusted browser;
 3. select only a registered workspace through opaque identity;
 4. list and inspect teams;
-5. create and configure a draft with its initial roster;
+5. create and configure a draft with its initial roster, using any supported agent runtime or mixed
+   team composition without a preset-only restriction;
 6. prepare, launch, observe, reconnect, stop, and safely resume after a complete supported container
    restart;
 7. create, assign, update, and move tasks through the core Kanban flow;
 8. send and receive team messages;
-9. inspect bounded runtime status, logs, and failure diagnostics;
-10. answer an approval when a supported provider operation requires an operator decision; and
-11. log out, forget the current device, or reset access from the host.
+9. inspect basic runtime status and errors plus bounded, redacted server logs; and
+10. log out, forget the current device, or reset access from the host.
 
 Every advertised action must work through the real hosted composition and have route/client
 conformance plus focused contract or integration proof. Real-browser E2E validates the complete
@@ -60,6 +60,14 @@ The release does not require every historical Electron team screen or every Team
 Desktop behavior and shared feature code remain supported and tested even when their hosted
 integration is deferred.
 
+Hosted MVP supports automatic tool approval only. Manual approval mode is temporarily unavailable
+at Hosted create, update, promotion, and activation boundaries. The server must return an explicit
+unsupported/unavailable result; it must never rewrite a manual selection to `auto`. Persisted manual
+records remain parseable and readable so desktop/shared compatibility and future migration are
+preserved, but they cannot be promoted or activated. The existing approval implementation remains
+in place, unmounted and deferred. Its later acceptance criteria are tracked in
+[Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md).
+
 ## Deferred hosted expansion
 
 The following are not Core v1 release gates:
@@ -68,6 +76,10 @@ The following are not Core v1 release gates:
 - attachments and rich preview lifecycle;
 - task comments, relationships, and clarification beyond the core task workflow;
 - live member add/replace/remove/restore/restart/skip after initial team creation;
+- post-creation roster and settings editing; initial draft roster/settings editing remains in Core;
+- manual approval mode and its browser decision workflow;
+- browser member-log views and advanced diagnostics; basic status/errors and redacted server logs
+  remain in Core;
 - soft-delete restore, permanent delete, and identity-repair UI; explicit draft discard may remain;
 - cross-team administration;
 - automatic startup adoption or repair of legacy team identity;
@@ -94,6 +106,7 @@ The baseline below distinguishes implemented assets from production readiness.
 | `TeamIdentityFileStore`, `TeamDirectoryLifecycleAdapter`, backup compatibility | `KEEP`   | Reuse as identity/import infrastructure; do not wire automatic startup mutation or repair.                |
 | Roster adoption and identity reconciliation primitives                         | `KEEP`   | Preserve stable IDs and read diagnostics; mutation is explicit and offline when later exposed.            |
 | Review, attachment, member recovery, destructive, and cross-team feature code  | `KEEP`   | Preserve desktop/shared behavior; hosted production composition is deferred, not deleted or re-created.   |
+| Hosted manual approval storage, transport, activation, and reconciliation code | `KEEP`   | Preserve it unmounted; do not activate it or translate manual records to automatic mode in Hosted MVP.    |
 | `.codex-handoff` and hosted research/evidence trees                            | `KEEP`   | Retained historical evidence; do not bulk-delete, rewrite, or require every new worker to read all of it. |
 
 Before changing an existing asset, inspect whether it is production-composed, exported only, or
@@ -129,7 +142,7 @@ external effect.
 Tier B keeps the full durable command descriptor, evidence, effect-recovery classification,
 stable workflow reference, and explicit `operator_required` outcome when absence cannot be proven.
 
-Approval actual-owner admission is a two-generation lifecycle. The first owner generation may
+The retained, deferred approval actual-owner admission is a two-generation lifecycle. The first owner generation may
 publish only launcher-signed `provisioning` or `restart_required` state. Product approval routes
 remain unmounted in both states. A later owner generation may publish `active` only when the same
 launcher-signed lifecycle admission binds the exact approval snapshot SHA-256 digest, approval
@@ -137,7 +150,7 @@ generation, and current owner generation. Product must never derive ingress auth
 owner-writable workspace or `.claude` JSON file. The active snapshot routes authority by its
 immutable `partition.teamId`; there is no process-wide fixed team.
 
-The cross-repository lifecycle launch wire carries explicit `toolApprovalMode: 'auto' | 'manual'`.
+The cross-repository lifecycle launch wire continues to carry explicit `toolApprovalMode: 'auto' | 'manual'` for compatibility.
 `manual` is required to create pending hosted permission requests; legacy create callers default to
 `auto`, while persisted v2 runtime plans require the field explicitly. Approval decision settlement
 uses terminal `operator_required` plus a stable `reconciliationRef` when provider acceptance is
@@ -244,9 +257,18 @@ The minimum proof groups are:
 7. capability degradation and recovery with no hidden desktop listener or unavailable browser call;
 8. real lane-scoped runtime ingress, proving credential absence from the provider process tree,
    replay protection, rotation and revocation, fixed run/lane/provider scope, wrong-body rejection,
-   and no cross-lane callback impersonation; and
-9. provider approval prompt, allow, deny, timeout, reload recovery, and two-tab exactly-once answer
-   safety.
+   and no cross-lane callback impersonation;
+9. manual-approval unavailability at Hosted create, update, promotion, and activation boundaries,
+   including historical records and exact replays: manual records remain readable and byte-for-byte
+   unchanged, metadata-only updates and manual-to-automatic replacements are rejected without data
+   or revision mutation, and no unavailable route, listener, control, provider effect, or automatic
+   conversion is exposed. Provider authorization, credential isolation, per-team routing, custody,
+   redaction, ambiguity/reconciliation, and process-ownership safeguards remain intact. Positive
+   prompt, allow, deny, timeout, reload-recovery, and two-tab exactly-once decision workflows are
+   deferred until the acceptance criteria in
+   [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md) are promoted; and
+10. initial-roster configuration across each supported runtime and mixed-team composition without a
+   preset-only path, plus basic status/error and bounded redacted server-log presentation.
 
 These groups organize evidence; they do not replace the Core rows in the master plan's
 `Real end-to-end verification design`. The same suites must retain stable TeamId and WorkspaceId
@@ -274,6 +296,12 @@ provider/topology/failure cross-product.
 - Run the project-defined full desktop regression and packaging gates before release. Do not create a
   second hosted copy of the desktop matrix.
 
+Hosted browser release E2E runs on Linux against the built Docker Compose deployment with Caddy and
+Chromium, using a genuinely disposable, newly created sandbox project. Windows coverage runs in
+Actions. When the Hosted server is overloaded, isolated macOS sandbox tests and a macOS build may be
+used as a fallback for platform-neutral confidence, but every Linux-specific proof still runs on
+Linux. These gates never use real projects or local agent workers.
+
 The following are not acceptable simplifications: one provider standing in for a family at release,
 one order-dependent browser mega-test, mocked HTTP/SSE at the browser boundary, removal of existing
 desktop regressions, or weakening `coordination-events` replay and recovery coverage.
@@ -283,8 +311,8 @@ desktop regressions, or weakening `coordination-events` replay and recovery cove
 Core v1 does not add a backup UI, scheduler, background backup service, Prometheus exporter, or broad
 load-testing platform.
 
-It still ships a stopped-stack operator backup/restore path and runbook. Proof must reject a running
-controller and partial archive, verify the manifest, checksums, and SQLite integrity, restore only
+Backup and restore are not deferred. Core v1 ships a stopped-stack operator backup/restore path and
+runbook. Proof must reject a running controller and partial archive, verify the manifest, checksums, and SQLite integrity, restore only
 into an empty target, and complete one production-shape restore drill. After integrity validation and
 before service exposure, restore must rotate boot, event, browser device/session, and runtime
 authority, establish fresh mount bindings, and never reuse backed-up sessions or pairing tickets.

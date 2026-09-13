@@ -64,14 +64,14 @@ describe('standalone team lifecycle read wiring', () => {
     );
     expect(source).toContain('admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference)');
     const admissionSteps = [
-      'const bootstrap = await new TeamLifecycleReadBootstrapSource({',
-      'const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference)',
-      'hostedDraftPublication = await createHostedDraftPublicationComposition({ bootstrap, drafts: hostedAuthStorageBackend })',
-      'const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({',
-      'const readPorts = createMountBindingScopedTeamLifecycleReadPorts({',
-      'await readPorts.teamIdentities.listTeamIdentities()',
-      "import('./services/infrastructure/ServiceContext')",
-    ].map((step) => source.indexOf(step));
+      /const bootstrap\s*=\s*await new TeamLifecycleReadBootstrapSource\(\{/,
+      /const appDataRoot\s*=\s*admitHostedReadRoot\(bootstrap\.runtimeInstance\.appDataRoot\.reference\)/,
+      /hostedDraftPublication\s*=\s*await createHostedDraftPublicationComposition\(\{\s*bootstrap,\s*drafts:\s*hostedAuthStorageBackend,?\s*\}\)/,
+      /const teamIdentityGateway\s*=\s*await createTeamLifecycleReadOnlyIdentitySource\(\{/,
+      /const readPorts\s*=\s*createMountBindingScopedTeamLifecycleReadPorts\(\{/,
+      /await readPorts\.teamIdentities\.listTeamIdentities\(\)/,
+      /import\('\.\/services\/infrastructure\/ServiceContext'\)/,
+    ].map((step) => source.search(step));
     for (const [index, position] of admissionSteps.entries()) {
       expect(position).toBeGreaterThan(-1);
       if (index > 0) expect(position).toBeGreaterThan(admissionSteps[index - 1]!);
@@ -132,8 +132,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('if (hostedMode) localContext.startCacheOnly()');
     expect(source).not.toContain('JSON.parse');
     expect(source.match(/createInternalStorageFeature\(\{/g)).toHaveLength(1);
-    expect(source).toContain(
-      "hostedAuthStorageBackend = createInternalStorageFeature({ userDataPath: authDataDirectory, scope: 'hosted-auth' });"
+    expect(source).toMatch(
+      /hostedAuthStorageBackend\s*=\s*createInternalStorageFeature\(\{\s*userDataPath:\s*authDataDirectory,\s*scope:\s*'hosted-auth',?\s*\}\);/
     );
     expect(source).not.toContain('hostedAuthStorageBackend.teamIdentities');
     expect(source).not.toContain('teamIdentityReadBackend');

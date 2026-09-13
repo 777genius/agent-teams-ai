@@ -380,6 +380,38 @@ static int pa_close_provider_descriptors(int handoff_fd) {
   for (size_t index = 0; index < count; index++) (void)close(descriptors[index]);
   return 0;
 }
+static int pa_provider_stdio_enabled(const struct pa_launch *launch) {
+  return launch->provider_stdio != NULL && strcmp(launch->provider_stdio, "pipe") == 0;
+}
+static int pa_close_provider_transport_descriptors(void) {
+  int result = 0;
+  const int descriptors[] = {
+      PA_PROVIDER_STDIN_FD,
+      PA_PROVIDER_STDOUT_FD,
+      PA_PROVIDER_STDERR_FD,
+  };
+  for (size_t index = 0; index < sizeof(descriptors) / sizeof(descriptors[0]); index++) {
+    if (close(descriptors[index]) == -1 && errno != EBADF) result = -1;
+  }
+  return result;
+}
+static int pa_configure_provider_stdio(const struct pa_launch *launch) {
+  int result = 0;
+  if (pa_provider_stdio_enabled(launch)) {
+    if (dup2(PA_PROVIDER_STDIN_FD, STDIN_FILENO) == -1 ||
+        dup2(PA_PROVIDER_STDOUT_FD, STDOUT_FILENO) == -1 ||
+        dup2(PA_PROVIDER_STDERR_FD, STDERR_FILENO) == -1)
+      result = -1;
+    if (pa_close_provider_transport_descriptors() == -1) result = -1;
+  } else {
+    int null_fd = open("/dev/null", O_RDWR | O_CLOEXEC);
+    if (null_fd == -1 || dup2(null_fd, STDIN_FILENO) == -1 ||
+        dup2(null_fd, STDOUT_FILENO) == -1 || dup2(null_fd, STDERR_FILENO) == -1)
+      result = -1;
+    if (null_fd > STDERR_FILENO && close(null_fd) == -1) result = -1;
+  }
+  return result;
+}
 static char **pa_build_environment(const struct pa_launch *launch) {
   char **environment = calloc(launch->envc + 1U, sizeof(*environment));
   if (environment == NULL) return NULL;
@@ -490,6 +522,9 @@ static void pa_run_provider_bootstrap(char **arguments, char **environment) {
   }
   (void)close(handoff_pipe[1]);
   (void)close(PA_EXECUTABLE_FD);
+  (void)close(STDIN_FILENO);
+  (void)close(STDOUT_FILENO);
+  (void)close(STDERR_FILENO);
   free(arguments);
   pa_free_environment(environment);
   if (provider <= 0 || pa_read_exec_handoff(handoff_pipe[0]) == -1) {
@@ -532,7 +567,6 @@ static int pa_spawn_main(const struct pa_launch *launch, struct pa_main_state *m
   for (size_t index = 0; index < launch->argc; index++) arguments[index + 1U] = launch->argv[index];
   child = fork();
   if (child == 0) {
-    int null_fd;
     (void)close(ready_pipe[0]);
     (void)close(gate_pipe[1]);
     if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) == -1 ||
@@ -542,11 +576,7 @@ static int pa_spawn_main(const struct pa_launch *launch, struct pa_main_state *m
     if (setpgid(0, 0) == -1 || fchdir(PA_WORKDIR_FD) == -1 ||
         fcntl(PA_EXECUTABLE_FD, F_SETFD, FD_CLOEXEC) == -1)
       _exit(125);
-    null_fd = open("/dev/null", O_RDWR | O_CLOEXEC);
-    if (null_fd == -1 || dup2(null_fd, STDIN_FILENO) == -1 ||
-        dup2(null_fd, STDOUT_FILENO) == -1 || dup2(null_fd, STDERR_FILENO) == -1)
-      _exit(125);
-    if (null_fd > STDERR_FILENO) (void)close(null_fd);
+    if (pa_configure_provider_stdio(launch) == -1) _exit(125);
     if (ready_pipe[1] != PA_PROVIDER_READY_FD) {
       if (dup2(ready_pipe[1], PA_PROVIDER_READY_FD) == -1) _exit(125);
       (void)close(ready_pipe[1]);
@@ -556,6 +586,7 @@ static int pa_spawn_main(const struct pa_launch *launch, struct pa_main_state *m
   }
   (void)close(PA_EXECUTABLE_FD);
   (void)close(PA_WORKDIR_FD);
+  if (pa_provider_stdio_enabled(launch)) (void)pa_close_provider_transport_descriptors();
   (void)close(ready_pipe[1]);
   (void)close(gate_pipe[0]);
   free(arguments);

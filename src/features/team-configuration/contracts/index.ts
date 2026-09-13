@@ -31,10 +31,13 @@ export {
 export * from './hostedDraftPublication';
 export {
   assertHostedRosterMatches,
+  HOSTED_MVP_TOOL_APPROVAL_MODE,
   type HostedInitialLane,
   type HostedInitialMember,
   type HostedRosterConfiguration,
   hostedRosterMembers,
   isHostedInitialMemberName,
+  isHostedMvpApprovalModeAvailable,
+  isHostedMvpManualApprovalAvailable,
   parseHostedRosterConfiguration,
 } from './hostedRosterConfiguration';

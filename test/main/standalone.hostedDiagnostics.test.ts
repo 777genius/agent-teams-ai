@@ -312,7 +312,7 @@ describe('standalone hosted diagnostics', () => {
       /hostedDiagnostics = createHostedDiagnosticsComposition\(\{\s*authentication: hostedAccessFeature\.http,\s*runtimeInstance: hostedDiagnosticsRuntimeInstance,\s*expectedDeploymentId: hostedAccessFeature\.deploymentId,\s*routeAdmissionBinding: hostedRouteAdmissionBinding,\s*\}\)/
     );
     expect(source).toMatch(
-      /createRouteAdmission: isReady => createHostedRouteAdmissionBinding\(\{\s*routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,\s*routeScope: 'production',\s*readiness: \{ readiness: async \(\) => createStandaloneHostedRouteReadiness\(\{[\s\S]*?lifecycleOwnerAvailable: isReady\(\),\s*\}\)/
+      /createRouteAdmission:\s*(?:\(isReady\)|isReady)\s*=>\s*createHostedRouteAdmissionBinding\(\{\s*routes:\s*HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,\s*routeScope:\s*'production',\s*readiness:\s*\{\s*readiness:\s*async\s*\(\)\s*=>\s*createStandaloneHostedRouteReadiness\(\{[\s\S]*?lifecycleOwnerAvailable:\s*isReady\(\),?\s*\}\)/
     );
     expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
     expect(source).toContain('hostedProductionOwnerRouteDescriptors(productionOwnerAdmission)');

@@ -1,6 +1,9 @@
 import { randomBytes } from 'node:crypto';
 
-import { hostedRosterMembers } from '@features/team-configuration/contracts';
+import {
+  hostedRosterMembers,
+  isHostedMvpApprovalModeAvailable,
+} from '@features/team-configuration/contracts';
 import { sql } from 'drizzle-orm';
 import {
   check,
@@ -101,9 +104,12 @@ function draft(row: DraftRow) {
   let roster: { members: unknown; configuration?: unknown };
   if (Array.isArray(stored)) roster = { members: stored };
   else {
-    if (!stored || typeof stored !== 'object' ||
-        Object.keys(stored).sort().join(',') !== 'configuration,members,schemaVersion' ||
-        (stored as { schemaVersion?: unknown }).schemaVersion !== 1) {
+    if (
+      !stored ||
+      typeof stored !== 'object' ||
+      Object.keys(stored).sort().join(',') !== 'configuration,members,schemaVersion' ||
+      (stored as { schemaVersion?: unknown }).schemaVersion !== 1
+    ) {
       throw new TypeError('hosted-team-configuration-stored-roster-invalid');
     }
     roster = stored as { members: unknown; configuration: unknown };
@@ -186,7 +192,11 @@ export class HostedTeamConfigurationStorageOps {
           reservedTeamId,
           initialRevision,
           JSON.stringify(input.metadata),
-          JSON.stringify(input.configuration ? { schemaVersion: 1, members: input.members, configuration: input.configuration } : input.members),
+          JSON.stringify(
+            input.configuration
+              ? { schemaVersion: 1, members: input.members, configuration: input.configuration }
+              : input.members
+          ),
           admittedAtMs,
           admittedAtMs
         );
@@ -205,13 +215,23 @@ export class HostedTeamConfigurationStorageOps {
         if (input.publicationBinding) {
           const operationId = `adoption_${randomBytes(16).toString('hex')}`;
           const binding = input.publicationBinding;
-          db.prepare(`INSERT INTO hosted_team_configuration_publications
+          db.prepare(
+            `INSERT INTO hosted_team_configuration_publications
             (operation_id, workspace_id, team_id, actor_id, deployment_id, runtime_workspace_id,
              binding_generation, legacy_key, created_at, initial_revision, directory_fingerprint, state)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending')`).run(
-            operationId, input.workspaceId, reservedTeamId, binding.actorId, binding.deploymentId,
-            binding.runtimeWorkspaceId, binding.bindingGeneration, `draft-${operationId.slice(9)}`,
-            new Date(admittedAtMs).toISOString(), initialRevision);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending')`
+          ).run(
+            operationId,
+            input.workspaceId,
+            reservedTeamId,
+            binding.actorId,
+            binding.deploymentId,
+            binding.runtimeWorkspaceId,
+            binding.bindingGeneration,
+            `draft-${operationId.slice(9)}`,
+            new Date(admittedAtMs).toISOString(),
+            initialRevision
+          );
         }
         return {
           kind: 'created',
@@ -254,13 +274,28 @@ export class HostedTeamConfigurationStorageOps {
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
-        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
-        const nextRevision = revision();
         const current = draft(row);
+        // This Hosted-only policy check is inside the same IMMEDIATE transaction as the CAS write.
+        // Historical manual records stay readable, but no update (including metadata-only or an
+        // automatic replacement) may mutate their bytes or advance their revision.
+        if (
+          (current.configuration && !isHostedMvpApprovalModeAvailable(current.configuration)) ||
+          (input.updates.configuration &&
+            !isHostedMvpApprovalModeAvailable(input.updates.configuration))
+        ) {
+          return { kind: 'unavailable', reason: 'manual_approval_unavailable' };
+        }
+        if (this.isFrozen(input.workspaceId, input.teamId))
+          return { kind: 'conflict', reason: 'promotion_frozen' };
+        const nextRevision = revision();
         const { configuration, ...metadataUpdates } = input.updates;
         const nextMetadata = { ...current.metadata, ...metadataUpdates };
         const nextMembersJson = configuration
-          ? JSON.stringify({ schemaVersion: 1, members: hostedRosterMembers(configuration), configuration })
+          ? JSON.stringify({
+              schemaVersion: 1,
+              members: hostedRosterMembers(configuration),
+              configuration,
+            })
           : row.members_json;
         const changed = db
           .prepare(
@@ -314,7 +349,8 @@ export class HostedTeamConfigurationStorageOps {
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
-        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
+        if (this.isFrozen(input.workspaceId, input.teamId))
+          return { kind: 'conflict', reason: 'promotion_frozen' };
         const changed = db
           .prepare(
             `UPDATE hosted_team_configuration_drafts
@@ -324,8 +360,10 @@ export class HostedTeamConfigurationStorageOps {
           )
           .run(revision(), admittedAtMs, input.workspaceId, input.teamId, input.expectedRevision);
         if (changed.changes === 1) {
-          db.prepare(`UPDATE hosted_team_configuration_publications SET state = 'tombstoned'
-            WHERE workspace_id = ? AND team_id = ?`).run(input.workspaceId, input.teamId);
+          db.prepare(
+            `UPDATE hosted_team_configuration_publications SET state = 'tombstoned'
+            WHERE workspace_id = ? AND team_id = ?`
+          ).run(input.workspaceId, input.teamId);
         }
         return changed.changes === 1
           ? { kind: 'deleted', outcome: 'deleted' }
@@ -337,21 +375,43 @@ export class HostedTeamConfigurationStorageOps {
   /** Publication absence is legacy; another actor's immutable operation is never absence.
    * Runs inside the create replay/delete transaction, before mutation or replay success.
    */
-  private assertPublicationActor(workspaceId: string, teamId: string,
-    binding: TeamDraftPublicationBinding | undefined): void {
-    const row = this.getDatabase().prepare(`SELECT actor_id, deployment_id, runtime_workspace_id, binding_generation
-      FROM hosted_team_configuration_publications WHERE workspace_id = ? AND team_id = ?`)
-      .get(workspaceId, teamId) as { actor_id: string; deployment_id: string;
-        runtime_workspace_id: string; binding_generation: number } | undefined;
-    if (row && (!binding || row.actor_id !== binding.actorId || row.deployment_id !== binding.deploymentId ||
-        row.runtime_workspace_id !== binding.runtimeWorkspaceId || row.binding_generation !== binding.bindingGeneration)) {
+  private assertPublicationActor(
+    workspaceId: string,
+    teamId: string,
+    binding: TeamDraftPublicationBinding | undefined
+  ): void {
+    const row = this.getDatabase()
+      .prepare(
+        `SELECT actor_id, deployment_id, runtime_workspace_id, binding_generation
+      FROM hosted_team_configuration_publications WHERE workspace_id = ? AND team_id = ?`
+      )
+      .get(workspaceId, teamId) as
+      | {
+          actor_id: string;
+          deployment_id: string;
+          runtime_workspace_id: string;
+          binding_generation: number;
+        }
+      | undefined;
+    if (
+      row &&
+      (!binding ||
+        row.actor_id !== binding.actorId ||
+        row.deployment_id !== binding.deploymentId ||
+        row.runtime_workspace_id !== binding.runtimeWorkspaceId ||
+        row.binding_generation !== binding.bindingGeneration)
+    ) {
       throw new Error('draft-publication-actor-binding-mismatch');
     }
   }
 
   private isFrozen(workspaceId: string, teamId: string): boolean {
-    return !!this.getDatabase().prepare(`SELECT 1 FROM hosted_team_configuration_promotions
-      WHERE workspace_id = ? AND team_id = ?`).get(workspaceId, teamId);
+    return !!this.getDatabase()
+      .prepare(
+        `SELECT 1 FROM hosted_team_configuration_promotions
+      WHERE workspace_id = ? AND team_id = ?`
+      )
+      .get(workspaceId, teamId);
   }
 
   private requireMutationAdmission(deadlineAtMs: number): number {
