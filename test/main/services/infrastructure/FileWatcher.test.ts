@@ -109,16 +109,6 @@ vi.mock('../../../../src/main/services/error/ErrorDetector', () => ({
   },
 }));
 
-vi.mock('../../../../src/main/services/infrastructure/ConfigManager', () => ({
-  ConfigManager: {
-    getInstance: () => ({
-      getConfig: () => ({
-        notifications: { includeSubagentErrors: true, triggers: [] },
-      }),
-    }),
-  },
-}));
-
 vi.mock('../../../../src/main/services/discovery/ProjectPathResolver', () => ({
   projectPathResolver: {
     invalidateProject: vi.fn(),
@@ -260,6 +250,50 @@ describe('FileWatcher', () => {
     vi.unstubAllEnvs();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('defaults subagent error notifications off and honors the injected policy', async () => {
+    vi.mocked(fsp.access).mockResolvedValue();
+    const projectsDir = '/tmp/projects';
+    const subagentRelativePath = 'encoded-project/session-1/subagents/agent-worker.jsonl';
+    const subagentPath = path.join(projectsDir, subagentRelativePath);
+
+    const createHarness = (shouldIncludeSubagentErrors?: () => boolean) => {
+      const watcher = new FileWatcher(
+        new DataCache(50, 10, false),
+        projectsDir,
+        '/tmp/todos',
+        undefined,
+        shouldIncludeSubagentErrors
+      );
+      watcher.setNotificationManager(createMockNotificationManager());
+      const internals = watcher as unknown as {
+        processProjectsChange: (eventType: string, filename: string) => Promise<void>;
+        detectErrorsInSessionFile: ReturnType<typeof vi.fn>;
+      };
+      internals.detectErrorsInSessionFile = vi.fn().mockResolvedValue(undefined);
+      return internals;
+    };
+
+    const defaultHarness = createHarness();
+    await defaultHarness.processProjectsChange('change', subagentRelativePath);
+    expect(defaultHarness.detectErrorsInSessionFile).not.toHaveBeenCalled();
+
+    let enabled = false;
+    const shouldIncludeSubagentErrors = vi.fn(() => enabled);
+    const configuredHarness = createHarness(shouldIncludeSubagentErrors);
+    await configuredHarness.processProjectsChange('change', subagentRelativePath);
+    expect(configuredHarness.detectErrorsInSessionFile).not.toHaveBeenCalled();
+
+    enabled = true;
+    await configuredHarness.processProjectsChange('change', subagentRelativePath);
+    expect(shouldIncludeSubagentErrors).toHaveBeenCalledTimes(2);
+    expect(configuredHarness.detectErrorsInSessionFile).toHaveBeenCalledWith(
+      'encoded-project',
+      'session-1',
+      subagentPath,
+      'worker'
+    );
   });
 
   it('retries and starts watchers when directories appear later', async () => {

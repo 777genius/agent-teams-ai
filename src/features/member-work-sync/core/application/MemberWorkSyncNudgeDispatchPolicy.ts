@@ -120,7 +120,7 @@ function getAgendaReviewPickupRequestEventIds(agenda: MemberWorkSyncAgenda): str
           (item) =>
             item.kind === 'review' &&
             item.evidence.reviewObligation === 'review_pickup_required' &&
-            item.evidence.canBypassPhase2 === true &&
+            item.evidence.canBypassDeliveryReadiness === true &&
             (item.evidence.reviewDiagnostics?.length ?? 0) === 0
         )
         .map((item) => item.evidence.reviewRequestEventId)

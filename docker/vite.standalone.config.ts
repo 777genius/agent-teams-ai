@@ -1,8 +1,8 @@
 /**
  * Vite build config for the standalone (non-Electron) server.
  *
- * Produces a single CJS bundle at dist-standalone/index.cjs that can be
- * run with `node dist-standalone/index.cjs`.
+ * Produces the standalone server at dist-standalone/index.cjs and the
+ * internal-storage worker beside its shared chunk under dist-standalone/assets.
  */
 
 import { resolve } from 'path'
@@ -28,7 +28,7 @@ const nodeBuiltins = new Set([
 // (fastify ecosystem uses internal file resolution that doesn't survive bundling)
 const externalPackages = [
   'fastify', '@fastify/cors', '@fastify/static',
-  'agent-teams-controller'
+  'agent-teams-controller', 'better-sqlite3'
 ]
 
 // Stub native .node addons (ssh2/cpu-features have JS fallbacks)
@@ -109,11 +109,16 @@ export default defineConfig({
     ssr: true,
     rollupOptions: {
       input: {
-        index: resolve(ROOT, 'src/main/standalone.ts')
+        index: resolve(ROOT, 'src/main/standalone.ts'),
+        'internal-storage-worker': resolve(
+          ROOT,
+          'src/features/internal-storage/main/infrastructure/worker/internalStorageWorkerEntry.ts'
+        )
       },
       output: {
         format: 'cjs',
-        entryFileNames: '[name].cjs'
+        entryFileNames: (chunk) =>
+          chunk.name === 'internal-storage-worker' ? 'assets/[name].cjs' : '[name].cjs'
       },
       external: (id) => {
         // Externalize Node.js built-ins

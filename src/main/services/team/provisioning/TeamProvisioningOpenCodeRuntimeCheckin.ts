@@ -16,6 +16,7 @@ import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
   hasCommittedOpenCodeRuntimeBootstrapSessionEvidence,
   type OpenCodeRuntimeBootstrapCheckinIdempotencyResult,
+  type OpenCodeRuntimeBootstrapEvidencePorts,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotencyFromMember,
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { summarizeRuntimeLaunchResultMembers } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';

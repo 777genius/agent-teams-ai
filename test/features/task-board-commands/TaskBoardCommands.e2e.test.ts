@@ -7,16 +7,14 @@ import {
   ApplicationCommandLedgerStatus,
   ApplicationCommandRunOutcome,
 } from '@features/application-command-ledger/contracts';
-import {
-  createApplicationCommandLedgerFeature,
-  NodeApplicationCommandHasher,
-} from '@features/application-command-ledger/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   TaskBoardCommandFacade,
   type TaskBoardCreateTaskDestination,
 } from '@features/task-board-commands';
+import { createApplicationCommandHasher } from '@main/composition/applicationCommandLedgerComposition';
 import { type AgentTeamsController, createController } from 'agent-teams-controller';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -78,7 +76,7 @@ describe('task-board commands E2E', () => {
       Promise.reject(new Error('native module ABI mismatch'))
     );
     const runner = { run: vi.fn() };
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade(runner as never, {
       isDurableStorageAvailable: () => selector.select(true, false),
       hashPayload: (payload) => hasher.hashJson(payload),
@@ -107,7 +105,7 @@ describe('task-board commands E2E', () => {
 
   it('preserves the create failure when JSON fallback recovery lookup also fails', async () => {
     const harness = await makeHarness();
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade(null, {
       hashPayload: (payload) => hasher.hashJson(payload),
     });
@@ -149,7 +147,7 @@ describe('task-board commands E2E', () => {
 
   it('preserves the create failure when JSON fallback recovery reconciliation also fails', async () => {
     const harness = await makeHarness();
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade(null, {
       hashPayload: (payload) => hasher.hashJson(payload),
     });
@@ -186,7 +184,7 @@ describe('task-board commands E2E', () => {
 
   it('preserves terminal destination conflicts during JSON fallback recovery', async () => {
     const harness = await makeHarness();
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade(null, {
       hashPayload: (payload) => hasher.hashJson(payload),
     });
@@ -271,7 +269,7 @@ describe('task-board commands E2E', () => {
     const selector = new InternalStorageBackendSelector(() =>
       Promise.reject(new Error('native module ABI mismatch'))
     );
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const fallbackFacade = new TaskBoardCommandFacade({ run: vi.fn() } as never, {
       isDurableStorageAvailable: () => selector.select(true, false),
       hashPayload: (payload) => hasher.hashJson(payload),
@@ -344,7 +342,7 @@ describe('task-board commands E2E', () => {
     const selector = new InternalStorageBackendSelector(() =>
       Promise.reject(new Error('native module ABI mismatch'))
     );
-    const hasher = new NodeApplicationCommandHasher();
+    const hasher = createApplicationCommandHasher();
     const facade = new TaskBoardCommandFacade({ run: vi.fn() } as never, {
       isDurableStorageAvailable: () => selector.select(true, false),
       hashPayload: (payload) => hasher.hashJson(payload),
@@ -584,7 +582,7 @@ describe('task-board commands E2E', () => {
     const harness = await makeHarness();
     const identity = makeIdentity('99999999-9999-4999-8999-999999999999');
     const payload = { subject: 'Original subject', createdBy: 'user' };
-    const payloadHash = new NodeApplicationCommandHasher().hashJson(payload);
+    const payloadHash = createApplicationCommandHasher().hashJson(payload);
     await seedStaleStarted(harness, identity, payload);
     harness.controller.taskBoard.createTask({
       ...payload,
@@ -662,6 +660,7 @@ describe('task-board commands E2E', () => {
     });
     const feature = createApplicationCommandLedgerFeature({
       storageGateway: new InProcessGateway(core),
+      hasher: createApplicationCommandHasher(),
     });
     const controller = createController({ teamName: TEAM_NAME, claudeDir });
     const destination = makeDestination(controller);
@@ -722,7 +721,7 @@ async function seedStaleStarted(
     scopeKey: TEAM_NAME,
     ...identity,
     operation: CREATE_TASK_OPERATION,
-    payloadHash: new NodeApplicationCommandHasher().hashJson(payload),
+    payloadHash: createApplicationCommandHasher().hashJson(payload),
     metadataJson: null,
     nowIso: '2020-01-01T00:00:00.000Z',
     startedStaleAfterMs: 60_000,

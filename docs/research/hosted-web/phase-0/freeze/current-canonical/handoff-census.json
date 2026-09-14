@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "canonicalPredecessorCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+  },
+  "authority": "lane-identity-index.json",
+  "lanes": [
+    { "laneId": "w1", "path": ".codex-handoff/phase-00-w1.json", "state": "integrated-current" },
+    { "laneId": "w2", "path": ".codex-handoff/phase-00-w2.json", "state": "integrated-current" },
+    { "laneId": "w3", "path": ".codex-handoff/phase-00-w3.json", "state": "integrated-current" },
+    {
+      "laneId": "w4",
+      "path": ".codex-handoff/phase-00-w4.json",
+      "state": "integrated-current-characterization"
+    },
+    { "laneId": "w5", "path": ".codex-handoff/phase-00-w5.json", "state": "integrated-current" },
+    {
+      "laneId": "w6",
+      "path": ".codex-handoff/phase-00-w6.json",
+      "state": "integrated-current-characterization"
+    }
+  ],
+  "policy": "Current indexes override stale registry progress. Historical handoffs remain immutable. The accepted freeze is f4fa24aac9615a4ce10632965a2244a2e11a273e; rejected h7/h8 outputs are not adopted."
+}

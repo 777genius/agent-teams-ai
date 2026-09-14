@@ -16,6 +16,7 @@ import {
   useOpenCodeProviderModelCatalog,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
+import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { isOpenCodeCatalogHydrating } from '@renderer/components/runtime/providerConnectionUi';
@@ -31,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
@@ -159,6 +161,14 @@ interface OpenCodeProviderLoadingRowDef {
   sourceId: string;
   status: 'connected' | 'checking';
 }
+const runtimeProviderProvisioningReadinessTransport =
+  createRuntimeProviderProvisioningReadinessTransport();
+const openCodeLocalModelSetupDependencies = {
+  configureLocalProvider: (
+    input: Parameters<typeof api.runtimeProviderManagement.configureLocalProvider>[0]
+  ) => api.runtimeProviderManagement.configureLocalProvider(input),
+  checkReadiness: runtimeProviderProvisioningReadinessTransport.checkReadiness,
+};
 interface OpenCodeSourceOption {
   id: string;
   label: string;
@@ -191,7 +201,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -207,13 +216,11 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
@@ -222,7 +229,6 @@ interface OpenCodeVirtualModelRow {
 }
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
 
 interface OpenCodeModelCostRates {
@@ -1238,6 +1244,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       projectPath: openCodeCatalogScopeKey,
       addingMessage: t('modelSelector.localModels.addingHint'),
       chooseProjectMessage: t('modelSelector.localModels.chooseProject'),
+      dependencies: openCodeLocalModelSetupDependencies,
       autoSelectContextKey: JSON.stringify([selectedProviderId, effectiveProviderId, value]),
       onConfigured: async (configuredProjectPath) => {
         refreshOpenCodeLocalProviders();

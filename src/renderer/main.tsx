@@ -6,6 +6,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import { initializeAppCloseCoordination } from '@features/app-close-coordination/renderer';
+import { HostedAuthGate } from '@features/hosted-access/renderer';
 
 import { registerDynamicImportRecovery } from './utils/dynamicImportRecovery';
 import { App } from './App';
@@ -184,34 +185,56 @@ function stopEnhancedSplashScene(): void {
   window.__claudeTeamsSplashScene?.stop();
 }
 
-function mountApp(): void {
-  if (root) return;
+function initializeRendererWorkspace(): void {
+  if (window.__claudeTeamsUiDidInit) return;
 
-  // The main process reports ready only after config and telemetry IPC handlers exist.
+  window.__claudeTeamsUiDidInit = true;
   void bootstrapRendererTelemetryFromConfig();
-
   // React 18 StrictMode intentionally mounts/unmounts effects twice in dev,
   // which can start duplicate IPC init chains. Make initialization a one-time
   // module-level side effect guarded by a global flag.
-  if (!window.__claudeTeamsUiDidInit) {
-    window.__claudeTeamsUiDidInit = true;
-    // Keep the cleanup reachable for hot module reload / shutdown paths.
-    const cleanupNotifications = initializeNotificationListeners();
-    const cleanupAppCloseCoordination = initializeAppCloseCoordination(
-      window.electronAPI?.appCloseCoordination
-    );
-    window.__claudeTeamsUiCleanup = (): void => {
-      cleanupAppCloseCoordination();
-      cleanupNotifications();
-    };
+  // Keep the cleanup reachable for hot module reload / shutdown paths.
+  const cleanupNotifications = initializeNotificationListeners();
+  const cleanupAppCloseCoordination = initializeAppCloseCoordination(
+    window.electronAPI?.appCloseCoordination
+  );
+  window.__claudeTeamsUiCleanup = (): void => {
+    cleanupAppCloseCoordination();
+    cleanupNotifications();
+  };
+}
+
+function dismissHostedStartupSplash(): void {
+  stopStaticSplashTimer();
+  stopStartupTicker();
+  stopEnhancedSplashScene();
+  window.__claudeTeamsSplashScene = undefined;
+  document.getElementById('splash')?.remove();
+}
+
+function mountApp(): void {
+  if (root) return;
+
+  if (window.electronAPI) {
+    // The Electron main process reports ready only after protected IPC-backed
+    // workspace services and the renderer startup bridge are available.
+    initializeRendererWorkspace();
+  } else {
+    // Hosted authentication is the first browser workflow. Remove the desktop
+    // startup splash before checking auth, and defer every protected renderer
+    // initialization request until HostedAuthGate confirms a session.
+    dismissHostedStartupSplash();
   }
 
   root = ReactDOM.createRoot(document.getElementById('root')!);
-  root.render(
-    <React.StrictMode>
+  const app = window.electronAPI ? (
+    <App />
+  ) : (
+    <HostedAuthGate onAuthenticated={initializeRendererWorkspace}>
       <App />
-    </React.StrictMode>
+    </HostedAuthGate>
   );
+  root.render(<React.StrictMode>{app}</React.StrictMode>);
 }
 
 async function bootstrapRenderer(): Promise<void> {

@@ -150,4 +150,90 @@ describe('TeamKanbanManager', () => {
     await manager.garbageCollect('my-team', new Set(['12']));
     expect(hoisted.atomicWrite).not.toHaveBeenCalled();
   });
+
+  it('preserves unknown fields for retained state and does not resurrect removed tasks', async () => {
+    hoisted.files.set(
+      statePath,
+      JSON.stringify({
+        version: 1,
+        teamName: 'my-team',
+        reviewers: [],
+        futureRoot: { retained: true },
+        tasks: {
+          '12': {
+            column: 'review',
+            reviewer: 'alice',
+            movedAt: '2026-01-01T00:00:00.000Z',
+            futureTask: { retained: true },
+          },
+          '13': {
+            column: 'review',
+            movedAt: '2026-01-01T00:00:00.000Z',
+            futureTask: { removedWithTask: true },
+          },
+        },
+        columnOrder: {
+          review: ['12', '13'],
+          futureColumn: { retained: true },
+        },
+      })
+    );
+
+    await manager.updateTask('my-team', '12', { op: 'set_column', column: 'approved' });
+    await manager.updateTask('my-team', '13', { op: 'remove' });
+
+    const persisted = JSON.parse(hoisted.files.get(statePath) ?? '{}') as {
+      futureRoot?: unknown;
+      tasks?: Record<string, Record<string, unknown>>;
+      columnOrder?: Record<string, unknown>;
+    };
+    expect(persisted.futureRoot).toEqual({ retained: true });
+    expect(persisted.tasks?.['12']).toMatchObject({
+      column: 'approved',
+      futureTask: { retained: true },
+    });
+    expect(persisted.tasks?.['12']?.reviewer).toBeUndefined();
+    expect(persisted.tasks?.['13']).toBeUndefined();
+    expect(persisted.columnOrder?.futureColumn).toEqual({ retained: true });
+  });
+
+  it.each([
+    ['future version', JSON.stringify({ version: 2, teamName: 'my-team', tasks: {} })],
+    ['malformed JSON', '{not-json'],
+    [
+      'malformed known task field',
+      JSON.stringify({
+        version: 1,
+        teamName: 'my-team',
+        tasks: {
+          '12': {
+            column: 'review',
+            movedAt: '2026-01-01T00:00:00.000Z',
+            reviewer: { name: 'alice' },
+          },
+        },
+      }),
+    ],
+    [
+      'malformed known column order',
+      JSON.stringify({
+        version: 1,
+        teamName: 'my-team',
+        tasks: {},
+        columnOrder: { review: ['12', 13] },
+      }),
+    ],
+    [
+      'oversized JSON',
+      JSON.stringify({ teamName: 'my-team', tasks: {}, pad: 'x'.repeat(512 * 1024) }),
+    ],
+  ])('fails closed on %s without writing', async (_label, raw) => {
+    hoisted.files.set(statePath, raw);
+
+    await expect(
+      manager.updateTask('my-team', '12', { op: 'set_column', column: 'review' })
+    ).rejects.toBeTruthy();
+    expect(hoisted.files.get(statePath)).toBe(raw);
+    expect(hoisted.atomicWrite).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,12 @@
-import type { RuntimeStoreManifestEntryState } from './RuntimeStoreManifest';
+import { readFile } from 'node:fs/promises';
+
+import {
+  createDefaultRuntimeStoreManifest,
+  type RuntimeStoreManifest,
+  type RuntimeStoreManifestEntryState,
+  validateRuntimeStoreManifest,
+} from './RuntimeStoreManifest';
+
 import type {
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
@@ -23,6 +31,61 @@ export interface OpenCodeCommittedBootstrapSessionEvidence {
   activeRunId: string | null;
   sessions: OpenCodeCommittedBootstrapSessionRecord[];
   diagnostics: string[];
+}
+
+export interface ClearOpenCodeRuntimeLaneStorageParams {
+  teamsBasePath: string;
+  teamName: string;
+  laneId: string;
+}
+
+export type ClearOpenCodeRuntimeLaneStorageResult = 'cleared' | 'owner_changed';
+
+export async function resolveOpenCodeRuntimeLaneClearOwnership(input: {
+  expectedRunId: string | undefined;
+  laneEntryExists: boolean;
+  laneEntryRunId: string | undefined;
+  manifestExists: boolean;
+  laneDirectoryExists(): Promise<boolean>;
+  readManifestActiveRunId(): Promise<string | null | undefined>;
+}): Promise<ClearOpenCodeRuntimeLaneStorageResult | null> {
+  if (input.expectedRunId === undefined) return null;
+  if (!input.laneEntryExists && !input.manifestExists) {
+    return (await input.laneDirectoryExists()) ? 'owner_changed' : 'cleared';
+  }
+  if (input.laneEntryRunId !== undefined && input.laneEntryRunId !== input.expectedRunId) {
+    return 'owner_changed';
+  }
+  if (input.manifestExists) {
+    return (await input.readManifestActiveRunId()) === input.expectedRunId ? null : 'owner_changed';
+  }
+  return input.laneEntryRunId === undefined ? 'owner_changed' : null;
+}
+
+export async function readRuntimeStoreManifestEvidenceData(
+  manifestPath: string,
+  teamName: string,
+  clock: () => Date
+): Promise<RuntimeStoreManifest> {
+  let raw: string;
+  try {
+    raw = await readFile(manifestPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return createDefaultRuntimeStoreManifest(teamName, clock().toISOString());
+    }
+    throw error;
+  }
+  const parsed = JSON.parse(raw) as unknown;
+  const maybeRecord =
+    parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  const manifestData =
+    maybeRecord && Object.prototype.hasOwnProperty.call(maybeRecord, 'data')
+      ? maybeRecord.data
+      : parsed;
+  return validateRuntimeStoreManifest(manifestData);
 }
 
 export function normalizeOpenCodeBootstrapSessionRecord(

@@ -9,16 +9,20 @@ import {
   useOpenCodeProviderModelCatalog,
 } from './useOpenCodeProviderModelCatalog';
 
+import type {
+  OpenCodeCatalogDependencies,
+  OpenCodeCatalogTransportPort,
+} from '../ports/OpenCodeCatalogTransportPort';
+
 const apiMock = vi.hoisted(() => ({
   runtimeProviderManagement: {
     loadModels: vi.fn(() => new Promise(() => undefined)),
   },
 }));
-
-vi.mock('@renderer/api', () => ({
-  api: apiMock,
-  isElectronMode: () => true,
-}));
+const dependencies = {
+  isElectronCapable: () => true,
+  transport: apiMock.runtimeProviderManagement as unknown as OpenCodeCatalogTransportPort,
+} satisfies OpenCodeCatalogDependencies;
 
 interface HookProbeProps {
   refreshRevision?: number;
@@ -26,13 +30,16 @@ interface HookProbeProps {
 }
 
 const HookProbe = ({ refreshRevision, onResult }: HookProbeProps): null => {
-  const result = useOpenCodeProviderModelCatalog({
-    enabled: true,
-    sourceProviderId: 'openrouter',
-    projectPath: '/sandbox/project',
-    refreshRevision,
-    passiveProviderStatus: null,
-  });
+  const result = useOpenCodeProviderModelCatalog(
+    {
+      enabled: true,
+      sourceProviderId: 'openrouter',
+      projectPath: '/sandbox/project',
+      refreshRevision,
+      passiveProviderStatus: null,
+    },
+    dependencies
+  );
   onResult?.(result);
   return null;
 };

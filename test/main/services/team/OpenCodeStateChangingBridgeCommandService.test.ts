@@ -779,71 +779,6 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       { client: clientIdentity, server },
       ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
     );
-    const service = createService();
-
-    await expect(service.execute(buildSendInput('acceptance'))).rejects.toThrow(
-      'OpenCode delivery acceptance mode is required'
-    );
-    expect(bridge.calls).toHaveLength(0);
-    await expect(ledger.list()).resolves.toEqual([]);
-    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
-
-    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
-      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
-    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
-      { client: clientIdentity, server },
-      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
-    );
-    bridge.resultFactory = ({ body, command, options }) =>
-      bridgeSuccess({
-        requestId: options.requestId,
-        command,
-        data: {
-          runId: 'run-1',
-          idempotencyKey: body.preconditions.idempotencyKey,
-          runtimeStoreManifestHighWatermark: 10,
-          expectedBehaviorFingerprint: 'a'.repeat(64),
-        },
-      });
-    await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
-      ok: true,
-    });
-    expect(bridge.calls).toHaveLength(1);
-  });
-
-  it('requires the file-parts v2 contract only when sendMessage contains video', async () => {
-    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
-    const server = peerIdentity('agent_teams_orchestrator');
-    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
-    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
-      { client: clientIdentity, server },
-      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
-    );
-    const service = createService();
-    const videoFileParts = [
-      {
-        type: 'file' as const,
-        mime: 'video/mp4',
-        url: 'data:video/mp4;base64,AAAA',
-        filename: 'clip.mp4',
-      },
-    ];
-    const videoInput = buildSendInput('observed', videoFileParts);
-    const acceptanceVideoInput = buildSendInput('acceptance', videoFileParts);
-
-    await expect(service.execute(videoInput)).rejects.toThrow(
-      'OpenCode video file parts require orchestrator contract version'
-    );
-    await expect(service.execute(acceptanceVideoInput)).rejects.toThrow(
-      'OpenCode video file parts require orchestrator contract version'
-    );
-    expect(bridge.calls).toHaveLength(0);
-
-    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
-    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
-      { client: clientIdentity, server },
-      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
-    );
     bridge.resultFactory = ({ body, command, options }) =>
       bridgeSuccess({
         requestId: options.requestId,
@@ -908,7 +843,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         data: {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
-          runtimeStoreManifestHighWatermark: 0,
+          runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
         },
       });
     const service = createService();
@@ -924,6 +860,669 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
     expect(bridge.calls[0].body).toMatchObject({ expectedCapabilitySnapshotId: 'cap-1' });
     expect(bridge.calls[0].body.preconditions).toMatchObject({
+      expectedManifestHighWatermark: null,
+      expectedCapabilitySnapshotId: 'cap-1',
+      idempotencyKey: expect.stringMatching(
+        /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
+      ),
+    });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+    });
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  function enableRuntimeStop() {
+    const cap = `opencode:${'a'.repeat(32)}`;
+    manifestReader.manifest = {
+      ...manifestReader.manifest,
+      capabilitySnapshotId: cap,
+      behaviorFingerprint: 'b'.repeat(64),
+      stopSessions: [
+        {
+          teamName: 'team-a',
+          laneId: 'primary',
+          runId: 'run-1',
+          memberName: 'alice',
+          sessionId: 'session-1',
+        },
+      ],
+    };
+    const h = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', { capabilitySnapshotId: cap }),
+    });
+    h.stopRecoveryContractVersion = 1;
+    h.acceptedCommands.push('opencode.stopOutcome', 'opencode.reconcileStop');
+    h.server.bridgeProtocol.supportedCommands.push(
+      'opencode.stopOutcome',
+      'opencode.reconcileStop'
+    );
+    h.identityHash = createOpenCodeBridgeHandshakeIdentityHash(h);
+    handshakePort.nextHandshake = h;
+    return { ...buildStopInput(), capabilitySnapshotId: cap };
+  }
+
+  it.each([true, false])(
+    'new Stop retains original session authority and string warnings on immediate durable completion %s',
+    async (stopped) => {
+      const input = enableRuntimeStop();
+      bridge.resultFactory = ({ command, body, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+          data: runtimeData(stopped, body.preconditions.idempotencyKey),
+        });
+      const first = await createService().execute(input);
+      expect((await ledger.list())[0]).toMatchObject({
+        status: 'completed',
+        stopTarget: {
+          runtimeTarget: {
+            members: [{ memberName: 'alice', sessionId: 'session-1' }],
+            expectedBehaviorFingerprint: 'b'.repeat(64),
+          },
+        },
+      });
+      expect(await createService().execute(input)).toEqual(first);
+      expect(bridge.calls).toHaveLength(1);
+    }
+  );
+
+  it('does not replace an inflight original target with same-run successor sessions', async () => {
+    const input = enableRuntimeStop();
+    bridge.resultFactory = () => {
+      throw new Error('lost original response');
+    };
+    await expect(createService().execute(input)).rejects.toThrow('lost original');
+    manifestReader.manifest.stopSessions![0].sessionId = 'successor-session';
+    manifestReader.manifest.sessionIdentityHash = 'successor-hash';
+    await expect(createService().execute(input)).rejects.toThrow('target mismatch');
+    expect(bridge.calls).toHaveLength(1);
+    expect((await ledger.list())[0].stopTarget?.runtimeTarget?.members[0].sessionId).toBe(
+      'session-1'
+    );
+  });
+
+  it('queries the retained original after a transport timeout marks the ledger unknown', async () => {
+    const input = enableRuntimeStop();
+    bridge.resultFactory = ({ command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId!,
+      command,
+      completedAt: now.toISOString(),
+      durationMs: 10,
+      diagnostics: [],
+      error: { kind: 'timeout', message: 'lost after effect', retryable: false },
+    });
+    await expect(createService().execute(input)).resolves.toMatchObject({ ok: false });
+    expect((await ledger.list())[0].status).toBe('unknown_after_timeout');
+    bridge.resultFactory = ({ command, options }) =>
+      bridgeSuccess({ command, requestId: options.requestId, data: { status: 'inflight' } });
+    await expect(createService().execute(input)).rejects.toThrow('inflight');
+    expect(bridge.calls.map((c) => c.command)).toEqual([
+      'opencode.stopTeam',
+      'opencode.stopOutcome',
+      'opencode.reconcileStop',
+    ]);
+    expect((await ledger.list())[0].status).toBe('unknown_after_timeout');
+  });
+
+  function runtimeData(stopped: boolean, key: string) {
+    return {
+      runId: 'run-1',
+      stopped,
+      members: {
+        alice: { sessionId: 'session-1', stopped, diagnostics: ['original member detail'] },
+      },
+      warnings: ['original warning'],
+      diagnostics: [{ code: 'original', severity: 'warning', message: 'original diagnostic' }],
+      idempotencyKey: key,
+      manifestHighWatermark: null,
+      runtimeStoreManifestHighWatermark: null,
+    };
+  }
+
+  it.each([true, false])(
+    'runtime receipt recovers lost transport and durably repeats %s without redispatch or a host handshake',
+    async (stopped) => {
+      const input = enableRuntimeStop();
+      let original!: RuntimeStopRequest;
+      const runtime = {
+        ...bridgeSuccess().runtime,
+        capabilitySnapshotId: input.capabilitySnapshotId,
+      };
+      const executor: OpenCodeBridgeCommandExecutor = {
+        execute: vi.fn(async (command, body, options) => {
+          const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+          if (command === 'opencode.stopTeam') {
+            original = request;
+            // The complete original target must already be on disk before the first effect.
+            expect((await ledger.list())[0].stopTarget?.runtimeTarget).toEqual(request.target);
+            expect(
+              (body as { preconditions: { expectedBehaviorFingerprint: string } }).preconditions
+                .expectedBehaviorFingerprint
+            ).toBe('b'.repeat(64));
+            throw new Error('lost transport after effect');
+          }
+          expect(request).toEqual(original);
+          return bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            runtime,
+            data: {
+              status: 'completed',
+              receipt: {
+                request: original,
+                binding: [
+                  {
+                    memberName: 'alice',
+                    sessionId: 'session-1',
+                    hostKey: 'host-1',
+                    createdAt: 'created-original',
+                  },
+                ],
+                runtime,
+                status: 'completed',
+                data: runtimeData(stopped, original.idempotencyKey),
+              },
+            },
+          });
+        }) as OpenCodeBridgeCommandExecutor['execute'],
+      };
+      await expect(
+        createService({ bridge: executor, requestIdFactory: () => 'original-request' }).execute(
+          input
+        )
+      ).rejects.toThrow('lost transport');
+      ledger = createOpenCodeBridgeCommandLedgerStore({
+        filePath: path.join(tempDir, 'ledger.json'),
+      });
+      handshakePort.nextHandshake.server.runtime = {
+        providerId: 'opencode',
+        binaryPath: null,
+        binaryFingerprint: null,
+        version: null,
+        capabilitySnapshotId: null,
+        activeRunId: null,
+        runtimeStoreManifestHighWatermark: null,
+      };
+      handshakePort.nextHandshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(
+        handshakePort.nextHandshake
+      );
+      const recovered = await createService({ bridge: executor }).execute(input);
+      expect(recovered).toMatchObject({
+        requestId: 'original-request',
+        data: runtimeData(stopped, original.idempotencyKey),
+      });
+      expect(await createService({ bridge: executor }).execute(input)).toEqual(recovered);
+      expect(executor.execute).toHaveBeenCalledTimes(2);
+      expect(handshakePort.calls.at(-1)).toMatchObject({
+        requiredCommand: 'opencode.stopOutcome',
+        expectedRunId: null,
+        expectedCapabilitySnapshotId: null,
+      });
+    }
+  );
+
+  it('durably repeats a valid runtime receipt whose optional data key echo is absent', async () => {
+    const input = enableRuntimeStop();
+    const executor: OpenCodeBridgeCommandExecutor = {
+      execute: vi.fn(async (command, body, options) => {
+        if (command === 'opencode.stopTeam') throw new Error('lost');
+        const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+        const { idempotencyKey: _echo, ...data } = runtimeData(false, request.idempotencyKey);
+        const runtime = {
+          ...bridgeSuccess().runtime,
+          capabilitySnapshotId: input.capabilitySnapshotId,
+        };
+        return bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: {
+            status: 'completed',
+            receipt: {
+              request,
+              status: 'completed',
+              runtime,
+              data,
+              binding: [
+                {
+                  memberName: 'alice',
+                  sessionId: 'session-1',
+                  hostKey: 'original-host',
+                  createdAt: 'original-created',
+                },
+              ],
+            },
+          },
+        });
+      }) as OpenCodeBridgeCommandExecutor['execute'],
+    };
+    await expect(createService({ bridge: executor }).execute(input)).rejects.toThrow('lost');
+    const recovered = await createService({ bridge: executor }).execute(input);
+    expect(recovered).toMatchObject({
+      ok: true,
+      data: { stopped: false, warnings: ['original warning'] },
+    });
+    expect(recovered.ok && recovered.data).not.toHaveProperty('idempotencyKey');
+    expect(await createService({ bridge: executor }).execute(input)).toEqual(recovered);
+    expect(executor.execute).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['unknown', 'inflight'])(
+    'runtime %s uses retained original target and returns a separate observation without changing history',
+    async (outcomeStatus) => {
+      const input = enableRuntimeStop();
+      let original!: RuntimeStopRequest;
+      const executor: OpenCodeBridgeCommandExecutor = {
+        execute: vi.fn(async (command, body, options) => {
+          const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+          if (command === 'opencode.stopTeam') {
+            original = request;
+            throw new Error('lost transport');
+          }
+          expect(request).toEqual(original);
+          const binding = [
+            {
+              memberName: 'alice',
+              sessionId: 'session-1',
+              hostKey: 'host-1',
+              createdAt: 'created-original',
+            },
+          ];
+          const observation = {
+            status: 'reconciled_stopped',
+            target: original.target,
+            binding,
+            sessionSetToken: createHash('sha256')
+              .update(JSON.stringify({ target: original.target, binding }))
+              .digest('hex'),
+          };
+          return bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            data: command === 'opencode.stopOutcome' ? { status: outcomeStatus } : observation,
+          });
+        }) as OpenCodeBridgeCommandExecutor['execute'],
+      };
+      await expect(
+        createService({ bridge: executor, requestIdFactory: () => 'legacy-original' }).execute(
+          input
+        )
+      ).rejects.toThrow('lost transport');
+      if (outcomeStatus === 'unknown')
+        await ledger.markCompleted({
+          idempotencyKey: original.idempotencyKey,
+          response: { old: 'hash-only result' },
+        });
+      const before = await fs.readFile(path.join(tempDir, 'ledger.json'), 'utf8');
+      const observed = await createService({ bridge: executor }).execute(input);
+      expect(observed).toMatchObject({
+        command: 'opencode.reconcileStop',
+        data: { status: 'reconciled_stopped', target: original.target },
+      });
+      expect(observed.ok && observed.data).not.toHaveProperty('stopped');
+      expect(await fs.readFile(path.join(tempDir, 'ledger.json'), 'utf8')).toBe(before);
+      expect(executor.execute).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  it.each(['inflight', 'target_mismatch', 'unknown', 'active', 'bad_token', 'wrong_target'])(
+    'rejects non-authoritative runtime recovery: %s',
+    async (status) => {
+      const input = enableRuntimeStop();
+      const executor: OpenCodeBridgeCommandExecutor = {
+        execute: vi.fn(async (command, body, options) => {
+          if (command === 'opencode.stopTeam') throw new Error('lost');
+          const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+          const data =
+            command === 'opencode.stopOutcome'
+              ? { status: ['inflight', 'target_mismatch'].includes(status) ? status : 'unknown' }
+              : {
+                  status:
+                    status === 'bad_token' || status === 'wrong_target'
+                      ? 'reconciled_stopped'
+                      : status,
+                  target:
+                    status === 'wrong_target'
+                      ? { ...request.target, runId: 'successor' }
+                      : request.target,
+                  binding: [
+                    {
+                      memberName: 'alice',
+                      sessionId: 'session-1',
+                      hostKey: 'host',
+                      createdAt: 'original',
+                    },
+                  ],
+                  sessionSetToken: 'forged',
+                };
+          return bridgeSuccess({ command, requestId: options.requestId, data });
+        }) as OpenCodeBridgeCommandExecutor['execute'],
+      };
+      await expect(createService({ bridge: executor }).execute(input)).rejects.toThrow('lost');
+      await expect(createService({ bridge: executor }).execute(input)).rejects.toThrow(/Stop/);
+      expect((await ledger.list())[0].status).toBe('started');
+      expect(
+        vi.mocked(executor.execute).mock.calls.filter((call) => call[0] === 'opencode.stopTeam')
+      ).toHaveLength(1);
+    }
+  );
+
+  it.each(['version', 'lookup', 'reconcile'])(
+    'requires advertised compatible Stop recovery capabilities before new dispatch: %s',
+    async (missing) => {
+      const input = enableRuntimeStop();
+      if (missing === 'version') handshakePort.nextHandshake.stopRecoveryContractVersion = 2;
+      else
+        handshakePort.nextHandshake.acceptedCommands =
+          handshakePort.nextHandshake.acceptedCommands.filter(
+            (command) =>
+              command !== (missing === 'lookup' ? 'opencode.stopOutcome' : 'opencode.reconcileStop')
+          );
+      handshakePort.nextHandshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(
+        handshakePort.nextHandshake
+      );
+      await expect(createService().execute(input)).rejects.toThrow('Unsupported Stop recovery');
+      expect(bridge.calls).toHaveLength(0);
+      expect(await ledger.list()).toEqual([]);
+    }
+  );
+
+  it.each([undefined, 2, '1'])(
+    'refuses legacy lookup with unsupported runtime version %s',
+    async (version) => {
+      const input = enableRuntimeStop();
+      const executor: OpenCodeBridgeCommandExecutor = {
+        execute: vi.fn(async () => {
+          throw new Error('lost');
+        }),
+      };
+      await expect(createService({ bridge: executor }).execute(input)).rejects.toThrow('lost');
+      handshakePort.nextHandshake.stopRecoveryContractVersion = version as number | undefined;
+      handshakePort.nextHandshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(
+        handshakePort.nextHandshake
+      );
+      await expect(createService({ bridge: executor }).execute(input)).rejects.toThrow(
+        /unsupported/
+      );
+      expect(executor.execute).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['missing', 'duplicate', 'wrong_run', 'wrong_lane'])(
+    'requires the complete original target before new runtime Stop dispatch: %s',
+    async (mismatch) => {
+      const input = enableRuntimeStop();
+      if (mismatch === 'missing') manifestReader.manifest.stopSessions = [];
+      if (mismatch === 'duplicate')
+        manifestReader.manifest.stopSessions!.push(manifestReader.manifest.stopSessions![0]);
+      if (mismatch === 'wrong_run') manifestReader.manifest.stopSessions![0].runId = 'successor';
+      if (mismatch === 'wrong_lane') manifestReader.manifest.stopSessions![0].laneId = 'secondary';
+      await expect(createService().execute(input)).rejects.toThrow(/Stop/);
+      expect(bridge.calls).toHaveLength(0);
+      expect(await ledger.list()).toEqual([]);
+    }
+  );
+
+  it.each([true, false])(
+    'recovers completed Stop (%s) without PID or redispatch after recreation',
+    async (stopped) => {
+      bridge.resultFactory = ({ body, command, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            stopped,
+            members: {
+              alice: { sessionId: 'session-1', stopped, diagnostics: ['original detail'] },
+            },
+            warnings: [],
+            diagnostics: [],
+            idempotencyKey: body.preconditions.idempotencyKey,
+          },
+        });
+      const service = createService({ requestIdFactory: () => 'original-stop-request' });
+      const first = await service.execute(buildStopInput());
+      expect(await service.execute(buildStopInput())).toEqual(first);
+      ledger = createOpenCodeBridgeCommandLedgerStore({
+        filePath: path.join(tempDir, 'ledger.json'),
+      });
+      const recovered = await createService().execute(buildStopInput());
+      expect(recovered).toEqual(first);
+      expect(bridge.calls).toHaveLength(1);
+      expect(await leaseStore.getActive('team-a')).toBeNull();
+    }
+  );
+
+  it.each([
+    ['missing outcome', { stopped: undefined }],
+    ['invalid member outcome', { members: { alice: { stopped: 'yes', diagnostics: [] } } }],
+    ['invalid diagnostics', { diagnostics: ['unstructured diagnostic'] }],
+  ])('keeps a malformed Stop response fenced: %s', async (_name, malformed) => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+          ...malformed,
+        },
+      });
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(
+      'Invalid OpenCode Stop domain result'
+    );
+    ledger = createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(tempDir, 'ledger.json'),
+    });
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(
+      'reconciliation unknown'
+    );
+    expect(bridge.calls).toHaveLength(1);
+    expect(await leaseStore.getActive('team-a')).toBeNull();
+  });
+
+  it('requires the file-parts v2 contract only when sendMessage contains video', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    const service = createService();
+    const videoFileParts = [
+      {
+        type: 'file' as const,
+        mime: 'video/mp4',
+        url: 'data:video/mp4;base64,AAAA',
+        filename: 'clip.mp4',
+      },
+    ];
+    const videoInput = buildSendInput('observed', videoFileParts);
+    const acceptanceVideoInput = buildSendInput('acceptance', videoFileParts);
+
+    await expect(service.execute(videoInput)).rejects.toThrow(
+      'OpenCode video file parts require orchestrator contract version'
+    );
+    await expect(service.execute(acceptanceVideoInput)).rejects.toThrow(
+      'OpenCode video file parts require orchestrator contract version'
+    );
+    expect(bridge.calls).toHaveLength(0);
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
+        },
+      });
+    await createService().execute(buildStopInput());
+    const key = bridge.calls[0].body.preconditions.idempotencyKey;
+    const file = path.join(tempDir, 'ledger.json');
+    const disk = JSON.parse(await fs.readFile(file, 'utf8'));
+    delete disk.data[0].stopRecovery;
+    await fs.writeFile(file, JSON.stringify(disk));
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(/reconciliation/);
+    await ledger.markUnknownAfterTimeout({ idempotencyKey: key, error: 'timeout after effect' });
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(/reconciliation/);
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('refuses recovered Stop when the same run has a replacement session', async () => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+        },
+      });
+    await createService().execute(buildStopInput());
+    manifestReader.manifest = { ...manifestReader.manifest, sessionIdentityHash: 'successor' };
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(/target/);
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each([
+    'missing-run',
+    'stale-run',
+    'missing-manifest-run',
+    'missing-snapshot',
+    'stale-caller-snapshot',
+    'stale-body-snapshot',
+    'missing-body-run',
+    'wrong-body-team',
+    'wrong-body-lane',
+  ])('rejects sendMessage %s before handshake or mutation', async (failure) => {
+    const input = buildSendInput('acceptance');
+    if (failure === 'missing-run') input.runId = null;
+    if (failure === 'stale-run') input.runId = 'old-run';
+    if (failure === 'missing-manifest-run') manifestReader.manifest.activeRunId = null;
+    if (failure === 'missing-snapshot') manifestReader.manifest.capabilitySnapshotId = null;
+    if (failure === 'stale-caller-snapshot') input.capabilitySnapshotId = 'old-cap';
+    if (failure === 'stale-body-snapshot')
+      input.body = { ...(input.body as object), expectedCapabilitySnapshotId: 'old-cap' };
+    if (failure === 'missing-body-run') input.body = { ...(input.body as object), runId: null };
+    if (failure === 'wrong-body-team') input.body = { ...(input.body as object), teamId: 'other' };
+    if (failure === 'wrong-body-lane') input.body = { ...(input.body as object), laneId: 'other' };
+
+    await expect(createService().execute(input)).rejects.toThrow(/persisted lane/);
+    expect(handshakePort.calls).toHaveLength(0);
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+  });
+
+  it('does not apply runtime-store high watermark preconditions to sendMessage delivery', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator', {
+      runtimeStoreManifestHighWatermark: 0,
+    });
+    await expect(createService().execute(buildStopInput())).rejects.toThrow(
+      /reconciliation unknown/
+    );
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each(['result', 'request', 'target', 'missing', 'invalid_shape'])(
+    'rejects corrupt completed Stop %s evidence',
+    async (corruption) => {
+      bridge.resultFactory = ({ body, command, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            stopped: false,
+            members: { alice: { sessionId: 'session-1', stopped: false, diagnostics: [] } },
+            warnings: [],
+            diagnostics: [],
+            idempotencyKey: body.preconditions.idempotencyKey,
+          },
+        });
+      await createService().execute(buildStopInput());
+      const file = path.join(tempDir, 'ledger.json');
+      const disk = JSON.parse(await fs.readFile(file, 'utf8'));
+      if (corruption === 'result') disk.data[0].stopRecovery.result.data.stopped = true;
+      if (corruption === 'request') disk.data[0].requestId = 'unrelated-command';
+      if (corruption === 'target') disk.data[0].stopRecovery.target.runId = 'successor';
+      if (corruption === 'missing') delete disk.data[0].stopRecovery.result;
+      if (corruption === 'invalid_shape') disk.data[0].stopRecovery = { target: null, result: 7 };
+      await fs.writeFile(file, JSON.stringify(disk));
+      await expect(createService().execute(buildStopInput())).rejects.toThrow(
+        /mismatch|reconciliation/
+      );
+      expect(bridge.calls).toHaveLength(1);
+    }
+  );
+
+  it('does not let app-owned runtime manifest progress block an exact-run stop', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+      }),
+    });
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    const service = createService();
+
+    await expect(service.execute(buildStopInput())).resolves.toMatchObject({
+      ok: true,
+      data: { runId: 'run-1', stopped: true },
+    });
+    expect(handshakePort.calls[0]).toMatchObject({
+      expectedRunId: 'run-1',
+      expectedCapabilitySnapshotId: 'cap-1',
+      expectedManifestHighWatermark: null,
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body).toMatchObject({ expectedCapabilitySnapshotId: 'cap-1' });
+    expect(bridge.calls[0].body.preconditions).toMatchObject({
+      laneId: 'primary',
+      expectedRunId: 'run-1',
       expectedManifestHighWatermark: null,
       expectedCapabilitySnapshotId: 'cap-1',
       idempotencyKey: expect.stringMatching(

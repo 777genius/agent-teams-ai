@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "auditId": "P0.AUDIT.CROSS_LANE",
+  "packetRevision": "phase-00-r2",
+  "generatedAt": "2026-07-11T18:20:45Z",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "canonicalBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "planBundleCommit": "f1ad7a8cba2f26abf5f42ddd206937c24d143f77",
+  "overallDisposition": "hold_all_adoption_pending_owner_correction_and_repeat_review",
+  "summary": {
+    "producerJobsDone": 6,
+    "reciprocalReviewJobsDone": 3,
+    "producerPairsApproved": 0,
+    "reviewApprovedFiles": 9,
+    "immediatelyAdoptableFiles": 0,
+    "findings": {
+      "critical": 3,
+      "high": 14,
+      "medium": 5,
+      "low": 2,
+      "total": 24
+    }
+  },
+  "registrySnapshot": {
+    "registryRoot": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2",
+    "producers": [
+      {
+        "laneId": "w1",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w1-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "d000ec9d1aae5995f66279ca70fb3d0da80eafcba808b153f3398d1d4c86c110"
+      },
+      {
+        "laneId": "w2",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "df2b4edcccad1ffac46091ceca124710cfcf68058eafddadbeaf141808b02b50"
+      },
+      {
+        "laneId": "w3",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "a0ceff5b4c384e551abe336060922cb278d7a4768344a89663094ddde44308fc"
+      },
+      {
+        "laneId": "w4",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w4-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "4fd9c0bce7717f1947fff64a9cee6edcd8fc1321b0504365d3341bb0786d3e1d"
+      },
+      {
+        "laneId": "w5",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w5-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "9f87bbc855161c368da5b4fef16a3d2002f6cdc69acce996555df49b801038e5"
+      },
+      {
+        "laneId": "w6",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-w6-v1",
+        "registryStatus": "done",
+        "producerStatus": "characterized",
+        "handoffSha256": "64a053f03111dcd79a7ca05aaff773cbbc6990ec458cd676a21a228233f59d2f"
+      }
+    ],
+    "reviews": [
+      {
+        "pair": "w1-w2",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1",
+        "registryStatus": "done",
+        "reviewStatus": "failed",
+        "producerDispositions": ["w1:reject", "w2:reject"],
+        "handoffSha256": "c12836733a03159b434223b6ffb63d2a561a3ff946dd3704fde6f5d7f88ef48e",
+        "reportSha256": "213836d2c6104318d3e59848a856dea14bfefc9d56840645a76cf821fc918e2b"
+      },
+      {
+        "pair": "w3-w5",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1",
+        "registryStatus": "done",
+        "reviewStatus": "rejected",
+        "producerDispositions": ["w3:reject", "w5:reject"],
+        "handoffSha256": "f8d9b40c83ce4d895110162807cd8abafaac25566ef4dd32db0ab5e8afbd8beb",
+        "reportSha256": "8140261ef1cf3a2a37fc25d75f639fa9e20607e7bb1c104fe5a39b1585e38a15"
+      },
+      {
+        "pair": "w4-w6",
+        "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1",
+        "registryStatus": "done",
+        "reviewStatus": "rejected_pending_correction",
+        "producerDispositions": ["w4:reject", "w6:reject"],
+        "handoffSha256": "7bf1e3e6f1c02ff352909cead19dd0a344f4277d3bbd7ac4e897dfee2a45a175",
+        "reportSha256": "4a509551fdf2466f1be2f6cc9e9b8c9c1058fb3c5c695f8706f78af42e47e5bf"
+      }
+    ]
+  },
+  "approvedFiles": [
+    {
+      "order": 1,
+      "laneId": "w1",
+      "evidenceId": "P0.W1.SELECTION_INVARIANTS",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+      "sha256": "b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+      "reviewApproval": "approved",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 2,
+      "laneId": "w2",
+      "evidenceId": "P0.W2.EXECUTION_TOPOLOGY",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sha256": "b9b4824158f00ee43bcc6c0104dfb6d344b03929eb84dde06907c06d6df50955",
+      "reviewApproval": "approved",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 3,
+      "laneId": "w3",
+      "evidenceId": "P0.W3.STATE_FAMILY_CATALOG",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "sha256": "c36fa922a39d91cb125edb99df27721350f00b2d4ff382fc4f9c209b6b419566",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 4,
+      "laneId": "w3",
+      "evidenceId": "P0.W3.WRITER_COORDINATION",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "sha256": "756626d98ff3d52abdc911f8ab74b4ba6daceaa146a853fdbf04990227159bcb",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 5,
+      "laneId": "w3",
+      "evidenceId": "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+      "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+      "sha256": "09f0ed9d08776592a6ed8db2e558d34fde6db161d7bd213714a578db216964f3",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 6,
+      "laneId": "w3",
+      "evidenceId": "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+      "sha256": "b4c43b3e6494bea0d8ff3a42e188c40b184c5c6d84deceff00561011b5d47315",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 7,
+      "laneId": "w3",
+      "evidenceId": "P0.W3.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "sha256": "6ee6b1f69d075e8e39f4f8dd468269cebac368495a530e8e8f1193ed38b54531",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_for_w3_w5_deduplication"
+    },
+    {
+      "order": 8,
+      "laneId": "w5",
+      "evidenceId": "P0.W5.EVENT_CURSOR_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_pair_rejected"
+    },
+    {
+      "order": 9,
+      "laneId": "w5",
+      "evidenceId": "P0.W5.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341",
+      "reviewApproval": "accepted_as_useful",
+      "adoptionStatus": "held_for_w3_w5_deduplication"
+    }
+  ],
+  "conflicts": [
+    {
+      "order": 1,
+      "severity": "critical",
+      "findingIds": ["R46-01"],
+      "owners": ["w6"],
+      "summary": "Restart restores mutation admission after logout, device revocation, or family replay revocation.",
+      "integrationEffect": "Reject W6 auth evidence and all remote-mutation prerequisites."
+    },
+    {
+      "order": 2,
+      "severity": "critical",
+      "findingIds": ["RW35-002", "RW35-003"],
+      "owners": ["w3", "w5"],
+      "summary": "W5 counts labels as crash boundaries and assigns automatic retry classes that contradict W3's uncoordinated external-writer evidence.",
+      "integrationEffect": "Reject W5 scheduler, command catalog, effect matrix, and fingerprint package."
+    },
+    {
+      "order": 3,
+      "severity": "high",
+      "findingIds": ["R12-W1-001", "R12-W1-002", "R12-X-001"],
+      "owners": ["w1", "w2"],
+      "summary": "W1 manufactures line-dependent JSX actions and conflicts with W2/canonical ownership and trust direction.",
+      "integrationEffect": "Reject W1 parity/action/scanner artifacts until a semantic action catalog is reviewed."
+    },
+    {
+      "order": 4,
+      "severity": "high",
+      "findingIds": ["R46-02", "R46-03", "R46-04"],
+      "owners": ["w4", "w6"],
+      "summary": "Auth reset is not fenced by typed drain truth; W4 uses reusable numeric PIDs and emits hard-coded cleanup success.",
+      "integrationEffect": "Reject W4 process/cleanup claims and W6 reset schedules."
+    },
+    {
+      "order": 5,
+      "severity": "high",
+      "findingIds": ["R46-06", "R46-07"],
+      "owners": ["w4", "w6"],
+      "summary": "The artifact scanner omits all three W4 native artifacts and final topology; ABI/native smoke facts are not reproducible from owned code.",
+      "integrationEffect": "Reject paired host/artifact adoption until one concrete final-image manifest exists."
+    },
+    {
+      "order": 6,
+      "severity": "high",
+      "findingIds": ["R12-W2-001", "R12-W2-002", "R12-W2-004"],
+      "owners": ["w2"],
+      "summary": "W2 does not discover omitted environment keys, nested schemas are shallow, and the hosted fake-runtime matrix is incomplete.",
+      "integrationEffect": "Reject W2 ingress/environment/credential scanner package."
+    },
+    {
+      "order": 7,
+      "severity": "high",
+      "findingIds": ["RW35-001", "RW35-004", "RW35-005"],
+      "owners": ["w3", "w5"],
+      "summary": "Legacy backup behavior lacks the required fault fixture, fingerprint vectors are incomplete, and mutation coverage is circular.",
+      "integrationEffect": "Reject W3 backup behavior and the remaining W5 recovery evidence."
+    },
+    {
+      "order": 8,
+      "severity": "high",
+      "findingIds": ["R12-W1-003", "R12-W2-003"],
+      "owners": ["w1", "w2", "w3", "w4", "w5", "w6"],
+      "summary": "Estimate arithmetic and bucket identities cannot be reconciled; W3/W5 overlap and W2/W4 overlap are not frozen.",
+      "integrationEffect": "The 28k-45k v1 estimate is not yet evidence-backed."
+    },
+    {
+      "order": 9,
+      "severity": "high",
+      "findingIds": ["R12-W1-004"],
+      "owners": ["w1"],
+      "summary": "W1 emits 48,661 lines, including 46,262 raw ledger lines, without the required compact/hash or adoption exception.",
+      "integrationEffect": "Do not adopt the raw W1 ledger files."
+    },
+    {
+      "order": 10,
+      "severity": "medium",
+      "findingIds": ["R12-W2-005", "RW35-006", "R46-05", "R46-08"],
+      "owners": ["w2", "w3", "w4", "w5", "w6"],
+      "summary": "Producer diff checks skipped untracked files, and W4's close-all proof stops at descriptor 1023.",
+      "integrationEffect": "Repeat real staged/no-index checks and add a high-FD canary before adoption."
+    }
+  ],
+  "risks": [
+    {
+      "order": 1,
+      "riskId": "P0.RISK.LEDGER_DRIFT",
+      "severity": "high",
+      "status": "open",
+      "evidence": "The integration lane-ledger still says bootstrap/unstarted with null phaseStartSha, job IDs, and handoff hashes while the registry shows all six producers and all three reviews done.",
+      "requiredAction": "Integration owner must reconcile the controller-owned base/lane ledger from registry evidence before opening an adoption attempt."
+    },
+    {
+      "order": 2,
+      "riskId": "P0.RISK.NO_PAIR_APPROVAL",
+      "severity": "critical",
+      "status": "open",
+      "evidence": "All three reciprocal reviews reject both producers in their pair.",
+      "requiredAction": "Return findings to owners and repeat focused reciprocal reviews; do not integrate isolated approved files yet."
+    },
+    {
+      "order": 3,
+      "riskId": "P0.RISK.TARGET_TOPOLOGY",
+      "severity": "critical",
+      "status": "open",
+      "evidence": "W4 and W6 remain characterized; no final non-root/init/seccomp/image/HTTPS topology exists for target verification.",
+      "requiredAction": "After corrections and manifest agreement, run the required marker-owned probes in the admitted final-shape topology."
+    },
+    {
+      "order": 4,
+      "riskId": "P0.RISK.ESTIMATE_FREEZE",
+      "severity": "high",
+      "status": "open",
+      "evidence": "W1 reports false <=20% variance, W2 uses non-canonical buckets, W3/W5 overlap, and W4 ranges are not reconciled with W2 or the canonical ledger.",
+      "requiredAction": "Regenerate canonical unique-bucket ranges after corrections and perform the packet-required scope review."
+    },
+    {
+      "order": 5,
+      "riskId": "P0.RISK.TERMINAL_BOUNDARY",
+      "severity": "high",
+      "status": "open",
+      "evidence": "The current standalone artifact emits terminal service/gateway/SDK surfaces and cannot be designated the terminal-free hosted v1 artifact.",
+      "requiredAction": "Adopt an allowlisted artifact manifest and terminal-negative image gate; do not implement a hosted terminal."
+    },
+    {
+      "order": 6,
+      "riskId": "P0.RISK.WRITER_AUTHORITY",
+      "severity": "high",
+      "status": "open",
+      "evidence": "W3 records unresolved provider/task/inbox/member/transcript writers and quiescent-only active writes.",
+      "requiredAction": "Keep affected mutations unavailable or operator-required until W2/provider evidence proves coordination."
+    },
+    {
+      "order": 7,
+      "riskId": "P0.RISK.PROVIDER_CONFORMANCE",
+      "severity": "high",
+      "status": "open",
+      "evidence": "W2 provider compatibility and environment exposure are source-observed only; the explicit key census and hosted provider matrix are incomplete.",
+      "requiredAction": "Correct the scanner/matrix and retain target/live-sandbox proof obligations."
+    },
+    {
+      "order": 8,
+      "riskId": "P0.RISK.EVIDENCE_BUDGET",
+      "severity": "high",
+      "status": "open",
+      "evidence": "W1 exceeds both lane and single-adoption budgets by orders of magnitude.",
+      "requiredAction": "Keep compact indexes and hashes in Git or obtain an explicit controller-approved split."
+    },
+    {
+      "order": 9,
+      "riskId": "P0.RISK.SELF_REVIEW_PROVENANCE",
+      "severity": "low",
+      "status": "contained_not_closed",
+      "evidence": "Plain producer git diff --check commands skipped untracked additions; reviewers independently found no whitespace defects.",
+      "requiredAction": "Use staged or per-file no-index checks in every correction handoff."
+    }
+  ],
+  "integrationOrder": [
+    {
+      "order": 1,
+      "owner": "integration_controller",
+      "action": "Reconcile base.json and lane-ledger.json with phaseStartSha, job/worktree IDs, review states, and handoff hashes from the registry.",
+      "status": "required_before_adoption"
+    },
+    {
+      "order": 2,
+      "owner": "w1-w2",
+      "action": "Correct R12 findings, compact W1 evidence, align canonical actions/direction/buckets, and repeat reciprocal review.",
+      "status": "pending"
+    },
+    {
+      "order": 3,
+      "owner": "w3-w5",
+      "action": "Correct RW35 findings, bind recovery classes to writer truth, deduplicate EST-RECOVERY-STATE, and repeat reciprocal review.",
+      "status": "pending"
+    },
+    {
+      "order": 4,
+      "owner": "w4-w6",
+      "action": "Correct R46 findings, agree one artifact/topology contract, and repeat reciprocal review.",
+      "status": "pending"
+    },
+    {
+      "order": 5,
+      "owner": "integration_controller",
+      "action": "Open a policy integration attempt and adopt only the final reviewed file set in packet order, splitting any adoption above 1,500 lines.",
+      "status": "blocked_by_steps_1_to_4"
+    },
+    {
+      "order": 6,
+      "owner": "integration_controller",
+      "action": "Run targeted combined checks, admitted target-topology probes, estimate/decision freeze, then the separately authorized broad gate.",
+      "status": "not_authorized_in_this_audit"
+    }
+  ],
+  "scopeAttestation": {
+    "modifiedOtherWorktrees": false,
+    "modifiedIntegration": false,
+    "broadOrFinalGatesRun": false,
+    "phase1Implemented": false,
+    "hostedTerminalImplemented": false
+  }
+}

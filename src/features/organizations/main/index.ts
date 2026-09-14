@@ -3,5 +3,5 @@ export {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from './adapters/input/ipc/registerOrganizationsIpc';
+export type { OrganizationsTeamDataPort } from './application/OrganizationsTeamDataPort';
 export type { OrganizationsFeatureFacade } from './composition/createOrganizationsFeature';
-export { createOrganizationsFeature } from './composition/createOrganizationsFeature';

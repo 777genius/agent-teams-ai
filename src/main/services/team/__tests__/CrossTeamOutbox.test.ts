@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CrossTeamOutbox } from '../CrossTeamOutbox';
+import { CrossTeamIdempotencyConflictError, CrossTeamOutbox } from '../CrossTeamOutbox';
 
 import type { CrossTeamMessage } from '@shared/types';
 
@@ -34,19 +34,20 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     setClaudeBasePathOverride(null);
     if (tempRoot) {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('dedupes a runtime retry with the same trimmed caller message id', async () => {
+  it('returns a conflict when a stable cross-run key is reused with a changed payload', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const message = makeMessage();
     const retry = makeMessage({
-      messageId: '\truntime-message-1\n',
-      conversationId: 'runtime-idempotency-2',
+      messageId: 'runtime-message-2',
+      conversationId: '\truntime-idempotency-1\n',
       text: 'Retry payload changed after the caller message id was already recorded',
       summary: 'Retry summary changed',
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
@@ -58,15 +59,18 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
         callerMessageId: message.messageId,
       })
     ).resolves.toEqual({ duplicate: null });
-    await expect(
-      outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
+    const conflict = await outbox
+      .appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
         stableIdentity: true,
         callerMessageId: retry.messageId,
       })
-    ).resolves.toEqual({
-      duplicate: message,
-    });
+      .catch((error: unknown) => error);
 
+    expect(conflict).toBeInstanceOf(CrossTeamIdempotencyConflictError);
+    expect(conflict).toMatchObject({
+      code: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      existingMessageId: message.messageId,
+    });
     await expect(outbox.read('source-team')).resolves.toEqual([message]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
@@ -81,9 +85,8 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     const retry = makeMessage({
       messageId: 'generated-message-2',
       conversationId: '\truntime-idempotency-1\n',
-      text: 'Retry payload changed after the conversation was already recorded',
-      summary: 'Retry summary changed',
-      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
+      text: '  ship   THE same payload ',
+      summary: ' runtime DELIVERY ',
     });
 
     await expect(
@@ -113,7 +116,6 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     });
     const retry = makeMessage({
       messageId: 'runtime-message-retry',
-      text: 'Retry payload changed after the original delivery',
     });
 
     for (const nextMessage of [message, staleInterveningMessage]) {
@@ -154,7 +156,8 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
 
-  it('dedupes a cross-run retry that reuses the conversation identity with a new run-scoped caller message id', async () => {
+  it('dedupes a normalized cross-run retry beyond the legacy five-minute window', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     // Runtime cross-team caller messageId is the run-scoped destinationMessageId
@@ -176,6 +179,7 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
         callerMessageId: first.messageId,
       })
     ).resolves.toEqual({ duplicate: null });
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
     await expect(
       outbox.appendIfNotRecent('source-team', second, onBeforeAppend, undefined, {
         stableIdentity: true,

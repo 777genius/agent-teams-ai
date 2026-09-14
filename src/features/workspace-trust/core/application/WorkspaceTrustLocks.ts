@@ -18,59 +18,90 @@ export interface WorkspaceTrustLockOptions {
   isCancelled(): boolean;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export interface WorkspaceTrustLockRuntime {
+  wait(delayMs: number): Promise<void>;
+}
+
+const PORTABLE_LOCK_RUNTIME: WorkspaceTrustLockRuntime = {
+  wait(delayMs) {
+    return new Promise((resolve) => {
+      const signal = AbortSignal.timeout(delayMs);
+      signal.addEventListener('abort', () => resolve(), { once: true });
+      if (signal.aborted) {
+        resolve();
+      }
+    });
+  },
+};
+
+function positiveDuration(value: number | undefined, fallback: number): number | null {
+  const duration = value ?? fallback;
+  return Number.isSafeInteger(duration) && duration > 0 ? duration : null;
 }
 
 async function waitForLockTurn(
   previous: Promise<void>,
   lockKey: string,
-  options: WorkspaceTrustLockOptions
+  options: WorkspaceTrustLockOptions,
+  runtime: WorkspaceTrustLockRuntime
 ): Promise<void> {
-  const startedAt = Date.now();
-  const pollIntervalMs = options.pollIntervalMs ?? 50;
+  const timeoutMs = positiveDuration(options.timeoutMs, 0);
+  const pollIntervalMs = positiveDuration(options.pollIntervalMs, 50);
+  if (timeoutMs === null || pollIntervalMs === null) {
+    throw new WorkspaceTrustLockTimeoutError(lockKey);
+  }
+  let remainingMs = timeoutMs;
 
-  while (true) {
+  while (remainingMs > 0) {
     if (options.isCancelled()) {
       throw new WorkspaceTrustLockCancelledError(lockKey);
     }
-    const elapsedMs = Date.now() - startedAt;
-    if (elapsedMs >= options.timeoutMs) {
-      throw new WorkspaceTrustLockTimeoutError(lockKey);
-    }
 
-    const waitMs = Math.min(pollIntervalMs, options.timeoutMs - elapsedMs);
+    const waitMs = Math.min(pollIntervalMs, remainingMs);
     const result = await Promise.race([
       previous.then(
         () => 'released' as const,
         () => 'released' as const
       ),
-      sleep(waitMs).then(() => 'poll' as const),
+      runtime.wait(waitMs).then(
+        () => 'poll' as const,
+        () => 'runtime-unavailable' as const
+      ),
     ]);
     if (result === 'released') {
       return;
     }
+    if (result === 'runtime-unavailable') {
+      throw new WorkspaceTrustLockTimeoutError(lockKey);
+    }
+    remainingMs -= waitMs;
   }
+
+  throw new WorkspaceTrustLockTimeoutError(lockKey);
 }
 
 export class WorkspaceTrustLockRegistry {
   private readonly tails = new Map<string, Promise<void>>();
+
+  constructor(private readonly runtime: WorkspaceTrustLockRuntime = PORTABLE_LOCK_RUNTIME) {}
 
   async withWorkspaceLock<T>(
     lockKey: string,
     options: WorkspaceTrustLockOptions,
     fn: () => Promise<T>
   ): Promise<T> {
-    const previous = this.tails.get(lockKey) ?? Promise.resolve();
+    const previous = this.tails.get(lockKey);
     let release!: () => void;
     const current = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const tail = previous.catch(() => undefined).then(() => current);
+    const tail = (previous ?? Promise.resolve()).catch(() => undefined).then(() => current);
     this.tails.set(lockKey, tail);
 
     try {
-      await waitForLockTurn(previous, lockKey, options);
+      if (previous) {
+        await waitForLockTurn(previous, lockKey, options, this.runtime);
+      }
       return await fn();
     } finally {
       release();

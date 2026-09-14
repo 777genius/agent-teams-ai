@@ -14,6 +14,47 @@ import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:search');
 
+async function searchGrantedProjects(
+  services: HttpServices,
+  request: unknown,
+  query: string,
+  maxResults: number
+) {
+  const projects = await services.projectScanner.scan();
+  const decisions = await Promise.all(
+    projects.map(async (project) => ({
+      project,
+      publicWorkspaceId: await services.hostedAuth!.projectWorkspaceId(request, project.id),
+    }))
+  );
+  const granted = decisions
+    .filter(({ publicWorkspaceId }) => publicWorkspaceId !== null)
+    .map(({ project }) => project);
+  const searches = [];
+  for (let offset = 0; offset < granted.length; offset += 8) {
+    const batch = await Promise.allSettled(
+      granted
+        .slice(offset, offset + 8)
+        .map((project) => services.projectScanner.searchSessions(project.id, query, maxResults))
+    );
+    for (const result of batch) {
+      if (result.status === 'fulfilled') searches.push(result.value);
+    }
+    if (searches.reduce((total, result) => total + result.totalMatches, 0) >= maxResults) break;
+  }
+  const results = searches
+    .flatMap((result) => result.results)
+    .sort((left, right) => right.timestamp - left.timestamp)
+    .slice(0, maxResults);
+  return {
+    results,
+    totalMatches: results.length,
+    sessionsSearched: searches.reduce((total, result) => total + result.sessionsSearched, 0),
+    query,
+    isPartial: searches.some((result) => result.isPartial),
+  };
+}
+
 export function registerSearchRoutes(app: FastifyInstance, services: HttpServices): void {
   app.get<{
     Params: { projectId: string };
@@ -65,11 +106,9 @@ export function registerSearchRoutes(app: FastifyInstance, services: HttpService
         50
       );
 
-      const result = await services.projectScanner.searchAllProjects(
-        validatedQuery.value!,
-        maxResults
-      );
-      return result;
+      return services.hostedAuth
+        ? searchGrantedProjects(services, request, validatedQuery.value!, maxResults)
+        : services.projectScanner.searchAllProjects(validatedQuery.value!, maxResults);
     } catch (error) {
       logger.error('Error in GET global search:', error);
       return { results: [], totalMatches: 0, sessionsSearched: 0, query };

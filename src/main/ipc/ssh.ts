@@ -95,6 +95,9 @@ export function registerSshHandlers(ipcMain: IpcMain): void {
         fsProvider: provider,
         projectsDir: remoteProjectsPath,
         todosDir: remoteTodosPath,
+        getCustomProjectPaths: () => configManager.getCustomProjectPaths(),
+        shouldIncludeSubagentErrors: () =>
+          configManager.getConfig().notifications.includeSubagentErrors,
       });
 
       // Register and start SSH context

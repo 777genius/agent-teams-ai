@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TeamPermanentDeletionTransactionCoordinator } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+import { TeamPermanentDeletionTransactionCoordinator } from '@features/team-view-read-model/main';
 
-import type { TeamPermanentDeletionTransactionCoordinatorPorts } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
 import type { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import type {
   TeamBackupService,
@@ -10,6 +9,9 @@ import type {
 } from '@main/services/team/TeamBackupService';
 import type { TeamTaskAttachmentStore } from '@main/services/team/TeamTaskAttachmentStore';
 
+type TeamPermanentDeletionTransactionCoordinatorPorts = ConstructorParameters<
+  typeof TeamPermanentDeletionTransactionCoordinator
+>[0];
 type PermanentDeletionTarget = TeamPermanentDeletionIntent['completedTargets'][number];
 
 const PREPARE_TIMEOUT_MS = 30_000;

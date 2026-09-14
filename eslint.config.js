@@ -385,7 +385,7 @@ export default defineConfig([
                 '@features/agent-graph/renderer/**',
               ],
               message:
-                'Import agent-graph only through its public entrypoint: @features/agent-graph/renderer.',
+                'Import agent-graph only through public entrypoints: @features/agent-graph or @features/agent-graph/renderer.',
             },
           ],
         },

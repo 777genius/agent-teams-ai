@@ -4,7 +4,6 @@ import type {
   TeamLaunchRuntimeAdapter,
 } from '../../runtime';
 import type { OpenCodeCommittedBootstrapSessionRecord } from '../store/OpenCodeRuntimeManifestEvidenceReader';
-import type { PrimaryLaneBootstrapSelfHealDecision } from './OpenCodePrimaryLaneBootstrapSelfHeal';
 import type { OpenCodePromptDeliveryFollowUpPolicy } from './OpenCodePromptDeliveryFollowUpPolicy';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -14,7 +13,6 @@ import type {
 import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
-import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type {
   AgentActionMode,
@@ -26,6 +24,15 @@ import type {
   TeamMember,
   TeamProviderId,
 } from '@shared/types';
+
+export interface OpenCodeLeadTurnActivityNotification {
+  runId: string;
+  state: 'active' | 'idle';
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  observedAt: string;
+}
 
 export type OpenCodeRuntimeMessageAdapter = TeamLaunchRuntimeAdapter & {
   sendMessageToMember(
@@ -60,19 +67,13 @@ export interface OpenCodeMemberMessageDeliveryInput {
   attachments?: AttachmentPayload[];
   source?: OpenCodeMemberMessageDeliverySource;
   inboxTimestamp?: string;
-  /**
-   * Extra reply-optional notices delivered inside the same prompt (inbox relay
-   * coalescing). Appended to the prompt body only; the ledger payload hash is
-   * computed from `text`, so retries of the same inbox row stay consistent.
-   */
   coalescedNoticeText?: string;
 }
 
 /**
- * The prompt body actually sent to the runtime: the inbox row's own text plus
- * whatever notices the relay folded into this delivery. Keep this separate from
- * `input.text`, which is the identity of the inbox row and the only thing the
- * payload hash may see.
+ * Build the runtime prompt body without widening the ledger payload identity:
+ * coalesced notices are delivery content, while `text` remains the inbox row's
+ * stable hash input across retries.
  */
 export function buildOpenCodePromptBodyText(
   input: Pick<OpenCodeMemberMessageDeliveryInput, 'text' | 'coalescedNoticeText'>
@@ -96,18 +97,11 @@ export interface OpenCodeMemberInboxDelivery {
     | 'direct_child_message_send'
     | 'plain_assistant_text';
   queuedBehindMessageId?: string;
-  /**
-   * True only when THIS call dispatched a prompt carrying `coalescedNoticeText`
-   * and the runtime accepted it. `delivered` is not proof of dispatch (see the
-   * INVARIANT note at the end of `deliver`), so the inbox relay read-commits
-   * coalesced riders on this flag alone.
-   */
-  coalescedNoticesDelivered?: boolean;
   reason?: string;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
+  coalescedNoticesDelivered?: boolean;
 }
-
 export interface OpenCodeMemberDirectory {
   config: TeamConfig | null;
   teamMeta: {
@@ -122,13 +116,11 @@ export interface OpenCodeMemberDirectory {
   } | null;
   metaMembers: TeamMember[];
 }
-
 export interface OpenCodeMemberLaneIdentity {
   laneId: string;
   laneKind: 'primary' | 'secondary';
   laneOwnerProviderId?: TeamProviderId;
 }
-
 export type OpenCodeMemberIdentityResolution =
   | {
       ok: true;
@@ -150,14 +142,6 @@ interface DeliverableTrackedRun {
     member: { name: string };
     runId?: string | null;
   }[];
-}
-
-export interface OpenCodeLeadTurnActivityNotification {
-  teamName: string;
-  memberName: string;
-  laneId: string;
-  runId: string | null;
-  state: 'active' | 'idle';
 }
 
 export interface OpenCodeMemberMessageDeliveryServiceDependencies {
@@ -187,12 +171,6 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     member: TeamMember;
     projectPath: string | null;
   }): Promise<boolean>;
-  /**
-   * Runtime turn/context token usage for a lane member: the only progress proof
-   * an ACP bridge produces. Unset, the probe short-circuits and the
-   * stale-pending clock is pure wall time.
-   */
-  readOpenCodeMemberContextUsage?: OpenCodeMemberContextUsageProbe;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName: string): void;
   findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {
@@ -256,11 +234,6 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     'isEnabled'
   >;
   openCodePromptDeliveryFollowUpPolicy: Pick<OpenCodePromptDeliveryFollowUpPolicy, 'schedule'>;
-  /**
-   * Windows the stale-pending guard bounds a pending delivery with. Supplied by
-   * whoever composes this service; the policy itself has no defaults.
-   */
-  openCodeStalePendingPolicyConfig: OpenCodeStalePendingPolicyConfig;
   isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     teamName?: string;
     memberName?: string;
@@ -301,24 +274,6 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     record: OpenCodePromptDeliveryLedgerRecord,
     detail: string
   ): void;
-  /**
-   * Lead activity for the OpenCode primary lane. A pure-OpenCode lead has no
-   * stdin stream, so "Working"/"Idle" is derived from prompt-delivery turns:
-   * 'active' once a prompt is accepted, 'idle' once the delivery settles.
-   */
-  notifyOpenCodeLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
-  /**
-   * Bounded, exactly-once lead re-bootstrap for a primary lane that holds no
-   * committed runtime session. Absent means the delivery keeps its old
-   * behaviour and the refusal is never escalated.
-   */
-  requestOpenCodePrimaryLaneRebootstrap?(input: {
-    teamName: string;
-    laneId: string;
-    memberName: string;
-    runId: string | null;
-    reason: string;
-  }): Promise<PrimaryLaneBootstrapSelfHealDecision>;
   observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
     adapter: OpenCodeRuntimeMessageAdapter;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -342,4 +297,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     visibleReply: OpenCodeVisibleReplyProof | null;
   }>;
+  notifyOpenCodeLeadTurnActivity?: (notification: OpenCodeLeadTurnActivityNotification) => void;
+  readOpenCodeMemberContextUsage?: (input: Record<string, unknown>) => Promise<unknown>;
+  openCodeStalePendingPolicyConfig?: OpenCodeStalePendingPolicyConfig;
 }

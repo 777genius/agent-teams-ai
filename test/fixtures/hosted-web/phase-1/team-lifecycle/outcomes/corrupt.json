@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "corrupt",
+  "auditedState": "corrupt",
+  "oracles": [
+    {
+      "kind": "failure",
+      "code": "internal",
+      "reason": "corrupt_source",
+      "retryable": false,
+      "diagnosticPresent": true
+    }
+  ]
+}

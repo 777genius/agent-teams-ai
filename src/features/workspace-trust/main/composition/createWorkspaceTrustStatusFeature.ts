@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import { FileClaudeStateProbe } from '../adapters/output/ClaudeStateProbe';
 import { WorkspaceTrustStatusReader } from '../application/WorkspaceTrustStatusReader';
@@ -14,6 +15,20 @@ import type { LaunchTrustResult, WorkspaceTrustProjectStatusResult } from '../..
 export interface WorkspaceTrustStatusFeatureFacade {
   getLaunchStatus(request: unknown): Promise<LaunchTrustResult>;
   getProjectStatus(request: unknown): Promise<WorkspaceTrustProjectStatusResult>;
+}
+
+export function resolveWorkspaceTrustGlobalConfigFilePath(input: {
+  getClaudeConfigDir: () => string;
+  getAutoDetectedClaudeConfigDir: () => string;
+  getHomeDir: () => string;
+}): string {
+  const claudeConfigDir = input.getClaudeConfigDir();
+  return path.join(
+    claudeConfigDir !== input.getAutoDetectedClaudeConfigDir()
+      ? claudeConfigDir
+      : input.getHomeDir(),
+    '.claude.json'
+  );
 }
 
 export function createWorkspaceTrustStatusFeature(input: {

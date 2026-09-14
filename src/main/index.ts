@@ -212,7 +212,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
+import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -2021,13 +2021,15 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
+  const teamProduct = createProductTeamProvisioning();
+  teamProvisioningService = teamProduct.service;
+  const teamFeatureCapabilitySources = teamProduct.capabilities;
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
-  const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
-  const teamMessagingApi = teamIpcHandlerApis.messaging;
+  const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
+  const teamMessagingApi = teamFeatureCapabilitySources.messaging;
   const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
-    memberLifecycle: teamIpcHandlerApis.memberLifecycle,
+    memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
     /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
@@ -2902,14 +2904,12 @@ async function initializeServices(): Promise<void> {
       await requestGuardedAppQuit('relaunch');
     },
   });
-
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
     sshConnectionManager,
     teamDataService,
-    teamIpcHandlerApis,
+    teamFeatureCapabilitySources,
     teamMemberLogsFinder,
     memberStatsComputer,
     boardTaskActivityService,

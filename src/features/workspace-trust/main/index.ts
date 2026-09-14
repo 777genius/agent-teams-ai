@@ -32,10 +32,7 @@ export { NodePtyProcessAdapter } from './adapters/output/NodePtyProcessAdapter';
 export { FileTempEmptyMcpConfigStore } from './adapters/output/TempEmptyMcpConfigStore';
 export { createWorkspaceTrustCoordinator } from './composition/createWorkspaceTrustCoordinator';
 export { createWorkspaceTrustFeatures } from './composition/createWorkspaceTrustFeatures';
-export {
-  createWorkspaceTrustStatusFeature,
-  type WorkspaceTrustStatusFeatureFacade,
-} from './composition/createWorkspaceTrustStatusFeature';
+export type { WorkspaceTrustStatusFeatureFacade } from './composition/createWorkspaceTrustStatusFeature';
 export {
   resolveWorkspaceTrustCanonicalGitRoot,
   resolveWorkspaceTrustFilesystemGitRoot,

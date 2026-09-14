@@ -153,6 +153,7 @@ function render(overrides: Partial<React.ComponentProps<typeof EditTeamMemberDia
       isTeamAlive={false}
       isTeamProvisioning={false}
       isMixedTeam={false}
+      updateMemberSettings={updateMemberSettings}
       onClose={onClose}
       onRefresh={onRefresh}
       onRelaunchRequired={onRelaunchRequired}

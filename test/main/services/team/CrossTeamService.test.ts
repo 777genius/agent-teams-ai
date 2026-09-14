@@ -1,6 +1,6 @@
 import {
-  CrossTeamService,
   type CrossTeamRecipientMetadataReader,
+  CrossTeamService,
 } from '@main/services/team/CrossTeamService';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {

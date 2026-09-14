@@ -14,14 +14,16 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { ReviewMutationKind, ReviewMutationPhase } from '@features/review-mutations/contracts';
+import type { ReviewMutationPhase } from '@features/review-mutations/contracts';
+import type {
+  PrepareReviewMutationInput,
+  ReviewMutationJournalRecord,
+} from '@features/review-mutations/main';
 import type {
   FileChangeWithContent,
   FileReviewDecision,
   ReviewDecisionPersistenceScope,
-  ReviewDirectDiskMutationStep,
   ReviewFileScope,
-  ReviewPersistedStateSnapshot,
 } from '@shared/types';
 
 const JOURNAL_VERSION = 2;
@@ -42,63 +44,13 @@ export interface ReviewMutationJournalDiscardInspection {
   corruptRecordCount: number;
 }
 
-export interface ReviewMutationJournalRecord {
-  version: 2;
-  id: string;
-  phase: ReviewMutationPhase;
-  kind: ReviewMutationKind;
-  teamName: string;
-  persistenceScope: ReviewDecisionPersistenceScope;
-  reviewScope: ReviewFileScope;
-  decisions: (FileReviewDecision & { reviewKey: string })[];
-  fileContents: FileChangeWithContent[];
-  decisionStatuses?: ('pending' | 'applied')[];
-  /** Exact path postimages captured before an applied decision is checkpointed. */
-  decisionPostimages?: (ReviewMutationJournalPathPostimage[] | null)[];
-  /** Exact lock-scoped transitions checkpointed before their disk write begins. */
-  decisionTransitions?: (ReviewMutationJournalPathTransition[] | null)[];
-  diskSteps?: ReviewMutationJournalDiskStep[];
-  persistedState?: ReviewPersistedStateSnapshot;
-  expectedDecisionRevision?: number;
-  createdAt: string;
-  updatedAt: string;
-  /** A handled application failure blocks automatic recovery until explicit retry/discard. */
-  blocked?: boolean;
-  failure?: string;
-}
-
-export interface PrepareReviewMutationInput {
-  teamName: string;
-  persistenceScope: ReviewDecisionPersistenceScope;
-  reviewScope: ReviewFileScope;
-  kind: ReviewMutationKind;
-  decisions: (FileReviewDecision & { reviewKey: string })[];
-  fileContents: FileChangeWithContent[];
-  diskSteps?: ReviewMutationJournalDiskStep[];
-  persistedState?: ReviewPersistedStateSnapshot;
-  expectedDecisionRevision?: number;
-}
-
-export type ReviewMutationJournalDiskStep = ReviewDirectDiskMutationStep & {
-  status: 'pending' | 'applied';
-  /** Main-resolved immutable rename evidence needed after the renderer is gone. */
-  authoritativeContent?: FileChangeWithContent;
-};
-
-export interface ReviewMutationJournalPathPostimage {
-  filePath: string;
-  /** Null means the path must be absent. Existing text is stored by digest only. */
-  sha256: string | null;
-}
-
-export interface ReviewMutationJournalPathTransition {
-  filePath: string;
-  beforeContent: string | null;
-  afterContent: string | null;
-  operation?: 'replace' | 'delete' | 'move';
-  transactionId?: string;
-  relatedFilePath?: string;
-}
+export type {
+  PrepareReviewMutationInput,
+  ReviewMutationJournalDiskStep,
+  ReviewMutationJournalPathPostimage,
+  ReviewMutationJournalPathTransition,
+  ReviewMutationJournalRecord,
+} from '@features/review-mutations/main';
 
 interface LegacyReviewMutationJournalRecord {
   version: 1;

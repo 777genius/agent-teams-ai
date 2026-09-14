@@ -43,6 +43,10 @@ export interface ServiceContextConfig {
   projectsDir?: string;
   /** Todos directory path (defaults to ~/.claude/todos) */
   todosDir?: string;
+  /** Supplies persisted custom project paths for repository grouping. */
+  getCustomProjectPaths?: () => readonly string[];
+  /** Decides whether subagent session errors produce notifications. */
+  shouldIncludeSubagentErrors?: () => boolean;
 }
 
 /**
@@ -92,7 +96,10 @@ export class ServiceContext {
     this.projectScanner = new ProjectScanner(
       config.projectsDir,
       config.todosDir,
-      config.fsProvider
+      config.fsProvider,
+      {
+        getCustomProjectPaths: config.getCustomProjectPaths ?? (() => []),
+      }
     );
 
     // 2. SessionParser - depends on ProjectScanner
@@ -112,7 +119,8 @@ export class ServiceContext {
       this.dataCache,
       config.projectsDir,
       config.todosDir,
-      config.fsProvider
+      config.fsProvider,
+      config.shouldIncludeSubagentErrors ?? (() => false)
     );
 
     logger.info(`ServiceContext created: ${config.id}`);

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 2,
+  "phaseId": "phase-00",
+  "laneId": "w5",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "remediationBaseSha": "648bebed68f5a64c984e83b441e14dd7c587c403",
+  "salvagedFrom": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w5-v1",
+  "status": "remediated_pending_reciprocal_review",
+  "evidence": [
+    {
+      "id": "P0.W5.EVENT_CURSOR_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W5.COMMAND_CATALOG",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+      "proofLevel": "source_observed_plus_executable_omission_proof"
+    },
+    {
+      "id": "P0.W5.EFFECT_RECOVERY_MATRIX",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+      "proofLevel": "fresh_process_fixture_characterized"
+    },
+    {
+      "id": "P0.W5.FINGERPRINT_GOLDENS",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+      "proofLevel": "immutable_oracle_fixture_characterized"
+    },
+    {
+      "id": "P0.W5.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W5.SUPPORTING.MUTATION_CENSUS",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+      "proofLevel": "source_observed_plus_executable_omission_proof"
+    },
+    {
+      "id": "P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json",
+      "proofLevel": "review_input"
+    }
+  ],
+  "findingResolutions": {
+    "RW35-002": "resolved: every effect boundary terminates an attempt process with exit 86 and recovers in a distinct process from durable files; exact state/effect/compensation/publication counts are asserted",
+    "RW35-003": "resolved: all task/inbox/provider candidates remain fail-closed under integrated W3 writer evidence",
+    "RW35-004": "resolved: retained/default/version/ordered-array vectors are checked against immutable expected encodings and HMAC digests outside generator outputs",
+    "RW35-005": "resolved: TypeScript AST extraction and independent 114-member disposition manifest are compared bidirectionally; omitted-row, stale-row, and omitted-descriptor controls fail",
+    "RW35-006": "resolved: every untracked addition is covered by no-index whitespace checking",
+    "R35-R2-001": "resolved by genuine fresh-process recovery and exact boundary assertions",
+    "R35-R2-002": "resolved by independent source extraction, full mutation/query/ephemeral/deferred dispositions, and omission fixtures",
+    "R35-R2-003": "resolved by this 23-path remediation handoff with phase-start/base distinction and exact checks",
+    "R35-R2-004": "resolved by targeted Prettier and all-file no-index whitespace checking",
+    "P0.V2.CONFLICT.W1_W2_W5.ACTION_OWNERSHIP": "resolved for W5: launch/stop/cancel use team-lifecycle; legacy runtime.permission_answer is deferred and excluded in favor of runtime permission-request ingress plus operator-owned outbound decision"
+  },
+  "integratedW3Authority": {
+    "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+    "preserved": true,
+    "effectDisposition": "all 101 generated effects remain automaticRecoveryAdmitted=false; transactional candidates require the future transaction and external candidates remain operator_required without W3-required writer/lookup proof"
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-w5.json",
+    "docs/research/hosted-web/phase-0/recovery-events/README.md",
+    "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+    "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+    "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+    "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+    "docs/research/hosted-web/phase-0/recovery-events/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+    "docs/research/hosted-web/phase-0/recovery-events/index.json",
+    "docs/research/hosted-web/phase-0/recovery-events/index.schema.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-census.schema.json",
+    "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json",
+    "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+    "scripts/hosted-web/phase-0/recovery-events/effect-recovery-worker.mjs",
+    "scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs",
+    "scripts/hosted-web/phase-0/recovery-events/model.mjs",
+    "scripts/hosted-web/phase-0/recovery-events/mutation-census.mjs",
+    "test/architecture/hosted-web/phase-0/recovery-events/fixtures/fingerprint-oracle-vectors.json",
+    "test/architecture/hosted-web/phase-0/recovery-events/fixtures/invalid-command-catalog.json",
+    "test/architecture/hosted-web/phase-0/recovery-events/fixtures/omitted-command-descriptor.json",
+    "test/architecture/hosted-web/phase-0/recovery-events/fixtures/omitted-mutation-row.json",
+    "test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs"
+  ],
+  "checks": [
+    {
+      "command": "node scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs --check",
+      "exitCode": 0,
+      "result": "9 generated evidence files fresh"
+    },
+    {
+      "command": "node test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs",
+      "exitCode": 0,
+      "result": "7 tests passed including 52 two-process recovery schedules and omission controls"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <W5 MJS files>",
+      "exitCode": 0,
+      "result": "targeted fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <W5 authored source/schema/fixture/handoff files>",
+      "exitCode": 0,
+      "result": "targeted Prettier check passed"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 23 additions>",
+      "exitCode": 0,
+      "result": "all additions whitespace-clean"
+    },
+    {
+      "command": "bounded secret/private-key/Bearer/token/absolute-home scan over 23 additions",
+      "exitCode": 0,
+      "result": "no likely secret or prohibited real-user path"
+    }
+  ],
+  "unverifiedClaims": [
+    "No Phase 1 hosted SQLite command registry/event journal, retention lease coordinator, snapshot endpoint, or renderer reconciler is implemented by this lane.",
+    "W3's integrated proof keeps current native task/config/inbox writers uncoordinated or quiescent-only; no W5 catalog row promotes them to automatic recovery.",
+    "The future app-exclusive SQLite transaction, production worker wiring, final artifact ABI, deployment drain, recovery-point publication, and credential/keyring preservation remain target-unverified.",
+    "The immutable fingerprint oracle uses public test-only keys and is evidence for deterministic encoding only, not production key custody."
+  ],
+  "blockers": [],
+  "estimateBuckets": [
+    {
+      "bucketId": "EST-RECOVERY-STATE",
+      "changedLinesLow": 4500,
+      "changedLinesHigh": 7500,
+      "confidence": "medium-low",
+      "overlap": "Deduplicate integrated W3 SQLite transaction, backup, keyring, and external-writer fixtures."
+    }
+  ],
+  "nextAction": "focused W3/W5 reciprocal re-review against this exact 23-path W5 bundle"
+}

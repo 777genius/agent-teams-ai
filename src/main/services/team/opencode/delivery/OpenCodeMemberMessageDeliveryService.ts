@@ -41,7 +41,6 @@ import {
   normalizeOpenCodeDeliveryResponseObservation,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
 import {
-  buildOpenCodeStalePendingPlainTextObservation,
   decideOpenCodeStalePendingResolution,
   getOpenCodeObservedSessionActivity,
   getOpenCodePromptDeliveryPendingAgeMs,
@@ -57,6 +56,7 @@ import {
   logOpenCodeStalePendingResolution,
   readOpenCodeStalePendingTurnUsedTokens,
 } from './OpenCodeStalePendingObservationSignals';
+import { applyOpenCodeStalePendingResolution } from './OpenCodeStalePendingResolutionApplier';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
@@ -65,11 +65,7 @@ import type {
   OpenCodeMemberMessageDeliveryInput,
   OpenCodeMemberMessageDeliveryServiceDependencies,
 } from './OpenCodeMemberMessageDeliveryPorts';
-import type {
-  OpenCodePromptDeliveryLedgerRecord,
-  OpenCodePromptDeliveryLedgerStore,
-} from './OpenCodePromptDeliveryLedger';
-import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
+import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
 
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 
@@ -79,70 +75,6 @@ function nowIso(): string {
 
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
-
-  /**
-   * Apply a stale-pending resolution to the ledger. `settle_plain_text` marks
-   * the record responded (plain-text turn end); `fail_terminal` closes it so it
-   * stops blocking the lane. Returns null when nothing was changed.
-   */
-  private async applyStalePendingResolution(input: {
-    checkpoint: () => Promise<void>;
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-    resolution: OpenCodeStalePendingResolution;
-    teamName: string;
-    memberName: string;
-    notifyActivity: (state: OpenCodeLeadTurnActivityNotification['state']) => void;
-    eventContext: Record<string, unknown>;
-  }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
-    const { resolution } = input;
-    await input.checkpoint();
-    if (resolution.action === 'settle_plain_text') {
-      const settled = await input.ledger.applyObservation({
-        id: input.ledgerRecord.id,
-        responseObservation: buildOpenCodeStalePendingPlainTextObservation({
-          record: input.ledgerRecord,
-          reason: resolution.reason,
-        }),
-        diagnostics: [resolution.reason],
-        observedAt: nowIso(),
-      });
-      await input.checkpoint();
-      this.deps.logOpenCodePromptDeliveryEvent(
-        'opencode_prompt_delivery_response_observed',
-        settled,
-        {
-          ...input.eventContext,
-          reason: resolution.reason,
-          stalePendingSettledAsPlainText: true,
-        }
-      );
-      return settled;
-    }
-    if (resolution.action === 'fail_terminal') {
-      const failed = await input.ledger.markFailedTerminal({
-        id: input.ledgerRecord.id,
-        reason: resolution.reason,
-        diagnostics: resolution.diagnostics,
-        failedAt: nowIso(),
-      });
-      await input.checkpoint();
-      this.deps.logOpenCodePromptDeliveryEvent(
-        'opencode_prompt_delivery_terminal_failure',
-        failed,
-        {
-          ...input.eventContext,
-          reason: resolution.reason,
-          stalePending: true,
-        }
-      );
-      input.notifyActivity('idle');
-      return failed;
-    }
-    // 'none' and 'keep_observing' fall through to the regular follow-up
-    // scheduling, which already logs each observe cycle.
-    return null;
-  }
 
   async deliver(
     teamName: string,
@@ -708,6 +640,8 @@ export class OpenCodeMemberMessageDeliveryService {
           ? Date.parse(ledgerRecord.nextAttemptAt)
           : NaN;
         await checkpoint();
+        const accepted = hasOpenCodeAcceptedRuntimePrompt(ledgerRecord);
+        const acceptanceUnknown = Boolean(ledgerRecord.acceptanceUnknown && !accepted);
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -717,13 +651,14 @@ export class OpenCodeMemberMessageDeliveryService {
             : OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
         });
         return {
-          delivered: true,
-          accepted: true,
+          delivered: accepted || acceptanceUnknown,
+          accepted,
           responsePending: true,
           responseState: ledgerRecord.responseState,
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
           laneId: laneIdentity.laneId,
+          ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
           visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
           visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
           reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',
@@ -951,7 +886,7 @@ export class OpenCodeMemberMessageDeliveryService {
           observedDiagnostics: observed.diagnostics,
           pendingAgeMs: turnActivityAgeMs,
         });
-        const staleSettled = await this.applyStalePendingResolution({
+        const staleSettled = await applyOpenCodeStalePendingResolution(this.deps, {
           checkpoint,
           ledger,
           ledgerRecord,

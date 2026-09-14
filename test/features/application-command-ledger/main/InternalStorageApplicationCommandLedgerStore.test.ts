@@ -1,15 +1,49 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { Worker } from 'node:worker_threads';
 
 import {
   ApplicationCommandBeginOutcome,
   ApplicationCommandConflictReason,
   ApplicationCommandFailureKind,
   type ApplicationCommandLedgerBeginRequest,
+  type ApplicationCommandLedgerBeginResult,
   ApplicationCommandLedgerStatus,
-} from '@features/application-command-ledger/contracts';
-import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main';
+  type ApplicationCommandLedgerStorageGateway,
+  COMMAND_IDEMPOTENCY_SCOPE,
+  type CommandDescriptor,
+  type CommandFingerprintRecord,
+  type DurableApplicationCommandAttemptClaim,
+  type DurableApplicationCommandAttemptLeaseRequest,
+  type DurableApplicationCommandAttemptReference,
+  type DurableApplicationCommandClaimRequest,
+  type DurableApplicationCommandClaimResult,
+  type DurableApplicationCommandClaimStatusRequest,
+  type DurableApplicationCommandCommitRequest,
+  type DurableApplicationCommandConsumerApplyRequest,
+  type DurableApplicationCommandConsumerApplyResult,
+  type DurableApplicationCommandConsumerProjectionRecord,
+  type DurableApplicationCommandConsumerProjectionRequest,
+  type DurableApplicationCommandEffectTransitionRequest,
+  type DurableApplicationCommandLedgerStorageGateway,
+  type DurableApplicationCommandOutboxClaimRequest,
+  type DurableApplicationCommandOutboxDeliveryAcknowledgementRequest,
+  type DurableApplicationCommandOutboxListRequest,
+  type DurableApplicationCommandOutboxRecord,
+  type DurableApplicationCommandPersistClaimRequest,
+  type DurableApplicationCommandRecord,
+  type DurableApplicationCommandStatusRequest,
+  type DurableApplicationCommandTransitionRequest,
+  HMAC_SHA256_LD_V1,
+  type HostedAuthorityProjectionCommitRequest,
+  type HostedAuthorityProjectionCommitResult,
+  type HostedAuthorityProjectionPersistRequest,
+  type HostedAuthorityProjectionReadRequest,
+  type HostedAuthorityProjectionRecord,
+} from '@features/application-command-ledger';
+import { createCommandDescriptorRegistry } from '@features/application-command-ledger/core/domain';
+import { InternalStorageApplicationCommandLedgerStore } from '@features/application-command-ledger/main/adapters/output/InternalStorageApplicationCommandLedgerStore';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -19,8 +53,10 @@ import { InProcessGateway } from '../../internal-storage/helpers/InProcessGatewa
 describe('InternalStorageApplicationCommandLedgerStore', () => {
   let tmpDir: string | null = null;
   const cores: InternalStorageWorkerCore[] = [];
+  const workers: TestWorkerRpc[] = [];
 
   afterEach(async () => {
+    await Promise.all(workers.splice(0).map((worker) => worker.close()));
     for (const core of cores.splice(0)) {
       core.close();
     }
@@ -52,6 +88,207 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     }
     expect(replay.record.resultJson).toBe('{"ok":true}');
     expect(replay.record.status).toBe(ApplicationCommandLedgerStatus.Completed);
+  });
+
+  it('durably replays an identical completed mutation after restart and lease expiry', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mutation-fence-restart-'));
+    const databasePath = path.join(tmpDir, 'storage', 'app.db');
+    const firstCore = openCore(databasePath);
+    const firstStore = new InternalStorageApplicationCommandLedgerStore(
+      new InProcessGateway(firstCore)
+    );
+    const request = makeMutationBeginRequest();
+
+    await expect(firstStore.begin(request)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Started,
+    });
+    await firstStore.markCompleted({
+      namespace: request.namespace,
+      scopeKey: request.scopeKey,
+      commandId: request.commandId,
+      attemptCount: 1,
+      resultHash: 'hash:mutation-result',
+      resultJson: '{"status":"stopped"}',
+      completedAtIso: '2026-07-24T14:00:10.000Z',
+    });
+    closeCore(firstCore);
+
+    const secondCore = openCore(databasePath);
+    const secondStore = new InternalStorageApplicationCommandLedgerStore(
+      new InProcessGateway(secondCore)
+    );
+    const replay = await secondStore.begin({
+      ...request,
+      nowIso: '2026-07-24T16:00:00.000Z',
+    });
+
+    expect(replay).toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.DuplicateCompleted,
+      record: {
+        resultJson: '{"status":"stopped"}',
+        status: ApplicationCommandLedgerStatus.Completed,
+      },
+    });
+  });
+
+  it('rejects expired, stale, rebound, changed, and unsettled mutation claims', async () => {
+    const store = await makeStore();
+
+    const expired = makeMutationBeginRequest({
+      scopeKey: 'expired',
+      commandId: 'expired-operation',
+      idempotencyKey: 'expired-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'expired-operation',
+        claimedAtIso: '2026-07-24T13:00:00.000Z',
+        expiresAtIso: '2026-07-24T13:30:00.000Z',
+      }),
+    });
+    await expect(store.begin(expired)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationFenceExpired,
+    });
+
+    const settled = makeMutationBeginRequest();
+    await store.begin(settled);
+    await store.markCompleted({
+      namespace: settled.namespace,
+      scopeKey: settled.scopeKey,
+      commandId: settled.commandId,
+      attemptCount: 1,
+      resultHash: 'hash:settled',
+      resultJson: '{"status":"stopped"}',
+      completedAtIso: '2026-07-24T14:00:10.000Z',
+    });
+
+    for (const leaseFence of [9, 10]) {
+      const operationId = `stale-operation-${leaseFence}`;
+      await expect(
+        store.begin(
+          makeMutationBeginRequest({
+            commandId: operationId,
+            idempotencyKey: operationId,
+            mutationFence: makeMutationFence({
+              operationId,
+              leaseToken: `stale-token-${leaseFence}`,
+              leaseFence,
+            }),
+          })
+        )
+      ).resolves.toMatchObject({
+        outcome: ApplicationCommandBeginOutcome.Conflict,
+        reason: ApplicationCommandConflictReason.MutationFenceStale,
+      });
+    }
+
+    await expect(
+      store.begin({
+        ...settled,
+        mutationFence: makeMutationFence({
+          operationId: settled.commandId,
+          leaseToken: 'replacement-token',
+          leaseFence: 11,
+        }),
+      })
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationOperationRebound,
+    });
+    await expect(
+      store.begin({
+        ...settled,
+        payloadHash: 'hash:changed-payload',
+      })
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.PayloadHashMismatch,
+    });
+    const withoutMutationFence = {
+      namespace: settled.namespace,
+      scopeKey: settled.scopeKey,
+      commandId: settled.commandId,
+      idempotencyKey: settled.idempotencyKey,
+      operation: settled.operation,
+      payloadHash: settled.payloadHash,
+      metadataJson: settled.metadataJson,
+      nowIso: settled.nowIso,
+      startedStaleAfterMs: settled.startedStaleAfterMs,
+    };
+    await expect(store.begin(withoutMutationFence)).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationOperationRebound,
+    });
+
+    const tokenReboundOperation = 'token-rebound-operation';
+    await expect(
+      store.begin(
+        makeMutationBeginRequest({
+          commandId: tokenReboundOperation,
+          idempotencyKey: tokenReboundOperation,
+          mutationFence: makeMutationFence({
+            operationId: tokenReboundOperation,
+            leaseToken: settled.mutationFence!.leaseToken,
+            leaseFence: 11,
+          }),
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationTokenRebound,
+    });
+
+    const active = makeMutationBeginRequest({
+      scopeKey: 'active-scope',
+      commandId: 'active-operation',
+      idempotencyKey: 'active-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'active-operation',
+        leaseToken: 'active-token',
+      }),
+    });
+    await store.begin(active);
+    await expect(
+      store.begin(
+        makeMutationBeginRequest({
+          scopeKey: active.scopeKey,
+          commandId: 'active-successor',
+          idempotencyKey: 'active-successor',
+          mutationFence: makeMutationFence({
+            operationId: 'active-successor',
+            leaseToken: 'active-successor-token',
+            leaseFence: 11,
+          }),
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.Conflict,
+      reason: ApplicationCommandConflictReason.MutationSuccessorBlocked,
+    });
+  });
+
+  it('serializes identical mutation claims across independent SQLite workers', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    const request = makeMutationBeginRequest({
+      scopeKey: 'concurrent-scope',
+      commandId: 'concurrent-operation',
+      idempotencyKey: 'concurrent-operation',
+      mutationFence: makeMutationFence({
+        operationId: 'concurrent-operation',
+        leaseToken: 'concurrent-token',
+      }),
+    });
+
+    const outcomes = await Promise.all([first.begin(request), second.begin(request)]);
+
+    expect(
+      outcomes.map(({ outcome }) => outcome).sort((left, right) => left.localeCompare(right))
+    ).toEqual([
+      ApplicationCommandBeginOutcome.AlreadyStarted,
+      ApplicationCommandBeginOutcome.Started,
+    ]);
+    await expect(
+      first.listByScope({ namespace: request.namespace, scopeKey: request.scopeKey })
+    ).resolves.toHaveLength(1);
   });
 
   it('replays idempotency key reuse by a different command id when payload matches', async () => {
@@ -251,6 +488,1157 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     ).rejects.toThrow('attempt is stale');
   });
 
+  it('persists a versioned claim, ordered effect evidence, status, and outbox commit', async () => {
+    const store = await makeDurableStore();
+
+    const claimed = await store.claimDurable(makeDurableClaim());
+    expect(claimed.resolution.outcome).toBe('claimed');
+    expect(claimed.command).toMatchObject({
+      commandId: 'durable-cmd-1',
+      state: 'prepared',
+      effects: [
+        { ordinal: 0, effectId: 'write-local-state', state: 'not_started' },
+        { ordinal: 1, effectId: 'notify-provider', state: 'not_started' },
+      ],
+    });
+
+    await store.transitionDurableCommand({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'prepared',
+      nextState: 'running',
+      errorCode: null,
+      errorJson: null,
+      transitionedAtIso: '2026-07-20T10:00:01.000Z',
+    });
+    await succeedEffect(store, 0, '2026-07-20T10:00:02.000Z');
+    await succeedEffect(store, 1, '2026-07-20T10:00:03.000Z');
+
+    const committed = await store.commitDurable({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'running',
+      outcomeJson: '{"accepted":true}',
+      committedAtIso: '2026-07-20T10:00:04.000Z',
+      outbox: {
+        eventId: 'event-1',
+        eventType: 'task.created',
+        scopeKind: 'team',
+        scopeId: 'team-a',
+        schemaVersion: 1,
+        semanticRevision: 1,
+        payloadJson: '{"taskId":"task-a"}',
+        createdAtIso: '2026-07-20T10:00:04.000Z',
+      },
+    });
+
+    expect(committed.state).toBe('committed');
+    expect(committed.effects.map((effect) => effect.state)).toEqual([
+      'observed_succeeded',
+      'observed_succeeded',
+    ]);
+    expect(committed.effects[0]?.evidence).toEqual([
+      expect.objectContaining({
+        sequence: 1,
+        outcome: 'observed_succeeded',
+        evidenceJson: '{"proof":"effect-0"}',
+      }),
+    ]);
+    await expect(
+      store.getDurableStatus({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-1',
+      })
+    ).resolves.toEqual(committed);
+    await expect(store.listDurableOutbox({ afterSequence: 0, limit: 10 })).resolves.toEqual([
+      expect.objectContaining({
+        sequence: 1,
+        eventId: 'event-1',
+        commandId: 'durable-cmd-1',
+        semanticRevision: 1,
+        payloadJson: '{"taskId":"task-a"}',
+        deliveryAcknowledgedAt: null,
+      }),
+    ]);
+    const claimedOutbox = await store.claimDurableOutbox({
+      ownerId: 'delivery-worker-a',
+      leaseToken: 'delivery-lease-a',
+      claimedAtIso: '2026-07-20T10:00:05.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:01:05.000Z',
+      limit: 10,
+    });
+    expect(claimedOutbox).toEqual([
+      expect.objectContaining({
+        eventId: 'event-1',
+        deliveryLease: expect.objectContaining({ generation: 1, ownerId: 'delivery-worker-a' }),
+      }),
+    ]);
+    await store.acknowledgeDurableOutboxDelivery({
+      eventId: 'event-1',
+      deliveryGeneration: 1,
+      ownerId: 'delivery-worker-a',
+      leaseToken: 'delivery-lease-a',
+      acknowledgedAtIso: '2026-07-20T10:00:06.000Z',
+    });
+    await expect(store.listDurableOutbox({ afterSequence: 0, limit: 10 })).resolves.toEqual([
+      expect.objectContaining({
+        eventId: 'event-1',
+        deliveryAcknowledgedAt: '2026-07-20T10:00:06.000Z',
+      }),
+    ]);
+  });
+
+  it('converges overlapping claims across independent worker threads and rejects changed intent', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    const [left, right] = await Promise.all([
+      first.claimDurable(makeDurableClaim()),
+      second.claimDurable(
+        makeDurableClaim({
+          commandId: 'durable-cmd-2',
+          attempt: {
+            attemptId: 'attempt-b',
+            ownerId: 'worker-b',
+            leaseToken: 'command-lease-b',
+            claimedAtIso: '2026-07-20T10:00:00.000Z',
+            leaseExpiresAtIso: '2026-07-20T10:10:00.000Z',
+          },
+        })
+      ),
+    ]);
+
+    expect(
+      [left.resolution.outcome, right.resolution.outcome].sort((first, second) =>
+        first.localeCompare(second)
+      )
+    ).toEqual(['claimed', 'same_intent']);
+    expect(
+      [left.attemptAcquired, right.attemptAcquired].sort(
+        (first, second) => Number(first) - Number(second)
+      )
+    ).toEqual([false, true]);
+    expect(left.command.commandId).toBe(right.command.commandId);
+    expect(left.command.attempt).toEqual(right.command.attempt);
+    await expect(
+      second.getDurableByClaim({
+        scope: makeDurableClaim().scope,
+      })
+    ).resolves.toMatchObject({
+      commandId: left.command.commandId,
+      state: 'prepared',
+    });
+    const losingCommandId =
+      left.command.commandId === 'durable-cmd-1' ? 'durable-cmd-2' : 'durable-cmd-1';
+    await expect(
+      first.getDurableStatus({
+        deploymentId: 'deployment-a',
+        commandId: losingCommandId,
+      })
+    ).resolves.toBeNull();
+
+    const conflict = await second.claimDurable(
+      makeDurableClaim({
+        commandId: 'durable-cmd-3',
+        fingerprint: makeFingerprint({ digest: 'b'.repeat(64) }),
+      })
+    );
+    expect(conflict.resolution).toMatchObject({
+      outcome: 'idempotency_mismatch',
+      claimAction: 'reject',
+      effectAction: 'none',
+      mismatch: { code: 'idempotency_mismatch' },
+    });
+    expect(conflict.attemptAcquired).toBe(false);
+    expect(conflict.command.commandId).toBe(left.command.commandId);
+    await expect(
+      first.getDurableStatus({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-3',
+      })
+    ).resolves.toBeNull();
+  });
+
+  it('fences an expired execution generation so attempt A cannot report success after B begins', async () => {
+    const store = await makeDurableStore();
+    const claimed = await store.claimDurable(makeDurableClaim());
+    expect(claimed).toMatchObject({
+      attemptAcquired: true,
+      command: { attempt: DEFAULT_ATTEMPT_REFERENCE },
+    });
+    await store.transitionDurableCommand({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'prepared',
+      nextState: 'running',
+      errorCode: null,
+      errorJson: null,
+      transitionedAtIso: '2026-07-20T10:00:01.000Z',
+    });
+    await store.transitionDurableEffect({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      ordinal: 0,
+      expectedState: 'not_started',
+      nextState: 'attempting',
+      evidence: null,
+      evidenceJson: null,
+      transitionedAtIso: '2026-07-20T10:00:02.000Z',
+    });
+    await store.renewDurableAttemptLease({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      renewedAtIso: '2026-07-20T10:05:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:15:00.000Z',
+    });
+
+    const earlyAttemptB = await store.claimDurable(
+      makeDurableClaim({
+        commandId: 'durable-cmd-2',
+        attempt: {
+          attemptId: 'attempt-b',
+          ownerId: 'worker-b',
+          leaseToken: 'command-lease-b',
+          claimedAtIso: '2026-07-20T10:10:00.000Z',
+          leaseExpiresAtIso: '2026-07-20T10:20:00.000Z',
+        },
+      })
+    );
+    expect(earlyAttemptB).toMatchObject({
+      attemptAcquired: false,
+      command: { attempt: { generation: 1, ownerId: 'worker-a' } },
+    });
+
+    const takeover = await store.claimDurable(
+      makeDurableClaim({
+        commandId: 'durable-cmd-2',
+        attempt: {
+          attemptId: 'attempt-b',
+          ownerId: 'worker-b',
+          leaseToken: 'command-lease-b',
+          claimedAtIso: '2026-07-20T10:15:00.000Z',
+          leaseExpiresAtIso: '2026-07-20T10:25:00.000Z',
+        },
+      })
+    );
+    expect(takeover).toMatchObject({
+      resolution: { outcome: 'same_intent' },
+      attemptAcquired: true,
+      command: {
+        state: 'recovering',
+        attempt: { generation: 2, attemptId: 'attempt-b', ownerId: 'worker-b' },
+      },
+    });
+    expect(takeover.command.effects[0]).toMatchObject({ ordinal: 0, state: 'ambiguous' });
+
+    await expect(
+      store.transitionDurableEffect({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-1',
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        ordinal: 0,
+        expectedState: 'attempting',
+        nextState: 'observed_succeeded',
+        evidence: {
+          effectId: 'write-local-state',
+          effectVersion: 1,
+          recoveryClass: 'transactional_local',
+          evidenceSchemaVersion: 1,
+          outcome: 'observed_succeeded',
+        },
+        evidenceJson: '{"proof":"stale-attempt-a"}',
+        transitionedAtIso: '2026-07-20T10:06:00.000Z',
+      })
+    ).rejects.toThrow('attempt fence is stale');
+
+    const reconciled = await store.transitionDurableEffect({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: {
+        generation: 2,
+        attemptId: 'attempt-b',
+        ownerId: 'worker-b',
+        leaseToken: 'command-lease-b',
+      },
+      ordinal: 0,
+      expectedState: 'ambiguous',
+      nextState: 'observed_succeeded',
+      evidence: {
+        effectId: 'write-local-state',
+        effectVersion: 1,
+        recoveryClass: 'transactional_local',
+        evidenceSchemaVersion: 1,
+        outcome: 'observed_succeeded',
+      },
+      evidenceJson: '{"proof":"attempt-b-reconciliation"}',
+      transitionedAtIso: '2026-07-20T10:16:00.000Z',
+    });
+    expect(reconciled.effects[0]).toMatchObject({ state: 'observed_succeeded' });
+  });
+
+  it('claims one globally ordered outbox batch and fences concurrent and stale delivery owners', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    for (const ordinal of [1, 2]) {
+      const commandId = `durable-outbox-${ordinal}`;
+      await first.claimDurable(
+        makeDurableClaim({
+          commandId,
+          scope: {
+            ...makeDurableClaim().scope,
+            idempotencyKey: `durable-outbox-idem-${ordinal}`,
+          },
+          fingerprint: makeFingerprint({ digest: String(ordinal).repeat(64) }),
+        })
+      );
+      await first.transitionDurableCommand({
+        deploymentId: 'deployment-a',
+        commandId,
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        expectedState: 'prepared',
+        nextState: 'running',
+        errorCode: null,
+        errorJson: null,
+        transitionedAtIso: '2026-07-20T10:00:01.000Z',
+      });
+      await succeedEffect(first, 0, '2026-07-20T10:00:02.000Z', { commandId });
+      await succeedEffect(first, 1, '2026-07-20T10:00:03.000Z', { commandId });
+      await first.commitDurable({
+        deploymentId: 'deployment-a',
+        commandId,
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        expectedState: 'running',
+        outcomeJson: `{"ordinal":${ordinal}}`,
+        committedAtIso: '2026-07-20T10:00:04.000Z',
+        outbox: {
+          eventId: `event-${ordinal}`,
+          eventType: 'task.created',
+          scopeKind: 'team',
+          scopeId: 'team-a',
+          schemaVersion: 1,
+          semanticRevision: ordinal,
+          payloadJson: `{"ordinal":${ordinal}}`,
+          createdAtIso: '2026-07-20T10:00:04.000Z',
+        },
+      });
+    }
+
+    const concurrentConsumerRequest = {
+      consumerId: 'task-list-projection-v1',
+      projectionKey: 'team-a/tasks',
+      eventId: 'event-1',
+      semanticRevision: 1,
+      stateJson: '{"taskIds":["task-1"]}',
+      appliedAtIso: '2026-07-20T10:00:05.000Z',
+    } satisfies DurableApplicationCommandConsumerApplyRequest;
+    const concurrentApplications = await Promise.all([
+      first.applyDurableConsumerEvent(concurrentConsumerRequest),
+      second.applyDurableConsumerEvent(concurrentConsumerRequest),
+    ]);
+    expect(
+      concurrentApplications
+        .map(({ outcome }) => outcome)
+        .sort((left, right) => left.localeCompare(right))
+    ).toEqual(['applied', 'duplicate']);
+    await expect(
+      first.getDurableConsumerProjection({
+        consumerId: concurrentConsumerRequest.consumerId,
+        projectionKey: concurrentConsumerRequest.projectionKey,
+      })
+    ).resolves.toMatchObject({ semanticRevision: 1, applicationCount: 1 });
+
+    const deliveryOwnerA: DurableApplicationCommandOutboxClaimRequest = {
+      ownerId: 'delivery-worker-a',
+      leaseToken: 'delivery-lease-a',
+      claimedAtIso: '2026-07-20T10:01:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
+      limit: 10,
+    };
+    const deliveryOwnerB: DurableApplicationCommandOutboxClaimRequest = {
+      ownerId: 'delivery-worker-b',
+      leaseToken: 'delivery-lease-b',
+      claimedAtIso: '2026-07-20T10:01:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
+      limit: 10,
+    };
+    const [claimedA, claimedB] = await Promise.all([
+      first.claimDurableOutbox(deliveryOwnerA),
+      second.claimDurableOutbox(deliveryOwnerB),
+    ]);
+    expect([claimedA.length, claimedB.length].sort((left, right) => left - right)).toEqual([0, 2]);
+
+    const winner =
+      claimedA.length > 0
+        ? { store: first, claim: deliveryOwnerA, records: claimedA }
+        : { store: second, claim: deliveryOwnerB, records: claimedB };
+    const loser =
+      claimedA.length > 0
+        ? { store: second, ownerId: 'delivery-worker-b', leaseToken: 'delivery-lease-b' }
+        : { store: first, ownerId: 'delivery-worker-a', leaseToken: 'delivery-lease-a' };
+    await expect(
+      winner.store.acknowledgeDurableOutboxDelivery({
+        eventId: 'event-2',
+        deliveryGeneration: 1,
+        ownerId: winner.claim.ownerId,
+        leaseToken: winner.claim.leaseToken,
+        acknowledgedAtIso: '2026-07-20T10:01:30.000Z',
+      })
+    ).rejects.toThrow('acknowledge delivery in sequence order');
+
+    const takeover = await loser.store.claimDurableOutbox({
+      ownerId: loser.ownerId,
+      leaseToken: loser.leaseToken,
+      claimedAtIso: '2026-07-20T10:02:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:03:00.000Z',
+      limit: 10,
+    });
+    expect(takeover).toEqual([
+      expect.objectContaining({
+        eventId: 'event-1',
+        deliveryLease: {
+          generation: 2,
+          ownerId: loser.ownerId,
+          leaseToken: loser.leaseToken,
+          claimedAt: '2026-07-20T10:02:00.000Z',
+          leaseExpiresAt: '2026-07-20T10:03:00.000Z',
+        },
+      }),
+      expect.objectContaining({
+        eventId: 'event-2',
+        deliveryLease: {
+          generation: 2,
+          ownerId: loser.ownerId,
+          leaseToken: loser.leaseToken,
+          claimedAt: '2026-07-20T10:02:00.000Z',
+          leaseExpiresAt: '2026-07-20T10:03:00.000Z',
+        },
+      }),
+    ]);
+    await expect(
+      winner.store.acknowledgeDurableOutboxDelivery({
+        eventId: 'event-1',
+        deliveryGeneration: 1,
+        ownerId: winner.claim.ownerId,
+        leaseToken: winner.claim.leaseToken,
+        acknowledgedAtIso: '2026-07-20T10:01:40.000Z',
+      })
+    ).rejects.toThrow('delivery fence is stale');
+
+    for (const [index, eventId] of ['event-1', 'event-2'].entries()) {
+      await loser.store.acknowledgeDurableOutboxDelivery({
+        eventId,
+        deliveryGeneration: 2,
+        ownerId: loser.ownerId,
+        leaseToken: loser.leaseToken,
+        acknowledgedAtIso: `2026-07-20T10:02:${String(10 + index).padStart(2, '0')}.000Z`,
+      });
+    }
+    await expect(first.listDurableOutbox({ afterSequence: 0, limit: 10 })).resolves.toEqual([
+      expect.objectContaining({ eventId: 'event-1', deliveryAcknowledgedAt: expect.any(String) }),
+      expect.objectContaining({ eventId: 'event-2', deliveryAcknowledgedAt: expect.any(String) }),
+    ]);
+    expect(winner.records.map((record) => record.eventId)).toEqual(['event-1', 'event-2']);
+  });
+
+  it('durably deduplicates consumer application after close, reopen, and pre-ack crash', async () => {
+    const first = await makeDurableStore();
+    for (const revision of [1, 2]) {
+      const commandId = `durable-crash-outbox-${revision}`;
+      await first.claimDurable(
+        makeDurableClaim({
+          commandId,
+          scope: {
+            ...makeDurableClaim().scope,
+            idempotencyKey: `durable-crash-outbox-idem-${revision}`,
+          },
+          fingerprint: makeFingerprint({ digest: String(revision).repeat(64) }),
+        })
+      );
+      await first.transitionDurableCommand({
+        deploymentId: 'deployment-a',
+        commandId,
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        expectedState: 'prepared',
+        nextState: 'running',
+        errorCode: null,
+        errorJson: null,
+        transitionedAtIso: '2026-07-20T10:00:01.000Z',
+      });
+      await succeedEffect(first, 0, '2026-07-20T10:00:02.000Z', { commandId });
+      await succeedEffect(first, 1, '2026-07-20T10:00:03.000Z', { commandId });
+      await first.commitDurable({
+        deploymentId: 'deployment-a',
+        commandId,
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        expectedState: 'running',
+        outcomeJson: `{"revision":${revision}}`,
+        committedAtIso: '2026-07-20T10:00:04.000Z',
+        outbox: {
+          eventId: `e${revision}`,
+          eventType: 'task.changed',
+          scopeKind: 'team',
+          scopeId: 'team-a',
+          schemaVersion: 1,
+          semanticRevision: revision,
+          payloadJson: `{"revision":${revision},"taskId":"task-a"}`,
+          createdAtIso: '2026-07-20T10:00:04.000Z',
+        },
+      });
+    }
+
+    const firstLease = {
+      ownerId: 'delivery-worker-a',
+      leaseToken: 'delivery-lease-a',
+      claimedAtIso: '2026-07-20T10:01:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
+      limit: 10,
+    } satisfies DurableApplicationCommandOutboxClaimRequest;
+    const firstBatch = await first.claimDurableOutbox(firstLease);
+    expect(firstBatch.map((record) => record.eventId)).toEqual(['e1', 'e2']);
+
+    const stableEnvelopeBytes = (record: DurableApplicationCommandOutboxRecord): Buffer =>
+      Buffer.from(
+        JSON.stringify({
+          eventId: record.eventId,
+          sequence: record.sequence,
+          semanticRevision: record.semanticRevision,
+          payloadJson: record.payloadJson,
+        }),
+        'utf8'
+      );
+
+    // Consumer projection application commits, then delivery crashes before its acknowledgement.
+    await expect(
+      first.applyDurableConsumerEvent({
+        consumerId: 'task-projection-v1',
+        projectionKey: 'team-a/task-a',
+        eventId: 'e1',
+        semanticRevision: 1,
+        stateJson: '{"revision":1,"taskId":"task-a"}',
+        appliedAtIso: '2026-07-20T10:01:01.000Z',
+      })
+    ).resolves.toMatchObject({
+      outcome: 'applied',
+      projection: { semanticRevision: 1, applicationCount: 1, lastEventId: 'e1' },
+    });
+    const firstBatchBytes = firstBatch.map(stableEnvelopeBytes);
+    cores.splice(0).forEach((core) => core.close());
+
+    const reopened = makeDurableStoreAt(path.join(tmpDir!, 'storage', 'app.db'));
+    const reclaimedLease = {
+      ownerId: 'delivery-worker-b',
+      leaseToken: 'delivery-lease-b',
+      claimedAtIso: '2026-07-20T10:02:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:03:00.000Z',
+      limit: 10,
+    } satisfies DurableApplicationCommandOutboxClaimRequest;
+    const reclaimedBatch = await reopened.claimDurableOutbox(reclaimedLease);
+    expect(reclaimedBatch.map((record) => record.deliveryLease?.generation)).toEqual([2, 2]);
+    expect(reclaimedBatch.map(stableEnvelopeBytes)).toEqual(firstBatchBytes);
+
+    await expect(
+      Promise.resolve().then(() =>
+        reopened.applyDurableConsumerEvent({
+          consumerId: 'task-projection-v1',
+          projectionKey: 'team-a/task-a',
+          eventId: 'e1',
+          semanticRevision: 2,
+          stateJson: '{"revision":2,"taskId":"task-a"}',
+          appliedAtIso: '2026-07-20T10:02:01.000Z',
+        })
+      )
+    ).rejects.toThrow('semantic revision mismatch');
+    await expect(
+      reopened.applyDurableConsumerEvent({
+        consumerId: 'task-projection-v1',
+        projectionKey: 'team-a/task-a',
+        eventId: 'e1',
+        semanticRevision: 1,
+        stateJson: '{"revision":1,"taskId":"task-a"}',
+        appliedAtIso: '2026-07-20T10:02:02.000Z',
+      })
+    ).resolves.toMatchObject({
+      outcome: 'duplicate',
+      projection: {
+        semanticRevision: 1,
+        applicationCount: 1,
+        lastEventId: 'e1',
+        updatedAt: '2026-07-20T10:01:01.000Z',
+      },
+    });
+
+    await expect(
+      Promise.resolve().then(() =>
+        reopened.acknowledgeDurableOutboxDelivery({
+          eventId: 'e2',
+          deliveryGeneration: 2,
+          ownerId: reclaimedLease.ownerId,
+          leaseToken: reclaimedLease.leaseToken,
+          acknowledgedAtIso: '2026-07-20T10:02:01.000Z',
+        })
+      )
+    ).rejects.toThrow('acknowledge delivery in sequence order');
+    await expect(
+      Promise.resolve().then(() =>
+        reopened.acknowledgeDurableOutboxDelivery({
+          eventId: 'e1',
+          deliveryGeneration: 1,
+          ownerId: firstLease.ownerId,
+          leaseToken: firstLease.leaseToken,
+          acknowledgedAtIso: '2026-07-20T10:02:01.000Z',
+        })
+      )
+    ).rejects.toThrow('delivery fence is stale');
+
+    for (const [index, record] of reclaimedBatch.entries()) {
+      const applied = await reopened.applyDurableConsumerEvent({
+        consumerId: 'task-projection-v1',
+        projectionKey: 'team-a/task-a',
+        eventId: record.eventId,
+        semanticRevision: record.semanticRevision,
+        stateJson: `{"revision":${record.semanticRevision},"taskId":"task-a"}`,
+        appliedAtIso: `2026-07-20T10:02:${String(5 + index).padStart(2, '0')}.000Z`,
+      });
+      expect(applied.outcome).toBe(record.eventId === 'e1' ? 'duplicate' : 'applied');
+      await reopened.acknowledgeDurableOutboxDelivery({
+        eventId: record.eventId,
+        deliveryGeneration: 2,
+        ownerId: reclaimedLease.ownerId,
+        leaseToken: reclaimedLease.leaseToken,
+        acknowledgedAtIso: `2026-07-20T10:02:${String(10 + index).padStart(2, '0')}.000Z`,
+      });
+    }
+
+    await expect(
+      reopened.getDurableConsumerProjection({
+        consumerId: 'task-projection-v1',
+        projectionKey: 'team-a/task-a',
+      })
+    ).resolves.toEqual({
+      consumerId: 'task-projection-v1',
+      projectionKey: 'team-a/task-a',
+      semanticRevision: 2,
+      lastEventId: 'e2',
+      stateJson: '{"revision":2,"taskId":"task-a"}',
+      applicationCount: 2,
+      updatedAt: '2026-07-20T10:02:06.000Z',
+    });
+    await expect(reopened.listDurableOutbox({ afterSequence: 0, limit: 10 })).resolves.toEqual([
+      expect.objectContaining({ eventId: 'e1', deliveryAcknowledgedAt: expect.any(String) }),
+      expect.objectContaining({ eventId: 'e2', deliveryAcknowledgedAt: expect.any(String) }),
+    ]);
+  });
+
+  it('reads command, effects, and evidence inside one SQLite snapshot transaction', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'durable-app-command-snapshot-'));
+    const statements: string[] = [];
+    const core = new InternalStorageWorkerCore({
+      databasePath: path.join(tmpDir, 'storage', 'app.db'),
+      createDatabase: (file) =>
+        new Database(file, { verbose: (sql) => statements.push(String(sql)) }),
+    });
+    cores.push(core);
+    const store = new InternalStorageApplicationCommandLedgerStore(
+      makeDurableGateway(core),
+      createCommandDescriptorRegistry(DURABLE_DESCRIPTORS)
+    );
+    await store.claimDurable(makeDurableClaim());
+    await store.transitionDurableCommand({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'prepared',
+      nextState: 'running',
+      errorCode: null,
+      errorJson: null,
+      transitionedAtIso: '2026-07-20T10:00:01.000Z',
+    });
+    await succeedEffect(store, 0, '2026-07-20T10:00:02.000Z');
+
+    statements.length = 0;
+    await store.getDurableStatus({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+    });
+    const begin = statements.findIndex((statement) => /^begin\b/i.test(statement));
+    const commit = statements.findIndex((statement) => /^commit\b/i.test(statement));
+    const selects = statements
+      .map((statement, index) => ({ statement, index }))
+      .filter(({ statement }) => /^select\b/i.test(statement));
+    expect(begin).toBeGreaterThanOrEqual(0);
+    expect(selects.length).toBeGreaterThanOrEqual(4);
+    expect(selects.every(({ index }) => index > begin && index < commit)).toBe(true);
+  });
+
+  it('survives reopen with an attempting effect and requires evidence before commit', async () => {
+    const first = await makeDurableStore();
+    await first.claimDurable(makeDurableClaim());
+    await first.transitionDurableCommand({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'prepared',
+      nextState: 'running',
+      errorCode: null,
+      errorJson: null,
+      transitionedAtIso: '2026-07-20T10:00:01.000Z',
+    });
+    await first.transitionDurableEffect({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      ordinal: 0,
+      expectedState: 'not_started',
+      nextState: 'attempting',
+      evidence: null,
+      evidenceJson: null,
+      transitionedAtIso: '2026-07-20T10:00:02.000Z',
+    });
+    cores.splice(0).forEach((core) => core.close());
+
+    const reopened = makeDurableStoreAt(path.join(tmpDir!, 'storage', 'app.db'));
+    await expect(
+      reopened.getDurableStatus({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-1',
+      })
+    ).resolves.toMatchObject({
+      state: 'running',
+      effects: [
+        { state: 'attempting', evidence: [] },
+        { state: 'not_started', evidence: [] },
+      ],
+    });
+    await expect(
+      reopened.commitDurable({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-1',
+        attempt: DEFAULT_ATTEMPT_REFERENCE,
+        expectedState: 'running',
+        outcomeJson: '{"accepted":true}',
+        committedAtIso: '2026-07-20T10:00:03.000Z',
+        outbox: {
+          eventId: 'event-before-proof',
+          eventType: 'task.created',
+          scopeKind: 'team',
+          scopeId: 'team-a',
+          schemaVersion: 1,
+          semanticRevision: 1,
+          payloadJson: '{}',
+          createdAtIso: '2026-07-20T10:00:03.000Z',
+        },
+      })
+    ).rejects.toThrow('observed_succeeded');
+    await expect(reopened.listDurableOutbox({ afterSequence: 0, limit: 10 })).resolves.toEqual([]);
+  });
+
+  it('moves an ambiguous non-reconcilable effect to operator_required', async () => {
+    const store = await makeDurableStore();
+    await store.claimDurable(
+      makeDurableClaim({
+        fingerprint: makeFingerprint({ descriptorId: 'task.deliver', digest: 'c'.repeat(64) }),
+      })
+    );
+    await store.transitionDurableCommand({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      expectedState: 'prepared',
+      nextState: 'running',
+      errorCode: null,
+      errorJson: null,
+      transitionedAtIso: '2026-07-20T10:00:01.000Z',
+    });
+    await store.transitionDurableEffect({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      ordinal: 0,
+      expectedState: 'not_started',
+      nextState: 'attempting',
+      evidence: null,
+      evidenceJson: null,
+      transitionedAtIso: '2026-07-20T10:00:02.000Z',
+    });
+    const ambiguous = await store.transitionDurableEffect({
+      deploymentId: 'deployment-a',
+      commandId: 'durable-cmd-1',
+      attempt: DEFAULT_ATTEMPT_REFERENCE,
+      ordinal: 0,
+      expectedState: 'attempting',
+      nextState: 'ambiguous',
+      evidence: null,
+      evidenceJson: null,
+      transitionedAtIso: '2026-07-20T10:00:03.000Z',
+    });
+
+    expect(ambiguous).toMatchObject({
+      state: 'operator_required',
+      errorCode: 'ambiguous_non_reconcilable_effect',
+      effects: [{ state: 'ambiguous' }],
+    });
+  });
+
+  it('fails closed for unknown registered and persisted descriptor versions', async () => {
+    const store = await makeDurableStore();
+    await expect(
+      store.claimDurable(
+        makeDurableClaim({
+          fingerprint: makeFingerprint({ descriptorVersion: 99, digest: 'd'.repeat(64) }),
+        })
+      )
+    ).rejects.toThrow('No exact command descriptor version is registered');
+
+    await store.claimDurable(makeDurableClaim());
+    const db = new Database(path.join(tmpDir!, 'storage', 'app.db'));
+    try {
+      db.prepare(
+        `UPDATE durable_application_commands
+         SET descriptor_version = 99
+         WHERE command_id = 'durable-cmd-1'`
+      ).run();
+      await expect(
+        store.transitionDurableCommand({
+          deploymentId: 'deployment-a',
+          commandId: 'durable-cmd-1',
+          attempt: DEFAULT_ATTEMPT_REFERENCE,
+          expectedState: 'prepared',
+          nextState: 'running',
+          errorCode: null,
+          errorJson: null,
+          transitionedAtIso: '2026-07-20T10:00:01.000Z',
+        })
+      ).rejects.toThrow('No exact command descriptor version is registered');
+      expect(
+        db
+          .prepare(
+            `SELECT state FROM durable_application_commands WHERE command_id = 'durable-cmd-1'`
+          )
+          .pluck()
+          .get()
+      ).toBe('prepared');
+      db.prepare(
+        `UPDATE durable_application_commands
+         SET fingerprint_version = 'hmac-sha256-ld-v99'
+         WHERE command_id = 'durable-cmd-1'`
+      ).run();
+    } finally {
+      db.close();
+    }
+    await expect(
+      store.getDurableStatus({
+        deploymentId: 'deployment-a',
+        commandId: 'durable-cmd-1',
+      })
+    ).rejects.toThrow('Unsupported durable application command fingerprint version');
+  });
+
+  it('atomically commits and replays a hosted authority projection and rejects conflicting intent', async () => {
+    const store = await makeDurableStore();
+    const request = makeHostedProjectionCommit();
+
+    await expect(store.commitHostedAuthorityProjection(request)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: {
+        generation: 1,
+        revision: 1,
+        stateJson: '{"revision":1,"tasks":[]}',
+      },
+      receipt: {
+        commandId: 'hosted-authority-command-1',
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-retry',
+          receiptJson: '{"kind":"prospective-retry","revision":1}',
+          committedAtIso: '2026-07-20T18:01:00.000Z',
+          outbox: { eventId: 'hosted-authority-event-retry' },
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: 'idempotent_replay',
+      receipt: {
+        commandId: 'hosted-authority-command-1',
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+        revision: 1,
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({ outcome: 'fingerprint_conflict' });
+
+    const db = new Database(path.join(tmpDir!, 'storage', 'app.db'), { readonly: true });
+    try {
+      expect(
+        db
+          .prepare(
+            `SELECT
+               (SELECT COUNT(*) FROM durable_application_commands) AS commands,
+               (SELECT COUNT(*) FROM durable_application_command_outbox) AS outbox,
+               (SELECT COUNT(*) FROM coordination_event_journal) AS journal,
+               (SELECT COUNT(*) FROM hosted_authority_projections) AS projections`
+          )
+          .get()
+      ).toEqual({ commands: 1, outbox: 1, journal: 1, projections: 1 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it('replays the exact original projection after a later revision commits', async () => {
+    const store = await makeDurableStore();
+    const commandA = makeHostedProjectionCommit();
+    await expect(store.commitHostedAuthorityProjection(commandA)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 1, revision: 1 },
+    });
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-2',
+          scope: { idempotencyKey: 'hosted-authority-idem-2' },
+          fingerprint: { digest: '2'.repeat(64) },
+          projection: {
+            expectedRevision: 1,
+            nextRevision: 2,
+            stateJson: '{"revision":2,"tasks":[{"id":"task-b"}]}',
+          },
+          receiptJson: '{"kind":"committed","revision":2}',
+          outbox: {
+            eventId: 'hosted-authority-event-2',
+            semanticRevision: 2,
+            payloadJson: '{"revision":2,"teamId":"team-a"}',
+          },
+          committedAtIso: '2026-07-20T18:01:00.000Z',
+        })
+      )
+    ).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 1, revision: 2 },
+    });
+
+    await expect(store.commitHostedAuthorityProjection(commandA)).resolves.toEqual({
+      outcome: 'idempotent_replay',
+      projection: {
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        generation: 1,
+        revision: 1,
+        stateJson: '{"revision":1,"tasks":[]}',
+        lastCommandId: 'hosted-authority-command-1',
+        updatedAt: '2026-07-20T18:00:00.000Z',
+      },
+      receipt: {
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        commandId: 'hosted-authority-command-1',
+        generation: 1,
+        revision: 1,
+        eventId: 'hosted-authority-event-1',
+        receiptJson: '{"kind":"committed","revision":1}',
+        committedAt: '2026-07-20T18:00:00.000Z',
+      },
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({ outcome: 'fingerprint_conflict' });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ projection: { expectedRevision: 1, nextRevision: 2 } })
+      )
+    ).rejects.toThrow('hosted-authority-projection-replay-binding-conflict');
+  });
+
+  it('checks generation before idempotency and fences stale or non-monotonic revisions', async () => {
+    const store = await makeDurableStore();
+    await store.commitHostedAuthorityProjection(makeHostedProjectionCommit());
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-stale-revision',
+          scope: { idempotencyKey: 'hosted-authority-idem-stale-revision' },
+          fingerprint: { digest: '1'.repeat(64) },
+          outbox: { eventId: 'hosted-authority-event-stale-revision' },
+        })
+      )
+    ).resolves.toEqual({
+      outcome: 'stale_revision',
+      currentGeneration: 1,
+      currentRevision: 1,
+    });
+
+    const advance = makeHostedProjectionCommit({
+      commandId: 'hosted-authority-command-2',
+      scope: { idempotencyKey: 'hosted-authority-idem-2' },
+      fingerprint: { digest: '2'.repeat(64) },
+      projection: {
+        expectedRevision: 1,
+        nextGeneration: 2,
+        nextRevision: 2,
+        stateJson: '{"revision":2,"tasks":[]}',
+      },
+      receiptJson: '{"kind":"committed","revision":2}',
+      outbox: {
+        eventId: 'hosted-authority-event-2',
+        semanticRevision: 2,
+      },
+    });
+    await expect(store.commitHostedAuthorityProjection(advance)).resolves.toMatchObject({
+      outcome: 'committed',
+      projection: { generation: 2, revision: 2 },
+    });
+
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ fingerprint: { digest: 'f'.repeat(64) } })
+      )
+    ).resolves.toEqual({
+      outcome: 'stale_generation',
+      currentGeneration: 2,
+      currentRevision: 2,
+    });
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({
+          commandId: 'hosted-authority-command-non-monotonic',
+          scope: { idempotencyKey: 'hosted-authority-idem-non-monotonic' },
+          fingerprint: { digest: '3'.repeat(64) },
+          projection: { expectedRevision: 2, nextRevision: 4 },
+          outbox: { eventId: 'hosted-authority-event-non-monotonic', semanticRevision: 4 },
+        })
+      )
+    ).rejects.toThrow('monotonicity-invalid');
+  });
+
+  it('serializes concurrent hosted authority commits with BEGIN IMMEDIATE', async () => {
+    const { first, second } = await makeConcurrentDurableStores();
+    const request = makeHostedProjectionCommit();
+
+    const results = await Promise.all([
+      first.commitHostedAuthorityProjection(request),
+      second.commitHostedAuthorityProjection(request),
+    ]);
+
+    expect(results.map((result) => result.outcome).sort()).toEqual([
+      'committed',
+      'idempotent_replay',
+    ]);
+    await expect(
+      first.getHostedAuthorityProjection({
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        deadlineAtMs: Date.now() + 30_000,
+      })
+    ).resolves.toMatchObject({ generation: 1, revision: 1 });
+  });
+
+  it('rolls the command, projection, receipt, outbox, and journal back together and survives restart', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-authority-rollback-'));
+    const databasePath = path.join(tmpDir, 'storage', 'app.db');
+    const first = makeDurableStoreAt(databasePath);
+    await first.getHostedAuthorityProjection({
+      deploymentId: 'deployment-a',
+      projectionKind: 'team-task-board',
+      projectionKey: 'team-a',
+      deadlineAtMs: Date.now() + 30_000,
+    });
+    const db = new Database(databasePath);
+    try {
+      db.exec(
+        `CREATE TRIGGER fail_hosted_authority_journal
+         BEFORE INSERT ON coordination_event_journal
+         BEGIN SELECT RAISE(ABORT, 'hosted-authority-test-journal-failure'); END`
+      );
+    } finally {
+      db.close();
+    }
+    await expect(
+      first.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).rejects.toThrow('hosted-authority-test-journal-failure');
+
+    const rolledBack = new Database(databasePath);
+    try {
+      for (const table of [
+        'durable_application_commands',
+        'durable_application_command_outbox',
+        'coordination_event_journal',
+        'hosted_authority_projections',
+      ]) {
+        expect(
+          (rolledBack.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number })
+            .count
+        ).toBe(0);
+      }
+      rolledBack.exec('DROP TRIGGER fail_hosted_authority_journal');
+    } finally {
+      rolledBack.close();
+    }
+
+    await first.commitHostedAuthorityProjection(makeHostedProjectionCommit());
+    closeCore(cores.at(-1)!);
+    const reopened = makeDurableStoreAt(databasePath);
+    await expect(
+      reopened.getHostedAuthorityProjection({
+        deploymentId: 'deployment-a',
+        projectionKind: 'team-task-board',
+        projectionKey: 'team-a',
+        deadlineAtMs: Date.now() + 30_000,
+      })
+    ).resolves.toMatchObject({ generation: 1, revision: 1 });
+    await expect(
+      reopened.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).resolves.toMatchObject({ outcome: 'idempotent_replay' });
+  });
+
+  it('fails closed after the deadline and while the database-wide backup fence is active', async () => {
+    const store = await makeDurableStore();
+    await expect(
+      store.commitHostedAuthorityProjection(
+        makeHostedProjectionCommit({ deadlineAtMs: Date.now() - 1 })
+      )
+    ).rejects.toThrow('deadline-expired');
+
+    const db = new Database(path.join(tmpDir!, 'storage', 'app.db'));
+    try {
+      db.prepare(
+        `INSERT INTO coordination_backup_runs (
+           backup_run_id, deployment_id, state, revision, fence_completion_status,
+           record_json, requested_at, updated_at
+         ) VALUES ('backup-hosted-authority', 'deployment-a', 'sqlite_snapshot', 1, NULL,
+                   '{}', '2026-08-02T18:00:00.000Z', '2026-08-02T18:00:00.000Z')`
+      ).run();
+      db.prepare(
+        `INSERT INTO coordination_backup_writer_fences (
+           deployment_id, generation, admitted_run_id, lease_id, status,
+           disposition, acquired_at, completed_at
+         ) VALUES ('deployment-a', 1, 'backup-hosted-authority',
+                   'backup-hosted-authority-lease', 'active', NULL,
+                   '2026-08-02T18:00:00.000Z', NULL)`
+      ).run();
+    } finally {
+      db.close();
+    }
+    await expect(
+      store.commitHostedAuthorityProjection(makeHostedProjectionCommit())
+    ).rejects.toThrow('internal-storage-mutation-admission-fenced');
+  });
+
   async function makeStore(): Promise<InternalStorageApplicationCommandLedgerStore> {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'app-command-ledger-'));
     const core = new InternalStorageWorkerCore({
@@ -260,7 +1648,160 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     cores.push(core);
     return new InternalStorageApplicationCommandLedgerStore(new InProcessGateway(core));
   }
+
+  async function makeDurableStore(): Promise<InternalStorageApplicationCommandLedgerStore> {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'durable-app-command-ledger-'));
+    return makeDurableStoreAt(path.join(tmpDir, 'storage', 'app.db'));
+  }
+
+  async function makeConcurrentDurableStores(): Promise<{
+    first: InternalStorageApplicationCommandLedgerStore;
+    second: InternalStorageApplicationCommandLedgerStore;
+  }> {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'durable-app-command-concurrent-'));
+    const databasePath = path.join(tmpDir, 'storage', 'app.db');
+    const bootstrap = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    bootstrap.handle('ping', {});
+    bootstrap.close();
+
+    const workerPath = path.join(tmpDir, 'internal-storage-test-worker.cjs');
+    // Test-only output is confined to the fresh mkdtemp directory above.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.writeFile(workerPath, internalStorageTestWorkerSource(), 'utf8');
+    const firstWorker = new TestWorkerRpc(workerPath, databasePath);
+    const secondWorker = new TestWorkerRpc(workerPath, databasePath);
+    workers.push(firstWorker, secondWorker);
+    await Promise.all([firstWorker.call('ping', {}), secondWorker.call('ping', {})]);
+    const firstCore = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    const secondCore = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    cores.push(firstCore, secondCore);
+    return {
+      first: new InternalStorageApplicationCommandLedgerStore(
+        makeDurableGateway(firstCore, firstWorker.call.bind(firstWorker)),
+        createCommandDescriptorRegistry(DURABLE_DESCRIPTORS)
+      ),
+      second: new InternalStorageApplicationCommandLedgerStore(
+        makeDurableGateway(secondCore, secondWorker.call.bind(secondWorker)),
+        createCommandDescriptorRegistry(DURABLE_DESCRIPTORS)
+      ),
+    };
+  }
+
+  function makeDurableStoreAt(databasePath: string): InternalStorageApplicationCommandLedgerStore {
+    const core = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    cores.push(core);
+    return new InternalStorageApplicationCommandLedgerStore(
+      makeDurableGateway(core),
+      createCommandDescriptorRegistry(DURABLE_DESCRIPTORS)
+    );
+  }
+
+  function openCore(databasePath: string): InternalStorageWorkerCore {
+    const core = new InternalStorageWorkerCore({
+      databasePath,
+      createDatabase: (file) => new Database(file),
+    });
+    cores.push(core);
+    return core;
+  }
+
+  function closeCore(core: InternalStorageWorkerCore): void {
+    core.close();
+    cores.splice(cores.indexOf(core), 1);
+  }
 });
+
+function internalStorageTestWorkerSource(): string {
+  return [
+    "const path = require('node:path');",
+    "const { createRequire } = require('node:module');",
+    "const { parentPort, workerData } = require('node:worker_threads');",
+    "const requireFromRepo = createRequire(path.join(process.cwd(), 'package.json'));",
+    "const { register } = requireFromRepo('tsx/cjs/api');",
+    "register({ tsconfigPath: path.join(process.cwd(), 'tsconfig.json') });",
+    "const { InternalStorageWorkerCore } = require(path.join(process.cwd(), 'src', 'features', 'internal-storage', 'main', 'infrastructure', 'worker', 'InternalStorageWorkerCore.ts'));",
+    "const databaseModule = requireFromRepo('better-sqlite3-node');",
+    'const Database = databaseModule.default || databaseModule;',
+    'const core = new InternalStorageWorkerCore({',
+    '  databasePath: workerData.databasePath,',
+    '  createDatabase: (databasePath) => new Database(databasePath),',
+    '});',
+    "parentPort.on('message', (message) => {",
+    '  try {',
+    '    const result = core.handle(message.op, message.payload);',
+    '    parentPort.postMessage({ id: message.id, ok: true, result });',
+    '  } catch (error) {',
+    '    parentPort.postMessage({ id: message.id, ok: false, error: error instanceof Error ? error.message : String(error) });',
+    '  }',
+    '});',
+    "process.on('exit', () => core.close());",
+    '',
+  ].join('\n');
+}
+
+interface TestWorkerResponse {
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: string;
+}
+
+class TestWorkerRpc {
+  private readonly worker: Worker;
+  private nextId = 0;
+
+  constructor(workerPath: string, databasePath: string) {
+    // The path is a test-owned bundle created under this test's fresh mkdtemp directory.
+    this.worker = new Worker(workerPath, { workerData: { databasePath } });
+  }
+
+  call(op: string, payload: unknown): Promise<unknown> {
+    const id = `request-${this.nextId++}`;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for test worker op: ${op}`));
+      }, 10_000);
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.worker.off('message', onMessage);
+        this.worker.off('error', onError);
+      };
+      const onMessage = (message: TestWorkerResponse) => {
+        if (message.id !== id) return;
+        cleanup();
+        if (message.ok) {
+          resolve(message.result);
+        } else {
+          reject(new Error(message.error ?? `Test worker op failed: ${op}`));
+        }
+      };
+      const onError = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+      this.worker.on('message', onMessage);
+      this.worker.on('error', onError);
+      this.worker.postMessage({ id, op, payload });
+    });
+  }
+
+  async close(): Promise<void> {
+    await this.worker.terminate();
+  }
+}
 
 function makeBeginRequest(
   overrides: Partial<ApplicationCommandLedgerBeginRequest<string>> = {}
@@ -277,4 +1818,387 @@ function makeBeginRequest(
     startedStaleAfterMs: 60_000,
     ...overrides,
   };
+}
+
+function makeMutationBeginRequest(
+  overrides: Partial<ApplicationCommandLedgerBeginRequest<string>> = {}
+): ApplicationCommandLedgerBeginRequest<string> {
+  return {
+    namespace: 'lane-execution-mutation',
+    scopeKey: 'team-a:run-a:1',
+    commandId: 'mutation-operation',
+    idempotencyKey: 'mutation-operation',
+    operation: 'lane-execution.stop',
+    payloadHash: 'hash:mutation-payload',
+    metadataJson: null,
+    nowIso: '2026-07-24T14:00:00.000Z',
+    startedStaleAfterMs: 60_000,
+    mutationFence: makeMutationFence(),
+    ...overrides,
+  };
+}
+
+function makeMutationFence(
+  overrides: Partial<
+    NonNullable<ApplicationCommandLedgerBeginRequest<string>['mutationFence']>
+  > = {}
+): NonNullable<ApplicationCommandLedgerBeginRequest<string>['mutationFence']> {
+  return {
+    laneId: 'primary',
+    backend: 'provisioning_cli',
+    effectKind: 'stop',
+    operationId: 'mutation-operation',
+    leaseToken: 'mutation-token',
+    leaseOwnerId: 'mutation-owner',
+    leaseFence: 10,
+    claimedAtIso: '2026-07-24T13:59:00.000Z',
+    expiresAtIso: '2026-07-24T14:01:00.000Z',
+    ...overrides,
+  };
+}
+
+const DURABLE_DESCRIPTORS: readonly CommandDescriptor[] = [
+  {
+    descriptorId: 'task.create',
+    descriptorVersion: 1,
+    commandKind: 'task.create',
+    inputSchemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    idempotencyScope: COMMAND_IDEMPOTENCY_SCOPE,
+    retentionClass: 'operator-command',
+    normalizedIntentProjection: () => ({ taskId: 'task-a' }),
+    effects: [
+      {
+        effectId: 'write-local-state',
+        effectVersion: 1,
+        recoveryClass: 'transactional_local',
+        evidenceSchemaVersion: 1,
+      },
+      {
+        effectId: 'notify-provider',
+        effectVersion: 1,
+        recoveryClass: 'idempotent_by_operation_id',
+        evidenceSchemaVersion: 1,
+      },
+    ],
+  },
+  {
+    descriptorId: 'task.deliver',
+    descriptorVersion: 1,
+    commandKind: 'task.create',
+    inputSchemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    idempotencyScope: COMMAND_IDEMPOTENCY_SCOPE,
+    retentionClass: 'operator-command',
+    normalizedIntentProjection: () => ({ taskId: 'task-a' }),
+    effects: [
+      {
+        effectId: 'unmarked-delivery',
+        effectVersion: 1,
+        recoveryClass: 'non_reconcilable',
+        evidenceSchemaVersion: 1,
+      },
+    ],
+  },
+  {
+    descriptorId: 'hosted.authority.update',
+    descriptorVersion: 1,
+    commandKind: 'hosted.authority.update',
+    inputSchemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    idempotencyScope: COMMAND_IDEMPOTENCY_SCOPE,
+    retentionClass: 'hosted-authority-receipt',
+    normalizedIntentProjection: () => ({ projectionKey: 'team-a' }),
+    effects: [
+      {
+        effectId: 'commit-hosted-authority-projection',
+        effectVersion: 1,
+        recoveryClass: 'transactional_local',
+        evidenceSchemaVersion: 1,
+      },
+    ],
+  },
+];
+
+const DEFAULT_ATTEMPT_CLAIM: DurableApplicationCommandAttemptClaim = {
+  attemptId: 'attempt-a',
+  ownerId: 'worker-a',
+  leaseToken: 'command-lease-a',
+  claimedAtIso: '2026-07-20T10:00:00.000Z',
+  leaseExpiresAtIso: '2026-07-20T10:10:00.000Z',
+};
+
+const DEFAULT_ATTEMPT_REFERENCE: DurableApplicationCommandAttemptReference = {
+  generation: 1,
+  attemptId: DEFAULT_ATTEMPT_CLAIM.attemptId,
+  ownerId: DEFAULT_ATTEMPT_CLAIM.ownerId,
+  leaseToken: DEFAULT_ATTEMPT_CLAIM.leaseToken,
+};
+
+function makeFingerprint(
+  overrides: Partial<CommandFingerprintRecord> = {}
+): CommandFingerprintRecord {
+  return {
+    descriptorId: 'task.create',
+    descriptorVersion: 1,
+    schemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    keyVersion: 'key-v1',
+    digest: 'a'.repeat(64),
+    ...overrides,
+  };
+}
+
+function makeDurableClaim(
+  overrides: Partial<DurableApplicationCommandClaimRequest> = {}
+): DurableApplicationCommandClaimRequest {
+  return {
+    commandId: 'durable-cmd-1',
+    scope: {
+      deploymentId: 'deployment-a',
+      stableActorId: 'operator-a',
+      commandKind: 'task.create',
+      idempotencyKey: 'durable-idem-1',
+    },
+    fingerprint: makeFingerprint(),
+    attempt: DEFAULT_ATTEMPT_CLAIM,
+    auditSessionId: 'session-a',
+    createdAtIso: '2026-07-20T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
+type HostedProjectionCommitOverrides = Omit<
+  Partial<HostedAuthorityProjectionCommitRequest>,
+  'scope' | 'fingerprint' | 'projection' | 'outbox' | 'attribution'
+> & {
+  readonly scope?: Partial<HostedAuthorityProjectionCommitRequest['scope']>;
+  readonly fingerprint?: Partial<HostedAuthorityProjectionCommitRequest['fingerprint']>;
+  readonly projection?: Partial<HostedAuthorityProjectionCommitRequest['projection']>;
+  readonly outbox?: Partial<HostedAuthorityProjectionCommitRequest['outbox']>;
+  readonly attribution?: HostedAuthorityProjectionCommitRequest['attribution'];
+};
+
+function makeHostedProjectionCommit(
+  overrides: HostedProjectionCommitOverrides = {}
+): HostedAuthorityProjectionCommitRequest {
+  const committedAtIso = overrides.committedAtIso ?? '2026-07-20T18:00:00.000Z';
+  const scope: HostedAuthorityProjectionCommitRequest['scope'] = {
+    deploymentId: 'deployment-a',
+    stableActorId: 'operator-a',
+    commandKind: 'hosted.authority.update',
+    idempotencyKey: 'hosted-authority-idem-1',
+    ...overrides.scope,
+  };
+  const fingerprint: HostedAuthorityProjectionCommitRequest['fingerprint'] = {
+    descriptorId: 'hosted.authority.update',
+    descriptorVersion: 1,
+    schemaVersion: 1,
+    fingerprintVersion: HMAC_SHA256_LD_V1,
+    effectPlanVersion: 1,
+    keyVersion: 'key-v1',
+    digest: 'e'.repeat(64),
+    ...overrides.fingerprint,
+  };
+  const projection: HostedAuthorityProjectionCommitRequest['projection'] = {
+    projectionKind: 'team-task-board',
+    projectionKey: 'team-a',
+    expectedGeneration: 1,
+    expectedRevision: 0,
+    nextGeneration: 1,
+    nextRevision: 1,
+    stateJson: '{"revision":1,"tasks":[]}',
+    ...overrides.projection,
+  };
+  const outbox: HostedAuthorityProjectionCommitRequest['outbox'] = {
+    eventId: 'hosted-authority-event-1',
+    eventType: 'team.task_board.updated',
+    scopeKind: 'team',
+    scopeId: 'team-a',
+    schemaVersion: 1,
+    semanticRevision: projection.nextRevision,
+    payloadJson: '{"teamId":"team-a"}',
+    createdAtIso: committedAtIso,
+    ...overrides.outbox,
+  };
+  return {
+    commandId: 'hosted-authority-command-1',
+    auditSessionId: 'session-a',
+    receiptJson: '{"kind":"committed","revision":1}',
+    attribution: overrides.attribution ?? {
+      actor: { kind: 'operator', actorRef: 'operator-a' },
+    },
+    committedAtIso,
+    deadlineAtMs: Date.now() + 30_000,
+    ...overrides,
+    scope,
+    fingerprint,
+    projection,
+    outbox,
+  };
+}
+
+async function succeedEffect(
+  store: InternalStorageApplicationCommandLedgerStore,
+  ordinal: number,
+  transitionedAtIso: string,
+  options: {
+    commandId?: string;
+    attempt?: DurableApplicationCommandAttemptReference;
+  } = {}
+): Promise<void> {
+  const commandId = options.commandId ?? 'durable-cmd-1';
+  const attempt = options.attempt ?? DEFAULT_ATTEMPT_REFERENCE;
+  const effectId = ordinal === 0 ? 'write-local-state' : 'notify-provider';
+  const recoveryClass =
+    ordinal === 0 ? ('transactional_local' as const) : ('idempotent_by_operation_id' as const);
+  await store.transitionDurableEffect({
+    deploymentId: 'deployment-a',
+    commandId,
+    attempt,
+    ordinal,
+    expectedState: 'not_started',
+    nextState: 'attempting',
+    evidence: null,
+    evidenceJson: null,
+    transitionedAtIso,
+  });
+  await store.transitionDurableEffect({
+    deploymentId: 'deployment-a',
+    commandId,
+    attempt,
+    ordinal,
+    expectedState: 'attempting',
+    nextState: 'observed_succeeded',
+    evidence: {
+      effectId,
+      effectVersion: 1,
+      recoveryClass,
+      evidenceSchemaVersion: 1,
+      outcome: 'observed_succeeded',
+    },
+    evidenceJson: `{"proof":"effect-${ordinal}"}`,
+    transitionedAtIso,
+  });
+}
+
+function makeDurableGateway(
+  core: InternalStorageWorkerCore,
+  workerCall?: (op: string, payload: unknown) => Promise<unknown>
+): ApplicationCommandLedgerStorageGateway & DurableApplicationCommandLedgerStorageGateway {
+  const call =
+    workerCall ??
+    ((op: string, payload: unknown) =>
+      Promise.resolve().then(() => core.handle(op as never, payload as never)));
+  const durable = {
+    applicationCommandLedgerDurableClaim: (
+      request: DurableApplicationCommandPersistClaimRequest
+    ): Promise<DurableApplicationCommandClaimResult> =>
+      call(
+        'appCommandLedger.durable.claim',
+        request
+      ) as Promise<DurableApplicationCommandClaimResult>,
+    applicationCommandLedgerDurableGetStatus: (
+      request: DurableApplicationCommandStatusRequest
+    ): Promise<DurableApplicationCommandRecord | null> =>
+      call(
+        'appCommandLedger.durable.getStatus',
+        request
+      ) as Promise<DurableApplicationCommandRecord | null>,
+    applicationCommandLedgerDurableGetByClaim: (
+      request: DurableApplicationCommandClaimStatusRequest
+    ): Promise<DurableApplicationCommandRecord | null> =>
+      call(
+        'appCommandLedger.durable.getByClaim',
+        request
+      ) as Promise<DurableApplicationCommandRecord | null>,
+    applicationCommandLedgerDurableRenewAttemptLease: (
+      request: DurableApplicationCommandAttemptLeaseRequest
+    ): Promise<DurableApplicationCommandRecord> =>
+      call(
+        'appCommandLedger.durable.renewAttemptLease',
+        request
+      ) as Promise<DurableApplicationCommandRecord>,
+    applicationCommandLedgerDurableTransitionCommand: (
+      request: DurableApplicationCommandTransitionRequest
+    ): Promise<DurableApplicationCommandRecord> =>
+      call(
+        'appCommandLedger.durable.transitionCommand',
+        request
+      ) as Promise<DurableApplicationCommandRecord>,
+    applicationCommandLedgerDurableTransitionEffect: (
+      request: DurableApplicationCommandEffectTransitionRequest
+    ): Promise<DurableApplicationCommandRecord> =>
+      call(
+        'appCommandLedger.durable.transitionEffect',
+        request
+      ) as Promise<DurableApplicationCommandRecord>,
+    applicationCommandLedgerDurableCommit: (
+      request: DurableApplicationCommandCommitRequest
+    ): Promise<DurableApplicationCommandRecord> =>
+      call('appCommandLedger.durable.commit', request) as Promise<DurableApplicationCommandRecord>,
+    applicationCommandLedgerDurableListOutbox: (
+      request: DurableApplicationCommandOutboxListRequest
+    ): Promise<DurableApplicationCommandOutboxRecord[]> =>
+      call('appCommandLedger.durable.listOutbox', request) as Promise<
+        DurableApplicationCommandOutboxRecord[]
+      >,
+    applicationCommandLedgerDurableClaimOutbox: (
+      request: DurableApplicationCommandOutboxClaimRequest
+    ): Promise<DurableApplicationCommandOutboxRecord[]> =>
+      call('appCommandLedger.durable.claimOutbox', request) as Promise<
+        DurableApplicationCommandOutboxRecord[]
+      >,
+    applicationCommandLedgerDurableAcknowledgeOutboxDelivery: (
+      request: DurableApplicationCommandOutboxDeliveryAcknowledgementRequest
+    ): Promise<void> =>
+      call('appCommandLedger.durable.acknowledgeOutboxDelivery', request) as Promise<void>,
+    applicationCommandLedgerDurableApplyConsumerEvent: (
+      request: DurableApplicationCommandConsumerApplyRequest
+    ): Promise<DurableApplicationCommandConsumerApplyResult> =>
+      call(
+        'appCommandLedger.durable.applyConsumerEvent',
+        request
+      ) as Promise<DurableApplicationCommandConsumerApplyResult>,
+    applicationCommandLedgerDurableGetConsumerProjection: (
+      request: DurableApplicationCommandConsumerProjectionRequest
+    ): Promise<DurableApplicationCommandConsumerProjectionRecord | null> =>
+      call(
+        'appCommandLedger.durable.getConsumerProjection',
+        request
+      ) as Promise<DurableApplicationCommandConsumerProjectionRecord | null>,
+    applicationCommandLedgerHostedAuthorityProjectionCommit: (
+      request: HostedAuthorityProjectionPersistRequest
+    ): Promise<HostedAuthorityProjectionCommitResult> =>
+      call(
+        'appCommandLedger.hostedAuthorityProjection.commit',
+        request
+      ) as Promise<HostedAuthorityProjectionCommitResult>,
+    applicationCommandLedgerHostedAuthorityProjectionGet: (
+      request: HostedAuthorityProjectionReadRequest
+    ): Promise<HostedAuthorityProjectionRecord | null> =>
+      call(
+        'appCommandLedger.hostedAuthorityProjection.get',
+        request
+      ) as Promise<HostedAuthorityProjectionRecord | null>,
+  };
+  const application = workerCall
+    ? {
+        applicationCommandLedgerBegin: (
+          request: ApplicationCommandLedgerBeginRequest<string>
+        ): Promise<ApplicationCommandLedgerBeginResult<string>> =>
+          call('appCommandLedger.begin', request) as Promise<
+            ApplicationCommandLedgerBeginResult<string>
+          >,
+      }
+    : {};
+  return Object.assign(
+    new InProcessGateway(core),
+    application,
+    durable
+  ) as ApplicationCommandLedgerStorageGateway & DurableApplicationCommandLedgerStorageGateway;
 }

@@ -10,6 +10,16 @@ import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisio
 import { atomicWriteAsync } from './atomicWrite';
 import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
 import {
+  isSupportedLaunchStateDocument,
+  isSupportedLaunchSummaryDocument,
+  type JsonRecord,
+  LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS,
+  MAX_LAUNCH_STATE_BYTES,
+  mergeLaunchState,
+  readVersionedDocumentForMutation,
+  replaceKnownFields,
+} from './TeamLaunchStateDocumentPersistence';
+import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
 } from './TeamLaunchStateEvaluator';
@@ -23,7 +33,6 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
-const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
 
@@ -335,14 +344,37 @@ export class TeamLaunchStateStore {
     };
     if (options.isAuthorized?.() === false) return false;
     try {
+      const [existingState, existingSummary] = await Promise.all([
+        readVersionedDocumentForMutation(statePath, 2, teamName),
+        readVersionedDocumentForMutation(summaryPath, 1),
+      ]);
+      if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
+        throw new Error('Refusing to replace malformed launch state');
+      }
+      if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
+        throw new Error('Refusing to replace malformed launch summary');
+      }
+      const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
       await atomicWriteAsync(
         statePath,
-        `${JSON.stringify({ ...snapshot, publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(
+          { ...mergeLaunchState(existingState, snapshot), publicationRunId: options.runId },
+          null,
+          2
+        )}\n`,
         { beforeCommit }
       );
       await atomicWriteAsync(
         summaryPath,
-        `${JSON.stringify({ ...createPersistedLaunchSummaryProjection(snapshot), publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(
+          replaceKnownFields(
+            existingSummary,
+            { ...launchSummary, publicationRunId: options.runId } as unknown as JsonRecord,
+            LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
+          ),
+          null,
+          2
+        )}\n`,
         { beforeCommit }
       );
       if (beginsLaunch) {

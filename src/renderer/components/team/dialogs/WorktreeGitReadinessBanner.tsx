@@ -1,117 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import {
+  useWorktreeGitReadiness as useFeatureWorktreeGitReadiness,
+  type WorktreeGitReadinessState,
+} from '@features/team-provisioning/renderer';
 import { Button } from '@renderer/components/ui/button';
+import { createTeamWorktreeGitReadinessTransport } from '@renderer/composition/team/createTeamWorktreeGitReadinessTransport';
 import { AlertTriangle, CheckCircle2, GitBranch, Loader2 } from 'lucide-react';
 
-import type { TeamWorktreeGitStatus } from '@shared/types';
-
-interface WorktreeGitReadinessState {
-  status: TeamWorktreeGitStatus | null;
-  loading: boolean;
-  actionLoading: 'init' | 'commit' | null;
-  error: string | null;
-  refresh: () => Promise<void>;
-  initializeRepository: () => Promise<void>;
-  createInitialCommit: () => Promise<void>;
-}
+const worktreeGitReadinessTransport = createTeamWorktreeGitReadinessTransport();
 
 export function useWorktreeGitReadiness(
   projectPath: string | null,
   enabled: boolean
 ): WorktreeGitReadinessState {
-  const [status, setStatus] = useState<TeamWorktreeGitStatus | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState<'init' | 'commit' | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!enabled || !projectPath?.trim()) {
-      setStatus(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setStatus(await api.teams.getWorktreeGitStatus(projectPath));
-    } catch (err) {
-      setStatus(null);
-      setError(err instanceof Error ? err.message : 'Failed to inspect Git repository');
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, projectPath]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!enabled || !projectPath?.trim()) {
-      setStatus(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    void api.teams
-      .getWorktreeGitStatus(projectPath)
-      .then((nextStatus) => {
-        if (!cancelled) setStatus(nextStatus);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setStatus(null);
-          setError(err instanceof Error ? err.message : 'Failed to inspect Git repository');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, projectPath]);
-
-  const initializeRepository = useCallback(async () => {
-    if (!projectPath?.trim()) return;
-    setActionLoading('init');
-    setError(null);
-    try {
-      setStatus(await api.teams.initializeGitRepository(projectPath));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize Git repository');
-    } finally {
-      setActionLoading(null);
-    }
-  }, [projectPath]);
-
-  const createInitialCommit = useCallback(async () => {
-    if (!projectPath?.trim()) return;
-    setActionLoading('commit');
-    setError(null);
-    try {
-      setStatus(await api.teams.createInitialGitCommit(projectPath));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create initial Git commit');
-    } finally {
-      setActionLoading(null);
-    }
-  }, [projectPath]);
-
-  return useMemo(
-    () => ({
-      status,
-      loading,
-      actionLoading,
-      error,
-      refresh,
-      initializeRepository,
-      createInitialCommit,
-    }),
-    [actionLoading, createInitialCommit, error, initializeRepository, loading, refresh, status]
-  );
+  return useFeatureWorktreeGitReadiness(projectPath, enabled, worktreeGitReadinessTransport);
 }
 
 export function getWorktreeGitBlockingMessage(

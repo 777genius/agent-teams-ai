@@ -6,9 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 
-function makeStatus(
-  overrides: Partial<MemberWorkSyncStatus> = {}
-): MemberWorkSyncStatus {
+function makeStatus(overrides: Partial<MemberWorkSyncStatus> = {}): MemberWorkSyncStatus {
   return {
     teamName: 'sable-ops',
     memberName: 'team-lead',
@@ -119,7 +117,7 @@ describe('MemberWorkSyncNudge', () => {
                 reviewCycleId: 'evt-review-request',
                 reviewRequestEventId: 'evt-review-request',
                 reviewObligation: 'review_pickup_required',
-                canBypassPhase2: true,
+                canBypassDeliveryReadiness: true,
               },
             },
           ],
@@ -184,8 +182,6 @@ describe('MemberWorkSyncNudge', () => {
       'repairs OpenCode delivery proof for original messageId "message-1"'
     );
     expect(payload.text).toContain('do not duplicate it');
-    expect(outboxInput?.id).toBe(
-      'member-work-sync:sable-ops:bob:proof-missing:message-1'
-    );
+    expect(outboxInput?.id).toBe('member-work-sync:sable-ops:bob:proof-missing:message-1');
   });
 });

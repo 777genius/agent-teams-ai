@@ -15,6 +15,7 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
+  createTeamMemberSettingsRendererApi,
   type MemberSettingsRelaunchDraft,
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
@@ -128,6 +129,7 @@ const LaunchTeamDialog = lazy(() =>
 // Stable empty roster for the draft view: an inline [] would change identity
 // every render and retrigger LaunchTeamDialog's hydration effect.
 const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
+const teamMemberSettingsApi = createTeamMemberSettingsRendererApi(api);
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
@@ -3441,6 +3443,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
+                  updateMemberSettings={teamMemberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
                   onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}

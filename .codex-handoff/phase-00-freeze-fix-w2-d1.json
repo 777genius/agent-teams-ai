@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-w2-d1",
+  "phaseId": "phase-00",
+  "findingId": "P0.FREEZE.W1_W2.C1.002",
+  "owner": "W2",
+  "status": "resolved",
+  "title": "Workspace-trust provider-child environment sanitizer is included in the independent census",
+  "sourceReview": {
+    "reviewTaskId": "agent-teams-hosted-web-refactor-phase-00-freeze-review-w1-w2-c1",
+    "reviewedCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+    "historicalFindingIds": ["R12-W2-001", "R12R-W2-001"]
+  },
+  "corrections": [
+    {
+      "id": "P0.FREEZE.W2.CENSUS.WORKSPACE_TRUST",
+      "status": "satisfied",
+      "evidence": "The production-source census now declares src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts and scans file roots as well as directory roots. Removing this surface from discovered occurrences produces a classified-without-source failure for every workspace-trust prohibition."
+    },
+    {
+      "id": "P0.FREEZE.W2.CENSUS.EXACT_PREFIX",
+      "status": "satisfied",
+      "evidence": "Extraction version 3 recognizes exact environment-key Set declarations and prefix arrays as explicit wildcard policies. Provenance, semantic fixture, and credential-exposure membership cover CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER, AGENT_TEAMS_RUNTIME_TURN_SETTLED_*, AGENT_TEAMS_MCP_*, and CLAUDE_TEAM_BOOTSTRAP_*."
+    },
+    {
+      "id": "P0.FREEZE.W2.CENSUS.OMISSION_NEGATIVES",
+      "status": "satisfied",
+      "evidence": "Focused tests independently remove the workspace-trust sanitizer surface and each of the four exact/prefix policies. Every mutation fails the completeness validator with the omitted policy named."
+    },
+    {
+      "id": "P0.FREEZE.W2.PRIOR_PROOFS",
+      "status": "satisfied",
+      "evidence": "The prior 40 proofs remain green: all 26 canonical fake-runtime seam proofs and the prior 14 scanner tests pass. Two new omission-sensitive scanner tests increase the focused result to 42 tests."
+    }
+  ],
+  "checks": [
+    {
+      "id": "P0.FREEZE.W2.CHECK.SCANNER",
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "exitCode": 0,
+      "result": "Scanner passed with 4 providers, 2 backend families, 5 operations, 13 independently executed provider cases, 7 provider/mode dispositions, per-key provenance/exposure, strict schemas, and the omission-sensitive census."
+    },
+    {
+      "id": "P0.FREEZE.W2.CHECK.TESTS",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "result": "2 files and 42 tests passed: 16 scanner tests and 26 canonical fake-runtime seam proofs."
+    },
+    {
+      "id": "P0.FREEZE.W2.CHECK.SANITIZER",
+      "command": "pnpm exec vitest run test/features/workspace-trust/main/workspaceTrustPreflightEnv.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "result": "The existing focused sanitizer test passed, directly proving removal of the named exact key and all three prefix examples while preserving user authentication environment values."
+    },
+    {
+      "id": "P0.FREEZE.W2.CHECK.LINT",
+      "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "exitCode": 0,
+      "result": "Focused fast lint passed."
+    },
+    {
+      "id": "P0.FREEZE.W2.CHECK.FORMAT",
+      "command": "pnpm exec prettier --check <seven changed provider-runtime evidence/scanner/fixture/test paths plus this handoff>",
+      "exitCode": 0,
+      "result": "All owned changed paths use Prettier style."
+    },
+    {
+      "id": "P0.FREEZE.W2.CHECK.DIFF",
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "No whitespace errors."
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-w2-d1.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/README.md",
+    "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+    "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
+    "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+    "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/environment-semantics.json",
+    "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+  ],
+  "scope": {
+    "otherLanesEdited": false,
+    "controllerIndexesEdited": false,
+    "productionWorkspaceTrustSourceEdited": false
+  },
+  "remainingNarrowings": [
+    "Evidence remains source-observed at the pinned Phase 0 base; final-image provider execution and credential canaries remain target-unverified as declared by the canonical W2 packet."
+  ],
+  "nextAction": "Controller reruns the focused W1/W2 freeze review against this W2 correction."
+}

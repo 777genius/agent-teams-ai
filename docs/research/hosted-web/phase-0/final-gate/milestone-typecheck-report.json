@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "gate": "phase-0-final-gate-typescript-workspace-milestone",
+  "mode": "milestone",
+  "baseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "workspaceScript": "pnpm typecheck:workspace",
+  "executionPolicy": "run the three canonical workspace stages in order; normalize only the inherited root diagnostics and require clean MCP exits",
+  "timeoutMsPerStage": 300000,
+  "durationMs": 218250,
+  "passed": true,
+  "stages": [
+    {
+      "id": "root",
+      "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck.raw.txt",
+      "schemaVersion": 1,
+      "gate": "phase-0-final-gate-typescript-milestone",
+      "mode": "milestone",
+      "baseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "durationMs": 207899,
+      "compilerCommand": "pnpm --silent typecheck",
+      "processDisposition": "exited",
+      "signal": null,
+      "timeoutMs": 300000,
+      "compilerOutputBytes": 1815,
+      "compilerOutputSha256": "46821e45d10298369490fd11ddc4046f16e38a15b0cf4e1c0532e36de26c43aa",
+      "passed": true,
+      "rawExitCode": 2,
+      "observedDiagnosticCount": 7,
+      "normalizedInheritedCount": 7,
+      "resolvedInheritedCount": 0,
+      "effectiveDiagnosticCount": 0,
+      "inheritedDiagnostics": [
+        {
+          "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "line": 25,
+          "column": 8,
+          "code": 7016,
+          "message": "Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs'. '<repo>/scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs' implicitly has an 'any' type."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "line": 66,
+          "column": 31,
+          "code": 7031,
+          "message": "Binding element 'code' implicitly has an 'any' type."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "line": 117,
+          "column": 68,
+          "code": 18046,
+          "message": "'session' is of type 'unknown'."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "line": 413,
+          "column": 48,
+          "code": 7031,
+          "message": "Binding element 'operation' implicitly has an 'any' type."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "line": 733,
+          "column": 10,
+          "code": 7031,
+          "message": "Binding element 'artifactId' implicitly has an 'any' type."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+          "line": 12,
+          "column": 8,
+          "code": 7016,
+          "message": "Could not find a declaration file for module '../../../../../scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs'. '<repo>/scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs' implicitly has an 'any' type."
+        },
+        {
+          "file": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+          "line": 162,
+          "column": 44,
+          "code": 2352,
+          "message": "Conversion of type '{ providerBackends: { codex: \"fixture-codex\"; gemini: \"fixture-gemini\"; }; }' to type 'RuntimeConfig' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  The types of 'providerBackends.gemini' are incompatible between these types.\n    Type '\"fixture-gemini\"' is not comparable to type '\"auto\" | \"api\" | \"cli-sdk\"'."
+        }
+      ],
+      "resolvedDiagnostics": [],
+      "unexpectedDiagnostics": [],
+      "unparsedOutput": []
+    },
+    {
+      "id": "mcp-source",
+      "command": "pnpm --silent --filter agent-teams-mcp typecheck",
+      "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-source.raw.txt",
+      "durationMs": 4362,
+      "processDisposition": "exited",
+      "rawExitCode": 0,
+      "signal": null,
+      "timeoutMs": 300000,
+      "compilerOutputBytes": 0,
+      "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true
+    },
+    {
+      "id": "mcp-tests",
+      "command": "pnpm --silent --filter agent-teams-mcp typecheck:test",
+      "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-tests.raw.txt",
+      "durationMs": 5989,
+      "processDisposition": "exited",
+      "rawExitCode": 0,
+      "signal": null,
+      "timeoutMs": 300000,
+      "compilerOutputBytes": 0,
+      "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true
+    }
+  ]
+}

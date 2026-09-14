@@ -4,9 +4,13 @@ import {
   type WorkspaceTrustElectronApi,
 } from '../contracts';
 
-import type { IpcRenderer } from 'electron';
+interface WorkspaceTrustIpcRendererPort {
+  invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T>;
+}
 
-export function createWorkspaceTrustBridge(ipcRenderer: IpcRenderer): WorkspaceTrustElectronApi {
+export function createWorkspaceTrustBridge(
+  ipcRenderer: WorkspaceTrustIpcRendererPort
+): WorkspaceTrustElectronApi {
   return {
     workspaceTrust: {
       getLaunchStatus: (request) => ipcRenderer.invoke(WORKSPACE_TRUST_GET_LAUNCH_STATUS, request),

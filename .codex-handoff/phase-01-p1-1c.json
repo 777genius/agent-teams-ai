@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-1c",
+  "packetRevision": "phase-01-s2-conformance-r1",
+  "parentPlanCommit": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+  "baseSha": "041b5c7c2d3225b7dc2eca9e9b7b71aa33217060",
+  "planBundleCommit": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+  "phaseStartSha": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+  "resultCommitSha": null,
+  "status": "characterized",
+  "toolVersions": {
+    "node": "24.16.0",
+    "pnpm": "10.33.4",
+    "vitest": "3.2.6",
+    "eslint": "9.39.4",
+    "typescript": "7.0.2",
+    "prettier": "3.8.1",
+    "git": "2.43.0"
+  },
+  "evidence": [
+    {
+      "id": "P1.1C.CONFORMANCE",
+      "path": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.1C.RATCHETS",
+      "path": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-1c.json",
+    "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
+    "scripts/hosted-web/phase-1/check-parity-references.ts",
+    "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
+    "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+    "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
+    "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
+    "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+    "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+    "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance test/architecture/hosted-web/phase-1/dependencies test/architecture/hosted-web/phase-1/parity test/architecture/hosted-web/phase-1/renderer-boundaries",
+      "exitCode": 0,
+      "result": "4 files and 13 tests passed"
+    },
+    {
+      "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-1/check-feature-dependencies.ts scripts/hosted-web/phase-1/check-parity-references.ts scripts/hosted-web/phase-1/check-renderer-boundaries.ts test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts test/architecture/hosted-web/phase-1/parity/parity-references.test.ts test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "inherited Phase 0 test-tree diagnostics; no P1.1C-owned diagnostic",
+      "inheritedDiagnostics": [
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts: TS7016, TS7031, TS18046, TS7031, TS7031",
+        "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts: TS7016",
+        "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts: TS2352"
+      ]
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-1c.json scripts/hosted-web/phase-1/check-feature-dependencies.ts scripts/hosted-web/phase-1/check-parity-references.ts scripts/hosted-web/phase-1/check-renderer-boundaries.ts test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts test/architecture/hosted-web/phase-1/parity/parity-references.test.ts test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "result": "only the 28 exact writable paths are untracked"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+      "exitCode": 0,
+      "result": "4 tests passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+      "exitCode": 0,
+      "result": "3 tests passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "exitCode": 0,
+      "result": "3 tests passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+      "exitCode": 0,
+      "result": "3 tests passed"
+    }
+  ],
+  "unverifiedChecks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts",
+      "reason": "the P1.1D-owned second path does not exist in P1.S2; the combined check was not run"
+    }
+  ],
+  "scopeChecks": [
+    {
+      "command": "git merge-base --is-ancestor 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060 a0dc964e9a71b782b1bbad4769db62a691e50c97",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --name-only 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060..a0dc964e9a71b782b1bbad4769db62a691e50c97",
+      "exitCode": 0,
+      "result": "exactly the eight contract-owned router documentation paths"
+    },
+    {
+      "command": "git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97 && git ls-files --others --exclude-standard",
+      "exitCode": 0,
+      "result": "exactly the 28 changedPaths"
+    },
+    {
+      "command": "git diff --exit-code a0dc964e9a71b782b1bbad4769db62a691e50c97 -- .",
+      "exitCode": 0,
+      "result": "no tracked path differs; every untracked path is P1.1C-owned"
+    }
+  ],
+  "safetyChecks": [
+    {
+      "command": "rg -n -i '(api[_-]?key[[:space:]]*[:=]|access[_-]?token[[:space:]]*[:=]|refresh[_-]?token[[:space:]]*[:=]|password[[:space:]]*[:=]|bearer[[:space:]]+[A-Za-z0-9]|-----BEGIN [A-Z ]*PRIVATE KEY-----|/[U]sers/|/[h]ome/|/[r]oot/|claude[-]runtime|auth[_-]?payload|provider[_-]?payload|raw[_-]?(command|runtime)[_-]?body)' <28 exact changedPaths>",
+      "exitCode": 0,
+      "result": "one reviewed match: this handoff's safety-result wording; no leaked value or private path"
+    },
+    {
+      "command": "file <28 exact changedPaths>",
+      "exitCode": 0,
+      "result": "all paths are ASCII JavaScript source or JSON text data; zero binaries"
+    }
+  ],
+  "negativeResultMatrix": [
+    {
+      "id": "P1.NEG.CORE_SIDE_EFFECT",
+      "result": "passed",
+      "diagnostic": "phase1-core-side-effect-forbidden",
+      "positiveNeighbor": "verified"
+    },
+    {
+      "id": "P1.NEG.HOSTED_ELECTRON_API",
+      "result": "passed",
+      "diagnostic": "phase1-hosted-electron-api-forbidden",
+      "positiveNeighbor": "verified"
+    },
+    {
+      "id": "P1.NEG.IMPORT_FORBIDDEN",
+      "result": "passed",
+      "diagnostic": "phase1-core-import-forbidden",
+      "positiveNeighbor": "verified"
+    },
+    {
+      "id": "P1.NEG.LEGACY_GOD_DTO",
+      "result": "fixture-scanner-half-passed",
+      "diagnostic": "phase1-legacy-god-dto-forbidden",
+      "positiveNeighbor": "unverified-P1.1D-owned"
+    },
+    {
+      "id": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "result": "fixture-scanner-half-passed",
+      "diagnostic": "phase1-filesystem-adapter-forbidden",
+      "positiveNeighbor": "unverified-P1.1D-owned"
+    },
+    {
+      "id": "P1.NEG.PARITY_DRIFT",
+      "result": "passed",
+      "diagnostic": "phase1-parity-reference-drift",
+      "positiveNeighbor": "verified"
+    },
+    {
+      "id": "P1.NEG.PATH_SECRET_LEAK",
+      "result": "passed",
+      "diagnostic": "phase1-path-secret-leak",
+      "positiveNeighbor": "verified"
+    },
+    {
+      "id": "P1.NEG.PRODUCTION_ADAPTER_MOUNT",
+      "result": "passed",
+      "diagnostic": "phase1-test-adapter-production-import",
+      "positiveNeighbor": "verified-on-eight-frozen-production-boundaries"
+    },
+    {
+      "id": "P1.NEG.RATCHET_REGRESSION",
+      "result": "passed",
+      "diagnostic": "phase1-ratchet-regression",
+      "positiveNeighbor": "verified"
+    }
+  ],
+  "fixtureHashes": {
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json": "1fc62ffb444c8ebb1f3b7d4ad35303d7c501539ab8cac4e220b88972bc6e46d5",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json": "98a99c4f03af0a407b979b3f606bdfe2d55ba2c544e330c95e51312106fcec07",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json": "2c8378bcd7e928e9ab2fb77f46cdda897e6c350bf130bf376123de961458d2b7",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json": "95f032d6a434a4cd4bbda3d701beb4a99a1657f8ad4e4ed5e3d3ddeb70aacb8e",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json": "f6f582303ffae9919abc2e7b30f794de609808fa69b76101e8d89bc879c9baef",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json": "4aec77f80650895ec7e81dc900c00b17b0fc1c38e44c81a347e40f035c88f3db",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json": "272ac470b7b843018a94d700f40336b4536d6f373839cc9fa12261c27d2083d8",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json": "f4534d45b0523ec16d713be97e94c698804092e153de242e093500eaa422255a",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json": "40e57bfb5af87ff6a1dd019f2ffb8058f09c5e54c88546e971f97a5316425d4b",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json": "e37e636ca979fec6e8cb5372da01e9953674d7b30c772be2c707dc0bc5463247",
+    "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json": "beaabfd29b6a7447403b3054a1e7a08247410e21f65be4563f543144bc3d9ea4"
+  },
+  "patchManifest": {
+    "phaseStartSha": "a0dc964e9a71b782b1bbad4769db62a691e50c97",
+    "algorithm": "concatenate git diff --binary --no-index -- /dev/null <path> for the 27 ordered non-handoff changedPaths, then SHA-256",
+    "computedBeforeHandoffCreation": true,
+    "selfHashOmitted": true,
+    "sha256": "1beb4adc55d879d0089140f57c3ce3f7a92647a1c3021b8f901879f3d6adb1e1",
+    "changedPathSha256": {
+      "scripts/hosted-web/phase-1/check-feature-dependencies.ts": "55da0d4482be98b42b3593aecb33a829ddd20107f3c89001ee1fe7d1860a74bb",
+      "scripts/hosted-web/phase-1/check-parity-references.ts": "b29a2152c9e0cf106d7e575ad0d8e8e2ffe877f11e0899d95b21d75d0105bec0",
+      "scripts/hosted-web/phase-1/check-renderer-boundaries.ts": "d4960be8879a90d7e1b2634c39bcdb064fb6dbcb4587bd8f8fc1c5e2456404a3",
+      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts": "b71bed9df2f99612d0f1aa14ae690eab9976539f0b1c8d5690c7c6bf9c9752a1",
+      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts": "92dff015dccca5f0f9d2b743d701f88c496a99b71e5baf0221b27d4e574435dc",
+      "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts": "345d9946c526e776ef93dbce9dfabfda2a1c38f413b7a2a1f72180b4a29b186a",
+      "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts": "5ecc201ede7104e77e9fba7689ef92f0ef71bda4ab7cf855b72640bed5bc90c9",
+      "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts": "de5695f3bd825b2fa169434a0423f6488fbe3d8aa01969acad5b0f83cde3f329",
+      "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts": "6276cc61248bc20db71bf928ac0cae142374507db2d218205aa37f7ff0f659e6",
+      "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts": "0ca26159a5ea6a2dc4d57190322743c3d83f93de5d1c75ec412aec85080ba419",
+      "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts": "754c40dea9b2683aebd9d6e22b147d4f16194642f2b040aa22f3778309e5b271",
+      "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts": "6aa2a176173a436f1c8a180cd7d4f01799b5089701d1e6c29151bd7244afc117",
+      "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts": "28f7817de7251ef9e6d11a7d6def5625a0efa256ad6b4d81c1d2ae70f62f4b62",
+      "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts": "5afcde69d1ad33c6ecf1a7031e4e5a7d5b8e5870253092b20b86f8abced7edbc",
+      "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts": "5e85a09294bef3c28278f04ea1e4896dacbd14fe438cd0a40b99781570f212c1",
+      "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts": "1eabeaae77ba5a6b59d2e6376263726c2b27e5f55e01faed021ef25c3e144e59",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json": "1fc62ffb444c8ebb1f3b7d4ad35303d7c501539ab8cac4e220b88972bc6e46d5",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json": "98a99c4f03af0a407b979b3f606bdfe2d55ba2c544e330c95e51312106fcec07",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json": "2c8378bcd7e928e9ab2fb77f46cdda897e6c350bf130bf376123de961458d2b7",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json": "95f032d6a434a4cd4bbda3d701beb4a99a1657f8ad4e4ed5e3d3ddeb70aacb8e",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json": "f6f582303ffae9919abc2e7b30f794de609808fa69b76101e8d89bc879c9baef",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json": "4aec77f80650895ec7e81dc900c00b17b0fc1c38e44c81a347e40f035c88f3db",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json": "272ac470b7b843018a94d700f40336b4536d6f373839cc9fa12261c27d2083d8",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json": "f4534d45b0523ec16d713be97e94c698804092e153de242e093500eaa422255a",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json": "40e57bfb5af87ff6a1dd019f2ffb8058f09c5e54c88546e971f97a5316425d4b",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json": "e37e636ca979fec6e8cb5372da01e9953674d7b30c772be2c707dc0bc5463247",
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json": "beaabfd29b6a7447403b3054a1e7a08247410e21f65be4563f543144bc3d9ea4"
+    }
+  },
+  "scopeProof": {
+    "ownedPathCount": 28,
+    "changedPathListSha256": "c171c9d8fe8b44c2cda1eac9f9a2d3b4cefd5535757ce768105cf33d9f51c2a3",
+    "ownedPathsMatchBaseBeforeWork": true,
+    "nonOwnedPathsMatchPhaseStartSha": true,
+    "phaseStartDiffFromBaseIsRouterDocumentationOnly": true,
+    "controllerAdmission": "worker-start-v1 admission supplied externally; no production registration was performed",
+    "changedAndUntrackedSafetyScan": "reviewed scanner denylist terms only; no secret, credential, private/home/real-project path, raw command/runtime body, or binary artifact",
+    "p1s3Status": "blocked"
+  },
+  "unverifiedClaims": [
+    "P1.1D list use-case semantics or transport-shaped adapters",
+    "P1.1D-owned positive neighbor for P1.NEG.LEGACY_GOD_DTO",
+    "P1.1D-owned positive neighbor for P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+    "P1.NEG.SEMANTIC_OUTCOME future feature conformance",
+    "production isolation beyond the eight frozen boundaries asserted by the owned scanner",
+    "P1.R1 acceptance or admission",
+    "controller integration of either P1.S2 producer",
+    "complete Phase 1 or production hosted behavior"
+  ],
+  "blockers": [
+    {
+      "class": "base_failure",
+      "reproducer": "pnpm typecheck",
+      "affectedEvidenceIds": ["P1.1C.CONFORMANCE", "P1.1C.RATCHETS"],
+      "unrelatedLaneCanContinue": true,
+      "recommendedControllerAction": "Preserve the inherited Phase 0 typecheck diagnostics as a separately owned baseline finding; do not widen P1.1C."
+    }
+  ],
+  "adrRecommendations": [],
+  "estimateBuckets": [],
+  "nextAction": "Wait for the independent P1.1B handoff and a separately authorized P1.R1 router decision; do not start review, P1.1D, integration, or production work."
+}

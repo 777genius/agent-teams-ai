@@ -5,12 +5,12 @@ import { InMemoryTeamImportReviewStore } from '../infrastructure/InMemoryTeamImp
 import { SafeLocalTeamImportFolderSource } from '../infrastructure/SafeLocalTeamImportFolderSource';
 import { TeamDataImportDraftRepository } from '../infrastructure/TeamDataImportDraftRepository';
 
+import type { TeamImportTeamDataPort } from '../application/TeamImportTeamDataPort';
 import type {
   CreateTeamImportDraftRequest,
   CreateTeamImportDraftResult,
   TeamImportPreview,
 } from '@features/team-import/contracts';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 
 export interface TeamImportFeatureFacade {
   chooseFolderAndPreview(): Promise<TeamImportPreview | null>;
@@ -18,7 +18,7 @@ export interface TeamImportFeatureFacade {
 }
 
 export function createTeamImportFeature(
-  teamDataService: TeamDataService,
+  teamData: TeamImportTeamDataPort,
   onTeamCreated?: (teamName: string) => void
 ): TeamImportFeatureFacade {
   const reviewStore = new InMemoryTeamImportReviewStore();
@@ -29,7 +29,7 @@ export function createTeamImportFeature(
   );
   const createDraftUseCase = new CreateTeamImportDraftUseCase(
     reviewStore,
-    new TeamDataImportDraftRepository(teamDataService, onTeamCreated)
+    new TeamDataImportDraftRepository(teamData, onTeamCreated)
   );
 
   return {

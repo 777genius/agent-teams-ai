@@ -17,4 +17,10 @@ export {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
-} from './infrastructure/openCodeVersionDiagnostics';
+} from './application/openCodeVersionDiagnostics';
+export type {
+  OpenCodeVersionCommandOptions,
+  OpenCodeVersionCommandResult,
+  OpenCodeVersionDiagnosticMetadata,
+  OpenCodeVersionDiagnosticPorts,
+} from './application/OpenCodeVersionDiagnosticPorts';

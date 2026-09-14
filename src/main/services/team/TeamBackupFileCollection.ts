@@ -78,3 +78,24 @@ export function collectRecursiveFilesSync(
   walk(rootDir, '');
   return files;
 }
+
+export async function collectBackupRelativePaths(rootDir: string): Promise<string[]> {
+  const files: string[] = [];
+  const walk = async (dirPath: string, relDir: string): Promise<void> => {
+    try {
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
+        if (entry.isFile()) {
+          files.push(relPath);
+        } else if (entry.isDirectory()) {
+          await walk(path.join(dirPath, entry.name), relPath);
+        }
+      }
+    } catch {
+      // A concurrently removed backup directory contributes no files.
+    }
+  };
+  await walk(rootDir, '');
+  return files;
+}

@@ -28,10 +28,20 @@ import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWo
 
 import { BackendSelectingTaskCommentNotificationJournalStore } from './BackendSelectingTaskCommentNotificationJournalStore';
 import { BackendSelectingTaskStallJournalStore } from './BackendSelectingTaskStallJournalStore';
+import {
+  createHostedAuthStorageBackend,
+  type HostedAuthStorageBackend,
+} from './createHostedAuthStorageBackend';
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
+import type { HostedAuthStorageGateway } from '../../contracts/hostedAuthStorageContracts';
+import type { HostedTeamApprovalAuthorityStorageGateway } from '../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
+import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
+import type { TeamRosterStorageGateway } from '../../contracts/teamRosterStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
+import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
+import type { ProcessOwnershipStorageGateway } from '../application/processOwnershipStorage';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
@@ -43,6 +53,12 @@ export interface InternalStorageFeatureDeps {
   userDataPath: string;
 }
 
+export interface InternalStorageHostedAuthFeatureDeps extends InternalStorageFeatureDeps {
+  readonly scope: 'hosted-auth';
+}
+
+export type InternalStorageHostedAuthFeature = HostedAuthStorageBackend;
+
 export interface InternalStorageMemberWorkSyncBackend {
   gateway: MemberWorkSyncStorageGateway;
   selector: InternalStorageBackendSelector;
@@ -51,6 +67,33 @@ export interface InternalStorageMemberWorkSyncBackend {
 
 export interface InternalStorageApplicationCommandLedgerBackend {
   gateway: ApplicationCommandLedgerStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
+export interface InternalStorageTeamIdentityReadBackend {
+  gateway: TeamIdentityReadGateway;
+}
+
+export interface InternalStorageTeamRosterBackend {
+  gateway: TeamRosterStorageGateway;
+}
+
+export interface InternalStorageCoordinationDurabilityBackend {
+  gateway: CoordinationDurabilityStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
+export interface InternalStorageProcessOwnershipBackend {
+  gateway: ProcessOwnershipStorageGateway;
+}
+
+export interface InternalStorageHostedAuthBackend {
+  gateway: HostedAuthStorageGateway;
+}
+
+/** Durable approval authority has no JSON fallback or lifecycle behavior. */
+export interface InternalStorageHostedTeamApprovalAuthorityBackend {
+  gateway: HostedTeamApprovalAuthorityStorageGateway;
   selector: InternalStorageBackendSelector;
 }
 
@@ -69,6 +112,18 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
+  /** Durable identity reads never degrade to directory or JSON discovery. */
+  teamIdentityReadBackend: InternalStorageTeamIdentityReadBackend | null;
+  /** TeamRoster identity is SQLite-only and never falls back to name-keyed JSON. */
+  teamRosterBackend: InternalStorageTeamRosterBackend | null;
+  /** Critical coordination durability never degrades to a JSON fallback. */
+  coordinationDurabilityBackend: InternalStorageCoordinationDurabilityBackend | null;
+  /** Process ownership is SQLite-only; unavailable storage closes runtime-control admission. */
+  processOwnershipBackend: InternalStorageProcessOwnershipBackend | null;
+  /** Hosted authentication is SQLite-only and fails closed without the worker. */
+  hostedAuthBackend: InternalStorageHostedAuthBackend | null;
+  /** Hosted approval decisions are SQLite-only and do not mount runtime delivery. */
+  hostedTeamApprovalAuthorityBackend: InternalStorageHostedTeamApprovalAuthorityBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -80,9 +135,18 @@ export function getInternalStorageDatabasePath(userDataPath: string): string {
 }
 
 export function createInternalStorageFeature(
+  deps: InternalStorageHostedAuthFeatureDeps
+): InternalStorageHostedAuthFeature;
+export function createInternalStorageFeature(
   deps: InternalStorageFeatureDeps
-): InternalStorageFeature {
+): InternalStorageFeature;
+export function createInternalStorageFeature(
+  deps: InternalStorageFeatureDeps | InternalStorageHostedAuthFeatureDeps
+): InternalStorageFeature | InternalStorageHostedAuthFeature {
   const databasePath = getInternalStorageDatabasePath(deps.userDataPath);
+  if ('scope' in deps && deps.scope === 'hosted-auth') {
+    return createHostedAuthStorageBackend(databasePath);
+  }
   // Replica ownership is per team/store. A missing replica means that store was
   // never touched through SQLite; a dirty replica fails closed on its own.
   // App-wide database existence cannot be used here because a healthy database
@@ -158,6 +222,12 @@ export function createInternalStorageFeature(
     ),
     memberWorkSyncBackend: { gateway: client, selector, fallbackRequiresReplica },
     applicationCommandLedgerBackend: workerAvailable ? { gateway: client, selector } : null,
+    teamIdentityReadBackend: workerAvailable ? { gateway: client } : null,
+    teamRosterBackend: workerAvailable ? { gateway: client } : null,
+    coordinationDurabilityBackend: workerAvailable ? { gateway: client, selector } : null,
+    processOwnershipBackend: workerAvailable ? { gateway: client } : null,
+    hostedAuthBackend: workerAvailable ? { gateway: client } : null,
+    hostedTeamApprovalAuthorityBackend: workerAvailable ? { gateway: client, selector } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

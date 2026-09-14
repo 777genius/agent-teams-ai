@@ -7,6 +7,7 @@ import { useGraphSendMessageDialog } from './useGraphSendMessageDialog';
 import { useGraphTaskActions } from './useGraphTaskActions';
 import { useGraphTaskDetailDialog } from './useGraphTaskDetailDialog';
 
+import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
 import type {
   MemberActivityFilter,
   MemberDetailTab,
@@ -17,7 +18,10 @@ interface OpenProfileOptions {
   initialTab?: MemberDetailTab;
 }
 
-export function useGraphSurfaceInteractions(teamName: string): {
+export function useGraphSurfaceInteractions(
+  teamName: string,
+  taskNotificationPort: TeamGraphTaskNotificationPort
+): {
   dialogs: React.ReactNode;
   onApproveTask: (taskId: string) => void;
   onCancelTask: (taskId: string) => void;
@@ -34,9 +38,9 @@ export function useGraphSurfaceInteractions(teamName: string): {
   openTaskDetail: (taskId: string) => void;
 } {
   const changeReview = useGraphChangeReviewDialog(teamName);
-  const createTask = useGraphCreateTaskDialog(teamName);
+  const createTask = useGraphCreateTaskDialog(teamName, taskNotificationPort);
   const sendMessage = useGraphSendMessageDialog(teamName);
-  const taskActions = useGraphTaskActions(teamName);
+  const taskActions = useGraphTaskActions(teamName, taskNotificationPort);
   const taskDetail = useGraphTaskDetailDialog(teamName, {
     onDeleteTask: taskActions.onDeleteTask,
     onViewChanges: changeReview.openTaskChanges,

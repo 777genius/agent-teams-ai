@@ -1,6 +1,13 @@
+import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { constants as fsConstants } from 'fs';
@@ -227,6 +234,60 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  const teamLifecycleReadHost = services.teamLifecycleReadHost;
+  if (teamLifecycleReadHost) {
+    app.post<{ Body: unknown }>(TEAM_LIFECYCLE_LIST_ROUTE, async (request, reply) => {
+      const requestController = new AbortController();
+      const abortRequest = () => requestController.abort();
+      const rawRequest = request.raw;
+      const requestSocket = rawRequest.socket;
+      const rawResponse = reply.raw;
+      rawRequest.once('aborted', abortRequest);
+      requestSocket.once('close', abortRequest);
+      rawResponse.once('close', abortRequest);
+      if (rawRequest.aborted || requestSocket.destroyed || rawResponse.destroyed) {
+        abortRequest();
+      }
+      try {
+        const result = await teamLifecycleReadHost.listTeamLifecycle(
+          request.body,
+          requestController.signal
+        );
+        if (!services.hostedAuth || result.kind !== 'success') return reply.send(result);
+        const workspaceIds = await Promise.all(
+          result.items.map((item) =>
+            services.hostedAuth!.projectWorkspaceId(request, item.workspaceId)
+          )
+        );
+        const filtered: CanonicalListTeamLifecycleResult = Object.freeze({
+          ...result,
+          items: Object.freeze(
+            result.items.flatMap((item, index) => {
+              const workspaceId = workspaceIds[index];
+              return workspaceId === null
+                ? []
+                : [{ ...item, workspaceId: parseWorkspaceId(workspaceId) }];
+            })
+          ),
+        });
+        return reply.send(filtered);
+      } catch {
+        const error = createSafeAppError({ code: 'unavailable', reason: 'transport_unavailable' });
+        const failure: TeamLifecycleReadFailure = Object.freeze({
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          kind: 'failure',
+          error: error as TeamLifecycleReadFailure['error'],
+          retryable: true,
+        });
+        return reply.send(failure);
+      } finally {
+        rawRequest.removeListener('aborted', abortRequest);
+        requestSocket.removeListener('close', abortRequest);
+        rawResponse.removeListener('close', abortRequest);
+      }
+    });
+  }
+
   registerTeamMemberDiagnosticsRoute(app, services, {
     logger,
     shouldLogError,

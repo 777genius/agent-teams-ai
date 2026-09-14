@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { memberLogObservationPorts } from '@features/member-log-stream/renderer';
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -492,16 +493,15 @@ export const MemberLogsTab = ({
           didBeginRefreshing = true;
         }
         setError(null);
-
         const result =
           taskId != null
-            ? await api.teams.getLogsForTask(teamName, taskId, {
+            ? await memberLogObservationPorts.readTaskLogs(teamName, taskId, {
                 owner: taskOwner,
                 status: taskStatus,
                 intervals: taskWorkIntervals,
                 since: taskSince,
               })
-            : await api.teams.getMemberLogs(teamName, memberName!);
+            : await memberLogObservationPorts.readMemberLogs(teamName, memberName!);
         const nextLogs = Array.isArray(result) ? [...result] : [];
 
         if (!cancelled) {

@@ -34,7 +34,7 @@ function dependencies(
         setAsDefault: false,
       },
     })),
-    prepareProvisioning: vi.fn(async () => ({ ready: true, message: 'Ready.' })),
+    checkReadiness: vi.fn(async () => ({ ready: true, message: 'Ready.' })),
     ...overrides,
   };
 }
@@ -63,15 +63,8 @@ describe('addAndTestOpenCodeLocalModel', () => {
         allowPrivateNetwork: false,
       })
     );
-    expect(deps.prepareProvisioning).toHaveBeenCalledWith(
-      projectPath,
-      'opencode',
-      ['opencode'],
-      ['ollama/qwen3-30b-32k'],
-      false,
-      'deep'
-    );
-    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    expect(deps.checkReadiness).toHaveBeenCalledWith(projectPath, 'ollama/qwen3-30b-32k');
+    expect(deps.checkReadiness).toHaveBeenCalledOnce();
     expect(onConfigured).toHaveBeenCalledOnce();
   });
 
@@ -91,13 +84,13 @@ describe('addAndTestOpenCodeLocalModel', () => {
       })
     ).resolves.toEqual({ status: 'ready', message: 'Ready.' });
 
-    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    expect(deps.checkReadiness).toHaveBeenCalledOnce();
     finishRefresh();
   });
 
   it('returns the exact hard compatibility reason from the deep check', async () => {
     const deps = dependencies({
-      prepareProvisioning: vi.fn(async () => ({
+      checkReadiness: vi.fn(async () => ({
         ready: false,
         message: 'Not ready.',
         issues: [
@@ -123,12 +116,12 @@ describe('addAndTestOpenCodeLocalModel', () => {
       status: 'incompatible',
       message: 'gemma3:27b does not support tool calls required by Agent Teams.',
     });
-    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    expect(deps.checkReadiness).toHaveBeenCalledOnce();
   });
 
   it('preserves an experimental override offered by the deep check', async () => {
     const deps = dependencies({
-      prepareProvisioning: vi.fn(async () => ({
+      checkReadiness: vi.fn(async () => ({
         ready: false,
         message: 'Not ready.',
         issues: [
@@ -155,12 +148,12 @@ describe('addAndTestOpenCodeLocalModel', () => {
       status: 'experimental',
       message: 'The execution probe failed, but an experimental override is available.',
     });
-    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    expect(deps.checkReadiness).toHaveBeenCalledOnce();
   });
 
   it('keeps a warning-only deep check in needs verification', async () => {
     const deps = dependencies({
-      prepareProvisioning: vi.fn(async () => ({
+      checkReadiness: vi.fn(async () => ({
         ready: true,
         message: 'Ready with warning.',
         warnings: ['Coordination probe was unavailable and will be retried before launch.'],
@@ -177,7 +170,7 @@ describe('addAndTestOpenCodeLocalModel', () => {
       status: 'needs_verification',
       message: 'Coordination probe was unavailable and will be retried before launch.',
     });
-    expect(deps.prepareProvisioning).toHaveBeenCalledOnce();
+    expect(deps.checkReadiness).toHaveBeenCalledOnce();
   });
 
   it('forwards approval only when the caller confirms the exact project target', async () => {
