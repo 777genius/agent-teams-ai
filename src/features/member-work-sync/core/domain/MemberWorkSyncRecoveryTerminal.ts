@@ -71,6 +71,12 @@ export function applyMemberWorkSyncDeliveredDispatch(input: {
   boundTurnId?: string;
   deliveredAt?: string;
 }): MemberWorkSyncRecoveryHealth | undefined {
+  const reservation = input.health?.reservations?.find(
+    (entry) => entry.intentId === input.intentId
+  );
+  if (reservation?.state === 'resolved' || reservation?.state === 'cancelled') {
+    return input.health;
+  }
   return patchMemberWorkSyncReservation(input.health, input.intentId, (reservation) => ({
     ...reservation,
     state: 'awaiting_outcome',

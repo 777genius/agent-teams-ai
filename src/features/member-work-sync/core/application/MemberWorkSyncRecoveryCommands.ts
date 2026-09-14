@@ -160,6 +160,22 @@ export class MemberWorkSyncRecoveryCommands {
         defaultIntentKey,
         `${baseInput.id}:${defaultIntentKey}`
       );
+      if (!hadUnresolvedIntent) {
+        const leftover = await outboxStore.readItem?.({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          id: recoveryInput.id,
+        });
+        if (
+          leftover &&
+          (leftover.status === 'delivered' ||
+            leftover.status === 'superseded' ||
+            leftover.status === 'claimed')
+        ) {
+          const retryKey = `${defaultIntentKey}:${mutationId}`;
+          recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
+        }
+      }
       if (hadUnresolvedIntent && existing) {
         const existingItem = await outboxStore.readItem?.({
           teamName: input.teamName,
@@ -346,12 +362,20 @@ async function retireRevokedDeliveredRecovery(
     memberName: status.memberName,
     id: intentId,
   });
-  if (!item || item.status !== 'delivered') {
+  if (!item || (item.status !== 'delivered' && item.status !== 'claimed')) {
     return status;
   }
   const deliveredId = item.deliveredMessageId ?? item.id;
   if (!revokedMessageIds.includes(deliveredId) && !revokedMessageIds.includes(item.id)) {
     return status;
+  }
+  if (item.status === 'claimed') {
+    await deps.outboxStore.markSuperseded({
+      teamName: status.teamName,
+      id: item.id,
+      reason: 'inbox_revoked',
+      nowIso: deps.clock.now().toISOString(),
+    });
   }
   const retired = await retireMemberWorkSyncRecoveryIntent({
     deps,

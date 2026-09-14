@@ -124,6 +124,26 @@ describe('member work sync recovery terminal protocol', () => {
     });
   });
 
+  it('does not reopen a resolved reservation after a late delivered dispatch', () => {
+    const retired = applyMemberWorkSyncTerminalRetirement({
+      health,
+      intentId: 'intent-1',
+      receiptId: 'inbox-revoked:intent-1',
+      pendingAck: false,
+    });
+    const late = applyMemberWorkSyncDeliveredDispatch({
+      health: retired,
+      intentId: 'intent-1',
+      boundTurnId: 'msg_recovery_prompt',
+      deliveredAt: '2026-09-11T12:00:30.000Z',
+    });
+    expect(late?.unresolvedIntentId).toBeUndefined();
+    expect(late?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalReceiptId: 'inbox-revoked:intent-1',
+    });
+  });
+
   it('retires an awaiting reservation after a later accepted report', () => {
     const awaiting = applyMemberWorkSyncDeliveredDispatch({
       health,

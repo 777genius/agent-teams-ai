@@ -207,6 +207,7 @@ class InMemoryOutboxStore implements MemberWorkSyncOutboxStorePort {
   readonly ensures: MemberWorkSyncOutboxEnsureInput[] = [];
   readonly items = new Map<string, MemberWorkSyncOutboxItem>();
   rejectPayloadConflicts = false;
+  beforeMarkDelivered?: (input: MemberWorkSyncOutboxMarkDeliveredInput) => Promise<void>;
 
   async ensurePending(input: MemberWorkSyncOutboxEnsureInput) {
     this.ensures.push(input);
@@ -259,6 +260,7 @@ class InMemoryOutboxStore implements MemberWorkSyncOutboxStorePort {
   }
 
   async markDelivered(input: MemberWorkSyncOutboxMarkDeliveredInput): Promise<void> {
+    await this.beforeMarkDelivered?.(input);
     const current = this.items.get(input.id);
     if (current?.attemptGeneration === input.attemptGeneration && current.status === 'claimed') {
       const next = {
@@ -3132,6 +3134,103 @@ describe('MemberWorkSync use cases', () => {
     if (stopped.ok) {
       expect(stopped.status.recoveryHealth?.unresolvedIntentId).toBeUndefined();
     }
+    await commands.resume({ teamName: 'team-a', memberName: 'bob' });
+    const second = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.status.recoveryHealth?.unresolvedIntentId).not.toBe(firstIntentId);
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'pending'
+    );
+    const resumed = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-resume',
+    });
+    expect(resumed.delivered).toBeGreaterThanOrEqual(1);
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'delivered'
+    );
+  });
+
+  it('allocates a fresh Continue after Stop revokes a claimed recovery before markDelivered', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const ordinary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(ordinary.delivered).toBeGreaterThanOrEqual(1);
+    const ordinaryId = inbox.inserted[0]?.messageId;
+    expect(ordinaryId).toBeTruthy();
+    inbox.readMessageIds.add(ordinaryId!);
+    const commands = new MemberWorkSyncRecoveryCommands(deps);
+    const first = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+
+    let reachedMarkDelivered!: () => void;
+    const reached = new Promise<void>((resolve) => {
+      reachedMarkDelivered = resolve;
+    });
+    let releaseMarkDelivered!: () => void;
+    const released = new Promise<void>((resolve) => {
+      releaseMarkDelivered = resolve;
+    });
+    outbox.beforeMarkDelivered = async (input) => {
+      if (input.id !== firstIntentId) {
+        return;
+      }
+      reachedMarkDelivered();
+      await released;
+    };
+
+    const inFlight = new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-continue',
+    });
+    await reached;
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('claimed');
+    expect(inbox.inserted.some((row) => row.messageId === firstIntentId)).toBe(true);
+
+    const stopped = await commands.stop({
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'user_stop',
+    });
+    expect(stopped.ok).toBe(true);
+    if (stopped.ok) {
+      expect(stopped.status.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    }
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('superseded');
+    expect(inbox.revokedMessageIds.has(firstIntentId!)).toBe(true);
+
+    releaseMarkDelivered();
+    const lateDispatch = await inFlight;
+    expect(lateDispatch.delivered).toBeGreaterThanOrEqual(1);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('superseded');
+
     await commands.resume({ teamName: 'team-a', memberName: 'bob' });
     const second = await commands.continueManually({
       teamName: 'team-a',
