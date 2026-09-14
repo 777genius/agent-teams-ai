@@ -1003,7 +1003,6 @@ const authorizedWindowCloses = new WeakSet<BrowserWindow>();
 const windowCloseReadinessInFlight = new WeakSet<BrowserWindow>();
 let appQuitFlow: Promise<boolean> | null = null;
 
-// Service registry and global services
 let contextRegistry: ServiceContextRegistry;
 let workspaceTrustStatus: workspaceTrustComposition.NodeWorkspaceTrustFeatures['status'];
 let notificationManager: NotificationManager;
