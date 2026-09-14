@@ -18,11 +18,9 @@ import {
   registerRecentProjectsHttp,
 } from '@features/recent-projects/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
-import {
-  registerWorkspaceTrustHttp,
-  type WorkspaceTrustStatusFeatureFacade,
-} from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
+
+import { registerWorkspaceTrustHttp } from '../composition/workspaceTrust/registerWorkspaceTrustHttp';
 
 import { registerConfigRoutes } from './config';
 import { registerEventRoutes } from './events';
@@ -52,6 +50,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type { FastifyInstance } from 'fastify';
 

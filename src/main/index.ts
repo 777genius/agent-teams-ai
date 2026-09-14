@@ -116,7 +116,6 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import * as workspaceTrustFeature from '@features/workspace-trust/main';
 import {
   applyAgentTeamsMcpAppContext,
   ensureAgentTeamsMcpLocalLaunchEnv,
@@ -213,6 +212,7 @@ import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
+import * as workspaceTrustComposition from './composition/workspaceTrust';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -1004,7 +1004,7 @@ let appQuitFlow: Promise<boolean> | null = null;
 
 // Service registry and global services
 let contextRegistry: ServiceContextRegistry;
-let workspaceTrustStatus: workspaceTrustFeature.WorkspaceTrustStatusFeatureFacade;
+let workspaceTrustStatus: workspaceTrustComposition.NodeWorkspaceTrustFeatures['status'];
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
@@ -2033,7 +2033,7 @@ async function initializeServices(): Promise<void> {
     /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
-  const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
+  const workspaceTrust = workspaceTrustComposition.createNodeWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
     getHomeDir,
@@ -2042,7 +2042,7 @@ async function initializeServices(): Promise<void> {
   });
   workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
-  workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  workspaceTrustComposition.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -3196,7 +3196,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
-      workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
+      workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);

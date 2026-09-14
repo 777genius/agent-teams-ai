@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
 
-import { createWorkspaceTrustStatusFeature } from '@features/workspace-trust/main/composition/createWorkspaceTrustStatusFeature';
+import { createNodeWorkspaceTrustFeatures } from '@main/composition/workspaceTrust/createNodeWorkspaceTrustFeatures';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LaunchTrustRequest } from '@features/workspace-trust/contracts';
+import type { WorkspaceTrustArgsOnlyPlanRequest } from '@features/workspace-trust/main';
 
 vi.mock('node:fs/promises', () => ({
   default: { realpath: vi.fn(), stat: vi.fn(), readFile: vi.fn() },
@@ -19,9 +20,11 @@ const request: LaunchTrustRequest = {
 };
 const config = {
   getHomeDir: () => '/sandbox/home',
-  globalConfigFilePath: '/sandbox/claude.json',
+  getClaudeConfigDir: () => '/sandbox',
+  getAutoDetectedClaudeConfigDir: () => '/sandbox/auto-detected',
   env: {},
 };
+const createStatusFeature = (input = config) => createNodeWorkspaceTrustFeatures(input).status;
 const unknown = {
   providers: [
     { providerId: 'anthropic', status: 'unknown' },
@@ -54,7 +57,7 @@ describe('workspace trust guarded facade', () => {
     { ...request, providerIds: Array(33).fill('codex') },
     { ...request, providerIds: 'codex' },
   ])('rejects malformed input without filesystem probing: %j', async (value) => {
-    const feature = createWorkspaceTrustStatusFeature(config);
+    const feature = createStatusFeature(config);
     expect(await feature.getLaunchStatus(value as LaunchTrustRequest)).toEqual(unknown);
     expect(fs.realpath).not.toHaveBeenCalled();
     expect(fs.stat).not.toHaveBeenCalled();
@@ -63,11 +66,11 @@ describe('workspace trust guarded facade', () => {
 
   it('blocks local probing for remote context including legacy API and dynamic callbacks', async () => {
     const getHomeDir = vi.fn(config.getHomeDir);
-    const globalConfigFilePath = vi.fn(() => config.globalConfigFilePath);
-    const feature = createWorkspaceTrustStatusFeature({
+    const getClaudeConfigDir = vi.fn(config.getClaudeConfigDir);
+    const feature = createStatusFeature({
       ...config,
       getHomeDir,
-      globalConfigFilePath,
+      getClaudeConfigDir,
       isLocalContext: () => false,
     });
     expect(await feature.getLaunchStatus(request)).toEqual(unknown);
@@ -75,26 +78,48 @@ describe('workspace trust guarded facade', () => {
     expect(fs.realpath).not.toHaveBeenCalled();
     expect(fs.stat).not.toHaveBeenCalled();
     expect(getHomeDir).not.toHaveBeenCalled();
-    expect(globalConfigFilePath).not.toHaveBeenCalled();
+    expect(getClaudeConfigDir).not.toHaveBeenCalled();
+  });
+
+  it('defers the launch coordinator binding until its first plan', async () => {
+    const getClaudeConfigDir = vi.fn(config.getClaudeConfigDir);
+    const feature = createNodeWorkspaceTrustFeatures({ ...config, getClaudeConfigDir });
+    expect(getClaudeConfigDir).not.toHaveBeenCalled();
+
+    const request: WorkspaceTrustArgsOnlyPlanRequest = {
+      providers: ['codex'],
+      workspaces: [],
+      featureFlags: {
+        enabled: true,
+        claudePty: true,
+        codexArgs: true,
+        retry: false,
+        fileLock: true,
+      },
+    };
+    expect(await feature.coordinator.planArgsOnly(request)).toEqual({ launchArgPatches: [] });
+    expect(getClaudeConfigDir).toHaveBeenCalledTimes(2);
+    await feature.coordinator.planArgsOnly(request);
+    expect(getClaudeConfigDir).toHaveBeenCalledTimes(2);
   });
 
   it('keeps flags, selected config and host callbacks fresh between requests', async () => {
     const env: NodeJS.ProcessEnv = {};
     let local = false;
-    let configPath = '/sandbox/one.json';
-    const feature = createWorkspaceTrustStatusFeature({
+    let configDir = '/sandbox/one';
+    const feature = createStatusFeature({
       ...config,
       env,
       isLocalContext: () => local,
-      globalConfigFilePath: () => configPath,
+      getClaudeConfigDir: () => configDir,
     });
     expect(await feature.getLaunchStatus(request)).toEqual(unknown);
     local = true;
     expect(await feature.getProjectStatus(request)).toEqual({ status: 'trusted' });
-    expect(fs.readFile).toHaveBeenLastCalledWith('/sandbox/one.json', 'utf8');
-    configPath = '/sandbox/two.json';
+    expect(fs.readFile).toHaveBeenLastCalledWith('/sandbox/one/.claude.json', 'utf8');
+    configDir = '/sandbox/two';
     expect(await feature.getProjectStatus(request)).toEqual({ status: 'trusted' });
-    expect(fs.readFile).toHaveBeenLastCalledWith('/sandbox/two.json', 'utf8');
+    expect(fs.readFile).toHaveBeenLastCalledWith('/sandbox/two/.claude.json', 'utf8');
     env.AGENT_TEAMS_WORKSPACE_TRUST_CLAUDE_PTY = '0';
     expect(await feature.getLaunchStatus(request)).toEqual({
       providers: [
@@ -107,7 +132,7 @@ describe('workspace trust guarded facade', () => {
   it.each(['ENOENT', 'ENOTDIR', 'EACCES', 'EIO'])('maps %s to bounded states', async (code) => {
     vi.mocked(fs.realpath).mockRejectedValue(Object.assign(new Error('secret path'), { code }));
     const status = code === 'ENOENT' || code === 'ENOTDIR' ? 'not_applicable' : 'unknown';
-    expect(await createWorkspaceTrustStatusFeature(config).getLaunchStatus(request)).toEqual({
+    expect(await createStatusFeature(config).getLaunchStatus(request)).toEqual({
       providers: request.providerIds.map((providerId) => ({ providerId, status })),
     });
     expect(fs.readFile).not.toHaveBeenCalled();
@@ -117,7 +142,7 @@ describe('workspace trust guarded facade', () => {
     vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => false } as Awaited<
       ReturnType<typeof fs.stat>
     >);
-    expect(await createWorkspaceTrustStatusFeature(config).getLaunchStatus(request)).toEqual({
+    expect(await createStatusFeature(config).getLaunchStatus(request)).toEqual({
       providers: request.providerIds.map((providerId) => ({
         providerId,
         status: 'not_applicable',
@@ -130,15 +155,13 @@ describe('workspace trust guarded facade', () => {
     vi.mocked(fs.stat)
       .mockResolvedValueOnce({ isDirectory: () => true } as Awaited<ReturnType<typeof fs.stat>>)
       .mockRejectedValue(Object.assign(new Error('gone'), { code: 'ENOENT' }));
-    expect(await createWorkspaceTrustStatusFeature(config).getLaunchStatus(request)).toEqual(
-      unknown
-    );
+    expect(await createStatusFeature(config).getLaunchStatus(request)).toEqual(unknown);
     expect(fs.readFile).not.toHaveBeenCalled();
   });
 
   it('Codex-only reads no config or authentication files', async () => {
     expect(
-      await createWorkspaceTrustStatusFeature(config).getLaunchStatus({
+      await createStatusFeature(config).getLaunchStatus({
         ...request,
         providerIds: ['codex'],
       })
@@ -147,14 +170,14 @@ describe('workspace trust guarded facade', () => {
   });
 
   it('isolates a throwing Claude config getter from Codex', async () => {
-    const claudeConfigDir = vi.fn(() => {
+    const getClaudeConfigDir = vi.fn(() => {
       throw new Error('private path');
     });
-    const feature = createWorkspaceTrustStatusFeature({ ...config, claudeConfigDir });
+    const feature = createStatusFeature({ ...config, getClaudeConfigDir });
     expect(await feature.getLaunchStatus({ ...request, providerIds: ['codex'] })).toEqual({
       providers: [{ providerId: 'codex', status: 'launch_scoped' }],
     });
-    expect(claudeConfigDir).not.toHaveBeenCalled();
+    expect(getClaudeConfigDir).not.toHaveBeenCalled();
     expect(await feature.getLaunchStatus(request)).toEqual({
       providers: [
         { providerId: 'anthropic', status: 'unknown' },
@@ -164,7 +187,7 @@ describe('workspace trust guarded facade', () => {
   });
 
   it('preserves legacy path trimming without changing spaces inside paths', async () => {
-    await createWorkspaceTrustStatusFeature(config).getProjectStatus({
+    await createStatusFeature(config).getProjectStatus({
       projectPath: '  /sandbox/a project/  ',
     });
     expect(fs.realpath).toHaveBeenCalledWith('/sandbox/a project/');

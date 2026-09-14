@@ -27,7 +27,6 @@ import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Standalone binds the bounded hosted approval catalog.
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 import { isHostedMvpManualApprovalAvailable } from '@features/team-configuration/contracts';
-import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
@@ -90,6 +89,7 @@ import {
   type TeamLifecycleReadHost,
 } from './composition/hosted/teamLifecycleReadComposition';
 import { createTeamLifecycleReadOnlyIdentitySource } from './composition/hosted/teamLifecycleReadOnlyIdentitySource';
+import { createNodeWorkspaceTrustFeatures } from './composition/workspaceTrust/createNodeWorkspaceTrustFeatures';
 import {
   type HostedWorkspaceEventBridge,
   registerHostedWorkspaceEventBridge,
@@ -626,7 +626,7 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
-    workspaceTrust: createWorkspaceTrustFeatures({
+    workspaceTrust: createNodeWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,
       getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
       getHomeDir,

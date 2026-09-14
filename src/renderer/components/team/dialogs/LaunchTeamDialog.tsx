@@ -18,7 +18,6 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import {
-  useWorkspaceTrustStatus,
   WorkspaceTrustLaunchControl,
 } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
@@ -47,6 +46,7 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -551,7 +551,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
+  const workspaceTrustStatus = useWorkspaceTrustShellStatus({
     enabled: open && isLaunchMode,
     projectPath: effectiveCwd || null,
     providerIds: selectedMemberProviders,

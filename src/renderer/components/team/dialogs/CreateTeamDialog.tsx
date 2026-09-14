@@ -17,7 +17,6 @@ import {
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  useWorkspaceTrustStatus,
   WorkspaceTrustLaunchNotice,
 } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
@@ -53,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -746,7 +746,7 @@ export const CreateTeamDialog = ({
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   const launchPreflightCanResolveBlockers =
     canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
+  const workspaceTrustStatus = useWorkspaceTrustShellStatus({
     enabled: open && canCreate && launchTeam,
     projectPath: effectiveCwd || null,
     providerIds: selectedMemberProviders,

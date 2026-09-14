@@ -1,9 +1,9 @@
 import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
-} from '../../../contracts';
+} from '@features/workspace-trust/contracts';
 
-import type { WorkspaceTrustStatusFeatureFacade } from '../../composition/createWorkspaceTrustStatusFeature';
+import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 function isLoopbackAddress(address: string): boolean {

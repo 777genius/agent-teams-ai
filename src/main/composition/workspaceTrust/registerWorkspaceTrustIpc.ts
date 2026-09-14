@@ -1,9 +1,9 @@
 import {
   WORKSPACE_TRUST_GET_LAUNCH_STATUS,
   WORKSPACE_TRUST_GET_PROJECT_STATUS,
-} from '../../../contracts';
+} from '@features/workspace-trust/contracts';
 
-import type { WorkspaceTrustStatusFeatureFacade } from '../../composition/createWorkspaceTrustStatusFeature';
+import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';
 import type { IpcMain } from 'electron';
 
 export function registerWorkspaceTrustIpc(

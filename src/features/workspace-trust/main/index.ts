@@ -21,18 +21,20 @@ export {
   normalizeWorkspaceTrustConfigKey,
 } from '../core/domain';
 export type * from '../core/domain/WorkspaceTrustTypes';
-export { registerWorkspaceTrustHttp } from './adapters/input/registerWorkspaceTrustHttp';
-export {
-  registerWorkspaceTrustIpc,
-  removeWorkspaceTrustIpc,
-} from './adapters/input/registerWorkspaceTrustIpc';
 export { FileClaudeStateProbe } from './adapters/output/ClaudeStateProbe';
 export { FileClaudeTrustPersister } from './adapters/output/ClaudeTrustPersister';
 export { NodePtyProcessAdapter } from './adapters/output/NodePtyProcessAdapter';
 export { FileTempEmptyMcpConfigStore } from './adapters/output/TempEmptyMcpConfigStore';
+export type {
+  WorkspaceTrustStatusDependencies,
+  WorkspaceTrustStatusReaderDependency,
+} from './application/WorkspaceTrustStatusDependencies';
+export { WorkspaceTrustStatusReader } from './application/WorkspaceTrustStatusReader';
 export { createWorkspaceTrustCoordinator } from './composition/createWorkspaceTrustCoordinator';
-export { createWorkspaceTrustFeatures } from './composition/createWorkspaceTrustFeatures';
-export type { WorkspaceTrustStatusFeatureFacade } from './composition/createWorkspaceTrustStatusFeature';
+export {
+  createWorkspaceTrustStatusFeature,
+  type WorkspaceTrustStatusFeatureFacade,
+} from './composition/createWorkspaceTrustStatusFeature';
 export {
   resolveWorkspaceTrustCanonicalGitRoot,
   resolveWorkspaceTrustFilesystemGitRoot,
