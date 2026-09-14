@@ -15,12 +15,12 @@ export {
   type TeamProvisioningStatusFeatureDeps,
   type TeamProvisioningStatusRun,
 } from './composition/createTeamProvisioningStatusFeature';
-export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';
 export {
   createLegacyMemberSettingsRepository,
   type LegacyMemberSettingsMetadataFile,
   type LegacyMemberSettingsRepositoryDependencies,
 } from './composition/LegacyMemberSettingsRepository';
+export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';
 export {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
