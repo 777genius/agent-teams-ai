@@ -2,13 +2,20 @@ import { PRIVATE_HTTP_KIND, type LocatedHttpObservation } from './private-http-t
 import { decodePrivateHttpRecord, assertPrivateHttpOuterBinding } from './private-http';
 import { privateHttpPairReader } from './private-http-pairs';
 import { canonicalJson, sha256 } from './contracts';
-import { appliedHttpReceipt, type AppliedHttpReceipt } from './http-entity';
+import {
+  appliedHttpReceipt,
+  decodeReadResponse,
+  type AppliedHttpReceipt,
+} from './http-entity';
 import { parseHttpObservationEnvelope } from './http-observation-envelope';
 import type { NativeCaptureShard } from './native-captures';
 import {
   buildOpenCodeOperationIndex,
   joinHttpOperationBody,
+  openCodeApprovalOperationKey,
   operationKey,
+  type OpenCodeApprovalOperationIndex,
+  type OpenCodeApprovalOperationTuple,
   type OpenCodeFact,
 } from './opencode-operation-index';
 import { assertP1NativeBindings } from './p1-admission';
@@ -20,6 +27,7 @@ import {
   httpCheck,
   httpHeaderStatus,
   httpHex,
+  ownerHttpOperationRouteV2,
   parseHttpCanonical,
   snapshotHttpContext,
 } from './raw-http';
@@ -29,7 +37,282 @@ import type {
   HttpRequestObservation,
   HttpResponseObservation,
   LocatedHttpRawRecord,
+  RetainedHttpBody,
 } from './raw-http-types';
+
+export interface NativeHttpApprovalCapture {
+  readonly request: HttpRequestObservation;
+  readonly response: HttpResponseObservation | null;
+}
+
+export interface NativeHttpApprovalCorrelation {
+  readonly key: string;
+  readonly tuple: OpenCodeApprovalOperationTuple;
+  /** The exact Slice A observation entity which established this operation. */
+  readonly sourceObservationResponseBody: RetainedHttpBody;
+  /** Exact Owner-retained bytes sent across the native HTTP boundary. */
+  readonly nativeRequestBody: RetainedHttpBody;
+  /** Exact Owner-retained bytes received across the native HTTP boundary. */
+  readonly nativeResponseBody: RetainedHttpBody;
+  readonly nativeResponseStatus: number;
+}
+
+export interface NativeHttpApprovalCorrelationResult {
+  readonly status: 'correlated-unverified';
+  readonly admission: 'unverified';
+  readonly correlations: readonly NativeHttpApprovalCorrelation[];
+}
+
+function retainedApprovalBody(
+  supplied: RetainedHttpBody,
+  label: string
+): RetainedHttpBody {
+  httpCheck(
+    Object.keys(supplied).length === 3 &&
+      ['byteLength', 'sha256', 'bodyBase64'].every((field) => field in supplied) &&
+      Number.isSafeInteger(supplied.byteLength) &&
+      supplied.byteLength >= 0 &&
+      supplied.byteLength <= HTTP_LIMITS.body &&
+      httpHex(supplied.sha256),
+    `${label}_commitment`
+  );
+  const bytes = decodeHttpBase64(supplied.bodyBase64, HTTP_LIMITS.body, `${label}_base64`);
+  httpCheck(
+    bytes.length === supplied.byteLength && sha256(bytes) === supplied.sha256,
+    `${label}_retention`
+  );
+  return Object.freeze({
+    byteLength: supplied.byteLength,
+    sha256: supplied.sha256,
+    bodyBase64: supplied.bodyBase64,
+  });
+}
+
+function tupleWithoutDigest(tuple: OpenCodeApprovalOperationTuple): string {
+  return canonicalJson({
+    runtimeInstanceId: tuple.runtimeInstanceId,
+    configGeneration: tuple.configGeneration,
+    sessionId: tuple.sessionId,
+    requestId: tuple.requestId,
+    sessionIncarnation: tuple.sessionIncarnation,
+    requestIncarnation: tuple.requestIncarnation,
+  });
+}
+
+function retainedApprovalTuple(
+  supplied: OpenCodeApprovalOperationTuple
+): OpenCodeApprovalOperationTuple {
+  const tuple = {
+    runtimeInstanceId: supplied.runtimeInstanceId,
+    configGeneration: supplied.configGeneration,
+    sessionId: supplied.sessionId,
+    requestId: supplied.requestId,
+    sessionIncarnation: supplied.sessionIncarnation,
+    requestIncarnation: supplied.requestIncarnation,
+    permissionDigest: supplied.permissionDigest,
+  };
+  httpCheck(
+    Object.values(tuple).every((field) => typeof field === 'string' && field.length > 0) &&
+      httpHex(tuple.permissionDigest),
+    'native_approval_tuple'
+  );
+  return Object.freeze(tuple);
+}
+
+function validateDecodedApprovalPermissions(
+  permissions: readonly OpenCodeApprovalOperationTuple[],
+  keys: Set<string>,
+  digestByIdentity: Map<string, string>
+): void {
+  for (const suppliedPermission of permissions) {
+    const permission = retainedApprovalTuple(suppliedPermission);
+    const key = openCodeApprovalOperationKey(permission);
+    httpCheck(!keys.has(key), 'native_approval_observation_duplicate');
+    keys.add(key);
+    const identity = tupleWithoutDigest(permission);
+    const digest = digestByIdentity.get(identity);
+    httpCheck(
+      digest === undefined || digest === permission.permissionDigest,
+      'native_approval_observation_ambiguous'
+    );
+    digestByIdentity.set(identity, permission.permissionDigest);
+  }
+}
+
+function validateApprovalIndex(
+  index: OpenCodeApprovalOperationIndex
+): ReadonlyMap<string, Readonly<{
+  tuple: OpenCodeApprovalOperationTuple;
+  responseBody: RetainedHttpBody;
+}>> {
+  httpCheck(
+    Object.isFrozen(index) &&
+      Object.isFrozen(index.entries) &&
+      Number.isSafeInteger(index.size) &&
+      index.size === index.entries.length,
+    'native_approval_index'
+  );
+  const byKey = new Map<string, {
+    tuple: OpenCodeApprovalOperationTuple;
+    responseBody: RetainedHttpBody;
+  }>();
+  const bindingsByResponse = new Map<string, Array<{
+    key: string;
+    tuple: OpenCodeApprovalOperationTuple;
+    responseBody: RetainedHttpBody;
+  }>>();
+  const digestByIdentity = new Map<string, string>();
+  let previousKey: string | null = null;
+  for (const binding of index.entries) {
+    const tuple = retainedApprovalTuple(binding.tuple);
+    const key = openCodeApprovalOperationKey(tuple);
+    httpCheck(
+      Object.isFrozen(binding) &&
+        Object.isFrozen(binding.tuple) &&
+        binding.key === key &&
+        index.get(binding.tuple) === binding &&
+        !byKey.has(key) &&
+        (previousKey === null || Buffer.from(previousKey).compare(Buffer.from(key)) < 0),
+      'native_approval_index_binding'
+    );
+    previousKey = key;
+    const identity = tupleWithoutDigest(tuple);
+    const digest = digestByIdentity.get(identity);
+    httpCheck(
+      digest === undefined || digest === tuple.permissionDigest,
+      'native_approval_index_ambiguous'
+    );
+    digestByIdentity.set(identity, tuple.permissionDigest);
+    const responseBody = retainedApprovalBody(
+      binding.responseBody,
+      'native_approval_observation'
+    );
+    const responseKey = canonicalJson(responseBody);
+    bindingsByResponse.set(responseKey, [
+      ...(bindingsByResponse.get(responseKey) ?? []),
+      { key, tuple, responseBody },
+    ]);
+    byKey.set(key, { tuple, responseBody });
+  }
+
+  // A retained observation body may back several selected bindings. Decode each distinct body once,
+  // but apply duplicate and ambiguity checks globally before accepting any selected correlation.
+  const observedKeys = new Set<string>();
+  const observedDigestByIdentity = new Map<string, string>();
+  for (const bindings of bindingsByResponse.values()) {
+    const { responseBody } = bindings[0]!;
+    const decoded = decodeReadResponse(
+      { kind: 'observe', sessionId: bindings[0]!.tuple.sessionId },
+      {
+        phase: 'response-retained',
+        ownerExchangeNonce: 'native-http-approval-index',
+        requestRecordId: 'native-http-approval-index',
+        status: 200,
+        responseHeaders: [],
+        peerOperationNonce: null,
+        nonceStatus: 'missing',
+        connectedPeer: {
+          localAddress: '127.0.0.1',
+          localPort: 1,
+          remoteAddress: '127.0.0.1',
+          remotePort: 1,
+        },
+        body: responseBody,
+        complete: true,
+      }
+    );
+    httpCheck(decoded.kind === 'observation', 'native_approval_observation');
+    validateDecodedApprovalPermissions(
+      decoded.permissions,
+      observedKeys,
+      observedDigestByIdentity
+    );
+    for (const { key } of bindings) {
+      const matches = decoded.permissions.filter(
+        (permission) => openCodeApprovalOperationKey(permission) === key
+      );
+      httpCheck(matches.length === 1, 'native_approval_observation_tuple');
+    }
+  }
+  return byKey;
+}
+
+/**
+ * Correlates already-validated Slice A/B approval operations with native HTTP request/response
+ * observations. This is retained, observational evidence only: it cannot admit P1 or authorize a
+ * decision. Record, fixture, approval and transport IDs are deliberately absent from the join key.
+ */
+export function correlateNativeHttpApprovalEvidence(input: {
+  readonly operationIndex: OpenCodeApprovalOperationIndex;
+  readonly captures: readonly NativeHttpApprovalCapture[];
+}): NativeHttpApprovalCorrelationResult {
+  httpCheck(input.captures.length > 0, 'native_approval_capture_missing');
+  const operations = validateApprovalIndex(input.operationIndex);
+  const correlations: NativeHttpApprovalCorrelation[] = [];
+  const consumed = new Set<string>();
+  for (const capture of input.captures) {
+    const response = capture.response;
+    httpCheck(response !== null, 'native_approval_response_missing');
+    httpCheck(response.complete, 'native_approval_response_incomplete');
+    const requestBody = retainedApprovalBody(
+      capture.request.body,
+      'native_approval_request'
+    );
+    const responseBody = retainedApprovalBody(response.body, 'native_approval_response');
+    const route = ownerHttpOperationRouteV2(capture.request.operation);
+    httpCheck(
+      capture.request.phase === 'request-retained' &&
+        capture.request.operation.kind === 'reply' &&
+        capture.request.method === route.method &&
+        capture.request.path === route.path &&
+        response.phase === 'response-retained' &&
+        response.ownerExchangeNonce === capture.request.ownerExchangeNonce,
+      'native_approval_capture'
+    );
+    const headers = httpHeaderStatus(response.responseHeaders);
+    httpCheck(
+      headers.identityEncoding &&
+        headers.nonceStatus === response.nonceStatus &&
+        headers.peerOperationNonce === response.peerOperationNonce,
+      'native_approval_response_headers'
+    );
+    const receipt = appliedHttpReceipt(
+      { ...capture.request, body: requestBody },
+      { ...response, body: responseBody }
+    );
+    httpCheck(receipt !== null, 'native_approval_response_mismatch');
+    const tuple = Object.freeze({
+      runtimeInstanceId: receipt.runtimeInstanceId,
+      configGeneration: receipt.configGeneration,
+      sessionId: receipt.sessionId,
+      requestId: receipt.requestId,
+      sessionIncarnation: receipt.sessionIncarnation,
+      requestIncarnation: receipt.requestIncarnation,
+      permissionDigest: receipt.permissionDigest,
+    });
+    const key = openCodeApprovalOperationKey(tuple);
+    const operation = operations.get(key);
+    httpCheck(operation !== undefined, 'native_approval_operation_missing');
+    httpCheck(!consumed.has(key), 'native_approval_capture_duplicate');
+    consumed.add(key);
+    correlations.push(
+      Object.freeze({
+        key,
+        tuple: operation.tuple,
+        sourceObservationResponseBody: operation.responseBody,
+        nativeRequestBody: requestBody,
+        nativeResponseBody: responseBody,
+        nativeResponseStatus: response.status,
+      })
+    );
+  }
+  correlations.sort((left, right) => Buffer.from(left.key).compare(Buffer.from(right.key)));
+  return Object.freeze({
+    status: 'correlated-unverified',
+    admission: 'unverified',
+    correlations: Object.freeze(correlations),
+  });
+}
 
 export interface HttpCaptureSelection {
   readonly captureSha256: string;
