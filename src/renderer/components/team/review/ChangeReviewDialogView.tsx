@@ -12,6 +12,7 @@ import {
   TaskChangesEmptyState,
   toTaskChangeSetV2,
 } from '@features/change-review/renderer';
+import { isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { X } from 'lucide-react';
@@ -244,7 +245,7 @@ export const ChangeReviewDialogView = ({
           className="flex shrink-0 items-center gap-1"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <AnnouncementNewsButton />
+          <AnnouncementNewsButton visible={isElectronMode()} />
           <button
             type="button"
             aria-label="Close Changes"

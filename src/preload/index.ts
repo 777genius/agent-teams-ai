@@ -1,4 +1,3 @@
-import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
@@ -279,6 +278,7 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
+import { createElectronAnnouncementsBridge } from './createElectronAnnouncementsBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -510,7 +510,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
-  announcements: createAnnouncementsBridge(),
+  announcements: createElectronAnnouncementsBridge(ipcRenderer),
   ...createWorkspaceTrustBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),

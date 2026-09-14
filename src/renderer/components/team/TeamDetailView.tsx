@@ -22,7 +22,7 @@ import {
 } from '@features/team-provisioning/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
@@ -342,13 +342,12 @@ const TaskDetailDialogHost = memo(
   })
 );
 TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
-
 interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
+  taskNotificationPort: ComponentProps<typeof TeamGraphOverlay>['taskNotificationPort'];
 }
-
 interface TeamReviewDialogState {
   open: boolean;
   mode: 'agent' | 'task';
@@ -1278,16 +1277,15 @@ const TeamKanbanBoardBridge = memo(function TeamKanbanBoardBridge({
   ...props
 }: TeamKanbanBoardBridgeProps): React.JSX.Element {
   const activeTaskLogActivity = useStore((s) => s.activeTaskLogActivityByTeam[teamName]);
-
   return (
     <KanbanBoard {...props} teamName={teamName} activeTaskLogActivity={activeTaskLogActivity} />
   );
 });
-
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
   isPaneFocused = false,
+  taskNotificationPort,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -3665,6 +3663,8 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Suspense fallback={null}>
             <TeamGraphOverlay
               teamName={teamName}
+              announcementsVisible={isElectronMode()}
+              taskNotificationPort={taskNotificationPort}
               onClose={() => setGraphOpen(false)}
               onPinAsTab={() => {
                 setGraphOpen(false);

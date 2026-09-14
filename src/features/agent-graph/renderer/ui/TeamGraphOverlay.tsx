@@ -33,6 +33,7 @@ import type {
 
 export interface TeamGraphOverlayProps {
   teamName: string;
+  announcementsVisible: boolean;
   taskNotificationPort: TeamGraphTaskNotificationPort;
   onClose: () => void;
   onPinAsTab?: () => void;
@@ -43,6 +44,7 @@ export interface TeamGraphOverlayProps {
 
 export const TeamGraphOverlay = ({
   teamName,
+  announcementsVisible,
   taskNotificationPort,
   onClose,
   onPinAsTab,
@@ -117,7 +119,7 @@ export const TeamGraphOverlay = ({
         isSidebarVisible={effectiveSidebarVisible}
         renderTopToolbarContent={() => (
           <div className="flex items-center gap-1">
-            <AnnouncementNewsButton />
+            <AnnouncementNewsButton visible={announcementsVisible} />
             <GraphProvisioningHud teamName={teamName} />
           </div>
         )}
