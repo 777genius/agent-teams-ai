@@ -924,5 +924,23 @@
       "needsFix": "Necessidades de correção"
     },
     "unassigned": "não atribuído"
+  },
+  "announcements": {
+    "title": "Notícias",
+    "historyTitle": "Novidades",
+    "description": "Atualizações, melhorias e histórias do Agent Teams.",
+    "imageUnavailable": "Imagem indisponível",
+    "loading": "Carregando notícias…",
+    "loadError": "Este artigo não está disponível. Atualize as notícias ou tente novamente mais tarde.",
+    "expired": "Não é mais atual",
+    "empty": "Você está em dia",
+    "emptyDescription": "As notícias do projeto aparecerão aqui quando forem publicadas.",
+    "allNews": "Todas as notícias",
+    "status": {
+      "offline": "Você está offline. Os artigos carregados anteriormente estão disponíveis; algumas imagens podem não aparecer.",
+      "writer_busy": "As notícias estão abertas em outra instância do aplicativo. Você pode consultar a lista aqui; abra os artigos na outra instância.",
+      "unavailable": "As notícias estão disponíveis no aplicativo para desktop.",
+      "state_unavailable": "A leitura está disponível, mas seu progresso não pode ser salvo agora. As notícias automáticas estão pausadas."
+    }
   }
 }

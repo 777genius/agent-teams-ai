@@ -113,6 +113,39 @@ describe('evaluateCodexLaunchReadiness', () => {
     });
   });
 
+  it.each(['chatgpt', 'auto'] as const)(
+    'still allows launch in %s mode when the local legacy auth file is stale but the CLI reports an account',
+    (preferredAuthMode) => {
+      // The legacy-auth freshness gate can only clear localActiveChatgptAccountPresent.
+      // It must never gate launchAllowed: a ChatGPT-only user whose ~/.codex/auth.json
+      // has an old last_refresh is still launchable, because readiness is decided by the
+      // authoritative `codex app-server` account read.
+      const readiness = evaluateCodexLaunchReadiness({
+        preferredAuthMode,
+        managedAccount: {
+          type: 'chatgpt',
+          email: 'user@example.com',
+          planType: 'plus',
+        },
+        apiKey: {
+          available: false,
+          source: null,
+          sourceLabel: null,
+        },
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        localActiveChatgptAccountPresent: false,
+      });
+
+      expect(readiness).toMatchObject({
+        state: 'ready_chatgpt',
+        effectiveAuthMode: 'chatgpt',
+        launchAllowed: true,
+        issueMessage: null,
+      });
+    }
+  );
+
   it('fails fast when the Codex runtime is missing entirely', () => {
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: 'auto',

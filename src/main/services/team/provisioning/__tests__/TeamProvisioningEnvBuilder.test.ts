@@ -62,6 +62,29 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
+    const ports = createPorts({
+      getClaudeBasePath: () => '/sandbox/private-claude',
+      resolveControlApiBaseUrl: vi.fn(async () => 'http://127.0.0.1:4588'),
+      buildProviderAwareCliEnv: vi.fn(async () => ({
+        env: {
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON:
+            '{"ELECTRON_RUN_AS_NODE":"1","CLAUDE_TEAM_CONTROL_URL":"http://stale:9999"}',
+        },
+        connectionIssues: {},
+        providerArgs: [],
+      })),
+    });
+    const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
+    expect(result.env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/private-claude');
+    expect(result.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4588');
+    expect(JSON.parse(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toEqual({
+      ELECTRON_RUN_AS_NODE: '1',
+      AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/private-claude',
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:4588',
+    });
+  });
+
   it('returns codex runtime auth source for Codex provider env', async () => {
     const ports = createPorts({
       buildRuntimeTurnSettledEnvironment: vi.fn(async () => ({
@@ -180,6 +203,42 @@ describe('TeamProvisioningEnvBuilder', () => {
       CODEX_HOME: '/tmp/codex-home',
     });
     expect(result.usesAnthropicApiKeyHelper).toBe(false);
+  });
+
+  it('carries the Codex API key in the cross-provider patch only for api login mode', async () => {
+    const makePorts = (loginMethod: string) => ({
+      buildProvisioningEnv: vi.fn(async () => ({
+        env: {
+          CODEX_HOME: '/tmp/codex-home',
+          CODEX_CLI_PATH: '/usr/local/bin/codex',
+          CLAUDE_CODE_CODEX_BACKEND: 'api',
+          CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: loginMethod,
+          OPENAI_API_KEY: 'sk-proj-cross-provider',
+          CODEX_API_KEY: 'sk-proj-cross-provider',
+        },
+        authSource: 'codex_runtime' as const,
+        geminiRuntimeAuth: null,
+        providerArgs: [],
+      })),
+      buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+      logger: { error: vi.fn() },
+    });
+
+    const apiMode = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'codex member' }],
+      ports: makePorts('api'),
+    });
+    expect(apiMode.envPatch.OPENAI_API_KEY).toBe('sk-proj-cross-provider');
+    expect(apiMode.envPatch.CODEX_API_KEY).toBe('sk-proj-cross-provider');
+
+    const chatgptMode = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'codex member' }],
+      ports: makePorts('chatgpt'),
+    });
+    expect(chatgptMode.envPatch.OPENAI_API_KEY).toBeUndefined();
+    expect(chatgptMode.envPatch.CODEX_API_KEY).toBeUndefined();
   });
 
   it('carries Anthropic connection intent through a non-Anthropic primary runtime', async () => {

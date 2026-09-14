@@ -120,7 +120,7 @@ function createDeps(
     readLaunchState: vi.fn(async () => null),
     writeLaunchStateSnapshot: vi.fn(async (_teamName, snapshot) => snapshot),
     readPersistedTeamProjectPath: vi.fn(() => '/persisted-cwd'),
-    clearOpenCodeRuntimeLaneStorage: vi.fn(async () => true),
+    clearOpenCodeRuntimeLaneStorage: vi.fn(async () => 'cleared' as const),
     deleteSecondaryRuntimeRun: vi.fn(),
     clearSecondaryRuntimeRuns: vi.fn(),
     runtimeAdapterRunByTeam,

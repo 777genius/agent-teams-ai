@@ -1,12 +1,20 @@
-import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
+import {
+  resolveAppManagedCodexRuntimeBinaryPath,
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath,
+} from '@features/codex-runtime-installer/main';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import {
   isSupportedOpenCodeRuntimeBinaryPath,
+  resolveAppManagedOpenCodeRuntimeBinaryPath,
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
-import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
+import {
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
 import {
   applyOpenCodeRuntimeBinaryEnv,
@@ -44,6 +52,61 @@ export interface ProviderAwareCliEnvResult {
   env: NodeJS.ProcessEnv;
   connectionIssues: Partial<Record<CliProviderId, string>>;
   providerArgs: string[];
+}
+
+function resolveExplicitOpenCodeBinary(
+  options: Pick<ProviderAwareCliEnvOptions, 'env'>
+): string | null {
+  return (
+    [
+      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
+      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
+    ]
+      .find((candidate): candidate is string => Boolean(candidate?.trim()))
+      ?.trim() ?? null
+  );
+}
+
+/**
+ * Builds the environment for passive runtime status/catalog commands only.
+ * Keep this projection synchronous: passive reads may project existing managed-runtime
+ * manifest metadata, but must not probe/install runtimes or enter MCP, credential,
+ * auth, or launch-argument resolution.
+ */
+export function buildPassiveProviderStatusCliEnv(
+  options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
+): ProviderAwareCliEnvResult {
+  const { env } = buildRuntimeBaseEnv({
+    ...options,
+    shellEnv: options.shellEnv ?? getCachedShellEnv() ?? {},
+    mergePathFallbacks: true,
+  });
+  if (!options.providerId || options.providerId === 'opencode') {
+    const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
+    const appManagedOpenCodeBinary = resolveAppManagedOpenCodeRuntimeBinaryPath();
+    const cachedVerifiedOpenCodeBinary = appManagedOpenCodeBinary
+      ? null
+      : resolveCachedVerifiedOpenCodeRuntimeBinaryPath();
+    const knownOpenCodeBinary = appManagedOpenCodeBinary ?? cachedVerifiedOpenCodeBinary;
+    if (knownOpenCodeBinary && !explicitOpenCodeBinary) {
+      // A cached login shell can retain a stale override after the app installs or updates
+      // or verifies its runtime. Keep only deliberate call/process overrides authoritative.
+      delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
+      delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
+    }
+    applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? knownOpenCodeBinary);
+    applyAgentTeamsMcpAppContext(env);
+  }
+  if (!options.providerId || options.providerId === 'codex') {
+    const appManagedCodexBinary = resolveAppManagedCodexRuntimeBinaryPath();
+    if (appManagedCodexBinary && !env.CODEX_CLI_PATH) {
+      env.CODEX_CLI_PATH = appManagedCodexBinary;
+    }
+  }
+  removeGlobalElectronRunAsNodeEnv(env);
+  return { env, connectionIssues: {}, providerArgs: [] };
 }
 
 export function getProviderStatusStoredCredentialAllowlist(
@@ -90,14 +153,7 @@ export async function buildProviderAwareCliEnv(
     mergePathFallbacks: true,
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
-    const explicitOpenCodeBinary = [
-      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
-      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
-    ]
-      .find((candidate): candidate is string => Boolean(candidate?.trim()))
-      ?.trim();
+    const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
     const supportedExplicitOpenCodeBinary =
       explicitOpenCodeBinary &&
       (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
@@ -124,6 +180,7 @@ export async function buildProviderAwareCliEnv(
   }
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     await ensureAgentTeamsMcpLocalLaunchEnv(env);
+    applyAgentTeamsMcpAppContext(env);
   }
 
   if (options.providerId) {

@@ -278,7 +278,13 @@ export function projectRuntimeLiveness(
     const processTableAvailable = evidence.process?.processTableAvailable !== false;
     return buildProjection(
       {
-        alive: false,
+        // A process table that answered and does not contain the recorded pid is
+        // evidence the process is gone, so the member is not alive - that is what
+        // the diagnostic says. Only an unavailable table leaves the registration
+        // as the best evidence we have. Ephemeral lanes are not affected: their
+        // host is found in the table and resolves to 'runtime_process' before
+        // this fallback is reached.
+        alive: !processTableAvailable,
         livenessKind: processTableAvailable ? 'stale_metadata' : 'registered_only',
         pidSource: evidence.process?.pidSource ?? 'persisted_metadata',
         pid: expectedPid,
@@ -297,10 +303,16 @@ export function projectRuntimeLiveness(
     );
   }
 
+  // Deliberately asymmetric with the recorded-pid branch above: registration
+  // metadata without a pid is a weaker signal that a process-table lookup
+  // cannot falsify, because there was no pid to look up. Reporting not-alive
+  // here would strand every ephemeral lane that registers before it records a
+  // runtime pid, so the registration stays authoritative until a pid exists
+  // and the table actually disproves it.
   if (hasPersistedRuntimeEvidence(evidence)) {
     return buildProjection(
       {
-        alive: false,
+        alive: true,
         livenessKind: 'registered_only',
         runtimeSessionId,
         runtimeDiagnostic: 'registered runtime metadata without live process',

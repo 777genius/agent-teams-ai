@@ -1,9 +1,16 @@
 import * as path from 'path';
 
+import { sleep } from './TeamProvisioningAsyncUtils';
+import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
+import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
-  markOpenCodeLaneBlockedBySharedRuntimeFailure,
-  selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC,
+  type OpenCodeSharedRuntimeFailuresByProject,
+  shouldRetryTransientOpenCodeSharedRuntimeFailure,
+  takeBlockingOpenCodeSharedRuntimeFailure,
+  trackOpenCodeSharedRuntimeFailureFromResult,
+} from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -19,17 +26,19 @@ export interface MixedSecondaryLaunchQueueRun {
   processKilled: boolean;
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
   mixedSecondaryLaneLaunchQueue?: Promise<void>;
-  mixedSecondarySharedRuntimeFailuresByProject?: Map<string, string>;
+  mixedSecondarySharedRuntimeFailuresByProject?: OpenCodeSharedRuntimeFailuresByProject;
 }
 
 export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunchQueueRun> {
   nowMs(): number;
   randomUuid(): string;
   teamsBasePath(): string;
+  isCurrentTrackedRun(run: TRun): boolean;
   clearOpenCodeRuntimeLaneStorage(input: {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    expectedRunId: string;
   }): Promise<unknown>;
   upsertOpenCodeRuntimeLaneIndexEntry(input: {
     teamsBasePath: string;
@@ -39,6 +48,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
     diagnostics: string[];
   }): Promise<unknown>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  deleteSecondaryRuntimeRunIfOwned(teamName: string, laneId: string, runId: string): boolean;
   launchSingleMixedSecondaryLane(run: TRun, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
   publishMixedSecondaryLaneStatusChange(
     run: TRun,
@@ -65,6 +75,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
 async function clearQueuedMixedSecondaryLaneStorage<TRun extends MixedSecondaryLaunchQueueRun>(
   run: TRun,
   lane: MixedSecondaryRuntimeLaneState,
+  laneRunId: string,
   ports: MixedSecondaryLaunchQueuePorts<TRun>
 ): Promise<void> {
   await ports
@@ -72,9 +83,10 @@ async function clearQueuedMixedSecondaryLaneStorage<TRun extends MixedSecondaryL
       teamsBasePath: ports.teamsBasePath(),
       teamName: run.teamName,
       laneId: lane.laneId,
+      expectedRunId: laneRunId,
     })
     .catch(() => undefined);
-  ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+  ports.deleteSecondaryRuntimeRunIfOwned(run.teamName, lane.laneId, laneRunId);
 }
 
 export function launchQueuedMixedSecondaryLaneInBackground<
@@ -90,17 +102,23 @@ export function launchQueuedMixedSecondaryLaneInBackground<
 
   lane.queuedAtMs = lane.queuedAtMs ?? ports.nowMs();
   lane.launchScheduled = true;
-  lane.runId = lane.runId ?? ports.randomUuid();
+  const laneRunId = (lane.runId ??= ports.randomUuid());
+  const shouldAbortLaunch = (): boolean =>
+    run.cancelRequested || run.processKilled || !ports.isCurrentTrackedRun(run);
 
   const launch = async () => {
     try {
-      if (run.cancelRequested || run.processKilled) {
-        await clearQueuedMixedSecondaryLaneStorage(run, lane, ports);
-        lane.state = 'finished';
+      if (shouldAbortLaunch()) {
+        // This queued lane has not acquired runtime storage or registry ownership.
+        if (lane.runId === laneRunId) lane.state = 'finished';
         return;
       }
       const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
-      const sharedRuntimeFailure = run.mixedSecondarySharedRuntimeFailuresByProject?.get(laneCwd);
+      const sharedRuntimeFailure = takeBlockingOpenCodeSharedRuntimeFailure(
+        run,
+        laneCwd,
+        ports.nowMs()
+      );
       if (sharedRuntimeFailure) {
         markOpenCodeLaneBlockedBySharedRuntimeFailure({
           teamName: run.teamName,
@@ -114,19 +132,34 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       }
       lane.state = 'launching';
       await ports.launchSingleMixedSecondaryLane(run, lane);
-      if (lane.result) {
-        const nextSharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
-          lane.result
+      if (shouldRetryTransientOpenCodeSharedRuntimeFailure(lane.result) && !shouldAbortLaunch()) {
+        // The pre-launch gate on the failed result proves the state-changing
+        // bridge command never ran, so one in-place relaunch cannot duplicate a
+        // host or a session.
+        ports.logger.warn(
+          `[${run.teamName}] OpenCode secondary lane ${lane.laneId} hit a transient shared runtime timeout; retrying once in ${OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS}ms`
         );
-        if (nextSharedRuntimeFailure) {
-          run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
-          run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, nextSharedRuntimeFailure);
+        lane.diagnostics = appendDiagnosticOnce(
+          lane.diagnostics,
+          OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC
+        );
+        await sleep(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+        // The backoff is a window in which the lane can change hands (a manual
+        // lane retry or a relaunch assigns a new lane run id). Only the run that
+        // observed the timeout may relaunch, mirroring the cancelled-lane fence.
+        if (!shouldAbortLaunch() && lane.runId === laneRunId) {
+          lane.state = 'launching';
+          lane.result = null;
+          await ports.launchSingleMixedSecondaryLane(run, lane);
         }
       }
+      if (lane.result) {
+        trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
+      }
     } catch (error) {
-      if (run.cancelRequested || run.processKilled) {
-        await clearQueuedMixedSecondaryLaneStorage(run, lane, ports);
-        lane.state = 'finished';
+      if (shouldAbortLaunch()) {
+        await clearQueuedMixedSecondaryLaneStorage(run, lane, laneRunId, ports);
+        if (lane.runId === laneRunId) lane.state = 'finished';
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
@@ -142,13 +175,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       lane.warnings = [];
       lane.diagnostics = [...lane.diagnostics, message];
       const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
-      const sharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
-        lane.result
-      );
-      if (sharedRuntimeFailure) {
-        run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
-        run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, sharedRuntimeFailure);
-      }
+      trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
       await ports
         .upsertOpenCodeRuntimeLaneIndexEntry({
           teamsBasePath: ports.teamsBasePath(),
@@ -181,7 +208,9 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
   ports: MixedSecondaryLaunchQueuePorts<TRun>,
   options: { waitForCompletion?: boolean } = {}
 ): Promise<PersistedTeamLaunchSnapshot | null> {
-  if (run.cancelRequested || run.processKilled) {
+  const shouldAbortLaunch = (): boolean =>
+    run.cancelRequested || run.processKilled || !ports.isCurrentTrackedRun(run);
+  if (shouldAbortLaunch()) {
     return ports.readLaunchState(run.teamName).catch(() => null);
   }
 
@@ -218,6 +247,7 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
       };
       lane.diagnostics = lane.result.diagnostics;
       await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+      if (shouldAbortLaunch()) return ports.readLaunchState(run.teamName).catch(() => null);
     }
     return ports.persistLaunchStateSnapshot(run, 'finished');
   }
@@ -228,7 +258,7 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
 
   if (options.waitForCompletion) {
     await run.mixedSecondaryLaneLaunchQueue;
-    if (run.cancelRequested || run.processKilled) {
+    if (shouldAbortLaunch()) {
       return ports.readLaunchState(run.teamName).catch(() => null);
     }
   }

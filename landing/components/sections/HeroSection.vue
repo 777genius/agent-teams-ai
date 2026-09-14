@@ -92,10 +92,9 @@ const heroSlogan = computed(() => (
 ));
 
 const heroDownloadUrl = computed(() => {
-  const asset = downloadStore.selectedAsset;
+  const asset = selectedDownloadAsset.value;
   if (!asset) return latestReleaseUrl.value;
-  const arch = asset.os === "macos" ? downloadStore.macArch : asset.arch;
-  return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
+  return resolve(asset.os, asset.resolvedArch)?.url || releaseDownloadUrl(asset.fileName);
 });
 
 const docsHref = computed(() => buildDocsHref({

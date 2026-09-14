@@ -15,6 +15,8 @@ import {
 } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import { OpenCodeRuntimeManifestEvidenceReader } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
@@ -25,8 +27,6 @@ import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDec
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { TeamRuntimeRecoveryFeatureFacade } from '@features/team-runtime-recovery/main/composition/createTeamRuntimeRecoveryFeature';
-import type { RuntimeStoreManifestEvidence } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import type { RuntimeStoreManifestReader } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { OpenCodeBridgeCommandExecutor } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { TeamNotificationPayload } from '@main/utils/teamNotificationBuilder';
 
@@ -285,18 +285,13 @@ function createStateChangingCommands(input: {
       filePath: path.join(input.controlDir, 'ledger.json'),
     }),
     bridge: input.bridge,
-    manifestReader: new StaticManifestReader(),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
+      teamsBasePath: getTeamsBasePath(),
+    }),
   });
-}
-
-class StaticManifestReader implements RuntimeStoreManifestReader {
-  async read(): Promise<RuntimeStoreManifestEvidence> {
-    return {
-      highWatermark: 0,
-      activeRunId: null,
-      capabilitySnapshotId: null,
-    };
-  }
 }
 
 function createStableBridgeEnv(): NodeJS.ProcessEnv {

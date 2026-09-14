@@ -31,6 +31,8 @@ describe('runtime projection foundation', () => {
     });
 
     expect(liveness).toMatchObject({
+      // The process table answered and did not contain the pid: that is evidence
+      // the process is gone, which is exactly what the diagnostic reports.
       alive: false,
       livenessKind: 'stale_metadata',
       pid: 4242,
@@ -50,6 +52,33 @@ describe('runtime projection foundation', () => {
         },
       })
     ).toEqual({});
+  });
+
+  it('keeps a persisted pid deliverable while the process table is unavailable', () => {
+    const liveness = projectRuntimeLiveness({
+      process: {
+        pid: 4242,
+        running: false,
+        processTableAvailable: false,
+      },
+      registration: {
+        runtimePid: 4242,
+        runtimeSessionId: 'session-1',
+      },
+    });
+
+    // The other half of `alive: !processTableAvailable`: a table that could not
+    // answer proves nothing, so the registration stays the best evidence and
+    // ephemeral lane hosts stay deliverable between turns.
+    expect(liveness).toMatchObject({
+      alive: true,
+      livenessKind: 'registered_only',
+      pid: 4242,
+      pidSource: 'persisted_metadata',
+      runtimeSessionId: 'session-1',
+      runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+      runtimeDiagnosticSeverity: 'warning',
+    });
   });
 
   it('does not treat stale heartbeat evidence as a live runtime', () => {
@@ -192,7 +221,7 @@ describe('runtime projection foundation', () => {
         },
       })
     ).toMatchObject({
-      alive: false,
+      alive: true,
       livenessKind: 'registered_only',
       runtimeSessionId: 'session-persisted',
       runtimeDiagnostic: 'registered runtime metadata without live process',

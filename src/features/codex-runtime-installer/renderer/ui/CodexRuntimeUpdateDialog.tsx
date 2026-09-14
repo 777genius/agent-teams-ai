@@ -63,16 +63,18 @@ export const CodexRuntimeUpdateDialog = ({
     return dashboardT('cliStatus.runtimeInstall.install');
   }, [dashboardT, status?.latestVersion, status?.state, status?.updateAvailable]);
   const versionSummary =
-    status?.version && status.latestVersion
-      ? settingsT('cliStatus.versionUpgrade', {
-          current: normalizeVersion(status.version),
-          latest: status.latestVersion,
-        })
-      : status?.latestVersion
-        ? `v${status.latestVersion}`
-        : status?.version
-          ? status.version
-          : null;
+    completed && status?.version
+      ? `v${normalizeVersion(status.version)}`
+      : status?.version && status.latestVersion
+        ? settingsT('cliStatus.versionUpgrade', {
+            current: normalizeVersion(status.version),
+            latest: status.latestVersion,
+          })
+        : status?.latestVersion
+          ? `v${status.latestVersion}`
+          : status?.version
+            ? status.version
+            : null;
   const detail = status?.progress?.detail ?? error ?? status?.error ?? null;
 
   return (

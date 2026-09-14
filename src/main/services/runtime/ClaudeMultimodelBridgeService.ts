@@ -1,4 +1,4 @@
-import { execCli } from '@main/utils/childProcess';
+import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -8,10 +8,14 @@ import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import {
+  buildPassiveProviderStatusCliEnv,
   buildProviderAwareCliEnv,
-  getAggregateProviderStatusStoredCredentialAllowlist,
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
+import {
+  canHydrateProviderCatalog,
+  markProviderCatalogRefreshFailed,
+} from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
 import {
   applyProviderStatusCheck,
@@ -20,8 +24,10 @@ import {
   createRuntimeStatusErrorProviderStatus,
   getLegacyProviderStatusCheck,
   mapRuntimeExtensionCapabilities,
+  mergeProviderStatusDisplayEvidence,
   resolveRuntimeProviderStatusCheck,
   type RuntimeExtensionCapabilitiesResponse,
+  sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
 
 import type {
@@ -37,13 +43,25 @@ const logger = createLogger('ClaudeMultimodelBridgeService');
 
 const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
-const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
-const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
+const CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 15_000;
 const SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+const OPENCODE_PROJECT_STATUS_CACHE_TTL_MS = 10_000;
+
+// Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
+type ProviderStatusesObserver = (
+  providers: CliProviderStatus[],
+  updatedProviderId?: CliProviderId
+) => void;
+
+const providerStatusReadInFlight = new Map<string, Promise<CliProviderStatus>>();
+const providerStatusReadCache = new Map<
+  string,
+  { readonly expiresAt: number; readonly status: CliProviderStatus }
+>();
 
 function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
   const normalized = projectPath?.trim();
@@ -170,6 +188,7 @@ interface UnifiedRuntimeStatusResponse {
   providers?: Record<
     string,
     {
+      providerId?: string;
       supported?: boolean;
       authenticated?: boolean;
       authMethod?: string | null;
@@ -466,6 +485,7 @@ function mapRuntimeProviderModelMetadata(
     limits: metadata.limits ?? null,
     free: metadata.free === true,
     releaseDate: typeof releaseDate === 'string' ? releaseDate : null,
+    recentlyReleased: metadata.recentlyReleased === true,
     ...(opencode ? { opencode } : {}),
   };
 }
@@ -478,8 +498,10 @@ function mapRuntimeProviderModelCatalog(
     return null;
   }
 
-  const fetchedAt = modelCatalog.fetchedAt?.trim();
-  const staleAt = modelCatalog.staleAt?.trim();
+  // Preserve the wire value exactly. Authority parsing requires an exact UTC
+  // ISO round trip, so whitespace or normalization must not repair bad input.
+  const fetchedAt = modelCatalog.fetchedAt;
+  const staleAt = modelCatalog.staleAt;
   const source = modelCatalog.source;
   const status = modelCatalog.status;
   if (
@@ -495,14 +517,29 @@ function mapRuntimeProviderModelCatalog(
     return null;
   }
 
+  if (!Array.isArray(modelCatalog.models)) {
+    return null;
+  }
+  if (
+    !modelCatalog.models.every(
+      (model) =>
+        model &&
+        typeof model === 'object' &&
+        !Array.isArray(model) &&
+        typeof model.id === 'string' &&
+        typeof model.launchModel === 'string' &&
+        typeof model.displayName === 'string' &&
+        Boolean(model.id.trim() && model.launchModel.trim() && model.displayName.trim())
+    )
+  ) {
+    return null;
+  }
+
   const models: NonNullable<CliProviderStatus['modelCatalog']>['models'] =
-    modelCatalog.models?.flatMap((model) => {
-      const id = model.id?.trim();
-      const launchModel = model.launchModel?.trim();
-      const displayName = model.displayName?.trim();
-      if (!id || !launchModel || !displayName) {
-        return [];
-      }
+    modelCatalog.models.flatMap((model) => {
+      const id = model.id!.trim();
+      const launchModel = model.launchModel!.trim();
+      const displayName = model.displayName!.trim();
 
       const supportedReasoningEfforts = collectRuntimeReasoningEfforts(
         model.supportedReasoningEfforts
@@ -537,7 +574,7 @@ function mapRuntimeProviderModelCatalog(
           metadata: mapRuntimeProviderModelMetadata(model.metadata),
         },
       ];
-    }) ?? [];
+    });
 
   return {
     schemaVersion: 1,
@@ -563,7 +600,7 @@ function getRuntimeModelCatalogRefreshState(
   modelCatalog: CliProviderStatus['modelCatalog']
 ): NonNullable<CliProviderStatus['modelCatalogRefreshState']> {
   if (modelCatalog) {
-    return 'ready';
+    return modelCatalog.status === 'ready' ? 'ready' : 'error';
   }
 
   return runtimeStatus?.runtimeCapabilities?.modelCatalog?.dynamic === true ? 'loading' : 'idle';
@@ -607,76 +644,6 @@ function mapRuntimeSubscriptionRateLimits(
   return primary || secondary ? { primary, secondary } : null;
 }
 
-function mergeRuntimeCapabilitiesForCatalogHydration(
-  live: CliProviderStatus['runtimeCapabilities'],
-  hydrated: CliProviderStatus['runtimeCapabilities']
-): CliProviderStatus['runtimeCapabilities'] {
-  if (!hydrated) {
-    return live ?? null;
-  }
-  if (!live) {
-    return hydrated;
-  }
-  return {
-    ...live,
-    modelCatalog: hydrated.modelCatalog ?? live.modelCatalog,
-    reasoningEffort: hydrated.reasoningEffort ?? live.reasoningEffort,
-    fastMode: hydrated.fastMode ?? live.fastMode,
-  };
-}
-
-function shouldPromoteHydratedAuthState(
-  liveProvider: CliProviderStatus,
-  hydratedProvider: CliProviderStatus
-): boolean {
-  return (
-    liveProvider.providerId === 'opencode' &&
-    liveProvider.authenticated !== true &&
-    hydratedProvider.authenticated === true
-  );
-}
-
-function mergeProviderCatalogFields(
-  liveProvider: CliProviderStatus,
-  hydratedProvider: CliProviderStatus
-): CliProviderStatus {
-  const modelCatalog = hydratedProvider.modelCatalog ?? liveProvider.modelCatalog ?? null;
-  const promoteHydratedAuthState = shouldPromoteHydratedAuthState(liveProvider, hydratedProvider);
-  return {
-    ...liveProvider,
-    authenticated: promoteHydratedAuthState
-      ? hydratedProvider.authenticated
-      : liveProvider.authenticated,
-    authMethod: promoteHydratedAuthState ? hydratedProvider.authMethod : liveProvider.authMethod,
-    verificationState: promoteHydratedAuthState
-      ? hydratedProvider.verificationState
-      : liveProvider.verificationState,
-    capabilities: promoteHydratedAuthState
-      ? hydratedProvider.capabilities
-      : liveProvider.capabilities,
-    statusMessage: promoteHydratedAuthState
-      ? hydratedProvider.statusMessage
-      : liveProvider.statusMessage,
-    detailMessage: promoteHydratedAuthState
-      ? hydratedProvider.detailMessage
-      : liveProvider.detailMessage,
-    backend: promoteHydratedAuthState ? hydratedProvider.backend : liveProvider.backend,
-    models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState: modelCatalog
-      ? 'ready'
-      : hydratedProvider.modelCatalogRefreshState === 'error'
-        ? 'error'
-        : liveProvider.modelCatalogRefreshState,
-    runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(
-      liveProvider.runtimeCapabilities,
-      hydratedProvider.runtimeCapabilities
-    ),
-    subscriptionRateLimits:
-      hydratedProvider.subscriptionRateLimits ?? liveProvider.subscriptionRateLimits ?? null,
-  };
-}
-
 export class ClaudeMultimodelBridgeService {
   private providerStatusHydrationGeneration = 0;
 
@@ -691,6 +658,8 @@ export class ClaudeMultimodelBridgeService {
     this.providerStatusHydrationGeneration += 1;
     this.providerStatusHydrationGenerations.clear();
     this.providerStatusHydrationInFlight.clear();
+    providerStatusReadInFlight.clear();
+    providerStatusReadCache.clear();
   }
 
   private getProviderStatusHydrationKey(
@@ -707,6 +676,21 @@ export class ClaudeMultimodelBridgeService {
     providerIds: readonly CliProviderId[],
     projectPath?: string | null
   ): number {
+    if (providerIds.length === 1) {
+      const hydrationKey = this.getProviderStatusHydrationKey(
+        binaryPath,
+        providerIds[0],
+        projectPath
+      );
+      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
+      if (
+        currentGeneration !== undefined &&
+        this.providerStatusHydrationInFlight.has(hydrationKey)
+      ) {
+        return currentGeneration;
+      }
+    }
+
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
       this.providerStatusHydrationGenerations.set(
@@ -826,12 +810,6 @@ export class ClaudeMultimodelBridgeService {
     );
   }
 
-  private isUnifiedRuntimeUnsupported(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error);
-    const lower = message.toLowerCase();
-    return this.isRuntimeStatusCompatibilityError(error) || lower.includes('runtime status');
-  }
-
   private isRuntimeStatusTimeoutError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
@@ -856,9 +834,9 @@ export class ClaudeMultimodelBridgeService {
     }
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
       const fallbackTimeout =
-        providerId === 'opencode'
-          ? OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
-          : LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+        providerId === 'codex'
+          ? CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
+          : PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
       return Math.min(options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS, fallbackTimeout);
     }
     return (
@@ -1009,10 +987,12 @@ export class ClaudeMultimodelBridgeService {
         options
       );
       const statusCheck = getLegacyProviderStatusCheck(providerId, originalError);
-      return applyProviderStatusCheck(
-        provider,
-        statusCheck.statusCheckOutcome,
-        statusCheck.statusCheckErrorCode
+      return sanitizeProviderStatusAuthority(
+        applyProviderStatusCheck(
+          provider,
+          statusCheck.statusCheckOutcome,
+          statusCheck.statusCheckErrorCode
+        )
       );
     } catch (fallbackError) {
       logger.warn(
@@ -1032,20 +1012,35 @@ export class ClaudeMultimodelBridgeService {
     if (!runtimeStatus) {
       return provider;
     }
+    if (runtimeStatus.providerId !== undefined && runtimeStatus.providerId !== providerId) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider status response did not match the requested provider')
+      );
+    }
     const modelCatalog = mapRuntimeProviderModelCatalog(providerId, runtimeStatus.modelCatalog);
+    const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus, providerId);
+    const isAuthoritativeStatus =
+      statusCheck.statusCheckOutcome === 'authoritative' &&
+      runtimeStatus.verificationState === 'verified';
 
-    return {
+    return sanitizeProviderStatusAuthority({
       ...provider,
       supported: runtimeStatus.supported === true,
-      authenticated: runtimeStatus.authenticated === true,
-      authMethod: runtimeStatus.authMethod ?? null,
-      verificationState: runtimeStatus.verificationState ?? 'unknown',
-      ...resolveRuntimeProviderStatusCheck(runtimeStatus),
+      authenticated: isAuthoritativeStatus && runtimeStatus.authenticated === true,
+      authMethod: isAuthoritativeStatus ? (runtimeStatus.authMethod ?? null) : null,
+      verificationState:
+        statusCheck.statusCheckOutcome === 'authoritative'
+          ? (runtimeStatus.verificationState ?? 'unknown')
+          : statusCheck.statusCheckOutcome === 'transient_error'
+            ? 'error'
+            : 'unknown',
+      ...statusCheck,
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
-        teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
+        teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,
         oneShot: runtimeStatus.capabilities?.oneShot === true,
         extensions: mapRuntimeExtensionCapabilities(
           providerId,
@@ -1120,7 +1115,40 @@ export class ClaudeMultimodelBridgeService {
               : undefined,
           }
         : null,
-    };
+    });
+  }
+
+  private projectProviderStatuses(providers: CliProviderStatus[]): CliProviderStatus[] {
+    return providers.map((provider) => sanitizeProviderStatusAuthority(provider));
+  }
+
+  private notifyProviderStatuses(
+    onUpdate: ProviderStatusesObserver | undefined,
+    providers: CliProviderStatus[],
+    updatedProviderId?: CliProviderId
+  ): void {
+    if (!onUpdate) return;
+    try {
+      onUpdate(this.projectProviderStatuses(providers), updatedProviderId);
+    } catch (error) {
+      logger.warn(
+        `Provider status observer failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private notifyProviderStatus(
+    onUpdate: ((provider: CliProviderStatus) => void) | undefined,
+    provider: CliProviderStatus
+  ): void {
+    if (!onUpdate) return;
+    try {
+      onUpdate(sanitizeProviderStatusAuthority(provider));
+    } catch (error) {
+      logger.warn(
+        `Provider catalog observer failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   private applyConnectionIssue(
@@ -1139,6 +1167,7 @@ export class ClaudeMultimodelBridgeService {
       verificationState: 'error',
       statusMessage: issue,
       detailMessage: null,
+      capabilities: { ...provider.capabilities, teamLaunch: false },
       backend: null,
     };
   }
@@ -1178,13 +1207,19 @@ export class ClaudeMultimodelBridgeService {
       cwd: getProviderStatusCommandCwd(options.projectPath),
     });
     const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
-    return providerConnectionService.enrichProviderStatus(
-      this.applyConnectionIssue(
-        this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
-        connectionIssues
-      ),
-      { hydrateModelCatalog: options.summary !== true }
+    const mappedProvider = this.applyConnectionIssue(
+      this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
+      connectionIssues
     );
+    if (mappedProvider.statusCheckOutcome !== 'authoritative') {
+      return {
+        ...mappedProvider,
+        authenticated: false,
+        authMethod: null,
+        capabilities: { ...mappedProvider.capabilities, teamLaunch: false },
+      };
+    }
+    return sanitizeProviderStatusAuthority(mappedProvider);
   }
 
   private async getProviderStatusFromScopedRuntimeStatus(
@@ -1192,14 +1227,52 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
-    return this.getProviderStatusFromRuntimeStatusCommand(
-      binaryPath,
+    const projectPath = getProviderStatusCommandCwd(options.projectPath) ?? '';
+    const requestKey = JSON.stringify([
+      path.resolve(binaryPath),
       providerId,
-      env,
-      connectionIssues,
-      options
-    );
+      options.summary === true,
+      options.timeoutMs ?? null,
+      projectPath,
+    ]);
+    const canReuseCompletedRead =
+      providerId === 'opencode' && projectPath.length > 0 && options.summary !== true;
+    const cached = canReuseCompletedRead ? providerStatusReadCache.get(requestKey) : undefined;
+    if (cached && cached.expiresAt > Date.now()) return cached.status;
+    if (cached) providerStatusReadCache.delete(requestKey);
+    const existing = providerStatusReadInFlight.get(requestKey);
+    if (existing) return existing;
+
+    const request = (async () => {
+      const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
+        binaryPath,
+        providerId,
+      });
+      const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+        passiveEnv,
+        providerId
+      );
+      const status = await this.getProviderStatusFromRuntimeStatusCommand(
+        binaryPath,
+        providerId,
+        env,
+        connectionIssues,
+        options
+      );
+      if (canReuseCompletedRead && status.statusCheckOutcome === 'authoritative') {
+        providerStatusReadCache.set(requestKey, {
+          expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
+          status,
+        });
+      }
+      return status;
+    })().finally(() => {
+      if (providerStatusReadInFlight.get(requestKey) === request) {
+        providerStatusReadInFlight.delete(requestKey);
+      }
+    });
+    providerStatusReadInFlight.set(requestKey, request);
+    return request;
   }
 
   private async getProviderStatusesFromScopedRuntimeStatus(
@@ -1220,7 +1293,10 @@ export class ClaudeMultimodelBridgeService {
             providerId,
             await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, options)
           );
-          onUpdate?.(this.buildProviderStatusesSnapshot(providers, providerIds));
+          this.notifyProviderStatuses(
+            onUpdate,
+            this.buildProviderStatusesSnapshot(providers, providerIds)
+          );
         } catch (error) {
           failures.push({ providerId, error });
         }
@@ -1250,11 +1326,21 @@ export class ClaudeMultimodelBridgeService {
         for (const { providerId, provider } of fallbackProviders) {
           providers.set(providerId, provider);
         }
-        onUpdate?.(this.buildProviderStatusesSnapshot(providers, providerIds));
+        this.notifyProviderStatuses(
+          onUpdate,
+          this.buildProviderStatusesSnapshot(providers, providerIds)
+        );
         return this.buildProviderStatusesSnapshot(providers, providerIds);
       }
 
-      return null;
+      for (const { providerId, error } of failures) {
+        providers.set(providerId, createRuntimeStatusErrorProviderStatus(providerId, error));
+      }
+      this.notifyProviderStatuses(
+        onUpdate,
+        this.buildProviderStatusesSnapshot(providers, providerIds)
+      );
+      return this.buildProviderStatusesSnapshot(providers, providerIds);
     }
 
     logger.warn(
@@ -1276,7 +1362,10 @@ export class ClaudeMultimodelBridgeService {
     for (const { providerId, provider } of fallbackProviders) {
       providers.set(providerId, provider);
     }
-    onUpdate?.(this.buildProviderStatusesSnapshot(providers, providerIds));
+    this.notifyProviderStatuses(
+      onUpdate,
+      this.buildProviderStatusesSnapshot(providers, providerIds)
+    );
     return this.buildProviderStatusesSnapshot(providers, providerIds);
   }
 
@@ -1284,7 +1373,7 @@ export class ClaudeMultimodelBridgeService {
     binaryPath: string,
     liveProviders: CliProviderStatus[],
     generation: number,
-    onUpdate?: (providers: CliProviderStatus[]) => void
+    onUpdate?: ProviderStatusesObserver
   ): void {
     if (!onUpdate) {
       for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
@@ -1306,7 +1395,7 @@ export class ClaudeMultimodelBridgeService {
     }
 
     for (const liveProvider of liveProviders) {
-      if (liveProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true) {
+      if (!canHydrateProviderCatalog(liveProvider)) {
         this.clearProviderStatusHydrationGeneration(
           binaryPath,
           liveProvider.providerId,
@@ -1331,9 +1420,13 @@ export class ClaudeMultimodelBridgeService {
           }
           providers.set(
             liveProvider.providerId,
-            mergeProviderCatalogFields(currentProvider, hydratedProvider)
+            mergeProviderStatusDisplayEvidence(hydratedProvider, currentProvider)
           );
-          onUpdate(this.buildProviderStatusesSnapshot(providers, providerIds));
+          this.notifyProviderStatuses(
+            onUpdate,
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
+          );
         })
         .catch((error) => {
           if (
@@ -1345,16 +1438,17 @@ export class ClaudeMultimodelBridgeService {
           if (!currentProvider) {
             return;
           }
-          providers.set(liveProvider.providerId, {
-            ...currentProvider,
-            modelCatalogRefreshState: 'error',
-          });
+          providers.set(liveProvider.providerId, markProviderCatalogRefreshFailed(currentProvider));
           logger.warn(
             `Provider catalog hydration failed for ${liveProvider.providerId}: ${
               error instanceof Error ? error.message : String(error)
             }`
           );
-          onUpdate(this.buildProviderStatusesSnapshot(providers, providerIds));
+          this.notifyProviderStatuses(
+            onUpdate,
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
+          );
         })
         .finally(() => {
           this.clearProviderStatusHydrationGeneration(
@@ -1388,7 +1482,11 @@ export class ClaudeMultimodelBridgeService {
     snapshot: OpenCodeRuntimeVerifyResponse['snapshot']
   ): CliProviderStatus {
     if (!snapshot) {
-      return provider;
+      return sanitizeProviderStatusAuthority({
+        ...provider,
+        verificationState: 'unknown',
+        statusMessage: 'OpenCode live verification returned no evidence',
+      });
     }
 
     const diagnostics = snapshot.diagnostics ?? [];
@@ -1433,7 +1531,7 @@ export class ClaudeMultimodelBridgeService {
       },
     ];
 
-    return {
+    return sanitizeProviderStatusAuthority({
       ...provider,
       verificationState: liveIssuesPresent ? 'error' : 'verified',
       statusMessage: liveIssuesPresent
@@ -1452,7 +1550,7 @@ export class ClaudeMultimodelBridgeService {
                 : (provider.backend.authMethodDetail ?? null),
           }
         : provider.backend,
-    };
+    });
   }
 
   async getProviderStatus(
@@ -1461,33 +1559,34 @@ export class ClaudeMultimodelBridgeService {
     onCatalogUpdate?: (provider: CliProviderStatus) => void,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
+    const requestedProjectPath = options.projectPath?.trim() ?? '';
+    const projectPath = requestedProjectPath
+      ? getProviderStatusCommandCwd(requestedProjectPath)
+      : undefined;
+    if (requestedProjectPath && !projectPath) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Project-scoped provider status requires an absolute, non-root project path')
+      );
+    }
 
-    const generation = this.beginProviderStatusHydration(
-      binaryPath,
-      [providerId],
-      options.projectPath
-    );
+    const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);
     let backgroundHydrationOwnsGenerationCleanup = false;
     try {
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-        summary: true,
-        projectPath: options.projectPath,
+        // OpenCode's passive summary intentionally omits authentication and its
+        // model catalog. A project-scoped launch check needs the exact catalog,
+        // otherwise a healthy installed CLI is misclassified as runtime_missing.
+        summary: providerId !== 'opencode' || !projectPath,
+        projectPath,
       });
-      if (
-        options.projectPath?.trim() &&
-        provider.runtimeCapabilities?.modelCatalog?.dynamic === true
-      ) {
+      if (projectPath && canHydrateProviderCatalog(provider)) {
         try {
           const hydratedProvider = await this.getProviderCatalogHydration(
             binaryPath,
             provider.providerId,
             generation,
-            options
+            { projectPath }
           );
           if (
             hydratedProvider &&
@@ -1495,27 +1594,28 @@ export class ClaudeMultimodelBridgeService {
               binaryPath,
               provider.providerId,
               generation,
-              options.projectPath
+              projectPath
             )
           ) {
-            return mergeProviderCatalogFields(provider, hydratedProvider);
+            return sanitizeProviderStatusAuthority(
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
+            );
           }
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
         } catch (error) {
           logger.warn(
             `Project-scoped provider catalog hydration failed for ${provider.providerId}: ${
               error instanceof Error ? error.message : String(error)
             }`
           );
-          return {
-            ...provider,
-            modelCatalogRefreshState: 'error',
-            detailMessage: error instanceof Error ? error.message : String(error),
-          };
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
         }
       }
-      if (provider.runtimeCapabilities?.modelCatalog?.dynamic === true && onCatalogUpdate) {
+      if (canHydrateProviderCatalog(provider) && onCatalogUpdate) {
         backgroundHydrationOwnsGenerationCleanup = true;
-        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, options)
+        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, {
+          projectPath,
+        })
           .then((hydratedProvider) => {
             if (!hydratedProvider) {
               return;
@@ -1525,12 +1625,15 @@ export class ClaudeMultimodelBridgeService {
                 binaryPath,
                 provider.providerId,
                 generation,
-                options.projectPath
+                projectPath
               )
             ) {
               return;
             }
-            onCatalogUpdate(mergeProviderCatalogFields(provider, hydratedProvider));
+            this.notifyProviderStatus(
+              onCatalogUpdate,
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
+            );
           })
           .catch((error) => {
             if (
@@ -1538,7 +1641,7 @@ export class ClaudeMultimodelBridgeService {
                 binaryPath,
                 provider.providerId,
                 generation,
-                options.projectPath
+                projectPath
               )
             ) {
               return;
@@ -1548,84 +1651,22 @@ export class ClaudeMultimodelBridgeService {
                 error instanceof Error ? error.message : String(error)
               }`
             );
-            onCatalogUpdate({
-              ...provider,
-              modelCatalogRefreshState: 'error',
-            });
+            this.notifyProviderStatus(onCatalogUpdate, markProviderCatalogRefreshFailed(provider));
           })
           .finally(() => {
             this.clearProviderStatusHydrationGeneration(
               binaryPath,
               providerId,
               generation,
-              options.projectPath
+              projectPath
             );
           });
       }
       return provider;
     } catch (error) {
-      if (providerId === 'gemini' && this.isRuntimeStatusCompatibilityError(error)) {
-        return this.buildGeminiStatus(binaryPath);
-      }
-
-      if (this.isRuntimeStatusCompatibilityError(error)) {
-        logger.warn(
-          `Provider-scoped summary runtime status unavailable for ${providerId}, falling back to full probe: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-        try {
-          return await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-            projectPath: options.projectPath,
-          });
-        } catch (fullError) {
-          if (
-            this.isRuntimeStatusTimeoutError(fullError) &&
-            this.shouldUseLegacyProviderTimeoutFallback(providerId)
-          ) {
-            logger.warn(
-              `Provider-scoped full runtime status timed out for ${providerId}, falling back to scoped legacy probes: ${
-                fullError instanceof Error ? fullError.message : String(fullError)
-              }`
-            );
-            return this.getProviderStatusFromLegacyProbesOrError(
-              binaryPath,
-              providerId,
-              fullError,
-              options
-            );
-          }
-          logger.warn(
-            `Provider-scoped full runtime status unavailable for ${providerId}, returning scoped error: ${
-              fullError instanceof Error ? fullError.message : String(fullError)
-            }`
-          );
-          return createRuntimeStatusErrorProviderStatus(providerId, fullError);
-        }
-      }
-
       const summaryStatusError = error instanceof Error ? error.message : String(error);
-      if (
-        this.isRuntimeStatusTimeoutError(error) &&
-        this.shouldUseLegacyProviderTimeoutFallback(providerId)
-      ) {
-        logger.debug(
-          `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
-        );
-        logger.warn(
-          `Provider-scoped summary runtime status timed out for ${providerId}, falling back to scoped legacy probes: ${
-            summaryStatusError
-          }`
-        );
-        return this.getProviderStatusFromLegacyProbesOrError(
-          binaryPath,
-          providerId,
-          error,
-          options
-        );
-      }
       logger.warn(
-        `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
+        `Provider-scoped summary runtime status unavailable for ${providerId}; returning scoped degraded status without fallback: ${summaryStatusError}`
       );
       return createRuntimeStatusErrorProviderStatus(providerId, error);
     } finally {
@@ -1634,7 +1675,7 @@ export class ClaudeMultimodelBridgeService {
           binaryPath,
           providerId,
           generation,
-          options.projectPath
+          projectPath
         );
       }
     }
@@ -1658,12 +1699,12 @@ export class ClaudeMultimodelBridgeService {
           error instanceof Error ? error.message : String(error)
         }`
       );
-      return {
+      return sanitizeProviderStatusAuthority({
         ...provider,
         verificationState: 'error',
         statusMessage: 'OpenCode live verification failed',
         detailMessage: error instanceof Error ? error.message : String(error),
-      };
+      });
     }
   }
 
@@ -1721,11 +1762,11 @@ export class ClaudeMultimodelBridgeService {
     _binaryPath: string,
     provider: CliProviderStatus
   ): Promise<CliProviderStatus> {
-    return {
+    return sanitizeProviderStatusAuthority({
       ...provider,
       modelVerificationState: 'idle',
       modelAvailability: [],
-    };
+    });
   }
 
   private async buildGeminiStatus(binaryPath: string): Promise<CliProviderStatus> {
@@ -1735,7 +1776,7 @@ export class ClaudeMultimodelBridgeService {
     try {
       const { stdout } = await execCli(
         binaryPath,
-        ['model', 'list', '--json', '--provider', 'all'],
+        ['model', 'list', '--json', '--provider', 'gemini'],
         {
           timeout: PROVIDER_MODELS_TIMEOUT_MS,
           maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
@@ -1768,6 +1809,8 @@ export class ClaudeMultimodelBridgeService {
           ? `gemini_${authState.authMethod}`
           : authState.authMethod;
       provider.verificationState = 'verified';
+      provider.statusCheckOutcome = 'authoritative';
+      provider.statusCheckErrorCode = undefined;
       provider.statusMessage = null;
       if (authState.authMethod === 'cli_oauth_personal') {
         provider.backend = {
@@ -1778,17 +1821,17 @@ export class ClaudeMultimodelBridgeService {
           authMethodDetail: authState.authMethod,
         };
       }
-      return provider;
+      return sanitizeProviderStatusAuthority(provider);
     }
 
     provider.statusMessage =
       authState.statusMessage ?? 'Set GEMINI_API_KEY or Google ADC to use Gemini.';
-    return provider;
+    return sanitizeProviderStatusAuthority(provider);
   }
 
   async getProviderStatuses(
     binaryPath: string,
-    onUpdate?: (providers: CliProviderStatus[]) => void
+    onUpdate?: ProviderStatusesObserver
   ): Promise<CliProviderStatus[]> {
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
@@ -1810,14 +1853,20 @@ export class ClaudeMultimodelBridgeService {
       if (providers) {
         catalogHydrationOwnsGenerationCleanup = true;
         this.hydrateProviderCatalogs(binaryPath, providers, generation, onUpdate);
-        return providers;
+        return this.projectProviderStatuses(providers);
       }
+      throw new Error('Provider-scoped summary runtime status returned no provider snapshot');
     } catch (error) {
       logger.warn(
-        `Provider-scoped summary runtime status unavailable, falling back to full probe: ${
+        `Provider-scoped summary runtime status unavailable; returning scoped degraded statuses: ${
           error instanceof Error ? error.message : String(error)
         }`
       );
+      const providers = DEFAULT_PROVIDER_STATUS_IDS.map((providerId) =>
+        createRuntimeStatusErrorProviderStatus(providerId, error)
+      );
+      this.notifyProviderStatuses(onUpdate, providers);
+      return this.projectProviderStatuses(providers);
     } finally {
       if (!catalogHydrationOwnsGenerationCleanup) {
         for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
@@ -1825,186 +1874,5 @@ export class ClaudeMultimodelBridgeService {
         }
       }
     }
-
-    try {
-      const providers = await this.getProviderStatusesFromScopedRuntimeStatus(
-        binaryPath,
-        onUpdate,
-        { providerIds: DEFAULT_PROVIDER_STATUS_IDS }
-      );
-      if (providers) {
-        return providers;
-      }
-    } catch (error) {
-      logger.warn(
-        `Provider-scoped full runtime status unavailable, falling back to legacy probes: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    const { env, connectionIssues } = await this.buildCliEnv(binaryPath, {
-      allowedStoredApiKeyEnvVarNames: getAggregateProviderStatusStoredCredentialAllowlist(),
-    });
-
-    let unifiedRuntimeStatusError: unknown = null;
-    try {
-      const { stdout } = await execCli(binaryPath, ['runtime', 'status', '--json'], {
-        timeout: PROVIDER_STATUS_TIMEOUT_MS,
-        maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
-        env,
-      });
-      const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
-      const providers = await providerConnectionService.enrichProviderStatuses(
-        this.applyConnectionIssues(
-          DEFAULT_PROVIDER_STATUS_IDS.map((providerId) =>
-            this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId])
-          ),
-          connectionIssues
-        )
-      );
-      onUpdate?.(providers);
-      return providers;
-    } catch (error) {
-      unifiedRuntimeStatusError = error;
-      if (!this.isUnifiedRuntimeUnsupported(error)) {
-        logger.warn(
-          `Unified runtime status unavailable, falling back to legacy probes: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const [statusResult, modelsResult] = await Promise.allSettled([
-      execCli(binaryPath, ['auth', 'status', '--json', '--provider', 'all'], {
-        timeout: PROVIDER_STATUS_TIMEOUT_MS,
-        maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
-        env,
-      }),
-      execCli(binaryPath, ['model', 'list', '--json', '--provider', 'all'], {
-        timeout: PROVIDER_MODELS_TIMEOUT_MS,
-        maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
-        env,
-      }),
-    ]);
-
-    const providers = new Map<CliProviderId, CliProviderStatus>(
-      DEFAULT_PROVIDER_STATUS_IDS.map((providerId) => [
-        providerId,
-        createDefaultProviderStatus(providerId),
-      ])
-    );
-
-    if (statusResult.status === 'fulfilled') {
-      try {
-        const parsed = extractJsonObject<ProviderStatusCommandResponse>(statusResult.value.stdout);
-        for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
-          const runtimeStatus = parsed.providers?.[providerId];
-          if (!runtimeStatus || providerId === 'opencode') continue;
-          const statusCheck = getLegacyProviderStatusCheck(providerId, unifiedRuntimeStatusError);
-          providers.set(providerId, {
-            ...applyProviderStatusCheck(
-              providers.get(providerId)!,
-              statusCheck.statusCheckOutcome,
-              statusCheck.statusCheckErrorCode
-            ),
-            supported: runtimeStatus.supported === true,
-            authenticated: runtimeStatus.authenticated === true,
-            authMethod: runtimeStatus.authMethod ?? null,
-            verificationState: runtimeStatus.verificationState ?? 'unknown',
-            statusMessage: runtimeStatus.statusMessage ?? null,
-            detailMessage: runtimeStatus.detailMessage ?? null,
-            canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
-            capabilities: {
-              teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
-              oneShot: runtimeStatus.capabilities?.oneShot === true,
-              extensions: mapRuntimeExtensionCapabilities(
-                providerId,
-                runtimeStatus.capabilities?.extensions
-              ),
-            },
-            backend: runtimeStatus.backend?.kind
-              ? {
-                  kind: runtimeStatus.backend.kind,
-                  label: runtimeStatus.backend.label ?? runtimeStatus.backend.kind,
-                  endpointLabel: runtimeStatus.backend.endpointLabel ?? null,
-                  projectId: runtimeStatus.backend.projectId ?? null,
-                  authMethodDetail: runtimeStatus.backend.authMethodDetail ?? null,
-                }
-              : null,
-          });
-          onUpdate?.(DEFAULT_PROVIDER_STATUS_IDS.map((id) => providers.get(id)!));
-        }
-      } catch (error) {
-        logger.warn(
-          `Failed to parse provider auth status JSON: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    } else {
-      const message =
-        statusResult.reason instanceof Error
-          ? statusResult.reason.message
-          : String(statusResult.reason);
-      logger.warn(`Provider auth status unavailable: ${message}`);
-      for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
-        const provider = {
-          ...providers.get(providerId)!,
-          statusMessage: 'Provider status not supported by current claude-multimodel build',
-        };
-        providers.set(
-          providerId,
-          providerId === 'opencode'
-            ? provider
-            : applyProviderStatusCheck(
-                provider,
-                'transient_error',
-                getLegacyProviderStatusCheck(providerId, statusResult.reason).statusCheckErrorCode
-              )
-        );
-        onUpdate?.(DEFAULT_PROVIDER_STATUS_IDS.map((id) => providers.get(id)!));
-      }
-    }
-
-    if (modelsResult.status === 'fulfilled') {
-      try {
-        const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelsResult.value.stdout);
-        for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
-          const modelPayload = parsed.providers?.[providerId];
-          if (!modelPayload) continue;
-          const runtimeModels = extractModelIds(modelPayload.models);
-          if (runtimeModels.length === 0 && providerId !== 'opencode') continue;
-          const provider = {
-            ...providers.get(providerId)!,
-            models: runtimeModels,
-          };
-          providers.set(
-            providerId,
-            providerId === 'opencode'
-              ? applyProviderStatusCheck(provider, 'model_only', 'partial_response')
-              : provider
-          );
-          onUpdate?.(DEFAULT_PROVIDER_STATUS_IDS.map((id) => providers.get(id)!));
-        }
-      } catch (error) {
-        logger.warn(
-          `Failed to parse provider models JSON: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const enrichedProviders = await providerConnectionService.enrichProviderStatuses(
-      this.applyConnectionIssues(
-        DEFAULT_PROVIDER_STATUS_IDS.map((providerId) => providers.get(providerId)!),
-        connectionIssues
-      )
-    );
-    onUpdate?.(enrichedProviders);
-
-    return enrichedProviders;
   }
 }

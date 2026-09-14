@@ -1,4 +1,5 @@
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
+import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { execCli as defaultExecCli } from '@main/utils/childProcess';
 
 import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
@@ -42,7 +43,8 @@ export interface TeamProvisioningPrepareFacadePorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
+    providerArgs: string[],
+    diagnosticModel?: string
   ): Promise<{ warning?: string }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
@@ -67,6 +69,7 @@ export interface TeamProvisioningPrepareFacadePorts {
   }): Promise<{ worktreePath: string }>;
   providerProbeCache?: ProviderProbeCachePort;
   execCli?: TeamProvisioningPrepareCoordinatorPorts['execCli'];
+  readOpenCodeProviderStatus?: TeamProvisioningPrepareCoordinatorPorts['readOpenCodeProviderStatus'];
   inspectOpenCodeLocalModelRuntime?: TeamProvisioningPrepareCoordinatorPorts['inspectOpenCodeLocalModelRuntime'];
   planRuntimeLanesOrThrow(
     leadProviderId: TeamProviderId | undefined,
@@ -101,6 +104,7 @@ export interface TeamProvisioningPrepareFacadeServiceHostOptions
         TeamProvisioningPrepareFacadePorts,
         | 'execCli'
         | 'inspectOpenCodeLocalModelRuntime'
+        | 'readOpenCodeProviderStatus'
         | 'providerProbeCache'
         | 'resolveClaudeBinaryPath'
       >
@@ -114,14 +118,8 @@ export function createTeamProvisioningPrepareFacadeFromService(
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
     buildProvisioningEnv: (providerId, providerBackendId, envOptions) =>
       service.buildProvisioningEnv(providerId, providerBackendId, envOptions),
-    runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-      service.providerRuntime.runProviderOneShotDiagnostic(
-        claudePath,
-        cwd,
-        env,
-        providerId,
-        providerArgs
-      ),
+    runProviderOneShotDiagnostic: (...args) =>
+      service.providerRuntime.runProviderOneShotDiagnostic(...args),
     readRuntimeProviderLaunchFacts: (params) => service.readRuntimeProviderLaunchFacts(params),
     resolveClaudeBinaryPath: options.resolveClaudeBinaryPath,
     probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>
@@ -129,6 +127,7 @@ export function createTeamProvisioningPrepareFacadeFromService(
     ensureMemberWorktree: (input) => service.memberWorktreeManager.ensureMemberWorktree(input),
     providerProbeCache: options.providerProbeCache,
     execCli: options.execCli,
+    readOpenCodeProviderStatus: options.readOpenCodeProviderStatus,
     inspectOpenCodeLocalModelRuntime: options.inspectOpenCodeLocalModelRuntime,
     planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
       service.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
@@ -144,20 +143,30 @@ export class TeamProvisioningPrepareFacade {
   constructor(private readonly ports: TeamProvisioningPrepareFacadePorts) {
     this.resolveClaudeBinaryPath =
       ports.resolveClaudeBinaryPath ?? (() => ClaudeBinaryResolver.resolve());
+    const providerStatusBridge = new ClaudeMultimodelBridgeService();
     const execCli = ports.execCli ?? defaultExecCli;
     this.coordinator = new TeamProvisioningPrepareCoordinator({
       providerProbeCache: ports.providerProbeCache ?? createInMemoryProviderProbeCachePort(),
       getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),
       buildProvisioningEnv: (providerId, providerBackendId, options) =>
         ports.buildProvisioningEnv(providerId, providerBackendId, options),
-      runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-        ports.runProviderOneShotDiagnostic(claudePath, cwd, env, providerId, providerArgs),
+      runProviderOneShotDiagnostic: (...args) => ports.runProviderOneShotDiagnostic(...args),
       readRuntimeProviderLaunchFacts: (params) => ports.readRuntimeProviderLaunchFacts(params),
       resolveClaudeBinaryPath: this.resolveClaudeBinaryPath,
       probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>
         ports.probeClaudeRuntime(claudePath, cwd, env, providerId, providerArgs),
       ensureMemberWorktree: (input) => ports.ensureMemberWorktree(input),
       execCli: (command, args, opts) => execCli(command, args, opts),
+      readOpenCodeProviderStatus:
+        ports.readOpenCodeProviderStatus ??
+        (async ({ cwd }) => {
+          const binaryPath = await this.resolveClaudeBinaryPath();
+          return binaryPath
+            ? providerStatusBridge.getProviderStatus(binaryPath, 'opencode', undefined, {
+                projectPath: cwd,
+              })
+            : null;
+        }),
       inspectOpenCodeLocalModelRuntime: ports.inspectOpenCodeLocalModelRuntime,
       info: (message) => ports.info(message),
       warn: (message) => ports.warn(message),
@@ -183,6 +192,7 @@ export class TeamProvisioningPrepareFacade {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;

@@ -1,7 +1,7 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { ShieldAlert } from 'lucide-react';
 
-import { shouldShowWorkspaceTrustLaunchNotice } from '../hooks/useWorkspaceTrustStatus';
+import { shouldShowWorkspaceTrustLaunchNotice } from '../view-models/workspaceTrustLaunchNotice';
 
 import type { WorkspaceTrustDisplayStatus } from '../hooks/useWorkspaceTrustStatus';
 

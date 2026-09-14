@@ -76,6 +76,10 @@ function createHarness(
       vi.fn(async (filePath, contents) => {
         files.set(filePath, contents);
       }),
+    writeFileUtf8: vi.fn(async (filePath, contents, options) => {
+      await options?.beforeCommit();
+      files.set(filePath, contents);
+    }),
     unlink: vi.fn(async (filePath) => {
       if (!files.delete(filePath)) {
         throw new Error('missing');
@@ -119,6 +123,32 @@ function createHarness(
 }
 
 describe('TeamProvisioningConfigMaintenance', () => {
+  it('publishes the early launch roster through a guarded write and invalidates config reads', async () => {
+    const configPath = path.join(TEAM_BASE, 'launch-team', 'config.json');
+    const { maintenance, ports, files, invalidatedTeams } = createHarness({
+      files: {
+        [configPath]: JSON.stringify({ members: [{ name: 'team-lead', agentType: 'team-lead' }] }),
+      },
+    });
+
+    await expect(
+      maintenance.materializeLaunchRoster({
+        teamName: 'launch-team',
+        members: [{ name: 'worker', role: 'Worker', providerId: 'opencode' }],
+        isCurrentRun: () => true,
+      })
+    ).resolves.toBe(true);
+    expect(ports.writeFileUtf8).toHaveBeenCalledWith(configPath, expect.any(String), {
+      beforeCommit: expect.any(Function),
+    });
+    expect(JSON.parse(files.get(configPath) ?? '{}').members).toEqual([
+      { name: 'team-lead', agentType: 'team-lead' },
+      expect.objectContaining({ name: 'worker', providerId: 'opencode', joinedAt: 123_456 }),
+    ]);
+    expect(invalidatedTeams).toEqual(['launch-team']);
+    expect(ports.scanForNewestProjectSession).not.toHaveBeenCalled();
+  });
+
   it('backs up and normalizes launch config, then merges duplicate inboxes using in-memory ports', async () => {
     const teamName = 'launch-team';
     const configPath = path.join(TEAM_BASE, teamName, 'config.json');

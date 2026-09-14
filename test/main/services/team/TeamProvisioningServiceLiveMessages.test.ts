@@ -369,7 +369,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       content: [{ type: 'text', text: 'Launching teammates now.' }],
     });
 
-    expect(emitter).toHaveBeenCalledTimes(1);
+    const events = emitter.mock.calls.map(([event]) => event);
+    expect(events.filter((event) => event.type === 'lead-message')).toHaveLength(1);
+    expect(events.filter((event) => event.type === 'lead-activity')).toEqual([
+      { type: 'lead-activity', teamName: 'my-team', runId: run.runId, detail: 'active' },
+    ]);
+    expect(events.some((event) => event.type === 'inbox')).toBe(false);
     expect(emitter).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'lead-message', teamName: 'my-team' })
     );
@@ -387,14 +392,17 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       type: 'assistant',
       content: [{ type: 'text', text: 'Message 1' }],
     });
-    expect(emitter).toHaveBeenCalledTimes(1);
+    expect(emitter.mock.calls.filter(([event]) => event.type === 'lead-message')).toHaveLength(1);
 
     // Second message immediately after: should be coalesced (not emitted again)
     callHandleStreamJsonMessage(service, run, {
       type: 'assistant',
       content: [{ type: 'text', text: 'Message 2' }],
     });
-    expect(emitter).toHaveBeenCalledTimes(1); // Still 1
+    expect(emitter.mock.calls.filter(([event]) => event.type === 'lead-message')).toHaveLength(1);
+    expect(
+      emitter.mock.calls.filter(([event]) => event.type === 'lead-activity').map(([event]) => event)
+    ).toEqual([{ type: 'lead-activity', teamName: 'my-team', runId: run.runId, detail: 'active' }]);
 
     // Messages are still cached though
     const live = service.getLiveLeadProcessMessages('my-team');
@@ -604,21 +612,24 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     );
   });
 
-  it('suppresses bare transcript speaker placeholders from lead thought output', () => {
-    const service = new TeamProvisioningService();
-    seedConfig('my-team');
-    const emitter = vi.fn<(event: TeamChangeEvent) => void>();
-    service.setTeamChangeEmitter(emitter);
-    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+  it.each([false, true])(
+    'suppresses bare transcript speaker placeholders with provisioningComplete=%s',
+    (provisioningComplete) => {
+      const service = new TeamProvisioningService();
+      seedConfig('my-team');
+      const emitter = vi.fn<(event: TeamChangeEvent) => void>();
+      service.setTeamChangeEmitter(emitter);
+      const run = attachRun(service, 'my-team', { provisioningComplete });
 
-    callHandleStreamJsonMessage(service, run, {
-      type: 'assistant',
-      content: [{ type: 'text', text: 'Human: ' }],
-    });
+      callHandleStreamJsonMessage(service, run, {
+        type: 'assistant',
+        content: [{ type: 'text', text: 'Human: ' }],
+      });
 
-    expect(service.getLiveLeadProcessMessages('my-team')).toHaveLength(0);
-    expect(emitter).not.toHaveBeenCalled();
-  });
+      expect(service.getLiveLeadProcessMessages('my-team')).toHaveLength(0);
+      expect(emitter).not.toHaveBeenCalled();
+    }
+  );
 
   it('SendMessage(to:teammate) creates inbox row and emits inbox detail for recipient', () => {
     const service = new TeamProvisioningService();

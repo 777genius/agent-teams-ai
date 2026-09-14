@@ -12,9 +12,15 @@ vi.mock('@main/utils/childProcess', () => ({
 }));
 
 import {
+  createTeamProvisioningLaunchStateCompatibilityBoundaryFromService,
+  type TeamProvisioningLaunchStateCompatibilityServiceHost,
+} from '../TeamProvisioningLaunchStateCompatibilityFacade';
+import { createInitialMemberSpawnStatusEntry } from '../TeamProvisioningMemberSpawnStatusPolicy';
+import {
   emitLogsProgress,
   killTeamProcess,
   killTeamProcessAndWait,
+  publishConfirmedLaunchProgress,
   updateProgress,
 } from '../TeamProvisioningRunProgress';
 
@@ -172,4 +178,124 @@ describe('TeamProvisioningRunProgress', () => {
     });
     expect(onProgress).toHaveBeenCalledWith(targetRun.progress);
   });
+
+  it('publishes late OpenCode readiness before notification dedupe and preserves unrelated warnings', () => {
+    const target = confirmedLaunchRun();
+    target.teamLaunchedNotificationFired = true;
+    const lane = target.mixedSecondaryLanes[0];
+    lane.state = 'launching';
+    const previous = target.progress;
+    expect(publishConfirmedLaunchProgress(target)).toBe(false);
+    expect(target.progress).toBe(previous);
+    expect(target.onProgress).not.toHaveBeenCalled();
+
+    lane.state = 'finished';
+    expect(publishConfirmedLaunchProgress(target)).toBe(true);
+    expect(target.progress).toMatchObject({
+      state: 'ready',
+      message: 'Team launched - all 3 teammates joined and are ready for tasks.',
+      warnings: ['Unrelated advisory'],
+      cliLogsTail: 'retained diagnostics',
+    });
+    expect(target.progress.messageSeverity).toBeUndefined();
+    expect(target.onProgress).toHaveBeenCalledWith(target.progress);
+    expect(publishConfirmedLaunchProgress(target)).toBe(true);
+    expect(target.onProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('projects confirmation at initial ready promotion when the final lane event preceded it', async () => {
+    const target = confirmedLaunchRun();
+    target.progress.state = 'assembling';
+    let promoted = false;
+    const fireNotification = vi.fn(async () => {
+      expect(target.progress.message).toContain('all 3 teammates joined');
+      expect(target.progress.messageSeverity).toBeUndefined();
+    });
+    const boundary = createTeamProvisioningLaunchStateCompatibilityBoundaryFromService({
+      isProvisioningRunPromotedToAlive: () => promoted,
+      launchNotifications: { fireTeamLaunchedNotification: fireNotification },
+    } as unknown as TeamProvisioningLaunchStateCompatibilityServiceHost);
+    await boundary.maybeFireTeamLaunchedNotificationWhenAllMembersJoined(target);
+    expect(target.onProgress).not.toHaveBeenCalled();
+    promoted = true;
+    target.progress.state = 'ready';
+    await boundary.fireTeamLaunchedNotification(target);
+    expect(fireNotification).toHaveBeenCalledTimes(1);
+    expect(target.onProgress).toHaveBeenCalledWith(target.progress);
+  });
+
+  it.each(['cancelled', 'killed', 'stale-lane', 'unconfirmed', 'hard-failure', 'disconnected'])(
+    'does not clear joining diagnostics for %s evidence',
+    (condition) => {
+      const target = confirmedLaunchRun();
+      if (condition === 'cancelled') target.cancelRequested = true;
+      if (condition === 'killed') target.processKilled = true;
+      if (condition === 'disconnected') target.progress.state = 'disconnected';
+      const lane = target.mixedSecondaryLanes[0];
+      if (condition === 'stale-lane') lane.runId = 'new-secondary-run';
+      if (condition === 'unconfirmed')
+        lane.result!.members['opencode-worker'].bootstrapConfirmed = false;
+      if (condition === 'hard-failure') lane.result!.members['opencode-worker'].hardFailure = true;
+      const previous = target.progress;
+      expect(publishConfirmedLaunchProgress(target)).toBe(false);
+      expect(target.progress).toBe(previous);
+      expect(target.onProgress).not.toHaveBeenCalled();
+    }
+  );
 });
+
+function confirmedLaunchRun(): ProvisioningRun {
+  const members = ['codex-worker', 'haiku-worker', 'opencode-worker'];
+  return run({
+    isLaunch: true,
+    expectedMembers: members,
+    progress: progress({
+      state: 'ready',
+      message: 'Team provisioned - 2/3 teammates made contact, 1 still joining',
+      messageSeverity: 'warning',
+      warnings: ['Unrelated advisory'],
+      cliLogsTail: 'retained diagnostics',
+    }),
+    memberSpawnStatuses: new Map(
+      members.map((name) => [
+        name,
+        {
+          ...createInitialMemberSpawnStatusEntry(),
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+        },
+      ])
+    ),
+    mixedSecondaryLanes: [
+      {
+        laneId: 'secondary:opencode:opencode-worker',
+        providerId: 'opencode',
+        member: { name: 'opencode-worker', role: 'developer' },
+        runId: 'secondary-run',
+        state: 'finished',
+        warnings: [],
+        diagnostics: [],
+        result: {
+          runId: 'secondary-run',
+          teamName: 'team',
+          launchPhase: 'finished',
+          teamLaunchState: 'clean_success',
+          members: {
+            'opencode-worker': {
+              memberName: 'opencode-worker',
+              providerId: 'opencode',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              diagnostics: [],
+            },
+          },
+          warnings: [],
+          diagnostics: [],
+        },
+      },
+    ],
+  });
+}

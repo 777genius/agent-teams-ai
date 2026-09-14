@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -177,22 +178,24 @@ function renderMembersEditor(props: {
 
   const render = (members: MemberDraft[]): void => {
     root.render(
-      <MembersEditorSection
-        members={members}
-        onChange={onChange}
-        showWorktreeIsolationControls
-        teammateWorktreeDefault={props.teammateWorktreeDefault}
-        softDeleteMembers={props.softDeleteMembers}
-        inheritedProviderId={props.inheritedProviderId}
-        defaultProviderId={props.defaultProviderId}
-        inheritedEffort={props.inheritedEffort}
-        limitContext={props.limitContext}
-        runtimeProviderStatusById={props.runtimeProviderStatusById}
-        singleMemberMode={props.singleMemberMode}
-        leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
-        identityLockReason="locked"
-        draftKeyPrefix="worktree-test"
-      />
+      <TooltipProvider>
+        <MembersEditorSection
+          members={members}
+          onChange={onChange}
+          showWorktreeIsolationControls
+          teammateWorktreeDefault={props.teammateWorktreeDefault}
+          softDeleteMembers={props.softDeleteMembers}
+          inheritedProviderId={props.inheritedProviderId}
+          defaultProviderId={props.defaultProviderId}
+          inheritedEffort={props.inheritedEffort}
+          limitContext={props.limitContext}
+          runtimeProviderStatusById={props.runtimeProviderStatusById}
+          singleMemberMode={props.singleMemberMode}
+          leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
+          identityLockReason="locked"
+          draftKeyPrefix="worktree-test"
+        />
+      </TooltipProvider>
     );
   };
 
@@ -373,6 +376,19 @@ describe('MembersEditorSection runtime model selection', () => {
 });
 
 describe('MembersEditorSection worktree master checkbox', () => {
+  it('shows the bulk worktree control when at least one member is active', () => {
+    const alice = createMemberDraft({ id: 'alice', name: 'alice' });
+    const removedAlice = { ...alice, removedAt: Date.now() };
+    const { host, rerender } = renderMembersEditor({ members: [removedAlice] });
+
+    expect(host.querySelector('#teammate-worktree-default-worktree-test')).toBeNull();
+    expect(host.querySelector('#teammate-agent-teams-mcp-default-worktree-test')).toBeTruthy();
+
+    rerender([alice]);
+
+    expect(masterWorktreeCheckbox(host)).toBeTruthy();
+  });
+
   it('renders indeterminate when only some active members use worktrees', () => {
     const { host } = renderMembersEditor({
       members: [

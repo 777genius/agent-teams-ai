@@ -449,6 +449,7 @@ describe('ChangeExtractorService', () => {
   let tmpDir: string | null = null;
 
   afterEach(async () => {
+    vi.useRealTimers();
     setClaudeBasePathOverride(null);
     if (tmpDir) {
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -2538,7 +2539,173 @@ describe('ChangeExtractorService', () => {
     );
   });
 
-  it('does not cache negative OpenCode backfill while delivery context already exists', async () => {
+  async function setupBackfillRegression(warningOnly = false) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-09T00:00:00Z'));
+    let runtimeIdentity = 'runtime-A';
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+    await writeOpenCodeDeliveryLedger(tmpDir);
+    if (warningOnly) await writeWarningOnlyLedgerNotice(projectDir, { memberName: 'bob' });
+    const failure = {
+      opencodeTaskLedgerEvidenceContractVersion: OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
+      outcome: 'no-attribution',
+      importedEvents: 0,
+      candidateEvents: 0,
+      scannedSessions: 1,
+      scannedToolparts: 0,
+      diagnostics: [],
+      notices: [],
+    };
+    const backfillOpenCodeTaskLedger = vi.fn().mockResolvedValue(failure);
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
+    };
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      { getConfig: vi.fn(async () => ({ projectPath })) } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger, getRuntimeIdentity: async () => runtimeIdentity } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
+    );
+    return {
+      service,
+      failure,
+      backfillOpenCodeTaskLedger,
+      workerClient,
+      replaceRuntime: () => {
+        runtimeIdentity = 'runtime-B';
+      },
+    };
+  }
+
+  it('preserves backoff across automatic 20-second forceFresh summaries and lets manual retry bypass it', async () => {
+    const { service, backfillOpenCodeTaskLedger, workerClient } = await setupBackfillRegression();
+    const refresh = (retryBackfill = false) =>
+      service.getTaskChanges(TEAM_NAME, TASK_ID, {
+        ...SUMMARY_OPTIONS,
+        owner: 'bob',
+        forceFresh: true,
+        retryBackfill,
+      });
+    const start = Date.now();
+    // Fail at 0, 20, 40, 60, 100 seconds. The 40/60-second deadlines must survive polling.
+    for (const [seconds, calls] of [
+      [0, 1],
+      [20, 2],
+      [40, 3],
+      [60, 4],
+      [80, 4],
+      [100, 5],
+      [120, 5],
+      [140, 5],
+      [159.999, 5],
+      [160, 6],
+    ] as const) {
+      vi.setSystemTime(start + seconds * 1_000);
+      const computations = workerClient.computeTaskChanges.mock.calls.length;
+      const result = await refresh();
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(calls);
+      expect(workerClient.computeTaskChanges.mock.calls.length).toBeGreaterThan(computations);
+      expect(result.taskId).toBe(TASK_ID);
+    }
+    await refresh(true);
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(7);
+    vi.setSystemTime(Date.now() + 4_999);
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(7);
+    vi.setSystemTime(Date.now() + 1);
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(8);
+  });
+
+  it.each(['failed result', 'thrown error'])(
+    'preserves runtime B success when pending runtime A completes with %s',
+    async (completion) => {
+      const { service, failure, backfillOpenCodeTaskLedger, replaceRuntime } =
+        await setupBackfillRegression(true);
+      let resolveA!: (result: typeof failure) => void;
+      let rejectA!: (error: Error) => void;
+      let startedA!: () => void;
+      const aStarted = new Promise<void>((resolve) => {
+        startedA = resolve;
+      });
+      const pendingA = new Promise<typeof failure>((resolve, reject) => {
+        resolveA = resolve;
+        rejectA = reject;
+      });
+      backfillOpenCodeTaskLedger.mockImplementationOnce(() => {
+        startedA();
+        return pendingA;
+      });
+      const refresh = () =>
+        service.getTaskChanges(TEAM_NAME, TASK_ID, {
+          ...SUMMARY_OPTIONS,
+          owner: 'bob',
+          forceFresh: true,
+        });
+      const a = refresh();
+      await aStarted;
+      replaceRuntime();
+      backfillOpenCodeTaskLedger.mockResolvedValueOnce({
+        ...failure,
+        outcome: 'duplicates-only',
+        candidateEvents: 1,
+      });
+      const b = await refresh();
+      expect(b.files).toHaveLength(0);
+      expect(b.warnings.length).toBeGreaterThan(0);
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+      if (completion === 'thrown error') rejectA(new Error('obsolete runtime failed'));
+      else resolveA(failure);
+      await a;
+      if (completion === 'thrown error') {
+        expect(console.warn).toHaveBeenCalledWith(
+          '[Service:ChangeExtractorService]',
+          expect.stringContaining('obsolete runtime failed')
+        );
+        vi.mocked(console.warn).mockClear();
+      }
+      await refresh();
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+      vi.setSystemTime(Date.now() + 59_999);
+      await refresh();
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+      vi.setSystemTime(Date.now() + 1);
+      await refresh();
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  it('bounds failed backfill refreshes and bypasses cooldown for runtime, evidence and explicit retry', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-09T00:00:00Z'));
+    let runtimeIdentity = 'runtime-v1';
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
     setClaudeBasePathOverride(tmpDir);
     await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
@@ -2631,7 +2798,7 @@ describe('ChangeExtractorService', () => {
       { getConfig: vi.fn(async () => ({ projectPath })) } as any,
       undefined,
       workerClient as any,
-      { backfillOpenCodeTaskLedger } as any,
+      { backfillOpenCodeTaskLedger, getRuntimeIdentity: async () => runtimeIdentity } as any,
       { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
     );
 
@@ -2644,22 +2811,59 @@ describe('ChangeExtractorService', () => {
       status: 'completed',
     });
 
+    const refresh = () =>
+      service.getTaskChanges(TEAM_NAME, TASK_ID, { owner: 'bob', status: 'completed' });
+    await Promise.all(Array.from({ length: 20 }, refresh));
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(Date.now() + 5_000);
+    await Promise.all(Array.from({ length: 20 }, refresh));
     expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
-    expect(backfillOpenCodeTaskLedger.mock.calls[0]?.[0]?.deliveryContextPath).toEqual(
-      expect.stringContaining('delivery-context.json')
-    );
-    expect(backfillOpenCodeTaskLedger.mock.calls[0]?.[0]?.deliveryContextHash).toMatch(
-      /^[a-f0-9]{64}$/
-    );
-    expect(backfillOpenCodeTaskLedger.mock.calls[1]?.[0]?.deliveryContextPath).toEqual(
-      expect.stringContaining('delivery-context.json')
-    );
-    expect(backfillOpenCodeTaskLedger.mock.calls[1]?.[0]?.deliveryContextHash).toMatch(
-      /^[a-f0-9]{64}$/
-    );
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+    runtimeIdentity = 'runtime-v2';
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(3);
+    const evidence = JSON.parse(await fs.readFile(deliveryLedgerPath, 'utf8'));
+    evidence.data[0].observedAssistantMessageId = 'assistant-new';
+    await fs.writeFile(deliveryLedgerPath, JSON.stringify(evidence));
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(4);
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+      forceFresh: true,
+      retryBackfill: true,
+    });
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(5);
+    // Cooldown must not replace the normal task-evidence computation.
+    expect(workerClient.computeTaskChanges.mock.calls.length).toBeGreaterThan(5);
+    for (const [input] of backfillOpenCodeTaskLedger.mock.calls) {
+      expect(input.deliveryContextPath).toEqual(expect.stringContaining('delivery-context.json'));
+      expect(input.deliveryContextHash).toMatch(/^[a-f0-9]{64}$/);
+    }
+    const success = await backfillOpenCodeTaskLedger.mock.results[4].value;
+    backfillOpenCodeTaskLedger.mockClear();
+    backfillOpenCodeTaskLedger.mockResolvedValueOnce({
+      ...success,
+      opencodeTaskLedgerEvidenceContractVersion: OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
+      outcome: 'imported',
+      importedEvents: 1,
+    } as any);
+    vi.setSystemTime(Date.now() + 5_000);
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(1);
+    await Promise.all(Array.from({ length: 20 }, refresh));
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(Date.now() + 60_000);
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(Date.now() + 5_000);
+    await refresh();
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(3);
   });
 
-  it('does not cache duplicates-only OpenCode backfill from an old evidence contract', async () => {
+  it('retries duplicates-only from an old evidence contract after cooldown', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
     setClaudeBasePathOverride(tmpDir);
     await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
@@ -2723,6 +2927,7 @@ describe('ChangeExtractorService', () => {
       owner: 'bob',
       status: 'completed',
     });
+    vi.setSystemTime(Date.now() + 5_000);
     await service.getTaskChanges(TEAM_NAME, TASK_ID, {
       owner: 'bob',
       status: 'completed',

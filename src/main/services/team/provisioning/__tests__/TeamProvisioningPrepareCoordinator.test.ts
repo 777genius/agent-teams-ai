@@ -109,6 +109,24 @@ function deferredPublication(): {
 }
 
 describe('TeamProvisioningPrepareCoordinator', () => {
+  it('does not run broad OpenCode readiness when automatic diagnostics have no selected model', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/opencode-passive', {
+      providerId: 'opencode',
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(true);
+    expect(result.details).toContain(
+      'OpenCode readiness is deferred until launch has a selected model.'
+    );
+  });
+
   it('coalesces matching prepare requests and returns cloned results', async () => {
     let releaseProbe: ((value: { warning?: string }) => void) | null = null;
     const probeClaudeRuntime = vi.fn(
@@ -260,6 +278,83 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(verifySelectedProviderModels).toHaveBeenCalledOnce();
   });
 
+  it('blocks ChatGPT-gated Codex models during deep verification via the one-shot probe', async () => {
+    const execCli = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes('-p')) {
+        throw new Error(
+          "400 invalid_request_error: The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account."
+        );
+      }
+      throw new Error(`Unexpected CLI invocation: ${args.join(' ')}`);
+    });
+    const readRuntimeProviderLaunchFacts = vi.fn().mockResolvedValue({
+      defaultModel: 'gpt-5.6-sol',
+      modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+      modelListParsed: true,
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+    });
+    const coordinator = createCoordinator({ execCli, readRuntimeProviderLaunchFacts });
+
+    const deepResult = await coordinator.prepareForProvisioning('/workspace/chatgpt-gate', {
+      providerId: 'codex',
+      modelIds: ['gpt-5.2'],
+      modelVerificationMode: 'deep',
+    });
+    expect(deepResult.ready).toBe(false);
+    expect(deepResult.message).toContain('not supported when using Codex with a ChatGPT account');
+    expect(deepResult.issues).toEqual([
+      expect.objectContaining({
+        providerId: 'codex',
+        modelId: 'gpt-5.2',
+        code: 'model_unavailable',
+      }),
+    ]);
+
+    execCli.mockClear();
+    const compatibilityResult = await coordinator.prepareForProvisioning(
+      '/workspace/chatgpt-gate-compatibility',
+      {
+        providerId: 'codex',
+        modelIds: ['gpt-5.2'],
+      }
+    );
+    expect(compatibilityResult.ready).toBe(true);
+    expect(execCli).not.toHaveBeenCalled();
+  });
+
+  it('does not report ready when terminal OAuth failure follows an incidental busy status', async () => {
+    const prepare = vi.fn().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: ['OpenCode session status busy', 'Token refresh failed: 401'],
+      warnings: [],
+    });
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      }),
+    });
+    const result = await coordinator.prepareForProvisioning('/sandbox/oauth-expired', {
+      providerId: 'opencode',
+      modelIds: ['openai/gpt-5.4'],
+      modelVerificationMode: 'deep',
+    });
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('Token refresh failed: 401');
+    expect(result.issues).toEqual([
+      expect.objectContaining({ severity: 'blocking', code: 'not_authenticated' }),
+    ]);
+    expect(result.warnings?.join(' ')).not.toContain('busy');
+  });
+
   it('blocks selected local models that fail the injected runtime-readiness gate', async () => {
     const prepare = vi.fn().mockResolvedValue({
       ok: true,
@@ -313,6 +408,43 @@ describe('TeamProvisioningPrepareCoordinator', () => {
       'Selected model ollama/qwen3:4b is unavailable. The selected local model does not support tools.'
     );
   });
+
+  it.each([false, true])(
+    'passes the first explicit selected Codex model to diagnostic (structured=%s)',
+    async (structured) => {
+      const runProviderOneShotDiagnostic = vi.fn().mockResolvedValue({});
+      const coordinator = createCoordinator({
+        runProviderOneShotDiagnostic,
+        verifySelectedProviderModels: vi
+          .fn()
+          .mockResolvedValue({ details: [], warnings: [], blockingMessages: [] }),
+      });
+      await coordinator.prepareForProvisioning('/sandbox/selected-codex-model', {
+        providerId: 'codex',
+        modelVerificationMode: 'deep',
+        modelIds: structured
+          ? ['gpt-5.6-sol']
+          : [' ', '__provider_default__', ' gpt-5.6-luna ', 'gpt-5.6-sol'],
+        ...(structured
+          ? {
+              modelChecks: [
+                { providerId: 'anthropic' as const, model: 'opus' },
+                { providerId: 'codex' as const, model: ' gpt-5.6-luna ' },
+                { providerId: 'codex' as const, model: 'gpt-5.6-sol' },
+              ],
+            }
+          : {}),
+      });
+      expect(runProviderOneShotDiagnostic).toHaveBeenCalledExactlyOnceWith(
+        '/fake/claude',
+        '/sandbox/selected-codex-model',
+        { PATH: '/bin' },
+        'codex',
+        [],
+        'gpt-5.6-luna'
+      );
+    }
+  );
 
   it('treats quota retry one-shot diagnostics as blocking readiness failures', async () => {
     const runProviderOneShotDiagnostic = vi.fn().mockResolvedValue({
@@ -470,6 +602,26 @@ describe('TeamProvisioningPrepareCoordinator', () => {
       'codex-default',
       undefined,
     ]);
+  });
+
+  it('rejects an OpenCode default without invoking broad model discovery', async () => {
+    const resolveProviderDefaultModel = vi.fn();
+    const buildProvisioningEnv = vi.fn();
+    const coordinator = createCoordinator({
+      buildProvisioningEnv,
+      resolveProviderDefaultModel,
+    });
+
+    await expect(
+      coordinator.materializeEffectiveTeamMemberSpecs({
+        claudePath: '/fake/claude',
+        cwd: '/workspace/materialize',
+        members: [{ name: 'one', role: 'One', providerId: 'opencode' }],
+        defaults: {},
+      })
+    ).rejects.toThrow('Select an explicit model and retry');
+    expect(buildProvisioningEnv).not.toHaveBeenCalled();
+    expect(resolveProviderDefaultModel).not.toHaveBeenCalled();
   });
 
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {

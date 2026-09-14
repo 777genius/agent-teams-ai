@@ -7,9 +7,15 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import {
+  getExpectedRuntimeCliVersion,
+  matchesRuntimeCliVersion,
+} from '../lib/runtime-cli-version.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..', '..');
 const runtimeLock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));
+const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
 const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-public-runtime-e2e-'));
 const platformKey = `${process.platform}-${process.arch}`;
 
@@ -73,6 +79,7 @@ try {
     cacheRoot,
     runtimeLock.version,
     platformKey,
+    'payload-v1',
     asset.binaryName
   );
   if (path.resolve(runtimePath) !== path.resolve(expectedRuntimePath)) {
@@ -86,9 +93,13 @@ try {
     maxBuffer: 1024 * 1024,
   });
   const versionText = `${version.stdout ?? ''}\n${version.stderr ?? ''}`.trim();
-  if (version.error || version.status !== 0 || !versionText.includes(runtimeLock.version)) {
+  if (
+    version.error ||
+    version.status !== 0 ||
+    !matchesRuntimeCliVersion(version.stdout, expectedCliVersion)
+  ) {
     fail(
-      `expected executable runtime ${runtimeLock.version}, got ${versionText || version.error?.message || `exit ${version.status}`}`,
+      `expected executable runtime ${runtimeLock.version} with CLI version ${expectedCliVersion}, got ${versionText || version.error?.message || `exit ${version.status}`}`,
       version
     );
   }
@@ -120,7 +131,7 @@ try {
     fail('second bootstrap did not return the same cached runtime path', cachedBootstrap);
   }
 
-  const cacheDirEntries = fs.readdirSync(path.dirname(runtimePath));
+  const cacheDirEntries = fs.readdirSync(path.dirname(path.dirname(runtimePath)));
   const staleBootstrapEntry = cacheDirEntries.find(
     (entry) => entry === '.bootstrap.lock' || entry.startsWith('.bootstrap-')
   );

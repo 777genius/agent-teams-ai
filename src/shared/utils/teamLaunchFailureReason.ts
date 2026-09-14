@@ -19,6 +19,30 @@ export interface ProvisionedButNotAliveLaunchEntry {
   livenessKind?: TeamAgentRuntimeLivenessKind;
 }
 
+/**
+ * The launch grace verdict travels as a stable identifier rather than prose, so
+ * every reader compares one token and the renderer can translate it once at the
+ * display boundary. It lives here because both processes need it: the main
+ * process writes it, the renderer maps it to text.
+ */
+export const MEMBER_LAUNCH_GRACE_TIMEOUT_REASON = 'member_launch_grace_timeout';
+
+/**
+ * The sentence the identifier replaced. Launch statuses are persisted, so a team
+ * whose launch failed before the rename still carries this spelling on disk and
+ * every launch-grace reader has to keep recognising it.
+ */
+export const LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON =
+  'Teammate did not join within the launch grace window.';
+
+export function isLaunchGraceWindowFailureReason(reason?: string): boolean {
+  const text = reason?.trim();
+  return (
+    text === MEMBER_LAUNCH_GRACE_TIMEOUT_REASON ||
+    text === LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON
+  );
+}
+
 export function stripProcessTableUnavailableDiagnosticSuffix(reason: string): string | null {
   const match = /^(.*?);\s*process table (?:is )?unavailable$/i.exec(reason.trim());
   const baseReason = match?.[1]?.trim();

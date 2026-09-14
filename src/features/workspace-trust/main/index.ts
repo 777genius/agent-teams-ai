@@ -21,6 +21,11 @@ export {
   normalizeWorkspaceTrustConfigKey,
 } from '../core/domain';
 export type * from '../core/domain/WorkspaceTrustTypes';
+export { registerWorkspaceTrustHttp } from './adapters/input/registerWorkspaceTrustHttp';
+export {
+  registerWorkspaceTrustIpc,
+  removeWorkspaceTrustIpc,
+} from './adapters/input/registerWorkspaceTrustIpc';
 export { FileClaudeStateProbe } from './adapters/output/ClaudeStateProbe';
 export { FileClaudeTrustPersister } from './adapters/output/ClaudeTrustPersister';
 export { NodePtyProcessAdapter } from './adapters/output/NodePtyProcessAdapter';

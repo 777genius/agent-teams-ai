@@ -403,6 +403,7 @@ export async function runProviderOneShotDiagnostic({
   env,
   providerId = 'anthropic',
   providerArgs = [],
+  diagnosticModel,
   ports,
 }: {
   claudePath: string;
@@ -410,6 +411,7 @@ export async function runProviderOneShotDiagnostic({
   env: NodeJS.ProcessEnv;
   providerId?: TeamProviderId;
   providerArgs?: string[];
+  diagnosticModel?: string;
   ports: TeamProvisioningProviderDiagnosticsPorts;
 }): Promise<{ warning?: string }> {
   const cliCommandLabel = getConfiguredCliCommandLabel();
@@ -424,7 +426,14 @@ export async function runProviderOneShotDiagnostic({
     return {};
   }
 
-  const args = buildProviderCliCommandArgs(providerArgs, getPreflightPingArgs(providerId, ports));
+  const modelOverride =
+    resolvedProviderId === 'codex'
+      ? diagnosticModel?.trim() || ports.getConfiguredCodexCustomProviderModel()
+      : undefined;
+  const args = buildProviderCliCommandArgs(
+    providerArgs,
+    buildProviderPreflightPingArgs(providerId, { modelOverride })
+  );
   const timeoutMs = getPreflightTimeoutMs(providerId);
   ports.appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
     providerId: resolvedProviderId,
@@ -1165,17 +1174,6 @@ export async function spawnProbe({
       });
     });
   });
-}
-
-function getPreflightPingArgs(
-  providerId: TeamProviderId | undefined,
-  ports: Pick<TeamProvisioningProviderDiagnosticsPorts, 'getConfiguredCodexCustomProviderModel'>
-): string[] {
-  const codexCustomModel =
-    resolveTeamProviderId(providerId) === 'codex'
-      ? ports.getConfiguredCodexCustomProviderModel()
-      : null;
-  return buildProviderPreflightPingArgs(providerId, { modelOverride: codexCustomModel });
 }
 
 function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {

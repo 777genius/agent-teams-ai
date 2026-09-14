@@ -632,8 +632,10 @@ export interface TaskChangeRequestOptions {
   stateBucket?: 'approved' | 'review' | 'completed' | 'active';
   /** Lightweight response for summary UIs; skips snippets/timeline details. */
   summaryOnly?: boolean;
-  /** Force a fresh recompute and overwrite any cache snapshot. */
+  /** Recompute the summary cache; automatic refreshes preserve backfill cooldown. */
   forceFresh?: boolean;
+  /** Explicit user retry: reset failed backfill cooldown, preserving successful cache entries. */
+  retryBackfill?: boolean;
 }
 
 export interface TeamTaskChangeSummaryRequest {

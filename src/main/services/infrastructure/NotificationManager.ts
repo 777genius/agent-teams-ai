@@ -16,8 +16,7 @@
  */
 
 import { getAppIconPath } from '@main/utils/appIcon';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { getAppDataPath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
@@ -49,21 +48,20 @@ import { projectPathResolver } from '../discovery/ProjectPathResolver';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { ConfigManager } from './ConfigManager';
+import {
+  migrateLegacyNotificationPath,
+  NOTIFICATIONS_PATH,
+  parseNotificationHistory,
+  type StoredNotification,
+  writeNotificationsFileAtomically,
+} from './notificationHistoryFile';
 
 // Re-export DetectedError for backward compatibility
 export type { DetectedError };
+// Re-export the stored notification shape for backward compatibility
+export type { StoredNotification };
 // Re-export team notification types for callers
 export type { TeamEventType, TeamNotificationPayload } from '@main/utils/teamNotificationBuilder';
-
-/**
- * Stored notification with read status.
- */
-export interface StoredNotification extends DetectedError {
-  /** Whether the notification has been read */
-  isRead: boolean;
-  /** When the notification was created (may differ from error timestamp) */
-  createdAt: number;
-}
 
 /**
  * Pagination options for getNotifications.
@@ -101,15 +99,6 @@ const MAX_NOTIFICATIONS = 100;
 /** Throttle window in milliseconds (5 seconds) */
 const THROTTLE_MS = 5000;
 
-/** Path to notifications storage file */
-const NOTIFICATIONS_PATH = path.join(getHomeDir(), '.claude', 'agent-teams-notifications.json');
-const LEGACY_NOTIFICATION_FILENAMES = [
-  'claude-devtools-notifications.json',
-  'claude-code-context-notifications.json',
-] as const;
-const LEGACY_NOTIFICATION_PATHS = LEGACY_NOTIFICATION_FILENAMES.map((filename) =>
-  path.join(getHomeDir(), '.claude', filename)
-);
 const SENDER_ICON_CACHE = new Map<string, NotificationConstructorOptions['icon'] | undefined>();
 const WINDOWS_TOAST_AVATAR_CACHE = new Map<string, string | undefined>();
 /**
@@ -135,11 +124,6 @@ interface TeamNotificationAvatarMember {
   name: string;
   removedAt?: number | string | null;
   agentType?: string;
-}
-
-interface LegacyNotificationData {
-  path: string;
-  data: string;
 }
 
 type NotificationEventName = 'click' | 'close' | 'show' | 'failed';
@@ -562,138 +546,6 @@ function buildWindowsTeamToastXml(input: {
   ]
     .filter(Boolean)
     .join('');
-}
-
-async function migrateLegacyNotificationPath(): Promise<string> {
-  try {
-    await fsp.readFile(NOTIFICATIONS_PATH, 'utf8');
-    return NOTIFICATIONS_PATH;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      return NOTIFICATIONS_PATH;
-    }
-  }
-
-  const legacyNotificationData = await selectLegacyNotificationData();
-  if (!legacyNotificationData) {
-    return NOTIFICATIONS_PATH;
-  }
-
-  try {
-    await fsp.mkdir(path.dirname(NOTIFICATIONS_PATH), { recursive: true });
-    await fsp.writeFile(NOTIFICATIONS_PATH, legacyNotificationData.data, {
-      encoding: 'utf8',
-      flag: 'wx',
-    });
-    return NOTIFICATIONS_PATH;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      return NOTIFICATIONS_PATH;
-    }
-
-    return legacyNotificationData.path;
-  }
-}
-
-async function selectLegacyNotificationData(): Promise<LegacyNotificationData | null> {
-  const readableData: LegacyNotificationData[] = [];
-
-  for (const legacyPath of LEGACY_NOTIFICATION_PATHS) {
-    try {
-      const legacyData = await fsp.readFile(legacyPath, 'utf8');
-      const candidate = { path: legacyPath, data: legacyData };
-      if (isNotificationHistoryJson(legacyData)) {
-        return candidate;
-      }
-      readableData.push(candidate);
-    } catch {
-      // Continue to older legacy filenames.
-    }
-  }
-
-  return readableData[0] ?? null;
-}
-
-function isNotificationHistoryJson(data: string): boolean {
-  return parseNotificationHistory(data) !== null;
-}
-
-interface NotificationHistoryParseResult {
-  notifications: StoredNotification[];
-  recovered: boolean;
-}
-
-function parseNotificationHistory(data: string): NotificationHistoryParseResult | null {
-  const parsed = parseNotificationHistoryArray(data);
-  if (parsed) {
-    return { notifications: parsed, recovered: false };
-  }
-
-  const firstArrayEnd = findFirstJsonArrayEnd(data);
-  if (firstArrayEnd === null) {
-    return null;
-  }
-
-  const recovered = parseNotificationHistoryArray(data.slice(0, firstArrayEnd));
-  return recovered ? { notifications: recovered, recovered: true } : null;
-}
-
-function parseNotificationHistoryArray(data: string): StoredNotification[] | null {
-  try {
-    const parsed = JSON.parse(data) as unknown;
-    return Array.isArray(parsed) ? (parsed as StoredNotification[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-function findFirstJsonArrayEnd(data: string): number | null {
-  const start = data.search(/\S/u);
-  if (start === -1 || data[start] !== '[') {
-    return null;
-  }
-
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let index = start; index < data.length; index++) {
-    const char = data[index];
-
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === '\\') {
-        escaped = true;
-      } else if (char === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inString = true;
-      continue;
-    }
-
-    if (char === '[') {
-      depth += 1;
-      continue;
-    }
-
-    if (char === ']') {
-      depth -= 1;
-      if (depth === 0) {
-        return index + 1;
-      }
-    }
-  }
-
-  return null;
-}
-
-async function writeNotificationsFileAtomically(filePath: string, data: string): Promise<void> {
-  await atomicWriteAsync(filePath, data);
 }
 
 // =============================================================================

@@ -34,7 +34,11 @@ export interface MemberWorkSyncFeatureFacade {
   scheduleProofMissingRecovery(
     request: MemberWorkSyncProofMissingRecoveryScheduleRequest
   ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult>;
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
   noteTeamChange(event: TeamChangeEvent): void;

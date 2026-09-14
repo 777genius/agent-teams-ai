@@ -1,5 +1,10 @@
 import { createHash } from 'crypto';
 
+import {
+  OPEN_CODE_BRIDGE_COMMAND_NAMES,
+  type OpenCodeBridgeCommandName,
+} from './OpenCodeBridgeCommandNames';
+
 import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
 import type { NativeAgentAttachmentMimeType } from '@features/agent-attachments/contracts';
 import type {
@@ -14,21 +19,8 @@ export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
 export const OPEN_CODE_FILE_PARTS_CONTRACT_VERSION = 2 as const;
-export type OpenCodeBridgeCommandName =
-  | 'opencode.handshake'
-  | 'opencode.commandStatus'
-  | 'opencode.readiness'
-  | 'opencode.cleanupHosts'
-  | 'opencode.launchTeam'
-  | 'opencode.reconcileTeam'
-  | 'opencode.stopTeam'
-  | 'opencode.sendMessage'
-  | 'opencode.observeMessageDelivery'
-  | 'opencode.answerPermission'
-  | 'opencode.listRuntimePermissions'
-  | 'opencode.getRuntimeTranscript'
-  | 'opencode.recoverDeliveryJournal'
-  | 'opencode.backfillTaskLedger';
+export const OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION = 2 as const;
+export type { OpenCodeBridgeCommandName } from './OpenCodeBridgeCommandNames';
 export type OpenCodeTeamLaunchBridgeState =
   | 'blocked'
   | 'launching'
@@ -71,8 +63,8 @@ export interface OpenCodeLaunchTeamCommandBody {
   manifestHighWatermark: number | null;
   capabilitySnapshotRecoveryAttemptId?: string;
   executionProof?: OpenCodeExecutionProof;
+  expectedBehaviorFingerprint: string;
 }
-
 export interface OpenCodeRuntimePermissionCommandData {
   requestId: string;
   sessionId: string | null;
@@ -105,8 +97,8 @@ export interface OpenCodeLaunchTeamCommandData {
   manifestHighWatermark?: number | null;
   runtimeStoreManifestHighWatermark?: number | null;
   durableCheckpoints?: { name: string; memberName?: string | null; observedAt: string }[];
+  expectedBehaviorFingerprint?: string;
 }
-
 export interface OpenCodeReconcileTeamCommandBody {
   runId: string;
   laneId: string;
@@ -120,28 +112,10 @@ export interface OpenCodeReconcileTeamCommandBody {
   reason: string;
 }
 
-export interface OpenCodeStopTeamCommandBody {
-  runId: string;
-  laneId: string;
-  teamId: string;
-  teamName: string;
-  projectPath?: string;
-  expectedCapabilitySnapshotId?: string | null;
-  manifestHighWatermark?: number | null;
-  reason: string;
-  force?: boolean;
-}
-
-export interface OpenCodeStopTeamCommandData {
-  runId: string;
-  stopped: boolean;
-  members: Record<string, { sessionId?: string; stopped: boolean; diagnostics: string[] }>;
-  warnings: OpenCodeTeamBridgeWarning[];
-  diagnostics: OpenCodeTeamBridgeDiagnostic[];
-  idempotencyKey?: string;
-  manifestHighWatermark?: number | null;
-  runtimeStoreManifestHighWatermark?: number | null;
-}
+export type {
+  OpenCodeStopTeamCommandBody,
+  OpenCodeStopTeamCommandData,
+} from './OpenCodeRuntimeStopProtocol';
 
 export interface OpenCodeAnswerPermissionCommandBody {
   runId: string;
@@ -178,6 +152,12 @@ export interface OpenCodeCleanupHostsCommandBody {
   staleAgeMs?: number | null;
   leaseStaleAgeMs?: number | null;
   preflightLeaseStaleAgeMs?: number | null;
+}
+
+export interface OpenCodeStartupCleanupStatus {
+  completion: 'drained' | 'unknown';
+  coverage: 'complete' | 'partial';
+  survivingPids: number[];
 }
 
 export interface OpenCodeCleanupHostsCommandData {
@@ -486,6 +466,7 @@ export interface OpenCodeBridgePeerIdentity {
     opencodeAppManagedBootstrapContractVersion?: number;
     opencodeDeliveryAcceptanceContractVersion?: number;
     opencodeFilePartsContractVersion?: number;
+    expectedBehaviorFingerprintSchemaVersion?: number;
   };
   runtime: {
     providerId: 'opencode';
@@ -511,6 +492,7 @@ export interface OpenCodeBridgeHandshake {
   acceptedCommands: OpenCodeBridgeCommandName[];
   serverTime: string;
   identityHash: string;
+  stopRecoveryContractVersion?: number;
 }
 export interface OpenCodeBridgeCommandPreconditions {
   handshakeIdentityHash: string;
@@ -532,26 +514,19 @@ export interface OpenCodeStateChangingBridgeEnvelope<
 
 export interface RuntimeStoreManifestEvidence {
   highWatermark: number;
+  sessionIdentityHash?: string;
+  stopSessions?: {
+    teamName: string;
+    laneId: string;
+    runId: string | null;
+    memberName: string;
+    sessionId: string;
+  }[];
+  behaviorFingerprint?: string | null;
   activeRunId?: string | null;
   capabilitySnapshotId?: string | null;
 }
-
-const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
-  'opencode.handshake',
-  'opencode.commandStatus',
-  'opencode.readiness',
-  'opencode.cleanupHosts',
-  'opencode.launchTeam',
-  'opencode.reconcileTeam',
-  'opencode.stopTeam',
-  'opencode.sendMessage',
-  'opencode.observeMessageDelivery',
-  'opencode.answerPermission',
-  'opencode.listRuntimePermissions',
-  'opencode.getRuntimeTranscript',
-  'opencode.recoverDeliveryJournal',
-  'opencode.backfillTaskLedger',
-]);
+const VALID_COMMANDS: ReadonlySet<string> = new Set(OPEN_CODE_BRIDGE_COMMAND_NAMES);
 
 const VALID_FAILURE_KINDS: ReadonlySet<OpenCodeBridgeFailureKind> = new Set([
   'unsupported_schema',
@@ -741,6 +716,17 @@ export function validateOpenCodeBridgeHandshake(input: {
           'OpenCode app-managed bootstrap is required, but the orchestrator does not advertise contract version 1. Update agent_teams_orchestrator and restart the app.',
       };
     }
+    if (
+      [
+        input.handshake.client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion,
+        input.handshake.server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion,
+      ].some((version) => version !== OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION)
+    )
+      return {
+        ok: false,
+        reason:
+          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
+      };
   }
 
   if (
@@ -1039,7 +1025,8 @@ function isPeerIdentity(value: unknown): value is OpenCodeBridgePeerIdentity {
     !isContractVersion(bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
-    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion)
+    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion) ||
+    !isContractVersion(bridgeProtocol.expectedBehaviorFingerprintSchemaVersion)
   ) {
     return false;
   }

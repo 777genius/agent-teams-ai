@@ -12,7 +12,7 @@ import {
 import type {
   OpenCodeMemberDirectory,
   OpenCodeMemberIdentityResolution,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamConfig, TeamMember, TeamProviderId } from '@shared/types';
 
 export interface OpenCodeSoloRuntimeRosterInput {

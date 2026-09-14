@@ -125,8 +125,12 @@ export class TeamMemberWorktreeManager {
       if (!existingStat.isDirectory()) {
         throw new Error(`Worktree path exists but is not a directory: ${worktreePath}`);
       }
-      await this.assertExistingWorktreeMatchesRepo(worktreePath, baseRepoPath, branchName);
-      return { baseRepoPath, worktreePath, branchName };
+      const currentBranch = await this.validateExistingWorktreeAndGetBranch(
+        worktreePath,
+        baseRepoPath,
+        request.memberName
+      );
+      return { baseRepoPath, worktreePath, branchName: currentBranch };
     }
 
     const legacyStat = await fs.promises.stat(legacyWorktreePath).catch(() => null);
@@ -134,8 +138,12 @@ export class TeamMemberWorktreeManager {
       if (!legacyStat.isDirectory()) {
         throw new Error(`Worktree path exists but is not a directory: ${legacyWorktreePath}`);
       }
-      await this.assertExistingWorktreeMatchesRepo(legacyWorktreePath, baseRepoPath, branchName);
-      return { baseRepoPath, worktreePath: legacyWorktreePath, branchName };
+      const currentBranch = await this.validateExistingWorktreeAndGetBranch(
+        legacyWorktreePath,
+        baseRepoPath,
+        request.memberName
+      );
+      return { baseRepoPath, worktreePath: legacyWorktreePath, branchName: currentBranch };
     }
 
     await fs.promises.mkdir(path.dirname(worktreePath), { recursive: true });
@@ -157,15 +165,15 @@ export class TeamMemberWorktreeManager {
     return (await realpathIfExists(root)) ?? root;
   }
 
-  private async assertExistingWorktreeMatchesRepo(
+  private async validateExistingWorktreeAndGetBranch(
     worktreePath: string,
     baseRepoPath: string,
-    branchName: string
-  ): Promise<void> {
+    memberName: string
+  ): Promise<string> {
     const [baseCommonRaw, targetCommonRaw, targetBranchRaw] = await Promise.all([
       execGit(['rev-parse', '--git-common-dir'], baseRepoPath),
       execGit(['rev-parse', '--git-common-dir'], worktreePath),
-      execGit(['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath),
+      execGit(['branch', '--show-current'], worktreePath),
     ]);
     const [baseCommon, targetCommon] = await Promise.all([
       resolveGitPath(baseRepoPath, baseCommonRaw),
@@ -174,11 +182,13 @@ export class TeamMemberWorktreeManager {
     if (baseCommon !== targetCommon) {
       throw new Error(`Worktree path belongs to a different git repository: ${worktreePath}`);
     }
-    if (targetBranchRaw !== branchName) {
+    if (!targetBranchRaw) {
       throw new Error(
-        `Worktree path is checked out on "${targetBranchRaw}", expected "${branchName}": ${worktreePath}`
+        `Worktree path for member "${memberName}" has a detached HEAD. Check out a branch before continuing: ${worktreePath}`
       );
     }
+    // An existing teammate worktree may have moved to a task branch; preserve it as-is.
+    return targetBranchRaw;
   }
 
   private async createWorktree(params: {

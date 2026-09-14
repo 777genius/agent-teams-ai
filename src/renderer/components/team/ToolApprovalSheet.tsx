@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
@@ -259,6 +260,8 @@ export const ToolApprovalSheet: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!current) return;
+
     const handleKeyDown = (e: KeyboardEvent): void => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -274,7 +277,7 @@ export const ToolApprovalSheet: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleRespond, isAskQuestion, hasSelection]);
+  }, [current, handleRespond, isAskQuestion, hasSelection]);
 
   // Resolve teammate color for MemberBadge (when source !== 'lead')
   const sourceColor = useMemo(() => {
@@ -282,6 +285,8 @@ export const ToolApprovalSheet: React.FC = () => {
     const member = selectedTeamMembers.find((m) => m.name === current.source);
     return member?.color;
   }, [current, selectedTeamMembers]);
+
+  useOverlayOccupancy(Boolean(current));
 
   if (!current) return null;
 

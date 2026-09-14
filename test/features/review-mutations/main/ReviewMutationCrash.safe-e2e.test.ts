@@ -76,6 +76,29 @@ async function runWorker(
   });
 }
 
+// TerminateProcess, which taskkill /F issues, sets the victim's exit code to 1.
+const WINDOWS_TERMINATE_PROCESS_EXIT_CODE = 1;
+// The fixture's own fail-stop when taskkill is missing from a stripped runner.
+const WINDOWS_TASKKILL_UNAVAILABLE_EXIT_CODE = 137;
+
+function expectAbruptTermination(result: WorkerResult): void {
+  if (process.platform === 'win32') {
+    // Windows has no POSIX signal to observe, so the exit code has to carry the
+    // whole assertion. `code !== 0` was too weak for that: it also accepts a
+    // null code, and an uncaught throw exits 1 as well, so it could not tell a
+    // real TerminateProcess from the fixture falling through its own guard.
+    // Pin the two exit codes the fixture can legitimately produce, and require
+    // a silent stderr, which is what separates them from that throw.
+    expect(result.signal, result.stderr).toBeNull();
+    expect(result.stderr).toBe('');
+    expect([WINDOWS_TERMINATE_PROCESS_EXIT_CODE, WINDOWS_TASKKILL_UNAVAILABLE_EXIT_CODE]).toContain(
+      result.code
+    );
+    return;
+  }
+  expect(result.signal === 'SIGKILL' || result.code === 137, result.stderr).toBe(true);
+}
+
 describe('review mutation crash recovery process E2E', () => {
   afterEach(async () => {
     await Promise.all(
@@ -92,7 +115,7 @@ describe('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers exact disk, history revision, and WAL state after SIGKILL at %s',
+    'recovers exact disk, history revision, and WAL state after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -104,7 +127,7 @@ describe('review mutation crash recovery process E2E', () => {
       await writeFile(filePath, 'before\n', 'utf8');
 
       const crashed = await runWorker('run', claudeBasePath, filePath, auditPath, crashPoint);
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker('recover', claudeBasePath, filePath, auditPath, 'none');
       expect(recovered.code, recovered.stderr).toBe(0);
@@ -136,7 +159,7 @@ describe('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers a history restore after SIGKILL at %s',
+    'recovers a history restore after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-history-restore-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -155,7 +178,7 @@ describe('review mutation crash recovery process E2E', () => {
         crashPoint,
         'history-restore'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',
@@ -194,7 +217,7 @@ describe('review mutation crash recovery process E2E', () => {
     await writeFile(filePath, 'before\n', 'utf8');
 
     const crashed = await runWorker('run', claudeBasePath, filePath, auditPath, 'disk_applied');
-    expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+    expectAbruptTermination(crashed);
     await writeFile(filePath, 'external-after-crash\n', 'utf8');
 
     const refused = await runWorker('recover', claudeBasePath, filePath, auditPath, 'none');
@@ -219,7 +242,7 @@ describe('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers disk Redo and both history branches after SIGKILL at %s',
+    'recovers disk Redo and both history branches after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-disk-redo-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -238,7 +261,7 @@ describe('review mutation crash recovery process E2E', () => {
         crashPoint,
         'disk-redo'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',
@@ -311,7 +334,7 @@ describe('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers decision-only Redo after SIGKILL at %s',
+    'recovers decision-only Redo after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-redo-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -330,7 +353,7 @@ describe('review mutation crash recovery process E2E', () => {
         crashPoint,
         'decision-only-redo'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',

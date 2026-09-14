@@ -38,6 +38,15 @@ interface LaunchDialogPrefillResult {
   limitContext: boolean;
 }
 
+/**
+ * Persisted launch metadata is read back from disk and may be legacy or hand-edited,
+ * so anything that is not a non-empty string must degrade to "no saved backend id"
+ * instead of reaching a string method.
+ */
+export function normalizeSavedBackendId(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
 function normalizeModelCandidate(
   model: string | undefined,
   providerId: TeamProviderId | undefined
@@ -111,7 +120,8 @@ export function resolveLaunchDialogPrefill({
   const providerBackendId =
     migrateProviderBackendId(
       providerId,
-      previousLaunchParams?.providerBackendId?.trim() || savedRequest?.providerBackendId?.trim()
+      normalizeSavedBackendId(previousLaunchParams?.providerBackendId) ??
+        normalizeSavedBackendId(savedRequest?.providerBackendId)
     ) ??
     getDefaultProviderBackendId(providerId) ??
     undefined;

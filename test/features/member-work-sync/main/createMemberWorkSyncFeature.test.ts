@@ -1300,6 +1300,182 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('releases every quiescence source when an abandoned preparation is aborted', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const abandonedIdentityId = '11111111-1111-4111-8111-111111111111';
+    const retryIdentityId = '33333333-3333-4333-8333-333333333333';
+    // The gate wait is the part with no deadline of its own: one wedged team
+    // operation parks it for good.
+    const gateIdle = createDeferred();
+    const awaitTeamIdle = vi
+      .spyOn(MemberWorkSyncTeamOperationGate.prototype, 'awaitTeamIdle')
+      .mockImplementation(() => gateIdle.promise);
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockResolvedValue(undefined);
+    const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+    const auditResumeTeam = vi.spyOn(QuiescingMemberWorkSyncAuditJournal.prototype, 'resumeTeam');
+    const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    const abandon = new AbortController();
+    let abandoned: Promise<void> | null = null;
+    let retry: Promise<void> | null = null;
+
+    try {
+      abandoned = feature.prepareTeamDeletion(' Team-A ', abandonedIdentityId, {
+        signal: abandon.signal,
+      });
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+
+      abandon.abort();
+      await expect(abandoned).rejects.toThrow('was abandoned before it completed');
+
+      // Everything the preparation quiesced is back before the retry runs.
+      expect(operationResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(auditResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(routerResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+
+      // A retry gets a preparation of its own rather than the abandoned promise,
+      // which may never settle.
+      retry = feature.prepareTeamDeletion(' Team-A ', retryIdentityId);
+      expect(retry).not.toBe(abandoned);
+
+      // Letting the abandoned wait finish must not carry it into the purge: the
+      // team is running again and only the retry owns the deletion now.
+      gateIdle.resolve();
+      await expect(retry).resolves.toBeUndefined();
+      expect(purgeTeam).toHaveBeenCalledOnce();
+      expect(purgeTeam).toHaveBeenCalledWith(' Team-A ', retryIdentityId);
+    } finally {
+      gateIdle.resolve();
+      await abandoned?.catch(() => undefined);
+      await retry?.catch(() => undefined);
+      await feature.dispose();
+      routerResumeTeam.mockRestore();
+      auditResumeTeam.mockRestore();
+      operationResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
+      awaitTeamIdle.mockRestore();
+    }
+  });
+
+  it('refuses a preparation whose signal is already aborted', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const beginTeamQuiesce = vi.spyOn(
+      MemberWorkSyncTeamOperationGate.prototype,
+      'beginTeamQuiesce'
+    );
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+
+    try {
+      // An abort that arrives before the listener exists would be ignored, and
+      // the team would be quiesced with nothing left to release it. Nothing is
+      // quiesced at all instead.
+      await expect(
+        feature.prepareTeamDeletion(' Team-A ', undefined, { signal: AbortSignal.abort() })
+      ).rejects.toThrow('was abandoned before it completed');
+      expect(beginTeamQuiesce).not.toHaveBeenCalled();
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+    } finally {
+      await feature.dispose();
+      beginTeamQuiesce.mockRestore();
+    }
+  });
+
+  it('ignores an abort once the preparation has already succeeded', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const deletionIdentityId = '11111111-1111-4111-8111-111111111111';
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockResolvedValue(undefined);
+    const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    const abandon = new AbortController();
+
+    try {
+      await expect(
+        feature.prepareTeamDeletion(' Team-A ', deletionIdentityId, { signal: abandon.signal })
+      ).resolves.toBeUndefined();
+
+      // Negative control for the abort above: a late abort of a preparation that
+      // already did its job must not hand the team back. Between prepare and
+      // complete the team is quiesced on purpose, because the destructive half
+      // of the deletion runs there.
+      abandon.abort();
+      expect(operationResumeTeam).not.toHaveBeenCalled();
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+      expect(purgeTeam).toHaveBeenCalledOnce();
+    } finally {
+      await feature.dispose();
+      operationResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
+    }
+  });
+
   it('cancels and drains admitted scheduled delivery before purging the team', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);

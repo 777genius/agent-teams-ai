@@ -54,19 +54,25 @@
       "choosingAllProjects": "Choisissez un modèle pour les projets sans remplacement.",
       "choosingProject": "Choisissez un modèle uniquement pour {{project}}.",
       "cancelChoosing": "Annuler",
+      "select": "Sélectionner",
+      "selected": "Sélectionné",
       "testAndUse": "Tester et utiliser",
       "testAndUseAllProjects": "Tester et utiliser pour tous les projets",
       "testAndUseProject": "Tester et utiliser pour ce projet"
     },
     "diagnostics": {
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante",
       "copied": "Diagnostic copié",
       "copiedShort": "Copié",
       "copy": "Copier les diagnostics",
+      "copyAll": "Copier tous les diagnostics",
       "hints": "Conseils",
       "likelyCause": "Cause probable:",
       "windowsSymlinkAdminHint": "Windows: lancez Agent Teams AI en tant qu'administrateur"
     },
     "models": {
+      "testingElapsed": "En attente du résultat du test... {{seconds}} s",
       "alreadyDefault": "C'est déjà la valeur par défaut d'OpenCode sélectionnée.",
       "empty": "Aucun modèle trouvé.",
       "emptyFree": "Aucun modèle gratuit trouvé.",

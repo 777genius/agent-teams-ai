@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { openAnnouncementHistory } from '@features/announcements/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -21,6 +22,7 @@ import {
   FileText,
   Gauge,
   MoreHorizontal,
+  Newspaper,
   Puzzle,
   Search,
   Settings,
@@ -59,6 +61,7 @@ export const MoreMenu = ({
   const [buttonHover, setButtonHover] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const {
     openCommandPalette,
@@ -127,6 +130,20 @@ export const MoreMenu = ({
 
   // Build menu sections
   const topItems: MenuItem[] = [
+    ...(isElectronMode()
+      ? [
+          {
+            id: 'news',
+            label: t('announcements.title'),
+            icon: Newspaper,
+            onClick: () => {
+              setIsOpen(false);
+              triggerRef.current?.focus();
+              openAnnouncementHistory();
+            },
+          },
+        ]
+      : []),
     {
       id: 'teams',
       label: t('layout.menu.teams'),
@@ -259,6 +276,7 @@ export const MoreMenu = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            ref={triggerRef}
             onClick={() => setIsOpen(!isOpen)}
             onMouseEnter={() => setButtonHover(true)}
             onMouseLeave={() => setButtonHover(false)}

@@ -72,7 +72,30 @@
       "externalTeam": "echipă externă",
       "crossTeamAwaitingReply": "Mesaj între echipe trimis, se așteaptă răspunsul",
       "user": "utilizator",
-      "awaitingApproval": "se așteaptă aprobarea"
+      "awaitingApproval": "se așteaptă aprobarea",
+      "discardQueued": {
+        "action": "Renunță la mesajele din coadă",
+        "alreadyDelivered": "Nu s-a eliminat nimic: acele mesaje fuseseră deja livrate către \"{{member}}\".",
+        "cancelLabel": "Anulează",
+        "confirmLabel": "Renunță",
+        "count": "{{count}} în coadă",
+        "count_few": "{{count}} în coadă",
+        "count_many": "{{count}} în coadă",
+        "count_one": "{{count}} în coadă",
+        "count_other": "{{count}} în coadă",
+        "failedFallbackMessage": "A apărut o eroare neașteptată",
+        "failedTitle": "Mesajele din coadă nu au putut fi eliminate",
+        "message": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_few": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_many": "Renunți la {{count}} de mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_one": "Renunți la {{count}} mesaj din coadă pentru \"{{member}}\"? Nu a fost încă livrat și va fi eliminat definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_other": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "okLabel": "OK",
+        "remaining": "Eliminate: {{discarded}}. Rămân în coadă: {{remaining}}.",
+        "resultTitle": "Mesaje în coadă",
+        "title": "Renunță la mesajele din coadă",
+        "tooltip": "Renunță la mesajele din coadă ale acestui membru"
+      }
     },
     "reply": {
       "replyingTo": "Se răspunde la",
@@ -312,8 +335,14 @@
       "saved": "Salvat"
     },
     "worktree": {
-      "description": "Rulează acest coechipier într-un git worktree separat. Aplicarea/respingerea modificărilor vizează acel worktree, nu spațiul de lucru al liderului.",
-      "label": "Worktree"
+      "description": "Bifat: folosește un worktree Git separat, creat la pornire dacă este necesar. Worktree-urile existente își păstrează branch-ul curent. Debifat: folosește spațiul de lucru partajat al proiectului; vechiul worktree este păstrat.",
+      "label": "Worktree",
+      "existing": "Ultimul spațiu de lucru: {{path}}. Worktree-ul gestionat este reutilizat dacă este disponibil; altfel, este creat la pornire.",
+      "new": "Worktree: este reutilizat dacă este disponibil; altfel, este creat la pornire. Branch-ul va fi afișat după pornire.",
+      "shared": "Spațiul de lucru partajat al proiectului: {{path}}. Folosește branch-ul proiectului.",
+      "sharedPending": "Spațiu de lucru partajat: este stabilit la pornire împreună cu worktree-ul liderului. Branch-ul va fi afișat după pornire.",
+      "branch": "Branch-ul worktree-ului: {{branch}}",
+      "branchUnavailable": "Indisponibil"
     },
     "addMembers": {
       "title": "Adaugă membri",
@@ -333,6 +362,7 @@
       "launch": "Lansează",
       "remove": "Elimină",
       "stop": "Oprește",
+      "stopping": "Se oprește...",
       "task": "Sarcină",
       "visualize": "Vizualizează",
       "usage": "Utilizare"
@@ -354,6 +384,14 @@
       "member_one": "membru",
       "member_other": "membri",
       "title": "Echipa nu a fost încă lansată"
+    },
+    "stopFailed": {
+      "title": "Echipa nu a putut fi oprită",
+      "message": "Echipa încă rulează. Verificați starea și apăsați din nou Oprește."
+    },
+    "stopUnknown": {
+      "title": "Oprirea nu a putut fi confirmată",
+      "message": "Nu s-a primit niciun răspuns de la mediul de execuție. Reîmprospătați starea echipei înainte de a reîncerca."
     },
     "invalidTab": "Filă de echipă invalidă",
     "kanbanSafeData": "Încărcarea completă a kanban-ului a eșuat. Se afișează date sigure.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Relansează echipa",
       "relaunching": "Se relansează...",
       "saveChanges": "Salvează modificările",
-      "saving": "Se salvează..."
+      "saving": "Se salvează...",
+      "skipPreflightAndLaunch": "Omite verificarea și lansează"
+    },
+    "workspaceTrust": {
+      "description": "La pornirea echipei se pot executa comenzi ale proiectului și servere MCP."
     },
     "billing": {
       "prefix": "Începând cu 15 iunie 2026, Anthropic facturează",
@@ -1540,6 +1582,11 @@
       "message": "Ștergi echipa \"{{teamName}}\" permanent? Toate datele vor fi pierdute.",
       "confirmLabel": "Șterge definitiv",
       "cancelLabel": "Anulează"
+    },
+    "deleteFailed": {
+      "title": "Ștergerea echipei a eșuat",
+      "fallbackMessage": "A apărut o eroare neașteptată",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Dacă directorul nu există, va fi creat automat."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Coechipierul nu s-a alăturat în perioada de grație a lansării."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Membri",
       "addMember": "Adaugă membru",
       "editAsJson": "Editează ca JSON",
-      "runInSeparateWorktrees": "Rulează coechipierii în worktree-uri separate",
+      "runInSeparateWorktrees": "Worktree pentru toți membrii echipei",
       "agentTeamsMcpOnly": "Doar Agent Teams MCP",
       "removedCount": "Eliminați ({{count}})",
       "removedModelLockReason": "Membrii eliminați sunt păstrați pentru istoricul de ștergere temporară. Restaurează-i pentru a edita setările.",
-      "memberNamesUnique": "Numele membrilor trebuie să fie unice"
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice",
+      "worktreeDescription": "Bifat: worktree-uri separate pentru toți membrii. Mixt: doar pentru membrii selectați. Debifat: spațiul de lucru partajat al proiectului. Dezactivarea acestei opțiuni păstrează worktree-urile existente pe disc."
     },
     "stats": {
       "computing": "Se calculează statisticile...",
@@ -2401,7 +2452,7 @@
   },
   "advancedCli": {
     "title": "Avansat",
-    "useWorktree": "Folosește worktree",
+    "useWorktree": "Worktree-ul liderului (separat de worktree-urile celorlalți membri)",
     "recent": "Recente",
     "commandPreview": "Previzualizare comandă",
     "customArguments": "Argumente personalizate",

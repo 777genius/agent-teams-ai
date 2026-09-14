@@ -226,47 +226,56 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     expect(fs.existsSync(helperDirectory)).toBe(false);
   });
 
-  it('removes pending helper material when direct tmux preparation fails', async () => {
-    const helperDirectory = createHelperDirectory();
-    const input = createInput();
-    const host = createHost(helperDirectory, input.run);
-    host.materializeEffectiveTeamMemberSpecs.mockRejectedValueOnce(
-      new Error('member materialization failed')
-    );
-    const controller = createController(host);
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
-      new Map([['%7', { paneId: '%7', panePid: 777, currentCommand: 'zsh' }]])
-    );
+  // Direct tmux restart is POSIX-only by contract: isInteractiveShellCommand()
+  // returns false on win32 (tmux runs under WSL there), so the pane-busy guard
+  // fires before the behaviour under test can be reached.
+  it.skipIf(process.platform === 'win32')(
+    'removes pending helper material when direct tmux preparation fails',
+    async () => {
+      const helperDirectory = createHelperDirectory();
+      const input = createInput();
+      const host = createHost(helperDirectory, input.run);
+      host.materializeEffectiveTeamMemberSpecs.mockRejectedValueOnce(
+        new Error('member materialization failed')
+      );
+      const controller = createController(host);
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([['%7', { paneId: '%7', panePid: 777, currentCommand: 'zsh' }]])
+      );
 
-    await expect(
-      (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
+      await expect(
+        (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
+          ...input,
+          paneId: '%7',
+        })
+      ).rejects.toThrow('member materialization failed');
+
+      expect(host.buildProvisioningEnv).toHaveBeenCalledTimes(1);
+      expect(fs.existsSync(helperDirectory)).toBe(false);
+      expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'retains helper material after a direct tmux restart command is delivered',
+    async () => {
+      const helperDirectory = createHelperDirectory();
+      const input = createInput();
+      const host = createHost(helperDirectory, input.run);
+      const controller = createController(host);
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([['%8', { paneId: '%8', panePid: 778, currentCommand: 'zsh' }]])
+      );
+
+      await (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
         ...input,
-        paneId: '%7',
-      })
-    ).rejects.toThrow('member materialization failed');
+        paneId: '%8',
+      });
 
-    expect(host.buildProvisioningEnv).toHaveBeenCalledTimes(1);
-    expect(fs.existsSync(helperDirectory)).toBe(false);
-    expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
-  });
-
-  it('retains helper material after a direct tmux restart command is delivered', async () => {
-    const helperDirectory = createHelperDirectory();
-    const input = createInput();
-    const host = createHost(helperDirectory, input.run);
-    const controller = createController(host);
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
-      new Map([['%8', { paneId: '%8', panePid: 778, currentCommand: 'zsh' }]])
-    );
-
-    await (controller as unknown as DirectTmuxRestartController).launchDirectTmuxMemberRestart({
-      ...input,
-      paneId: '%8',
-    });
-
-    expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
-    expect(fs.existsSync(helperDirectory)).toBe(true);
-  });
+      expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+      expect(fs.existsSync(helperDirectory)).toBe(true);
+    }
+  );
 
   it('removes helper material when a spawned direct process is rolled back', async () => {
     const helperDirectory = createHelperDirectory();

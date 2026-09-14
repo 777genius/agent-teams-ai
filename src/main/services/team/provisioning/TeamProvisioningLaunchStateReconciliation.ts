@@ -106,6 +106,21 @@ export interface GuardCommittedOpenCodeSecondaryLaneEvidencePorts {
     state: 'active';
     diagnostics: string[];
   }): Promise<void>;
+  /**
+   * Per-member committed-session lookup. `hasRuntimeEvidenceOnDisk` is a LANE
+   * flag: it flips as soon as one member commits, so on a multi-member primary
+   * lane a teammate's session record masks a lead that has none - the exact
+   * member this gate exists for. Optional so a caller that wires no reader keeps
+   * the lane-level behaviour. Declared as a plain function value, not a method:
+   * the gate reads it off the ports object once and calls it per member, so an
+   * implementation may never depend on its `this`.
+   */
+  hasCommittedOpenCodeLaneMemberSessionEvidence?: (input: {
+    teamName: string;
+    laneId: string;
+    runId: string;
+    memberName: string;
+  }) => Promise<boolean>;
   logWarn(message: string): void;
 }
 
@@ -516,38 +531,114 @@ export function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(inp
   };
 }
 
-export async function guardCommittedOpenCodeSecondaryLaneEvidence(
+/**
+ * The exact failure string the runtime store invariants produce for this
+ * condition. That invariant was never wired into a launch path, so a lead
+ * promoted to `confirmed_alive` with no session record broke it silently; the
+ * promotion gate now names the invariant it enforces.
+ */
+export function buildMissingOpenCodeSessionRecordDiagnostic(memberName: string): string {
+  return `confirmed member ${memberName} has no matching OpenCode session record`;
+}
+
+function claimsOpenCodeBootstrapConfirmed(
+  evidence: TeamRuntimeLaunchResult['members'][string] | undefined
+): boolean {
+  return (
+    evidence != null &&
+    (evidence.launchState === 'confirmed_alive' ||
+      evidence.bootstrapConfirmed === true ||
+      evidence.livenessKind === 'confirmed_bootstrap')
+  );
+}
+
+function matchesOpenCodeAppManagedBootstrapCandidate(params: {
+  teamName: string;
+  laneId: string;
+  runId: string;
+  memberName: string;
+  evidence: TeamRuntimeLaunchResult['members'][string];
+}): boolean {
+  const { evidence } = params;
+  const candidate =
+    evidence.bootstrapEvidenceSource === 'app_managed_bootstrap' &&
+    evidence.bootstrapMode === 'app_managed_context'
+      ? evidence.appManagedBootstrapCandidate
+      : undefined;
+  return (
+    candidate?.source === 'app_managed_bootstrap' &&
+    candidate.teamName === params.teamName &&
+    candidate.memberName === params.memberName &&
+    candidate.runId === params.runId &&
+    candidate.laneId === params.laneId &&
+    candidate.runtimeSessionId === evidence.sessionId?.trim()
+  );
+}
+
+async function collectUncommittedOpenCodeLaneMemberNames(
   params: {
     teamName: string;
     laneId: string;
     result: TeamRuntimeLaunchResult;
-    memberName: string;
+    guardedMemberNames: readonly string[];
+    laneHasRuntimeEvidenceOnDisk: boolean;
+  },
+  ports: GuardCommittedOpenCodeSecondaryLaneEvidencePorts
+): Promise<string[]> {
+  const readMemberEvidence = ports.hasCommittedOpenCodeLaneMemberSessionEvidence;
+  const uncommittedMemberNames: string[] = [];
+  for (const memberName of params.guardedMemberNames) {
+    if (!claimsOpenCodeBootstrapConfirmed(params.result.members[memberName])) {
+      continue;
+    }
+    const committed = readMemberEvidence
+      ? // A read that throws cannot disprove anything, so it may never downgrade
+        // a healthy member; only an answered `false` is proof of a missing record.
+        await readMemberEvidence({
+          teamName: params.teamName,
+          laneId: params.laneId,
+          runId: params.result.runId,
+          memberName,
+        }).catch(() => true)
+      : params.laneHasRuntimeEvidenceOnDisk;
+    if (!committed) {
+      uncommittedMemberNames.push(memberName);
+    }
+  }
+  return uncommittedMemberNames;
+}
+
+/**
+ * The single promotion gate that turns app-managed OpenCode bootstrap into
+ * `confirmed_alive` only after durable lane evidence exists on disk. Lane-kind
+ * agnostic on purpose: the primary lane's lead is the one member that used to
+ * skip it, which is exactly how a team whose lead held no session record was
+ * still promoted to a healthy `ready`.
+ */
+export async function guardCommittedOpenCodeLaneEvidence(
+  params: {
+    teamName: string;
+    laneId: string;
+    result: TeamRuntimeLaunchResult;
+    memberNames: readonly string[];
   },
   ports: GuardCommittedOpenCodeSecondaryLaneEvidencePorts
 ): Promise<TeamRuntimeLaunchResult> {
-  const memberEvidence = params.result.members[params.memberName];
-  if (!memberEvidence) {
-    return params.result;
-  }
-
-  const claimsBootstrapConfirmed =
-    memberEvidence.launchState === 'confirmed_alive' ||
-    memberEvidence.bootstrapConfirmed === true ||
-    memberEvidence.livenessKind === 'confirmed_bootstrap';
-  const runtimeSessionId = memberEvidence.sessionId?.trim();
-  const appManagedCandidate =
-    memberEvidence.bootstrapEvidenceSource === 'app_managed_bootstrap' &&
-    memberEvidence.bootstrapMode === 'app_managed_context'
-      ? memberEvidence.appManagedBootstrapCandidate
-      : undefined;
-  const appManagedCandidateMatches =
-    appManagedCandidate?.source === 'app_managed_bootstrap' &&
-    appManagedCandidate.teamName === params.teamName &&
-    appManagedCandidate.memberName === params.memberName &&
-    appManagedCandidate.runId === params.result.runId &&
-    appManagedCandidate.laneId === params.laneId &&
-    appManagedCandidate.runtimeSessionId === runtimeSessionId;
-  if (!claimsBootstrapConfirmed && !appManagedCandidateMatches) {
+  const guardedMemberNames = params.memberNames.filter((memberName) => {
+    const evidence = params.result.members[memberName];
+    return (
+      evidence != null &&
+      (claimsOpenCodeBootstrapConfirmed(evidence) ||
+        matchesOpenCodeAppManagedBootstrapCandidate({
+          teamName: params.teamName,
+          laneId: params.laneId,
+          runId: params.result.runId,
+          memberName,
+          evidence,
+        }))
+    );
+  });
+  if (guardedMemberNames.length === 0) {
     return params.result;
   }
   const committedResult = await ports.commitOpenCodeRuntimeAdapterLaunchSessionEvidence({
@@ -555,27 +646,44 @@ export async function guardCommittedOpenCodeSecondaryLaneEvidence(
     laneId: params.laneId,
     result: params.result,
   });
-  const committedMemberEvidence = committedResult.members[params.memberName] ?? memberEvidence;
 
   const storage = await ports.inspectOpenCodeRuntimeLaneStorage({
     teamName: params.teamName,
     laneId: params.laneId,
   });
-  if (storage.hasRuntimeEvidenceOnDisk) {
-    return committedResult;
-  }
-  if (!claimsBootstrapConfirmed) {
+  const uncommittedMemberNames = await collectUncommittedOpenCodeLaneMemberNames(
+    {
+      ...params,
+      // The COMMITTED result, not the one that came in: the commit promotes a
+      // matching app-managed candidate to confirmed, and reading the pre-commit
+      // result made the collector skip exactly those members - the ones whose
+      // confirmation this commit just created and nothing has yet read back the
+      // way the delivery path will.
+      result: committedResult,
+      guardedMemberNames,
+      laneHasRuntimeEvidenceOnDisk: storage.hasRuntimeEvidenceOnDisk,
+    },
+    ports
+  );
+  if (uncommittedMemberNames.length === 0) {
     return committedResult;
   }
 
-  const diagnostics = buildOpenCodeUncommittedBootstrapDiagnostic(storage);
-  const members = {
-    ...committedResult.members,
-    [params.memberName]: downgradeUncommittedOpenCodeBootstrapEvidence(
-      committedMemberEvidence,
-      diagnostics
-    ),
-  };
+  const laneDiagnostics = buildOpenCodeUncommittedBootstrapDiagnostic(storage);
+  const diagnostics = [
+    ...laneDiagnostics,
+    ...uncommittedMemberNames.map(buildMissingOpenCodeSessionRecordDiagnostic),
+  ];
+  const members = { ...committedResult.members };
+  for (const memberName of uncommittedMemberNames) {
+    // Each member carries only its OWN missing-record diagnostic: a union would
+    // make one member's evidence name other members, which reads as a wider
+    // outage than the one that happened.
+    members[memberName] = downgradeUncommittedOpenCodeBootstrapEvidence(
+      committedResult.members[memberName] ?? params.result.members[memberName],
+      [...laneDiagnostics, buildMissingOpenCodeSessionRecordDiagnostic(memberName)]
+    );
+  }
   await ports
     .upsertOpenCodeRuntimeLaneIndexEntry({
       teamName: params.teamName,
@@ -593,10 +701,25 @@ export async function guardCommittedOpenCodeSecondaryLaneEvidence(
 
   const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
   return {
-    ...params.result,
-    launchPhase: teamLaunchState === 'clean_success' ? params.result.launchPhase : 'active',
+    ...committedResult,
+    launchPhase: teamLaunchState === 'clean_success' ? committedResult.launchPhase : 'active',
     teamLaunchState,
     members,
     diagnostics: Array.from(new Set([...committedResult.diagnostics, ...diagnostics])),
   };
+}
+
+export async function guardCommittedOpenCodeSecondaryLaneEvidence(
+  params: {
+    teamName: string;
+    laneId: string;
+    result: TeamRuntimeLaunchResult;
+    memberName: string;
+  },
+  ports: GuardCommittedOpenCodeSecondaryLaneEvidencePorts
+): Promise<TeamRuntimeLaunchResult> {
+  return await guardCommittedOpenCodeLaneEvidence(
+    { ...params, memberNames: [params.memberName] },
+    ports
+  );
 }

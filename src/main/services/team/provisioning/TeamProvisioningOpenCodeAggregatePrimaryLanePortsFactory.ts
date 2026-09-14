@@ -39,7 +39,9 @@ export interface TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactoryDeps {
   upsertOpenCodeRuntimeLaneIndexEntry?: LaunchOpenCodeAggregatePrimaryLanePorts['upsertOpenCodeRuntimeLaneIndexEntry'];
   setOpenCodeRuntimeActiveRunManifest?: LaunchOpenCodeAggregatePrimaryLanePorts['setOpenCodeRuntimeActiveRunManifest'];
   clearOpenCodeRuntimeLaneStorage?: LaunchOpenCodeAggregatePrimaryLanePorts['clearOpenCodeRuntimeLaneStorage'];
+  guardCommittedOpenCodeLaneEvidence?: LaunchOpenCodeAggregatePrimaryLanePorts['guardCommittedOpenCodeLaneEvidence'];
   logWarning?: LaunchOpenCodeAggregatePrimaryLanePorts['logWarning'];
+  logDiagnostic?: LaunchOpenCodeAggregatePrimaryLanePorts['logDiagnostic'];
 }
 
 export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(
@@ -90,6 +92,10 @@ export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromServi
       });
       service.invalidateRuntimeSnapshotCaches(input.teamName);
     },
+    ...(deps.guardCommittedOpenCodeLaneEvidence
+      ? { guardCommittedOpenCodeLaneEvidence: deps.guardCommittedOpenCodeLaneEvidence }
+      : {}),
     logWarning: deps.logWarning ?? ((message) => logger.warn(message)),
+    logDiagnostic: deps.logDiagnostic ?? ((message) => logger.diagnostic(message)),
   };
 }

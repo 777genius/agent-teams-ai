@@ -67,6 +67,31 @@ export function getOpenCodeRuntimeDeliveryRecordTimeMs(
   return 0;
 }
 
+/**
+ * Latest moment this record was observed.
+ *
+ * `getOpenCodeRuntimeDeliveryRecordTimeMs` prefers `failedAt`, which
+ * `markFailedTerminal` stamps once. A record whose observe loop keeps
+ * re-confirming the same failure would therefore carry a frozen timestamp, and
+ * the advisory the user sees would claim to be as old as the first failure
+ * however long the lane has been re-checked since. The surfaced advisory has to
+ * age with the last observation instead.
+ */
+export function getOpenCodeRuntimeDeliveryLatestObservationTimeMs(
+  record: OpenCodePromptDeliveryLedgerRecord
+): number {
+  const times = [
+    record.failedAt,
+    record.respondedAt,
+    record.lastObservedAt,
+    record.lastAttemptAt,
+    record.updatedAt,
+  ]
+    .map((candidate) => Date.parse(candidate ?? ''))
+    .filter((time) => Number.isFinite(time) && time > 0);
+  return times.length > 0 ? Math.max(...times) : 0;
+}
+
 export function getOpenCodeRuntimeDeliveryPromptTimeMs(
   record: OpenCodePromptDeliveryLedgerRecord
 ): number {
@@ -194,8 +219,13 @@ export function decideOpenCodeRuntimeDeliveryAdvisory(input: {
   const now = input.now ?? Date.now();
   const graceMs = input.graceMs ?? OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS;
   const recordTime = getOpenCodeRuntimeDeliveryRecordTimeMs(input.record);
+  const latestObservationTime = getOpenCodeRuntimeDeliveryLatestObservationTimeMs(input.record);
   const observedAt = new Date(
-    Number.isFinite(recordTime) && recordTime > 0 ? recordTime : now
+    latestObservationTime > 0
+      ? latestObservationTime
+      : Number.isFinite(recordTime) && recordTime > 0
+        ? recordTime
+        : now
   ).toISOString();
   const reasonCode = classifyOpenCodeRuntimeDeliveryReasonCode(reason);
 

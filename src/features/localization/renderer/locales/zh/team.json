@@ -72,7 +72,30 @@
       "externalTeam": "外部团队",
       "crossTeamAwaitingReply": "跨团队消息已发送，等待回复",
       "user": "用户",
-      "awaitingApproval": "等待批准"
+      "awaitingApproval": "等待批准",
+      "discardQueued": {
+        "action": "丢弃排队中的消息",
+        "alreadyDelivered": "未丢弃任何内容：这些消息已经送达“{{member}}”。",
+        "cancelLabel": "取消",
+        "confirmLabel": "丢弃",
+        "count": "排队 {{count}} 条",
+        "count_few": "排队 {{count}} 条",
+        "count_many": "排队 {{count}} 条",
+        "count_one": "排队 {{count}} 条",
+        "count_other": "排队 {{count}} 条",
+        "failedFallbackMessage": "发生意外错误",
+        "failedTitle": "无法丢弃排队中的消息",
+        "message": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_few": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_many": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_one": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_other": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "okLabel": "确定",
+        "remaining": "已丢弃 {{discarded}} 条。仍在排队：{{remaining}} 条。",
+        "resultTitle": "排队中的消息",
+        "title": "丢弃排队中的消息",
+        "tooltip": "丢弃该成员排队中的消息"
+      }
     },
     "reply": {
       "replyingTo": "正在回复",
@@ -312,8 +335,14 @@
       "saved": "已保存"
     },
     "worktree": {
-      "description": "在单独的 Git worktree中运行该队友。应用/拒绝更改的目标是工作树，而不是主要工作区。",
-      "label": "工作树"
+      "description": "选中: 使用单独的 Git worktree，必要时会在启动时创建。现有 worktree 会保留当前分支。未选中: 使用共享项目工作区，原有 worktree 将予以保留。",
+      "label": "工作树",
+      "existing": "上次使用的工作区: {{path}}。如有可用的托管 worktree 则会复用，否则将在启动时创建。",
+      "new": "Worktree: 如有可用项则会复用，否则将在启动时创建。启动后将显示分支。",
+      "shared": "共享项目工作区: {{path}}。使用项目分支。",
+      "sharedPending": "共享工作区: 启动时与负责人 worktree 一并确定。启动后将显示分支。",
+      "branch": "Worktree 分支: {{branch}}",
+      "branchUnavailable": "不可用"
     },
     "addMembers": {
       "title": "添加成员",
@@ -333,6 +362,7 @@
       "launch": "启动",
       "remove": "消除",
       "stop": "停止",
+      "stopping": "正在停止...",
       "task": "任务",
       "visualize": "可视化",
       "usage": "使用量"
@@ -354,6 +384,14 @@
       "member_one": "成员",
       "member_other": "成员",
       "title": "团队尚未启动"
+    },
+    "stopFailed": {
+      "title": "无法停止团队",
+      "message": "团队仍在运行。请检查其状态，然后再次按下“停止”。"
+    },
+    "stopUnknown": {
+      "title": "无法确认停止",
+      "message": "未收到运行时响应。请刷新团队状态后再试。"
     },
     "invalidTab": "团队选项卡无效",
     "kanbanSafeData": "无法完全加载看板。显示安全数据。",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "重新启动团队",
       "relaunching": "重新启动…",
       "saveChanges": "保存更改",
-      "saving": "保存…"
+      "saving": "保存…",
+      "skipPreflightAndLaunch": "跳过预检并启动"
+    },
+    "workspaceTrust": {
+      "description": "团队启动时可能会运行项目命令和 MCP 服务器。"
     },
     "billing": {
       "prefix": "自 2026 年 6 月 15 日起，Anthropic 账单",
@@ -1540,6 +1582,11 @@
       "message": "永久删除团队“{{teamName}}”？所有数据都将丢失。",
       "confirmLabel": "永久删除",
       "cancelLabel": "取消"
+    },
+    "deleteFailed": {
+      "title": "删除团队失败",
+      "fallbackMessage": "发生意外错误",
+      "confirmLabel": "好的"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "如果该目录不存在，则会自动创建。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "队友未在启动宽限时间内加入。"
+    },
     "badges": {
       "worktree": "工作树"
     },
@@ -1799,11 +1849,12 @@
       "title": "成员",
       "addMember": "添加成员",
       "editAsJson": "编辑为 JSON",
-      "runInSeparateWorktrees": "在单独的工作树中运行队友",
+      "runInSeparateWorktrees": "为所有队友使用 worktree",
       "agentTeamsMcpOnly": "仅限 Agent Team MCP",
       "removedCount": "已删除 ({{count}})",
       "removedModelLockReason": "已删除的成员将保留软删除历史记录。恢复它们以编辑设置。",
-      "memberNamesUnique": "成员名称必须是唯一的"
+      "memberNamesUnique": "成员名称必须是唯一的",
+      "worktreeDescription": "选中: 所有队友使用单独的 worktree。部分选中: 仅所选队友使用。未选中: 使用共享项目工作区。关闭此选项后，现有 worktree 仍会保留在磁盘上。"
     },
     "stats": {
       "computing": "计算统计数据…",
@@ -2401,7 +2452,7 @@
   },
   "advancedCli": {
     "title": "高级",
-    "useWorktree": "使用工作树",
+    "useWorktree": "负责人 worktree (与队友 worktree 分开)",
     "recent": "最近的",
     "commandPreview": "命令预览",
     "customArguments": "自定义参数",

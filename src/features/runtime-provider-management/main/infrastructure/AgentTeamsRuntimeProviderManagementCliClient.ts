@@ -3,6 +3,7 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
+import { recoverOpenCodeConnectApiKeyVerifyFailure } from './openCodeConnectApiKeyFallback';
 import {
   ensureOpenCodeGlobalDefaultContextPath,
   getOpenCodeGlobalDefaultContextPath,
@@ -12,6 +13,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import { RuntimeProviderCatalogDiagnostics } from './runtimeProviderCatalogDiagnostics';
 import {
   appendBoundedSpawnOutput,
   appendOptionalArg,
@@ -31,6 +33,9 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
+import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
+import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
+import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
@@ -38,6 +43,7 @@ import {
 } from './runtimeProviderModelTestBoundary';
 
 import type {
+  RuntimeProviderManagementCancelModelLoadInput,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementClearProjectDefaultInput,
@@ -129,13 +135,6 @@ interface ModelResponseCacheEntry {
   response: RuntimeProviderManagementModelsResponse;
 }
 
-interface ModelResponseInFlightEntry {
-  controller: AbortController;
-  hasUngroupedSubscriber: boolean;
-  requestGroups: Set<string>;
-  promise: Promise<RuntimeProviderManagementModelsResponse>;
-}
-
 export interface RuntimeProviderOAuthClientDependencies {
   openExternal?: (url: string) => Promise<void>;
   emitOAuthProgress?: (event: RuntimeProviderOAuthProgressDto) => void;
@@ -218,7 +217,10 @@ function sanitizeRuntimeProviderError(error: unknown): RuntimeProviderManagement
     RUNTIME_PROVIDER_ERROR_CODES.has(rawCode as RuntimeProviderManagementErrorDto['code'])
       ? (rawCode as RuntimeProviderManagementErrorDto['code'])
       : 'runtime-unhealthy';
-  const diagnostics = sanitizeRuntimeProviderDiagnostics(error.diagnostics);
+  const diagnostics = sanitizeRuntimeProviderDiagnostics(
+    error.diagnostics,
+    RUNTIME_PROVIDER_ERROR_CODES
+  );
   const message =
     sanitizeNullableRuntimeProviderText(error.message) ??
     'Runtime provider management command failed';
@@ -253,36 +255,6 @@ function sanitizeRuntimeProviderOutputValue(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [key, sanitizeRuntimeProviderOutputValue(entry)])
   );
-}
-
-function sanitizeRuntimeProviderDiagnostics(
-  diagnostics: unknown
-): RuntimeProviderManagementErrorDto['diagnostics'] {
-  if (!isRecord(diagnostics)) {
-    return null;
-  }
-  return {
-    errorCode:
-      typeof diagnostics.errorCode === 'string' &&
-      RUNTIME_PROVIDER_ERROR_CODES.has(
-        diagnostics.errorCode as RuntimeProviderManagementErrorDto['code']
-      )
-        ? (diagnostics.errorCode as RuntimeProviderManagementErrorDto['code'])
-        : null,
-    summary: sanitizeNullableRuntimeProviderText(diagnostics.summary),
-    likelyCause: sanitizeNullableRuntimeProviderText(diagnostics.likelyCause),
-    binaryPath: sanitizeNullableRuntimeProviderText(diagnostics.binaryPath),
-    command: sanitizeNullableRuntimeProviderText(diagnostics.command),
-    projectPath: sanitizeNullableRuntimeProviderText(diagnostics.projectPath),
-    exitCode: typeof diagnostics.exitCode === 'number' ? diagnostics.exitCode : null,
-    stderrPreview: sanitizeNullableRuntimeProviderText(diagnostics.stderrPreview),
-    stdoutPreview: sanitizeNullableRuntimeProviderText(diagnostics.stdoutPreview),
-    hints: Array.isArray(diagnostics.hints)
-      ? diagnostics.hints
-          .filter((hint): hint is string => typeof hint === 'string')
-          .map(sanitizeRuntimeProviderText)
-      : [],
-  };
 }
 
 function sanitizeNullableRuntimeProviderText(value: unknown): string | null {
@@ -1000,6 +972,36 @@ function collectSpawnOutput(
   });
 }
 
+function parseProviderCommandResponse(
+  runtimeId: RuntimeProviderManagementRuntimeId,
+  context: RuntimeProviderCommandContext,
+  result: { stdout: string; stderr: string; code: number | null; stdinError: string | null }
+): RuntimeProviderManagementProviderResponse {
+  const stderr = mergeSpawnStderrWithStdinError(result);
+  if (result.code === 0) {
+    return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
+      result.stdout,
+      context,
+      stderr
+    );
+  }
+  try {
+    return sanitizeRuntimeProviderResponse(
+      extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
+    );
+  } catch {
+    return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+      runtimeId,
+      formatNonJsonCliOutputError({
+        context,
+        stdout: result.stdout,
+        stderr,
+        exitCode: result.code,
+      })
+    );
+  }
+}
+
 function mergeSpawnStderrWithStdinError(result: {
   stderr: string;
   stdinError: string | null;
@@ -1282,8 +1284,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   >();
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
-  private readonly modelResponseInFlight = new Map<string, ModelResponseInFlightEntry>();
-  private readonly activeModelRequestGroups = new Map<string, string>();
+  private readonly modelRequests = new RuntimeProviderModelRequestTracker();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
@@ -1425,13 +1426,21 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheKey: string,
     response: RuntimeProviderManagementModelsResponse,
     ttlMs: number,
-    cacheGeneration: number
+    cacheGeneration: number,
+    cacheKeyGeneration: number
   ): RuntimeProviderManagementModelsResponse {
     if (
-      cacheGeneration === this.modelResponseCacheGeneration &&
+      (cacheGeneration !== this.modelResponseCacheGeneration ||
+        !this.modelRequests.isGenerationCurrent(cacheKey, cacheKeyGeneration)) &&
       response.models &&
       !response.error
     ) {
+      return {
+        ...response,
+        models: { ...response.models, catalogState: 'stale' },
+      };
+    }
+    if (response.models && !response.error) {
       this.modelResponseCache.delete(cacheKey);
       this.pruneModelResponseCache();
       this.modelResponseCache.set(cacheKey, {
@@ -1451,66 +1460,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private invalidateModelResponseCache(abortInFlight = true): void {
     this.modelResponseCacheGeneration += 1;
     this.modelResponseCache.clear();
-    if (!abortInFlight) {
-      // Detach stale work from deduplication without disrupting callers that
-      // are already displaying it. A refresh can then start a fresh request
-      // immediately, and the detached response cannot repopulate the cache
-      // because its generation no longer matches.
-      this.modelResponseInFlight.clear();
-      this.activeModelRequestGroups.clear();
-      return;
-    }
-    for (const entry of this.modelResponseInFlight.values()) {
-      entry.controller.abort();
-    }
-    this.modelResponseInFlight.clear();
-    this.activeModelRequestGroups.clear();
+    this.modelRequests.clear(abortInFlight);
   }
 
   private invalidateProviderResponseCaches(): void {
     this.invalidateDirectoryResponseCache();
     this.invalidateModelResponseCache();
-  }
-
-  private releaseSupersededModelRequest(requestGroupId: string, nextCacheKey: string): void {
-    const previousCacheKey = this.activeModelRequestGroups.get(requestGroupId);
-    if (!previousCacheKey || previousCacheKey === nextCacheKey) {
-      return;
-    }
-    this.activeModelRequestGroups.delete(requestGroupId);
-    const previousEntry = this.modelResponseInFlight.get(previousCacheKey);
-    if (!previousEntry) {
-      return;
-    }
-    previousEntry.requestGroups.delete(requestGroupId);
-    if (!previousEntry.hasUngroupedSubscriber && previousEntry.requestGroups.size === 0) {
-      previousEntry.controller.abort();
-    }
-  }
-
-  private registerModelRequestSubscriber(
-    entry: ModelResponseInFlightEntry,
-    cacheKey: string,
-    requestGroupId: string | null
-  ): void {
-    if (requestGroupId) {
-      entry.requestGroups.add(requestGroupId);
-      this.activeModelRequestGroups.set(requestGroupId, cacheKey);
-      return;
-    }
-    entry.hasUngroupedSubscriber = true;
-  }
-
-  private cleanupModelResponseInFlight(cacheKey: string, entry: ModelResponseInFlightEntry): void {
-    if (this.modelResponseInFlight.get(cacheKey) !== entry) {
-      return;
-    }
-    this.modelResponseInFlight.delete(cacheKey);
-    for (const requestGroupId of entry.requestGroups) {
-      if (this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
-    }
   }
 
   private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
@@ -1627,6 +1582,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
+    const previous = this.directoryResponseCache.get(cacheKey)?.response;
     const refreshInFlightKey = `refresh:${cacheKey}`;
     const cachedInFlightKey = `cached:${cacheKey}`;
     if (input.refresh) {
@@ -1655,12 +1611,20 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       return existingRequest;
     }
 
-    const request = this.loadProviderDirectoryUncached(
-      input,
-      projectPath,
-      cacheKey,
-      this.directoryResponseCacheGeneration
-    );
+    const attempt = new RuntimeProviderCatalogDiagnostics('provider_directory', projectPath);
+    const generation = this.directoryResponseCacheGeneration;
+    const normalize = (response: RuntimeProviderManagementDirectoryResponse) =>
+      normalizeRuntimeProviderDirectoryResponse(response, input.summary === true, previous);
+    const request = this.loadProviderDirectoryUncached(input, projectPath, attempt, (response) =>
+      this.writeDirectoryResponseCache(
+        cacheKey,
+        normalize(response),
+        this.getDirectoryResponseCacheTtlMs(input),
+        generation
+      )
+    )
+      .then(normalize)
+      .then((response) => attempt.finish(response));
     this.directoryResponseInFlight.set(inFlightKey, request);
     try {
       return await request;
@@ -1674,8 +1638,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private async loadProviderDirectoryUncached(
     input: RuntimeProviderManagementLoadDirectoryInput,
     projectPath: string | null,
-    cacheKey: string,
-    cacheGeneration: number
+    attempt: RuntimeProviderCatalogDiagnostics,
+    onSuccess: (
+      response: RuntimeProviderManagementDirectoryResponse
+    ) => RuntimeProviderManagementDirectoryResponse
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const { binaryPath, env } = await resolveCliEnv();
     if (!binaryPath) {
@@ -1686,9 +1652,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
 
     const args = ['runtime', 'providers', 'directory', '--runtime', input.runtimeId, '--json'];
-    if (input.summary === true) {
-      args.push('--summary');
-    }
+    if (input.summary === true) args.push('--summary');
     appendOptionalArg(args, '--project-path', projectPath);
     appendOptionalArg(args, '--query', input.query ?? null);
     appendOptionalArg(args, '--filter', input.filter ?? null);
@@ -1709,20 +1673,17 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
 
     try {
-      const { stdout, stderr } = await execCli(
+      const { stdout, stderr } = await attempt.exec(
         binaryPath,
         args,
         runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
       );
-      return this.writeDirectoryResponseCache(
-        cacheKey,
+      return onSuccess(
         extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
           stdout,
           context,
           stderr
-        ),
-        this.getDirectoryResponseCacheTtlMs(input),
-        cacheGeneration
+        )
       );
     } catch (error) {
       const failure = normalizeCommandFailure(error, context);
@@ -1736,23 +1697,28 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           );
           if (junctionReady) {
             try {
-              const retryResult = await execCli(
+              const retryResult = await attempt.exec(
                 binaryPath,
                 args,
                 runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
               );
-              return this.writeDirectoryResponseCache(
-                cacheKey,
+              return onSuccess(
                 extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
                   retryResult.stdout,
                   context,
                   retryResult.stderr
-                ),
-                this.getDirectoryResponseCacheTtlMs(input),
-                cacheGeneration
+                )
               );
-            } catch {
-              // Retry also failed; fall through to return the original error.
+            } catch (retryError) {
+              return (
+                extractJsonObjectFromError<RuntimeProviderManagementDirectoryResponse>(
+                  retryError
+                ) ??
+                commandFailureResponse<RuntimeProviderManagementDirectoryResponse>(
+                  input.runtimeId,
+                  normalizeCommandFailure(retryError, context)
+                )
+              );
             }
           }
         }
@@ -1982,29 +1948,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       } else {
         result = await collectSpawnOutput(child, stdinValue);
       }
-      if (result.code === 0) {
-        return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
-          result.stdout,
-          context,
-          mergeSpawnStderrWithStdinError(result)
-        );
-      }
-
-      try {
-        return sanitizeRuntimeProviderResponse(
-          extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
-        );
-      } catch {
-        return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-          input.runtimeId,
-          formatNonJsonCliOutputError({
-            context,
-            stdout: result.stdout,
-            stderr: mergeSpawnStderrWithStdinError(result),
-            exitCode: result.code,
-          })
-        );
-      }
+      const parsed = parseProviderCommandResponse(input.runtimeId, context, result);
+      return this.recoverConnectVerifyFailure(input, parsed);
     } catch (error) {
       if (isOAuth) {
         const active = this.activeOAuthOperations.get(oauthOperationId);
@@ -2024,13 +1969,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         }
       }
       const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
-      if (response) {
-        return response;
-      }
-      return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-        input.runtimeId,
-        normalizeCommandFailure(error, context)
-      );
+      return response
+        ? this.recoverConnectVerifyFailure(input, response)
+        : commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+            input.runtimeId,
+            normalizeCommandFailure(error, context)
+          );
     } finally {
       if (isOAuth) {
         this.activeOAuthOperations.delete(oauthOperationId);
@@ -2175,41 +2119,32 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         )
       ) as ChildProcessWithoutNullStreams;
       const result = await collectSpawnOutput(child, input.apiKey);
-      if (result.code === 0) {
-        return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
-          result.stdout,
-          context,
-          mergeSpawnStderrWithStdinError(result)
-        );
-      }
-
-      try {
-        return sanitizeRuntimeProviderResponse(
-          extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
-        );
-      } catch {
-        return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-          input.runtimeId,
-          formatNonJsonCliOutputError({
-            context,
-            stdout: result.stdout,
-            stderr: mergeSpawnStderrWithStdinError(result),
-            exitCode: result.code,
-          })
-        );
-      }
+      return this.recoverConnectVerifyFailure(
+        input,
+        parseProviderCommandResponse(input.runtimeId, context, result)
+      );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
-      if (response) {
-        return response;
-      }
-      return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-        input.runtimeId,
-        normalizeCommandFailure(error, context)
-      );
+      return response
+        ? this.recoverConnectVerifyFailure(input, response)
+        : commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+            input.runtimeId,
+            normalizeCommandFailure(error, context)
+          );
     } finally {
       this.invalidateProviderResponseCaches();
     }
+  }
+
+  // See `recoverOpenCodeConnectApiKeyVerifyFailure` for why this exists.
+  private async recoverConnectVerifyFailure(
+    input: RuntimeProviderManagementConnectApiKeyInput | RuntimeProviderManagementConnectInput,
+    response: RuntimeProviderManagementProviderResponse
+  ): Promise<RuntimeProviderManagementProviderResponse> {
+    return recoverOpenCodeConnectApiKeyVerifyFailure(input, response, {
+      loadView: (viewInput) => this.loadView(viewInput),
+      invalidateProviderCaches: () => this.invalidateProviderResponseCaches(),
+    });
   }
 
   async forgetCredential(
@@ -2270,7 +2205,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.invalidateProviderResponseCaches();
     }
   }
-
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
@@ -2278,53 +2212,73 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
     const requestGroupId = input.requestGroupId?.trim() || null;
     if (requestGroupId) {
-      this.releaseSupersededModelRequest(requestGroupId, cacheKey);
+      this.modelRequests.releaseSuperseded(requestGroupId, cacheKey);
     }
-
-    const cached = this.readModelResponseCache(cacheKey);
+    const currentRefresh =
+      input.refresh === true ? this.modelRequests.reuseRefresh(cacheKey, requestGroupId) : null;
+    if (currentRefresh) return currentRefresh;
+    if (input.refresh === true) {
+      this.modelResponseCache.delete(cacheKey);
+      this.modelRequests.beginRefresh(cacheKey);
+    }
+    const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
-      if (requestGroupId && this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
+      if (requestGroupId) this.modelRequests.releaseForCacheHit(requestGroupId, cacheKey);
       return cached;
     }
-
-    const existingRequest = this.modelResponseInFlight.get(cacheKey);
-    if (existingRequest) {
-      this.registerModelRequestSubscriber(existingRequest, cacheKey, requestGroupId);
+    const existingRequest = this.modelRequests.get(cacheKey);
+    if (existingRequest?.controller.signal.aborted) {
+      this.modelRequests.discard(cacheKey);
+    } else if (existingRequest) {
+      this.modelRequests.register(existingRequest, cacheKey, requestGroupId);
       return existingRequest.promise;
     }
-
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
+    const cacheKeyGeneration = this.modelRequests.getGeneration(cacheKey);
+    const attempt = new RuntimeProviderCatalogDiagnostics(
+      'provider_models',
+      projectPath,
+      input.providerId
+    );
     const promise = this.loadModelsUncached(
       input,
       projectPath,
       cacheKey,
       cacheGeneration,
-      controller.signal
-    );
-    const inFlightEntry: ModelResponseInFlightEntry = {
+      cacheKeyGeneration,
+      controller.signal,
+      attempt
+    ).then((response) => (controller.signal.aborted ? response : attempt.finish(response)));
+    const inFlightEntry = {
       controller,
+      refresh: input.refresh === true,
       hasUngroupedSubscriber: false,
       requestGroups: new Set<string>(),
       promise,
     };
-    this.registerModelRequestSubscriber(inFlightEntry, cacheKey, requestGroupId);
-    this.modelResponseInFlight.set(cacheKey, inFlightEntry);
+    this.modelRequests.register(inFlightEntry, cacheKey, requestGroupId);
+    this.modelRequests.set(cacheKey, inFlightEntry);
     try {
       return await promise;
     } finally {
-      this.cleanupModelResponseInFlight(cacheKey, inFlightEntry);
+      this.modelRequests.cleanup(cacheKey, inFlightEntry);
     }
   }
-
+  async cancelModelLoad(
+    input: RuntimeProviderManagementCancelModelLoadInput
+  ): Promise<RuntimeProviderManagementModelTestControlResponse> {
+    this.modelRequests.cancel(input.requestGroupId.trim());
+    return { ok: true };
+  }
   private async loadModelsUncached(
     input: RuntimeProviderManagementLoadModelsInput,
     projectPath: string | null,
     cacheKey: string,
     cacheGeneration: number,
-    signal: AbortSignal
+    cacheKeyGeneration: number,
+    signal: AbortSignal,
+    attempt: RuntimeProviderCatalogDiagnostics
   ): Promise<RuntimeProviderManagementModelsResponse> {
     const { binaryPath, env } = await resolveCliEnv();
     if (!binaryPath) {
@@ -2333,7 +2287,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         projectPath
       );
     }
-
     let args = [
       'runtime',
       'providers',
@@ -2362,9 +2315,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (misconfigured) {
       return misconfigured;
     }
-
+    const cacheTtlMs = this.getModelResponseCacheTtlMs(input);
     try {
-      const { stdout, stderr } = await execCli(binaryPath, args, {
+      const { stdout, stderr } = await attempt.exec(binaryPath, args, {
         ...runtimeProviderCommandOptions({ env }, projectPath),
         timeout: COMMAND_TIMEOUT_MS,
         signal,
@@ -2376,13 +2329,20 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           context,
           stderr
         ),
-        this.getModelResponseCacheTtlMs(input),
-        cacheGeneration
+        cacheTtlMs,
+        cacheGeneration,
+        cacheKeyGeneration
       );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementModelsResponse>(error);
       if (response) {
-        return response;
+        return this.writeModelResponseCache(
+          cacheKey,
+          response,
+          cacheTtlMs,
+          cacheGeneration - (signal.aborted ? 1 : 0),
+          cacheKeyGeneration
+        );
       }
       return commandFailureResponse<RuntimeProviderManagementModelsResponse>(
         input.runtimeId,
@@ -2510,7 +2470,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         input.modelId,
         '--scope',
         input.scope === 'all_projects' ? 'all-projects' : 'project',
-        '--probe',
+        ...(input.probe === false ? [] : ['--probe']),
         '--compact',
         '--json',
       ],

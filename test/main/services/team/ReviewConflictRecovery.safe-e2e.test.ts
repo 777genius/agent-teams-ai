@@ -35,7 +35,13 @@ function runWorker(mode: string, root: string): Promise<WorkerResult> {
   });
 }
 
-describe('review conflict recovery process safety', () => {
+// SIGKILL semantics: the cases kill a child mid-write and assert what the
+// survivor observes. Windows has no real SIGKILL - process.kill() maps to
+// TerminateProcess - so the crash-left state these assertions model cannot be
+// produced faithfully here.
+const describePosix = process.platform === 'win32' ? describe.skip : describe;
+
+describePosix('review conflict recovery process safety', () => {
   afterEach(async () => {
     await Promise.all(
       temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true }))

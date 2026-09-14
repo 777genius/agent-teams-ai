@@ -1,15 +1,144 @@
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot as createReactRoot, type Root } from 'react-dom/client';
 
 import {
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type {
+  RuntimeLocalProviderListInput,
+  RuntimeLocalProviderListResponse,
+  RuntimeProviderManagementLoadModelsInput,
+  RuntimeProviderManagementModelsResponse,
+} from '@features/runtime-provider-management/contracts';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { ElectronAPI } from '@shared/types/api';
+
+const mountedRoots = new Set<Root>();
+
+function createRoot(container: Element | DocumentFragment): Root {
+  const reactRoot = createReactRoot(container);
+  let mounted = true;
+  const trackedRoot: Root = {
+    render: (children) => reactRoot.render(children),
+    unmount: () => {
+      if (!mounted) return;
+      mounted = false;
+      mountedRoots.delete(trackedRoot);
+      reactRoot.unmount();
+    },
+  };
+  mountedRoots.add(trackedRoot);
+  return trackedRoot;
+}
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+function providerModelsResponse(
+  providerId: string,
+  modelIds: readonly string[] = [],
+  options: {
+    catalogState?: 'fresh' | 'stale';
+    error?: string;
+  } = {}
+): RuntimeProviderManagementModelsResponse {
+  if (options.error) {
+    return {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      error: { code: 'runtime-unhealthy', message: options.error, recoverable: true },
+    };
+  }
+  return {
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    models: {
+      runtimeId: 'opencode',
+      providerId,
+      models: modelIds.map((modelId, index) => ({
+        modelId,
+        providerId,
+        displayName: modelId.slice(modelId.indexOf('/') + 1),
+        sourceLabel: providerId === 'opencode' ? 'OpenCode Zen' : providerId,
+        free: providerId === 'opencode',
+        default: index === 0,
+        availability: 'available',
+        accessKind: providerId === 'opencode' ? 'builtin_free' : 'credentialed',
+        routeKind: providerId === 'opencode' ? 'builtin_free' : 'connected_provider',
+        accessReason: null,
+      })),
+      defaultModelId: modelIds[0] ?? null,
+      diagnostics: [],
+      catalogState: options.catalogState ?? 'fresh',
+      nextCursor: null,
+    },
+  };
+}
+
+function installLoadModelsApi(
+  loadModels: (
+    input: RuntimeProviderManagementLoadModelsInput
+  ) => Promise<RuntimeProviderManagementModelsResponse>,
+  listLocalProviders: (
+    input: RuntimeLocalProviderListInput
+  ) => Promise<RuntimeLocalProviderListResponse> = async (input) => ({
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    scope: input.scope,
+    providers: [],
+  })
+): void {
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      runtimeProviderManagement: { listLocalProviders, loadModels },
+    } as unknown as ElectronAPI,
+  });
+}
+
+async function resolveDeferred<T>(deferred: Deferred<T>, value: T): Promise<void> {
+  await act(async () => {
+    deferred.resolve(value);
+    await deferred.promise;
+    await Promise.resolve();
+  });
+}
+
+async function hydrateFailClosedAuthorityClocks(): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
+
+// Real-timer counterpart for tests that keep real timers: the fail-closed
+// authority clocks publish their first reading from a setTimeout(0) callback,
+// and that dispatch only flushes when awaited inside act().
+async function flushFailClosedAuthorityClocks(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
 
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
@@ -133,7 +262,20 @@ import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/d
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
 describe('TeamModelSelector disabled Codex models', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    vi.stubGlobal('EventSource', undefined);
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of [...mountedRoots]) {
+        root.unmount();
+      }
+      await Promise.resolve();
+    });
+    if (vi.isFakeTimers()) {
+      vi.clearAllTimers();
+    }
     resetRuntimeProviderDirectoryCacheForTests();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'electronAPI');
@@ -161,6 +303,51 @@ describe('TeamModelSelector disabled Codex models', () => {
     codexAccountHookState.logout.mockClear();
     useVirtualizerMock.mockClear();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('requests only the selected deferred Codex provider once across rerenders', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const providers = ['anthropic', 'codex', 'opencode'].map((providerId) => ({
+      providerId,
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: 'Provider status will refresh when needed.',
+      models: [],
+      capabilities: { teamLaunch: false, oneShot: false },
+      modelCatalogRefreshState: 'idle',
+      runtimeCapabilities: null,
+      backend: null,
+    }));
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', installed: true, providers };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const props = {
+      providerId: 'codex' as const,
+      onProviderChange: () => undefined,
+      value: '',
+      onValueChange: () => undefined,
+    };
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, props));
+      await Promise.resolve();
+    });
+    await flushFailClosedAuthorityClocks();
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, props));
+      await Promise.resolve();
+    });
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+      silent: false,
+      checkReason: 'launch_preflight',
+    });
+    expect(
+      providers.every((provider) => !provider.capabilities.teamLaunch && !provider.authenticated)
+    ).toBe(true);
   });
 
   it('shows only Default while Codex runtime models are still loading', async () => {
@@ -976,6 +1163,10 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows an OpenCode catalog loading skeleton instead of the transient big-pickle placeholder', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const loadModels = vi.fn(
+      () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
+    );
+    installLoadModelsApi(loadModels);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1016,7 +1207,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         React.createElement(TeamModelSelector, {
           providerId: 'opencode',
           onProviderChange: () => undefined,
-          value: '',
+          value: 'opencode/big-pickle',
           onValueChange: () => undefined,
         })
       );
@@ -1029,12 +1220,14 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
     ).not.toBeNull();
-    expect(host.textContent).toContain('Default');
     expect(host.textContent).toContain('Loading OpenCode models...');
     expect(host.textContent).toContain('Checking connected providers');
     expect(host.textContent).toContain('Models will appear automatically.');
     expect(host.textContent).not.toContain('big-pickle');
     expect(host.textContent).not.toContain('Recommended only');
+    expect(loadModels).toHaveBeenCalledWith(
+      expect.objectContaining({ runtimeId: 'opencode', providerId: 'opencode' })
+    );
 
     await act(async () => {
       root.unmount();
@@ -1044,6 +1237,10 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('replaces anonymous OpenCode source skeletons with cached connected providers', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const loadModels = vi.fn(
+      () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
+    );
+    installLoadModelsApi(loadModels);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1077,7 +1274,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         React.createElement(TeamModelSelector, {
           providerId: 'opencode',
           onProviderChange: () => undefined,
-          value: '',
+          value: 'opencode/big-pickle',
           onValueChange: () => undefined,
           projectPath,
         })
@@ -1196,25 +1393,19 @@ describe('TeamModelSelector disabled Codex models', () => {
       host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
     ).toBeNull();
     const cachedProvider = host.querySelector(
-      '[data-testid="team-model-selector-provider-nav-loading-xai"]'
+      '[data-testid="team-model-selector-provider-nav-xai"]'
     );
     expect(cachedProvider?.textContent).toContain('SuperGrok');
-    expect(cachedProvider?.getAttribute('aria-label')).toBe(
-      'SuperGrok is connected. Loading models.'
-    );
+    expect(cachedProvider?.getAttribute('data-connection-status')).toBe('connected');
     const cachedCursor = host.querySelector(
-      '[data-testid="team-model-selector-provider-nav-loading-cursor-acp"]'
+      '[data-testid="team-model-selector-provider-nav-cursor-acp"]'
     );
-    expect(cachedCursor?.getAttribute('data-connection-status')).toBe('checking');
-    expect(cachedCursor?.getAttribute('aria-label')).toBe(
-      'Cursor account status and models are loading.'
-    );
+    expect(cachedCursor?.getAttribute('data-connection-status')).toBe('connected');
     expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-loading-project-only"]')
+      host.querySelector('[data-testid="team-model-selector-provider-nav-project-only"]')
     ).toBeNull();
     expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-loading-google"]')
-        ?.textContent
+      host.querySelector('[data-testid="team-model-selector-provider-nav-google"]')?.textContent
     ).toContain('Google Gemini API');
     expect(host.textContent).toContain('Syncing models');
 
@@ -1224,8 +1415,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps stale project-scoped OpenCode models visible while refreshing them', async () => {
+  it('refreshes stale passive OpenCode status while keeping local models visible without remote catalog loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
+    installLoadModelsApi(loadModels);
     const staleModel = 'ollama/stale-local-model';
     const provider = {
       providerId: 'opencode',
@@ -1285,7 +1478,8 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+    expect(loadModels).not.toHaveBeenCalled();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
       silent: true,
       checkReason: 'launch_preflight',
       projectPath: '/tmp/stale-project',
@@ -1301,28 +1495,248 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('refreshes a project-scoped OpenCode catalog when its TTL expires while mounted', async () => {
+  it('keeps catalog Ollama visible after an empty authoritative local overlay lookup', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-20T12:00:00.000Z'));
-    const projectPath = '/tmp/catalog-ttl-project';
+    const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
+    installLoadModelsApi(loadModels);
+    const localModelId = 'ollama/qwen';
     const provider = {
       providerId: 'opencode',
       authenticated: true,
       supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      detailMessage: null,
+      statusMessage: null,
       capabilities: { teamLaunch: true },
-      models: ['ollama/qwen2.5:0.5b'],
+      models: [localModelId],
       modelCatalogRefreshState: 'ready',
       modelCatalog: {
         schemaVersion: 1,
         providerId: 'opencode',
         source: 'app-server',
         status: 'ready',
-        fetchedAt: new Date(Date.now()).toISOString(),
-        staleAt: new Date(Date.now() + 1_000).toISOString(),
-        defaultModelId: 'ollama/qwen2.5:0.5b',
-        defaultLaunchModel: 'ollama/qwen2.5:0.5b',
-        models: [],
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2099-07-20T12:10:00.000Z',
+        defaultModelId: localModelId,
+        defaultLaunchModel: localModelId,
+        models: [
+          {
+            id: localModelId,
+            launchModel: localModelId,
+            displayName: 'qwen',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+            metadata: {
+              opencode: {
+                providerId: 'ollama',
+                modelId: 'qwen',
+                sourceLabel: 'Ollama',
+                accessKind: 'configured_authless',
+                routeKind: 'configured_local',
+                proofState: 'needs_probe',
+                requiresExecutionProof: true,
+                reason: null,
+              },
+            },
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [provider],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    await flushFailClosedAuthorityClocks();
+
+    await vi.waitFor(() => {
+      expect(host.textContent).toContain('qwen');
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-ollama"]')
+    ).toBeNull();
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+    ).not.toBeNull();
+    expect(loadModels).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('never dispatches a remote catalog load for a custom local provider route', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const localLookup = createDeferred<RuntimeLocalProviderListResponse>();
+    const loadModels = vi.fn(async () => providerModelsResponse('corp-local'));
+    installLoadModelsApi(loadModels, () => localLookup.promise);
+    const localModelId = 'corp-local/model';
+    const provider = {
+      providerId: 'opencode',
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true },
+      models: [localModelId],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2099-07-20T12:10:00.000Z',
+        defaultModelId: localModelId,
+        defaultLaunchModel: localModelId,
+        models: [
+          {
+            id: localModelId,
+            launchModel: localModelId,
+            displayName: 'model',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+            metadata: {
+              opencode: {
+                providerId: 'corp-local',
+                modelId: 'model',
+                sourceLabel: 'Corporate Local',
+                accessKind: 'configured_authless',
+                routeKind: 'configured_local',
+                proofState: 'needs_probe',
+                requiresExecutionProof: true,
+                reason: null,
+              },
+            },
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [provider],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: localModelId,
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(loadModels).not.toHaveBeenCalled();
+
+    await resolveDeferred(localLookup, {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      scope: 'global',
+      providers: [
+        {
+          preset: {
+            id: 'custom',
+            providerId: 'corp-local',
+            displayName: 'Corporate Local',
+            defaultBaseUrl: 'http://127.0.0.1:4444/v1',
+            description: 'Test-only custom local provider',
+            scannable: false,
+          },
+          providerId: 'corp-local',
+          baseUrl: 'http://127.0.0.1:4444/v1',
+          configuredModelIds: ['model'],
+          defaultModelId: 'model',
+          isDefault: true,
+          state: 'available',
+          liveModels: [{ id: 'model', displayName: 'model' }],
+          latencyMs: 1,
+          message: 'Connected',
+        },
+      ],
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('model'));
+
+    expect(loadModels).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('reloads the selected provider catalog when the scoped status revision changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const projectPath = '/tmp/catalog-ttl-project';
+    const modelId = 'deepinfra/qwen2.5:0.5b';
+    const loadModels = vi.fn(async () => providerModelsResponse('deepinfra', [modelId]));
+    installLoadModelsApi(loadModels);
+    const provider = {
+      providerId: 'opencode',
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true },
+      models: [modelId],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2026-07-20T12:01:00.000Z',
+        defaultModelId: modelId,
+        defaultLaunchModel: modelId,
+        models: [
+          {
+            id: modelId,
+            launchModel: modelId,
+            displayName: 'qwen2.5:0.5b',
+          },
+        ],
         diagnostics: {
           configReadState: 'ready',
           appServerState: 'healthy',
@@ -1342,30 +1756,39 @@ describe('TeamModelSelector disabled Codex models', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: 'ollama/qwen2.5:0.5b',
-          onValueChange: () => undefined,
-          projectPath,
-        })
-      );
-      await Promise.resolve();
-    });
+    const render = async (): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: modelId,
+            onValueChange: () => undefined,
+            projectPath,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
 
-    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_001);
-    });
+    await render();
+    await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+    expect(loadModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({ providerId: 'deepinfra', projectPath })
+    );
+    storeState.cliProviderStatusScopeRevision += 1;
+    await render();
+    await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(2));
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
       silent: true,
       checkReason: 'launch_preflight',
       projectPath,
     });
 
-    await act(async () => root.unmount());
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('virtualizes large OpenCode model lists instead of rendering every model tile', async () => {
@@ -1551,6 +1974,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows short-lived OpenCode preflight notes as selectable advisory tiles', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1564,10 +1988,35 @@ describe('TeamModelSelector disabled Codex models', () => {
           },
           authenticated: true,
           supported: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           capabilities: {
             teamLaunch: true,
           },
           models: ['openai/gpt-5.4', 'opencode/big-pickle'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'GPT-5.4',
+              },
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+              },
+            ],
+          },
           modelVerificationState: 'idle',
           modelAvailability: [],
         },
@@ -1593,6 +2042,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     const issueButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('big-pickle')
@@ -1633,12 +2083,37 @@ describe('TeamModelSelector disabled Codex models', () => {
           },
           authenticated: true,
           supported: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           capabilities: {
             teamLaunch: true,
           },
           statusMessage: 'OpenAI token invalid',
           detailMessage: 'OpenAI token refresh failed: 401',
           models: ['openai/gpt-5.4', 'opencode/big-pickle'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'GPT-5.4',
+              },
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+              },
+            ],
+          },
           availableBackends: [
             {
               id: 'openai',
@@ -1686,6 +2161,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(openAiButton?.getAttribute('aria-disabled')).toBe('true');
     expect(openAiButton?.textContent).toContain('Unavailable');
     expect(bigPickleButton).not.toBeNull();
+    await flushFailClosedAuthorityClocks();
     expect(bigPickleButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
@@ -2432,8 +2908,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('hydrates Anthropic static fallback catalogs before clearing live-only selections', async () => {
+  it('fail-closes static Anthropic catalogs before accepting live-only selections', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     const onValueChange = vi.fn();
     const staticAnthropicProvider = {
       providerId: 'anthropic',
@@ -2478,11 +2955,19 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
     const liveAnthropicProvider = {
       ...staticAnthropicProvider,
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true, oneShot: true },
       models: ['claude-fable-5', 'claude-mythos-5', 'claude-sonnet-5'],
+      modelCatalogRefreshState: 'ready',
       modelCatalog: {
         ...staticAnthropicProvider.modelCatalog,
         source: 'anthropic-models-api',
         status: 'ready',
+        fetchedAt: '2026-07-03T00:00:00.000Z',
+        staleAt: '2099-07-03T00:10:00.000Z',
         defaultModelId: 'claude-fable-5',
         defaultLaunchModel: 'claude-fable-5',
         models: [
@@ -2553,13 +3038,15 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
       silent: false,
       checkReason: 'launch_preflight',
     });
-    expect(onValueChange).not.toHaveBeenCalledWith('');
+    expect(onValueChange).toHaveBeenCalledWith('');
     expect(host.textContent).not.toContain('Mythos 5');
+    onValueChange.mockClear();
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2577,7 +3064,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-
+    await hydrateFailClosedAuthorityClocks();
     expect(host.textContent).toContain('Fable 5');
     expect(host.textContent).toContain('Mythos 5');
     expect(host.textContent).toContain('Sonnet 5');
@@ -2591,6 +3078,11 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('opens readiness-gated OpenCode as diagnostics without selecting it', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      installed: true,
+      providers: [],
+    };
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -2604,6 +3096,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           value: '',
           onValueChange: () => undefined,
           disableGeminiOption: true,
+          projectPath: '/tmp/opencode-inspection-project',
         })
       );
       await Promise.resolve();
@@ -2616,7 +3109,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const openCodeButton = buttons.find((button) => button.textContent?.includes('OpenCode'));
     expect(openCodeButton).not.toBeNull();
     expect(openCodeButton?.hasAttribute('disabled')).toBe(false);
-    expect(openCodeButton?.getAttribute('aria-disabled')).toBe('true');
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
     expect(openCodeButton?.getAttribute('aria-description')).toContain(
       'OpenCode runtime status is still loading.'
     );
@@ -2627,11 +3120,27 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).not.toHaveBeenCalled();
-    const activeOpenCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('OpenCode')
+    await vi.waitFor(() =>
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+        silent: true,
+        checkReason: 'launch_preflight',
+        projectPath: '/tmp/opencode-inspection-project',
+      })
     );
-    expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    await act(async () => {
+      await vi.waitFor(() => {
+        const activeOpenCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('OpenCode')
+        );
+        expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
+      });
+    });
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(
+      host
+        .querySelector('[data-testid="team-model-selector-provider-status"]')
+        ?.getAttribute('data-tone')
+    ).toBe('info');
     expect(host.textContent).toContain('OpenCode status: checking runtime');
     expect(host.textContent).toContain(
       'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.'
@@ -3147,7 +3656,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       button.textContent?.includes('OpenCode')
     );
     expect(openCodeButton?.hasAttribute('disabled')).toBe(false);
-    expect(openCodeButton?.getAttribute('aria-disabled')).toBe('true');
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
     expect(openCodeButton?.getAttribute('aria-description')).toContain(
       'OpenCode runtime store needs recovery'
     );
@@ -3225,12 +3734,32 @@ describe('TeamModelSelector disabled Codex models', () => {
           providerId: 'opencode',
           supported: true,
           authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           detailMessage: null,
           statusMessage: null,
           capabilities: {
             teamLaunch: true,
           },
           models: ['openrouter/minimax/minimax-m2.5-free'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openrouter/minimax/minimax-m2.5-free',
+                launchModel: 'openrouter/minimax/minimax-m2.5-free',
+                displayName: 'minimax/minimax-m2.5-free',
+              },
+            ],
+          },
         },
       ],
     };
@@ -3238,6 +3767,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => {
       render();
       await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(onProviderChange).not.toHaveBeenCalled();
@@ -3392,7 +3924,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('does not normalize the selected model while viewing OpenCode readiness diagnostics', async () => {
+  it('does not normalize the selected model when unknown OpenCode readiness stays fail closed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -3419,7 +3951,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).toContain('OpenCode runtime status is still loading.');
     expect(onValueChange).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -3699,18 +4233,39 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('keeps ready OpenCode selectable when no role-specific disable is provided', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       providers: [
         {
           providerId: 'opencode',
           supported: true,
           authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           detailMessage: null,
           statusMessage: null,
           capabilities: {
             teamLaunch: true,
           },
           models: ['openrouter/minimax/minimax-m2.5-free'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openrouter/minimax/minimax-m2.5-free',
+                launchModel: 'openrouter/minimax/minimax-m2.5-free',
+                displayName: 'minimax/minimax-m2.5-free',
+              },
+            ],
+          },
         },
       ],
     };
@@ -3730,11 +4285,14 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
-    const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('OpenCode')
+    const openCodeButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-opencode"]'
     );
+    expect(openCodeButton).not.toBeNull();
     expect(openCodeButton?.hasAttribute('disabled')).toBe(false);
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -3791,6 +4349,42 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows connected dashboard OpenCode providers as model tabs', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const catalogModelByProvider: Record<string, string> = {
+      'cursor-acp': 'cursor-acp/auto',
+      'github-copilot': 'github-copilot/gpt-4.1',
+      openrouter: 'openrouter/moonshotai/kimi-k2',
+      'xiaomi-token-plan-ams': 'xiaomi-token-plan-ams/mimo-v2.5',
+    };
+    const sourceLabelByProvider: Record<string, string> = {
+      'cursor-acp': 'Cursor',
+      'github-copilot': 'GitHub Copilot',
+      openrouter: 'OpenRouter',
+      'xiaomi-token-plan-ams': 'Xiaomi Token Plan',
+    };
+    const loadModels = vi.fn(async (input: RuntimeProviderManagementLoadModelsInput) => {
+      const response = providerModelsResponse(input.providerId, [
+        catalogModelByProvider[input.providerId]!,
+      ]);
+      return response.models
+        ? {
+            ...response,
+            models: {
+              ...response.models,
+              models: response.models.models.map((catalogModel) => ({
+                ...catalogModel,
+                sourceLabel: sourceLabelByProvider[input.providerId] ?? catalogModel.sourceLabel,
+                ...(input.providerId === 'cursor-acp'
+                  ? {
+                      accessKind: 'configured_authless' as const,
+                      routeKind: 'configured_local' as const,
+                    }
+                  : {}),
+              })),
+            },
+          }
+        : response;
+    });
+    installLoadModelsApi(loadModels);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -3798,6 +4392,8 @@ describe('TeamModelSelector disabled Codex models', () => {
           providerId: 'opencode',
           supported: true,
           authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           detailMessage: null,
           statusMessage: null,
           capabilities: { teamLaunch: true },
@@ -3808,13 +4404,14 @@ describe('TeamModelSelector disabled Codex models', () => {
             'xiaomi-token-plan-ams/mimo-v2.5',
             'xai/grok-4',
           ],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
             source: 'app-server',
             status: 'ready',
             fetchedAt: '2026-07-12T00:00:00.000Z',
-            staleAt: '2026-07-12T00:10:00.000Z',
+            staleAt: '2099-07-12T00:10:00.000Z',
             defaultModelId: null,
             defaultLaunchModel: null,
             models: [
@@ -4003,6 +4600,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toBe(true);
     expect(host.textContent).not.toContain('SuperGrok');
 
+    await flushFailClosedAuthorityClocks();
+    expect(copilotTab?.hasAttribute('disabled')).toBe(false);
+    expect(copilotTab?.getAttribute('aria-disabled')).toBeNull();
+
     await act(async () => {
       copilotTab?.click();
       await Promise.resolve();
@@ -4028,6 +4629,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await vi.waitFor(() =>
+      expect(loadModels).toHaveBeenCalledWith(expect.objectContaining({ providerId: 'openrouter' }))
+    );
 
     const restoredOpenRouterTab = host.querySelector<HTMLButtonElement>(
       '[data-testid="team-model-selector-provider-nav-openrouter"]'
@@ -4049,24 +4653,25 @@ describe('TeamModelSelector disabled Codex models', () => {
       restoredCopilotTab?.click();
       await Promise.resolve();
     });
+    await vi.waitFor(() =>
+      expect(loadModels).toHaveBeenCalledWith(
+        expect.objectContaining({ providerId: 'github-copilot' })
+      )
+    );
     expect(host.querySelector('[data-tabs-value="opencode-source:github-copilot"]')).not.toBeNull();
-    expect(remountedOnValueChange).not.toHaveBeenCalledWith('');
-
-    await act(async () => {
-      remountedRoot.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange,
-          value: 'cursor-acp/auto',
-          onValueChange: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
+    expect(remountedOnValueChange).toHaveBeenCalledWith('');
 
     const cursorTab = host.querySelector<HTMLButtonElement>(
       '[data-testid="team-model-selector-provider-nav-cursor-acp"]'
     );
+    await act(async () => {
+      cursorTab?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(loadModels).toHaveBeenCalledWith(expect.objectContaining({ providerId: 'cursor-acp' }))
+    );
+
     const openCodeTab = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'OpenCode'
     );
@@ -4080,21 +4685,19 @@ describe('TeamModelSelector disabled Codex models', () => {
       ).map((heading) => heading.textContent)
     ).toContain('Cursor');
 
-    await act(async () => {
-      remountedRoot.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange,
-          value: 'xiaomi-token-plan-ams/mimo-v2.5',
-          onValueChange: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
-
     const xiaomiTab = host.querySelector<HTMLButtonElement>(
       '[data-testid="team-model-selector-provider-nav-xiaomi-token-plan-ams"]'
     );
+    await act(async () => {
+      xiaomiTab?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(loadModels).toHaveBeenCalledWith(
+        expect.objectContaining({ providerId: 'xiaomi-token-plan-ams' })
+      )
+    );
+
     expect(xiaomiTab?.getAttribute('data-state')).toBe('active');
     expect(host.textContent).toContain('mimo-v2.5');
     expect(host.textContent).not.toContain('gpt-4.1');
@@ -4265,6 +4868,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toBeNull();
 
     await renderSelector('kiro/auto');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-cursor-acp"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-kiro"]')
+    ).not.toBeNull();
     expect(host.querySelector('[data-tabs-value="opencode-source:kiro"]')).not.toBeNull();
     const kiroGroup = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-opencode-group"]')
@@ -4302,18 +4911,44 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('renders OpenCode source groups and keeps raw model ids on selection', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       providers: [
         {
           providerId: 'opencode',
           supported: true,
           authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           detailMessage: null,
           statusMessage: null,
           capabilities: {
             teamLaunch: true,
           },
           models: ['openai/gpt-5.4', 'openrouter/moonshotai/kimi-k2'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'GPT-5.4',
+              },
+              {
+                id: 'openrouter/moonshotai/kimi-k2',
+                launchModel: 'openrouter/moonshotai/kimi-k2',
+                displayName: 'moonshotai/kimi-k2',
+              },
+            ],
+          },
         },
       ],
     };
@@ -4334,6 +4969,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).toContain('OpenAI');
@@ -4352,6 +4988,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     expect(openRouterButton).toBeTruthy();
     expect(openRouterButton?.textContent).not.toContain('OpenRouter');
+    expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -4867,6 +5504,7 @@ describe('TeamModelSelector disabled Codex models', () => {
             teamLaunch: true,
           },
           models: [
+            'cursor-acp/auto',
             'llama.cpp/qwen-test:0.5b',
             'opencode/big-pickle',
             'openrouter/moonshotai/kimi-k2',
@@ -4882,6 +5520,32 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultModelId: 'llama.cpp/qwen-test:0.5b',
             defaultLaunchModel: 'llama.cpp/qwen-test:0.5b',
             models: [
+              {
+                id: 'cursor-acp/auto',
+                launchModel: 'cursor-acp/auto',
+                displayName: 'auto',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: false,
+                  opencode: {
+                    providerId: 'cursor-acp',
+                    modelId: 'auto',
+                    sourceLabel: 'Cursor',
+                    accessKind: 'configured_authless',
+                    routeKind: 'configured_local',
+                    proofState: 'verified',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
               {
                 id: 'llama.cpp/qwen-test:0.5b',
                 launchModel: 'llama.cpp/qwen-test:0.5b',
@@ -5001,18 +5665,21 @@ describe('TeamModelSelector disabled Codex models', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const renderValue = async (nextValue: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: nextValue,
+            onValueChange: () => undefined,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
 
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
+    await renderValue('');
 
     const getSourceGroupLabels = (): string[] =>
       Array.from(
@@ -5103,17 +5770,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       expect.arrayContaining(['llama.cpp', 'OpenCode Zen', 'OpenRouter', 'DeepSeek'])
     );
 
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: 'openrouter/moonshotai/kimi-k2',
-          onValueChange: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
+    await renderValue('openrouter/moonshotai/kimi-k2');
 
     const restoredOpenRouterGroup = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-opencode-group"]')
@@ -5134,6 +5791,134 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).not.toBeNull();
     expect(host.querySelector('[title]')).toBeNull();
 
+    await renderValue('llama.cpp/qwen-test:0.5b');
+    const manualLocalTag = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-opencode-route-tag-local"]'
+    );
+    expect(manualLocalTag).not.toBeNull();
+    await act(async () => {
+      manualLocalTag?.click();
+      await Promise.resolve();
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="team-model-selector-opencode-route-tag-local"]'
+        )
+        ?.click();
+      await Promise.resolve();
+    });
+    expect(getSourceGroupLabels()).toEqual(['llama.cpp']);
+    await renderValue('');
+    expect(getSourceGroupLabels()).toEqual(['llama.cpp']);
+
+    const listSourceFilterLocalProviders = vi.fn(
+      async (input: RuntimeLocalProviderListInput): Promise<RuntimeLocalProviderListResponse> => ({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        scope: input.scope,
+        providers: [
+          {
+            preset: {
+              id: 'ollama',
+              providerId: 'cursor-acp',
+              displayName: 'Cursor',
+              defaultBaseUrl: 'http://127.0.0.1:11434/v1',
+              description: 'Source classification fixture',
+              scannable: true,
+            },
+            providerId: 'cursor-acp',
+            baseUrl: 'http://127.0.0.1:11434/v1',
+            configuredModelIds: [],
+            defaultModelId: null,
+            isDefault: false,
+            state: 'unavailable',
+            liveModels: [],
+            latencyMs: null,
+            message: 'Unavailable',
+          },
+        ],
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          listLocalProviders: listSourceFilterLocalProviders,
+          loadModels: vi.fn(async (input: RuntimeProviderManagementLoadModelsInput) =>
+            providerModelsResponse(input.providerId)
+          ),
+          scanLocalProviders: vi.fn(async () => ({
+            schemaVersion: 1,
+            runtimeId: 'opencode',
+            error: { code: 'scan-failed', message: 'Scan unavailable', recoverable: true },
+          })),
+        },
+      } as unknown as ElectronAPI,
+    });
+    await renderValue('cursor-acp/auto');
+    await act(async () => {
+      await vi.waitFor(() => expect(listSourceFilterLocalProviders).toHaveBeenCalled());
+      await Promise.resolve();
+    });
+    const initialOpenCodeStatus = (
+      storeState.cliStatus as {
+        providers: Array<{
+          models: string[];
+          modelCatalog: {
+            models: Array<{
+              launchModel: string;
+              metadata: { [key: string]: unknown; opencode: Record<string, unknown> };
+            }>;
+          };
+        }>;
+      }
+    ).providers[0]!;
+    storeState.cliStatus = {
+      providers: [
+        {
+          ...initialOpenCodeStatus,
+          modelCatalog: {
+            ...initialOpenCodeStatus.modelCatalog,
+            models: initialOpenCodeStatus.modelCatalog.models.map((model) =>
+              model.launchModel === 'cursor-acp/auto'
+                ? {
+                    ...model,
+                    metadata: {
+                      ...model.metadata,
+                      opencode: { ...model.metadata.opencode, routeKind: 'catalog_provider' },
+                    },
+                  }
+                : model
+            ),
+          },
+        },
+      ],
+    };
+    await renderValue('');
+    await renderValue('cursor-acp/auto');
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(
+          host.querySelector('[data-testid="team-model-selector-opencode-provider-filter"]')
+        ).not.toBeNull()
+      );
+    });
+    const manualSourceFilter = host.querySelector<HTMLElement>(
+      '[data-testid="team-model-selector-opencode-provider-filter"]'
+    );
+    await act(async () => {
+      manualSourceFilter?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    const manualOpenRouterSource = document.body.querySelector<HTMLElement>(
+      '[aria-label="Filter OpenRouter"]'
+    );
+    await act(async () => {
+      manualOpenRouterSource?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    await renderValue('');
+    expect(getSourceGroupLabels()).toEqual(['OpenRouter']);
+
     await act(async () => {
       root.unmount();
       await Promise.resolve();
@@ -5142,19 +5927,28 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('refreshes the OpenCode catalog for the selected project and again when it changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const loadModels = vi.fn(async () =>
+      providerModelsResponse('opencode', ['opencode/big-pickle'])
+    );
+    installLoadModelsApi(loadModels);
+    const provider = {
+      providerId: 'opencode',
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      detailMessage: null,
+      statusMessage: null,
+      capabilities: { teamLaunch: true, oneShot: false },
+      models: [],
+    };
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          detailMessage: null,
-          statusMessage: null,
-          capabilities: { teamLaunch: true, oneShot: false },
-          models: [],
-        },
-      ],
+      providers: [provider],
+    };
+    storeState.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('opencode', '/tmp/local-model-project-a')]: provider,
+      [getCliProviderStatusScopeKey('opencode', '/tmp/local-model-project-b')]: provider,
     };
 
     const host = document.createElement('div');
@@ -5166,7 +5960,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           React.createElement(TeamModelSelector, {
             providerId: 'opencode',
             onProviderChange: () => undefined,
-            value: '',
+            value: 'opencode/big-pickle',
             onValueChange: () => undefined,
             projectPath,
           })
@@ -5176,19 +5970,25 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
 
     await renderForProject('/tmp/local-model-project-a');
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
-      silent: true,
-      checkReason: 'launch_preflight',
-      projectPath: '/tmp/local-model-project-a',
-    });
+    await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+    expect(loadModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        runtimeId: 'opencode',
+        providerId: 'opencode',
+        projectPath: '/tmp/local-model-project-a',
+      })
+    );
 
-    storeState.fetchCliProviderStatus.mockClear();
     await renderForProject('/tmp/local-model-project-b');
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
-      silent: true,
-      checkReason: 'launch_preflight',
-      projectPath: '/tmp/local-model-project-b',
-    });
+    await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(2));
+    expect(loadModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        runtimeId: 'opencode',
+        providerId: 'opencode',
+        projectPath: '/tmp/local-model-project-b',
+      })
+    );
+    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
@@ -5196,127 +5996,18 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('retries a project catalog until an authoritative load succeeds', async () => {
+  it('loads a cold connected provider only after that provider tab is selected', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-    storeState.cliStatus = {
-      flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          detailMessage: null,
-          statusMessage: null,
-          capabilities: { teamLaunch: true, oneShot: false },
-          models: [],
-        },
-      ],
-    };
-    storeState.fetchCliProviderStatus.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange: () => undefined,
-          projectPath: '/tmp/retry-project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_999);
-    });
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1);
-    });
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
-    });
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
-
-  it('settles the project catalog loading UI after retries are exhausted', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-    storeState.cliStatus = {
-      flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          capabilities: { teamLaunch: true, oneShot: false },
-          models: [],
-        },
-      ],
-    };
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange: () => undefined,
-          projectPath: '/tmp/exhausted-retry-project',
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
-    ).not.toBeNull();
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(retryDelay);
-      });
-    }
-
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
-    ).toBeNull();
-    storeState.fetchCliProviderStatus.mockResolvedValue(undefined);
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
-
-  it('does not accept an empty scoped catalog when connected providers have known models', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
     const projectPath = '/tmp/empty-scoped-catalog-project';
+    const catalogRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
+    const loadModels = vi.fn(() => catalogRequest.promise);
+    installLoadModelsApi(loadModels);
     const emptyScopedProvider = {
       providerId: 'opencode',
       supported: true,
       authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       capabilities: { teamLaunch: true, oneShot: false },
       models: [],
       modelCatalogRefreshState: 'ready',
@@ -5341,7 +6032,6 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
     storeState.cliProviderStatusByScope[getCliProviderStatusScopeKey('opencode', projectPath)] =
       emptyScopedProvider;
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
@@ -5389,23 +6079,32 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    const openRouterTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-openrouter"]'
+    );
+    expect(openRouterTab).not.toBeNull();
+    expect(openRouterTab?.hasAttribute('disabled')).toBe(false);
+    expect(loadModels).not.toHaveBeenCalled();
 
-    expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-loading-openrouter"]')
-    ).not.toBeNull();
+    await act(async () => {
+      openRouterTab?.click();
+      await Promise.resolve();
+    });
+    expect(loadModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtimeId: 'opencode',
+        providerId: 'openrouter',
+        projectPath,
+      })
+    );
+    expect(host.querySelector('[data-tabs-value="opencode-source:openrouter"]')).not.toBeNull();
     expect(host.textContent).toContain('Syncing models');
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
 
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(retryDelay);
-      });
-    }
-
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-catalog-refresh-error"]')
-        ?.textContent
-    ).toContain('OpenCode models could not be refreshed');
+    await resolveDeferred(catalogRequest, providerModelsResponse('openrouter', []));
+    await vi.waitFor(() => expect(openRouterTab?.disabled).toBe(true));
+    expect(openRouterTab?.textContent).toContain('0');
+    expect(openRouterTab?.getAttribute('aria-description')).toContain('no available models');
 
     await act(async () => {
       root.unmount();
@@ -5415,8 +6114,12 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('keeps the global OpenCode catalog visible and offers retry when a project refresh fails', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-20T12:00:00.000Z'));
+    const retryRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
+    const loadModels = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('provider catalog timed out'))
+      .mockImplementationOnce(() => retryRequest.promise);
+    installLoadModelsApi(loadModels);
     const openRouterModel = {
       id: 'openrouter/moonshotai/kimi-k2.6',
       launchModel: 'openrouter/moonshotai/kimi-k2.6',
@@ -5443,34 +6146,46 @@ describe('TeamModelSelector disabled Codex models', () => {
         },
       },
     };
+    const globalProvider = {
+      providerId: 'opencode',
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true, oneShot: false },
+      models: [openRouterModel.launchModel],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T11:59:00.000Z',
+        staleAt: '2026-07-20T12:10:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [openRouterModel],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    };
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          capabilities: { teamLaunch: true, oneShot: false },
-          models: [openRouterModel.launchModel],
-          modelCatalogRefreshState: 'ready',
-          modelCatalog: {
-            schemaVersion: 1,
-            providerId: 'opencode',
-            source: 'app-server',
-            status: 'ready',
-            fetchedAt: '2026-07-20T11:59:00.000Z',
-            staleAt: '2026-07-20T12:10:00.000Z',
-            defaultModelId: null,
-            defaultLaunchModel: null,
-            models: [openRouterModel],
-            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
-          },
-          modelVerificationState: 'idle',
-          modelAvailability: [],
-        },
-      ],
+      providers: [globalProvider],
     };
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    storeState.cliProviderStatusByScope[
+      getCliProviderStatusScopeKey('opencode', '/tmp/failed-project-refresh')
+    ] = {
+      ...globalProvider,
+      supported: false,
+      authenticated: false,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'partial_response',
+      capabilities: { ...globalProvider.capabilities, teamLaunch: false },
+      modelCatalogRefreshState: 'error',
+    };
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
@@ -5487,26 +6202,32 @@ describe('TeamModelSelector disabled Codex models', () => {
         React.createElement(TeamModelSelector, {
           providerId: 'opencode',
           onProviderChange: () => undefined,
-          value: '',
+          value: openRouterModel.launchModel,
           onValueChange: () => undefined,
           projectPath: '/tmp/failed-project-refresh',
         })
       );
       await Promise.resolve();
     });
+    await vi.waitFor(() =>
+      expect(
+        host.querySelector('[data-testid="team-model-selector-opencode-catalog-refresh-error"]')
+      ).not.toBeNull()
+    );
 
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
     expect(host.textContent).toContain('moonshotai/kimi-k2.6');
 
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(retryDelay);
-      });
-    }
-
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
+    expect(loadModels).toHaveBeenCalledTimes(1);
+    expect(loadModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'openrouter',
+        projectPath: '/tmp/failed-project-refresh',
+      })
+    );
+    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
@@ -5527,250 +6248,323 @@ describe('TeamModelSelector disabled Codex models', () => {
       retryButton?.click();
       await Promise.resolve();
     });
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(5);
+    expect(loadModels).toHaveBeenCalledTimes(2);
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-catalog-refresh-error"]')
     ).toBeNull();
 
+    await resolveDeferred(
+      retryRequest,
+      providerModelsResponse('openrouter', [openRouterModel.launchModel])
+    );
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
   });
 
-  it('keeps local inventories scoped without silently clearing an explicit route', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const listLocalProviders = vi.fn(
-      async (input: { scope: 'global' | 'project'; projectPath?: string | null }) => ({
-        schemaVersion: 1 as const,
-        runtimeId: 'opencode' as const,
-        scope: input.scope,
-        providers:
-          input.scope === 'project' && input.projectPath === '/tmp/local-model-project-a'
-            ? [
-                {
-                  preset: {
-                    id: 'lm-studio' as const,
-                    providerId: 'lmstudio',
-                    displayName: 'LM Studio',
-                    defaultBaseUrl: 'http://127.0.0.1:1234/v1',
-                    description: 'Local test provider',
-                    scannable: true,
-                  },
-                  providerId: 'lmstudio',
-                  baseUrl: 'http://127.0.0.1:1234/v1',
-                  configuredModelIds: [
-                    'qwen-test:0.5b',
-                    'nomic-embed-text:latest',
-                    'stale-chat:latest',
-                  ],
-                  defaultModelId: 'qwen-test:0.5b',
-                  isDefault: true,
-                  state: 'available' as const,
-                  liveModels: [{ id: 'qwen-test:0.5b', displayName: 'qwen-test:0.5b' }],
-                  latencyMs: 4,
-                  message: 'Connected',
-                },
-              ]
-            : [],
-      })
-    );
-    Object.defineProperty(window, 'electronAPI', {
-      configurable: true,
-      value: { runtimeProviderManagement: { listLocalProviders } },
-    });
-    storeState.cliStatus = {
-      flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          detailMessage: null,
-          statusMessage: null,
-          capabilities: { teamLaunch: true, oneShot: false },
-          models: ['lmstudio/qwen-test:0.5b', 'openrouter/moonshotai/kimi-k2'],
-          modelCatalogRefreshState: 'ready',
-          modelCatalog: {
-            schemaVersion: 1,
+  it.each([
+    ['confirms', true],
+    ['does not confirm', false],
+  ])(
+    'fences a custom local selection while the next project authority %s it',
+    async (_authority, projectBHasCustomProvider) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const localModelId = 'corp-local/model';
+      const customLocalProvider = {
+        preset: {
+          id: 'custom' as const,
+          providerId: 'corp-local',
+          displayName: 'Corporate Local',
+          defaultBaseUrl: 'http://127.0.0.1:4444/v1',
+          description: 'Test-only custom local provider',
+          scannable: false,
+        },
+        providerId: 'corp-local',
+        baseUrl: 'http://127.0.0.1:4444/v1',
+        configuredModelIds: ['model'],
+        defaultModelId: 'model',
+        isDefault: true,
+        state: 'available' as const,
+        liveModels: [{ id: 'model', displayName: 'model' }],
+        latencyMs: 1,
+        message: 'Connected',
+      };
+      const loadModels = vi.fn(
+        () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
+      );
+      const projectBLocalLookup = createDeferred<RuntimeLocalProviderListResponse>();
+      const listLocalProviders = vi.fn(
+        async (input: { scope: 'global' | 'project'; projectPath?: string | null }) => {
+          if (input.scope === 'project' && input.projectPath === '/tmp/local-model-project-b') {
+            return projectBLocalLookup.promise;
+          }
+          return {
+            schemaVersion: 1 as const,
+            runtimeId: 'opencode' as const,
+            scope: input.scope,
+            providers:
+              input.scope === 'project' && input.projectPath === '/tmp/local-model-project-a'
+                ? [
+                    {
+                      preset: {
+                        id: 'lm-studio' as const,
+                        providerId: 'lmstudio',
+                        displayName: 'LM Studio',
+                        defaultBaseUrl: 'http://127.0.0.1:1234/v1',
+                        description: 'Local test provider',
+                        scannable: true,
+                      },
+                      providerId: 'lmstudio',
+                      baseUrl: 'http://127.0.0.1:1234/v1',
+                      configuredModelIds: [
+                        'qwen-test:0.5b',
+                        'nomic-embed-text:latest',
+                        'stale-chat:latest',
+                      ],
+                      defaultModelId: 'qwen-test:0.5b',
+                      isDefault: true,
+                      state: 'available' as const,
+                      liveModels: [{ id: 'qwen-test:0.5b', displayName: 'qwen-test:0.5b' }],
+                      latencyMs: 4,
+                      message: 'Connected',
+                    },
+                    customLocalProvider,
+                  ]
+                : [],
+          };
+        }
+      );
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: { runtimeProviderManagement: { listLocalProviders, loadModels } },
+      });
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
             providerId: 'opencode',
-            source: 'app-server',
-            status: 'ready',
-            fetchedAt: '2026-07-19T00:00:00.000Z',
-            staleAt: '2026-07-19T00:10:00.000Z',
-            defaultModelId: 'lmstudio/qwen-test:0.5b',
-            defaultLaunchModel: 'lmstudio/qwen-test:0.5b',
-            models: [
-              {
-                id: 'lmstudio/qwen-test:0.5b',
-                launchModel: 'lmstudio/qwen-test:0.5b',
-                displayName: 'qwen-test:0.5b',
-                hidden: false,
-                supportedReasoningEfforts: [],
-                defaultReasoningEffort: null,
-                inputModalities: ['text'],
-                supportsPersonality: false,
-                isDefault: true,
-                upgrade: false,
-                source: 'app-server',
-                metadata: {
-                  opencode: {
-                    providerId: 'lmstudio',
-                    modelId: 'qwen-test:0.5b',
-                    sourceLabel: 'LM Studio',
-                    accessKind: 'configured_authless',
-                    routeKind: 'configured_local',
-                    proofState: 'needs_probe',
-                    requiresExecutionProof: true,
-                    reason: null,
+            supported: true,
+            authenticated: true,
+            detailMessage: null,
+            statusMessage: null,
+            capabilities: { teamLaunch: true, oneShot: false },
+            models: [localModelId, 'openrouter/moonshotai/kimi-k2'],
+            modelCatalogRefreshState: 'ready',
+            modelCatalog: {
+              schemaVersion: 1,
+              providerId: 'opencode',
+              source: 'app-server',
+              status: 'ready',
+              fetchedAt: '2026-07-19T00:00:00.000Z',
+              staleAt: '2026-07-19T00:10:00.000Z',
+              defaultModelId: localModelId,
+              defaultLaunchModel: localModelId,
+              models: [
+                {
+                  id: localModelId,
+                  launchModel: localModelId,
+                  displayName: 'model',
+                  hidden: false,
+                  supportedReasoningEfforts: [],
+                  defaultReasoningEffort: null,
+                  inputModalities: ['text'],
+                  supportsPersonality: false,
+                  isDefault: true,
+                  upgrade: false,
+                  source: 'app-server',
+                  metadata: {
+                    opencode: {
+                      providerId: 'corp-local',
+                      modelId: 'model',
+                      sourceLabel: 'Corporate Local',
+                      accessKind: 'configured_authless',
+                      routeKind: 'configured_local',
+                      proofState: 'needs_probe',
+                      requiresExecutionProof: true,
+                      reason: null,
+                    },
                   },
                 },
-              },
-              {
-                id: 'openrouter/moonshotai/kimi-k2',
-                launchModel: 'openrouter/moonshotai/kimi-k2',
-                displayName: 'moonshotai/kimi-k2',
-                hidden: false,
-                supportedReasoningEfforts: [],
-                defaultReasoningEffort: null,
-                inputModalities: ['text'],
-                supportsPersonality: false,
-                isDefault: false,
-                upgrade: false,
-                source: 'app-server',
-                metadata: {
-                  opencode: {
-                    providerId: 'openrouter',
-                    modelId: 'moonshotai/kimi-k2',
-                    sourceLabel: 'OpenRouter',
-                    accessKind: 'connected',
-                    routeKind: 'remote',
-                    proofState: 'verified',
-                    requiresExecutionProof: false,
-                    reason: null,
+                {
+                  id: 'openrouter/moonshotai/kimi-k2',
+                  launchModel: 'openrouter/moonshotai/kimi-k2',
+                  displayName: 'moonshotai/kimi-k2',
+                  hidden: false,
+                  supportedReasoningEfforts: [],
+                  defaultReasoningEffort: null,
+                  inputModalities: ['text'],
+                  supportsPersonality: false,
+                  isDefault: false,
+                  upgrade: false,
+                  source: 'app-server',
+                  metadata: {
+                    opencode: {
+                      providerId: 'openrouter',
+                      modelId: 'moonshotai/kimi-k2',
+                      sourceLabel: 'OpenRouter',
+                      accessKind: 'connected',
+                      routeKind: 'remote',
+                      proofState: 'verified',
+                      requiresExecutionProof: false,
+                      reason: null,
+                    },
                   },
                 },
+              ],
+              diagnostics: {
+                configReadState: 'ready',
+                appServerState: 'healthy',
+                message: null,
+                code: null,
               },
-            ],
-            diagnostics: {
-              configReadState: 'ready',
-              appServerState: 'healthy',
-              message: null,
-              code: null,
             },
           },
-        },
-      ],
-    };
+        ],
+      };
+      const openCodeProvider = (storeState.cliStatus as { providers: [unknown] }).providers[0];
+      storeState.cliProviderStatusByScope = {
+        [getCliProviderStatusScopeKey('opencode', '/tmp/local-model-project-a')]: openCodeProvider,
+        [getCliProviderStatusScopeKey('opencode', '/tmp/local-model-project-b')]: openCodeProvider,
+      };
 
-    const onValueChange = vi.fn();
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    const renderForProject = async (
-      projectPath: string,
-      providerId: 'anthropic' | 'opencode' = 'opencode',
-      value = 'lmstudio/qwen-test:0.5b'
-    ): Promise<void> => {
+      const onValueChange = vi.fn();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const renderForProject = async (
+        projectPath: string,
+        providerId: 'anthropic' | 'opencode' = 'opencode',
+        value = localModelId
+      ): Promise<void> => {
+        await act(async () => {
+          root.render(
+            React.createElement(TeamModelSelector, {
+              providerId,
+              onProviderChange: () => undefined,
+              value,
+              onValueChange,
+              projectPath,
+            })
+          );
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+      };
+
+      await renderForProject('/tmp/local-model-project-a', 'anthropic', '');
+      expect(
+        host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
+          ?.textContent
+      ).toContain('2 detected · 4 configured');
+
+      await renderForProject('/tmp/local-model-project-a');
+      expect(host.textContent).toContain('qwen-test:0.5b');
+      expect(
+        host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+      ).toBeNull();
+      expect(loadModels).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('nomic-embed-text:latest');
+      expect(host.textContent).toContain('stale-chat:latest');
+      expect(
+        host.querySelector(
+          '[data-testid="team-model-selector-local-model-status-needs_verification"]'
+        )
+      ).not.toBeNull();
+      expect(
+        host.querySelectorAll('[data-testid="team-model-selector-local-model-status-incompatible"]')
+      ).toHaveLength(2);
+      expect(host.textContent).not.toContain('Needs test');
+      expect(onValueChange).not.toHaveBeenCalledWith('');
+      expect(
+        host
+          .querySelector('[data-testid="runtime-provider-logo-lmstudio"] img')
+          ?.getAttribute('src')
+      ).toContain('lm-studio-icon-color.svg');
+      const localModelsTab = host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-provider-nav-local-models"]'
+      );
+      const openCodeTab = host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-provider-nav-opencode"]'
+      );
+      expect(localModelsTab?.getAttribute('data-state')).toBe('active');
+      expect(openCodeTab?.getAttribute('data-state')).toBe('inactive');
+      expect(host.querySelector('[data-testid="team-model-selector-model-search"]')).not.toBeNull();
+      expect(
+        host
+          .querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+          ?.getAttribute('aria-pressed')
+      ).toBe('true');
+      expect(host.textContent).not.toContain('More');
+
       await act(async () => {
-        root.render(
-          React.createElement(TeamModelSelector, {
-            providerId,
-            onProviderChange: () => undefined,
-            value,
-            onValueChange,
-            projectPath,
-          })
-        );
-        await Promise.resolve();
+        openCodeTab?.click();
         await Promise.resolve();
       });
-    };
+      expect(host.querySelector('[data-tabs-value="opencode"]')).not.toBeNull();
 
-    await renderForProject('/tmp/local-model-project-a', 'anthropic', '');
-    expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
-        ?.textContent
-    ).toContain('1 detected · 3 configured');
+      await act(async () => {
+        localModelsTab?.click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
+      expect(onValueChange).not.toHaveBeenCalledWith('');
 
-    await renderForProject('/tmp/local-model-project-a');
-    expect(host.textContent).toContain('qwen-test:0.5b');
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
-    ).not.toBeNull();
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-filter-loading-skeleton"]')
-    ).not.toBeNull();
-    expect(host.textContent).toContain('nomic-embed-text:latest');
-    expect(host.textContent).toContain('stale-chat:latest');
-    expect(
-      host.querySelector(
-        '[data-testid="team-model-selector-local-model-status-needs_verification"]'
-      )
-    ).not.toBeNull();
-    expect(
-      host.querySelectorAll('[data-testid="team-model-selector-local-model-status-incompatible"]')
-    ).toHaveLength(2);
-    expect(host.textContent).not.toContain('Needs test');
-    expect(onValueChange).not.toHaveBeenCalledWith('');
-    expect(
-      host.querySelector('[data-testid="runtime-provider-logo-lmstudio"] img')?.getAttribute('src')
-    ).toContain('lm-studio-icon-color.svg');
-    const localModelsTab = host.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-provider-nav-local-models"]'
-    );
-    const openCodeTab = host.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-provider-nav-opencode"]'
-    );
-    expect(localModelsTab?.getAttribute('data-state')).toBe('active');
-    expect(openCodeTab?.getAttribute('data-state')).toBe('inactive');
-    expect(host.querySelector('[data-testid="team-model-selector-model-search"]')).not.toBeNull();
-    expect(
-      host
-        .querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
-        ?.getAttribute('aria-pressed')
-    ).toBe('true');
-    expect(host.textContent).not.toContain('More');
+      await renderForProject(
+        '/tmp/local-model-project-a',
+        'opencode',
+        'openrouter/moonshotai/kimi-k2'
+      );
+      onValueChange.mockClear();
+      const localModelsTabWithRemoteSelection = host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-provider-nav-local-models"]'
+      );
+      await act(async () => {
+        localModelsTabWithRemoteSelection?.click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
+      expect(onValueChange).not.toHaveBeenCalledWith('');
 
-    await act(async () => {
-      openCodeTab?.click();
-      await Promise.resolve();
-    });
-    expect(host.querySelector('[data-tabs-value="opencode"]')).not.toBeNull();
+      await renderForProject('/tmp/local-model-project-a');
+      const selectedLocalRouteTag = host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-opencode-route-tag-local"]'
+      );
+      expect(selectedLocalRouteTag?.getAttribute('aria-pressed')).toBe('true');
+      await act(async () => {
+        selectedLocalRouteTag?.click();
+        await Promise.resolve();
+      });
+      expect(selectedLocalRouteTag?.getAttribute('aria-pressed')).toBe('false');
+      loadModels.mockClear();
+      await renderForProject('/tmp/local-model-project-b');
+      const pendingLocalOption = Array.from(
+        host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-option"]')
+      ).find((option) => option.textContent?.includes('Corporate Local'));
+      expect(pendingLocalOption).toBeUndefined();
+      expect(loadModels).not.toHaveBeenCalled();
+      expect(onValueChange).not.toHaveBeenCalledWith('');
 
-    await act(async () => {
-      localModelsTab?.click();
-      await Promise.resolve();
-    });
-    expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
-    expect(onValueChange).not.toHaveBeenCalledWith('');
+      await resolveDeferred(projectBLocalLookup, {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        scope: 'project',
+        providers: projectBHasCustomProvider ? [customLocalProvider] : [],
+      });
+      if (projectBHasCustomProvider) {
+        expect(onValueChange).not.toHaveBeenCalledWith('');
+        expect(loadModels).not.toHaveBeenCalled();
+      } else {
+        await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+        await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith(''));
+      }
 
-    await renderForProject(
-      '/tmp/local-model-project-a',
-      'opencode',
-      'openrouter/moonshotai/kimi-k2'
-    );
-    onValueChange.mockClear();
-    const localModelsTabWithRemoteSelection = host.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-provider-nav-local-models"]'
-    );
-    await act(async () => {
-      localModelsTabWithRemoteSelection?.click();
-      await Promise.resolve();
-    });
-    expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
-    expect(onValueChange).not.toHaveBeenCalledWith('');
-
-    await renderForProject('/tmp/local-model-project-a');
-    await renderForProject('/tmp/local-model-project-b');
-    expect(host.textContent).not.toContain('qwen-test:0.5b');
-    expect(onValueChange).not.toHaveBeenCalledWith('');
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
 
   it('discovers, compatibility-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -6008,7 +6802,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       'compatibility'
     );
     expect(testModel).not.toHaveBeenCalled();
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledOnce();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

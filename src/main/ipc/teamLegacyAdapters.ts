@@ -23,7 +23,10 @@ import {
   createDesktopTeamMessageDeliveryFeature,
   type DesktopTeamMessageDeliveryFeature,
 } from '@features/team-message-delivery/main';
-import { type TeamProvisioningFeature } from '@features/team-provisioning/main';
+import {
+  persistNodeMemberSettingsRelaunch,
+  type TeamProvisioningFeature,
+} from '@features/team-provisioning/main';
 import {
   createTeamRosterMutationFeature as createRosterMutationFeature,
   type TeamRosterMutationFeature,
@@ -43,6 +46,7 @@ import {
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
 import { NodeToolApprovalFileReader } from '@main/services/team/approvals/NodeToolApprovalFileReader';
 import { FileSystemDraftTeamConfigGuard } from '@main/services/team/configuration/FileSystemDraftTeamConfigGuard';
+import { invalidateTeamRosterSnapshotCaches } from '@main/services/team/invalidateTeamRosterSnapshotCaches';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
@@ -53,6 +57,7 @@ import { createLogger } from '@shared/utils/logger';
 import { setCurrentMainOp } from '../services/infrastructure/EventLoopLagMonitor';
 import { cloneLaunchIoGovernorPayload } from '../services/team/LaunchIoGovernor';
 
+import { MainTeamRuntimeStop } from './teams/MainTeamRuntimeStop';
 import { validateTeamName } from './guards';
 import { createDesktopTeamProvisioningFeature as createProvisioningFeature } from './teamProvisioningHost';
 import {
@@ -81,6 +86,7 @@ import type {
   DesktopTeamProvisioningStartCapability,
   DesktopTeamRuntimeCapability,
 } from './teamFeatureCapabilities';
+import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type { IpcMain } from 'electron';
 
@@ -96,7 +102,11 @@ const teamRosterMutationLogger = createLogger('IPC:teams');
 const teamRuntimeOperationsLogger = createLogger('IPC:teams');
 
 export interface TeamPermanentDeletionLifecycle {
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 }
@@ -281,7 +291,8 @@ export function initializeLegacyTeamHandlers(
   logSourceTracker?: TeamLogSourceTracker,
   branchTracker?: BranchStatusService,
   _ioGovernor?: LaunchIoGovernor,
-  permanentDeletionLifecycle?: TeamPermanentDeletionLifecycle
+  permanentDeletionLifecycle?: TeamPermanentDeletionLifecycle,
+  scopedResourceReleaser?: TeamScopedResourceReleaser
 ): void {
   teamDataService = service;
   teamBackupService = backupService ?? null;
@@ -303,6 +314,12 @@ export function initializeLegacyTeamHandlers(
       teamLifecycleIpcLogger.error(
         `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
       ),
+    releaseTeamScopedResources: async (teamName) => {
+      await scopedResourceReleaser?.release(teamName);
+    },
+    restoreTeamScopedResources: async (teamName, options) => {
+      await scopedResourceReleaser?.restore(teamName, options);
+    },
   });
   permanentDeletionCoordinator.startRecovery();
 }
@@ -360,6 +377,19 @@ async function executeLegacyProcessOperation<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     adapters.logger.error(`[teams:${operation}] ${message}`);
+    return { success: false, error: message };
+  }
+}
+
+export async function executeLegacyTeamHandler<T>(
+  operation: string,
+  execute: () => Promise<T>
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  try {
+    return { success: true, data: await execute() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    teamMessageDeliveryLogger.error(`[teams:${operation}] ${message}`);
     return { success: false, error: message };
   }
 }
@@ -524,6 +554,14 @@ export function createDesktopTeamLegacyAdapters(
     lifecycle: dependencies.capabilities.rosterLifecycle,
     messaging: dependencies.capabilities.messaging,
     logger: teamRosterMutationLogger,
+    persistMemberSettingsRelaunch: (teamName, members, intent) =>
+      persistNodeMemberSettingsRelaunch(teamName, members, intent, {
+        isTeamAlive: (name) => dependencies.capabilities.runtime.isTeamAlive(name),
+        hasProvisioningRun: (name) =>
+          dependencies.capabilities.provisioningRun.hasProvisioningRun(name),
+        invalidateWorkerCache: (name) =>
+          invalidateTeamRosterSnapshotCaches(name, dependencies.teamDataService),
+      }),
   });
   const provisioning = createProvisioningFeature({
     start: lifecycleAwareProvisioningStart,
@@ -542,6 +580,7 @@ export function createDesktopTeamLegacyAdapters(
   const data = dependencies.teamDataService;
   const memberLogs = dependencies.teamMemberLogsFinder;
   const memberStats = dependencies.memberStatsComputer;
+  const runtimeStop = new MainTeamRuntimeStop(runtime, teamRuntimeOperationsLogger);
   const runtimeOperations = createRuntimeOperationsFeature({
     logs: {
       getClaudeLogs: (teamName, query) => runtimeLogs.getClaudeLogs(teamName, query),
@@ -554,7 +593,8 @@ export function createDesktopTeamLegacyAdapters(
     runtime: {
       getAliveTeams: () => runtime.getAliveTeams(),
       isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
-      stopTeam: (teamName) => runtime.stopTeam(teamName),
+      stopTeam: (teamName) => runtimeStop.stopTeam(teamName),
+      forceStopTeam: (teamName) => runtimeStop.forceStopTeam(teamName),
     },
     lifecycle: runtimeLifecycle,
     diagnostics: {

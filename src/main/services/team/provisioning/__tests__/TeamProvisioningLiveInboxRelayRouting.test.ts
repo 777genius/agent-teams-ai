@@ -59,6 +59,93 @@ describe('TeamProvisioningLiveInboxRelayRouting', () => {
     expect(ports.readMetaMembers).not.toHaveBeenCalled();
   });
 
+  it.each(['user', 'User', ' user ', 'system', 'SYSTEM', ' System '])(
+    'ignores the app-owned %j inbox without reading team state',
+    async (inboxName) => {
+      const readConfigSnapshot = vi.fn().mockResolvedValue(config([{ name: 'team-lead' }]));
+      const readMetaMembers = vi.fn().mockResolvedValue([]);
+      const readInboxMessages = vi.fn().mockResolvedValue([]);
+      const relayOpenCodeMemberInboxMessages = vi.fn().mockResolvedValue({
+        relayed: 0,
+        attempted: 0,
+        delivered: 0,
+        failed: 0,
+      });
+      const relayLeadInboxMessages = vi.fn().mockResolvedValue(0);
+      const ports = createPorts({
+        readConfigSnapshot,
+        readMetaMembers,
+        readInboxMessages,
+        relayOpenCodeMemberInboxMessages,
+        relayLeadInboxMessages,
+      });
+
+      await expect(
+        relayInboxFileToLiveRecipientWithPorts({ teamName: 'team-a', inboxName }, ports)
+      ).resolves.toEqual({
+        kind: LiveInboxRelayKind.Ignored,
+        relayed: 0,
+      });
+
+      // No diagnostics: the file watcher escalates a non-empty diagnostics array
+      // to a warn line, which is the whole defect here.
+      expect(readConfigSnapshot).not.toHaveBeenCalled();
+      expect(readMetaMembers).not.toHaveBeenCalled();
+      expect(relayOpenCodeMemberInboxMessages).not.toHaveBeenCalled();
+      expect(relayLeadInboxMessages).not.toHaveBeenCalled();
+      expect(readInboxMessages).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['users', 'system-notices', 'userland'])(
+    'still routes the member named %j: the terminal names match exactly, not by prefix',
+    async (memberName) => {
+      const readConfigSnapshot = vi
+        .fn()
+        .mockResolvedValue(config([{ name: 'team-lead' }, { name: memberName }]));
+      const readMetaMembers = vi.fn().mockResolvedValue([]);
+      const ports = createPorts({ readConfigSnapshot, readMetaMembers });
+
+      await expect(
+        relayInboxFileToLiveRecipientWithPorts({ teamName: 'team-a', inboxName: memberName }, ports)
+      ).resolves.toEqual({
+        kind: LiveInboxRelayKind.NativeMemberNoop,
+        relayed: 0,
+      });
+
+      expect(readConfigSnapshot).toHaveBeenCalledWith('team-a');
+      expect(readMetaMembers).toHaveBeenCalledWith('team-a');
+    }
+  );
+
+  it('still routes a real OpenCode member inbox after the terminal-inbox guard', async () => {
+    const relayOpenCodeMemberInboxMessages = vi.fn().mockResolvedValue({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+    });
+    const ports = createPorts({
+      readConfigSnapshot: vi
+        .fn()
+        .mockResolvedValue(
+          config([{ name: 'team-lead' }, { name: 'Scout', providerId: 'opencode' }])
+        ),
+      isOpenCodeRuntimeRecipientFromSources,
+      relayOpenCodeMemberInboxMessages,
+    });
+
+    await expect(
+      relayInboxFileToLiveRecipientWithPorts({ teamName: 'team-a', inboxName: 'Scout' }, ports)
+    ).resolves.toMatchObject({
+      kind: LiveInboxRelayKind.OpenCodeMember,
+      relayed: 1,
+    });
+    expect(relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith('team-a', 'Scout', {
+      source: 'watcher',
+    });
+  });
+
   it('routes native lead inbox files through the lead relay only when the team is alive', async () => {
     const relayLeadInboxMessages = vi.fn().mockResolvedValue(2);
     const ports = createPorts({ relayLeadInboxMessages });

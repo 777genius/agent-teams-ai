@@ -13,6 +13,7 @@ import {
   type TeamProvisioningProcessExitRun,
   waitForValidConfig,
 } from '@main/services/team/provisioning/TeamProvisioningProcessExit';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamProvisioningProgress } from '@shared/types';
@@ -410,7 +411,8 @@ describe('TeamProvisioningProcessExit', () => {
       {
         readRegularFileUtf8: vi.fn(async (filePath: string) => {
           readPaths.push(filePath);
-          return filePath.startsWith('/default/') ? '{"name":"demo"}' : null;
+          // The probe joins the config path, so match on the joined prefix.
+          return filePath.startsWith(path.join('/default', 'teams')) ? '{"name":"demo"}' : null;
         }),
         timeoutMs: 1_000,
         pollMs: 10,
@@ -423,11 +425,11 @@ describe('TeamProvisioningProcessExit', () => {
     expect(result).toEqual({
       ok: true,
       location: 'default',
-      configPath: '/default/teams/demo/config.json',
+      configPath: path.join('/default', 'teams', 'demo', 'config.json'),
     });
     expect(readPaths).toEqual([
-      '/configured/teams/demo/config.json',
-      '/default/teams/demo/config.json',
+      path.join('/configured', 'teams', 'demo', 'config.json'),
+      path.join('/default', 'teams', 'demo', 'config.json'),
     ]);
   });
 

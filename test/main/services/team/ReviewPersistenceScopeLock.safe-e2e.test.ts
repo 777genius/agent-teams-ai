@@ -80,20 +80,28 @@ describe('review persistence scope lock process safety', () => {
     );
   });
 
-  it('takes over a crash-left lease only after its owner process dies', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'review-lock-crash-'));
-    temporaryRoots.push(root);
-    const logPath = path.join(root, 'order.log');
-    const counterPath = path.join(root, 'counter.txt');
+  // SIGKILL semantics: this case kills the lease owner mid-hold and asserts
+  // what the survivor observes. Windows has no real SIGKILL - process.kill()
+  // maps to TerminateProcess - so the crash-left lease it models cannot be
+  // produced faithfully here. The serialization case above is portable and
+  // still runs there.
+  it.skipIf(process.platform === 'win32')(
+    'takes over a crash-left lease only after its owner process dies',
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), 'review-lock-crash-'));
+      temporaryRoots.push(root);
+      const logPath = path.join(root, 'order.log');
+      const counterPath = path.join(root, 'counter.txt');
 
-    const crashed = await runWorker('crash', root, logPath, counterPath, 'crashed', 0);
-    expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
-    const recovered = await runWorker('run', root, logPath, counterPath, 'recovered', 0);
+      const crashed = await runWorker('crash', root, logPath, counterPath, 'crashed', 0);
+      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      const recovered = await runWorker('run', root, logPath, counterPath, 'recovered', 0);
 
-    expect(recovered.code, recovered.stderr).toBe(0);
-    await expect(readFile(counterPath, 'utf8')).resolves.toBe('1');
-    await expect(readFile(logPath, 'utf8')).resolves.toBe(
-      'crashed:enter\nrecovered:enter\nrecovered:exit\n'
-    );
-  });
+      expect(recovered.code, recovered.stderr).toBe(0);
+      await expect(readFile(counterPath, 'utf8')).resolves.toBe('1');
+      await expect(readFile(logPath, 'utf8')).resolves.toBe(
+        'crashed:enter\nrecovered:enter\nrecovered:exit\n'
+      );
+    }
+  );
 });

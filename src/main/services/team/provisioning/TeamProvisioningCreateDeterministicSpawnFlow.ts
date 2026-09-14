@@ -33,6 +33,7 @@ import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
+import { buildCreateBootstrapUserPrompt } from './TeamProvisioningRosterPrompt';
 import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
@@ -43,6 +44,7 @@ import {
   getLaunchModelArg,
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -271,17 +273,11 @@ export async function handleDeterministicCreateSpawnTimeout<
   >,
   timedOutChild = run.child
 ): Promise<void> {
-  const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-  if (readyOnTimeout) {
-    return; // cleanupRun already called inside tryCompleteAfterTimeout
-  }
-
-  // The readiness probe is asynchronous. A completion/cancellation path or a
-  // replacement child may have taken ownership while it was in flight.
   if (
     run.provisioningComplete ||
     run.cancelRequested ||
     run.processKilled ||
+    run.processClosed ||
     run.child !== timedOutChild
   ) {
     run.finalizingByTimeout = false;
@@ -292,6 +288,7 @@ export async function handleDeterministicCreateSpawnTimeout<
   try {
     await ports.killTeamProcessAndWait(timedOutChild);
   } catch {
+    if (run.cancelRequested || run.child !== timedOutChild) return;
     run.finalizingByTimeout = false;
     const progress = ports.updateProgress(
       run,
@@ -306,13 +303,8 @@ export async function handleDeterministicCreateSpawnTimeout<
     run.onProgress(progress);
     return;
   }
-
-  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-    error:
-      'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-    cliLogsTail: extractCliLogsFromRun(run),
-  });
-  run.onProgress(progress);
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  run.processClosed = true;
   try {
     await cleanupRunOwnedAnthropicApiKeyHelper(run);
   } catch {
@@ -330,6 +322,14 @@ export async function handleDeterministicCreateSpawnTimeout<
     run.onProgress(cleanupProgress);
     return;
   }
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  if (await ports.tryCompleteAfterTimeout(run).catch(() => false)) return;
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
+    error: 'Timed out waiting for CLI to complete provisioning.',
+    cliLogsTail: extractCliLogsFromRun(run),
+  });
+  run.onProgress(progress);
   ports.cleanupRun(run);
 }
 
@@ -354,7 +354,13 @@ export async function runDeterministicCreateSpawnFlow<
   logger,
   ports,
 }: RunDeterministicCreateSpawnFlowInput<TRun>): Promise<{ runId: string }> {
-  const initialUserPrompt = request.prompt?.trim() ?? '';
+  // Create-mode delivers this deferred prompt before any teammate confirms
+  // bootstrap; the roster wrap keeps the lead from inventing teammate names
+  // or executing teammates' work while they are still joining.
+  const initialUserPrompt = buildCreateBootstrapUserPrompt(
+    request.prompt ?? '',
+    allEffectiveMemberSpecs
+  );
   const promptSize = getPromptSizeSummary(initialUserPrompt);
   let child: SpawnedChild;
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
@@ -531,12 +537,12 @@ export async function runDeterministicCreateSpawnFlow<
   ports.startFilesystemMonitor(run, request);
 
   const spawnedChild = child;
-  run.timeoutHandle = setTimeout(() => {
+  scheduleProvisioningRunTimeout(run, getProvisioningRunTimeoutMs(run), () => {
     if (!run.processKilled && !run.provisioningComplete && run.child === spawnedChild) {
       run.finalizingByTimeout = true;
       void handleDeterministicCreateSpawnTimeout(run, ports, spawnedChild);
     }
-  }, getProvisioningRunTimeoutMs(run));
+  });
 
   child.once('error', (error) => {
     const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI', {

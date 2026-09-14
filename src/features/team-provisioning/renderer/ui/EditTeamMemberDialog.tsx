@@ -16,6 +16,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
 
+import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -25,6 +26,7 @@ import {
 } from '../utils/memberSettingsPresentation';
 
 import type { TeamMemberSettingsApi } from '../../contracts';
+import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
 
@@ -47,7 +49,7 @@ export interface EditTeamMemberDialogProps {
     model: string | null;
     effort: EffortLevel | null;
   }) => Promise<void> | void;
-  onRelaunchRequired: () => void;
+  onRelaunchRequired: (draft: MemberSettingsRelaunchDraft) => void;
 }
 
 function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
@@ -86,6 +88,7 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
+  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName);
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
@@ -127,10 +130,22 @@ export const EditTeamMemberDialog = ({
 
   const handleSave = async (): Promise<void> => {
     if (!targetAvailable) return;
+    if (incomingFingerprint !== fingerprint) {
+      setError(t('editTeam.errors.settingsChanged'));
+      return;
+    }
     setError(null);
     if (impact === 'relaunch') {
+      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
       resetIdentity();
-      onRelaunchRequired();
+      onRelaunchRequired({
+        teamName,
+        memberName: baseline.name,
+        targetKind: isLead ? 'lead' : 'member',
+        expectedFingerprint: fingerprint,
+        expectedTeamSettingsFingerprint: teamSettingsFingerprint,
+        settings,
+      });
       return;
     }
     let result: Awaited<ReturnType<typeof save>>;
@@ -187,8 +202,16 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'team_relaunch_required') {
+      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
       resetIdentity();
-      onRelaunchRequired();
+      onRelaunchRequired({
+        teamName,
+        memberName: baseline.name,
+        targetKind: isLead ? 'lead' : 'member',
+        expectedFingerprint: fingerprint,
+        expectedTeamSettingsFingerprint: teamSettingsFingerprint,
+        settings,
+      });
       return;
     }
     if (result.effect === 'recovery_required') {
@@ -266,7 +289,8 @@ export const EditTeamMemberDialog = ({
           </Button>
           <Button
             disabled={
-              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole
+              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole ||
+              (impact === 'relaunch' && !teamSettingsFingerprint)
             }
             onClick={() => void handleSave()}
           >

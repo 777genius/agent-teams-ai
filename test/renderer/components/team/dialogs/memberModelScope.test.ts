@@ -76,7 +76,7 @@ describe('memberModelScope', () => {
       members: [inheritedStale, explicitGemini],
       selectedProviderId: 'opencode',
       runtimeProviderStatusById: providerStatuses([
-        providerStatus('opencode', ['opencode/minimax-m2.5-free']),
+        terminalAuthoritativeEmptyCatalogStatus(),
       ]),
     });
 
@@ -243,7 +243,138 @@ describe('memberModelScope', () => {
     expect(result.changed).toBe(false);
     expect(result.members[0]).toBe(member);
   });
+  it('preserves a passive model-only OpenCode selection while scoped verification loads', () => {
+    const passiveStatus = providerStatus('opencode', [], {
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    });
+    const member = draft({ model: 'openrouter/provider-model-b' });
+
+    expect(
+      resolveProviderScopedMemberModel({
+        memberModel: member.model,
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([passiveStatus]),
+      })
+    ).toEqual({ providerId: 'opencode', model: 'openrouter/provider-model-b' });
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [member],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([passiveStatus]),
+      })
+    ).toEqual({ members: [member], changed: false });
+  });
+
+  it('uses the selector scoped catalog instead of a narrower passive summary', () => {
+    const scopedStatus = freshScopedProviderStatus([
+      'openrouter/provider-model-a',
+      'openrouter/provider-model-b',
+    ]);
+
+    expect(
+      resolveProviderScopedMemberModel({
+        memberModel: 'openrouter/provider-model-b',
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([
+          providerStatus('opencode', ['openrouter/provider-model-a']),
+        ]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scopedStatus]]),
+      })
+    ).toEqual({ providerId: 'opencode', model: 'openrouter/provider-model-b' });
+  });
+
+  it('consults fresh scoped authority before clearing from a settled empty passive status', () => {
+    const member = draft({ model: 'openrouter/provider-model-b' });
+    const scopedStatus = freshScopedProviderStatus([
+      'openrouter/provider-model-a',
+      'openrouter/provider-model-b',
+    ]);
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [member],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([
+          providerStatus('opencode', [], { modelCatalogRefreshState: 'ready' }),
+        ]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scopedStatus]]),
+      })
+    ).toEqual({ members: [member], changed: false });
+  });
+
+  it('rejects an absent model once the selector scoped catalog is authoritatively settled', () => {
+    const scopedStatus = freshScopedProviderStatus(['openrouter/provider-model-a']);
+
+    expect(
+      resolveProviderScopedMemberModel({
+        memberModel: 'openrouter/provider-model-b',
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([
+          providerStatus('opencode', ['openrouter/provider-model-a']),
+        ]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scopedStatus]]),
+      })
+    ).toEqual({ providerId: 'opencode', model: '' });
+  });
 });
+
+function freshScopedProviderStatus(models: string[]): CliProviderStatus {
+  return providerStatus('opencode', models, {
+    modelCatalogRefreshState: 'ready',
+    modelAvailability: models.map((modelId) => ({
+      modelId,
+      status: 'available',
+      reason: null,
+      checkedAt: null,
+    })),
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2099-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:10:00.000Z',
+      defaultModelId: models[0] ?? null,
+      defaultLaunchModel: models[0] ?? null,
+      models: models.map((model) => ({
+        id: model,
+        launchModel: model,
+        displayName: model,
+        hidden: false,
+        supportedReasoningEfforts: [],
+        defaultReasoningEffort: null,
+        inputModalities: ['text'],
+        supportsPersonality: false,
+        isDefault: model === models[0],
+        upgrade: false,
+        source: 'app-server',
+      })),
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  });
+}
+
+function terminalAuthoritativeEmptyCatalogStatus(): CliProviderStatus {
+  return providerStatus('opencode', [], {
+    statusCheckOutcome: 'authoritative',
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:00:00.000Z',
+      defaultModelId: null,
+      defaultLaunchModel: null,
+      models: [],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  });
+}
 
 function providerStatuses(
   statuses: CliProviderStatus[]

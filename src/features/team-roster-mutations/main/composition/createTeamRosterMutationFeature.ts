@@ -49,6 +49,11 @@ export interface TeamRosterMutationFeature {
   removeMember: RemoveTeamRosterMember;
   restoreMember: RestoreTeamRosterMember;
   updateMemberRole: UpdateTeamRosterMemberRole;
+  replaceMembersWithSettingsRelaunch(
+    teamName: string,
+    members: RosterMemberInput[],
+    intent: unknown
+  ): Promise<void>;
   logger: TeamRosterLoggerPort;
 }
 
@@ -58,6 +63,11 @@ export function createTeamRosterMutationFeature(dependencies: {
   lifecycle: TeamRosterLifecycleSource;
   messaging: { sendMessageToTeam(teamName: string, message: string): Promise<void> };
   logger: TeamRosterLoggerPort;
+  persistMemberSettingsRelaunch?(
+    teamName: string,
+    members: RosterMemberInput[],
+    intent: unknown
+  ): Promise<void>;
   metadata?: TeamRosterMetadataPort;
   cache?: TeamRosterCachePort;
 }): TeamRosterMutationFeature {
@@ -115,6 +125,13 @@ export function createTeamRosterMutationFeature(dependencies: {
     removeMember: new RemoveTeamRosterMember(featureDependencies),
     restoreMember: new RestoreTeamRosterMember(featureDependencies),
     updateMemberRole: new UpdateTeamRosterMemberRole(featureDependencies),
+    replaceMembersWithSettingsRelaunch: (teamName, members, intent) =>
+      dependencies.lifecycle.runLiveRosterMutation(teamName, () => {
+        if (!dependencies.persistMemberSettingsRelaunch) {
+          throw new Error('Member settings relaunch persistence is unavailable');
+        }
+        return dependencies.persistMemberSettingsRelaunch(teamName, members, intent);
+      }),
     logger: dependencies.logger,
   };
 }

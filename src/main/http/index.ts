@@ -18,6 +18,10 @@ import {
   registerRecentProjectsHttp,
 } from '@features/recent-projects/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
+import {
+  registerWorkspaceTrustHttp,
+  type WorkspaceTrustStatusFeatureFacade,
+} from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { registerConfigRoutes } from './config';
@@ -106,6 +110,7 @@ export interface HttpServices {
   organizationsFeature?: OrganizationsFeatureFacade;
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
+  workspaceTrust?: WorkspaceTrustStatusFeatureFacade;
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
@@ -244,6 +249,9 @@ export function registerHttpRoutes(
         }
       : undefined
   );
+  if (services.workspaceTrust) {
+    registerWorkspaceTrustHttp(app, services.workspaceTrust);
+  }
 
   logger.info('All HTTP routes registered');
 }

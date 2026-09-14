@@ -54,19 +54,25 @@
       "choosingAllProjects": "Pilih model untuk proyek tanpa pengesampingan.",
       "choosingProject": "Pilih model hanya untuk {{project}}.",
       "cancelChoosing": "Batal",
+      "select": "Pilih",
+      "selected": "Dipilih",
       "testAndUse": "Uji dan gunakan",
       "testAndUseAllProjects": "Uji dan gunakan untuk semua proyek",
       "testAndUseProject": "Uji dan gunakan untuk proyek ini"
     },
     "diagnostics": {
+      "previousPage": "Halaman sebelumnya",
+      "nextPage": "Halaman berikutnya",
       "copied": "Diagnostik disalin",
       "copiedShort": "Disalin",
       "copy": "Salin diagnosa",
+      "copyAll": "Salin semua",
       "hints": "Petunjuk",
       "likelyCause": "Kemungkinan menyebabkan:",
       "windowsSymlinkAdminHint": "Windows: jalankan Agent Teams AI sebagai Administrator"
     },
     "models": {
+      "testingElapsed": "Menunggu hasil pengujian... {{seconds}} dtk",
       "alreadyDefault": "Ini sudah menjadi standar OpenCode yang dipilih.",
       "empty": "Tidak ada model yang ditemukan.",
       "emptyFree": "Tidak ditemukan model gratis.",

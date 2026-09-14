@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { MemberBranchBadge } from '@renderer/components/team/members/MemberBranchBadge';
 import { Badge } from '@renderer/components/ui/badge';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -22,6 +23,7 @@ import {
   hasMemberLaunchDiagnosticsError,
   normalizeMemberLaunchFailureReason,
 } from '@renderer/utils/memberLaunchDiagnostics';
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import { getRuntimeMemorySourceLabel } from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
@@ -36,7 +38,6 @@ import {
   Check,
   Clock3,
   Cpu,
-  GitBranch,
   HardDrive,
   Info,
   Layers3,
@@ -107,7 +108,7 @@ interface MemberCardProps {
   onSendMessage?: () => void;
   onAssignTask?: () => void;
   onEditMember?: () => void;
-  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onRestartMember?: (memberName: string, expectedSecondary?: boolean) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
   onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
@@ -946,22 +947,26 @@ export const MemberCard = memo(function MemberCard({
     spawnEntry?.skippedForLaunch === true;
   const showFailedLaunchBadge = !isRemoved && isFailedLaunch;
   const showSkippedLaunchBadge = !isRemoved && isSkippedLaunch;
-  const rawLaunchFailureReason =
+  const launchFailureReasonText = describeMemberLaunchFailureReason(
     spawnError ??
-    spawnEntry?.hardFailureReason ??
-    spawnEntry?.runtimeDiagnostic ??
-    spawnEntry?.error;
+      spawnEntry?.hardFailureReason ??
+      spawnEntry?.runtimeDiagnostic ??
+      spawnEntry?.error,
+    t
+  );
   const launchFailureReason = showFailedLaunchBadge
-    ? normalizeMemberLaunchFailureReason(rawLaunchFailureReason)
+    ? normalizeMemberLaunchFailureReason(launchFailureReasonText)
     : null;
   const hasLiveLaunchControls =
     isTeamAlive === true || isTeamProvisioning === true || isLaunchSettling === true;
+  const isOpenCodeSecondary =
+    member.providerId === 'opencode' && (runtimeEntry?.laneKind ?? member.laneKind) === 'secondary';
   const hasRestartMemberControl =
     !isRemoved &&
     !isLeadMember(member) &&
     Boolean(onRestartMember) &&
     hasLiveLaunchControls &&
-    runtimeEntry?.restartable !== false;
+    (runtimeEntry?.restartable !== false || (isFailedLaunch && isOpenCodeSecondary));
   const openCodeRelaunchActionable = isOpenCodeRelaunchActionable({
     member,
     spawnEntry,
@@ -1008,13 +1013,13 @@ export const MemberCard = memo(function MemberCard({
   const handleRestartMember = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
     event.preventDefault();
     event.stopPropagation();
-    if (!onRestartMember || retryingLaunch) {
-      return;
-    }
+    if (!onRestartMember || retryingLaunch) return;
     setRetryLaunchError(null);
     setRetryingLaunch(true);
     try {
-      await onRestartMember(member.name);
+      await (isOpenCodeSecondary
+        ? onRestartMember(member.name, true)
+        : onRestartMember(member.name));
     } catch (error) {
       setRetryLaunchError(error instanceof Error ? error.message : restartActionErrorFallback);
     } finally {
@@ -1112,12 +1117,6 @@ export const MemberCard = memo(function MemberCard({
               <span className="shrink-0 font-medium text-[var(--color-text)]">
                 {displayMemberName(member.name)}
               </span>
-              {member.gitBranch && !showWorkspaceBadge ? (
-                <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[var(--color-text-muted)]">
-                  <GitBranch size={10} />
-                  {member.gitBranch}
-                </span>
-              ) : null}
               {showWorkspaceBadge ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1544,7 +1543,7 @@ export const MemberCard = memo(function MemberCard({
             <div
               data-testid="member-launch-failure-reason"
               className="col-span-2 col-start-2 min-w-0 whitespace-pre-wrap break-words text-[10px] font-medium leading-snug text-red-300/90"
-              title={rawLaunchFailureReason}
+              title={launchFailureReasonText}
             >
               <span>
                 {renderLinkifiedText(launchFailureReason, {
@@ -1556,6 +1555,7 @@ export const MemberCard = memo(function MemberCard({
             </div>
           ) : null}
         </div>
+        <MemberBranchBadge branch={member.gitBranch} />
       </div>
     </div>
   );

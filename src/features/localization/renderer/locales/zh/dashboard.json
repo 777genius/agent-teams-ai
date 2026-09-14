@@ -176,7 +176,7 @@
       "superGrokConnected": "已保存 SuperGrok OAuth",
       "superGrokDescription": "通过 OpenCode OAuth 使用您的 SuperGrok 订阅。",
       "switchToSuperGrok": "切换到 SuperGrok",
-      "title": "可选提供商和套餐",
+      "title": "提供商和套餐",
       "unavailable": "不可用",
       "updateForSuperGrok": "更新 OpenCode 以支持 OAuth",
       "updateOpenCode": "更新 OpenCode",

@@ -12,7 +12,7 @@ import {
   type TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps,
 } from '../TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory';
 
-import type { OpenCodeMemberIdentityResolution } from '../../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeMemberIdentityResolution } from '../../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,

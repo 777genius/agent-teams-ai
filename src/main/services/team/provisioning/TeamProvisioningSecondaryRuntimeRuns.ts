@@ -31,6 +31,13 @@ export interface MixedSecondaryRuntimeLaneState {
   queuedAtMs?: number;
   launchStartedAtMs?: number;
   launchFinishedAtMs?: number;
+  /**
+   * Set when the lane was finished before it was ever handed to the runtime,
+   * because the shared project runtime had already failed. Teardown reads it to
+   * tell a lane that owns nothing from one that owns a process, so it must stay
+   * a fact about the lane rather than a phrase in its user-facing diagnostics.
+   */
+  blockedBeforeLaunch?: true;
 }
 
 export interface SecondaryRuntimeRunEntry {
@@ -295,6 +302,29 @@ export function createSecondaryRuntimeRunStore(input: {
       clearSecondaryRuntimeRuns(input.secondaryRuntimeRunByTeam, teamName);
     },
   };
+}
+
+export function getTrackedOpenCodeBootstrapWakeRunId(
+  input: { teamName: string; laneId: string; runId: string },
+  ports: {
+    runTracking: { resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null };
+    runs: {
+      get(
+        runId: string
+      ): { mixedSecondaryLanes?: readonly { laneId: string; runId: string | null }[] } | undefined;
+    };
+  }
+): string | null {
+  const trackedRunId = ports.runTracking.resolveDeliverableTrackedRuntimeRunId(input.teamName);
+  if (!trackedRunId) return null;
+  if (input.laneId === 'primary') return trackedRunId === input.runId ? trackedRunId : null;
+  return ports.runs
+    .get(trackedRunId)
+    ?.mixedSecondaryLanes?.some(
+      (lane) => lane.laneId === input.laneId && lane.runId === input.runId
+    )
+    ? trackedRunId
+    : null;
 }
 
 export function getCurrentOpenCodeRuntimeRunId(input: {

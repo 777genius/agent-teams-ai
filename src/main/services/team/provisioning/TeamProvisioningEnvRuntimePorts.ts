@@ -22,7 +22,6 @@ export interface TeamProvisioningEnvRuntimePortsDeps {
   getRuntimeTurnSettledEnvironmentProvider(): RuntimeTurnSettledEnvironmentProvider | null;
   getRuntimeTurnSettledHookSettingsProvider(): RuntimeTurnSettledHookSettingsProvider | null;
   logger: TeamProvisioningEnvBuilderPorts['logger'];
-  processEnv?: NodeJS.ProcessEnv;
 }
 
 export interface TeamProvisioningEnvRuntimePorts {
@@ -41,10 +40,7 @@ export interface TeamProvisioningEnvRuntimePorts {
 }
 
 export async function resolveControlApiBaseUrlForProvisioning(
-  deps: Pick<
-    TeamProvisioningEnvRuntimePortsDeps,
-    'getControlApiBaseUrlResolver' | 'logger' | 'processEnv'
-  >
+  deps: Pick<TeamProvisioningEnvRuntimePortsDeps, 'getControlApiBaseUrlResolver' | 'logger'>
 ): Promise<string | null> {
   const resolver = deps.getControlApiBaseUrlResolver();
   if (!resolver) {
@@ -56,7 +52,6 @@ export async function resolveControlApiBaseUrlForProvisioning(
     if (!baseUrl) {
       throw new Error('Team control API resolver returned no base URL after startup.');
     }
-    (deps.processEnv ?? process.env).CLAUDE_TEAM_CONTROL_URL = baseUrl;
     return baseUrl;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

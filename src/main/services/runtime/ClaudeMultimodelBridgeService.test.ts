@@ -1,4 +1,7 @@
-import { describe, expect, test } from 'vitest';
+/* eslint-disable sonarjs/publicly-writable-directories -- Test-only project paths are never written. */
+
+import * as path from 'path';
+import { describe, expect, test, vi } from 'vitest';
 
 import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
 
@@ -9,6 +12,24 @@ interface RuntimeStatusMapper {
     providerId: CliProviderId,
     runtimeStatus: unknown
   ) => CliProviderStatus;
+  mergeOpenCodeVerification: (provider: CliProviderStatus, snapshot: unknown) => CliProviderStatus;
+}
+
+interface RuntimeStatusHydrationInternals {
+  beginProviderStatusHydration: (
+    binaryPath: string,
+    providerIds: readonly CliProviderId[],
+    projectPath?: string | null
+  ) => number;
+  getProviderStatusHydrationKey: (
+    binaryPath: string,
+    providerId: CliProviderId,
+    projectPath?: string | null
+  ) => string;
+  providerStatusHydrationInFlight: Map<
+    string,
+    { readonly generation: number; readonly promise: Promise<CliProviderStatus> }
+  >;
 }
 
 function mapRuntimeProviderStatus(
@@ -19,7 +40,61 @@ function mapRuntimeProviderStatus(
   return service.mapRuntimeProviderStatus(providerId, runtimeStatus);
 }
 
+function verifiedOpenCodeProvider(): CliProviderStatus {
+  return mapRuntimeProviderStatus('opencode', {
+    providerId: 'opencode',
+    supported: true,
+    authenticated: true,
+    authMethod: 'builtin_free',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    canLoginFromUi: false,
+    capabilities: { teamLaunch: true, oneShot: false, extensions: {} },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [],
+    backend: null,
+    statusMessage: null,
+    detailMessage: null,
+    models: ['opencode/big-pickle'],
+  });
+}
+
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
+  test.each(
+    (['anthropic', 'codex'] as const).flatMap((providerId) =>
+      [true, false].map((teamLaunch) => ({ providerId, teamLaunch }))
+    )
+  )(
+    '$providerId mints refresh provenance only from raw affirmative teamLaunch=$teamLaunch, ignoring injected markers',
+    ({ providerId, teamLaunch }) => {
+      const provider = mapRuntimeProviderStatus(providerId, {
+        providerId,
+        supported: true,
+        authenticated: true,
+        authMethod: 'claude.ai',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        capabilities: { teamLaunch, oneShot: true, extensions: {} },
+        canLoginFromUi: true,
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: null,
+        statusMessage: null,
+        detailMessage: null,
+        models: ['haiku'],
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+        teamLaunchAuthorityRestriction: 'catalog-refresh',
+      });
+      expect(provider.capabilities.teamLaunch).toBe(false);
+      expect(provider.teamLaunchAuthorityRestriction).toBe(
+        teamLaunch ? 'catalog-refresh' : undefined
+      );
+    }
+  );
   test('maps Anthropic subscription rate limits from orchestrator runtime status', () => {
     const provider = mapRuntimeProviderStatus('anthropic', {
       supported: true,
@@ -148,6 +223,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
               limits: null,
               free: false,
               releaseDate: '2026-05-20',
+              recentlyReleased: true,
               opencode: {
                 providerId: 'llama.cpp',
                 modelId: 'qwen-test:0.5b',
@@ -179,6 +255,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       reason: 'Execution proof required',
     });
     expect(provider.modelCatalog?.models[0]?.metadata?.releaseDate).toBe('2026-05-20');
+    expect(provider.modelCatalog?.models[0]?.metadata?.recentlyReleased).toBe(true);
     expect(provider.modelCatalog?.models[0]?.supportedReasoningEfforts).toEqual(['high', 'ultra']);
     expect(provider.modelCatalog?.models[0]?.defaultReasoningEffort).toBe('ultra');
   });
@@ -200,4 +277,91 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
 
     expect(provider.subscriptionRateLimits).toBeNull();
   });
+
+  test.each([
+    [null, 'unknown'],
+    [
+      {
+        detected: true,
+        hostHealthy: false,
+        probeError: 'host probe failed',
+        diagnostics: ['managed profile drift'],
+      },
+      'error',
+    ],
+  ] as const)(
+    'revokes OpenCode launch authority for missing or drifted live evidence',
+    (snapshot, verificationState) => {
+      const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
+      const provider = verifiedOpenCodeProvider();
+
+      expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        capabilities: { teamLaunch: false },
+      });
+    }
+  );
+
+  test('revokes OpenCode launch authority when live verification throws', async () => {
+    const service = new ClaudeMultimodelBridgeService();
+    vi.spyOn(service, 'getProviderStatus').mockResolvedValue(verifiedOpenCodeProvider());
+    vi.spyOn(
+      service as unknown as { getOpenCodeVerifySnapshot: () => Promise<never> },
+      'getOpenCodeVerifySnapshot'
+    ).mockRejectedValue(new Error('verification transport failed'));
+
+    await expect(service.verifyProviderStatus('/fake/runtime', 'opencode')).resolves.toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      capabilities: { teamLaunch: false },
+    });
+    vi.mocked(console.warn).mockClear();
+  });
+
+  test('requests the full OpenCode status for project-scoped launch checks', async () => {
+    const projectPath = '/tmp/sandbox-project';
+    const service = new ClaudeMultimodelBridgeService();
+    const internals = service as unknown as {
+      getProviderStatusFromScopedRuntimeStatus: (
+        binaryPath: string,
+        providerId: CliProviderId,
+        options: { summary?: boolean; projectPath?: string | null }
+      ) => Promise<CliProviderStatus>;
+    };
+    const statusSpy = vi
+      .spyOn(internals, 'getProviderStatusFromScopedRuntimeStatus')
+      .mockResolvedValue(verifiedOpenCodeProvider());
+
+    await service.getProviderStatus('/fake/cli', 'opencode', undefined, {
+      projectPath,
+    });
+
+    // The service resolves the project path before scoping the status request.
+    expect(statusSpy).toHaveBeenCalledWith('/fake/cli', 'opencode', {
+      summary: false,
+      projectPath: path.resolve(projectPath),
+    });
+  });
+
+  test('reuses an active single-provider catalog hydration generation', () => {
+    const internals =
+      new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusHydrationInternals;
+    const binaryPath = '/fake/cli';
+    const generation = internals.beginProviderStatusHydration(binaryPath, ['codex']);
+    const hydrationKey = internals.getProviderStatusHydrationKey(binaryPath, 'codex', null);
+    internals.providerStatusHydrationInFlight.set(hydrationKey, {
+      generation,
+      promise: Promise.resolve(mapRuntimeProviderStatus('codex', {})),
+    });
+
+    expect(internals.beginProviderStatusHydration(binaryPath, ['codex'])).toBe(generation);
+    expect(
+      internals.beginProviderStatusHydration(binaryPath, ['codex'], '/tmp/another-project')
+    ).not.toBe(generation);
+  });
 });
+
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after test-only temp path fixtures. */

@@ -31,6 +31,68 @@ describe('windowsProcessTable', () => {
     windowsProcessTable = await import('../../../src/main/utils/windowsProcessTable');
   });
 
+  it.each([
+    [{ code: 7, signal: 'SIGTERM', killed: true, errno: -1 }, 'unknown'],
+    [{ code: 'ETIMEDOUT', signal: 'SIGTERM', killed: true }, 'true'],
+    [{ killed: true }, 'unknown'],
+    [{}, 'unknown'],
+  ])('reports only available outcome metadata for %j', async (metadata, timedOut) => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(137);
+    const callbacks = captureExecFileCallbacks();
+    const request = windowsProcessTable.listWindowsProcessTable(123, { bypassCache: true });
+    callbacks[0](
+      Object.assign(new Error('foreign command --private-data'), metadata),
+      'foreign process table stdout',
+      'access denied API_KEY="mock-secret" --token mock-token'
+    );
+    const error = await request.catch((error: Error) => error);
+    expect(error).toBeInstanceOf(Error);
+    const message = String(error);
+    expect(message).toContain('windows_process_enumeration: probe failed');
+    expect(message).toContain('durationMs=37; timeoutMs=123');
+    expect(message).toContain(`timedOut=${timedOut}`);
+    for (const [key, value] of Object.entries(metadata))
+      expect(message).toContain(`${key}=${value}`);
+    expect(message).toContain('access denied');
+    expect(message).not.toMatch(/foreign|mock-secret|mock-token|code=0/);
+    clock.mockRestore();
+  });
+
+  it('keeps empty stderr and missing outcome unknown, including stderr-only rejection', async () => {
+    for (const [error, stderr] of [
+      [new Error('ignored'), ''],
+      [null, 'warning'],
+    ] as const) {
+      const callbacks = captureExecFileCallbacks();
+      const request = windowsProcessTable.listWindowsProcessTable();
+      callbacks[0](error, 'private stdout', stderr);
+      await expect(request).rejects.toThrow(`stderr=${JSON.stringify(stderr)}`);
+      await expect(request).rejects.not.toThrow(/code=|signal=|killed=|private/);
+    }
+  });
+
+  it('sanitizes before bounding stderr and leaves successful parse and sync behavior unchanged', async () => {
+    const callbacks = captureExecFileCallbacks();
+    const failed = windowsProcessTable.listWindowsProcessTable();
+    callbacks[0](
+      new Error('ignored'),
+      '',
+      '--password "' + 'private'.repeat(200) + '" end ' + 'x'.repeat(600)
+    );
+    const message = String(await failed.catch((error: Error) => error));
+    expect(message).toContain('--password [redacted] end');
+    expect(message).not.toContain('private');
+    expect(message.length).toBeLessThan(750);
+    const success = windowsProcessTable.listWindowsProcessTable();
+    callbacks[1](null, 'malformed private stdout', '');
+    await expect(success).resolves.toEqual([]);
+    childProcessMock.execFileSync.mockReturnValue(makeProcessTableJson(5));
+    expect(windowsProcessTable.listWindowsProcessTableSync()).toEqual([
+      expect.objectContaining({ pid: 5 }),
+    ]);
+    expect(childProcessMock.execFileSync.mock.calls[0][2].timeout).toBe(4_000);
+  });
+
   it('parses PowerShell process table JSON objects and arrays', () => {
     expect(
       windowsProcessTable.parseWindowsProcessTableJson(

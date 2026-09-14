@@ -5,8 +5,10 @@ import type { TeamRuntimeOperationsRendererTransportPort } from '@features/team-
 
 export function createTeamRuntimeOperationsTransport(): TeamRuntimeOperationsRendererTransportPort {
   return {
-    restartMember: (teamName, memberName) =>
-      unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName)),
+    restartMember: (teamName, memberName, expectedSecondary) =>
+      unwrapIpc('team:restartMember', () =>
+        api.teams.restartMember(teamName, memberName, expectedSecondary)
+      ),
     retryFailedSecondaryLanes: (teamName) =>
       unwrapIpc('team:retryFailedOpenCodeSecondaryLanes', () =>
         api.teams.retryFailedOpenCodeSecondaryLanes(teamName)

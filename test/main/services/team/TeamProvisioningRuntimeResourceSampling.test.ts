@@ -124,61 +124,106 @@ describe('TeamProvisioningRuntimeResourceSampling', () => {
     ).toBeUndefined();
   });
 
-  it('creates bound runtime snapshot resource sampling ports', async () => {
-    const previousPidusageTelemetry = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
-    process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = '1';
-    const listRuntimeProcessTable = vi.fn(async () => [
-      { pid: 111, ppid: 1, command: 'runtime', cpu: 4, memory: 100 },
-      { pid: 222, ppid: 111, command: 'child', cpu: 6, memory: 200 },
-    ]);
-    const readPidUsage = vi.fn(async () => ({
-      '111': { cpu: 8, memory: 300 },
-      '222': { cpu: 12, memory: 500 },
-    }));
-    try {
-      const sampling = createSampling({ listRuntimeProcessTable, readPidUsage });
+  // The read-only snapshot build shares this history with every other reader
+  // of the team, so an observation endpoint polling it may report the series a
+  // member already has but must not append to it, and must not prune it.
+  it('creates a write-free history port for a read-only snapshot build', () => {
+    const sampling = createSampling();
+    const writingPorts = sampling.createRuntimeSnapshotResourceSamplingPorts();
+    const readOnlyPorts = sampling.createRuntimeSnapshotResourceSamplingPorts({ readOnly: true });
+    const sample = (timestamp: string, rssBytes: number) => ({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-1',
+      pid: 111,
+      timestamp,
+      rssBytes,
+    });
 
-      const ports = sampling.createRuntimeSnapshotResourceSamplingPorts();
-      const rows = await ports.readRuntimeProcessRowsForUsageSnapshot('runtime-team');
-      const trees = ports.buildRuntimeUsageProcessTrees({
-        rootPids: [111],
-        processRows: rows,
-      });
-      const sampledStats = await ports.readProcessUsageStatsByPid([111, 222]);
-      const loadStats = ports.buildRuntimeProcessLoadStats({
-        rootPid: 111,
-        usageStatsByPid: sampledStats,
-        processTree: trees.get(111),
-      });
-      const history = ports.agentRuntimeResourceHistory.record({
-        teamName: 'runtime-team',
-        memberName: 'alice',
-        timestamp: '2026-04-24T12:00:00.000Z',
-        cpuPercent: loadStats?.cpuPercent,
-        rssBytes: loadStats?.rssBytes,
-        pid: 111,
-      });
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:00:00.000Z', 100))
+    ).toBeUndefined();
+    // Negative control: the writing port is what puts a sample in the history,
+    // so a read-only port that quietly recorded would be indistinguishable.
+    expect(
+      writingPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:01:00.000Z', 200))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:02:00.000Z', 300))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
 
-      expect(listRuntimeProcessTable).toHaveBeenCalledTimes(1);
-      expect(readPidUsage).toHaveBeenCalledWith([111, 222], expect.any(Object));
-      expect(trees.get(111)).toEqual({ pids: [111, 222], truncated: false });
-      expect(loadStats).toEqual({
-        childCpuPercent: 12,
-        childRssBytes: 500,
-        cpuPercent: 20,
-        primaryCpuPercent: 8,
-        primaryRssBytes: 300,
-        processCount: 2,
-        rssBytes: 800,
-        runtimeLoadScope: 'process-tree',
-      });
-      expect(history).toEqual([expect.objectContaining({ cpuPercent: 20, rssBytes: 800 })]);
-    } finally {
-      if (previousPidusageTelemetry === undefined) {
-        delete process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
-      } else {
-        process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = previousPidusageTelemetry;
+    readOnlyPorts.agentRuntimeResourceHistory.prune('runtime-team', new Set());
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:03:00.000Z', 400))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
+    // Negative control for the prune half, on the same history.
+    writingPorts.agentRuntimeResourceHistory.prune('runtime-team', new Set());
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:04:00.000Z', 500))
+    ).toBeUndefined();
+  });
+
+  // On win32 the usage snapshot tags every process row as 'wsl' and the tree
+  // builder drops those (a WSL pid namespace cannot be sampled from the
+  // Windows host), so the native tree this case asserts is unreachable there.
+  it.skipIf(process.platform === 'win32')(
+    'creates bound runtime snapshot resource sampling ports',
+    async () => {
+      const previousPidusageTelemetry = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+      process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = '1';
+      const listRuntimeProcessTable = vi.fn(async () => [
+        { pid: 111, ppid: 1, command: 'runtime', cpu: 4, memory: 100 },
+        { pid: 222, ppid: 111, command: 'child', cpu: 6, memory: 200 },
+      ]);
+      const readPidUsage = vi.fn(async () => ({
+        '111': { cpu: 8, memory: 300 },
+        '222': { cpu: 12, memory: 500 },
+      }));
+      try {
+        const sampling = createSampling({ listRuntimeProcessTable, readPidUsage });
+
+        const ports = sampling.createRuntimeSnapshotResourceSamplingPorts();
+        const rows = await ports.readRuntimeProcessRowsForUsageSnapshot('runtime-team');
+        const trees = ports.buildRuntimeUsageProcessTrees({
+          rootPids: [111],
+          processRows: rows,
+        });
+        const sampledStats = await ports.readProcessUsageStatsByPid([111, 222]);
+        const loadStats = ports.buildRuntimeProcessLoadStats({
+          rootPid: 111,
+          usageStatsByPid: sampledStats,
+          processTree: trees.get(111),
+        });
+        const history = ports.agentRuntimeResourceHistory.record({
+          teamName: 'runtime-team',
+          memberName: 'alice',
+          timestamp: '2026-04-24T12:00:00.000Z',
+          cpuPercent: loadStats?.cpuPercent,
+          rssBytes: loadStats?.rssBytes,
+          pid: 111,
+        });
+
+        expect(listRuntimeProcessTable).toHaveBeenCalledTimes(1);
+        expect(readPidUsage).toHaveBeenCalledWith([111, 222], expect.any(Object));
+        expect(trees.get(111)).toEqual({ pids: [111, 222], truncated: false });
+        expect(loadStats).toEqual({
+          childCpuPercent: 12,
+          childRssBytes: 500,
+          cpuPercent: 20,
+          primaryCpuPercent: 8,
+          primaryRssBytes: 300,
+          processCount: 2,
+          rssBytes: 800,
+          runtimeLoadScope: 'process-tree',
+        });
+        expect(history).toEqual([expect.objectContaining({ cpuPercent: 20, rssBytes: 800 })]);
+      } finally {
+        if (previousPidusageTelemetry === undefined) {
+          delete process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+        } else {
+          process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = previousPidusageTelemetry;
+        }
       }
     }
-  });
+  );
 });

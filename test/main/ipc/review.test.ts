@@ -5,6 +5,7 @@ import {
   removeReviewHandlers,
 } from '@main/ipc/review';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -13,6 +14,8 @@ import {
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_GET_TASK_CHANGES,
+  REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES,
   REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
@@ -39,6 +42,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IpcResult } from '@shared/types/ipc';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+
+vi.mock('electron', () => ({
+  app: { getPath: () => os.tmpdir(), getLocale: () => 'en' },
+  BrowserWindow: { getAllWindows: () => [] },
+}));
 
 let decisionTeamsBasePath: string;
 
@@ -87,6 +95,7 @@ describe('review IPC path confinement', () => {
   let extractor: {
     getTaskChanges: ReturnType<typeof vi.fn>;
     getAgentChanges: ReturnType<typeof vi.fn>;
+    getTeamTaskChangeSummaries: ReturnType<typeof vi.fn>;
   };
   let applier: {
     checkConflict: ReturnType<typeof vi.fn>;
@@ -160,6 +169,7 @@ describe('review IPC path confinement', () => {
           },
         ],
       }),
+      getTeamTaskChangeSummaries: vi.fn().mockResolvedValue({ summaries: {} }),
     };
     let renameTransitionState: 'accepted' | 'rejected' = 'rejected';
     applier = {
@@ -284,7 +294,9 @@ describe('review IPC path confinement', () => {
 
   afterEach(async () => {
     removeReviewHandlers(ipcMain);
-    await rm(tmpDir, { recursive: true, force: true });
+    // Windows keeps the sqlite lock database file busy while a handle is open.
+    closeReviewPersistenceScopeLockDatabasesForTests();
+    await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   async function getDisplayedSnapshotToken(
@@ -303,6 +315,48 @@ describe('review IPC path confinement', () => {
     if (!token) throw new Error('Review snapshot token was not returned');
     return token;
   }
+
+  it.each([undefined, false, true, 'true', 1, {}])(
+    'sanitizes explicit backfill retry intent %j independently from forceFresh',
+    async (retryBackfill) => {
+      const result = await ipcMain.invoke(REVIEW_GET_TASK_CHANGES, 'safe-team', 'task-1', {
+        summaryOnly: true,
+        forceFresh: true,
+        retryBackfill,
+      });
+      expect(result.success).toBe(true);
+      expect(extractor.getTaskChanges).toHaveBeenLastCalledWith(
+        'safe-team',
+        'task-1',
+        expect.objectContaining({
+          summaryOnly: true,
+          forceFresh: true,
+          retryBackfill: retryBackfill === true,
+        })
+      );
+    }
+  );
+
+  it('preserves manual backfill retry intent in batched summary requests', async () => {
+    const result = await ipcMain.invoke(REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES, 'safe-team', [
+      {
+        taskId: 'task-1',
+        options: { summaryOnly: true, forceFresh: true, retryBackfill: true },
+      },
+    ]);
+
+    expect(result.success).toBe(true);
+    expect(extractor.getTeamTaskChangeSummaries).toHaveBeenLastCalledWith('safe-team', [
+      {
+        taskId: 'task-1',
+        options: expect.objectContaining({
+          summaryOnly: true,
+          forceFresh: true,
+          retryBackfill: true,
+        }),
+      },
+    ]);
+  });
 
   it('ignores a late watch request after unwatch and a newer project subscription', async () => {
     let resolveOldProject!: (projectPath: string) => void;

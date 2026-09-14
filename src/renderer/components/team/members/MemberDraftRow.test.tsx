@@ -185,6 +185,14 @@ describe('MemberDraftRow', () => {
     expect(nameInput.className).not.toContain('shadow-none');
     expect(nameInput.className).not.toContain('font-semibold');
 
+    const removeButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Remove alice"]'
+    )!;
+    const actionRow = removeButton.parentElement!;
+    expect(actionRow.className).toContain('sm:flex-nowrap');
+    expect(actionRow.className).not.toContain('sm:flex-wrap');
+    expect(actionRow.firstElementChild?.className).toContain('sm:min-w-[140px]');
+
     act(() => {
       root.unmount();
     });

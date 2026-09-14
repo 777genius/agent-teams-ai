@@ -29,6 +29,7 @@ import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { DesktopTeamRuntimeCapability } from './teamFeatureCapabilities';
 import type { TeamPermanentDeletionLifecycle } from './teamLegacyAdapters';
+import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { IpcMain } from 'electron';
 
 export { showTeamNativeNotification } from './teamAuxiliaryIpc';
@@ -50,7 +51,8 @@ export function initializeTeamHandlers(
   logSourceTracker?: TeamLogSourceTracker,
   branchTracker?: BranchStatusService,
   ioGovernor?: LaunchIoGovernor,
-  permanentDeletionLifecycle?: TeamPermanentDeletionLifecycle
+  permanentDeletionLifecycle?: TeamPermanentDeletionLifecycle,
+  scopedResourceReleaser?: TeamScopedResourceReleaser
 ): void {
   initializeLegacyTeamHandlers(
     initializeTeamAuxiliaryIpc,
@@ -66,7 +68,8 @@ export function initializeTeamHandlers(
     logSourceTracker,
     branchTracker,
     ioGovernor,
-    permanentDeletionLifecycle
+    permanentDeletionLifecycle,
+    scopedResourceReleaser
   );
 }
 

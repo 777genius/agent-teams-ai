@@ -486,6 +486,70 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
   });
 
+  it('reserves backfill retry for a manual click while automatically refreshing every 20 seconds', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const task = makeTask('task-refresh');
+    hoisted.getTaskChanges.mockResolvedValue(makeSummary(task.id));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(TaskDetailDialog, {
+            open: true,
+            variant: 'team',
+            teamName: 'team-a',
+            task,
+            taskMap: new Map<string, TeamTaskWithKanban>(),
+            members: [],
+            onClose: vi.fn(),
+          })
+        );
+      });
+      await act(async () => {
+        clickChangesSection(host);
+      });
+      expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(1);
+      for (let tick = 0; tick < 5; tick++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20_000);
+        });
+        expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(tick + 2);
+        expect(hoisted.getTaskChanges).toHaveBeenLastCalledWith(
+          'team-a',
+          task.id,
+          expect.objectContaining({ summaryOnly: true, forceFresh: true })
+        );
+        expect(hoisted.getTaskChanges.mock.lastCall?.[2].retryBackfill).not.toBe(true);
+      }
+      const refreshButton = host.querySelector<HTMLButtonElement>(
+        '[data-testid="section-extra-Changes"] button'
+      );
+      expect(refreshButton).not.toBeNull();
+      await act(async () => {
+        refreshButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(7);
+      expect(hoisted.getTaskChanges).toHaveBeenLastCalledWith(
+        'team-a',
+        task.id,
+        expect.objectContaining({ summaryOnly: true, forceFresh: true, retryBackfill: true })
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000);
+      });
+      expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(8);
+      expect(hoisted.getTaskChanges.mock.lastCall?.[2].retryBackfill).not.toBe(true);
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+      hoisted.getTaskChanges.mockReset();
+    }
+  });
+
   it('preloads the changes summary after 1.5 seconds and shows header loading state', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

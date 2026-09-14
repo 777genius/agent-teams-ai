@@ -29,6 +29,7 @@ import {
 } from '@codemirror/view';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 import { AlertTriangle, Check, Loader2, X } from 'lucide-react';
@@ -63,6 +64,7 @@ export const ConfigEditorDialog = ({
   onConfigSaved,
 }: ConfigEditorDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
+  useOverlayOccupancy(open);
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);

@@ -21,9 +21,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
+  OpenCodeCatalogErrorAlert,
+  type OpenCodeCatalogFailure,
   resolveOpenCodeQuickConnectGate,
+  RuntimeProviderErrorAlert,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
+  useOpenCodeConnectedModelCatalog,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -53,6 +57,7 @@ import {
   shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
+import { shouldShowLoadedProviderModels } from '@renderer/components/runtime/providerModelVisibility';
 import {
   buildProviderRuntimeBackendSummaryText,
   getProviderRuntimeBackendSummary,
@@ -77,7 +82,7 @@ import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus
 import { getRuntimeDisplayName as getHumanRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
-import { getOpenCodeModelRoutePresentationStatus } from '@shared/utils/opencodeModelRoute';
+import { countConfiguredLocalOpenCodeCatalogModels } from '@shared/utils/opencodeModelRoute';
 import {
   AlertTriangle,
   CheckCircle,
@@ -98,11 +103,15 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
+import { DashboardRateLimitChips } from './DashboardRateLimitChips';
+import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
+import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
+import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -151,67 +160,6 @@ const TerminalModal = lazy(() =>
     default: module.TerminalModal,
   }))
 );
-
-const DashboardRateLimitChips = ({
-  providerId,
-  items,
-  refreshCycle,
-  refreshing,
-}: {
-  providerId: CliProviderId;
-  items: DashboardRateLimitItem[];
-  refreshCycle: number;
-  refreshing: boolean;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('dashboard');
-
-  return (
-    <div
-      className="flex flex-wrap items-center gap-2"
-      aria-busy={refreshing}
-      aria-label={refreshing ? t('cliStatus.labels.loadingRateLimits') : undefined}
-    >
-      {items.map((item) => (
-        <div
-          key={`${providerId}-${item.label}-${refreshCycle}`}
-          className={`w-fit max-w-full rounded-md border px-2 py-1.5 ${
-            refreshing
-              ? 'skeleton-shimmer'
-              : refreshCycle > 0
-                ? 'dashboard-rate-limit-refreshed'
-                : ''
-          }`}
-          style={{
-            borderColor: 'rgba(74, 222, 128, 0.2)',
-            backgroundColor: 'rgba(74, 222, 128, 0.06)',
-          }}
-        >
-          <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span
-              className="text-[10px] uppercase tracking-[0.06em]"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              {item.label}
-            </span>
-            <span
-              className="text-xs font-medium"
-              style={{ color: item.isDepleted ? '#f87171' : '#86efac' }}
-            >
-              {item.remaining}
-            </span>
-            <span
-              className="min-w-0 truncate text-[10px]"
-              style={{ color: 'var(--color-text-secondary)' }}
-              title={item.resetsAt}
-            >
-              • {t('cliStatus.labels.resets', { time: item.resetsAt })}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const RATE_LIMIT_SKELETON_LABELS = ['5h left', 'Weekly left'] as const;
 
@@ -485,6 +433,7 @@ const CliCheckingSpinner = ({
 // =============================================================================
 
 interface InstalledBannerProps {
+  catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
   cliStatusLoading: boolean;
@@ -619,6 +568,7 @@ function formatRuntimeAuthSummary(
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>,
   visibleProviders: readonly CliProviderStatus[],
   additionalConnectedCount: number,
+  configuredLocalCount: number,
   codexSnapshotPending: boolean,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string | null {
@@ -633,10 +583,15 @@ function formatRuntimeAuthSummary(
       visibleProviders.filter(
         (provider) => !isPending(provider) && isProviderCountedAsConnected(provider)
       ).length + additionalConnectedCount;
-
-    return connected > 0
-      ? t('cliStatus.provider.connectedCount', { connected })
-      : t('cliStatus.provider.connectToGetStarted');
+    if (connected <= 0 && configuredLocalCount <= 0) {
+      return t('cliStatus.provider.connectToGetStarted');
+    }
+    return [
+      ...(connected > 0 ? [t('cliStatus.provider.connectedCount', { connected })] : []),
+      ...(configuredLocalCount > 0
+        ? [t('cliStatus.provider.configuredLocalCount', { count: configuredLocalCount })]
+        : []),
+    ].join(' · ');
   }
 
   if (cliStatus.authStatusChecking) {
@@ -764,22 +719,7 @@ function getOpenCodeDashboardChips(
   }
 
   const catalogModels = provider.modelCatalog?.models ?? [];
-  const configuredLocalCount = new Set(
-    catalogModels
-      .filter((model) => {
-        const route = model.metadata?.opencode;
-        return (
-          getOpenCodeModelRoutePresentationStatus({
-            modelId: model.launchModel,
-            catalogId: model.id,
-            providerId: route?.providerId,
-            routeKind: route?.routeKind,
-            accessKind: route?.accessKind,
-          }) === 'local'
-        );
-      })
-      .map((model) => model.launchModel)
-  ).size;
+  const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(catalogModels);
   const verifiedCount = new Set(
     catalogModels
       .filter((model) => model.metadata?.opencode?.proofState === 'verified')
@@ -911,6 +851,7 @@ const OpenCodeAtlasCloudBanner = ({
 };
 
 const InstalledBanner = ({
+  catalogFailures = [],
   cliStatus,
   sourceProviderMap,
   cliStatusLoading,
@@ -964,6 +905,10 @@ const InstalledBanner = ({
   );
   const detailedProviders = visibleProviders;
   const canOpenExtensions = cliStatus.installed;
+  const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(
+    visibleProviders.find((provider) => provider.providerId === 'opencode')?.modelCatalog?.models ??
+      []
+  );
   const hasConnectedMultimodelProvider =
     isMultimodelRuntimeStatus(cliStatus) &&
     (visibleProviders.some(
@@ -971,7 +916,8 @@ const InstalledBanner = ({
         !isCodexSnapshotPending(provider, codexSnapshotPending) &&
         isProviderCountedAsConnected(provider)
     ) ||
-      openCodeConnectedPlanCount > 0);
+      openCodeConnectedPlanCount > 0 ||
+      configuredLocalCount > 0);
   const runtimeLabel = hasConnectedMultimodelProvider
     ? t('cliStatus.provider.readyToRunAgents')
     : formatRuntimeLabel(cliStatus);
@@ -979,6 +925,7 @@ const InstalledBanner = ({
     cliStatus,
     visibleProviders,
     openCodeConnectedPlanCount,
+    configuredLocalCount,
     codexSnapshotPending,
     t
   );
@@ -987,13 +934,15 @@ const InstalledBanner = ({
 
   return (
     <div
-      className={`mb-6 rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
+      className={`mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
       style={{ backgroundColor: INSTALLED_BANNER_BACKGROUND }}
     >
       <div
-        className={`flex items-center justify-between rounded-md ${
+        className={`flex items-center justify-between ${
           showCollapseControl
-            ? '-mx-2 cursor-pointer px-2 py-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15'
+            ? `${
+                showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
+              } cursor-pointer transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/15`
             : ''
         }`}
         role="button"
@@ -1133,6 +1082,14 @@ const InstalledBanner = ({
       )}
       {cliStatus.flavor === 'agent_teams_orchestrator' ? (
         <div className={showExpandedContent ? undefined : 'hidden'}>
+          {openCodeRuntimeStatus?.diagnostics ? (
+            <RuntimeProviderErrorAlert
+              compact
+              message={openCodeRuntimeStatus.error ?? ''}
+              diagnostics={openCodeRuntimeStatus.diagnostics}
+              testId="opencode-version-diagnostics"
+            />
+          ) : null}
           <RuntimeProviderQuickConnect
             enabled
             cliStatusLoading={cliStatusLoading}
@@ -1204,17 +1161,39 @@ const InstalledBanner = ({
               hasRateLimits: hasDashboardRateLimits,
               loading: rateLimitsLoading,
             });
-            const statusText = showSkeleton
-              ? t('cliStatus.actions.checking')
-              : formatProviderStatusText(provider, settingsT);
-            const modelCatalogLoading =
-              provider.modelCatalogRefreshState === 'loading' ||
-              isOpenCodeCatalogHydrating(provider);
+            const openCodeRuntimeContradictsMissingMetadata =
+              provider.providerId === 'opencode' &&
+              provider.statusCheckErrorCode === 'runtime_missing' &&
+              isOpenCodeRuntimeUsable(openCodeRuntimeStatus);
+            const isPassiveOpenCodeModelSummary =
+              provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only';
             const hasProviderModels =
               provider.providerId === 'opencode'
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
+            const statusText: string | null = showSkeleton
+              ? t('cliStatus.actions.checking')
+              : provider.providerId === 'opencode' &&
+                  hasProviderModels &&
+                  isProviderInventoryOnlyFallback(provider)
+                ? null
+                : isPassiveOpenCodeModelSummary
+                  ? hasProviderModels
+                    ? null
+                    : provider.modelCatalogRefreshState === 'error'
+                      ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
+                      : provider.modelCatalogRefreshState === 'ready'
+                        ? 'No models from connected providers'
+                        : t('cliStatus.actions.checking')
+                  : openCodeRuntimeContradictsMissingMetadata
+                    ? t('cliStatus.quickConnect.connected')
+                    : formatProviderStatusText(provider, settingsT);
+            const modelCatalogLoading =
+              !(provider.providerId === 'opencode' && hasProviderModels) &&
+              (provider.modelCatalogRefreshState === 'loading' ||
+                (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider)));
+            const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
@@ -1222,9 +1201,9 @@ const InstalledBanner = ({
               connectionModeSummary ||
               credentialSummary ||
               !hasProviderModels ||
-              modelCatalogLoading
+              modelCatalogLoading ||
+              provider.modelCatalog?.diagnostics.message
             );
-
             return (
               <div
                 key={provider.providerId}
@@ -1257,14 +1236,16 @@ const InstalledBanner = ({
                           </span>
                         ))}
                       </span>
-                      <span
-                        className="whitespace-nowrap text-xs"
-                        style={{
-                          color: getProviderStatusColor(statusText, provider.authenticated),
-                        }}
-                      >
-                        {statusText}
-                      </span>
+                      {statusText ? (
+                        <span
+                          className="whitespace-nowrap text-xs"
+                          style={{
+                            color: getProviderStatusColor(statusText, provider.authenticated),
+                          }}
+                        >
+                          {statusText}
+                        </span>
+                      ) : null}
                     </div>
                     {showSkeleton ? (
                       <ProviderDetailSkeleton />
@@ -1290,9 +1271,25 @@ const InstalledBanner = ({
                         {modelCatalogLoading ? (
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
-                        {!hasProviderModels && !modelCatalogLoading && (
-                          <span>{t('cliStatus.provider.modelsUnavailable')}</span>
-                        )}
+                        {provider.providerId === 'opencode' &&
+                        provider.modelCatalog?.diagnostics.message ? (
+                          catalogFailures.length ? (
+                            <OpenCodeCatalogErrorAlert failures={catalogFailures} />
+                          ) : (
+                            <ProviderCatalogDiagnostics
+                              message={provider.modelCatalog.diagnostics.message}
+                            />
+                          )
+                        ) : null}
+                        {!hasProviderModels &&
+                          !modelCatalogLoading &&
+                          !isPassiveOpenCodeModelSummary && (
+                            <span>
+                              {provider.providerId === 'opencode'
+                                ? 'No models from connected providers'
+                                : t('cliStatus.provider.modelsUnavailable')}
+                            </span>
+                          )}
                       </div>
                     ) : null}
                     {!showSkeleton && codexDashboardHint ? (
@@ -1420,6 +1417,7 @@ const InstalledBanner = ({
                       </button>
                     ) : null}
                     <button
+                      data-testid={`runtime-manage-${provider.providerId}`}
                       onClick={() => onProviderManage(provider.providerId)}
                       disabled={actionDisabled}
                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
@@ -1476,7 +1474,7 @@ const InstalledBanner = ({
                     </button>
                   </div>
                 </div>
-                {!showSkeleton && !modelCatalogLoading && hasProviderModels && (
+                {!showSkeleton && showProviderModels && (
                   <div className="col-span-2">
                     <ProviderModelBadges
                       providerId={provider.providerId}
@@ -1644,14 +1642,34 @@ export const CliStatusBanner = ({
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
+  const passiveOpenCodeProvider = useMemo(
+    () =>
+      loadingCliStatus?.providers.find((provider) => provider.providerId === 'opencode') ?? null,
+    [loadingCliStatus?.providers]
+  );
+  const openCodeDashboardCatalog = useOpenCodeConnectedModelCatalog({
+    enabled:
+      isElectron &&
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      openCodeRuntimeStatus?.installed !== false &&
+      canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
+    statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
+    refreshRevision: providerQuickConnectRefreshKey,
+    projectPath: selectedProjectPath,
+    passiveProviderStatus: passiveOpenCodeProvider,
+  });
+  const refreshOpenCodeDashboardCatalog = openCodeDashboardCatalog.refresh;
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
-        provider.providerId === 'codex'
-          ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
-          : provider
+        provider.providerId === 'opencode' && openCodeDashboardCatalog.providerStatus
+          ? openCodeDashboardCatalog.providerStatus
+          : provider.providerId === 'codex'
+            ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+            : provider
       ),
-    [loadingCliStatus?.providers, codexAccount.snapshot]
+    [loadingCliStatus?.providers, codexAccount.snapshot, openCodeDashboardCatalog.providerStatus]
   );
   const loadingCliProviderMap = useMemo(
     () =>
@@ -1812,30 +1830,10 @@ export const CliStatusBanner = ({
     shouldRefreshCodexSubscriptionLimits,
   ]);
 
-  useEffect(() => {
-    if (!isElectron) return;
-    // IMPORTANT: do NOT auto-fetch on mount.
-    // Store initialization already schedules a deferred CLI status check to avoid
-    // competing with initial teams/tasks/project scans.
-    // Keep a low-frequency refresh, but only after we've successfully loaded a status.
-    if (!cliStatus) {
-      return;
-    }
-
-    const interval = setInterval(
-      () => {
-        void refreshCliStatusForCurrentMode({
-          multimodelEnabled,
-          bootstrapCliStatus,
-          fetchCliStatus,
-        });
-      },
-      10 * 60 * 1000
-    );
-
-    return () => clearInterval(interval);
-  }, [bootstrapCliStatus, cliStatus, fetchCliStatus, isElectron, multimodelEnabled]);
-
+  useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
+    refreshOpenCodeDashboardCatalog();
+    void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
+  });
   useEffect(() => {
     if (!isElectron || !shouldPollAnthropicSubscriptionLimits) {
       setAnthropicRateLimitsRefreshing(false);
@@ -1856,6 +1854,7 @@ export const CliStatusBanner = ({
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     void (async () => {
       await invalidateCliStatus();
       await refreshCliStatusForCurrentMode({
@@ -1864,14 +1863,25 @@ export const CliStatusBanner = ({
         fetchCliStatus,
       });
     })();
-  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
+  }, [
+    bootstrapCliStatus,
+    fetchCliStatus,
+    invalidateCliStatus,
+    multimodelEnabled,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleOpenCodeRefresh = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
     })();
-  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus]);
+  }, [
+    fetchOpenCodeRuntimeStatus,
+    invalidateOpenCodeRuntimeStatus,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
@@ -1894,6 +1904,7 @@ export const CliStatusBanner = ({
   }, [codexAccount]);
 
   const recheckAuthState = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     setIsVerifyingAuth(true);
     void (async () => {
       try {
@@ -1907,7 +1918,13 @@ export const CliStatusBanner = ({
         setIsVerifyingAuth(false);
       }
     })();
-  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
+  }, [
+    bootstrapCliStatus,
+    fetchCliStatus,
+    invalidateCliStatus,
+    multimodelEnabled,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleProviderLogin = useCallback((providerId: CliProviderId) => {
     setProviderTerminal({ providerId, action: 'login' });
@@ -2004,14 +2021,14 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      await invalidateCliStatus();
+      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
       const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, invalidateCliStatus]
+    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -2243,6 +2260,7 @@ export const CliStatusBanner = ({
     if (multimodelEnabled) {
       return (
         <InstalledBanner
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2502,6 +2520,7 @@ export const CliStatusBanner = ({
       return (
         <>
           <InstalledBanner
+            catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2584,6 +2603,7 @@ export const CliStatusBanner = ({
     return (
       <>
         <InstalledBanner
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2705,19 +2725,7 @@ export const CliStatusBanner = ({
                 <li>
                   {t('cliStatus.troubleshoot.click')}{' '}
                   <button
-                    onClick={async () => {
-                      setIsVerifyingAuth(true);
-                      try {
-                        await invalidateCliStatus();
-                        if (multimodelEnabled) {
-                          await bootstrapCliStatus({ multimodelEnabled: true });
-                        } else {
-                          await fetchCliStatus();
-                        }
-                      } finally {
-                        setIsVerifyingAuth(false);
-                      }
-                    }}
+                    onClick={recheckAuthState}
                     className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors hover:bg-white/10"
                     style={{
                       color: '#fbbf24',
@@ -2782,19 +2790,7 @@ export const CliStatusBanner = ({
               args={['auth', 'login']}
               onClose={() => {
                 setShowLoginTerminal(false);
-                setIsVerifyingAuth(true);
-                void (async () => {
-                  try {
-                    await invalidateCliStatus();
-                    if (multimodelEnabled) {
-                      await bootstrapCliStatus({ multimodelEnabled: true });
-                    } else {
-                      await fetchCliStatus();
-                    }
-                  } finally {
-                    setIsVerifyingAuth(false);
-                  }
-                })();
+                recheckAuthState();
               }}
               autoCloseOnSuccessMs={4000}
               successMessage={t('cliStatus.labels.loginComplete')}
@@ -2810,6 +2806,7 @@ export const CliStatusBanner = ({
   return (
     <>
       <InstalledBanner
+        catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}
         cliStatusLoading={cliStatusLoading}

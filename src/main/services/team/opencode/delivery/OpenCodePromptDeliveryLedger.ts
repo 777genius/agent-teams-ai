@@ -1,6 +1,14 @@
 import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
+import { validateOpenCodePromptDeliveryLedgerRecords } from './OpenCodePromptDeliveryLedgerRecordSchema';
+import {
+  cancelOpenCodeDeliveryFromOtherRun,
+  isOpenCodeDeliveryFromOtherRun,
+} from './OpenCodePromptDeliveryRunEligibility';
+import { isOpenCodeSessionRefreshResponseState } from './OpenCodeSessionRefreshReasonClassifier';
+import { type OpenCodeTurnProgress, resolveOpenCodeTurnProgress } from './OpenCodeTurnProgress';
+
 import type {
   OpenCodeDeliveryResponseObservation,
   OpenCodeDeliveryResponseState,
@@ -23,7 +31,7 @@ export type OpenCodePromptDeliveryStatus =
   | 'failed_retryable'
   | 'failed_terminal';
 
-export interface OpenCodePromptDeliveryLedgerRecord {
+export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress {
   id: string;
   teamName: string;
   memberName: string;
@@ -57,6 +65,8 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   acceptedAt: string | null;
   respondedAt: string | null;
   failedAt: string | null;
+  /** Persisted force cancellation; late automatic writers must leave this row unchanged. */
+  cancelledAt?: string | null;
   inboxReadCommittedAt: string | null;
   inboxReadCommitError: string | null;
   prePromptCursor: string | null;
@@ -74,51 +84,6 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   createdAt: string;
   updatedAt: string;
 }
-
-const OPENCODE_PROMPT_DELIVERY_STATUSES = new Set<OpenCodePromptDeliveryStatus>([
-  'pending',
-  'accepted',
-  'responded',
-  'unanswered',
-  'retry_scheduled',
-  'retried',
-  'failed_retryable',
-  'failed_terminal',
-]);
-
-const OPENCODE_DELIVERY_RESPONSE_STATES = new Set<OpenCodeDeliveryResponseState>([
-  'not_observed',
-  'pending',
-  'prompt_not_indexed',
-  'responded_tool_call',
-  'responded_visible_message',
-  'responded_non_visible_tool',
-  'responded_plain_text',
-  'permission_blocked',
-  'tool_error',
-  'empty_assistant_turn',
-  'prompt_delivered_no_assistant_message',
-  'session_stale',
-  'session_error',
-  'reconcile_failed',
-]);
-
-const OPENCODE_PROMPT_DELIVERY_SOURCES = new Set<OpenCodePromptDeliveryLedgerRecord['source']>([
-  'watcher',
-  'ui-send',
-  'manual',
-  'watchdog',
-  'member-work-sync-review-pickup',
-]);
-
-const OPENCODE_DELIVERY_VISIBLE_REPLY_CORRELATIONS =
-  new Set<OpenCodeDeliveryVisibleReplyCorrelation>([
-    'relayOfMessageId',
-    'direct_child_message_send',
-    'plain_assistant_text',
-  ]);
-
-const AGENT_ACTION_MODES = new Set<AgentActionMode>(['do', 'ask', 'delegate']);
 
 export interface EnsureOpenCodePromptDeliveryInput {
   teamName: string;
@@ -174,6 +139,15 @@ export class OpenCodePromptDeliveryLedgerStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.id === id);
       if (existing) {
+        if (isOpenCodeDeliveryFromOtherRun(existing, input.runId)) {
+          const cancelled = cancelOpenCodeDeliveryFromOtherRun(existing, input.now);
+          result = cancelled;
+          return records.map((record) => (record.id === id ? cancelled : record));
+        }
+        if (isOpenCodePromptDeliveryCancelled(existing)) {
+          result = existing;
+          return records;
+        }
         if (existing.payloadHash !== input.payloadHash) {
           const reason = 'opencode_prompt_delivery_payload_mismatch';
           const updated: OpenCodePromptDeliveryLedgerRecord = {
@@ -292,6 +266,7 @@ export class OpenCodePromptDeliveryLedgerStore {
   }
 
   async getActiveForMember(input: {
+    runId?: string | null;
     teamName: string;
     memberName: string;
     laneId: string;
@@ -304,6 +279,7 @@ export class OpenCodePromptDeliveryLedgerStore {
             record.teamName === input.teamName &&
             record.memberName.toLowerCase() === input.memberName.toLowerCase() &&
             record.laneId === input.laneId &&
+            !isOpenCodeDeliveryFromOtherRun(record, input.runId) &&
             !isTerminalForAutomaticSelection(record)
         )
         .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))[0] ?? null
@@ -409,6 +385,7 @@ export class OpenCodePromptDeliveryLedgerStore {
     sessionId?: string | null;
     runtimePromptMessageId?: string | null;
     diagnostics?: string[];
+    turnUsedTokens?: number | null;
     observedAt: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
     return await this.updateExisting(input.id, (record) => {
@@ -470,7 +447,13 @@ export class OpenCodePromptDeliveryLedgerStore {
           input.responseObservation.assistantMessageId ?? record.observedAssistantMessageId,
         observedAssistantPreview:
           input.responseObservation.latestAssistantPreview ?? record.observedAssistantPreview,
-        observedToolCallNames: input.responseObservation.toolCallNames,
+        // A reconcile_failed/not_observed fallback observation carries an empty
+        // tool list. Overwriting the record with it would make the next
+        // successful observation look like fresh tool-call progress and defer a
+        // retry that is genuinely due.
+        observedToolCallNames: input.responseObservation.toolCallNames.length
+          ? input.responseObservation.toolCallNames
+          : record.observedToolCallNames,
         observedVisibleMessageId:
           input.responseObservation.visibleMessageToolCallId ?? record.observedVisibleMessageId,
         visibleReplyMessageId:
@@ -483,6 +466,7 @@ export class OpenCodePromptDeliveryLedgerStore {
           : (record.lastSessionRefreshReason ?? null),
         diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
         updatedAt: input.observedAt,
+        ...resolveOpenCodeTurnProgress(record, input),
       };
     });
   }
@@ -559,6 +543,24 @@ export class OpenCodePromptDeliveryLedgerStore {
       nextAttemptAt: input.nextAttemptAt,
       lastReason: input.reason,
       updatedAt: input.scheduledAt,
+    }));
+  }
+
+  /**
+   * Move only the record's due time. Every other scheduling write also rewrites
+   * `status` and `lastReason`, which is wrong for a postponement: nothing was
+   * attempted, so nothing about the record's state changed except when it is
+   * next allowed to be looked at.
+   */
+  async markNextAttemptDeferred(input: {
+    id: string;
+    nextAttemptAt: string;
+    deferredAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      nextAttemptAt: input.nextAttemptAt,
+      updatedAt: input.deferredAt,
     }));
   }
 
@@ -717,6 +719,57 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
+  /** Cancels delivery and watchdog work within the captured Stop scope; inbox rows are retained. */
+  async cancelNonTerminalRecords(input: {
+    includeRecoverableTerminal?: boolean;
+    now: string;
+    reason: string;
+    /**
+     * The runs the caller is cancelling for. A record stamped with one of them
+     * is cancelled whatever its age. Empty or omitted means the caller could
+     * not observe a run, and only `createdAtOrBeforeMs` decides.
+     */
+    ownedRunIds?: readonly string[];
+    /**
+     * Cancels a record created at or before this moment whatever its run, so a
+     * caller that observed no run id still cancels the work that existed when
+     * it asked. Omitted means all unfinished delivery and watchdog work is in scope.
+     */
+    createdAtOrBeforeMs?: number;
+  }): Promise<{ cancelled: number; keptForLaterRun: number }> {
+    const ownedRunIds = new Set((input.ownedRunIds ?? []).filter((runId) => runId.trim()));
+    const createdAtOrBeforeMs = input.createdAtOrBeforeMs ?? null;
+    let cancelled = 0;
+    let keptForLaterRun = 0;
+    await this.store.updateLocked((records) =>
+      records.map((record) => {
+        if (
+          isOpenCodePromptDeliveryCancelled(record) ||
+          record.inboxReadCommittedAt ||
+          (isOpenCodePromptDeliveryWatchdogTerminal(record) && !input.includeRecoverableTerminal)
+        ) {
+          return record;
+        }
+        if (!isInCancellationScope(record, ownedRunIds, createdAtOrBeforeMs)) {
+          keptForLaterRun += 1;
+          return record;
+        }
+        cancelled += 1;
+        return {
+          ...record,
+          status: 'failed_terminal' as const,
+          failedAt: input.now,
+          cancelledAt: input.now,
+          nextAttemptAt: null,
+          lastReason: input.reason,
+          diagnostics: mergeDiagnostics(record.diagnostics, [input.reason]),
+          updatedAt: input.now,
+        };
+      })
+    );
+    return { cancelled, keptForLaterRun };
+  }
+
   async pruneTerminalRecords(input: {
     now: Date;
     respondedRetentionMs?: number;
@@ -760,7 +813,7 @@ export class OpenCodePromptDeliveryLedgerStore {
         if (record.id !== id) {
           return record;
         }
-        updated = updater(record);
+        updated = isOpenCodePromptDeliveryCancelled(record) ? record : updater(record);
         return updated;
       })
     );
@@ -900,138 +953,6 @@ function isOpenCodePromptDeliveryUnansweredResponseState(
   return state === 'empty_assistant_turn' || state === 'prompt_delivered_no_assistant_message';
 }
 
-export function isOpenCodeResolvedBehaviorChangedReason(
-  reason: string | null | undefined
-): boolean {
-  return isCleanOpenCodeSessionRefreshReason(
-    reason,
-    /\bresolved_behavior_changed:[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i
-  );
-}
-
-export function isOpenCodeSessionTransportChangedReason(
-  reason: string | null | undefined
-): boolean {
-  return isCleanOpenCodeSessionRefreshReason(
-    reason,
-    /\bopencode_app_mcp_transport_changed:[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i
-  );
-}
-
-const OPENCODE_SESSION_REFRESH_FAILURE_PATTERN =
-  // eslint-disable-next-line sonarjs/regex-complexity -- Keyword taxonomy is kept literal to preserve diagnostic behavior.
-  /(?:^|[_\s:;./()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;./(),-])/i;
-const OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN =
-  /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/gi;
-const OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN =
-  /\b(?:not_observed|pending|prompt_not_indexed|responded_tool_call|responded_visible_message|responded_non_visible_tool|responded_plain_text|permission_blocked|tool_error|empty_assistant_turn|prompt_delivered_no_assistant_message|session_stale|session_error|reconcile_failed)\b/g;
-
-function isCleanOpenCodeSessionRefreshReason(
-  reason: string | null | undefined,
-  pattern: RegExp
-): boolean {
-  const normalized = reason?.trim().toLowerCase() ?? '';
-  if (!pattern.test(normalized)) {
-    return false;
-  }
-  const markerText = stripOpenCodeGenericApiErrorPrefix(normalized);
-  if (hasOpenCodeSessionRefreshFailureConflict(markerText)) {
-    return false;
-  }
-  const rawRemainder = markerText.replace(OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN, '');
-  const remainder = rawRemainder.replace(/[().,;:\s-]+/g, '');
-  if (remainder.length === 0) {
-    return true;
-  }
-  const staleLogProjectionContext =
-    normalized.includes('session is stale') ||
-    normalized.includes('stored session is stale') ||
-    normalized.includes('session reconcile skipped');
-  if (!staleLogProjectionContext) {
-    return false;
-  }
-  return isBenignOpenCodeSessionRefreshRemainder(rawRemainder);
-}
-
-function isBenignOpenCodeSessionRefreshRemainder(rawRemainder: string): boolean {
-  if (OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(rawRemainder)) {
-    return false;
-  }
-  const normalized = rawRemainder.replace(/[().,;:\s-]+/g, ' ').trim();
-  return (
-    normalized === 'opencode session is stale' ||
-    normalized ===
-      'opencode session is stale reading historical messages for log projection only' ||
-    normalized === 'opencode session reconcile skipped because the stored session is stale' ||
-    normalized === 'stored session is stale'
-  );
-}
-
-function isOpenCodeSessionRefreshScheduledReason(message: string | null | undefined): boolean {
-  const normalized = stripOpenCodeGenericApiErrorPrefix(
-    message?.trim().toLowerCase() ?? ''
-  ).replace(/[.:\s-]+$/, '');
-  return (
-    normalized === 'opencode prompt delivery session refresh scheduled' ||
-    normalized === 'opencode_prompt_delivery_session_refresh_scheduled' ||
-    normalized === 'opencode session refresh scheduled after resolved behavior changed' ||
-    normalized === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed' ||
-    normalized === 'opencode_session_stale_observe_scheduled_after_accepted_prompt' ||
-    normalized === 'opencode session changed; refreshing the session before retry'
-  );
-}
-
-function stripOpenCodeGenericApiErrorPrefix(message: string): string {
-  return message.replace(/^opencode api error(?:[.:\s-]+|$)/i, '');
-}
-
-function hasOpenCodeSessionRefreshFailureConflict(value: string): boolean {
-  return OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(
-    value.replace(OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN, 'state')
-  );
-}
-
-export function isOpenCodeSessionRefreshResponseState(input: {
-  responseState?: OpenCodeDeliveryResponseState;
-  reason?: string | null;
-  diagnostics?: readonly string[];
-}): boolean {
-  const candidates = [input.reason, ...(input.diagnostics ?? [])];
-  const hasActionRequiredConflict = candidates.some(isOpenCodeSessionRefreshActionRequiredConflict);
-  if (input.responseState === 'session_stale') {
-    return !hasActionRequiredConflict;
-  }
-  return (
-    !hasActionRequiredConflict &&
-    candidates.some(
-      (candidate) =>
-        isOpenCodeResolvedBehaviorChangedReason(candidate) ||
-        isOpenCodeSessionTransportChangedReason(candidate) ||
-        isOpenCodeSessionRefreshScheduledReason(candidate)
-    )
-  );
-}
-
-function isOpenCodeSessionRefreshActionRequiredConflict(
-  message: string | null | undefined
-): boolean {
-  const normalized = message?.trim().toLowerCase() ?? '';
-  if (!normalized) {
-    return false;
-  }
-  if (normalized.replace(/[.:\s-]+$/, '') === 'opencode api error') {
-    return false;
-  }
-  if (
-    isOpenCodeResolvedBehaviorChangedReason(normalized) ||
-    isOpenCodeSessionTransportChangedReason(normalized) ||
-    isOpenCodeSessionRefreshScheduledReason(normalized)
-  ) {
-    return false;
-  }
-  return OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(normalized);
-}
-
 export function isOpenCodePromptDeliveryAttemptDue(
   record: OpenCodePromptDeliveryLedgerRecord,
   nowMs: number = Date.now()
@@ -1043,177 +964,12 @@ export function isOpenCodePromptDeliveryAttemptDue(
   return !Number.isFinite(dueMs) || dueMs <= nowMs;
 }
 
-export function validateOpenCodePromptDeliveryLedgerRecords(
-  value: unknown
-): OpenCodePromptDeliveryLedgerRecord[] {
-  if (!Array.isArray(value)) {
-    throw new Error('OpenCode prompt delivery ledger must be an array');
-  }
-  const seen = new Set<string>();
-  return value.map((record, index) => {
-    if (!isOpenCodePromptDeliveryLedgerRecord(record)) {
-      throw new Error(`Invalid OpenCode prompt delivery ledger record at index ${index}`);
-    }
-    if (seen.has(record.id)) {
-      throw new Error(`Duplicate OpenCode prompt delivery ledger id: ${record.id}`);
-    }
-    seen.add(record.id);
-    return record;
-  });
-}
-
-function isOpenCodePromptDeliveryLedgerRecord(
-  value: unknown
-): value is OpenCodePromptDeliveryLedgerRecord {
-  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+export function isOpenCodePromptDeliveryCancelled(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
   return Boolean(
-    record &&
-    typeof record.id === 'string' &&
-    typeof record.teamName === 'string' &&
-    typeof record.memberName === 'string' &&
-    typeof record.laneId === 'string' &&
-    isOptionalNullableString(record.runId) &&
-    isOptionalNullableString(record.runtimeSessionId) &&
-    isOptionalNullableString(record.runtimePromptMessageId) &&
-    isOptionalStringArray(record.runtimePromptMessageIds) &&
-    isOptionalNullableString(record.lastRuntimePromptMessageId) &&
-    isOptionalNullableString(record.lastDeliveryAttemptIdWithAcceptedPrompt) &&
-    typeof record.inboxMessageId === 'string' &&
-    typeof record.inboxTimestamp === 'string' &&
-    isOpenCodePromptDeliverySource(record.source) &&
-    isOptionalNullableInboxMessageKind(record.messageKind) &&
-    typeof record.replyRecipient === 'string' &&
-    isOptionalNullableActionMode(record.actionMode) &&
-    isTaskRefArray(record.taskRefs) &&
-    typeof record.payloadHash === 'string' &&
-    isOpenCodePromptDeliveryStatus(record.status) &&
-    isOpenCodeDeliveryResponseState(record.responseState) &&
-    isNonNegativeInteger(record.attempts) &&
-    isNonNegativeInteger(record.maxAttempts) &&
-    isOptionalNonNegativeInteger(record.sessionRefreshAttempts) &&
-    isOptionalNonNegativeInteger(record.maxSessionRefreshAttempts) &&
-    isOptionalNullableString(record.lastSessionRefreshReason) &&
-    typeof record.acceptanceUnknown === 'boolean' &&
-    isOptionalNullableString(record.nextAttemptAt) &&
-    isOptionalNullableString(record.lastAttemptAt) &&
-    isOptionalNullableString(record.lastObservedAt) &&
-    isOptionalNullableString(record.acceptedAt) &&
-    isOptionalNullableString(record.respondedAt) &&
-    isOptionalNullableString(record.failedAt) &&
-    isOptionalNullableString(record.inboxReadCommittedAt) &&
-    isOptionalNullableString(record.inboxReadCommitError) &&
-    isOptionalNullableString(record.prePromptCursor) &&
-    isOptionalNullableString(record.postPromptCursor) &&
-    isOptionalNullableString(record.deliveredUserMessageId) &&
-    isOptionalNullableString(record.observedAssistantMessageId) &&
-    isOptionalNullableString(record.observedAssistantPreview) &&
-    isStringArray(record.observedToolCallNames) &&
-    isOptionalNullableString(record.observedVisibleMessageId) &&
-    isOptionalNullableString(record.visibleReplyMessageId) &&
-    isOptionalNullableString(record.visibleReplyInbox) &&
-    isOptionalNullableVisibleReplyCorrelation(record.visibleReplyCorrelation) &&
-    isOptionalNullableString(record.lastReason) &&
-    isStringArray(record.diagnostics) &&
-    typeof record.createdAt === 'string' &&
-    typeof record.updatedAt === 'string'
-  );
-}
-
-function isOpenCodePromptDeliveryStatus(value: unknown): value is OpenCodePromptDeliveryStatus {
-  return (
-    typeof value === 'string' &&
-    OPENCODE_PROMPT_DELIVERY_STATUSES.has(value as OpenCodePromptDeliveryStatus)
-  );
-}
-
-function isOpenCodeDeliveryResponseState(value: unknown): value is OpenCodeDeliveryResponseState {
-  return (
-    typeof value === 'string' &&
-    OPENCODE_DELIVERY_RESPONSE_STATES.has(value as OpenCodeDeliveryResponseState)
-  );
-}
-
-function isOpenCodePromptDeliverySource(
-  value: unknown
-): value is OpenCodePromptDeliveryLedgerRecord['source'] {
-  return (
-    typeof value === 'string' &&
-    OPENCODE_PROMPT_DELIVERY_SOURCES.has(value as OpenCodePromptDeliveryLedgerRecord['source'])
-  );
-}
-
-function isOptionalNullableVisibleReplyCorrelation(
-  value: unknown
-): value is OpenCodeDeliveryVisibleReplyCorrelation | null | undefined {
-  return (
-    value === undefined ||
-    value === null ||
-    (typeof value === 'string' &&
-      OPENCODE_DELIVERY_VISIBLE_REPLY_CORRELATIONS.has(
-        value as OpenCodeDeliveryVisibleReplyCorrelation
-      ))
-  );
-}
-
-function isOptionalNullableActionMode(value: unknown): value is AgentActionMode | null | undefined {
-  return (
-    value === undefined ||
-    value === null ||
-    (typeof value === 'string' && AGENT_ACTION_MODES.has(value as AgentActionMode))
-  );
-}
-
-function isOptionalNullableInboxMessageKind(
-  value: unknown
-): value is InboxMessageKind | null | undefined {
-  return (
-    value === undefined ||
-    value === null ||
-    value === 'default' ||
-    value === 'slash_command' ||
-    value === 'slash_command_result' ||
-    value === 'task_comment_notification' ||
-    value === 'task_stall_remediation' ||
-    value === 'member_work_sync_nudge' ||
-    value === 'runtime_recovery_nudge' ||
-    value === 'agent_error'
-  );
-}
-
-function isOptionalNullableString(value: unknown): value is string | null | undefined {
-  return value === undefined || value === null || typeof value === 'string';
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function isOptionalStringArray(value: unknown): value is string[] | undefined {
-  return value === undefined || isStringArray(value);
-}
-
-function isNonNegativeInteger(value: unknown): value is number {
-  return Number.isInteger(value) && (value as number) >= 0;
-}
-
-function isOptionalNonNegativeInteger(value: unknown): value is number | undefined {
-  return value === undefined || isNonNegativeInteger(value);
-}
-
-function isTaskRefArray(value: unknown): value is TaskRef[] {
-  return (
-    Array.isArray(value) &&
-    value.every((item) => {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) {
-        return false;
-      }
-      const taskRef = item as Record<string, unknown>;
-      return (
-        typeof taskRef.taskId === 'string' &&
-        typeof taskRef.displayId === 'string' &&
-        typeof taskRef.teamName === 'string'
-      );
-    })
+    record.cancelledAt ||
+    (record.status === 'failed_terminal' && record.lastReason?.startsWith('force_stop_requested:'))
   );
 }
 
@@ -1227,6 +983,42 @@ function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRec
     return false;
   }
   return record.status === 'failed_terminal' || record.status === 'responded';
+}
+
+export function isOpenCodePromptDeliveryWatchdogTerminal(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  if (record.status === 'failed_terminal' || isOpenCodePromptDeliveryCancelled(record)) {
+    return true;
+  }
+  // Every response still owes the durable inbox read commit, regardless of
+  // which channel supplied the reply. Force Stop must fence that remaining work.
+  return record.status === 'responded' && Boolean(record.inboxReadCommittedAt);
+}
+
+/**
+ * A lane ledger is keyed by lane, not by run, and a lane is reused: a relaunch
+ * of the same team writes its records into the same file. A cancellation must
+ * therefore say what it owns. A record is in scope when the caller observed the
+ * run that stamped it, or when it already existed at the moment the caller
+ * asked; a record that appeared after that moment and carries a run the caller
+ * never saw belongs to whatever started after it, and survives. A record whose
+ * `createdAt` cannot be read is in scope, because an unreadable timestamp is
+ * not evidence of a later run.
+ */
+function isInCancellationScope(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  ownedRunIds: ReadonlySet<string>,
+  createdAtOrBeforeMs: number | null
+): boolean {
+  if (record.runId && ownedRunIds.has(record.runId)) {
+    return true;
+  }
+  if (createdAtOrBeforeMs === null) {
+    return true;
+  }
+  const createdAtMs = Date.parse(record.createdAt);
+  return !Number.isFinite(createdAtMs) || createdAtMs <= createdAtOrBeforeMs;
 }
 
 function compareOpenCodePromptDeliveryDueOrder(
@@ -1254,6 +1046,10 @@ function shouldPruneOpenCodePromptDeliveryRecord(
   respondedRetentionMs: number,
   failedRetentionMs: number
 ): boolean {
+  // Unread inbox rows can outlive the retention window and rebuild a pruned delivery.
+  if (isOpenCodePromptDeliveryCancelled(record)) {
+    return false;
+  }
   if (record.status === 'responded' && record.inboxReadCommittedAt) {
     const committedMs = Date.parse(record.inboxReadCommittedAt);
     return Number.isFinite(committedMs) && nowMs - committedMs >= respondedRetentionMs;

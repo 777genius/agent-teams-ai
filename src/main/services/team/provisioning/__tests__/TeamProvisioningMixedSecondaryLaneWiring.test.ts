@@ -95,6 +95,7 @@ function createService(
     isStoppingSecondaryRuntimeTeam: vi.fn(() => false),
     getSecondaryRuntimeRuns: vi.fn(() => []),
     deleteSecondaryRuntimeRun: vi.fn(),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     getOpenCodeRuntimeAdapter: vi.fn(() => null),
     publishMixedSecondaryLaneStatusChange: vi.fn(async () => undefined),
     readLaunchState: vi.fn(async () => createSnapshot()),
@@ -123,8 +124,10 @@ function createDeps(
 ): TeamProvisioningMixedSecondaryLaneWiringDeps<TestRun> {
   return {
     service: createService(overrides),
+    isCurrentTrackedRun: vi.fn(() => true),
     logger: {
       warn: vi.fn(),
+      info: vi.fn(),
     },
   };
 }
@@ -137,6 +140,8 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     const lane = createLane();
     const launchResult = createLaunchResult();
 
+    expect(ports.isCurrentTrackedRun(run)).toBe(true);
+    expect(deps.isCurrentTrackedRun).toHaveBeenCalledWith(run);
     expect(ports.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(false);
     ports.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
     await ports.publishMixedSecondaryLaneStatusChange(run, lane);
@@ -259,13 +264,17 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     expect(deps.service.tryRecoverMissingOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledTimes(1);
     expect(deps.service.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledTimes(1);
     expect(deps.service.buildAggregateLaunchSnapshot).toHaveBeenCalledTimes(1);
-    expect(deps.service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot);
+    expect(deps.service.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      'atlas-hq',
+      snapshot,
+      undefined
+    );
   });
 
   it('builds mixed secondary lane wiring deps from service-shaped dependencies', async () => {
     const service = createService();
     const has = vi.fn(() => true);
-    const logger = { warn: vi.fn() };
+    const logger = { warn: vi.fn(), info: vi.fn() };
     const host = {
       stoppingSecondaryRuntimeTeams: { has },
       appShellBoundary: {
@@ -297,6 +306,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       },
       getSecondaryRuntimeRuns: service.getSecondaryRuntimeRuns,
       deleteSecondaryRuntimeRun: service.deleteSecondaryRuntimeRun,
+      deleteSecondaryRuntimeRunIfOwned: service.deleteSecondaryRuntimeRunIfOwned,
       publishMixedSecondaryLaneStatusChange: service.publishMixedSecondaryLaneStatusChange,
       setSecondaryRuntimeRun: service.setSecondaryRuntimeRun,
       buildOpenCodeSecondaryAppManagedLaunchPrompt:
@@ -311,14 +321,18 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       readPersistedTeamProjectPath: service.readPersistedTeamProjectPath,
       writeLaunchStateSnapshot: service.writeLaunchStateSnapshot,
     } satisfies TeamProvisioningMixedSecondaryLaneWiringServiceHost<TestRun>;
+    const isCurrentTrackedRun = vi.fn(() => false);
     const deps = createTeamProvisioningMixedSecondaryLaneWiringDepsFromService(host, {
       logger,
+      isCurrentTrackedRun,
     });
     const run = createRun();
     const lane = createLane();
     const snapshot = createSnapshot();
 
     expect(deps.logger).toBe(logger);
+    expect(deps.isCurrentTrackedRun(run)).toBe(false);
+    expect(isCurrentTrackedRun).toHaveBeenCalledWith(run);
     expect(deps.service.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(true);
     expect(deps.service.getSecondaryRuntimeRuns('atlas-hq')).toEqual([]);
     deps.service.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
@@ -357,7 +371,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       lane.laneId
     );
     expect(service.buildAggregateLaunchSnapshot).toHaveBeenCalledTimes(1);
-    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot);
+    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot, undefined);
   });
 
   it('exposes mixed secondary lane state helpers on the boundary', () => {

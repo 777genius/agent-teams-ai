@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -79,7 +80,6 @@ export const ProjectEditorOverlay = ({
   onEditorAction,
 }: ProjectEditorOverlayProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
-  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
   const { activeTabId, openTabs, modifiedFiles, saveErrors, externalChanges, conflictFile } =
     useStore(
       useShallow((s) => ({
@@ -92,7 +92,6 @@ export const ProjectEditorOverlay = ({
       }))
     );
 
-  // Actions — stable references in Zustand, no grouping needed
   const openEditor = useStore((s) => s.openEditor);
   const closeEditor = useStore((s) => s.closeEditor);
   const openFile = useStore((s) => s.openFile);
@@ -274,7 +273,6 @@ export const ProjectEditorOverlay = ({
     return () => observer.disconnect();
   }, []);
 
-  // Escape to close + F5 to refresh (with dialog guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -533,16 +531,16 @@ export const ProjectEditorOverlay = ({
       aria-modal="true"
       aria-label={t('editor.ariaLabel')}
     >
-      {/* Header */}
       <div
         className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3"
         style={{ paddingLeft: 'var(--macos-traffic-light-padding-left, 72px)' }}
       >
-        <div className="flex items-center gap-2 text-sm text-text-secondary">
-          <span className="font-medium text-text">{projectName}</span>
-          <span className="text-text-muted">{projectPath}</span>
+        <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary">
+          <span className="shrink-0 font-medium text-text">{projectName}</span>
+          <span className="truncate text-text-muted">{projectPath}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
+          <AnnouncementNewsButton />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

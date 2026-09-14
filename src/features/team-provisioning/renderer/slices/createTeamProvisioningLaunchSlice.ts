@@ -26,6 +26,101 @@ const defaultClock: TeamProvisioningLaunchClockPort = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
+let provisioningAttemptSequence = 0;
+
+function createProvisioningAttemptId(): string {
+  provisioningAttemptSequence += 1;
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `attempt-${provisioningAttemptSequence.toString(36)}`
+  );
+}
+
+function omitTeamKey<TRecord extends Record<string, unknown>>(
+  record: TRecord,
+  teamName: string
+): TRecord | null {
+  if (!(teamName in record)) return null;
+  const next = { ...record };
+  delete next[teamName];
+  return next;
+}
+
+function collectFailedProvisioningAttemptCleanup<
+  TMessageEntry extends TeamProvisioningLaunchMessageEntry,
+>(
+  state: TeamProvisioningLaunchStoreState<TMessageEntry>,
+  teamName: string,
+  pendingRunId: string,
+  startedAtFloor: string,
+  nowMs: number
+): Partial<TeamProvisioningLaunchStoreState<TMessageEntry>> {
+  const currentProvisioningRunId = state.currentProvisioningRunIdByTeam[teamName];
+  const currentRuntimeRunId = state.currentRuntimeRunIdByTeam[teamName];
+  const failedRunIds = new Set([pendingRunId]);
+  for (const runId of [currentProvisioningRunId, currentRuntimeRunId]) {
+    if (typeof runId === 'string') failedRunIds.add(runId);
+  }
+
+  const provisioningRuns = { ...state.provisioningRuns };
+  const ignoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
+  for (const runId of failedRunIds) {
+    delete provisioningRuns[runId];
+    ignoredProvisioningRunIds[runId] = teamName;
+  }
+
+  const clearsProvisioning =
+    typeof currentProvisioningRunId === 'string' && failedRunIds.has(currentProvisioningRunId);
+  const clearsRuntime =
+    typeof currentRuntimeRunId === 'string' && failedRunIds.has(currentRuntimeRunId);
+  const ignoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  if (clearsRuntime && currentRuntimeRunId) {
+    ignoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+  }
+
+  const memberSpawnStatusesByTeam = omitTeamKey(state.memberSpawnStatusesByTeam, teamName);
+  const memberSpawnSnapshotsByTeam = omitTeamKey(state.memberSpawnSnapshotsByTeam, teamName);
+  const teamAgentRuntimeByTeam = omitTeamKey(state.teamAgentRuntimeByTeam, teamName);
+  const activeToolsByTeam = omitTeamKey(state.activeToolsByTeam, teamName);
+  const finishedVisibleByTeam = omitTeamKey(state.finishedVisibleByTeam, teamName);
+  const toolHistoryByTeam = omitTeamKey(state.toolHistoryByTeam, teamName);
+  const provisioningSnapshotByTeam = omitTeamKey(state.provisioningSnapshotByTeam, teamName);
+  const clearsCurrentAttempt = clearsProvisioning || clearsRuntime;
+  const closedStartedAtFloor = new Date(
+    Math.max(nowMs, Date.parse(startedAtFloor)) + 1
+  ).toISOString();
+
+  return {
+    provisioningRuns,
+    ignoredProvisioningRunIds,
+    provisioningStartedAtFloorByTeam: {
+      ...state.provisioningStartedAtFloorByTeam,
+      [teamName]: closedStartedAtFloor,
+    },
+    ...(clearsProvisioning
+      ? {
+          currentProvisioningRunIdByTeam: omitTeamKey(
+            state.currentProvisioningRunIdByTeam,
+            teamName
+          )!,
+        }
+      : {}),
+    ...(clearsRuntime
+      ? {
+          currentRuntimeRunIdByTeam: omitTeamKey(state.currentRuntimeRunIdByTeam, teamName)!,
+          ignoredRuntimeRunIds,
+        }
+      : {}),
+    ...(clearsCurrentAttempt && memberSpawnStatusesByTeam ? { memberSpawnStatusesByTeam } : {}),
+    ...(clearsCurrentAttempt && memberSpawnSnapshotsByTeam ? { memberSpawnSnapshotsByTeam } : {}),
+    ...(clearsCurrentAttempt && teamAgentRuntimeByTeam ? { teamAgentRuntimeByTeam } : {}),
+    ...(clearsCurrentAttempt && activeToolsByTeam ? { activeToolsByTeam } : {}),
+    ...(clearsCurrentAttempt && finishedVisibleByTeam ? { finishedVisibleByTeam } : {}),
+    ...(clearsCurrentAttempt && toolHistoryByTeam ? { toolHistoryByTeam } : {}),
+    ...(clearsCurrentAttempt && provisioningSnapshotByTeam ? { provisioningSnapshotByTeam } : {}),
+  };
+}
+
 interface StartProvisioningParams<
   TRequest extends TeamCreateRequest | TeamLaunchRequest,
   TContext,
@@ -126,6 +221,22 @@ function isUnknownProvisioningRunError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Unknown runId');
 }
 
+function isProvisioningStateOwnedByAttempt<
+  TMessageEntry extends TeamProvisioningLaunchMessageEntry,
+>(
+  state: TeamProvisioningLaunchStoreState<TMessageEntry>,
+  teamName: string,
+  pendingRunId: string,
+  startedAtFloor: string
+): boolean {
+  const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
+  if (currentRunId === pendingRunId) return true;
+  if (!currentRunId) return false;
+
+  const currentProgress = state.provisioningRuns[currentRunId];
+  return currentProgress?.teamName === teamName && currentProgress.startedAt >= startedAtFloor;
+}
+
 export function createTeamProvisioningLaunchSlice<
   TMessageEntry extends TeamProvisioningLaunchMessageEntry,
   TContext,
@@ -135,6 +246,7 @@ export function createTeamProvisioningLaunchSlice<
   const clock = dependencies.clock ?? defaultClock;
   const persistence = dependencies.persistence;
   const transport = dependencies.transport;
+  const currentAttemptIdByTeam = new Map<string, string>();
 
   const pollProvisioningStatus = async (runId: string): Promise<void> => {
     let delayMs = 150;
@@ -161,6 +273,8 @@ export function createTeamProvisioningLaunchSlice<
     const { request } = params;
     dependencies.control.subscribe();
     dependencies.scope.reset(request.teamName);
+    const attemptId = createProvisioningAttemptId();
+    currentAttemptIdByTeam.set(request.teamName, attemptId);
 
     const floor = clock.nowIso();
     dependencies.state.setState((state) => ({
@@ -177,7 +291,7 @@ export function createTeamProvisioningLaunchSlice<
       )
     );
 
-    const pendingRunId = `pending:${request.teamName}:${clock.nowMs()}`;
+    const pendingRunId = `pending:${request.teamName}:${attemptId}`;
     dependencies.state.setState((state) => ({
       provisioningRuns: {
         ...state.provisioningRuns,
@@ -280,18 +394,30 @@ export function createTeamProvisioningLaunchSlice<
         // Polling below retries and handles missing runs.
       }
       void pollProvisioningStatus(response.runId);
+      if (currentAttemptIdByTeam.get(request.teamName) === attemptId) {
+        currentAttemptIdByTeam.delete(request.teamName);
+      }
       return response.runId;
     } catch (error) {
       const message = errorMessage(error, params.errorFallback);
       dependencies.state.setState((state) => {
-        const provisioningRuns = { ...state.provisioningRuns };
-        delete provisioningRuns[pendingRunId];
-        const currentProvisioningRunIdByTeam = {
-          ...state.currentProvisioningRunIdByTeam,
-        };
-        if (currentProvisioningRunIdByTeam[request.teamName] === pendingRunId) {
-          delete currentProvisioningRunIdByTeam[request.teamName];
-        }
+        const ownsCurrentAttemptIdentity =
+          currentAttemptIdByTeam.get(request.teamName) === attemptId;
+        const ownsCurrentAttemptState = isProvisioningStateOwnedByAttempt(
+          state,
+          request.teamName,
+          pendingRunId,
+          floor
+        );
+        if (!ownsCurrentAttemptIdentity || !ownsCurrentAttemptState) return {};
+
+        const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
+          state,
+          request.teamName,
+          pendingRunId,
+          floor,
+          clock.nowMs()
+        );
         const launchParamsByTeam = { ...state.launchParamsByTeam };
         if (
           areTeamLaunchParamsEqual(launchParamsByTeam[request.teamName], optimisticLaunchParams)
@@ -303,8 +429,7 @@ export function createTeamProvisioningLaunchSlice<
           }
         }
         return {
-          provisioningRuns,
-          currentProvisioningRunIdByTeam,
+          ...failedAttemptCleanup,
           launchParamsByTeam,
           provisioningErrorByTeam: {
             ...state.provisioningErrorByTeam,
@@ -312,6 +437,9 @@ export function createTeamProvisioningLaunchSlice<
           },
         };
       });
+      if (currentAttemptIdByTeam.get(request.teamName) === attemptId) {
+        currentAttemptIdByTeam.delete(request.teamName);
+      }
       if (!responseRunId) {
         dependencies.analytics.recordIpcFailure(params.analyticsContext, error);
       }

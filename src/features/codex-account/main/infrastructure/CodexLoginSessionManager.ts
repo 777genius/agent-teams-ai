@@ -59,13 +59,20 @@ export class CodexLoginSessionManager {
     return structuredClone(this.state);
   }
 
+  /**
+   * Begins a ChatGPT login. Resolves to `false` when the call is a no-op because a login
+   * is already starting or pending, and `true` when this call took ownership of the
+   * attempt. Callers that reset login-scoped state must key off the return value: a
+   * duplicate request changes no credentials, so treating it as a real login would clear
+   * state that nothing has invalidated.
+   */
   async start(options: {
     binaryPath: string;
     env: NodeJS.ProcessEnv;
     mode?: CodexChatgptLoginMode;
-  }): Promise<void> {
+  }): Promise<boolean> {
     if (this.activeSession || this.pendingStartToken) {
-      return;
+      return false;
     }
 
     const startToken = Symbol('codex-login-start');
@@ -90,7 +97,7 @@ export class CodexLoginSessionManager {
 
       if (this.pendingStartToken !== startToken) {
         await session.close().catch(() => undefined);
-        return;
+        return true;
       }
 
       const requestedResponseType =
@@ -103,7 +110,7 @@ export class CodexLoginSessionManager {
 
       if (this.pendingStartToken !== startToken) {
         await session.close().catch(() => undefined);
-        return;
+        return true;
       }
 
       if (response.type !== requestedResponseType) {
@@ -154,6 +161,7 @@ export class CodexLoginSessionManager {
         authUrl: authUrl.toString(),
         userCode,
       });
+      return true;
     } catch (error) {
       const wasAbandonedDuringStart =
         this.pendingStartToken !== startToken &&
@@ -168,7 +176,7 @@ export class CodexLoginSessionManager {
         this.activeSession = null;
       }
       if (wasAbandonedDuringStart) {
-        return;
+        return true;
       }
       this.setState({
         status: 'failed',

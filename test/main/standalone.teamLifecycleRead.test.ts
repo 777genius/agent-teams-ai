@@ -151,11 +151,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(fileSource).not.toMatch(/fs\.promises\.readFile\s*\(/);
   });
 
-  it('keeps invalid bootstrap fatal and missing identity storage fail-closed without disposal', async () => {
-    const [standalone, desktop] = await Promise.all([
-      readFile('src/main/standalone.ts', 'utf8'),
-      readFile('src/main/index.ts', 'utf8'),
-    ]);
+  it('keeps invalid hosted bootstrap fatal and missing identity storage fail-closed without disposal', async () => {
+    const standalone = await readFile('src/main/standalone.ts', 'utf8');
 
     expect(standalone).toContain(
       'let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost()'
@@ -168,8 +165,6 @@ describe('standalone team lifecycle read wiring', () => {
     );
     expect(standalone).not.toContain('internalStorageFeature');
     expect(standalone).not.toContain('internalStorageFeature.dispose');
-    expect(desktop).toContain('teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost()');
-    expect(desktop).not.toContain('new TeamLifecycleReadBootstrapSource');
   });
 
   it('obtains and flushes the shared ConfigManager singleton only after root admission', async () => {

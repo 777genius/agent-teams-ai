@@ -1,5 +1,6 @@
 import { isBootstrapProofClearableLaunchFailureReason } from './TeamProvisioningBootstrapTranscript';
 import {
+  applyExpiredLaunchGraceToPersistedStatuses,
   createInitialMemberSpawnStatusEntry,
   summarizeMemberSpawnStatusRecord,
 } from './TeamProvisioningMemberSpawnStatusPolicy';
@@ -586,6 +587,7 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
+  applyExpiredLaunchGraceToPersistedStatuses(nextStatuses, ports.cache.nowMs());
   const runtimeObservedAt = ports.nowIso();
   const aliveMemberNames = Object.entries(nextStatuses)
     .filter(([, entry]) => entry.runtimeAlive === true)

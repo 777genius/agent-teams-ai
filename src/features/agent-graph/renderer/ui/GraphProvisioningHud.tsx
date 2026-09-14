@@ -74,7 +74,11 @@ export const GraphProvisioningHud = ({
     return parts.join(' - ') || 'Open launch details';
   }, [presentation?.compactDetail, presentation?.compactTitle]);
 
-  if (!shouldRender || !presentation) {
+  if (!presentation) {
+    return enabled ? <TeamProvisioningPanel teamName={teamName} dismissible /> : null;
+  }
+
+  if (!shouldRender) {
     return null;
   }
 

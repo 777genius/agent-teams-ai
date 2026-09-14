@@ -4,6 +4,7 @@ import {
 } from './TeamProvisioningAuthRetryCleanupOwnership';
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
+import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
 import type {
   AnthropicApiKeyHelperCleanupRetryOwner,
@@ -42,6 +43,8 @@ export interface TeamProvisioningAuthRetryRun
   finalizingByTimeout: boolean;
   deterministicBootstrap: boolean;
   effectiveMembers: TeamCreateRequest['members'];
+  lastDeterministicBootstrapSeq?: number;
+  firstRealTurnSucceeded?: boolean;
 }
 
 export interface TeamProvisioningAuthRetryLogger {
@@ -423,6 +426,9 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   );
   run.child = child;
   run.processClosed = false;
+  run.finalizingByTimeout = false;
+  run.lastDeterministicBootstrapSeq = 0;
+  run.firstRealTurnSucceeded = false;
   run.authRetryInProgress = false;
 
   ports.updateProgress(run, 'spawning', 'CLI respawned - sending prompt', {
@@ -470,27 +476,35 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   }
 
   // Restart timeout
-  run.timeoutHandle = ports.setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete && run.child === child) {
-      run.processKilled = true;
-      run.finalizingByTimeout = true;
-      void (async () => {
-        if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
-          return;
-        }
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-        if (readyOnTimeout) return;
+  scheduleProvisioningRunTimeout(
+    run,
+    ports.getProvisioningRunTimeoutMs(run),
+    () => {
+      if (!run.processKilled && !run.provisioningComplete && run.child === child) {
+        run.processKilled = true;
+        run.finalizingByTimeout = true;
+        void (async () => {
+          if (!(await terminateAndReleaseAuthRetryRun(run, child, ports, 'timeout'))) {
+            return;
+          }
+          if (run.cancelRequested || run.child !== child) return;
+          run.processClosed = true;
+          const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
+          if (readyOnTimeout) return;
+          if (run.cancelRequested || run.child !== child) return;
 
-        const hint = run.isLaunch ? ' (launch)' : '';
-        const progress = ports.updateProgress(run, 'failed', `Timed out waiting for CLI${hint}`, {
-          error: `Timed out waiting for CLI${hint}.`,
-          cliLogsTail: ports.extractCliLogsFromRun(run),
-        });
-        run.onProgress(progress);
-        ports.cleanupRun(run);
-      })();
-    }
-  }, ports.getProvisioningRunTimeoutMs(run));
+          const hint = run.isLaunch ? ' (launch)' : '';
+          const progress = ports.updateProgress(run, 'failed', `Timed out waiting for CLI${hint}`, {
+            error: `Timed out waiting for CLI${hint}.`,
+            cliLogsTail: ports.extractCliLogsFromRun(run),
+          });
+          run.onProgress(progress);
+          ports.cleanupRun(run);
+        })();
+      }
+    },
+    ports
+  );
 
   child.once('error', (error) => {
     const hint = run.isLaunch ? ' (launch)' : '';

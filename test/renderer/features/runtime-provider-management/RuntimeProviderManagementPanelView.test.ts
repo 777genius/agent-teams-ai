@@ -315,6 +315,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
         })
       );
       await Promise.resolve();
@@ -363,6 +364,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
         })
       );
       await Promise.resolve();
@@ -1291,7 +1293,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent?.trim() === 'Cancel')
+        .find((button) => button.textContent?.trim() === 'Close')
         ?.click();
       await Promise.resolve();
     });
@@ -1345,10 +1347,10 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     const testAndUseButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Test and use'
+      (button) => button.textContent?.trim() === 'Select'
     );
     expect(testAndUseButton?.disabled).toBe(false);
-    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Test and use: qwen-test:0.5b');
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Select: qwen-test:0.5b');
     expect(testAndUseButton?.getAttribute('aria-label')).toContain(
       'Selected project has no matching credential'
     );
@@ -1363,9 +1365,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host
         .querySelector('[data-testid="runtime-provider-model-row-llama.cpp/unavailable:0.5b"]')
-        ?.querySelector('button[aria-label^="Test and use"]')
+        ?.querySelector('button[aria-label^="Select"]')
         ?.getAttribute('aria-label')
-    ).toContain('Test and use: Unavailable Model: OpenCode marks this model as deprecated');
+    ).toContain('Select: Unavailable Model: OpenCode marks this model as deprecated');
     vi.mocked(actions.setDefaultModel).mockRejectedValueOnce(new Error('write failed'));
     await act(async () => {
       testAndUseButton?.click();
@@ -1384,11 +1386,96 @@ describe('RuntimeProviderManagementPanelView', () => {
       'all_projects',
       null
     );
-    expect(document.activeElement).toBe(
-      Array.from(host.querySelectorAll('[role="tab"]')).find((tab) =>
-        tab.textContent?.includes('Models')
-      )
+    expect(host.querySelector('[data-testid="opencode-default-target-banner"]')).not.toBeNull();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              allProjectsDefaultModel: projectUnavailableModel.modelId,
+              projectDefaultModel: unavailableModel.modelId,
+              defaultModel: unavailableModel.modelId,
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'runtime-default',
+            selectedModelId: unavailableModel.modelId,
+            models: [projectUnavailableModel, unavailableModel],
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    const selectedButtons = host.querySelectorAll('button[aria-pressed="true"]');
+    expect(selectedButtons).toHaveLength(1);
+    expect(selectedButtons[0]?.getAttribute('aria-label')).toContain(
+      projectUnavailableModel.displayName
     );
+    expect(selectedButtons[0]?.textContent).toBe('Selected');
+  });
+
+  it('allows pinning the inherited model as an explicit project override', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const model = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/inherited',
+      displayName: 'Inherited',
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: true,
+      availability: 'available' as const,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        projectPath: '/tmp/project-a',
+        projectDefaultModel: null,
+        allProjectsDefaultModel: model.modelId,
+        defaultModel: model.modelId,
+        defaultModelSource: 'all_projects',
+      },
+      providers: [{ ...createState().view!.providers[0]!, state: 'connected', actions: [] }],
+      modelPickerProviderId: 'openrouter',
+      modelPickerMode: 'runtime-default',
+      models: [model],
+    });
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    await selectOpenCodeTab(host, 'Models');
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('button[aria-label^="Use another model: This project"]')
+        ?.click();
+    });
+    const select = host.querySelector<HTMLButtonElement>('button[aria-label="Select: Inherited"]');
+    expect(select).not.toBeNull();
+    expect(select?.disabled).toBe(false);
+    await act(async () => {
+      select?.click();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      model.modelId,
+      'project',
+      '/tmp/project-a'
+    );
+    await act(async () => root.unmount());
   });
 
   it('clears a project override through the explicit Use default action', async () => {
@@ -2468,13 +2555,13 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
-    expect(
-      buttons.some((button) => button.textContent?.includes('Remove managed credential'))
-    ).toBe(true);
+    expect(buttons.some((button) => button.textContent?.includes('Remove saved credentials'))).toBe(
+      true
+    );
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Remove managed credential'))
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
         ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await Promise.resolve();
     });
@@ -2483,7 +2570,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Remove managed credential'))
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
@@ -2530,7 +2617,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     const replaceButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Replace credential')
+      button.textContent?.includes('Replace API key')
     );
     expect(host.textContent).not.toContain('Connection');
     expect(host.textContent).not.toContain('API credential');
@@ -3949,6 +4036,57 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
     expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
+    const renderPaidPage = async (cursor: string | null): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: { ...createState().view!, providers: [connectedProvider] },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              modelsTotalCount: 4,
+              modelsNextCursor: cursor,
+              models: [
+                {
+                  providerId: 'openrouter',
+                  modelId: 'openrouter/paid',
+                  displayName: 'Paid model',
+                  sourceLabel: 'OpenRouter',
+                  free: false,
+                  default: false,
+                  availability: 'untested',
+                  routeKind: 'connected_provider',
+                },
+              ],
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+      });
+    };
+    await renderPaidPage('next-page');
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).not.toContain('Paid model');
+    expect(host.textContent).toContain('Free models shown: 0');
+    expect(host.textContent).toContain('Loaded 1 of 4');
+    expect(host.textContent).toContain('Checking the rest of the catalog');
+    expect(host.textContent).not.toContain('No free models found.');
+    await renderPaidPage(null);
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).toContain('No free models found.');
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+    });
+    expect(host.textContent).toContain('Paid model');
+    expect(host.textContent).toContain('Shown: 1');
+    await act(async () => root.unmount());
   });
 
   it('keeps the model search input enabled while model results are loading', async () => {
@@ -4260,5 +4398,131 @@ describe('RuntimeProviderManagementPanelView', () => {
         expect(logo?.textContent).toBe(provider.label);
       }
     }
+  });
+
+  it('lets users pick a project on Providers so local Ollama Test is enabled', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const ollamaProvider = {
+      ...createState().view!.providers[0]!,
+      providerId: 'ollama',
+      displayName: 'Ollama',
+      state: 'available' as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: 'ollama/qwen3-30b-32k',
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const ollamaModel = {
+      providerId: 'ollama',
+      modelId: 'ollama/qwen3-30b-32k',
+      displayName: 'qwen3-30b-32k',
+      sourceLabel: 'Ollama',
+      free: false,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason:
+        'OpenCode provider "ollama" for selected model "ollama/qwen3-30b-32k" requires execution verification before launch',
+    };
+    const project = {
+      id: 'sandbox',
+      path: '/tmp/agent-teams-ollama-sandbox',
+      name: 'Ollama sandbox',
+      sessions: [],
+      totalSessions: 0,
+      createdAt: 0,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: null,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-project-context-select"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+        ?.textContent
+    ).toContain('Select a project context before testing models.');
+    const disabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(disabledTest?.disabled).toBe(true);
+    expect(actions.testModel).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: project.path,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+    ).toBeNull();
+    const enabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(enabledTest?.disabled).toBe(false);
+
+    await act(async () => {
+      enabledTest?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
   });
 });

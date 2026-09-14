@@ -176,7 +176,7 @@
       "superGrokConnected": "SuperGrok OAuth が保存されました",
       "superGrokDescription": "OpenCode OAuth を通じて SuperGrok サブスクリプションを使用します。",
       "switchToSuperGrok": "スーパーグロックに切り替える",
-      "title": "オプションのプロバイダーとプラン",
+      "title": "プロバイダーとプラン",
       "unavailable": "利用不可",
       "updateForSuperGrok": "OAuth 用に OpenCode を更新する",
       "updateOpenCode": "オープンコードを更新する",

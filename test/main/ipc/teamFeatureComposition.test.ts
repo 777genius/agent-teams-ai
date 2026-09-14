@@ -40,7 +40,7 @@ const mocks = vi.hoisted(() => {
     configExists: vi.fn(),
     draftExists: vi.fn(),
   };
-  const loggers = Array.from({ length: 11 }, (_value, index) => ({
+  const loggers = Array.from({ length: 30 }, (_value, index) => ({
     error: vi.fn(),
     index,
     warn: vi.fn(),
@@ -63,6 +63,19 @@ const mocks = vi.hoisted(() => {
     });
   const register = eventHandler;
   const remove = eventHandler;
+  const persistNodeMemberSettingsRelaunch = vi.fn(
+    (
+      _teamName: string,
+      _members: unknown,
+      _intent: unknown,
+      _options: {
+        isTeamAlive(teamName: string): boolean;
+        hasProvisioningRun(teamName: string): boolean | Promise<boolean>;
+        invalidateWorkerCache(teamName: string): void;
+      }
+    ) => Promise.resolve()
+  );
+  const invalidateTeamRosterSnapshotCaches = vi.fn();
   const createTeamRuntimeOperationsFeature = vi.fn((...args: [TeamRuntimeOperationsHostPorts]) => {
     if (!args[0]) throw new Error('Runtime operations host ports are required');
     events.push('create-runtime-operations');
@@ -76,7 +89,8 @@ const mocks = vi.hoisted(() => {
       skipMemberForLaunch: TeamRuntimeOperationsHostPorts['lifecycle']['skipMemberForLaunch'];
     }): TeamRuntimeOperationsHostPorts['lifecycle'] => ({
       getMemberSpawnStatuses: (teamName) => source.getMemberSpawnStatuses(teamName),
-      restartMember: (teamName, memberName) => source.restartMember(teamName, memberName),
+      restartMember: (teamName, memberName, expectedSecondary) =>
+        source.restartMember(teamName, memberName, expectedSecondary),
       retryFailedRuntimeLanes: (teamName) => source.retryFailedOpenCodeSecondaryLanes(teamName),
       skipMemberForLaunch: (teamName, memberName) =>
         source.skipMemberForLaunch(teamName, memberName),
@@ -139,6 +153,8 @@ const mocks = vi.hoisted(() => {
     createTeamViewReadModelFeature: createFactory('create-view-read-model', features.viewReadModel),
     initializeTeamHandlers: register('initialize-legacy-team-handlers'),
     invalidateTeamConfig: vi.fn(),
+    invalidateTeamRosterSnapshotCaches,
+    persistNodeMemberSettingsRelaunch,
     permanentlyDeleteDraftTeam: vi.fn(),
     permanentlyDeleteTeam: vi.fn(),
     registerTaskLogObservabilityIpc: register('register-task-log-observability'),
@@ -206,6 +222,7 @@ vi.mock('@features/team-provisioning/main', () => ({
   createTeamProvisioningFeature: mocks.createTeamProvisioningFeature,
   registerTeamProvisioningIpc: mocks.registerTeamProvisioningIpc,
   removeTeamProvisioningIpc: mocks.removeTeamProvisioningIpc,
+  persistNodeMemberSettingsRelaunch: mocks.persistNodeMemberSettingsRelaunch,
 }));
 vi.mock('@features/team-roster-mutations/main', () => ({
   createTeamRosterMutationFeature: mocks.createTeamRosterMutationFeature,
@@ -255,10 +272,26 @@ vi.mock('@main/ipc/teams', () => ({
   registerTeamHandlers: mocks.registerTeamHandlers,
   removeTeamHandlers: mocks.removeTeamHandlers,
 }));
+vi.mock('@main/ipc/teams/MainTeamRuntimeStop', () => ({
+  MainTeamRuntimeStop: class {
+    constructor(private readonly runtime: { stopTeam(teamName: string): Promise<void> }) {}
+
+    stopTeam(teamName: string): Promise<void> {
+      return this.runtime.stopTeam(teamName);
+    }
+
+    forceStopTeam(): Promise<never> {
+      return Promise.reject(new Error('force stop not exercised by this composition test'));
+    }
+  },
+}));
 vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
   getTeamDataWorkerClient: () => ({
     invalidateTeamConfig: mocks.invalidateTeamConfig,
   }),
+}));
+vi.mock('@main/services/team/invalidateTeamRosterSnapshotCaches', () => ({
+  invalidateTeamRosterSnapshotCaches: mocks.invalidateTeamRosterSnapshotCaches,
 }));
 
 function sentinel(name: string): { name: string } {
@@ -331,6 +364,7 @@ function createDependencies() {
       findMemberLogs: vi.fn(() => runtimeOperationResults.memberLogs),
     },
     teamPermanentDeletionLifecycle: sentinel('team-permanent-deletion-lifecycle'),
+    teamScopedResourceReleaser: sentinel('team-scoped-resource-releaser'),
     teammateToolTracker: sentinel('teammate-tool-tracker'),
   };
   const capabilitySources = {
@@ -356,7 +390,10 @@ function createDependencies() {
       sendMessageToTeam: vi.fn(() => Promise.resolve()),
     },
     preflight: sentinel('preflight'),
-    provisioningRun: sentinel('provisioning-run'),
+    provisioningRun: {
+      ...sentinel('provisioning-run'),
+      hasProvisioningRun: vi.fn(() => false),
+    },
     provisioningStart: sentinel('provisioning-start'),
     provisioningStatus: sentinel('provisioning-status'),
     runtime: {
@@ -417,6 +454,8 @@ describe('desktop team feature composition behavior', () => {
       'remove-task-log-observability',
     ]);
     expect(ipcMain.removeHandler.mock.calls.map(([channel]) => channel)).toEqual([
+      'team:getQueuedUserMessages',
+      'team:discardQueuedUserMessages',
       'team:processSend',
       'team:processAlive',
     ]);
@@ -552,6 +591,7 @@ describe('desktop team feature composition behavior', () => {
       lifecycle: capabilities.rosterLifecycle,
       messaging: capabilities.messaging,
       logger: mocks.loggers[9],
+      persistMemberSettingsRelaunch: expect.any(Function),
     });
     expect(mocks.createTeamProvisioningFeature).toHaveBeenCalledWith({
       start: mocks.fencedProvisioningStart,
@@ -610,7 +650,7 @@ describe('desktop team feature composition behavior', () => {
     expect(host.runtime.isTeamAlive('sandbox-team')).toBe(true);
 
     const stop = host.runtime.stopTeam('sandbox-team');
-    const restart = host.lifecycle.restartMember('sandbox-team', 'alice');
+    const restart = host.lifecycle.restartMember('sandbox-team', 'alice', true);
     const retry = host.lifecycle.retryFailedRuntimeLanes('sandbox-team');
     const skip = host.lifecycle.skipMemberForLaunch('sandbox-team', 'alice');
     expect(retry).toBe(runtimeOperationResults.retry);
@@ -667,7 +707,8 @@ describe('desktop team feature composition behavior', () => {
     expect(capabilities.runtime.stopTeam).toHaveBeenCalledWith('sandbox-team');
     expect(capabilitySources.memberLifecycle.restartMember).toHaveBeenCalledWith(
       'sandbox-team',
-      'alice'
+      'alice',
+      true
     );
     expect(
       capabilitySources.memberLifecycle.retryFailedOpenCodeSecondaryLanes
@@ -680,6 +721,45 @@ describe('desktop team feature composition behavior', () => {
     expect(identities.teamDataService.getTeamData).toHaveBeenCalledTimes(3);
     expect(identities.teamDataService.killProcess).toHaveBeenCalledWith('sandbox-team', 41);
     expect(capabilities.messaging.sendMessageToTeam).toHaveBeenCalledWith('sandbox-team', 'status');
+  });
+
+  it('wires fingerprint-checked member settings persistence with runtime and cache guards', async () => {
+    mocks.persistNodeMemberSettingsRelaunch.mockImplementationOnce(
+      async (teamName, _members, _intent, options) => {
+        expect(options.isTeamAlive(teamName)).toBe(true);
+        expect(options.hasProvisioningRun(teamName)).toBe(false);
+        options.invalidateWorkerCache(teamName);
+      }
+    );
+    const { capabilities, identities } = createComposition();
+    const rosterDependencies = mocks.createTeamRosterMutationFeature.mock.calls[0][0] as {
+      persistMemberSettingsRelaunch(
+        teamName: string,
+        members: { name: string }[],
+        intent: unknown
+      ): Promise<void>;
+    };
+    const members = [{ name: 'alice' }];
+    const intent = { expectedFingerprint: 'member-fingerprint' };
+
+    await rosterDependencies.persistMemberSettingsRelaunch('sandbox-team', members, intent);
+
+    expect(mocks.persistNodeMemberSettingsRelaunch).toHaveBeenCalledWith(
+      'sandbox-team',
+      members,
+      intent,
+      expect.objectContaining({
+        isTeamAlive: expect.any(Function),
+        hasProvisioningRun: expect.any(Function),
+        invalidateWorkerCache: expect.any(Function),
+      })
+    );
+    expect(capabilities.runtime.isTeamAlive).toHaveBeenCalledWith('sandbox-team');
+    expect(capabilities.provisioningRun.hasProvisioningRun).toHaveBeenCalledWith('sandbox-team');
+    expect(mocks.invalidateTeamRosterSnapshotCaches).toHaveBeenCalledWith(
+      'sandbox-team',
+      identities.teamDataService
+    );
   });
 
   it('keeps legacy mutation sequencing in the compatibility ACL outside the feature', async () => {
@@ -728,7 +808,8 @@ describe('desktop team feature composition behavior', () => {
       identities.teamLogSourceTracker,
       identities.branchStatusService,
       identities.launchIoGovernor,
-      identities.teamPermanentDeletionLifecycle
+      identities.teamPermanentDeletionLifecycle,
+      identities.teamScopedResourceReleaser
     );
   });
 
@@ -755,6 +836,8 @@ describe('desktop team feature composition behavior', () => {
       'register-task-log-observability',
     ]);
     expect(ipcMain.handle.mock.calls.map(([channel]) => channel)).toEqual([
+      'team:getQueuedUserMessages',
+      'team:discardQueuedUserMessages',
       'team:processSend',
       'team:processAlive',
     ]);

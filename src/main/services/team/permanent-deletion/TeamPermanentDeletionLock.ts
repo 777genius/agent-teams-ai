@@ -49,6 +49,38 @@ function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
 
+/**
+ * True when publishing the candidate failed because the lock is already held.
+ *
+ * POSIX reports that as EEXIST/ENOTEMPTY (rename cannot replace a non-empty
+ * directory). Windows reports the very same situation as EPERM - and does so
+ * for any rename onto an existing directory - so the lock path is checked
+ * before treating it as contention; without that check every contended
+ * acquisition on Windows failed the whole permanent deletion instead of
+ * waiting for the holder.
+ *
+ * The probe is not atomic with the failed rename: the holder can release
+ * between the two, which is exactly the moment the caller is waiting for. A
+ * lock that is already gone is therefore resolved contention and must be
+ * retried, not reported as the stale rename error. Every other probe failure
+ * still surfaces the original error, and the candidate directory was created
+ * in this same directory moments earlier, so a permanent permission problem
+ * cannot hide behind the retry.
+ */
+async function isOccupiedLockRenameError(error: unknown, lockPath: string): Promise<boolean> {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'ENOTDIR' || code === 'EISDIR') {
+    return true;
+  }
+  if (code !== 'EPERM' && code !== 'EACCES') {
+    return false;
+  }
+  return await fs.promises
+    .lstat(lockPath)
+    .then(() => true)
+    .catch((probeError: unknown) => isEnoent(probeError));
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -333,13 +365,7 @@ export class TeamPermanentDeletionLock {
             ownerEntryName,
           };
         } catch (error) {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (
-            code !== 'EEXIST' &&
-            code !== 'ENOTEMPTY' &&
-            code !== 'ENOTDIR' &&
-            code !== 'EISDIR'
-          ) {
+          if (!(await isOccupiedLockRenameError(error, lockPath))) {
             throw error;
           }
           await this.removeStalePermanentDeletionLock(lockPath);

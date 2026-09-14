@@ -69,13 +69,15 @@ function isPathLikeCandidate(candidate: string): boolean {
   if (process.platform === 'win32') {
     return path.win32.isAbsolute(candidate) || candidate.includes('\\') || candidate.includes('/');
   }
-  return path.isAbsolute(candidate) || candidate.includes(path.sep);
+  // path.posix rather than the host's path: identical on a POSIX host, and it
+  // keeps the non-Windows branch meaningful when the platform is simulated.
+  return path.posix.isAbsolute(candidate) || candidate.includes(path.posix.sep);
 }
 
 function getPathEntries(): string[] {
   // TODO: Consider sharing runtimePathBinaryResolver here after preserving this resolver's
   // path-like candidate support and Windows PATHEXT normalization exactly.
-  const delimiter = process.platform === 'win32' ? ';' : path.delimiter;
+  const delimiter = process.platform === 'win32' ? ';' : ':';
   const shellEnv = getCachedShellEnv() ?? {};
   const seen = new Set<string>();
   return [shellEnv.PATH, buildMergedCliPath(null), process.env.PATH]
@@ -94,7 +96,7 @@ function resolvePathEntryCandidate(pathEntry: string, candidate: string): string
   if (process.platform === 'win32') {
     return path.win32.join(pathEntry, candidate);
   }
-  return path.join(pathEntry, candidate);
+  return path.posix.join(pathEntry, candidate);
 }
 
 async function verifyBinary(candidate: string): Promise<string | null> {

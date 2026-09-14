@@ -8,6 +8,7 @@ import { TeamTaskReader } from '../../TeamTaskReader';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';
+import { filterMessagesForAttribution } from './OpenCodeTaskLogAttributionProjection';
 import { OpenCodeTaskLogAttributionStore } from './OpenCodeTaskLogAttributionStore';
 import { TaskLogOpenCodeSessionEvidenceSource } from './TaskLogOpenCodeSessionEvidenceSource';
 
@@ -33,7 +34,6 @@ const HEURISTIC_TRANSCRIPT_LIMIT = 200;
 const ATTRIBUTED_TRANSCRIPT_LIMIT = 500;
 const WINDOW_GRACE_BEFORE_MS = 30_000;
 const WINDOW_GRACE_AFTER_MS = 15_000;
-const ATTRIBUTION_WINDOW_GRACE_MS = 1_000;
 const TASK_MARKER_CONTEXT_BEFORE_MESSAGES = 1;
 const TASK_MARKER_CONTEXT_MAX_MS = 5 * 60_000;
 const NATIVE_TOOL_CONTEXT_BEFORE_MS = 5 * 60_000;
@@ -899,23 +899,6 @@ function buildTaskTimeWindows(task: TeamTask): TimeWindow[] {
   return [];
 }
 
-function buildAttributionTimeWindows(record: OpenCodeTaskLogAttributionRecord): TimeWindow[] {
-  const sinceMs = record.since ? Date.parse(record.since) : Number.NaN;
-  const untilMs = record.until ? Date.parse(record.until) : Number.NaN;
-  if (!Number.isFinite(sinceMs) && !Number.isFinite(untilMs)) {
-    return [];
-  }
-
-  return [
-    {
-      startMs: Number.isFinite(sinceMs)
-        ? sinceMs - ATTRIBUTION_WINDOW_GRACE_MS
-        : Number.NEGATIVE_INFINITY,
-      endMs: Number.isFinite(untilMs) ? untilMs + ATTRIBUTION_WINDOW_GRACE_MS : null,
-    },
-  ];
-}
-
 function isWithinTimeWindows(timestamp: Date, windows: TimeWindow[]): boolean {
   const messageTime = timestamp.getTime();
   if (!Number.isFinite(messageTime)) {
@@ -930,49 +913,6 @@ function isWithinTimeWindows(timestamp: Date, windows: TimeWindow[]): boolean {
     const endMs = window.endMs ?? now;
     return messageTime >= window.startMs && messageTime <= endMs;
   });
-}
-
-function filterByMessageUuidRange(
-  messages: ParsedMessage[],
-  record: OpenCodeTaskLogAttributionRecord
-): ParsedMessage[] {
-  const startIndex = record.startMessageUuid
-    ? messages.findIndex((message) => message.uuid === record.startMessageUuid)
-    : 0;
-  if (startIndex < 0) {
-    return [];
-  }
-
-  const endIndex = record.endMessageUuid
-    ? messages.findIndex((message) => message.uuid === record.endMessageUuid)
-    : messages.length - 1;
-  if (endIndex < 0 || endIndex < startIndex) {
-    return [];
-  }
-
-  return messages.slice(startIndex, endIndex + 1);
-}
-
-function filterMessagesForAttribution(
-  messages: OpenCodeRuntimeTranscriptLogMessage[],
-  record: OpenCodeTaskLogAttributionRecord
-): ParsedMessage[] {
-  const parsedMessages = messages
-    .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
-    .filter((message): message is ParsedMessage => message !== null);
-
-  const hasMessageBounds = Boolean(record.startMessageUuid || record.endMessageUuid);
-  const hasTimeBounds = Boolean(record.since || record.until);
-  const canUseTaskSessionScope = record.scope === 'task_session' && Boolean(record.sessionId);
-  if (!hasMessageBounds && !hasTimeBounds && !canUseTaskSessionScope) {
-    return [];
-  }
-
-  const rangeFiltered = filterByMessageUuidRange(parsedMessages, record);
-  const windows = buildAttributionTimeWindows(record);
-  return rangeFiltered
-    .filter((message) => isWithinTimeWindows(message.timestamp, windows))
-    .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());
 }
 
 export class OpenCodeTaskLogStreamSource {
@@ -1247,12 +1187,7 @@ export class OpenCodeTaskLogStreamSource {
       }
 
       const projectedMessages = transcript.logProjection?.messages ?? [];
-      const markerProjection =
-        record.source === 'delivery_ledger'
-          ? buildTaskMarkerProjection(projectedMessages, teamName, task)
-          : null;
-      const filteredMessages =
-        markerProjection?.messages ?? filterMessagesForAttribution(projectedMessages, record);
+      const filteredMessages = filterMessagesForAttribution(projectedMessages, record);
       if (filteredMessages.length === 0) {
         continue;
       }

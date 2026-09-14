@@ -32,6 +32,7 @@ export function sanitizeTaskChangeOptions(options?: unknown): TaskChangeRequestO
         : undefined,
     summaryOnly: raw.summaryOnly === true,
     forceFresh: raw.forceFresh === true,
+    retryBackfill: raw.retryBackfill === true,
   };
 }
 

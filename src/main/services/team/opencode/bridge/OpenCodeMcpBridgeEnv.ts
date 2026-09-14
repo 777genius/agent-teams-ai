@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 const DISABLED_HTTP_MCP_VALUES = new Set(['0', 'false', 'no', 'off']);
 
 const LOCAL_MCP_LAUNCH_ENV_KEYS = [
@@ -8,6 +10,10 @@ const LOCAL_MCP_LAUNCH_ENV_KEYS = [
 const OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS = ['CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON'] as const;
 const LEGACY_LOCAL_MCP_CHILD_ENV_KEYS = ['ELECTRON_RUN_AS_NODE'] as const;
 const MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY = 'agent-teams-app-instance';
+export const OPENCODE_APP_PROFILE_SCOPE_ENV = 'CLAUDE_TEAM_APP_PROFILE_SCOPE';
+export const OPENCODE_APP_PROFILE_FRAGMENT_KEY = 'agent-teams-app-profile';
+const HTTP_MCP_URL_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL';
+const HTTP_MCP_URL_HASH_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH';
 
 export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
 
@@ -28,13 +34,40 @@ export function buildOpenCodeAppScopedMcpOwnershipMarker(appInstanceId: string):
   return fragment.toString();
 }
 
-export function buildOpenCodeAppScopedMcpUrl(baseUrl: string, appInstanceId: string): string {
+export function buildOpenCodeAppProcessOwnershipMarkers(
+  appInstanceId: string,
+  platform: NodeJS.Platform = process.platform
+): { requiredDetailsMarkers?: string[]; requiredServeConfigMarkersAny?: string[] } {
+  const instanceId = normalizeOpenCodeAppInstanceId(appInstanceId);
+  return platform === 'win32'
+    ? { requiredServeConfigMarkersAny: [buildOpenCodeAppScopedMcpOwnershipMarker(instanceId)] }
+    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${instanceId}`] };
+}
+
+// Full authority roots are hashed together, never basenames. The scope survives app restarts.
+export function buildOpenCodeAppProfileScope(userDataPath: string, claudeBasePath: string): string {
+  if (!userDataPath.trim() || !claudeBasePath.trim()) {
+    throw new Error('OpenCode app profile authority roots are required');
+  }
+  return createHash('sha256')
+    .update(JSON.stringify([userDataPath, claudeBasePath]))
+    .digest('hex');
+}
+
+export function buildOpenCodeAppScopedMcpUrl(
+  baseUrl: string,
+  appInstanceId: string,
+  profileScope?: string
+): string {
   const url = new URL(baseUrl);
   const fragment = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash);
   fragment.set(
     MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY,
     normalizeOpenCodeAppInstanceId(appInstanceId)
   );
+  if (profileScope) {
+    fragment.set(OPENCODE_APP_PROFILE_FRAGMENT_KEY, profileScope);
+  }
   url.hash = fragment.toString();
   return url.toString();
 }
@@ -93,6 +126,25 @@ export function shouldEnsureOpenCodeLocalMcpLaunchEnv(input: {
   return input.httpBridgeEnabled || !input.mcpUrl?.trim();
 }
 
+export function retainOpenCodeHttpMcpBridgeEnv(
+  sourceEnv: OpenCodeMcpBridgeEnv,
+  targetEnv: OpenCodeMcpBridgeEnv
+): boolean {
+  const url = sourceEnv[HTTP_MCP_URL_ENV]?.trim();
+  if (!url) {
+    return false;
+  }
+
+  targetEnv[HTTP_MCP_URL_ENV] = url;
+  const urlHash = sourceEnv[HTTP_MCP_URL_HASH_ENV]?.trim();
+  if (urlHash) {
+    targetEnv[HTTP_MCP_URL_HASH_ENV] = urlHash;
+  } else {
+    delete targetEnv[HTTP_MCP_URL_HASH_ENV];
+  }
+  return true;
+}
+
 export function copyOpenCodeLocalMcpLaunchEnv(
   sourceEnv: OpenCodeMcpBridgeEnv,
   targetEnv: OpenCodeMcpBridgeEnv
@@ -143,4 +195,52 @@ export function clearOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): void 
   for (const key of LEGACY_LOCAL_MCP_CHILD_ENV_KEYS) {
     delete env[key];
   }
+}
+
+/** A projection owned by the existing Host transport, with identity-checked revocation. */
+export function createOpenCodeMcpAppContext(
+  getCurrentHandle: () => { url: string; port: number; urlHash: string } | null
+): {
+  bind: (env: OpenCodeMcpBridgeEnv, httpEnabled: boolean) => () => void;
+  read: (claudeRoot: string) => OpenCodeMcpBridgeEnv | null;
+} {
+  let current: { env: OpenCodeMcpBridgeEnv; httpEnabled: boolean } | null = null;
+  return {
+    bind(env, httpEnabled) {
+      const owner = { env, httpEnabled };
+      current = owner;
+      return () => {
+        if (current === owner) current = null;
+      };
+    },
+    read(claudeRoot) {
+      if (!current) return null;
+      const { env, httpEnabled } = current;
+      const instance = env.CLAUDE_TEAM_APP_INSTANCE_ID;
+      const profile = env.CLAUDE_TEAM_APP_PROFILE_SCOPE;
+      if (
+        env.AGENT_TEAMS_MCP_CLAUDE_DIR !== claudeRoot ||
+        !instance?.trim() ||
+        !/^[a-f0-9]{64}$/.test(profile ?? '')
+      ) {
+        throw new Error('Invalid current Host MCP app context');
+      }
+      const result: OpenCodeMcpBridgeEnv = {
+        CLAUDE_TEAM_APP_INSTANCE_ID: instance,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profile,
+      };
+      for (const key of [...LOCAL_MCP_LAUNCH_ENV_KEYS, ...OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS]) {
+        if (env[key] !== undefined) result[key] = env[key];
+      }
+      const handle = getCurrentHandle();
+      if (httpEnabled && handle) {
+        if (handle.url !== `http://127.0.0.1:${handle.port}/mcp`) {
+          throw new Error('Invalid current Host MCP transport');
+        }
+        result[HTTP_MCP_URL_ENV] = buildOpenCodeAppScopedMcpUrl(handle.url, instance, profile);
+        result[HTTP_MCP_URL_HASH_ENV] = handle.urlHash;
+      }
+      return result;
+    },
+  };
 }

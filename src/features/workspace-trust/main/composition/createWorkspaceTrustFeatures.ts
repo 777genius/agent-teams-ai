@@ -14,6 +14,7 @@ export function createWorkspaceTrustFeatures(input: {
   getAutoDetectedClaudeConfigDir: () => string;
   getHomeDir: () => string;
   env?: NodeJS.ProcessEnv;
+  isLocalContext?: () => boolean;
 }) {
   const globalConfigFilePath = (): string => resolveWorkspaceTrustGlobalConfigFilePath(input);
   const shared = {
@@ -32,5 +33,11 @@ export function createWorkspaceTrustFeatures(input: {
       registerWorkspaceTrustIpc(ipcMain, status),
     removeIpc: (ipcMain: Parameters<typeof removeWorkspaceTrustIpc>[0]) =>
       removeWorkspaceTrustIpc(ipcMain),
+    status: createWorkspaceTrustStatusFeature({
+      ...shared,
+      getHomeDir: input.getHomeDir,
+      env: input.env,
+      isLocalContext: input.isLocalContext,
+    }),
   };
 }

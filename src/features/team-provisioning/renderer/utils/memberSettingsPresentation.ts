@@ -7,11 +7,11 @@ import {
 
 import type { EditableMemberSettings } from '../../contracts/memberSettings';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
-import type { ResolvedTeamMember, TeamProviderId } from '@shared/types';
+import type { ResolvedTeamMember, TeamMemberSnapshot, TeamProviderId } from '@shared/types';
 
 export type MemberSettingsSaveImpact = 'offline' | 'restart' | 'opencode_restart' | 'relaunch';
 
-export function memberToEditableSettings(member: ResolvedTeamMember): EditableMemberSettings {
+export function memberToEditableSettings(member: TeamMemberSnapshot): EditableMemberSettings {
   const configured = member.configuredRuntimeSettings;
   return {
     role: member.role?.trim() || null,
@@ -58,11 +58,11 @@ export function draftToEditableSettings(draft: MemberDraft): EditableMemberSetti
   };
 }
 
-export function fingerprintResolvedMember(member: ResolvedTeamMember): string {
+export function fingerprintResolvedMember(member: TeamMemberSnapshot): string {
   return createMemberSettingsFingerprint(memberToTargetSnapshot(member));
 }
 
-function memberToTargetSnapshot(member: ResolvedTeamMember): MemberSettingsTargetSnapshot {
+function memberToTargetSnapshot(member: TeamMemberSnapshot): MemberSettingsTargetSnapshot {
   return {
     name: member.name,
     agentType: member.agentType ?? null,
@@ -76,7 +76,7 @@ function memberToTargetSnapshot(member: ResolvedTeamMember): MemberSettingsTarge
   };
 }
 
-export function isCanonicalSettingsLead(member: ResolvedTeamMember): boolean {
+export function isCanonicalSettingsLead(member: TeamMemberSnapshot): boolean {
   return isCanonicalLeadTarget(memberToTargetSnapshot(member));
 }
 

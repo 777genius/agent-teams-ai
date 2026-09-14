@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 
+import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import {
   buildChangeReviewTitle,
   buildReviewChangeStats,
@@ -219,7 +220,7 @@ export const ChangeReviewDialogView = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       <div
-        className="flex items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
+        className="flex min-w-0 items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
         style={
           {
             paddingLeft: isMacElectron
@@ -229,8 +230,8 @@ export const ChangeReviewDialogView = ({
           } as React.CSSProperties
         }
       >
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium text-text">{title}</h2>
+        <div className="flex min-w-0 items-center gap-3">
+          <h2 className="truncate text-sm font-medium text-text">{title}</h2>
           {activeChangeSet && (
             <ViewedProgressBar
               viewed={viewedCount}
@@ -239,18 +240,23 @@ export const ChangeReviewDialogView = ({
             />
           )}
         </div>
-        <button
-          type="button"
-          aria-label="Close Changes"
-          onClick={() => void dialogLifecycle.requestClose()}
-          disabled={
-            mutationGuards.reviewCloseBusy || hydration.decisionPending || hydration.draftPending
-          }
-          className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+        <div
+          className="flex shrink-0 items-center gap-1"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <X className="size-4" />
-        </button>
+          <AnnouncementNewsButton />
+          <button
+            type="button"
+            aria-label="Close Changes"
+            onClick={() => void dialogLifecycle.requestClose()}
+            disabled={
+              mutationGuards.reviewCloseBusy || hydration.decisionPending || hydration.draftPending
+            }
+            className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
 
       <KeyboardShortcutsHelp

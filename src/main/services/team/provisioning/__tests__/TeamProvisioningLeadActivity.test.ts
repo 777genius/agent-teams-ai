@@ -180,4 +180,38 @@ describe('lead activity helpers', () => {
     expect(ports.emitTeamChange).not.toHaveBeenCalled();
     expect(syncedRunKeys.has(getLeadTaskActivityRunKey(run))).toBe(false);
   });
+
+  it('publishes initial observed activity once even when the run starts active', () => {
+    const run: LeadActivityRunLike = {
+      teamName: 'team-a',
+      runId: 'run-1',
+      leadActivityState: 'active',
+    };
+    const ports = createPorts();
+
+    setLeadActivity(run, 'active', ports);
+    setLeadActivity(run, 'active', ports);
+
+    expect(ports.emitTeamChange).toHaveBeenCalledExactlyOnceWith({
+      type: 'lead-activity',
+      teamName: 'team-a',
+      runId: 'run-1',
+      detail: 'active',
+    });
+    expect(run.leadActivityPublished).toBe(true);
+  });
+
+  it('does not publish initial observed activity from a stale run', () => {
+    const run: LeadActivityRunLike = {
+      teamName: 'team-a',
+      runId: 'old-run',
+      leadActivityState: 'active',
+    };
+    const ports = createPorts(new Set(), false);
+
+    setLeadActivity(run, 'active', ports);
+
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+    expect(run.leadActivityPublished).not.toBe(true);
+  });
 });

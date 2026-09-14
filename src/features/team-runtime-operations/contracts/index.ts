@@ -1,5 +1,6 @@
 export {
   TEAM_ALIVE_LIST,
+  TEAM_FORCE_STOP,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
@@ -33,4 +34,12 @@ export interface RetryFailedRuntimeLanesResult {
   pending: string[];
   failed: { memberName: string; error: string }[];
   skipped: { memberName: string; reason: string }[];
+}
+
+export interface TeamForceStopResult {
+  stopOutcome: 'stopped' | 'stop_failed' | 'timed_out' | 'runtime_already_down';
+  cleanupOutcome: 'completed' | 'incomplete';
+  killedRuntimePids: number[];
+  clearedPendingDeliveries: number;
+  diagnostics: string[];
 }

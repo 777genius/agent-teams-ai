@@ -31,6 +31,7 @@ import {
   shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
+import { shouldShowLoadedProviderModels } from '@renderer/components/runtime/providerModelVisibility';
 import {
   buildProviderRuntimeBackendSummaryText,
   getProviderRuntimeBackendSummary,
@@ -654,8 +655,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                 </div>
                               </div>
                               {!effectiveShowSkeleton &&
-                                !modelCatalogLoading &&
-                                hasProviderModels && (
+                                shouldShowLoadedProviderModels(provider, hasProviderModels) && (
                                   <div className="col-span-2">
                                     <ProviderModelBadges
                                       providerId={provider.providerId}

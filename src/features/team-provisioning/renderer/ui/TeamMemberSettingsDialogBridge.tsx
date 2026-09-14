@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import { isCanonicalSettingsLead } from '../utils/memberSettingsPresentation';
 
 import type { TeamMemberSettingsApi } from '../../contracts';
+import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { EffortLevel, ResolvedTeamMember } from '@shared/types';
 
 const EditTeamMemberDialog = lazy(() =>
@@ -22,7 +23,7 @@ export interface TeamMemberSettingsDialogBridgeProps {
     model: string | null;
     effort: EffortLevel | null;
   }) => Promise<void> | void;
-  onRelaunchRequired: () => void;
+  onRelaunchRequired: (draft: MemberSettingsRelaunchDraft) => void;
 }
 
 export const TeamMemberSettingsDialogBridge = ({

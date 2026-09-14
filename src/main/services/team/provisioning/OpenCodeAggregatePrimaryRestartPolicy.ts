@@ -87,11 +87,41 @@ export async function waitForAggregatePrimaryRestart(input: {
   return restart.runId;
 }
 
+export function assertSecondaryRetryOwned(
+  run:
+    | {
+        processKilled: boolean;
+        cancelRequested: boolean;
+        mixedSecondaryLanes: readonly { member: { name: string } }[];
+      }
+    | null
+    | undefined,
+  memberName: string
+): void {
+  const tracked =
+    run &&
+    !run.processKilled &&
+    !run.cancelRequested &&
+    run.mixedSecondaryLanes.some(
+      (lane) => lane.member.name.trim().toLowerCase() === memberName.trim().toLowerCase()
+    );
+  if (!tracked) {
+    throw new Error(
+      `Secondary lane for teammate "${memberName}" is no longer tracked; refusing aggregate primary restart`
+    );
+  }
+}
+
 export function resolveAggregatePrimaryRestartCandidate(input: {
   runtimeRun?: { runId: string; providerId: string };
   run: ProvisioningRun | null;
   memberName: string;
+  expectedSecondary?: boolean;
 }): { runId: string; run: ProvisioningRun | null } | null {
+  if (input.expectedSecondary) {
+    assertSecondaryRetryOwned(input.run, input.memberName);
+    return null;
+  }
   if (input.runtimeRun?.providerId !== 'opencode') return null;
   if (!input.run || input.run.processKilled || input.run.cancelRequested) {
     return { runId: input.runtimeRun.runId, run: null };
@@ -126,6 +156,28 @@ export function getCancelledAggregateLaunchError(teamName: string): Error {
   return new Error(
     `OpenCode aggregate primary launch for team "${teamName}" was cancelled because the owning run is no longer active`
   );
+}
+
+export async function clearCancelledAggregateRestartState(input: {
+  runId: string;
+  restartLease?: OpenCodeAggregatePrimaryRestartLease;
+  clearLaunchState(runId: string): Promise<void>;
+  clearPrimaryLane(runId: string): Promise<void>;
+  onLaunchClearError(runId: string, error: unknown): void;
+}): Promise<void> {
+  const { runId, restartLease } = input;
+  const ownedRunIds =
+    restartLease?.runId === runId && restartLease.cancelRequested && restartLease.candidateRunId
+      ? [runId, restartLease.candidateRunId]
+      : [runId];
+  for (const ownedRunId of ownedRunIds) {
+    await input.clearLaunchState(ownedRunId).catch((error: unknown) => {
+      input.onLaunchClearError(ownedRunId, error);
+    });
+    await input.clearPrimaryLane(ownedRunId).catch((error: unknown) => {
+      input.onLaunchClearError(ownedRunId, error);
+    });
+  }
 }
 
 export async function clearPersistedAggregateLaunchStateIfOwned(input: {

@@ -2,8 +2,9 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
+import { isRecentlyReleasedModel } from '@renderer/utils/modelReleaseFreshness';
 import {
-  getTeamModelBadgeLabel,
+  getRuntimeAwareTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
 } from '@renderer/utils/teamModelCatalog';
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
@@ -17,7 +18,7 @@ import type {
 } from '@shared/types';
 
 function formatModelBadgeLabel(providerId: CliProviderId, model: string): string {
-  return getTeamModelBadgeLabel(providerId, model) ?? model;
+  return getRuntimeAwareTeamModelBadgeLabel(providerId, model) ?? model;
 }
 
 function getAvailabilityStatus(
@@ -51,19 +52,16 @@ function getAvailabilityChip(
   }
 }
 
-function getCatalogBadgeLabel(
+function isCatalogModelFree(
   model: string,
   providerStatus: Pick<CliProviderStatus, 'modelCatalog' | 'providerId'> | null | undefined
-): string | null {
+): boolean {
   const catalogItem = providerStatus?.modelCatalog?.models.find(
     (item) => item.launchModel === model || item.id === model
   );
   const badgeLabel = catalogItem?.badgeLabel?.trim();
   if (providerStatus?.providerId !== 'opencode') {
-    return badgeLabel || (catalogItem?.metadata?.free === true ? 'Free' : null);
-  }
-  if (badgeLabel && badgeLabel.toLowerCase() !== 'free') {
-    return badgeLabel;
+    return catalogItem?.metadata?.free === true || badgeLabel?.toLowerCase() === 'free';
   }
   const route = catalogItem?.metadata?.opencode;
   return isOpenCodeModelExplicitlyFree({
@@ -74,20 +72,7 @@ function getCatalogBadgeLabel(
     accessKind: route?.accessKind,
     free: catalogItem?.metadata?.free,
     badgeLabel,
-  })
-    ? (badgeLabel ?? 'Free')
-    : null;
-}
-
-function normalizeBadgeText(value: string): string {
-  return value.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function shouldRenderCatalogBadge(modelLabel: string, catalogBadgeLabel: string | null): boolean {
-  if (!catalogBadgeLabel) {
-    return false;
-  }
-  return normalizeBadgeText(modelLabel) !== normalizeBadgeText(catalogBadgeLabel);
+  });
 }
 
 function hasChildAfterRowLimit(container: HTMLElement, rowLimit: number): boolean {
@@ -132,8 +117,23 @@ export const ProviderModelBadges = ({
   const [collapsedModelLimit, setCollapsedModelLimit] = useState<number | null>(null);
   const [measureTick, setMeasureTick] = useState(0);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus);
   const displayModelAvailability = providerId === 'opencode' ? undefined : modelAvailability;
+  const seenModelBadges = new Set<string>();
+  const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus).filter(
+    (model) => {
+      // Collapse aliases/snapshots only in this summary, preserving launch IDs in selectors.
+      // Different availability or pricing information must remain visible.
+      const key = JSON.stringify([
+        providerId === 'anthropic' ? formatModelBadgeLabel(providerId, model) : model,
+        getAvailabilityStatus(model, displayModelAvailability),
+        getAvailabilityReason(model, displayModelAvailability),
+        isCatalogModelFree(model, providerStatus),
+      ]);
+      if (seenModelBadges.has(key)) return false;
+      seenModelBadges.add(key);
+      return true;
+    }
+  );
   const shouldCollapse =
     typeof collapseAfter === 'number' && collapseAfter > 0 && visibleModels.length > collapseAfter;
   const collapsedBaseLimit = shouldCollapse ? collapseAfter : visibleModels.length;
@@ -194,52 +194,49 @@ export const ProviderModelBadges = ({
     return () => observer.disconnect();
   }, [expanded, maxCollapsedRows, shouldCollapse]);
 
-  const badgeClassName =
-    'inline-flex items-center gap-1 rounded-md border px-1.5 py-px font-mono text-[10px] leading-4';
-  const badgeStyle = {
-    borderColor: 'var(--color-border-subtle)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    color: 'var(--color-text-secondary)',
-  };
+  const modelClassName =
+    'inline-flex items-center font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]';
   const buttonClassName =
     'inline-flex items-center gap-1 rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-2 py-px text-[10px] font-medium leading-4 text-[rgb(147,197,253)] transition-colors hover:border-[rgba(59,130,246,0.55)] hover:bg-[rgba(59,130,246,0.18)] hover:text-[rgb(191,219,254)]';
-  const listClassName = cn('flex flex-wrap gap-1.5');
+  const listClassName = cn('flex flex-wrap items-center gap-x-[2ch] gap-y-0.5');
 
-  const renderModelBadge = (model: string, index: number): React.JSX.Element => {
+  const renderModelText = (model: string, index: number): React.JSX.Element => {
     const availabilityStatus = getAvailabilityStatus(model, displayModelAvailability);
     const availabilityReason = getAvailabilityReason(model, displayModelAvailability);
     const availabilityChip = getAvailabilityChip(availabilityStatus, t);
-    const modelLabel = formatModelBadgeLabel(providerId, model);
-    const catalogBadgeLabel = getCatalogBadgeLabel(model, providerStatus);
-    const catalogBadgeIsFree = catalogBadgeLabel === 'Free';
-    const localizedCatalogBadgeLabel = catalogBadgeIsFree
-      ? t('providerModelBadges.free')
-      : catalogBadgeLabel;
-    const showCatalogBadge = shouldRenderCatalogBadge(modelLabel, catalogBadgeLabel);
+    const catalogModel = providerStatus?.modelCatalog?.models.find(
+      (item) => item.launchModel === model || item.id === model
+    );
+    const modelLabel =
+      getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus) ??
+      formatModelBadgeLabel(providerId, model);
+    const recentlyReleased = isRecentlyReleasedModel(catalogModel);
+    const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
+    const hasFollowingModel = index < displayedModels.length - 1;
     const title = [
       availabilityReason ?? availabilityChip,
-      showCatalogBadge && catalogBadgeIsFree ? t('providerModelBadges.freeTooltip') : null,
+      catalogModelIsFree ? t('providerModelBadges.freeTooltip') : null,
     ]
       .filter(Boolean)
       .join(' - ');
 
     return (
-      <span
-        key={`${model}-${index}`}
-        className={badgeClassName}
-        style={badgeStyle}
-        title={title || undefined}
-      >
+      <span key={`${model}-${index}`} className={modelClassName} title={title || undefined}>
         <span>{modelLabel}</span>
-        {showCatalogBadge ? (
-          <span className="rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
-            {localizedCatalogBadgeLabel}
+        {recentlyReleased ? (
+          <span className="ml-1 rounded bg-sky-400/15 px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-sky-200">
+            New
+          </span>
+        ) : null}
+        {catalogModelIsFree ? (
+          <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
+            {t('providerModelBadges.free')}
           </span>
         ) : null}
         {availabilityChip ? (
           <span
             className={cn(
-              'rounded px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em]',
+              'ml-1 rounded px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em]',
               availabilityStatus === 'checking'
                 ? 'bg-[rgba(59,130,246,0.12)] text-[var(--color-text-secondary)]'
                 : availabilityStatus === 'unavailable'
@@ -250,18 +247,19 @@ export const ProviderModelBadges = ({
             {availabilityChip}
           </span>
         ) : null}
+        {hasFollowingModel ? <span>,</span> : null}
       </span>
     );
   };
 
   if (!shouldCollapse) {
-    return <div className="flex flex-wrap gap-1.5">{displayedModels.map(renderModelBadge)}</div>;
+    return <div className={listClassName}>{displayedModels.map(renderModelText)}</div>;
   }
 
   return (
     <div className="flex flex-col items-start gap-1.5">
       <div ref={listRef} className={listClassName}>
-        {displayedModels.map(renderModelBadge)}
+        {displayedModels.map(renderModelText)}
         {shouldCollapse && !expanded ? (
           <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>
             <ChevronDown className="size-3" />

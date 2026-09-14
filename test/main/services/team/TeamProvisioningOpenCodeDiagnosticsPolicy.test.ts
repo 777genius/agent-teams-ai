@@ -77,9 +77,9 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
         makeMember({ runtimeDiagnostic: 'OpenCode bridge reported member launch failure' })
       )
     ).toBe(false);
-    expect(hasRealOpenCodeLaunchDiagnostic(makeMember({ hardFailureReason: 'model not found' }))).toBe(
-      true
-    );
+    expect(
+      hasRealOpenCodeLaunchDiagnostic(makeMember({ hardFailureReason: 'model not found' }))
+    ).toBe(true);
   });
 
   it('redacts secrets and bounds app-managed briefing text', () => {
@@ -87,9 +87,9 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
       ' failed  --api-key sk-abcdefghijklmnopqrstuvwxyz  Bearer ABC123._+/=-  '
     );
     expect(normalized).toBe('failed --api-key [redacted] Bearer [redacted]');
-    expect(isGenericOpenCodePersistedFailureReason('OpenCode bridge reported member launch failure')).toBe(
-      true
-    );
+    expect(
+      isGenericOpenCodePersistedFailureReason('OpenCode bridge reported member launch failure')
+    ).toBe(true);
 
     const longBriefing = `${'x'.repeat(12_005)} --token secret-token`;
     const bounded = boundOpenCodeAppManagedBriefingText(longBriefing);
@@ -226,6 +226,35 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     expect(selectOpenCodePrepareProviderDiagnostic(mcpPrepare)).toBe('mcp_unavailable');
     expect(selectOpenCodeModelPreparePrimaryReason(mcpPrepare)).toBe('mcp_unavailable');
   });
+
+  it.each([
+    ['OpenCode session status busy', 'Token refresh failed: 401'],
+    [
+      'opencode_app_mcp_tool_proof_persisted_cache_hit',
+      'OpenCode session status busy',
+      'Token refresh failed: 401',
+    ],
+    ['OpenCode session status busy'],
+  ])(
+    'keeps typed terminal authentication failures above incidental busy diagnostics: %j',
+    (...diagnostics) => {
+      const prepare = {
+        ok: false,
+        providerId: 'opencode',
+        reason: 'not_authenticated',
+        retryable: true,
+        warnings: [],
+        diagnostics,
+      } satisfies Extract<TeamRuntimePrepareResult, { ok: false }>;
+      const reason = selectOpenCodeModelPreparePrimaryReason(prepare);
+      expect(reason).toBe(
+        diagnostics.includes('Token refresh failed: 401')
+          ? 'Token refresh failed: 401'
+          : 'not_authenticated'
+      );
+      expect(isOpenCodeModelPrepareBusyDeferred(prepare, reason)).toBe(false);
+    }
+  );
 
   it('defers retryable busy prepare failures without hiding model verification timeouts', () => {
     const busyPrepare = {

@@ -1,7 +1,9 @@
 import { memo, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
 import { X } from 'lucide-react';
 
 import { ProvisioningProgressBlock } from './ProvisioningProgressBlock';
@@ -45,6 +47,9 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   className,
   defaultLogsOpen,
 }: TeamProvisioningPanelProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('common');
+  const provisioningError = useStore((s) => s.provisioningErrorByTeam[teamName]);
+  const clearProvisioningError = useStore((s) => s.clearProvisioningError);
   const {
     presentation,
     cancelProvisioning,
@@ -65,7 +70,34 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
     setOpenCodeRetryError(null);
   }, [runInstanceKey]);
 
-  if (!presentation || dismissed) {
+  if (!presentation) {
+    return provisioningError ? (
+      <div
+        role="alert"
+        className={cn(
+          'flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2',
+          className
+        )}
+      >
+        <p className="min-w-0 flex-1 whitespace-pre-wrap text-xs text-[var(--step-error-text)] [overflow-wrap:anywhere]">
+          {provisioningError}
+        </p>
+        {dismissible ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 shrink-0 border-red-500/40 px-2 text-xs text-[var(--step-error-text)] hover:bg-red-500/10"
+            aria-label={t('actions.close')}
+            onClick={() => clearProvisioningError(teamName)}
+          >
+            <X size={12} />
+          </Button>
+        ) : null}
+      </div>
+    ) : null;
+  }
+
+  if (dismissed) {
     return null;
   }
 

@@ -146,6 +146,18 @@ export interface TeamRuntimeMemberLaunchEvidence {
   diagnostics: string[];
 }
 
+/**
+ * Present only when the launch was refused BEFORE any state-changing runtime
+ * command was issued. It is the caller's deterministic proof that no host or
+ * session exists for this run, so the same lane may be launched again without
+ * creating a duplicate.
+ */
+export interface TeamRuntimePreLaunchGate {
+  blocked: true;
+  reason: string;
+  retryable: boolean;
+}
+
 export interface TeamRuntimeLaunchResult {
   runId: string;
   teamName: string;
@@ -155,6 +167,7 @@ export interface TeamRuntimeLaunchResult {
   members: Record<string, TeamRuntimeMemberLaunchEvidence>;
   warnings: string[];
   diagnostics: string[];
+  preLaunchGate?: TeamRuntimePreLaunchGate;
 }
 
 export type TeamRuntimeReconcileReason =

@@ -27,9 +27,9 @@ export function createTeamRuntimeOperationsRendererSlice(
   };
 
   return {
-    restartMember: async (teamName, memberName) => {
+    restartMember: async (teamName, memberName, expectedSecondary) => {
       try {
-        await dependencies.transport.restartMember(teamName, memberName);
+        await dependencies.transport.restartMember(teamName, memberName, expectedSecondary);
       } finally {
         await refreshRuntime(teamName, { includeMessages: true });
       }

@@ -12,6 +12,18 @@ function parseTime(value: string | undefined): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
+/**
+ * Stamps how many alerts the epoch already produced so the caller can bound its
+ * escalation. Left off a first alert to keep the evaluation identical to the one
+ * the policy produced.
+ */
+function withPriorAlertCount(
+  evaluation: TaskStallEvaluation,
+  alertCount: number | undefined
+): TaskStallEvaluation {
+  return alertCount && alertCount > 0 ? { ...evaluation, priorAlertCount: alertCount } : evaluation;
+}
+
 export interface TeamTaskStallJournalOptions {
   alertCooldownMs?: number;
   /** Persistence backend. Defaults to the legacy per-team JSON file store. */
@@ -102,14 +114,14 @@ export class TeamTaskStallJournal {
 
           existing.state = 'alert_ready';
           existing.consecutiveScans += 1;
-          readyEvaluations.push(evaluation);
+          readyEvaluations.push(withPriorAlertCount(evaluation, existing.alertCount));
           continue;
         }
 
         existing.consecutiveScans += 1;
         if (existing.consecutiveScans >= 2) {
           existing.state = 'alert_ready';
-          readyEvaluations.push(evaluation);
+          readyEvaluations.push(withPriorAlertCount(evaluation, existing.alertCount));
         }
       }
 
@@ -126,6 +138,7 @@ export class TeamTaskStallJournal {
       target.state = 'alerted';
       target.updatedAt = now;
       target.alertedAt = now;
+      target.alertCount = (target.alertCount ?? 0) + 1;
       return { entries, result: undefined };
     });
   }

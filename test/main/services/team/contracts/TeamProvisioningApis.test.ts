@@ -212,6 +212,9 @@ function createSource() {
     getMemberSpawnStatuses: vi.fn(() =>
       Promise.resolve({ statuses: {}, runId: 'run-1', updatedAt: TEST_TIMESTAMP })
     ),
+    getMemberSpawnStatusesReadOnly: vi.fn(() =>
+      Promise.resolve({ statuses: {}, runId: 'run-1', updatedAt: TEST_TIMESTAMP })
+    ),
     runLiveRosterMutation: vi.fn(
       async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
     ),
@@ -231,6 +234,14 @@ function createSource() {
     getLeadActivityState: vi.fn(() => ({ state: 'idle' as const, runId: 'run-1' })),
     getLeadContextUsage: vi.fn(() => ({ usage: null, runId: 'run-1' })),
     getTeamAgentRuntimeSnapshot: vi.fn(() =>
+      Promise.resolve({
+        teamName: 'team',
+        members: {},
+        runId: 'run-1',
+        updatedAt: TEST_TIMESTAMP,
+      })
+    ),
+    getTeamAgentRuntimeSnapshotReadOnly: vi.fn(() =>
       Promise.resolve({
         teamName: 'team',
         members: {},
@@ -324,6 +335,7 @@ describe('bindTeamHttpHandlerApis', () => {
 
     expectTypeOf<TeamHttpHandlerApis>().toEqualTypeOf<Required<TeamHttpHandlerApis>>();
     expect(sortedKeys(api)).toEqual([
+      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',

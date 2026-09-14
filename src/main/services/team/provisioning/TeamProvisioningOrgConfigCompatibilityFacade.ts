@@ -1,7 +1,7 @@
 import type {
   OpenCodeMemberDirectory,
   OpenCodeMemberIdentityResolution,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamConfig, TeamMember } from '@shared/types';
 
 export interface TeamProvisioningOrgConfigCompatibilityServiceHost {

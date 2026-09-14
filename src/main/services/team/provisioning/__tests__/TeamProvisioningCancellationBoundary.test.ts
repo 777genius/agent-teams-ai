@@ -398,7 +398,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         readPersistedTeamProjectPath: () => '/repo',
         clearOpenCodeRuntimeLaneStorage: async ({ laneId }) => {
           laneArtifacts.delete(laneId);
-          return true;
+          return 'cleared';
         },
         deleteSecondaryRuntimeRun: (_teamName, laneId) => {
           secondaryRuns.delete(laneId);
@@ -415,7 +415,8 @@ describe('TeamProvisioningCancellationBoundary', () => {
         provisioningRunByTeam: new Map(),
         invalidateRuntimeSnapshotCaches: vi.fn(),
         emitTeamChange: vi.fn(),
-        logger: { warn: vi.fn() },
+        logger: { warn: vi.fn(), info: vi.fn() },
+        isRuntimeProcessAlive: () => false,
         nowIso: () => '2026-01-01T00:00:02.000Z',
       };
       const ports = makePorts({
@@ -956,7 +957,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
       readLaunchState: async () => null,
       writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
       readPersistedTeamProjectPath: () => '/repo',
-      clearOpenCodeRuntimeLaneStorage: async () => true,
+      clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
       deleteSecondaryRuntimeRun: (_teamName, laneId) => {
         secondaryRuns.delete(laneId);
       },

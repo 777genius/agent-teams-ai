@@ -1,4 +1,4 @@
-import { createTeamRuntimeLifecycleHostPort } from '@features/team-runtime-operations/main';
+import { createTeamRuntimeLifecycleHostPort } from '@features/team-runtime-operations/main/composition/createTeamRuntimeLifecycleHostPort';
 import { describe, expect, it } from 'vitest';
 
 describe('createTeamRuntimeLifecycleHostPort', () => {
@@ -24,9 +24,13 @@ describe('createTeamRuntimeLifecycleHostPort', () => {
         expect(teamName).toBe('sandbox-team');
         return spawnStatuses;
       },
-      restartMember(teamName: string, memberName: string) {
+      restartMember(teamName: string, memberName: string, expectedSecondary?: boolean) {
         receivers.push(this);
-        expect([teamName, memberName]).toEqual(['sandbox-team', 'worker']);
+        expect([teamName, memberName, expectedSecondary]).toEqual([
+          'sandbox-team',
+          'worker',
+          true,
+        ]);
         return restart;
       },
       retryFailedOpenCodeSecondaryLanes(teamName: string) {
@@ -43,7 +47,7 @@ describe('createTeamRuntimeLifecycleHostPort', () => {
     const lifecycle = createTeamRuntimeLifecycleHostPort(source);
 
     expect(lifecycle.getMemberSpawnStatuses('sandbox-team')).toBe(spawnStatuses);
-    expect(lifecycle.restartMember('sandbox-team', 'worker')).toBe(restart);
+    expect(lifecycle.restartMember('sandbox-team', 'worker', true)).toBe(restart);
     expect(lifecycle.retryFailedRuntimeLanes('sandbox-team')).toBe(retry);
     expect('retryFailedOpenCodeSecondaryLanes' in lifecycle).toBe(false);
     expect(lifecycle.skipMemberForLaunch('sandbox-team', 'worker')).toBe(skip);

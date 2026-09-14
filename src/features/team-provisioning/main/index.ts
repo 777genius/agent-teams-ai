@@ -31,3 +31,4 @@ export {
   type TeamProvisioningFeature,
   type TeamProvisioningIpcRegistrar,
 } from './composition/TeamProvisioningIpcBoundary';
+export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';

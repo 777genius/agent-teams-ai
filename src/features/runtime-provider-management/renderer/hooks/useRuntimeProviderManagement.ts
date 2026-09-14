@@ -39,10 +39,12 @@ import {
   replaceProvider,
 } from './runtimeProviderManagementPresentation';
 import {
-  applyModelTestResultToModel,
+  applyModelTestResultToModels,
   applyModelTestResultToView,
   buildFailedModelTestResult,
+  startModelTest,
 } from './runtimeProviderModelTestState';
+import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
 
 import type { RuntimeProviderConnectionIntent } from '../../core/domain';
 import type {
@@ -147,6 +149,8 @@ export interface RuntimeProviderManagementState {
   modelsErrorDiagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null;
   selectedModelId: string | null;
   testingModelIds: readonly string[];
+  cancelledModelTestIds?: readonly string[];
+  modelTestStartedAt?: Readonly<Record<string, number>>;
   savingDefaultModelId: string | null;
   clearingProjectDefault: boolean;
   modelResults: Readonly<Record<string, RuntimeProviderModelTestResultDto>>;
@@ -184,6 +188,7 @@ export interface RuntimeProviderManagementActions {
   loadMoreModels: () => Promise<void>;
   selectModel: (modelId: string) => void;
   useModelForNewTeams: (modelId: string) => void;
+  stopModelTest?: (providerId: string, modelId: string) => Promise<boolean>;
   testModel: (providerId: string, modelId: string) => Promise<RuntimeProviderModelTestResultDto>;
   setDefaultModel: (
     providerId: string,
@@ -322,6 +327,9 @@ export function useRuntimeProviderManagement(
   const [modelsErrorDiagnostics, setModelsErrorDiagnostics] =
     useState<RuntimeProviderManagementErrorDiagnosticsDto | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [modelTestStartedAt, setModelTestStartedAt] = useState<Readonly<Record<string, number>>>(
+    {}
+  );
   const [testingModelIds, setTestingModelIds] = useState<readonly string[]>([]);
   const [savingDefaultModelId, setSavingDefaultModelId] = useState<string | null>(null);
   const [clearingProjectDefault, setClearingProjectDefault] = useState(false);
@@ -342,6 +350,7 @@ export function useRuntimeProviderManagement(
   const modelLoadRequestSeq = useRef(0);
   const modelProbeGenerationRef = useRef(0);
   const modelTestRequestSeqRef = useRef(0);
+  const pendingModelStopsRef = useRef(new Map<string, Promise<boolean>>());
   const activeModelTestRequestGroupsRef = useRef(new Map<string, number>());
   const activeModelPickerProviderRef = useRef<string | null>(null);
   const appliedInitialProviderRef = useRef<string | null>(null);
@@ -376,13 +385,13 @@ export function useRuntimeProviderManagement(
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
   const cancelModelTestBestEffort = useCallback((): void => {
-    const requestGroupIds = [...activeModelTestRequestGroupsRef.current.keys()];
+    const requestGroupIds = [...activeModelTestRequestGroupsRef.current.entries()];
     if (requestGroupIds.length === 0) return;
     activeModelTestRequestGroupsRef.current.clear();
     const cancelModelTest = api.runtimeProviderManagement.cancelModelTest;
     if (!cancelModelTest) return;
-    for (const requestGroupId of requestGroupIds) {
-      void cancelModelTest({ requestGroupId }).catch(() => undefined);
+    for (const [group, token] of requestGroupIds) {
+      void cancelModelTest({ requestGroupId: `${group}:${token}` }).catch(() => undefined);
     }
   }, []);
   const projectContextRef = useRef<ProjectContextSnapshot>({
@@ -409,6 +418,7 @@ export function useRuntimeProviderManagement(
 
   const openModelPickerState = useCallback(
     (providerId: string, mode: RuntimeProviderModelPickerMode): void => {
+      cancelModelTestBestEffort();
       modelLoadRequestSeq.current += 1;
       modelProbeGenerationRef.current += 1;
       activeModelPickerProviderRef.current = providerId;
@@ -426,11 +436,13 @@ export function useRuntimeProviderManagement(
       setSelectedModelId(null);
       setModelResults({});
       setTestingModelIds([]);
+      setModelTestStartedAt({});
     },
-    []
+    [cancelModelTestBestEffort]
   );
 
   const closeModelPickerState = useCallback((): void => {
+    cancelModelTestBestEffort();
     modelLoadRequestSeq.current += 1;
     modelProbeGenerationRef.current += 1;
     activeModelPickerProviderRef.current = null;
@@ -448,7 +460,8 @@ export function useRuntimeProviderManagement(
     setSelectedModelId(null);
     setModelResults({});
     setTestingModelIds([]);
-  }, []);
+    setModelTestStartedAt({});
+  }, [cancelModelTestBestEffort]);
 
   useEffect(() => {
     cancelModelTestBestEffort();
@@ -488,6 +501,7 @@ export function useRuntimeProviderManagement(
     setModelsErrorDiagnostics(null);
     setSelectedModelId(null);
     setTestingModelIds([]);
+    setModelTestStartedAt({});
     setSavingProviderId(null);
     setView(null);
     setModelResults({});
@@ -1536,10 +1550,7 @@ export function useRuntimeProviderManagement(
     if (url) await api.openExternal(url);
   }, []);
 
-  const closeModelPicker = useCallback((): void => {
-    cancelModelTestBestEffort();
-    closeModelPickerState();
-  }, [cancelModelTestBestEffort, closeModelPickerState]);
+  const closeModelPicker = closeModelPickerState;
 
   const useModelForNewTeams = useCallback((modelId: string): void => {
     saveOpenCodeModelForNewTeams(modelId);
@@ -1550,6 +1561,16 @@ export function useRuntimeProviderManagement(
     setErrorDiagnostics(null);
   }, []);
 
+  const [stopModelTest, cancelledModelTestIds] = useModelTestStop(
+    options.runtimeId,
+    modelProbeGenerationRef.current,
+    modelTestStartedAt,
+    activeModelTestRequestGroupsRef,
+    pendingModelStopsRef,
+    setTestingModelIds,
+    setError,
+    withUiTimeout
+  );
   const testModel = useCallback(
     async (providerId: string, modelId: string): Promise<RuntimeProviderModelTestResultDto> => {
       const probeGeneration = modelProbeGenerationRef.current;
@@ -1559,12 +1580,12 @@ export function useRuntimeProviderManagement(
       const requestToken = ++modelTestRequestSeqRef.current;
       activeModelTestRequestGroupsRef.current.set(requestGroupId, requestToken);
       const shouldRecordProbeResult = (): boolean =>
+        activeModelTestRequestGroupsRef.current.get(requestGroupId) === requestToken &&
         modelProbeGenerationRef.current === probeGeneration &&
         (activeProviderAtStart === null || activeModelPickerProviderRef.current === providerId) &&
         isProjectContextCurrent(projectContext);
-      setTestingModelIds((current) =>
-        current.includes(modelId) ? current : [...current, modelId]
-      );
+      setModelTestStartedAt((current) => startModelTest(current, modelId));
+      setTestingModelIds((ids) => (ids.includes(modelId) ? ids : [...ids, modelId]));
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
@@ -1576,11 +1597,12 @@ export function useRuntimeProviderManagement(
             providerId,
             modelId,
             projectPath: projectContext.path,
-            requestGroupId,
+            requestGroupId: `${requestGroupId}:${requestToken}`,
           }),
           'Model test timed out',
           250_000
         );
+        await pendingModelStopsRef.current.get(`${requestGroupId}:${requestToken}`);
         if (response.error) {
           const result = buildFailedModelTestResult(providerId, modelId, response.error.message);
           if (response.error.diagnostics && shouldRecordProbeResult()) {
@@ -1588,26 +1610,16 @@ export function useRuntimeProviderManagement(
             setErrorDiagnostics(response.error.diagnostics);
           }
           if (shouldRecordProbeResult()) {
-            setModelResults((current) => ({
-              ...current,
-              [modelId]: result,
-            }));
-            setModels((current) =>
-              current.map((model) => applyModelTestResultToModel(model, result))
-            );
+            setModelResults((current) => ({ ...current, [modelId]: result }));
+            setModels((current) => applyModelTestResultToModels(current, result));
             setView((current) => applyModelTestResultToView(current, result));
           }
           return result;
         }
         if (response.result && shouldRecordProbeResult()) {
           const result = response.result;
-          setModelResults((current) => ({
-            ...current,
-            [modelId]: result,
-          }));
-          setModels((current) =>
-            current.map((model) => applyModelTestResultToModel(model, result))
-          );
+          setModelResults((current) => ({ ...current, [modelId]: result }));
+          setModels((current) => applyModelTestResultToModels(current, result));
           setView((current) => applyModelTestResultToView(current, result));
         }
         return (
@@ -1615,28 +1627,25 @@ export function useRuntimeProviderManagement(
           buildFailedModelTestResult(providerId, modelId, 'Model test response was empty')
         );
       } catch (testError) {
+        await pendingModelStopsRef.current.get(`${requestGroupId}:${requestToken}`);
         const result = buildFailedModelTestResult(
           providerId,
           modelId,
           testError instanceof Error ? testError.message : 'Failed to test model'
         );
         if (shouldRecordProbeResult()) {
-          setModelResults((current) => ({
-            ...current,
-            [modelId]: result,
-          }));
-          setModels((current) =>
-            current.map((model) => applyModelTestResultToModel(model, result))
-          );
+          setModelResults((current) => ({ ...current, [modelId]: result }));
+          setModels((current) => applyModelTestResultToModels(current, result));
           setView((current) => applyModelTestResultToView(current, result));
         }
         return result;
       } finally {
-        if (activeModelTestRequestGroupsRef.current.get(requestGroupId) === requestToken) {
-          activeModelTestRequestGroupsRef.current.delete(requestGroupId);
-        }
         if (shouldRecordProbeResult()) {
           setTestingModelIds((current) => current.filter((entry) => entry !== modelId));
+          setModelTestStartedAt((current) => withoutModelTestStart(current, modelId));
+        }
+        if (activeModelTestRequestGroupsRef.current.get(requestGroupId) === requestToken) {
+          activeModelTestRequestGroupsRef.current.delete(requestGroupId);
         }
       }
     },
@@ -1678,7 +1687,7 @@ export function useRuntimeProviderManagement(
             runtimeId: options.runtimeId,
             providerId,
             modelId,
-            probe: true,
+            probe: false,
             scope,
             projectPath: projectContext.path,
           }),
@@ -1691,28 +1700,17 @@ export function useRuntimeProviderManagement(
           setErrorDiagnostics(response.error.diagnostics ?? null);
           return false;
         }
-        const proofResult: RuntimeProviderModelTestResultDto = {
-          providerId,
-          modelId,
-          ok: true,
-          availability: 'available',
-          message: 'Model probe passed',
-          diagnostics: [],
-        };
         if (!isGlobal && response.view) {
-          setView(applyModelTestResultToView(response.view, proofResult));
+          setView(response.view);
         }
         if (!isGlobal) {
-          setModelResults((current) => ({ ...current, [modelId]: proofResult }));
           const effectiveDefaultModelId = response.view?.defaultModel ?? modelId;
           setSelectedModelId(effectiveDefaultModelId);
           setModels((current) =>
-            current.map((model) =>
-              applyModelTestResultToModel(
-                { ...model, default: model.modelId === effectiveDefaultModelId },
-                proofResult
-              )
-            )
+            current.map((model) => ({
+              ...model,
+              default: model.modelId === effectiveDefaultModelId,
+            }))
           );
         } else {
           const effectiveDefaultModelId = providerViewRef.current?.projectDefaultModel ?? modelId;
@@ -1739,13 +1737,6 @@ export function useRuntimeProviderManagement(
           let viewRefreshed = await refresh({ silent: true });
           if (!viewRefreshed && !isProjectContextCurrent(refreshContext)) {
             viewRefreshed = await refresh({ silent: true });
-          }
-          if (!getProjectContextSnapshot().path) {
-            setView((current) => applyModelTestResultToView(current, proofResult));
-            setModels((current) =>
-              current.map((model) => applyModelTestResultToModel(model, proofResult))
-            );
-            setModelResults((current) => ({ ...current, [modelId]: proofResult }));
           }
           refreshed = refreshed && viewRefreshed;
         } else if (!isProjectContextCurrent(projectContext)) {
@@ -1974,6 +1965,8 @@ export function useRuntimeProviderManagement(
       modelsErrorDiagnostics,
       selectedModelId,
       testingModelIds,
+      cancelledModelTestIds,
+      modelTestStartedAt,
       savingDefaultModelId,
       clearingProjectDefault,
       modelResults,
@@ -2032,6 +2025,8 @@ export function useRuntimeProviderManagement(
       successMessage,
       warningMessage,
       testingModelIds,
+      cancelledModelTestIds,
+      modelTestStartedAt,
       view,
     ]
   );
@@ -2064,6 +2059,7 @@ export function useRuntimeProviderManagement(
       selectModel: setSelectedModelId,
       useModelForNewTeams,
       testModel,
+      stopModelTest,
       setDefaultModel,
       clearProjectDefault,
     }),
@@ -2090,6 +2086,7 @@ export function useRuntimeProviderManagement(
       submitConnect,
       submitOAuthCode,
       testModel,
+      stopModelTest,
       updateApiKeyValue,
       updateModelQuery,
       updateProviderQuery,

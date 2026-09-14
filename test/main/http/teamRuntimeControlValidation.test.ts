@@ -39,6 +39,11 @@ function createHttpServices(teamRuntimeIngressApi: TeamApplicationRuntimeIngress
         getAliveTeams: unexpectedTeamApiCall,
       },
       runtimeIngress: teamRuntimeIngressApi,
+      runtimeControl: teamRuntimeControlApi,
+      memberDiagnostics: {
+        getMemberSpawnStatusesReadOnly: unexpectedTeamApiCall,
+        getTeamAgentRuntimeSnapshotReadOnly: unexpectedTeamApiCall,
+      },
     } satisfies TeamHttpHandlerApis,
   };
 }

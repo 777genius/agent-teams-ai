@@ -8,10 +8,29 @@ import type {
   EffortLevel,
   ResolvedTeamMember,
   TeamFastMode,
+  TeamMemberConfiguredRuntimeSettings,
   TeamProviderBackendId,
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
+
+// Edit canonical overrides, including absent keys, rather than a historical launch projection.
+export function getEditTeamConfiguredMember<
+  T extends {
+    configuredRuntimeSettings?: TeamMemberConfiguredRuntimeSettings;
+  },
+>(member: T): T {
+  const settings = member.configuredRuntimeSettings;
+  if (settings === undefined) return member;
+  return {
+    ...member,
+    providerId: settings.providerId,
+    providerBackendId: settings.providerBackendId,
+    model: settings.model,
+    effort: settings.effort,
+    fastMode: settings.fastMode,
+  };
+}
 
 function normalizeRestartSensitiveMemberContract(member: {
   role?: string;
@@ -73,7 +92,9 @@ export function getMembersRequiringRuntimeRestart(params: {
       continue;
     }
 
-    const previousRuntime = normalizeRestartSensitiveMemberContract(previousMember);
+    const previousRuntime = normalizeRestartSensitiveMemberContract(
+      getEditTeamConfiguredMember(previousMember)
+    );
     const nextRuntime = normalizeRestartSensitiveMemberContract(nextMember);
     if (
       previousRuntime.role !== nextRuntime.role ||
@@ -184,7 +205,11 @@ export function buildEditTeamMemberRosterSnapshot(
   members: readonly (ResolvedTeamMember | TeamProvisioningMemberInput)[]
 ): string {
   const normalizedMembers = members
-    .map(normalizeEditableMemberSnapshot)
+    .map((member) =>
+      normalizeEditableMemberSnapshot(
+        'configuredRuntimeSettings' in member ? getEditTeamConfiguredMember(member) : member
+      )
+    )
     .filter((member): member is NonNullable<typeof member> => member !== null)
     .sort((a, b) => a.name.localeCompare(b.name));
 

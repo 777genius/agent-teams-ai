@@ -1,9 +1,5 @@
-import {
-  type OpenCodeMemberInboxDelivery,
-  type OpenCodeMemberMessageDeliveryInput,
-  OpenCodeMemberMessageDeliveryService,
-  type OpenCodeMemberMessageDeliveryServiceDependencies,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OpenCodeMemberMessageDeliveryService } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
 
 import {
   createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
@@ -13,6 +9,11 @@ import {
   stampOpenCodeAppMcpTransportEvidenceIfMissing,
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 
+import type {
+  OpenCodeMemberInboxDelivery,
+  OpenCodeMemberMessageDeliveryInput,
+  OpenCodeMemberMessageDeliveryServiceDependencies,
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamProvisioningOpenCodeRuntimeRecoveryFacade } from './TeamProvisioningOpenCodeRuntimeRecoveryFacade';
 import type { TeamProvisioningOpenCodeStoppedLaneCleanupBoundary } from './TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
 
@@ -72,6 +73,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   openCodeVisibleReplyProofService: OpenCodeMemberMessageDeliveryFactoryPorts['openCodeVisibleReplyProofService'];
   openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberMessageDeliveryFactoryPorts['openCodePromptDeliveryWatchdogScheduler'];
   openCodePromptDeliveryFollowUpPolicy: OpenCodeMemberMessageDeliveryFactoryPorts['openCodePromptDeliveryFollowUpPolicy'];
+  openCodeStalePendingPolicyConfig: OpenCodeMemberMessageDeliveryFactoryPorts['openCodeStalePendingPolicyConfig'];
   isOpenCodeDeliveryResponseReadCommitAllowed: OpenCodeMemberMessageDeliveryFactoryPorts['isOpenCodeDeliveryResponseReadCommitAllowed'];
   getOpenCodeDeliveryPendingReason: OpenCodeMemberMessageDeliveryFactoryPorts['getOpenCodeDeliveryPendingReason'];
   markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: OpenCodeMemberMessageDeliveryFactoryPorts['markOpenCodeAcceptedDeliveryMissingPromptProofForRetry'];
@@ -79,12 +81,19 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   logOpenCodePromptDeliveryEvent: OpenCodeMemberMessageDeliveryFactoryPorts['logOpenCodePromptDeliveryEvent'];
   requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded'];
   emitOpenCodePromptDeliveryTaskLogChange: OpenCodeMemberMessageDeliveryFactoryPorts['emitOpenCodePromptDeliveryTaskLogChange'];
+  notifyOpenCodeLeadTurnActivity?: OpenCodeMemberMessageDeliveryFactoryPorts['notifyOpenCodeLeadTurnActivity'];
+  requestOpenCodePrimaryLaneRebootstrap?: OpenCodeMemberMessageDeliveryFactoryPorts['requestOpenCodePrimaryLaneRebootstrap'];
   observeOpenCodeDirectUserDeliveryInlineIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
 }
 
+/**
+ * The provisioning service supplies every delivery port except the runtime
+ * adapter (reached through its app-shell boundary) and the stale-pending
+ * windows, which this module composes in from the policy module.
+ */
 export type TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost = Omit<
   TeamProvisioningOpenCodeMemberMessageDeliveryHost,
-  'getOpenCodeRuntimeMessageAdapter'
+  'getOpenCodeRuntimeMessageAdapter' | 'openCodeStalePendingPolicyConfig'
 > & {
   appShellBoundary: {
     getOpenCodeRuntimeMessageAdapter: TeamProvisioningOpenCodeMemberMessageDeliveryHost['getOpenCodeRuntimeMessageAdapter'];
@@ -178,6 +187,7 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
     openCodeVisibleReplyProofService: host.openCodeVisibleReplyProofService,
     openCodePromptDeliveryWatchdogScheduler: host.openCodePromptDeliveryWatchdogScheduler,
     openCodePromptDeliveryFollowUpPolicy: host.openCodePromptDeliveryFollowUpPolicy,
+    openCodeStalePendingPolicyConfig: host.openCodeStalePendingPolicyConfig,
     isOpenCodeDeliveryResponseReadCommitAllowed: (input) =>
       host.isOpenCodeDeliveryResponseReadCommitAllowed(input),
     getOpenCodeDeliveryPendingReason: (input) => host.getOpenCodeDeliveryPendingReason(input),
@@ -191,6 +201,12 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
       host.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input),
     emitOpenCodePromptDeliveryTaskLogChange: (record, detail) =>
       host.emitOpenCodePromptDeliveryTaskLogChange(record, detail),
+    notifyOpenCodeLeadTurnActivity: (input) => host.notifyOpenCodeLeadTurnActivity?.(input),
+    // Passed through only when the host has it: an absent port must stay absent
+    // so the delivery service keeps its old primary-lane behaviour.
+    ...(host.requestOpenCodePrimaryLaneRebootstrap
+      ? { requestOpenCodePrimaryLaneRebootstrap: host.requestOpenCodePrimaryLaneRebootstrap }
+      : {}),
     observeOpenCodeDirectUserDeliveryInlineIfNeeded: (input) =>
       host.observeOpenCodeDirectUserDeliveryInlineIfNeeded(input),
   });
@@ -243,6 +259,8 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromServi
     openCodeVisibleReplyProofService: service.openCodeVisibleReplyProofService,
     openCodePromptDeliveryWatchdogScheduler: service.openCodePromptDeliveryWatchdogScheduler,
     openCodePromptDeliveryFollowUpPolicy: service.openCodePromptDeliveryFollowUpPolicy,
+    // The shipped stale-pending windows enter the pipeline here, once.
+    openCodeStalePendingPolicyConfig: OPENCODE_STALE_PENDING_POLICY_CONFIG,
     isOpenCodeDeliveryResponseReadCommitAllowed: (input) =>
       service.isOpenCodeDeliveryResponseReadCommitAllowed(input),
     getOpenCodeDeliveryPendingReason: (input) => service.getOpenCodeDeliveryPendingReason(input),

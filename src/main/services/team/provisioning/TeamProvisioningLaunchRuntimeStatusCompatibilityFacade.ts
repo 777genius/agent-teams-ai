@@ -9,7 +9,11 @@ import {
   recoverDeterministicBootstrapCompletionWithService,
 } from './TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { TeamProvisioningLaunchStateCompatibilityFacade } from './TeamProvisioningLaunchStateCompatibilityFacade';
-import { guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper } from './TeamProvisioningLaunchStateReconciliation';
+import {
+  guardCommittedOpenCodeLaneEvidence as guardCommittedOpenCodeLaneEvidenceHelper,
+  guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper,
+  type GuardCommittedOpenCodeSecondaryLaneEvidencePorts,
+} from './TeamProvisioningLaunchStateReconciliation';
 import {
   commitOpenCodeRuntimeAdapterLaunchSessionEvidence,
   launchOpenCodeAggregatePrimaryLane as launchOpenCodeAggregatePrimaryLaneHelper,
@@ -185,7 +189,11 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
     return launchOpenCodeAggregatePrimaryLaneHelper(
       params,
       createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(
-        this as unknown as TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost
+        this as unknown as TeamProvisioningOpenCodeAggregatePrimaryLaneServiceHost,
+        {
+          guardCommittedOpenCodeLaneEvidence: (input) =>
+            this.guardCommittedOpenCodeLaneEvidence(input),
+        }
       )
     );
   }
@@ -193,7 +201,7 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
   private createOpenCodeLaunchPersistencePorts() {
     return createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
       this as unknown as TeamProvisioningOpenCodeLaunchPersistenceServiceHost,
-      { nowIso }
+      { nowIso, logDiagnostic: (message) => logger.diagnostic(message) }
     );
   }
 
@@ -222,6 +230,22 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
     );
   }
 
+  private createOpenCodeLaneEvidencePorts(): GuardCommittedOpenCodeSecondaryLaneEvidencePorts {
+    return createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromService(
+      this as unknown as TeamProvisioningOpenCodeSecondaryLaneEvidenceServiceHost,
+      { logWarn: (message) => logger.warn(message) }
+    );
+  }
+
+  protected async guardCommittedOpenCodeLaneEvidence(params: {
+    teamName: string;
+    laneId: string;
+    result: TeamRuntimeLaunchResult;
+    memberNames: readonly string[];
+  }): Promise<TeamRuntimeLaunchResult> {
+    return guardCommittedOpenCodeLaneEvidenceHelper(params, this.createOpenCodeLaneEvidencePorts());
+  }
+
   protected async guardCommittedOpenCodeSecondaryLaneEvidence(params: {
     teamName: string;
     laneId: string;
@@ -230,12 +254,7 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
   }): Promise<TeamRuntimeLaunchResult> {
     return guardCommittedOpenCodeSecondaryLaneEvidenceHelper(
       params,
-      createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromService(
-        this as unknown as TeamProvisioningOpenCodeSecondaryLaneEvidenceServiceHost,
-        {
-          logWarn: (message) => logger.warn(message),
-        }
-      )
+      this.createOpenCodeLaneEvidencePorts()
     );
   }
 

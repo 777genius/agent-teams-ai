@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,10 +8,16 @@ import {
   type MixedSecondaryLaunchQueuePorts,
   type MixedSecondaryLaunchQueueRun,
 } from '../TeamProvisioningMixedSecondaryLaunchQueue';
+import {
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_FAILURE_TTL_MS,
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC,
+} from '../TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchResult,
+  TeamRuntimePreLaunchGate,
 } from '../../runtime/TeamRuntimeAdapter';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
 import type { PersistedTeamLaunchPhase, PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -119,12 +127,14 @@ function createPorts(
     nowMs: vi.fn<() => number>(() => 1234),
     randomUuid: vi.fn<() => string>(() => 'generated-run-id'),
     teamsBasePath: vi.fn<() => string>(() => '/teams'),
+    isCurrentTrackedRun: vi.fn(() => true),
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
     upsertOpenCodeRuntimeLaneIndexEntry: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['upsertOpenCodeRuntimeLaneIndexEntry']
     >(async () => undefined),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     deleteSecondaryRuntimeRun:
       vi.fn<MixedSecondaryLaunchQueuePorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     launchSingleMixedSecondaryLane: vi.fn<
@@ -175,6 +185,54 @@ function createDeferred(): {
 }
 
 describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
+  it('rejects a run superseded after successful roster preparation before queue entry', async () => {
+    const lane = createLane();
+    const run = createRun({ mixedSecondaryLanes: [lane] });
+    let currentRun = run;
+    const ports = createPorts({
+      isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+    });
+    const prepared = createDeferred();
+    const launching = (async () => {
+      await prepared.promise;
+      return launchMixedSecondaryLaneIfNeeded(run, ports);
+    })();
+
+    prepared.resolve();
+    currentRun = createRun();
+    await expect(launching).resolves.toEqual(createSnapshot('active'));
+
+    expect(ports.getOpenCodeRuntimeAdapter).not.toHaveBeenCalled();
+    expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+    expect(run.mixedSecondaryLaneLaunchQueue).toBeUndefined();
+    expect(lane).toMatchObject({ state: 'queued', runId: null });
+  });
+
+  it('does not launch or persist an old run after it is superseded while queued', async () => {
+    const lane = createLane();
+    const previous = createDeferred();
+    const run = createRun({
+      mixedSecondaryLanes: [lane],
+      mixedSecondaryLaneLaunchQueue: previous.promise,
+    });
+    let currentRun = run;
+    const ports = createPorts({
+      isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+    });
+
+    const launching = launchMixedSecondaryLaneIfNeeded(run, ports, { waitForCompletion: true });
+    currentRun = createRun();
+    previous.resolve();
+    await launching;
+
+    expect(lane.state).toBe('finished');
+    expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
+  });
+
   it('no-ops queued launch guard for non-queued or already scheduled lanes', () => {
     const finishedLane = createLane({ state: 'finished' });
     const scheduledLane = createLane({ launchScheduled: true });
@@ -277,12 +335,18 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
       ),
     ]);
     expect(run.mixedSecondarySharedRuntimeFailuresByProject).toEqual(
-      new Map([['/workspace/root', rootFailure]])
+      // The queue keys failures by resolved cwd, which anchors to a drive on Windows.
+      new Map([
+        [
+          path.resolve('/workspace/root'),
+          { rootCause: rootFailure, transient: true, recordedAtMs: 1234 },
+        ],
+      ])
     );
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, sameProject);
   });
 
-  it('cleans up and finishes a canceled queued lane before launch', async () => {
+  it('finishes a canceled queued lane without clearing storage it never acquired', async () => {
     const lane = createLane();
     const run = createRun({ cancelRequested: true, mixedSecondaryLanes: [lane] });
     const ports = createPorts();
@@ -290,15 +354,9 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
     await run.mixedSecondaryLaneLaunchQueue;
 
-    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: 'secondary:opencode:bob',
-    });
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith(
-      'team-a',
-      'secondary:opencode:bob'
-    );
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
     expect(lane.state).toBe('finished');
     expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
     expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
@@ -441,4 +499,341 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     expect(ports.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
     expect(ports.launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
   });
+  it.each(['cancelled', 'superseded'])(
+    'fences late rejected %s launch cleanup to the generation captured when queued',
+    async (outcome) => {
+      const lane = createLane({ runId: 'cancelled-run' });
+      const run = createRun({ mixedSecondaryLanes: [lane] });
+      let currentRun = run;
+      let releaseLaunch!: () => void;
+      let markLaunchEntered!: () => void;
+      const launchEntered = new Promise<void>((resolve) => {
+        markLaunchEntered = resolve;
+      });
+      const launchReleased = new Promise<void>((resolve) => {
+        releaseLaunch = resolve;
+      });
+      const ports = createPorts({
+        isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+        launchSingleMixedSecondaryLane: vi.fn(async () => {
+          markLaunchEntered();
+          await launchReleased;
+          throw new Error('cancelled launch returned late');
+        }),
+      });
+      launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+      await launchEntered;
+      if (outcome === 'cancelled') run.cancelRequested = true;
+      else currentRun = createRun();
+      lane.runId = 'fresh-run';
+      lane.state = 'launching';
+      releaseLaunch();
+      await run.mixedSecondaryLaneLaunchQueue;
+
+      expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+        teamsBasePath: '/teams',
+        teamName: 'team-a',
+        laneId: lane.laneId,
+        expectedRunId: 'cancelled-run',
+      });
+      expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+        'team-a',
+        lane.laneId,
+        'cancelled-run'
+      );
+      expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
+    }
+  );
+
+  const MODELS_QUERY_TIMEOUT =
+    'Failed to query OpenCode models: OpenCode command timed out after 10000ms';
+  const HOST_UNHEALTHY = 'OpenCode host is not healthy: exit 1';
+  const CONNECTION_REFUSED = 'OpenCode readiness bridge failed: internal_error: ECONNREFUSED';
+  // Proof that the state-changing bridge command never ran, so the lane may relaunch.
+  const RETRYABLE_PRE_LAUNCH_GATE: TeamRuntimePreLaunchGate = {
+    blocked: true,
+    reason: 'unknown_error',
+    retryable: true,
+  };
+
+  function gatedFailureResult(input: {
+    runId: string;
+    teamName: string;
+    memberName: string;
+    message: string;
+  }): TeamRuntimeLaunchResult {
+    return { ...createFailureResult(input), preLaunchGate: RETRYABLE_PRE_LAUNCH_GATE };
+  }
+
+  function cleanResult(runId: string, teamName: string): TeamRuntimeLaunchResult {
+    return {
+      runId,
+      teamName,
+      launchPhase: 'finished',
+      teamLaunchState: 'clean_success',
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    };
+  }
+
+  async function drainTransientBackoff(run: TestRun): Promise<void> {
+    await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+    await run.mixedSecondaryLaneLaunchQueue;
+  }
+
+  it('retries a gated models-query timeout once and leaves the project unblocked on success', async () => {
+    vi.useFakeTimers();
+    try {
+      const lane = createLane();
+      const run = createRun({ mixedSecondaryLanes: [lane] });
+      const launchSingleMixedSecondaryLane = vi
+        .fn<MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']>()
+        .mockImplementationOnce(async (_run, launchedLane) => {
+          launchedLane.state = 'finished';
+          launchedLane.result = gatedFailureResult({
+            runId: launchedLane.runId!,
+            teamName: run.teamName,
+            memberName: launchedLane.member.name,
+            message: MODELS_QUERY_TIMEOUT,
+          });
+        })
+        .mockImplementationOnce(async (_run, launchedLane) => {
+          launchedLane.state = 'finished';
+          launchedLane.result = cleanResult(launchedLane.runId!, run.teamName);
+        });
+      const ports = createPorts({ launchSingleMixedSecondaryLane });
+
+      launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+      await drainTransientBackoff(run);
+
+      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
+      expect(lane.result).toMatchObject({ teamLaunchState: 'clean_success' });
+      expect(lane.diagnostics).toContain(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC);
+      // A healthy result proves the shared runtime answered: nothing is left blocking.
+      expect(run.mixedSecondarySharedRuntimeFailuresByProject?.size ?? 0).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry a timeout that carries no pre-launch gate marker', async () => {
+    vi.useFakeTimers();
+    try {
+      const lane = createLane();
+      const run = createRun({ mixedSecondaryLanes: [lane] });
+      const launchSingleMixedSecondaryLane = vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+      >(async (_run, launchedLane) => {
+        launchedLane.state = 'finished';
+        // No marker: the bridge may already own a host for this lane.
+        launchedLane.result = createFailureResult({
+          runId: launchedLane.runId!,
+          teamName: run.teamName,
+          memberName: launchedLane.member.name,
+          message: MODELS_QUERY_TIMEOUT,
+        });
+      });
+      const ports = createPorts({ launchSingleMixedSecondaryLane });
+
+      launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+      await drainTransientBackoff(run);
+
+      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
+      expect(lane.diagnostics).not.toContain(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([HOST_UNHEALTHY, CONNECTION_REFUSED])(
+    'keeps %j permanently blocking even with the pre-launch gate marker',
+    async (message) => {
+      vi.useFakeTimers();
+      try {
+        let now = 10_000;
+        const first = createLane({
+          laneId: 'secondary:opencode:first',
+          member: { name: 'First', providerId: 'opencode' },
+        });
+        const late = createLane({
+          laneId: 'secondary:opencode:late',
+          member: { name: 'Late', providerId: 'opencode' },
+        });
+        const run = createRun({ mixedSecondaryLanes: [first, late] });
+        const launchSingleMixedSecondaryLane = vi.fn<
+          MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+        >(async (_run, launchedLane) => {
+          launchedLane.state = 'finished';
+          launchedLane.result = gatedFailureResult({
+            runId: launchedLane.runId!,
+            teamName: run.teamName,
+            memberName: launchedLane.member.name,
+            message,
+          });
+        });
+        const ports = createPorts({ nowMs: vi.fn(() => now), launchSingleMixedSecondaryLane });
+
+        launchQueuedMixedSecondaryLaneInBackground(run, first, ports);
+        await drainTransientBackoff(run);
+        // Well past the transient TTL: a non-transient record never expires.
+        now += 4 * OPENCODE_TRANSIENT_SHARED_RUNTIME_FAILURE_TTL_MS;
+        launchQueuedMixedSecondaryLaneInBackground(run, late, ports);
+        await drainTransientBackoff(run);
+
+        expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
+        expect(launchSingleMixedSecondaryLane).toHaveBeenCalledWith(run, first);
+        expect(late.diagnostics).toEqual([
+          message,
+          expect.stringContaining(
+            'This lane was not attempted because it uses the same project runtime.'
+          ),
+        ]);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it('spends the retry budget once: a second gated timeout blocks the sibling lanes', async () => {
+    vi.useFakeTimers();
+    try {
+      const first = createLane({
+        laneId: 'secondary:opencode:first',
+        member: { name: 'First', providerId: 'opencode' },
+      });
+      const sibling = createLane({
+        laneId: 'secondary:opencode:sibling',
+        member: { name: 'Sibling', providerId: 'opencode' },
+      });
+      const run = createRun({ mixedSecondaryLanes: [first, sibling] });
+      const launchSingleMixedSecondaryLane = vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+      >(async (_run, launchedLane) => {
+        launchedLane.state = 'finished';
+        launchedLane.result = gatedFailureResult({
+          runId: launchedLane.runId!,
+          teamName: run.teamName,
+          memberName: launchedLane.member.name,
+          message: MODELS_QUERY_TIMEOUT,
+        });
+      });
+      const ports = createPorts({ launchSingleMixedSecondaryLane });
+
+      launchQueuedMixedSecondaryLaneInBackground(run, first, ports);
+      await drainTransientBackoff(run);
+      launchQueuedMixedSecondaryLaneInBackground(run, sibling, ports);
+      await drainTransientBackoff(run);
+
+      // One retry for the failing lane, no attempt at all for the sibling.
+      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
+      expect(launchSingleMixedSecondaryLane).toHaveBeenNthCalledWith(1, run, first);
+      expect(launchSingleMixedSecondaryLane).toHaveBeenNthCalledWith(2, run, first);
+      expect(sibling.diagnostics).toEqual([
+        MODELS_QUERY_TIMEOUT,
+        expect.stringContaining(
+          'This lane was not attempted because it uses the same project runtime.'
+        ),
+      ]);
+      expect(run.mixedSecondarySharedRuntimeFailuresByProject).toEqual(
+        new Map([
+          [
+            path.resolve('/workspace/root'),
+            { rootCause: MODELS_QUERY_TIMEOUT, transient: true, recordedAtMs: 1234 },
+          ],
+        ])
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the next lane attempt again once a transient record has expired', async () => {
+    vi.useFakeTimers();
+    try {
+      let now = 10_000;
+      const first = createLane({
+        laneId: 'secondary:opencode:first',
+        member: { name: 'First', providerId: 'opencode' },
+      });
+      const late = createLane({
+        laneId: 'secondary:opencode:late',
+        member: { name: 'Late', providerId: 'opencode' },
+      });
+      const run = createRun({ mixedSecondaryLanes: [first, late] });
+      const launchSingleMixedSecondaryLane = vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+      >(async (_run, launchedLane) => {
+        launchedLane.state = 'finished';
+        launchedLane.result =
+          launchedLane === first
+            ? // No pre-launch gate: this lane is not retried in place.
+              createFailureResult({
+                runId: launchedLane.runId!,
+                teamName: run.teamName,
+                memberName: launchedLane.member.name,
+                message: MODELS_QUERY_TIMEOUT,
+              })
+            : cleanResult(launchedLane.runId!, run.teamName);
+      });
+      const ports = createPorts({ nowMs: vi.fn(() => now), launchSingleMixedSecondaryLane });
+
+      launchQueuedMixedSecondaryLaneInBackground(run, first, ports);
+      await drainTransientBackoff(run);
+
+      expect(run.mixedSecondarySharedRuntimeFailuresByProject?.size).toBe(1);
+
+      now += OPENCODE_TRANSIENT_SHARED_RUNTIME_FAILURE_TTL_MS;
+      launchQueuedMixedSecondaryLaneInBackground(run, late, ports);
+      await drainTransientBackoff(run);
+
+      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
+      expect(launchSingleMixedSecondaryLane).toHaveBeenNthCalledWith(2, run, late);
+      expect(late.result).toMatchObject({ teamLaunchState: 'clean_success' });
+      expect(run.mixedSecondarySharedRuntimeFailuresByProject?.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(['lane', 'tracked-run'])(
+    'does not relaunch after the backoff when the %s changed hands meanwhile',
+    async (owner) => {
+      vi.useFakeTimers();
+      try {
+        const lane = createLane();
+        const run = createRun({ mixedSecondaryLanes: [lane] });
+        let currentRun = run;
+        const launchSingleMixedSecondaryLane = vi
+          .fn<MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']>()
+          .mockImplementationOnce(async (_run, launchedLane) => {
+            launchedLane.state = 'finished';
+            launchedLane.result = gatedFailureResult({
+              runId: launchedLane.runId!,
+              teamName: run.teamName,
+              memberName: launchedLane.member.name,
+              message: MODELS_QUERY_TIMEOUT,
+            });
+          });
+        const ports = createPorts({
+          launchSingleMixedSecondaryLane,
+          isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+        });
+
+        launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+        await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS - 1);
+        // A manual lane retry re-owned the lane while the backoff was still pending.
+        if (owner === 'lane') lane.runId = 'successor-run-id';
+        else currentRun = createRun();
+        await drainTransientBackoff(run);
+
+        expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
+        expect(lane.runId).toBe(owner === 'lane' ? 'successor-run-id' : 'generated-run-id');
+        expect(lane.result).toMatchObject({ teamLaunchState: 'partial_failure' });
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
 });

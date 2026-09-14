@@ -9,6 +9,7 @@ minimumReleaseAgeExclude:
   - '@fastify/static@10.1.2'
   - brace-expansion@5.0.9
   - esbuild
+  - fast-uri@3.1.7
   - find-my-way@9.7.0
   - tmp@0.2.6
 strictPeerDependencies: true
@@ -32,6 +33,9 @@ overrides:
   '@babel/core': '7.29.7'
   '@hono/node-server@1': '1.19.13'
   '@opentelemetry/core': '2.8.0'
+  # Keep optional React menus on the same exact Tiptap core/pm peer version.
+  '@tiptap/react>@tiptap/extension-bubble-menu': '3.30.5'
+  '@tiptap/react>@tiptap/extension-floating-menu': '3.30.5'
   '@xmldom/xmldom': '0.8.15'
   'axios': '1.18.1'
   'body-parser': '2.3.0'
@@ -72,6 +76,8 @@ overrides:
   'picomatch@2': '2.3.2'
   'picomatch@4': '4.0.4'
   'postcss': '8.5.23'
+  # Tiptap and nested transforms must share model classes for wrapping/splitting.
+  'prosemirror-model': '1.25.11'
   'qs': '6.15.2'
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'

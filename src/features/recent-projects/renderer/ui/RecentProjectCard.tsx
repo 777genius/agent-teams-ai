@@ -1,12 +1,9 @@
-import { useMemo } from 'react';
-
 import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { projectColor } from '@renderer/utils/projectColor';
-import { FolderGit2, FolderOpen, FolderX, GitBranch, Terminal } from 'lucide-react';
+import { FolderOpen, GitBranch, Terminal } from 'lucide-react';
 
 import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
 
@@ -23,30 +20,23 @@ export const RecentProjectCard = ({
 }: Readonly<RecentProjectCardProps>): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: tCommon } = useAppTranslation('common');
-  const color = useMemo(() => projectColor(card.name), [card.name]);
   const isDeleted = card.filesystemState === 'deleted';
-  const FolderIcon = isDeleted ? FolderX : FolderGit2;
 
   return (
     <button
       onClick={isDeleted ? undefined : onClick}
       aria-disabled={isDeleted}
+      data-recent-project-cell="project"
       className={cn(
-        'project-row-zebra-card group relative flex min-h-[120px] flex-col overflow-hidden rounded-lg border border-border p-4 text-left transition-all duration-300 hover:border-border-emphasis',
-        isDeleted && 'cursor-default border-red-500/25 bg-red-500/[0.03] hover:border-red-500/35'
+        'project-row-zebra-card group relative flex min-h-[112px] flex-col overflow-hidden p-3.5 text-left transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis',
+        isDeleted && 'cursor-default bg-red-500/[0.03]'
       )}
     >
       {card.activeTeams && card.activeTeams.length > 0 && (
         <ActivePulseIndicator className="absolute right-3 top-3" />
       )}
 
-      <div className="mb-1 flex items-center gap-2.5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-overlay transition-colors duration-300 group-hover:border-border-emphasis">
-          <FolderIcon
-            className="size-4 transition-colors group-hover:text-text"
-            style={{ color: isDeleted ? 'var(--field-error-text)' : color.icon }}
-          />
-        </div>
+      <div className="mb-1 flex items-center">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="min-w-0 truncate text-sm font-medium text-text transition-colors duration-200 group-hover:text-text">

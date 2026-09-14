@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningEnvRuntimePorts,
@@ -25,24 +25,23 @@ function createDeps(
       warn: vi.fn(),
       error: vi.fn(),
     },
-    processEnv: {},
     ...overrides,
   };
 }
 
 describe('TeamProvisioningEnvRuntimePorts', () => {
-  it('publishes resolved control API base URL through injectable process env', async () => {
-    const processEnv = {};
+  afterEach(() => vi.unstubAllEnvs());
+  it('returns the control API base URL without taking publication ownership from the Host', async () => {
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:4568');
     const logger = { warn: vi.fn(), error: vi.fn() };
 
     const result = await resolveControlApiBaseUrlForProvisioning({
       getControlApiBaseUrlResolver: () => vi.fn(async () => 'http://127.0.0.1:4567'),
       logger,
-      processEnv,
     });
 
     expect(result).toBe('http://127.0.0.1:4567');
-    expect(processEnv).toEqual({ CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:4567' });
+    expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4568');
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -53,7 +52,6 @@ describe('TeamProvisioningEnvRuntimePorts', () => {
       resolveControlApiBaseUrlForProvisioning({
         getControlApiBaseUrlResolver: () => vi.fn(async () => null),
         logger,
-        processEnv: {},
       })
     ).rejects.toThrow(
       'Team control API failed to start or publish its base URL. Team runtime commands require the desktop Control API. Team control API resolver returned no base URL after startup.'

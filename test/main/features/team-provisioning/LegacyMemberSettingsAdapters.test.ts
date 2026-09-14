@@ -113,6 +113,57 @@ function fixture() {
 }
 
 describe('LegacyMemberSettingsRepositoryAdapter', () => {
+  it.each(['inherited', 'explicit', 'config-only', 'unrelated-meta', 'legacy-provider'] as const)(
+    'reads configured authority from the matching metadata row (%s)',
+    async (kind) => {
+      const f = fixture();
+      if (kind === 'legacy-provider') Object.assign(f.config.members[0], { providerId: undefined });
+      const canonical =
+        kind === 'inherited'
+          ? { name: ' alice ' }
+          : {
+              name: ' alice ',
+              providerId: 'anthropic' as const,
+              model: 'saved-model',
+              effort: 'low' as const,
+              providerBackendId: 'auto' as const,
+              fastMode: 'off' as const,
+            };
+      f.meta.members =
+        kind === 'config-only' || kind === 'legacy-provider'
+          ? []
+          : kind === 'unrelated-meta'
+            ? [{ name: 'Other' }]
+            : [canonical];
+      const settings = (await f.adapter.findTarget('team', 'ALICE'))!.settings;
+      expect(settings).toMatchObject(
+        kind === 'inherited'
+          ? {
+              providerId: null,
+              providerBackendId: null,
+              model: null,
+              effort: null,
+              fastMode: null,
+            }
+          : kind === 'explicit'
+            ? {
+                providerId: 'anthropic',
+                providerBackendId: 'auto',
+                model: 'saved-model',
+                effort: 'low',
+                fastMode: 'off',
+              }
+            : {
+                providerId: 'codex',
+                providerBackendId: 'cli-sdk',
+                model: 'gpt-old',
+                effort: 'high',
+                fastMode: 'on',
+              }
+      );
+    }
+  );
+
   it('materializes and saves the synthetic legacy lead target', async () => {
     let meta: TeamMembersMetaFile = { version: 1, members: [] };
     let config: { name: string; members: Array<Record<string, unknown>> } = {
@@ -163,11 +214,8 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
       fingerprintResolvedMember({
         name: 'team-lead',
         agentType: 'team-lead',
-        status: 'idle',
         currentTaskId: null,
         taskCount: 0,
-        lastActiveAt: null,
-        messageCount: 0,
         role: 'Team Lead',
         providerId: 'codex',
         providerBackendId: 'codex-native',
@@ -335,18 +383,15 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
     expect(before).toMatchObject({
       agentId: 'config-agent',
       joinedAt: 22,
-      settings: { model: 'config-model', effort: 'high', providerId: 'codex' },
+      settings: { model: 'meta-model', effort: 'low', providerId: 'codex' },
     });
     expect(
       fingerprintResolvedMember({
         name: 'ALICE',
         agentId: 'config-agent',
         joinedAt: 22,
-        status: 'idle',
         currentTaskId: null,
         taskCount: 0,
-        lastActiveAt: null,
-        messageCount: 0,
         role: 'builder',
         workflow: 'ship',
         isolation: 'worktree',
@@ -358,8 +403,8 @@ describe('LegacyMemberSettingsRepositoryAdapter', () => {
         configuredRuntimeSettings: {
           providerId: 'codex',
           providerBackendId: 'cli-sdk',
-          model: 'config-model',
-          effort: 'high',
+          model: 'meta-model',
+          effort: 'low',
           fastMode: 'on',
         },
         mcpPolicy: { mode: 'appOnly' },

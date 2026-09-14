@@ -1,5 +1,8 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import {
   type BootstrapTranscriptOutcome,
@@ -449,8 +452,7 @@ export async function reconcilePersistedLaunchMember(input: {
     graceExpired
   ) {
     current.hardFailure = true;
-    current.hardFailureReason =
-      current.hardFailureReason ?? 'Teammate did not join within the launch grace window.';
+    current.hardFailureReason = current.hardFailureReason ?? MEMBER_LAUNCH_GRACE_TIMEOUT_REASON;
   }
   current.launchState = deriveMemberLaunchState(current);
   current.lastEvaluatedAt = now;

@@ -38,6 +38,16 @@ export interface TeamProvisioningOpenCodeAggregatePrimaryCleanupPorts {
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
 }
 
+export type TeamProvisioningOpenCodeAggregatePrimaryCleanupRetryPorts = Pick<
+  TeamProvisioningOpenCodeAggregatePrimaryCleanupPorts,
+  | 'readPendingCleanups'
+  | 'consumePendingCleanup'
+  | 'clearPrimaryLaneIfOwned'
+  | 'getRuntimeOwner'
+  | 'setRuntimeOwner'
+  | 'getOpenCodeRuntimeAdapter'
+>;
+
 export interface StopUnretainableOpenCodePrimaryLaneInput {
   adapter: TeamLaunchRuntimeAdapter;
   run: ProvisioningRun;
@@ -113,7 +123,7 @@ export async function stopUnretainableOpenCodePrimaryLane(
 
 export async function retryPendingOpenCodePrimaryCleanup(
   teamName: string,
-  ports: TeamProvisioningOpenCodeAggregatePrimaryCleanupPorts
+  ports: TeamProvisioningOpenCodeAggregatePrimaryCleanupRetryPorts
 ): Promise<void> {
   const pendingCleanups = (await ports.readPendingCleanups(teamName))
     .map((cleanup) => [getPendingOpenCodePrimaryCleanupIdentity(cleanup), cleanup] as const)
@@ -159,15 +169,47 @@ export async function retryPendingOpenCodePrimaryCleanup(
       throw new OpenCodeAggregateRuntimeStopError([error]);
     }
 
-    await ports.consumePendingCleanup(cleanup);
-    const currentOwner = ports.getRuntimeOwner(cleanup.teamId);
+    let currentOwner = ports.getRuntimeOwner(cleanup.teamId);
+    if (!currentOwner) {
+      // Runtime ownership is process-local, while this cleanup obligation is
+      // durable. Recreate only the exact old identity so the ownership-gated
+      // storage boundary can finish cleanup after facade/process recreation.
+      // A concurrent replacement is detected by object identity below.
+      const recoveredOwner: OpenCodeAggregatePrimaryRuntimeOwner = {
+        runId: cleanup.runId,
+        providerId: cleanup.providerId,
+        cwd: cleanup.cwd,
+      };
+      ports.setRuntimeOwner(cleanup.teamId, recoveredOwner);
+      currentOwner = ports.getRuntimeOwner(cleanup.teamId);
+      if (currentOwner !== recoveredOwner) {
+        throw new OpenCodeAggregateRuntimeStopError([
+          new Error('OpenCode pending primary cleanup ownership changed during recovery'),
+        ]);
+      }
+    }
     if (
       currentOwner?.runId === cleanup.runId &&
       currentOwner.providerId === cleanup.providerId &&
       currentOwner.cwd === cleanup.cwd
     ) {
       await ports.clearPrimaryLaneIfOwned(cleanup.teamId, cleanup.runId);
+      const ownerAfterClear = ports.getRuntimeOwner(cleanup.teamId);
+      if (
+        ownerAfterClear?.runId === cleanup.runId &&
+        ownerAfterClear.providerId === cleanup.providerId &&
+        ownerAfterClear.cwd === cleanup.cwd
+      ) {
+        throw new OpenCodeAggregateRuntimeStopError([
+          new Error('OpenCode pending primary storage cleanup was not confirmed'),
+        ]);
+      }
     }
+    // The outbox is the recovery authority across facade/process recreation.
+    // Consume it only after every exact-owned cleanup step succeeds; otherwise
+    // a storage-clear rejection would strand a stopped lane with no durable
+    // retry record.
+    await ports.consumePendingCleanup(cleanup);
   }
 }
 

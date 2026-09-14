@@ -1,4 +1,3 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { watch } from 'chokidar';
 import { createHash } from 'crypto';
@@ -10,20 +9,28 @@ import {
   normalizeTaskChangePresenceFilePath,
 } from './taskChangePresenceUtils';
 import {
+  getTaskFreshnessDirsForContext,
+  getTeamTaskLogFreshnessDir,
+  pushUniqueNormalizedPath,
+  routeTaskFreshnessSignalChange,
+} from './teamLogSourceFreshnessSignals';
+import {
+  getPendingUnknownSessionIds,
+  markPendingRefreshAttempt,
+  rememberPendingUnknownSession,
+  removeConfirmedPendingSessions,
+} from './teamLogSourcePendingSessions';
+import { shouldIgnoreLogSourceWatcherPath } from './teamLogSourceWatcherIgnore';
+import {
   BOARD_TASK_CHANGE_FRESHNESS_DIRNAME,
-  BOARD_TASK_CHANGES_DIRNAME,
   BOARD_TASK_LOG_FRESHNESS_DIRNAME,
-  BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX,
   classifyLogSourceWatcherEvent,
-  getRelativeLogSourceParts,
   isAgentTranscriptFileName,
-  MAX_PENDING_UNKNOWN_ROOT_REFRESH_ATTEMPTS,
-  MAX_PENDING_UNKNOWN_ROOT_SESSIONS,
   normalizeLogSourceSessionId,
-  PENDING_UNKNOWN_ROOT_SESSION_TTL_MS,
-  TEAM_TASK_LOG_FRESHNESS_DIRNAME,
 } from './teamLogSourceWatchScope';
 
+import type { TaskFreshnessSignalSink } from './teamLogSourceFreshnessSignals';
+import type { PendingUnknownSessionCandidate } from './teamLogSourcePendingSessions';
 import type { TeamLogSourceLiveContext, TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type { TeamChangeEvent } from '@shared/types';
 import type { FSWatcher } from 'chokidar';
@@ -45,6 +52,22 @@ export type TeamLogSourceTrackingConsumer =
   | 'member_log_stream'
   | 'stall_monitor';
 
+/**
+ * What forceReleaseTeam took away, so a caller that could not finish the
+ * destructive operation it released for can put it back.
+ *
+ * Consumers such as the stall monitor and the task-log stream hold their
+ * acquisition in their own state and only release it when their own lifecycle
+ * ends. They never re-acquire on their own, so dropping their acquisition
+ * without a way to restore it leaves them owning a team whose log-source
+ * events have stopped arriving.
+ */
+export interface TeamLogSourceReleasedConsumers {
+  consumers: readonly { consumer: TeamLogSourceTrackingConsumer; count: number }[];
+  /** True when a live watcher was closed, so a directory handle was really held. */
+  releasedWatcher: boolean;
+}
+
 interface TrackingState {
   watcher: FSWatcher | null;
   projectDir: string | null;
@@ -63,37 +86,6 @@ interface TrackingState {
   ensureIdleReleaseTimer: ReturnType<typeof setTimeout> | null;
 }
 
-interface PendingUnknownSessionCandidate {
-  sessionId: string;
-  expiresAt: number;
-  refreshAttempts: number;
-}
-
-type DecodedFreshnessTaskId =
-  | { kind: 'task-id'; taskId: string }
-  | { kind: 'opaque-safe-segment' }
-  | { kind: 'invalid' };
-
-type TaskFreshnessSignalKind = NonNullable<TeamChangeEvent['taskSignalKind']>;
-
-function isOpaqueSafeTaskIdSegment(segment: string): boolean {
-  return /^task-id-[0-9a-f]{32}$/.test(segment);
-}
-
-function pushUniqueNormalizedPath(paths: string[], candidate: string | undefined): void {
-  if (!candidate || !path.isAbsolute(candidate)) {
-    return;
-  }
-  const normalized = path.normalize(candidate);
-  if (!paths.some((existing) => path.normalize(existing) === normalized)) {
-    paths.push(normalized);
-  }
-}
-
-function getTeamTaskLogFreshnessDir(teamName: string): string {
-  return path.join(getTeamsBasePath(), teamName, TEAM_TASK_LOG_FRESHNESS_DIRNAME);
-}
-
 function pathsOverlap(left: string, right: string): boolean {
   const normalizedLeft = path.normalize(left);
   const normalizedRight = path.normalize(right);
@@ -107,64 +99,28 @@ function pathsOverlap(left: string, right: string): boolean {
   );
 }
 
-export function shouldIgnoreLogSourceWatcherPath(
-  projectDir: string,
-  watchedPath: string,
-  scope?: {
-    scopedSessionIds?: ReadonlySet<string>;
-    pendingRootSessionIds?: ReadonlySet<string>;
-  }
-): boolean {
-  const parts = getRelativeLogSourceParts(projectDir, watchedPath);
-  if (!parts) {
-    return false;
-  }
-
-  const first = parts[0];
-  if (first === BOARD_TASK_CHANGES_DIRNAME) return true;
-  if (parts.includes('tool-results')) return true;
-  if (parts.includes('memory')) return true;
-  if (first === BOARD_TASK_LOG_FRESHNESS_DIRNAME) return false;
-  if (first === BOARD_TASK_CHANGE_FRESHNESS_DIRNAME) return false;
-
-  const scopedSessionIds = scope?.scopedSessionIds;
-  if (scopedSessionIds) {
-    if (parts.length === 1) {
-      if (first.endsWith('.jsonl')) {
-        const sessionId = normalizeLogSourceSessionId(first.slice(0, -'.jsonl'.length));
-        return (
-          !sessionId ||
-          (!scopedSessionIds.has(sessionId) && !scope?.pendingRootSessionIds?.has(sessionId))
-        );
-      }
-      return !scopedSessionIds.has(first);
-    }
-
-    if (!scopedSessionIds.has(first)) {
-      return true;
-    }
-
-    if (parts[1] === 'subagents') {
-      if (parts.length === 2) return false;
-      if (parts.length === 3) return !isAgentTranscriptFileName(parts[2]);
-    }
-
-    return true;
-  }
-
-  if (parts.length >= 2 && parts[1] === 'subagents') {
-    if (parts.length === 2) return false;
-    if (parts.length === 3) return !isAgentTranscriptFileName(parts[2]);
-    return true;
-  }
-
-  return false;
-}
-
 export class TeamLogSourceTracker {
   private readonly stateByTeam = new Map<string, TrackingState>();
   private emitter: ((event: TeamChangeEvent) => void) | null = null;
   private readonly changeListeners = new Set<(teamName: string) => void>();
+  /**
+   * Teams whose tracking forceReleaseTeam took away for a destructive
+   * operation still in flight. While suspended, enableTracking/ensureTracking
+   * no-op instead of rebuilding a watcher: a consumer (the stall monitor via
+   * ActiveTeamRegistry.reconcile(), a UI log subscription, ...) can otherwise
+   * re-acquire and reopen a handle in the same window the permanent-delete
+   * rename needs the directory handle-free for.
+   */
+  private readonly suspendedTeams = new Set<string>();
+  /** How routed task-freshness signals reach this tracker's change emitter. */
+  private readonly taskFreshnessSignalSink: TaskFreshnessSignalSink = {
+    emitTaskLogChange: (signal) => {
+      this.emitter?.({ type: 'task-log-change', ...signal });
+    },
+    emitLogSourceChange: (teamName) => {
+      this.emitLogSourceChange(teamName);
+    },
+  };
 
   constructor(private readonly logsFinder: TeamMemberLogsFinder) {}
 
@@ -194,6 +150,9 @@ export class TeamLogSourceTracker {
    * app lifetime once a team's changes were viewed.
    */
   async ensureTracking(teamName: string): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
     const state = this.getOrCreateState(teamName);
     this.scheduleEnsureTrackingIdleRelease(teamName, state);
 
@@ -245,6 +204,9 @@ export class TeamLogSourceTracker {
     teamName: string,
     consumer: TeamLogSourceTrackingConsumer
   ): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
     const state = this.getOrCreateState(teamName);
     const activeConsumerCountBefore = this.getActiveConsumerCount(state);
     state.consumerCounts.set(consumer, (state.consumerCounts.get(consumer) ?? 0) + 1);
@@ -335,6 +297,99 @@ export class TeamLogSourceTracker {
     }
     await this.disableTracking(teamName, 'change_presence_ensure');
     await this.disableTracking(teamName, 'change_presence');
+  }
+
+  /**
+   * Tear down the team's tracking regardless of who still holds an
+   * acquisition. stopTracking only releases the change-presence consumers, so a
+   * watcher acquired by the stall monitor or by a task log stream stays alive
+   * and keeps an open handle on teams/<team>/task-log-freshness - which on
+   * Windows is enough to block renaming the team directory during permanent
+   * deletion.
+   *
+   * Returns the acquisitions it took away, or null when the team was not
+   * tracked at all. The caller must hand that record back to
+   * restoreReleasedConsumers if the operation it released for does not
+   * complete: ActiveTeamRegistry and the task-log-stream handler keep their own
+   * "this team is mine" state and never re-acquire on their own, so a team that
+   * survives a failed deletion would otherwise stay owned by consumers that no
+   * longer receive log-source events.
+   */
+  async forceReleaseTeam(teamName: string): Promise<TeamLogSourceReleasedConsumers | null> {
+    // Suspend before touching state: a concurrent enableTracking/ensureTracking
+    // call arriving mid-release must not create a fresh watcher behind this
+    // call's back, even when nothing was tracked yet.
+    this.suspendedTeams.add(teamName);
+    const state = this.stateByTeam.get(teamName);
+    if (!state) {
+      return null;
+    }
+
+    const consumers = [...state.consumerCounts]
+      .filter(([, count]) => count > 0)
+      .map(([consumer, count]) => ({ consumer, count }));
+    state.consumerCounts.clear();
+    // Invalidate in-flight initialize/recompute passes so none of them can
+    // rebuild a watcher after this release.
+    state.lifecycleVersion += 1;
+
+    if (state.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+      state.ensureIdleReleaseTimer = null;
+    }
+    if (state.refreshTimer) {
+      clearTimeout(state.refreshTimer);
+      state.refreshTimer = null;
+    }
+    if (state.contextRefreshTimer) {
+      clearTimeout(state.contextRefreshTimer);
+      state.contextRefreshTimer = null;
+    }
+
+    const releasedWatcher = state.watcher !== null;
+    if (state.watcher) {
+      await state.watcher.close().catch(() => undefined);
+      state.watcher = null;
+    }
+
+    this.stateByTeam.delete(teamName);
+    return { consumers, releasedWatcher };
+  }
+
+  /**
+   * Put back what forceReleaseTeam took away. Used when the destructive
+   * operation the release was for did not complete, so the team is still there
+   * and its consumers still believe they own it. Re-acquiring through
+   * enableTracking rebuilds the watcher exactly once, on the first acquisition.
+   */
+  /**
+   * Lift a forceReleaseTeam suspension without replaying any consumers. Used
+   * when the destructive operation the release was for actually completed:
+   * there is nothing to re-track for a team that is gone, but a replacement
+   * team created under the same name afterward must not find tracking wedged
+   * off forever.
+   */
+  resumeSuspendedTeam(teamName: string): void {
+    this.suspendedTeams.delete(teamName);
+  }
+
+  async restoreReleasedConsumers(
+    teamName: string,
+    released: TeamLogSourceReleasedConsumers
+  ): Promise<void> {
+    this.resumeSuspendedTeam(teamName);
+    for (const { consumer, count } of released.consumers) {
+      for (let acquisition = 0; acquisition < count; acquisition++) {
+        await this.enableTracking(teamName, consumer);
+      }
+    }
+
+    // ensureTracking's acquisition is the only one that is released by a timer
+    // rather than by its owner, and enableTracking does not arm that timer.
+    const state = this.stateByTeam.get(teamName);
+    if (state && (state.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+      this.scheduleEnsureTrackingIdleRelease(teamName, state);
+    }
   }
 
   async disableTracking(
@@ -478,7 +533,7 @@ export class TeamLogSourceTracker {
     const { targets, scopedSessionIds } = await this.buildScopedWatchTargets(
       context.projectDir,
       context.watchSessionIds,
-      this.getPendingUnknownSessionIds(state),
+      getPendingUnknownSessionIds(state),
       taskFreshnessDirs
     );
     if (!this.isTrackingCurrent(teamName, expectedVersion)) {
@@ -501,7 +556,7 @@ export class TeamLogSourceTracker {
         }
         return shouldIgnoreLogSourceWatcherPath(context.projectDir, watchedPath, {
           scopedSessionIds,
-          pendingRootSessionIds: new Set(this.getPendingUnknownSessionIds(state)),
+          pendingRootSessionIds: new Set(getPendingUnknownSessionIds(state)),
         });
       },
       awaitWriteFinish: {
@@ -524,13 +579,18 @@ export class TeamLogSourceTracker {
         return;
       }
       const eventTaskFreshnessRootDirs = this.getTaskFreshnessRootDirs(current.activeContext);
-      const eventTaskFreshnessDirs = this.getTaskFreshnessDirsForContext(
+      const eventTaskFreshnessDirs = getTaskFreshnessDirsForContext(
         teamName,
         current.projectDir,
         eventTaskFreshnessRootDirs
       );
       if (
-        this.handleTaskFreshnessSignalChangeForDirs(teamName, changedPath, eventTaskFreshnessDirs)
+        routeTaskFreshnessSignalChange(
+          teamName,
+          changedPath,
+          eventTaskFreshnessDirs,
+          this.taskFreshnessSignalSink
+        )
       ) {
         return;
       }
@@ -683,67 +743,6 @@ export class TeamLogSourceTracker {
     }
   }
 
-  private getPendingUnknownSessionIds(state: TrackingState): string[] {
-    this.prunePendingUnknownSessions(state);
-    return [...state.pendingUnknownSessionIds.keys()];
-  }
-
-  private rememberPendingUnknownSession(
-    state: TrackingState,
-    rawSessionId: string | undefined
-  ): void {
-    const sessionId = normalizeLogSourceSessionId(rawSessionId);
-    if (!sessionId || state.scopedSessionIds.has(sessionId)) {
-      return;
-    }
-
-    const now = Date.now();
-    state.pendingUnknownSessionIds.set(sessionId, {
-      sessionId,
-      expiresAt: now + PENDING_UNKNOWN_ROOT_SESSION_TTL_MS,
-      refreshAttempts: state.pendingUnknownSessionIds.get(sessionId)?.refreshAttempts ?? 0,
-    });
-
-    while (state.pendingUnknownSessionIds.size > MAX_PENDING_UNKNOWN_ROOT_SESSIONS) {
-      const oldest = [...state.pendingUnknownSessionIds.values()].sort(
-        (left, right) => left.expiresAt - right.expiresAt
-      )[0];
-      if (!oldest) break;
-      state.pendingUnknownSessionIds.delete(oldest.sessionId);
-    }
-  }
-
-  private prunePendingUnknownSessions(state: TrackingState): void {
-    const now = Date.now();
-    for (const [sessionId, candidate] of state.pendingUnknownSessionIds.entries()) {
-      if (
-        candidate.expiresAt <= now ||
-        candidate.refreshAttempts >= MAX_PENDING_UNKNOWN_ROOT_REFRESH_ATTEMPTS
-      ) {
-        state.pendingUnknownSessionIds.delete(sessionId);
-      }
-    }
-  }
-
-  private markPendingRefreshAttempt(state: TrackingState): void {
-    for (const candidate of state.pendingUnknownSessionIds.values()) {
-      candidate.refreshAttempts += 1;
-    }
-    this.prunePendingUnknownSessions(state);
-  }
-
-  private removeConfirmedPendingSessions(
-    state: TrackingState,
-    confirmedSessionIds: readonly string[]
-  ): void {
-    for (const rawSessionId of confirmedSessionIds) {
-      const sessionId = normalizeLogSourceSessionId(rawSessionId);
-      if (sessionId) {
-        state.pendingUnknownSessionIds.delete(sessionId);
-      }
-    }
-  }
-
   private scheduleScopedRecompute(teamName: string): void {
     const current = this.stateByTeam.get(teamName);
     if (!current || this.getActiveConsumerCount(current) === 0) {
@@ -767,7 +766,7 @@ export class TeamLogSourceTracker {
     if (!state || this.getActiveConsumerCount(state) === 0) {
       return;
     }
-    this.rememberPendingUnknownSession(state, candidateSessionId);
+    rememberPendingUnknownSession(state, candidateSessionId);
     if (state.contextRefreshTimer) {
       return;
     }
@@ -785,7 +784,7 @@ export class TeamLogSourceTracker {
     if (!state || !this.isTrackingCurrent(teamName, expectedVersion)) {
       return;
     }
-    this.markPendingRefreshAttempt(state);
+    markPendingRefreshAttempt(state);
 
     const previousGeneration = state.snapshot.logSourceGeneration;
     const context = await this.logsFinder.getLiveLogSourceWatchContext(teamName, {
@@ -803,7 +802,7 @@ export class TeamLogSourceTracker {
       return;
     }
 
-    this.removeConfirmedPendingSessions(state, context.watchSessionIds);
+    removeConfirmedPendingSessions(state, context.watchSessionIds);
     state.snapshot = await this.computeSnapshot(context);
     if (!this.isTrackingCurrent(teamName, expectedVersion)) {
       return;
@@ -822,151 +821,6 @@ export class TeamLogSourceTracker {
     ) {
       this.scheduleContextRefresh(teamName, undefined, PENDING_CONTEXT_REFRESH_RETRY_MS);
     }
-  }
-
-  private handleTaskFreshnessSignalChange(
-    teamName: string,
-    changedPath: string,
-    signalDir: string,
-    taskSignalKind: TaskFreshnessSignalKind
-  ): boolean {
-    const relativePath = path.relative(signalDir, changedPath);
-    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      return path.normalize(changedPath) === path.normalize(signalDir);
-    }
-
-    if (relativePath === '.') {
-      return true;
-    }
-
-    if (relativePath.includes(path.sep)) {
-      return true;
-    }
-
-    const decoded = this.decodeTaskLogFreshnessTaskId(relativePath);
-    if (decoded.kind === 'invalid') {
-      return true;
-    }
-    if (decoded.kind === 'opaque-safe-segment') {
-      void this.emitTaskFreshnessSignalFromFile(teamName, changedPath, taskSignalKind);
-      return true;
-    }
-
-    this.emitter?.({
-      type: 'task-log-change',
-      teamName,
-      taskId: decoded.taskId,
-      taskSignalKind,
-    });
-    return true;
-  }
-
-  private decodeTaskLogFreshnessTaskId(fileName: string): DecodedFreshnessTaskId {
-    if (!fileName.endsWith(BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX)) {
-      return { kind: 'invalid' };
-    }
-
-    const encodedTaskId = fileName.slice(0, -BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX.length);
-    if (!encodedTaskId) {
-      return { kind: 'invalid' };
-    }
-    if (isOpaqueSafeTaskIdSegment(encodedTaskId)) {
-      return { kind: 'opaque-safe-segment' };
-    }
-
-    try {
-      const taskId = decodeURIComponent(encodedTaskId);
-      return taskId.trim().length > 0 ? { kind: 'task-id', taskId } : { kind: 'invalid' };
-    } catch {
-      return { kind: 'invalid' };
-    }
-  }
-
-  private async emitTaskFreshnessSignalFromFile(
-    teamName: string,
-    filePath: string,
-    taskSignalKind: TaskFreshnessSignalKind
-  ): Promise<void> {
-    try {
-      const raw = await fs.readFile(filePath, 'utf8');
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const taskId =
-        typeof parsed.taskId === 'string' && parsed.taskId.trim().length > 0
-          ? parsed.taskId.trim()
-          : null;
-      if (taskId) {
-        this.emitter?.({
-          type: 'task-log-change',
-          teamName,
-          taskId,
-          taskSignalKind,
-        });
-        return;
-      }
-    } catch {
-      // Deletions or partially unavailable files still need a team-level refresh.
-    }
-    this.emitLogSourceChange(teamName);
-  }
-
-  private handleTaskFreshnessSignalChangeForRoots(
-    teamName: string,
-    changedPath: string,
-    taskFreshnessRootDirs: readonly string[]
-  ): boolean {
-    for (const freshnessRootDir of taskFreshnessRootDirs) {
-      if (
-        this.handleTaskFreshnessSignalChange(
-          teamName,
-          changedPath,
-          path.join(freshnessRootDir, BOARD_TASK_LOG_FRESHNESS_DIRNAME),
-          'log'
-        )
-      ) {
-        return true;
-      }
-      if (
-        this.handleTaskFreshnessSignalChange(
-          teamName,
-          changedPath,
-          path.join(freshnessRootDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME),
-          'change'
-        )
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private getTaskFreshnessDirsForContext(
-    teamName: string,
-    projectDir: string,
-    taskFreshnessRootDirs: readonly string[]
-  ): { legacyRootDirs: string[]; logSignalDirs: string[] } {
-    const legacyRootDirs = [...taskFreshnessRootDirs];
-    pushUniqueNormalizedPath(legacyRootDirs, projectDir);
-    return {
-      legacyRootDirs,
-      logSignalDirs: [getTeamTaskLogFreshnessDir(teamName)],
-    };
-  }
-
-  private handleTaskFreshnessSignalChangeForDirs(
-    teamName: string,
-    changedPath: string,
-    taskFreshnessDirs: { legacyRootDirs: readonly string[]; logSignalDirs: readonly string[] }
-  ): boolean {
-    for (const logSignalDir of taskFreshnessDirs.logSignalDirs) {
-      if (this.handleTaskFreshnessSignalChange(teamName, changedPath, logSignalDir, 'log')) {
-        return true;
-      }
-    }
-    return this.handleTaskFreshnessSignalChangeForRoots(
-      teamName,
-      changedPath,
-      taskFreshnessDirs.legacyRootDirs
-    );
   }
 
   private async recompute(teamName: string): Promise<TeamLogSourceSnapshot> {

@@ -136,6 +136,17 @@ export abstract class TeamProvisioningStreamTurnCompatibilityFacade<
       service: this as unknown as TeamProvisioningStreamEventServiceAdapter<TRun>,
       persistentRuntimeCleanup: this.persistentRuntimeCleanup,
       outputRecovery: this.outputRecoveryFacade,
+      prepareMixedSecondaryLaunch: (run) =>
+        this.compatibilityDelegation.configFacade.materializeLaunchRoster({
+          teamName: run.teamName,
+          members: run.allEffectiveMembers,
+          isCurrentRun: () =>
+            this.compatibilityDelegation.runs.get(run.runId) === run &&
+            this.runTracking.getTrackedRunId(run.teamName) === run.runId &&
+            !run.cancelRequested &&
+            !run.processKilled &&
+            run.progress.state !== 'failed',
+        }),
       updateProgress,
       emitTeamChange: (event) => this.teamChangeEmitter?.(event),
     });

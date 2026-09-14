@@ -164,6 +164,6 @@ describe('runtime provider management domain', () => {
         '99.0.0'
       )
     ).toBe(false);
-    expect(supportsScopedDefaultModelInheritance(compatibleView)).toBe(false);
+    expect(supportsScopedDefaultModelInheritance(compatibleView)).toBe(true);
   });
 });

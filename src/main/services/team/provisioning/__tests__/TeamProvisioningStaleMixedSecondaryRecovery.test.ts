@@ -113,6 +113,7 @@ function createPorts(input: Partial<StaleMixedSecondaryRecoveryPorts> = {}): {
   let writtenSnapshot: PersistedTeamLaunchSnapshot | null = null;
   const defaultMember: TeamMember = { name: 'Bob', providerId: 'opencode', cwd: '/repo-bob' };
   const ports: StaleMixedSecondaryRecoveryPorts = {
+    isTeamLaunchStopped: async () => false,
     hasMixedSecondaryLaunchMetadata: () => false,
     shouldRecoverStalePersistedMixedLaunchSnapshot: () => true,
     readTeamMeta: async () => ({ providerId: 'codex', fastMode: 'on' }),
@@ -268,6 +269,72 @@ describe('recoverStaleMixedSecondaryLaunchSnapshotWithPorts', () => {
         },
       },
     ]);
+  });
+
+  it('recovers nothing for a stopped team and hands its persisted snapshot straight back', async () => {
+    const persistedSnapshot = createSnapshot({ leadSessionId: 'lead-session' });
+    const { ports, getAggregateParams, getWrittenSnapshot } = createPorts({
+      isTeamLaunchStopped: async () => true,
+    });
+
+    const result = await recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
+      'team-a',
+      null,
+      persistedSnapshot,
+      ports
+    );
+
+    expect(result).toBe(persistedSnapshot);
+    expect(getAggregateParams()).toBeNull();
+    expect(getWrittenSnapshot()).toBeNull();
+  });
+
+  it('publishes the recovered snapshot as a republication so a stop settling meanwhile survives', async () => {
+    // The stop marker check above the recovery cannot cover the runtime probes
+    // that follow it. A stop that lands during them must still win, so the
+    // write is fenced by the marker inside the store's publication queue and
+    // the caller is handed the persisted snapshot rather than the recovery.
+    const persistedSnapshot = createSnapshot({ leadSessionId: 'lead-session' });
+    let stopped = false;
+    const writeOptions: ({ republishesExistingLaunch?: boolean } | undefined)[] = [];
+    const { ports, getAggregateParams } = createPorts({
+      isTeamLaunchStopped: async () => {
+        const wasStopped = stopped;
+        stopped = true;
+        return wasStopped;
+      },
+      writeLaunchStateSnapshot: async (_teamName, snapshot, options) => {
+        writeOptions.push(options);
+        return snapshot;
+      },
+    });
+
+    const result = await recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
+      'team-a',
+      null,
+      persistedSnapshot,
+      ports
+    );
+
+    expect(getAggregateParams()?.secondaryMembers).toHaveLength(1);
+    expect(writeOptions).toEqual([{ republishesExistingLaunch: true }]);
+    expect(result).toBe(persistedSnapshot);
+  });
+
+  it('still recovers lane evidence for a team that was never marked stopped', async () => {
+    const { ports, getAggregateParams, getWrittenSnapshot } = createPorts({
+      isTeamLaunchStopped: async () => false,
+    });
+
+    const result = await recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
+      'team-a',
+      null,
+      null,
+      ports
+    );
+
+    expect(result).toBe(getWrittenSnapshot());
+    expect(getAggregateParams()?.secondaryMembers).toHaveLength(1);
   });
 
   it('returns null when no runtime, degraded, or stale lane evidence is recovered', async () => {

@@ -18,6 +18,7 @@ export type {
   TeamRuntimePendingPermission,
   TeamRuntimePermissionListInput,
   TeamRuntimePermissionListResult,
+  TeamRuntimePreLaunchGate,
   TeamRuntimePrepareFailure,
   TeamRuntimePrepareResult,
   TeamRuntimePrepareSuccess,

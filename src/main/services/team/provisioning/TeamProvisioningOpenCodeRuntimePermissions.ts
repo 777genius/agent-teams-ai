@@ -15,6 +15,7 @@ import type {
   TeamRuntimePendingPermission,
   TeamRuntimePermissionListResult,
 } from '../runtime';
+import type { LaunchStateWriteOptions } from './TeamProvisioningLaunchStateStoreBoundary';
 import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
@@ -104,7 +105,7 @@ export interface OpenCodeRuntimePermissionSyncPorts {
   getRuntimeAdapterRun(teamName: string): OpenCodeRuntimePermissionRuntimeRunLike | null;
   persistPendingPermissions(
     input: OpenCodeRuntimePendingPermissionsPersistenceInput
-  ): Promise<void>;
+  ): Promise<boolean | void>;
   syncSpawnStatuses(input: OpenCodeRuntimePermissionSpawnStatusSyncInput): void;
   syncToolApprovals(input: OpenCodeRuntimePermissionToolApprovalSyncInput): void;
   logWarning(message: string): void;
@@ -117,8 +118,12 @@ export interface OpenCodeRuntimePendingPermissionsPersistencePorts {
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
-  ): Promise<unknown>;
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: Pick<
+      LaunchStateWriteOptions,
+      'republishesExistingLaunch' | 'isAuthorized'
+    >
+  ): Promise<boolean | { wrote: boolean } | void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   emitMemberSpawnChange(input: {
     teamName: string;
@@ -161,8 +166,8 @@ export function createOpenCodeRuntimePendingPermissionsPersistencePortsFromServi
     enqueueLaunchStateStoreOperation: (teamName, operation) =>
       service.enqueueLaunchStateStoreOperation(teamName, operation),
     readLaunchState: (teamName) => options.readLaunchState(teamName),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshotNow(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, ...writeOptions) =>
+      service.writeLaunchStateSnapshotNow(teamName, snapshot, ...writeOptions),
     invalidateRuntimeSnapshotCaches: (teamName) =>
       service.invalidateRuntimeSnapshotCaches(teamName),
     emitMemberSpawnChange: (input) => {
@@ -465,14 +470,12 @@ export async function syncOpenCodeRuntimePermissionsAfterDelivery(
     return;
   }
 
-  await ports.persistPendingPermissions({
+  const persisted = await ports.persistPendingPermissions({
     ...input,
     permissionsByMember,
     previousLaunchState,
   });
-  if (ports.getTrackedRunId(input.teamName) !== runId) {
-    return;
-  }
+  if (persisted === false || ports.getTrackedRunId(input.teamName) !== runId) return;
   ports.syncSpawnStatuses({
     ...input,
     permissionsByMember,
@@ -758,10 +761,8 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     members[previousEntry.key] = nextMember;
     didChange = true;
   }
-  if (!didChange) {
-    return null;
-  }
-  return createPersistedLaunchSnapshot({
+  if (!didChange) return null;
+  const snapshot = createPersistedLaunchSnapshot({
     teamName: input.previous.teamName,
     expectedMembers: input.previous.expectedMembers,
     bootstrapExpectedMembers: input.previous.bootstrapExpectedMembers,
@@ -770,26 +771,22 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     members,
     updatedAt: input.observedAt,
   });
+  return { ...snapshot, publicationRunId: input.previous.publicationRunId };
 }
 
 export async function persistOpenCodeRuntimePendingPermissions(
   input: OpenCodeRuntimePendingPermissionsPersistenceInput,
   ports: OpenCodeRuntimePendingPermissionsPersistencePorts
-): Promise<void> {
-  if (!input.previousLaunchState) {
-    return;
-  }
+): Promise<boolean | void> {
+  if (!input.previousLaunchState) return;
+  const trackedRunId = ports.getTrackedRunId(input.teamName);
   const observedAt = ports.nowIso();
   try {
     const changed = await ports.enqueueLaunchStateStoreOperation(input.teamName, async () => {
-      const incomingRunId = input.runId?.trim();
-      if (incomingRunId && ports.getTrackedRunId(input.teamName) !== incomingRunId) {
-        return false;
-      }
+      if (trackedRunId && input.runId?.trim() && trackedRunId !== input.runId.trim()) return false;
+      if (ports.getTrackedRunId(input.teamName) !== trackedRunId) return false;
       const previous = await ports.readLaunchState(input.teamName);
-      if (!previous) {
-        return false;
-      }
+      if (!previous) return false;
       const nextSnapshot = buildOpenCodeRuntimePendingPermissionsLaunchSnapshot({
         previous,
         runId: input.runId,
@@ -798,11 +795,12 @@ export async function persistOpenCodeRuntimePendingPermissions(
         permissionsByMember: input.permissionsByMember,
         observedAt,
       });
-      if (!nextSnapshot) {
-        return false;
-      }
-      await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot);
-      return true;
+      if (!nextSnapshot) return;
+      const result = await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot, {
+        republishesExistingLaunch: true,
+        isAuthorized: () => ports.getTrackedRunId(input.teamName) === trackedRunId,
+      });
+      return result !== false && (typeof result !== 'object' || result.wrote);
     });
     if (changed) {
       ports.invalidateRuntimeSnapshotCaches(input.teamName);
@@ -814,10 +812,12 @@ export async function persistOpenCodeRuntimePendingPermissions(
         });
       }
     }
+    return changed;
   } catch (error) {
     ports.logDebug(
       `[${input.teamName}] Failed to persist OpenCode pending runtime permissions: ${getErrorMessage(error)}`
     );
+    return false;
   }
 }
 

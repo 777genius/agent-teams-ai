@@ -1,4 +1,4 @@
-import type { RetryFailedRuntimeLanesResult } from '../../../contracts';
+import type { RetryFailedRuntimeLanesResult, TeamForceStopResult } from '../../../contracts';
 import type {
   TeamRuntimeEffectsPort,
   TeamRuntimeFeedPort,
@@ -14,9 +14,13 @@ export class ManageTeamRuntimeLifecycle {
     private readonly effects: TeamRuntimeEffectsPort
   ) {}
 
-  async restartMember(teamName: string, memberName: string): Promise<void> {
+  async restartMember(
+    teamName: string,
+    memberName: string,
+    expectedSecondary?: boolean
+  ): Promise<void> {
     try {
-      await this.lifecycle.restartMember(teamName, memberName);
+      await this.lifecycle.restartMember(teamName, memberName, expectedSecondary);
     } finally {
       this.feed.invalidateMessageFeed(teamName);
     }
@@ -33,5 +37,12 @@ export class ManageTeamRuntimeLifecycle {
   async stopTeam(teamName: string): Promise<void> {
     this.effects.addStopBreadcrumb(teamName);
     await this.runtime.stopTeam(teamName);
+  }
+
+  forceStopTeam(teamName: string): Promise<TeamForceStopResult> {
+    if (!this.runtime.forceStopTeam) {
+      throw new Error('Force stop is unavailable');
+    }
+    return this.runtime.forceStopTeam(teamName);
   }
 }

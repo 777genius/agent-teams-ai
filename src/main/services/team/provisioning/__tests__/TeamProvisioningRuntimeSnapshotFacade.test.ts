@@ -29,6 +29,9 @@ function createDeferred<T>() {
 type BuildTeamAgentRuntimeSnapshotPort = NonNullable<
   TeamProvisioningRuntimeSnapshotFacadePorts['buildTeamAgentRuntimeSnapshot']
 >;
+type RuntimeSnapshotResourceSamplingPorts = ReturnType<
+  TeamProvisioningRuntimeSnapshotFacadePorts['createRuntimeSnapshotResourceSamplingPorts']
+>;
 type RuntimeSnapshotFacadeRun =
   TeamProvisioningRuntimeSnapshotFacadePorts['runs'] extends ReadonlyMap<string, infer T>
     ? T
@@ -111,6 +114,38 @@ function createFacadeHarness(
     historyLimit: 10,
     minSampleIntervalMs: 0,
   });
+  const pruneAgentRuntimeResourceHistory = vi.fn(
+    (teamName: string, activeKeys: ReadonlySet<string>) => {
+      resourceHistory.prune(teamName, activeKeys);
+    }
+  );
+  // Mirrors the production factory: the read-only build is handed the
+  // write-free history port, which reports the series a member already has and
+  // prunes nothing.
+  const createRuntimeSnapshotResourceSamplingPortsSpy = vi.fn(
+    (portOptions?: { readOnly?: boolean }): RuntimeSnapshotResourceSamplingPorts => ({
+      readRuntimeProcessRowsForUsageSnapshot: async () => null,
+      readProcessUsageStatsByPid: async () => new Map(),
+      buildRuntimeUsageProcessTrees: () => new Map(),
+      buildRuntimeProcessLoadStats: () => undefined,
+      agentRuntimeResourceHistory:
+        portOptions?.readOnly === true
+          ? {
+              record: (recordParams) => resourceHistory.read(recordParams),
+              prune: () => undefined,
+            }
+          : {
+              record: (recordParams) => resourceHistory.record(recordParams),
+              prune: pruneAgentRuntimeResourceHistory,
+            },
+    })
+  );
+  const getMemberSpawnStatusesPort = vi.fn(
+    async (): Promise<MemberSpawnStatusesSnapshot> => ({ statuses: {}, runId })
+  );
+  const getMemberSpawnStatusesReadOnlyPort = vi.fn(
+    async (): Promise<MemberSpawnStatusesSnapshot> => ({ statuses: {}, runId })
+  );
   const facade = new TeamProvisioningRuntimeSnapshotFacade({
     runs,
     runtimeAdapterRunByTeam: new Map(),
@@ -146,18 +181,10 @@ function createFacadeHarness(
       members: [],
     }),
     readPersistedRuntimeMembers: () => [],
-    getMemberSpawnStatuses: async (): Promise<MemberSpawnStatusesSnapshot> => ({
-      statuses: {},
-      runId,
-    }),
+    getMemberSpawnStatuses: getMemberSpawnStatusesPort,
+    getMemberSpawnStatusesReadOnly: getMemberSpawnStatusesReadOnlyPort,
     getLiveTeamAgentRuntimeMetadata: async () => new Map(),
-    createRuntimeSnapshotResourceSamplingPorts: () => ({
-      readRuntimeProcessRowsForUsageSnapshot: async () => null,
-      readProcessUsageStatsByPid: async () => new Map(),
-      buildRuntimeUsageProcessTrees: () => new Map(),
-      buildRuntimeProcessLoadStats: () => undefined,
-      agentRuntimeResourceHistory: resourceHistory,
-    }),
+    createRuntimeSnapshotResourceSamplingPorts: createRuntimeSnapshotResourceSamplingPortsSpy,
     runtimeSnapshotCache,
     getTrackedRunId: () => runId,
     getAgentRuntimeSnapshotCacheTtlMs: () => options.ttlMs ?? 60_000,
@@ -170,6 +197,10 @@ function createFacadeHarness(
   return {
     facade,
     agentRuntimeSnapshotCache,
+    pruneAgentRuntimeResourceHistory,
+    createRuntimeSnapshotResourceSamplingPortsSpy,
+    resourceHistory,
+    getMemberSpawnStatusesReadOnlyPort,
     getBuildCount: () => buildCount,
     setRunId: (nextRunId: string | null) => {
       runId = nextRunId;
@@ -302,6 +333,239 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
       isAlive: true,
       runId,
       progress: progress(runId, teamName),
+    });
+  });
+
+  describe('read-only snapshot', () => {
+    it('never prunes the shared runtime telemetry history and never fills the cache', async () => {
+      const harness = createFacadeHarness({ ttlMs: 0 });
+
+      await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      expect(harness.pruneAgentRuntimeResourceHistory).toHaveBeenCalledTimes(1);
+      const cachedAfterMutatingBuild = harness.agentRuntimeSnapshotCache.get('alpha');
+      expect(cachedAfterMutatingBuild).toBeDefined();
+
+      await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+
+      // A monitor poll resolving one member without a pid would otherwise drop
+      // that member's accumulated series and restart the sparkline.
+      expect(harness.pruneAgentRuntimeResourceHistory).toHaveBeenCalledTimes(1);
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')).toBe(cachedAfterMutatingBuild);
+    });
+
+    // Recording a sample is an in-memory write to a history every reader of
+    // this team shares, so the write-free build takes the port that reports a
+    // member's series instead of extending it.
+    it('takes the write-free resource history port', async () => {
+      const harness = createFacadeHarness({ ttlMs: 0 });
+
+      await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      expect(harness.createRuntimeSnapshotResourceSamplingPortsSpy).toHaveBeenLastCalledWith(
+        undefined
+      );
+
+      await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(harness.createRuntimeSnapshotResourceSamplingPortsSpy).toHaveBeenLastCalledWith({
+        readOnly: true,
+      });
+    });
+
+    it('coalesces concurrent read-only builds for the same tracked run', async () => {
+      const deferred = createDeferred<null>();
+      const harness = createFacadeHarness({ ttlMs: 0, getMeta: () => deferred.promise });
+
+      const first = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      const second = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+
+      expect(harness.getBuildCount()).toBe(1);
+
+      deferred.resolve(null);
+      const [firstSnapshot, secondSnapshot] = await Promise.all([first, second]);
+      expect(secondSnapshot).toBe(firstSnapshot);
+      expect(harness.pruneAgentRuntimeResourceHistory).not.toHaveBeenCalled();
+    });
+
+    it('rides a build the mutating getter already started', async () => {
+      const deferred = createDeferred<null>();
+      const harness = createFacadeHarness({ ttlMs: 0, getMeta: () => deferred.promise });
+
+      const mutating = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      const readOnly = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+
+      expect(harness.getBuildCount()).toBe(1);
+
+      deferred.resolve(null);
+      const [mutatingSnapshot, readOnlySnapshot] = await Promise.all([mutating, readOnly]);
+      expect(readOnlySnapshot).toBe(mutatingSnapshot);
+    });
+
+    // The read-only status projection neither coalesces nor fills a cache, so
+    // a caller that needs both halves - the HTTP diagnostics route reports the
+    // statuses next to this snapshot - would otherwise run two of them.
+    it('builds from a status projection the caller already made', async () => {
+      let projectionUsedByBuild: MemberSpawnStatusesSnapshot | undefined;
+      const buildTeamAgentRuntimeSnapshot = vi.fn<BuildTeamAgentRuntimeSnapshotPort>(
+        async (params) => {
+          projectionUsedByBuild = await params.getMemberSpawnStatuses('alpha');
+          return {
+            teamName: 'alpha',
+            updatedAt: '2026-06-20T17:19:11.000Z',
+            runId: params.runId,
+            members: {},
+          };
+        }
+      );
+      const harness = createFacadeHarness({ ttlMs: 0, buildTeamAgentRuntimeSnapshot });
+      harness.setRunId('run-1');
+      const memberSpawnStatuses: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+
+      await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', { memberSpawnStatuses });
+
+      expect(projectionUsedByBuild).toBe(memberSpawnStatuses);
+      expect(harness.getMemberSpawnStatusesReadOnlyPort).not.toHaveBeenCalled();
+    });
+
+    // Both directions of the rule: a caller that supplied a projection is
+    // answered by a build of its own even when the cached snapshot is for the
+    // very same run, and a caller that supplied none still rides that snapshot
+    // - otherwise the rule would just be "never share anything".
+    it('answers a supplied projection with its own build and a plain read from the cache', async () => {
+      const harness = createFacadeHarness({ ttlMs: 60_000 });
+      harness.setRunId('run-2');
+      const shared = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')?.snapshot).toBe(shared);
+
+      const staleProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+      const rebuilt = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses: staleProjection,
+      });
+      expect(rebuilt).not.toBe(shared);
+
+      const currentProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-2' };
+      const rebuiltForCurrentRun = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly(
+        'alpha',
+        { memberSpawnStatuses: currentProjection }
+      );
+      expect(rebuiltForCurrentRun).not.toBe(shared);
+
+      const polled = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(polled).toBe(shared);
+    });
+
+    // The snapshot cache is keyed by team and run and nothing in the key says
+    // which status projection filled it, so an entry for the tracked run can
+    // still carry runtime members projected from an earlier read of the
+    // statuses. Serving it to a caller that supplied its own projection is the
+    // two-views defect this parameter exists to remove, in a different order.
+    it('rebuilds rather than serving a cached snapshot made from another projection', async () => {
+      const projectionByBuild: MemberSpawnStatusesSnapshot[] = [];
+      const buildTeamAgentRuntimeSnapshot = vi.fn<BuildTeamAgentRuntimeSnapshotPort>(
+        async (params) => {
+          projectionByBuild.push(await params.getMemberSpawnStatuses(params.teamName));
+          const snapshot: TeamAgentRuntimeSnapshot = {
+            teamName: params.teamName,
+            updatedAt: `2026-06-20T17:19:0${projectionByBuild.length}.000Z`,
+            runId: params.runId,
+            members: {},
+          };
+          // Mirrors the production builder, whose publish the facade drops for
+          // a write-free build.
+          params.rememberAgentRuntimeSnapshot({
+            teamName: params.teamName,
+            runId: params.runId,
+            generationAtStart: params.generationAtStart,
+            snapshot,
+            ttlMs: params.getAgentRuntimeSnapshotCacheTtlMs(params.teamName, params.runId),
+          });
+          return snapshot;
+        }
+      );
+      const harness = createFacadeHarness({ ttlMs: 60_000, buildTeamAgentRuntimeSnapshot });
+      harness.setRunId('run-1');
+
+      const cachedFromFirstProjection = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      const cacheEntry = harness.agentRuntimeSnapshotCache.get('alpha');
+      expect(cacheEntry?.snapshot).toBe(cachedFromFirstProjection);
+
+      const secondProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+      const answered = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses: secondProjection,
+      });
+
+      expect(projectionByBuild[0]).not.toBe(secondProjection);
+      expect(projectionByBuild[1]).toBe(secondProjection);
+      expect(answered).not.toBe(cachedFromFirstProjection);
+      // The write-free build stays this caller's: the cache keeps the entry the
+      // writing build published.
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')).toBe(cacheEntry);
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')?.snapshot).toBe(
+        cachedFromFirstProjection
+      );
+    });
+
+    // The in-flight maps are keyed the same way, so the same mismatch reaches a
+    // build that has not finished yet - in both directions.
+    it('neither joins nor publishes an in-flight build when the caller supplied a projection', async () => {
+      const gates = [
+        createDeferred<null>(),
+        createDeferred<null>(),
+        createDeferred<null>(),
+        createDeferred<null>(),
+      ];
+      let gateIndex = 0;
+      const harness = createFacadeHarness({
+        ttlMs: 0,
+        getMeta: () => gates[gateIndex++]?.promise ?? Promise.resolve(null),
+      });
+      harness.setRunId('run-1');
+      const memberSpawnStatuses: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+
+      const mutating = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      const alongsideMutating = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses,
+      });
+      expect(harness.getBuildCount()).toBe(2);
+      gates[0]?.resolve(null);
+      gates[1]?.resolve(null);
+      const [mutatingSnapshot, alongsideMutatingSnapshot] = await Promise.all([
+        mutating,
+        alongsideMutating,
+      ]);
+      expect(alongsideMutatingSnapshot).not.toBe(mutatingSnapshot);
+
+      const diagnostics = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses,
+      });
+      const polled = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(harness.getBuildCount()).toBe(4);
+      gates[2]?.resolve(null);
+      gates[3]?.resolve(null);
+      const [diagnosticsSnapshot, polledSnapshot] = await Promise.all([diagnostics, polled]);
+      expect(polledSnapshot).not.toBe(diagnosticsSnapshot);
+    });
+
+    it('starts its own build when the tracked run moved on', async () => {
+      const firstDeferred = createDeferred<null>();
+      const secondDeferred = createDeferred<null>();
+      const gates = [firstDeferred, secondDeferred];
+      let gateIndex = 0;
+      const harness = createFacadeHarness({
+        ttlMs: 0,
+        getMeta: () => gates[gateIndex++]?.promise ?? Promise.resolve(null),
+      });
+
+      harness.setRunId('run-1');
+      const mutating = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      harness.setRunId('run-2');
+      const readOnly = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+
+      expect(harness.getBuildCount()).toBe(2);
+
+      firstDeferred.resolve(null);
+      secondDeferred.resolve(null);
+      const [mutatingSnapshot, readOnlySnapshot] = await Promise.all([mutating, readOnly]);
+      expect(mutatingSnapshot.runId).toBe('run-1');
+      expect(readOnlySnapshot.runId).toBe('run-2');
     });
   });
 

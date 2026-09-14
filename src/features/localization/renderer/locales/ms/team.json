@@ -72,7 +72,30 @@
       "externalTeam": "pasukan luaran",
       "crossTeamAwaitingReply": "Mesej merentas pasukan dihantar, menunggu balasan",
       "user": "pengguna",
-      "awaitingApproval": "menunggu kelulusan"
+      "awaitingApproval": "menunggu kelulusan",
+      "discardQueued": {
+        "action": "Buang mesej dalam baris gilir",
+        "alreadyDelivered": "Tiada apa-apa dibuang: mesej itu sudah dihantar kepada \"{{member}}\".",
+        "cancelLabel": "Batal",
+        "confirmLabel": "Buang",
+        "count": "{{count}} dalam baris gilir",
+        "count_few": "{{count}} dalam baris gilir",
+        "count_many": "{{count}} dalam baris gilir",
+        "count_one": "{{count}} dalam baris gilir",
+        "count_other": "{{count}} dalam baris gilir",
+        "failedFallbackMessage": "Ralat tidak dijangka berlaku",
+        "failedTitle": "Gagal membuang mesej dalam baris gilir",
+        "message": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_few": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_many": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_one": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_other": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} dibuang. Masih dalam baris gilir: {{remaining}}.",
+        "resultTitle": "Mesej dalam baris gilir",
+        "title": "Buang mesej dalam baris gilir",
+        "tooltip": "Buang mesej dalam baris gilir ahli ini"
+      }
     },
     "reply": {
       "replyingTo": "Membalas kepada",
@@ -312,8 +335,14 @@
       "saved": "Disimpan"
     },
     "worktree": {
-      "description": "Jalankan rakan pasukan ini dalam worktree git berasingan. Terima/tolak perubahan menyasarkan worktree tersebut, bukan ruang kerja ketua.",
-      "label": "Worktree"
+      "description": "Ditandakan: gunakan Git worktree berasingan, yang dicipta semasa pelancaran jika perlu. Worktree sedia ada mengekalkan branch semasanya. Tidak ditandakan: gunakan ruang kerja projek yang dikongsi; worktree lama dikekalkan.",
+      "label": "Worktree",
+      "existing": "Ruang kerja terakhir: {{path}}. Worktree terurus digunakan semula jika tersedia; jika tidak, dicipta semasa pelancaran.",
+      "new": "Worktree: digunakan semula jika tersedia, atau dicipta semasa pelancaran. Branch akan dipaparkan selepas pelancaran.",
+      "shared": "Ruang kerja projek yang dikongsi: {{path}}. Menggunakan branch projek.",
+      "sharedPending": "Ruang kerja yang dikongsi: ditentukan semasa pelancaran bersama worktree ketua. Branch akan dipaparkan selepas pelancaran.",
+      "branch": "Branch worktree: {{branch}}",
+      "branchUnavailable": "Tidak tersedia"
     },
     "addMembers": {
       "title": "Tambah Ahli",
@@ -333,6 +362,7 @@
       "launch": "Lancar",
       "remove": "Buang",
       "stop": "Hentikan",
+      "stopping": "Sedang menghentikan...",
       "task": "Tugasan",
       "visualize": "Visualisasikan",
       "usage": "Penggunaan"
@@ -354,6 +384,14 @@
       "member_one": "ahli",
       "member_other": "ahli",
       "title": "Pasukan belum dilancarkan"
+    },
+    "stopFailed": {
+      "title": "Pasukan tidak dapat dihentikan",
+      "message": "Pasukan masih berjalan. Semak statusnya dan tekan Hentikan sekali lagi."
+    },
+    "stopUnknown": {
+      "title": "Penghentian tidak dapat disahkan",
+      "message": "Respons runtime tidak diterima. Muat semula status pasukan sebelum mencuba lagi."
     },
     "invalidTab": "Tab pasukan tidak sah",
     "kanbanSafeData": "Gagal memuatkan kanban sepenuhnya. Memaparkan data selamat.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Lancarkan semula pasukan",
       "relaunching": "Melancarkan semula...",
       "saveChanges": "Simpan Perubahan",
-      "saving": "Menyimpan..."
+      "saving": "Menyimpan...",
+      "skipPreflightAndLaunch": "Langkau semakan awal dan lancarkan"
+    },
+    "workspaceTrust": {
+      "description": "Arahan projek dan pelayan MCP mungkin berjalan apabila pasukan bermula."
     },
     "billing": {
       "prefix": "Bermula 15 Jun 2026, Anthropic mengenakan bil",
@@ -1540,6 +1582,11 @@
       "message": "Padam pasukan \"{{teamName}}\" secara kekal? Semua data akan hilang.",
       "confirmLabel": "Padam selama-lamanya",
       "cancelLabel": "Batal"
+    },
+    "deleteFailed": {
+      "title": "Gagal memadam pasukan",
+      "fallbackMessage": "Ralat tidak dijangka berlaku",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Jika direktori tidak wujud, ia akan dicipta secara automatik."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Rakan pasukan tidak menyertai dalam tempoh tangguh pelancaran."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Ahli",
       "addMember": "Tambah ahli",
       "editAsJson": "Sunting sebagai JSON",
-      "runInSeparateWorktrees": "Jalankan rakan pasukan dalam worktree berasingan",
+      "runInSeparateWorktrees": "Worktree untuk semua rakan pasukan",
       "agentTeamsMcpOnly": "Agent Teams MCP sahaja",
       "removedCount": "Dibuang ({{count}})",
       "removedModelLockReason": "Ahli yang dibuang dikekalkan untuk sejarah padam lembut. Pulihkan mereka untuk menyunting tetapan.",
-      "memberNamesUnique": "Nama ahli mesti unik"
+      "memberNamesUnique": "Nama ahli mesti unik",
+      "worktreeDescription": "Ditandakan: worktree berasingan untuk semua rakan pasukan. Sebahagian: hanya untuk rakan pasukan yang dipilih. Tidak ditandakan: ruang kerja projek yang dikongsi. Mematikan pilihan ini akan mengekalkan worktree sedia ada pada cakera."
     },
     "stats": {
       "computing": "Mengira statistik...",
@@ -2401,7 +2452,7 @@
   },
   "advancedCli": {
     "title": "Lanjutan",
-    "useWorktree": "Guna worktree",
+    "useWorktree": "Worktree ketua (berasingan daripada worktree rakan pasukan)",
     "recent": "Terkini",
     "commandPreview": "Pratonton arahan",
     "customArguments": "Argumen tersuai",

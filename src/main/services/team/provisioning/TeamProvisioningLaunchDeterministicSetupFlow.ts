@@ -104,6 +104,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;
@@ -169,6 +170,7 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       expectedMembers: string[];
       effectiveMemberSpecs: TeamCreateRequest['members'];
       allEffectiveMemberSpecs: TeamCreateRequest['members'];
+      configuredMemberSpecs: TeamCreateRequest['members'];
       launchIdentity: ProviderModelLaunchIdentity;
       syntheticRequest: TeamCreateRequest;
       mixedSecondaryLanes: TMixedSecondaryLane[];
@@ -323,6 +325,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
         providerId: request.providerId,
         model: request.model,
         effort: request.effort,
+        syncModelsWithLead: request.syncModelsWithLead,
       },
       primaryProviderId: request.providerId,
       primaryEnv: provisioningEnv,
@@ -436,6 +439,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       expectedMembers,
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
+      configuredMemberSpecs: expectedMemberSpecs,
       launchIdentity,
       syntheticRequest,
       mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),

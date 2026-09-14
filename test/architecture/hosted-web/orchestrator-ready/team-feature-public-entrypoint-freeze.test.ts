@@ -54,6 +54,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TEAM_PROVISIONING_PROGRESS',
       'TEAM_PROVISIONING_STATUS',
       'TEAM_VALIDATE_CLI_ARGS',
+      'fingerprintSavedLaunchSettings',
       'isActiveProvisioningState',
       'isTerminalProvisioningState',
       'planProvisioningProgressUpdate',
@@ -97,6 +98,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TEAM_PROVISIONING_STATUS',
       'TEAM_UPDATE_MEMBER_SETTINGS',
       'TEAM_VALIDATE_CLI_ARGS',
+      'fingerprintSavedLaunchSettings',
     ],
   },
   'src/features/team-provisioning/main/index.ts': {
@@ -120,6 +122,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'createTeamProvisioningApplicationFeature',
       'createTeamProvisioningFeature',
       'createTeamProvisioningStatusFeature',
+      'persistNodeMemberSettingsRelaunch',
       'registerTeamMemberSettingsIpc',
       'registerTeamProvisioningIpc',
       'removeTeamMemberSettingsIpc',
@@ -129,6 +132,7 @@ const EXACT_PUBLIC_EXPORTS = {
   'src/features/team-provisioning/renderer/index.ts': {
     typeExports: [
       'LeadRuntimeLaunchSettings',
+      'MemberSettingsRelaunchDraft',
       'TeamLaunchAnalyticsCoordinatorDependencies',
       'TeamLaunchAnalyticsContext',
       'TeamLaunchParams',
@@ -191,8 +195,11 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamMemberSettingsDialogBridge',
       'TeamRuntimeFreshnessCoordinator',
       'applyLeadRuntimeSettingsToLaunchParams',
+      'applyMemberSettingsRelaunch',
       'areTeamLaunchParamsEqual',
+      'assertMemberSettingsRelaunchRoster',
       'buildLaunchParamsFromRuntimeRequest',
+      'buildMemberSettingsRelaunchIntent',
       'createProductTeamLaunchAnalyticsCoordinator',
       'createTeamListProvisioningPorts',
       'createTeamMemberSettingsRendererApi',
@@ -202,6 +209,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'createTeamRuntimeObservationSlice',
       'createTeamToolApprovalRendererSlice',
       'extractBaseModel',
+      'filterMemberSettingsRelaunchInputs',
       'loadTeamToolApprovalSettingsIntoRenderer',
       'normalizePersistedTeamLaunchParams',
       'refreshTeamMemberSettings',
@@ -776,9 +784,15 @@ const EXACT_PUBLIC_EXPORTS = {
     ],
   },
   'src/features/team-runtime-operations/contracts/index.ts': {
-    typeExports: ['RetryFailedRuntimeLanesResult', 'RuntimeLogQuery', 'RuntimeLogResponse'],
+    typeExports: [
+      'RetryFailedRuntimeLanesResult',
+      'RuntimeLogQuery',
+      'RuntimeLogResponse',
+      'TeamForceStopResult',
+    ],
     valueExports: [
       'TEAM_ALIVE_LIST',
+      'TEAM_FORCE_STOP',
       'TEAM_GET_AGENT_RUNTIME',
       'TEAM_GET_LOGS_FOR_TASK',
       'TEAM_GET_MEMBER_LOGS',

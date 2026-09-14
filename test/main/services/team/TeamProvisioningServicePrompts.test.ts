@@ -1366,7 +1366,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
-  it('coalesces codex cross-provider launch overrides into launchTeam Anthropic runtime settings', async () => {
+  it('keeps mixed runtime settings and the full roster in one actionable relaunch prompt', async () => {
     const teamName = 'anthropic-codex-launch-team';
     const teamDir = path.join(tempTeamsBase, teamName);
     fs.mkdirSync(teamDir, { recursive: true });
@@ -1396,7 +1396,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     );
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
-    const { child } = createFakeChild();
+    const { child, writeSpy } = createFakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
     const svc = new TeamProvisioningService();
@@ -1446,6 +1446,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
         cwd: process.cwd(),
         providerId: 'anthropic',
         clearContext: true,
+        prompt: 'Create one new task per teammate for RELAUNCH_OK.txt.',
       } as any,
       () => {}
     );
@@ -1456,6 +1457,15 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(extractBootstrapSpec().members).toEqual([
       expect.objectContaining({ name: 'alice', provider: 'codex' }),
     ]);
+    const prompt = extractPromptFromBootstrapFile();
+    expect(prompt).toContain('Your teammates are EXACTLY: alice, bob. No other teammate exists.');
+    expect(prompt).toContain(
+      'Apply the original user instructions now; do not wait for another user message.'
+    );
+    expect(prompt.split('Create one new task per teammate for RELAUNCH_OK.txt.')).toHaveLength(2);
+    expect(prompt).not.toContain('Do not start work, create tasks, or delegate in this turn.');
+    expect(writeSpy).not.toHaveBeenCalled();
+    expect(spawnCli).toHaveBeenCalledTimes(1);
     const settingsPath = readRuntimeSettingsPathFromLaunchArgs();
     const launchEnv = vi.mocked(spawnCli).mock.calls[0]?.[2]?.env as NodeJS.ProcessEnv;
     expect(launchEnv.CLAUDE_TEAM_RUNTIME_SETTINGS_PATH).toBe(settingsPath);

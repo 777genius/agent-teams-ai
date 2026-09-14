@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
@@ -27,6 +28,7 @@ import {
 } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
@@ -158,6 +160,7 @@ export interface MembersEditorSectionProps {
   modelUnavailableReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   disableAddMember?: boolean;
   addMemberLockReason?: string;
   showWorktreeIsolationControls?: boolean;
@@ -210,6 +213,7 @@ export const MembersEditorSection = ({
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
   disableAddMember = false,
   addMemberLockReason,
   showWorktreeIsolationControls = false,
@@ -524,24 +528,36 @@ export const MembersEditorSection = ({
   const masterRosterControls =
     showWorktreeIsolationControls && !singleMemberMode ? (
       <>
-        <div
-          className="flex min-w-0 items-center gap-2"
-          title={worktreeIsolationDisabledReason ?? undefined}
-        >
-          <Checkbox
-            id={worktreeDefaultControlId}
-            checked={teammateWorktreeDefaultChecked}
-            disabled={worktreeDefaultDisabled}
-            onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-          />
-          <Label
-            htmlFor={worktreeDefaultControlId}
-            className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-          >
-            {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
-            <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
-          </Label>
-        </div>
+        {activeMembers.length > 0 ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Checkbox
+                    id={worktreeDefaultControlId}
+                    checked={teammateWorktreeDefaultChecked}
+                    disabled={worktreeDefaultDisabled}
+                    aria-describedby={`${worktreeDefaultControlId}-description`}
+                    onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+                  />
+                  <Label
+                    htmlFor={worktreeDefaultControlId}
+                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+                  >
+                    {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
+                    <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
+                  </Label>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm text-xs">
+                {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
+              </TooltipContent>
+            </Tooltip>
+            <span id={`${worktreeDefaultControlId}-description`} className="sr-only">
+              {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
+            </span>
+          </>
+        ) : null}
         <div className="flex shrink-0 items-center gap-2">
           <Checkbox
             id={agentTeamsMcpDefaultControlId}
@@ -677,6 +693,7 @@ export const MembersEditorSection = ({
                   modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+                  onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                   providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />

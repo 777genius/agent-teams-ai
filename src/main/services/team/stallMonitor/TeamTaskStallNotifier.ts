@@ -55,6 +55,15 @@ function buildOpenCodeOwnerNudgeText(alert: TaskStallAlert): string {
     id: alert.taskId,
     displayId: alert.displayId,
   });
+  if (alert.remediationKind === 'pending_pickup') {
+    return [
+      `Task ${taskLabel} is assigned to you and nothing is blocking it, but it is still pending on the board - you never started it.`,
+      'Start it now: call task_start for this task, do the work, post the result as a task comment ON THIS TASK, then call task_complete.',
+      'A direct message to the user does not move the board and does not count as doing the task.',
+      'If you cannot start, add a task comment naming the concrete blocker and what you need. Do not reply with an acknowledgement only.',
+      'If prefixed Agent Teams MCP tool names are exposed, use mcp__agent-teams__task_start, mcp__agent-teams__task_add_comment and mcp__agent-teams__task_complete.',
+    ].join('\n');
+  }
   return [
     `Task ${taskLabel} may be stalled after a low-signal progress update.`,
     'Continue the task now. If blocked, add a concrete task comment explaining the blocker and needed input. If done, add a final task comment with the result and complete the task.',
@@ -62,8 +71,21 @@ function buildOpenCodeOwnerNudgeText(alert: TaskStallAlert): string {
   ].join('\n');
 }
 
+/**
+ * Relay outcomes that report `delivered: true` for a message the member already
+ * read, i.e. nothing was sent this time. Treating them as accepted would retire
+ * the alert against a no-op and strand the escalation.
+ */
+const NO_OP_DELIVERY_REASONS = new Set([
+  'opencode_inbox_message_already_read',
+  'opencode_inbox_read_already_committed',
+]);
+
 function isOpenCodeDeliveryAccepted(delivery: OpenCodeTaskStallDelivery): boolean {
   if (delivery.queuedBehindMessageId) {
+    return false;
+  }
+  if (delivery.reason && NO_OP_DELIVERY_REASONS.has(delivery.reason)) {
     return false;
   }
   if (delivery.accepted === true) {
@@ -123,7 +145,10 @@ export class TeamTaskStallNotifier {
         to: owner,
         messageId: args.messageId,
         timestamp: args.timestamp,
-        summary: 'Potential stalled task',
+        summary:
+          args.alert.remediationKind === 'pending_pickup'
+            ? 'Assigned task not started'
+            : 'Potential stalled task',
         text: args.text,
         taskRefs: [args.alert.taskRef],
         actionMode: 'do',

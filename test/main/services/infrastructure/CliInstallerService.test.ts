@@ -76,6 +76,11 @@ vi.mock('@main/services/team/cliFlavor', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: vi.fn(() => ({
+    env: { HOME: '/Users/tester' },
+    connectionIssues: {},
+    providerArgs: [],
+  })),
   buildProviderAwareCliEnv: vi.fn(async () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
@@ -122,6 +127,14 @@ function createTestProviderStatus(
   authenticated: boolean,
   authMethod: string | null
 ): CliProviderStatus {
+  const defaultModel =
+    {
+      anthropic: 'opus',
+      codex: 'gpt-5.4',
+      gemini: 'gemini-2.5-pro',
+      opencode: 'opencode/big-pickle',
+    }[providerId] ?? `${providerId}/default`;
+
   return {
     providerId,
     displayName: providerId,
@@ -129,11 +142,12 @@ function createTestProviderStatus(
     authenticated,
     authMethod,
     verificationState: authenticated ? 'verified' : 'unknown',
+    statusCheckOutcome: 'authoritative',
     modelVerificationState: 'idle',
-    modelCatalogRefreshState: 'idle',
+    modelCatalogRefreshState: 'ready',
     statusMessage: null,
     detailMessage: null,
-    models: [],
+    models: [defaultModel],
     modelAvailability: [],
     runtimeCapabilities: null,
     subscriptionRateLimits: null,
@@ -149,7 +163,32 @@ function createTestProviderStatus(
     externalRuntimeDiagnostics: [],
     backend: null,
     connection: null,
-    modelCatalog: null,
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'static-fallback',
+      status: 'ready',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-08-29T00:10:00.000Z',
+      defaultModelId: defaultModel,
+      defaultLaunchModel: defaultModel,
+      models: [
+        {
+          id: defaultModel,
+          launchModel: defaultModel,
+          displayName: defaultModel,
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'static-fallback',
+        },
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
   };
 }
 
@@ -171,6 +210,44 @@ describe('CliInstallerService', () => {
       showBinaryPath: true,
     });
     service = new CliInstallerService();
+  });
+
+  it('projects cached snapshots without mutating authoritative source evidence', () => {
+    const staleAt = Date.parse('2026-08-29T00:10:00.000Z');
+    const provider = createTestProviderStatus('codex', true, 'chatgpt');
+    provider.modelCatalog = { ...provider.modelCatalog!, staleAt: new Date(staleAt).toISOString() };
+    const source = {
+      flavor: 'agent_teams_orchestrator' as const,
+      displayName: 'Runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      installed: true,
+      installedVersion: '1.0.0',
+      binaryPath: '/fake/runtime',
+      launchError: null,
+      latestVersion: null,
+      updateAvailable: false,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      authMethod: 'chatgpt',
+      providers: [provider],
+    };
+    let now = staleAt - 1;
+    service = new CliInstallerService(() => now);
+    (service as unknown as { latestStatusSnapshot: typeof source }).latestStatusSnapshot = source;
+
+    expect(service.getLatestStatusSnapshot()?.providers[0].capabilities.teamLaunch).toBe(true);
+    now = staleAt;
+    const expired = service.getLatestStatusSnapshot()!;
+    expect(expired.providers[0]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+    });
+    expect(provider.capabilities.teamLaunch).toBe(true);
+    expect(provider.modelCatalog?.status).toBe('ready');
   });
 
   describe('getStatus', () => {
@@ -218,6 +295,222 @@ describe('CliInstallerService', () => {
 
       resolveDiag(null);
       await Promise.resolve();
+    });
+
+    it.each(['success', 'failure'] as const)(
+      'does not replay revoked auth when another aggregate hydration finishes with %s',
+      async (outcome) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+          displayName: 'Runtime',
+          supportsSelfUpdate: false,
+          showVersionDetails: false,
+          showBinaryPath: false,
+        });
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/hydration-runtime');
+        const wireProvider = (providerId: CliProviderId) => {
+          const provider = createTestProviderStatus(providerId, true, 'test-session');
+          return {
+            ...provider,
+            capabilities: { ...provider.capabilities, extensions: {} },
+            runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          };
+        };
+        const reply = (providerId: CliProviderId, provider: unknown) => ({
+          stdout: JSON.stringify({ schemaVersion: 2, providers: { [providerId]: provider } }),
+          stderr: '',
+        });
+        let resolveA!: (value: ReturnType<typeof reply>) => void;
+        let resolveB!: (value: ReturnType<typeof reply>) => void;
+        let rejectB!: (reason: Error) => void;
+        const pendingA = new Promise<ReturnType<typeof reply>>((resolve) => {
+          resolveA = resolve;
+        });
+        const pendingB = new Promise<ReturnType<typeof reply>>((resolve, reject) => {
+          resolveB = resolve;
+          rejectB = reject;
+        });
+        let revoked = false;
+        vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
+          if (args.includes('--version')) return { stdout: '0.0.45', stderr: '' };
+          const providerId = args[args.indexOf('--provider') + 1] as CliProviderId;
+          const full = wireProvider(providerId);
+          if (args.includes('--summary'))
+            return reply(providerId, {
+              ...full,
+              modelCatalog: null,
+              ...(providerId === 'opencode' || (providerId === 'anthropic' && revoked)
+                ? { authenticated: false, authMethod: null, runtimeCapabilities: null }
+                : {}),
+            });
+          return providerId === 'anthropic' ? pendingA : pendingB;
+        });
+        try {
+          const listeners: ((status: import('@shared/types').CliInstallationStatus) => void)[] = [];
+          const nextStatus = (
+            predicate: (status: import('@shared/types').CliInstallationStatus) => boolean
+          ) =>
+            new Promise<import('@shared/types').CliInstallationStatus>((resolve) => {
+              listeners.push((status) => {
+                if (predicate(status)) resolve(status);
+              });
+            });
+          const mockWindow = {
+            isDestroyed: () => false,
+            webContents: {
+              isDestroyed: () => false,
+              send: (_channel: string, progress: import('@shared/types').CliInstallerProgress) => {
+                const status = progress.status;
+                if (progress.type === 'status' && status)
+                  listeners.forEach((listener) => listener(status));
+              },
+            },
+          };
+          service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
+          await service.getStatus();
+          const aReady = nextStatus((status) =>
+            status.providers.some(
+              (provider) => provider.providerId === 'anthropic' && provider.capabilities.teamLaunch
+            )
+          );
+          resolveA(reply('anthropic', wireProvider('anthropic')));
+          await aReady;
+          revoked = true;
+          expect(await service.getProviderStatus('anthropic')).toMatchObject({
+            authenticated: false,
+            capabilities: { teamLaunch: false },
+          });
+          const bFinished = nextStatus((status) =>
+            status.providers.some(
+              (provider) =>
+                provider.providerId === 'codex' &&
+                provider.modelCatalogRefreshState === (outcome === 'success' ? 'ready' : 'error')
+            )
+          );
+          if (outcome === 'success') resolveB(reply('codex', wireProvider('codex')));
+          else rejectB(new Error('Test-only full status unavailable'));
+          const published = await bFinished;
+          for (const snapshot of [published, service.getLatestStatusSnapshot()!]) {
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'anthropic')
+            ).toMatchObject({
+              authenticated: false,
+              authMethod: null,
+              capabilities: { teamLaunch: false },
+            });
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'codex')?.capabilities
+                .teamLaunch
+            ).toBe(outcome === 'success');
+          }
+        } finally {
+          vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
+        }
+      }
+    );
+
+    it('preserves an early full hydration when the aggregate summary promise resolves', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'Runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/hydration-runtime');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '0.0.45', stderr: '' });
+      const ready = createTestProviderStatus('codex', true, 'test-session');
+      const summary = {
+        ...ready,
+        modelCatalog: null,
+        capabilities: { ...ready.capabilities, teamLaunch: false },
+      };
+      const spy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockImplementation(async (_binaryPath, onUpdate) => {
+          onUpdate?.([summary]);
+          onUpdate?.([ready], 'codex');
+          onUpdate?.([summary], 'opencode');
+          onUpdate?.([summary, summary], 'codex');
+          onUpdate?.([], 'codex');
+          expect(service.getLatestStatusSnapshot()?.providers).toHaveLength(1);
+          expect(service.getLatestStatusSnapshot()?.providers[0].capabilities.teamLaunch).toBe(
+            true
+          );
+          return [summary];
+        });
+      try {
+        const result = await service.getStatus();
+        for (const snapshot of [result, service.getLatestStatusSnapshot()!]) {
+          expect(snapshot.providers[0]).toMatchObject({
+            authenticated: true,
+            capabilities: { teamLaunch: true },
+            modelCatalog: { status: 'ready' },
+          });
+          expect(snapshot.authStatusChecking).toBe(false);
+        }
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('does not copy newer runtime authority into an older finishing status gather', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'Runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/old-runtime');
+      vi.mocked(execCli).mockResolvedValue({ stdout: '0.0.45', stderr: '' });
+      let resolveOld!: (providers: CliProviderStatus[]) => void;
+      let started!: () => void;
+      const oldStarted = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const oldProviders = new Promise<CliProviderStatus[]>((resolve) => {
+        resolveOld = resolve;
+      });
+      const newer = createTestProviderStatus('codex', true, 'new-runtime-session');
+      const spy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockImplementation(async (binaryPath) => {
+          if (binaryPath === '/mock/old-runtime') {
+            started();
+            return oldProviders;
+          }
+          return [newer];
+        });
+      try {
+        const oldResult = service.getStatus();
+        await oldStarted;
+        service.invalidateStatusCache();
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/new-runtime');
+        await service.getStatus();
+        resolveOld([createTestProviderStatus('codex', false, null)]);
+        const result = await oldResult;
+        expect(result.binaryPath).toBe('/mock/old-runtime');
+        expect(result.providers.every((provider) => !provider.capabilities.teamLaunch)).toBe(true);
+        expect(
+          result.providers.every((provider) => provider.authMethod !== 'new-runtime-session')
+        ).toBe(true);
+        expect(service.getLatestStatusSnapshot()).toMatchObject({
+          binaryPath: '/mock/new-runtime',
+          providers: [
+            expect.objectContaining({
+              authMethod: 'new-runtime-session',
+              capabilities: expect.objectContaining({ teamLaunch: true }),
+            }),
+          ],
+        });
+      } finally {
+        spy.mockRestore();
+        vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
+      }
     });
 
     it('includes frontend-visible providers in unavailable multimodel bootstrap status', async () => {
@@ -347,6 +640,49 @@ describe('CliInstallerService', () => {
       expect(service.getLatestStatusSnapshot()?.authLoggedIn).toBe(false);
     });
 
+    it('sanitizes stale catalog authority before publishing aggregate authentication', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' });
+      const provider = createTestProviderStatus('opencode', true, 'opencode_managed');
+      provider.runtimeCapabilities = { modelCatalog: { dynamic: true, source: 'runtime' } };
+      provider.modelCatalog = {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'stale',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: 'openai/model',
+        defaultLaunchModel: 'openai/model',
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      };
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockImplementation(
+        async (_binaryPath, onUpdate) => {
+          onUpdate?.([provider]);
+          return [provider];
+        }
+      );
+
+      const status = await service.getStatus();
+
+      expect(status).toMatchObject({ authLoggedIn: true, authMethod: 'opencode_managed' });
+      expect(status.providers[0]).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
+    });
+
     it('defers multimodel provider status probes during lightweight startup status checks', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
@@ -442,15 +778,164 @@ describe('CliInstallerService', () => {
         .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
         .mockResolvedValue(providerStatus);
 
+      await service.getStatus({ providerStatusMode: 'defer' });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockClear();
+      resolveInteractiveShellEnvBestEffortMock.mockClear();
+
       const status = await service.getProviderStatus('codex');
 
-      expect(status).toBe(providerStatus);
+      expect(status).toEqual(providerStatus);
+      expect(status).not.toBe(providerStatus);
       expect(execCli).not.toHaveBeenCalled();
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
       expect(getProviderStatusSpy).toHaveBeenCalledWith(
         '/mock/agent_teams_orchestrator',
         'codex',
         expect.any(Function)
       );
+    });
+
+    it.each(['/mock/old-runtime', '/mock/new-runtime', null])(
+      'rediscovers %s after invalidation without all-provider probes',
+      async (binaryPath) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/old-runtime');
+        await service.getStatus({ providerStatusMode: 'defer' });
+        const provider = createTestProviderStatus('codex', true, 'chatgpt');
+        const scoped = vi
+          .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+          .mockResolvedValue(provider);
+        const all = vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockClear().mockResolvedValue(binaryPath);
+        vi.mocked(execCli).mockClear();
+        service.invalidateStatusCache();
+        expect(service.getLatestStatusSnapshot()).toBeNull();
+        const status = await service.getProviderStatus('codex');
+        expect(ClaudeBinaryResolver.resolve).toHaveBeenCalledTimes(1);
+        expect(all).not.toHaveBeenCalled();
+        expect(execCli).not.toHaveBeenCalled();
+        if (binaryPath) {
+          expect(scoped).toHaveBeenCalledWith(binaryPath, 'codex', expect.any(Function));
+          expect(status).toEqual(provider);
+          expect(service.getLatestStatusSnapshot()).toMatchObject({
+            binaryPath,
+            authLoggedIn: true,
+            authMethod: 'chatgpt',
+          });
+        } else {
+          expect(scoped).not.toHaveBeenCalled();
+          expect(status).toMatchObject({
+            authenticated: false,
+            capabilities: { teamLaunch: false },
+          });
+        }
+        scoped.mockRestore();
+        all.mockRestore();
+      }
+    );
+
+    it('coalesces invalidated discovery and fences an obsolete discovery result', async () => {
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      let resolveOld!: (value: string | null) => void;
+      vi.mocked(ClaudeBinaryResolver.resolve).mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        })
+      );
+      const scoped = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+        .mockImplementation(async (_binary, id) => createTestProviderStatus(id, true, 'chatgpt'));
+      service.invalidateStatusCache();
+      const old = service.getProviderStatus('codex');
+      service.invalidateStatusCache();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/new-runtime');
+      await Promise.all([
+        service.getProviderStatus('codex'),
+        service.getProviderStatus('anthropic'),
+      ]);
+      expect(ClaudeBinaryResolver.resolve).toHaveBeenCalledTimes(2);
+      resolveOld('/mock/old-runtime');
+      expect(await old).toMatchObject({
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
+      expect(scoped).toHaveBeenCalledTimes(2);
+      expect(service.getLatestStatusSnapshot()).toMatchObject({
+        binaryPath: '/mock/new-runtime',
+        authLoggedIn: true,
+      });
+      expect(
+        service.getLatestStatusSnapshot()?.providers.filter((p) => p.authenticated)
+      ).toHaveLength(2);
+      scoped.mockRestore();
+    });
+
+    it.each([false, true])(
+      'publishes peer authority across scoped hydration only without global invalidation (%s)',
+      async (invalidateRuntime) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/runtime');
+        await service.getStatus({ providerStatusMode: 'defer' });
+        const peers = [
+          createTestProviderStatus('anthropic', true, 'oauth_token'),
+          createTestProviderStatus('opencode', true, 'api_key'),
+        ];
+        let hydrateCodex: ((status: CliProviderStatus) => void) | undefined;
+        const scoped = vi
+          .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+          .mockImplementation(async (_binary, providerId, onCatalogUpdate) => {
+            if (providerId === 'codex') hydrateCodex = onCatalogUpdate;
+            return (
+              peers.find((provider) => provider.providerId === providerId) ??
+              createTestProviderStatus('codex', true, 'chatgpt')
+            );
+          });
+        await service.getProviderStatus('anthropic');
+        await service.getProviderStatus('opencode');
+        const window = {
+          isDestroyed: () => false,
+          webContents: { send: vi.fn(), isDestroyed: () => false },
+        };
+        service.setMainWindow(window as unknown as import('electron').BrowserWindow);
+        if (invalidateRuntime) service.invalidateStatusCache();
+        await service.getProviderStatus('codex');
+        expect(hydrateCodex).toBeTypeOf('function');
+        hydrateCodex!(createTestProviderStatus('codex', true, 'chatgpt'));
+        const published = window.webContents.send.mock.calls.at(-1)?.[1];
+        expect(published).toMatchObject({ type: 'status', status: { installed: true } });
+        for (const peer of peers) {
+          expect(published.status.providers).toContainEqual(
+            expect.objectContaining({
+              providerId: peer.providerId,
+              authenticated: !invalidateRuntime,
+              capabilities: expect.objectContaining({ teamLaunch: !invalidateRuntime }),
+            })
+          );
+        }
+        scoped.mockRestore();
+      }
+    );
+
+    it('fails closed without cold runtime or shell discovery on a passive provider refresh', async () => {
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      const getProviderStatusSpy = vi.spyOn(
+        ClaudeMultimodelBridgeService.prototype,
+        'getProviderStatus'
+      );
+
+      const status = await service.getProviderStatus('codex');
+
+      expect(status).toMatchObject({
+        providerId: 'codex',
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+      expect(getProviderStatusSpy).not.toHaveBeenCalled();
     });
 
     it('retries the version probe once before marking the runtime unhealthy', async () => {
@@ -584,6 +1069,7 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
               statusMessage: null,
               models: [],
@@ -599,9 +1085,34 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
+              modelCatalogRefreshState: 'ready',
               statusMessage: null,
               models: ['gpt-5.4', 'gpt-5.4-mini'],
+              modelCatalog: {
+                schemaVersion: 1,
+                providerId: 'codex',
+                source: 'app-server',
+                status: 'ready',
+                fetchedAt: '2026-08-29T00:00:00.000Z',
+                staleAt: '2026-08-29T00:10:00.000Z',
+                defaultModelId: 'gpt-5.4',
+                defaultLaunchModel: 'gpt-5.4',
+                models: [
+                  {
+                    id: 'gpt-5.4',
+                    launchModel: 'gpt-5.4',
+                    displayName: 'GPT-5.4',
+                  },
+                  {
+                    id: 'gpt-5.4-mini',
+                    launchModel: 'gpt-5.4-mini',
+                    displayName: 'GPT-5.4 mini',
+                  },
+                ],
+                diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+              },
               modelAvailability: [],
               canLoginFromUi: true,
               capabilities: { teamLaunch: true, oneShot: true },
@@ -905,7 +1416,7 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
 
-    it('keeps non-empty OpenCode refresh models authoritative while preserving catalog metadata', async () => {
+    it('retains OpenCode catalog display metadata without preserving refresh authority', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       vi.mocked(getCliFlavorUiOptions).mockReturnValue({
@@ -931,6 +1442,7 @@ describe('CliInstallerService', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'idle',
           statusMessage: null,
           detailMessage: null,
@@ -999,6 +1511,7 @@ describe('CliInstallerService', () => {
         authenticated: true,
         authMethod: 'opencode_managed',
         verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
         modelVerificationState: 'idle',
         statusMessage: null,
         detailMessage: null,
@@ -1028,12 +1541,22 @@ describe('CliInstallerService', () => {
       const opencode = latestSnapshot?.providers.find(
         (provider) => provider.providerId === 'opencode'
       );
-      expect(opencode?.models).toEqual(['opencode/big-pickle']);
+      expect(opencode?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
       expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
         'opencode/big-pickle',
         'openai/gpt-5.4',
       ]);
-      expect(opencode?.modelCatalogRefreshState).toBe('ready');
+      expect(opencode).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        capabilities: { teamLaunch: false },
+        modelCatalog: { status: 'stale' },
+        modelCatalogRefreshState: 'loading',
+      });
     });
   });
 
@@ -1202,7 +1725,7 @@ describe('CliInstallerService', () => {
       expect(status.authMethod).toBe('api_key');
     });
 
-    it('returns multimodel metadata before provider status hydration finishes', async () => {
+    it('publishes provider authority when background hydration finishes after the initial wait', async () => {
       allowConsoleLogs();
       vi.useFakeTimers();
 
@@ -1230,7 +1753,7 @@ describe('CliInstallerService', () => {
       const status = await statusPromise;
       expect(status.installed).toBe(true);
       expect(status.installedVersion).toBe('0.0.45');
-      expect(status.authStatusChecking).toBe(true);
+      expect(status.authStatusChecking).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true
       );
@@ -1247,7 +1770,13 @@ describe('CliInstallerService', () => {
       expect(latest?.authStatusChecking).toBe(false);
       expect(latest?.authLoggedIn).toBe(true);
       expect(latest?.authMethod).toBe('oauth_token');
-      expect(status.authStatusChecking).toBe(true);
+      expect(
+        latest?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+      });
+      expect(status.authStatusChecking).toBe(false);
       expect(status.authLoggedIn).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true
@@ -1289,6 +1818,7 @@ describe('CliInstallerService', () => {
 
       service.invalidateStatusCache();
       expect(service.getLatestStatusSnapshot()).toBeNull();
+      expect(ClaudeBinaryResolver.clearCache).toHaveBeenCalled();
       expect(hydrationInvalidationSpy).toHaveBeenCalledTimes(1);
 
       resolveProviders([
@@ -1360,7 +1890,10 @@ describe('CliInstallerService', () => {
         verificationState: 'error',
         statusMessage: 'stale codex state',
       });
-      await staleRefresh;
+      expect(await staleRefresh).toMatchObject({
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
 
       const latestCodex = service
         .getLatestStatusSnapshot()

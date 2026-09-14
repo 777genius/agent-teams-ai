@@ -2,6 +2,7 @@ import { validateMemberName, validateTeamName } from '@main/ipc/guards';
 
 import { executeTeamRuntimeOperation } from './executeTeamRuntimeOperation';
 
+import type { TeamForceStopResult } from '../../../../contracts';
 import type { RetryFailedOpenCodeSecondaryLanesResult } from '../../../../contracts/compatibility/open-code-runtime';
 import type { TeamRuntimeOperationsFeature } from '../../../composition/createTeamRuntimeOperationsFeature';
 import type { TeamRuntimeOperationsIpcEvent } from '../../../composition/TeamRuntimeOperationsIpcBoundary';
@@ -11,7 +12,8 @@ export interface TeamRuntimeCommandIpcHandlers {
   restartMember(
     event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
-    memberName: unknown
+    memberName: unknown,
+    expectedSecondary?: unknown
   ): Promise<IpcResult<void>>;
   retryFailedOpenCodeSecondaryLanes(
     event: TeamRuntimeOperationsIpcEvent,
@@ -23,6 +25,10 @@ export interface TeamRuntimeCommandIpcHandlers {
     memberName: unknown
   ): Promise<IpcResult<void>>;
   stopTeam(event: TeamRuntimeOperationsIpcEvent, teamName: unknown): Promise<IpcResult<void>>;
+  forceStopTeam(
+    event: TeamRuntimeOperationsIpcEvent,
+    teamName: unknown
+  ): Promise<IpcResult<TeamForceStopResult>>;
   killProcess(
     event: TeamRuntimeOperationsIpcEvent,
     teamName: unknown,
@@ -58,13 +64,16 @@ export function createTeamRuntimeCommandIpcHandlers(
   feature: TeamRuntimeOperationsFeature
 ): TeamRuntimeCommandIpcHandlers {
   return {
-    restartMember: async (_event, teamName, memberName) => {
+    restartMember: async (_event, teamName, memberName, expectedSecondary) => {
       const team = validatedTeamName(teamName);
       if (!team.valid) return { success: false, error: team.error };
       const member = validatedMemberName(memberName);
       if (!member.valid) return { success: false, error: member.error };
+      if (expectedSecondary !== undefined && typeof expectedSecondary !== 'boolean') {
+        return { success: false, error: 'Invalid expectedSecondary' };
+      }
       return executeTeamRuntimeOperation(feature.logger, 'restartMember', () =>
-        feature.lifecycle.restartMember(team.value, member.value)
+        feature.lifecycle.restartMember(team.value, member.value, expectedSecondary)
       );
     },
     retryFailedOpenCodeSecondaryLanes: async (_event, teamName) => {
@@ -88,6 +97,13 @@ export function createTeamRuntimeCommandIpcHandlers(
       if (!team.valid) return { success: false, error: team.error };
       return executeTeamRuntimeOperation(feature.logger, 'stop', () =>
         feature.lifecycle.stopTeam(team.value)
+      );
+    },
+    forceStopTeam: async (_event, teamName) => {
+      const team = validatedTeamName(teamName);
+      if (!team.valid) return { success: false, error: team.error };
+      return executeTeamRuntimeOperation(feature.logger, 'forceStop', () =>
+        feature.lifecycle.forceStopTeam(team.value)
       );
     },
     killProcess: async (_event, teamName, pid) => {

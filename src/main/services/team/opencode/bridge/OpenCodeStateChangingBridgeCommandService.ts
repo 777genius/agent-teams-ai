@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 
+import { isLowercaseSha256 } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
+
 import {
   assertBridgeEvidenceCanCommitToRuntimeStores,
   createOpenCodeBridgeIdempotencyKey,
@@ -16,6 +18,14 @@ import {
   validateOpenCodeBridgeHandshake,
 } from './OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
+import { bindLifecycleManifest } from './OpenCodeLifecycleManifestBinding';
+import { validateRuntimeStopData } from './OpenCodeRuntimeStopProtocol';
+import {
+  createStopTarget,
+  recoverRuntimeStop,
+  runtimeStopRequest,
+} from './OpenCodeRuntimeStopRecovery';
+import { assertStopDomainResult } from './OpenCodeStopOutcomeRecovery';
 
 import type {
   OpenCodeBridgeCommandLease,
@@ -47,11 +57,30 @@ export interface OpenCodeBridgeHandshakePort {
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
     cwd?: string;
+    allowEmptyLaneStop?: boolean;
+    selectedModel?: string | null;
+    toolApprovalMode?: 'auto' | 'manual';
+    teamId?: string;
+    laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake>;
 }
 
+export interface OpenCodeLaunchAuthorityWriter {
+  publish(input: {
+    teamName: string;
+    laneId: string | null;
+    runId: string;
+    capabilitySnapshotId: string;
+    behaviorFingerprint: string;
+  }): Promise<void>;
+}
+
 export interface RuntimeStoreManifestReader {
-  read(teamName: string, laneId?: string | null): Promise<RuntimeStoreManifestEvidence>;
+  read(
+    teamName: string,
+    laneId?: string | null,
+    includeSessionIdentity?: boolean
+  ): Promise<RuntimeStoreManifestEvidence>;
 }
 
 export interface OpenCodeStateChangingBridgeDiagnosticsSink {
@@ -65,6 +94,7 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   ledger: OpenCodeBridgeCommandLedger;
   bridge: OpenCodeBridgeCommandExecutor;
   manifestReader: RuntimeStoreManifestReader;
+  launchAuthorityWriter: OpenCodeLaunchAuthorityWriter;
   diagnostics?: OpenCodeStateChangingBridgeDiagnosticsSink;
   requestIdFactory?: () => string;
   diagnosticIdFactory?: () => string;
@@ -79,6 +109,7 @@ export class OpenCodeStateChangingBridgeCommandService {
   private readonly leaseStore: OpenCodeBridgeCommandLeaseStore;
   private readonly ledger: OpenCodeBridgeCommandLedger;
   private readonly bridge: OpenCodeBridgeCommandExecutor;
+  private readonly launchAuthorityWriter: OpenCodeLaunchAuthorityWriter;
   private readonly manifestReader: RuntimeStoreManifestReader;
   private readonly diagnostics: OpenCodeStateChangingBridgeDiagnosticsSink | null;
   private readonly requestIdFactory: () => string;
@@ -94,6 +125,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     this.ledger = options.ledger;
     this.bridge = options.bridge;
     this.manifestReader = options.manifestReader;
+    this.launchAuthorityWriter = options.launchAuthorityWriter;
     this.diagnostics = options.diagnostics ?? null;
     this.requestIdFactory = options.requestIdFactory ?? (() => `opencode-bridge-${randomUUID()}`);
     this.diagnosticIdFactory =
@@ -115,35 +147,100 @@ export class OpenCodeStateChangingBridgeCommandService {
     cwd: string;
     timeoutMs: number;
   }): Promise<OpenCodeBridgeResult<TData>> {
+    assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
     const normalizedLaneId = input.laneId ?? null;
-    const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
+    const manifest = await this.manifestReader.read(
+      input.teamName,
+      normalizedLaneId,
+      input.command === 'opencode.stopTeam'
+    );
+    const { capabilitySnapshotId, body: commandBody } = bindLifecycleManifest(input, manifest);
     const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
       input.command
     );
     const expectedManifestHighWatermark = enforceManifestHighWatermark
       ? manifest.highWatermark
       : null;
+    const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
+      command: input.command,
+      teamName: input.teamName,
+      laneId: normalizedLaneId,
+      runId: input.runId,
+      body: commandBody,
+    });
+    if (input.command === 'opencode.stopTeam') {
+      const existing = await this.ledger.getByIdempotencyKey(idempotencyKey);
+      if (existing) {
+        const lease = await this.acquireLease({
+          teamName: input.teamName,
+          laneId: normalizedLaneId,
+          runId: input.runId,
+          command: input.command,
+          ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
+        });
+        try {
+          const current = await this.manifestReader.read(input.teamName, normalizedLaneId, true);
+          const bound = bindLifecycleManifest(input, current);
+          return await recoverRuntimeStop<TData>({
+            entry: existing,
+            current: createStopTarget(
+              {
+                teamName: input.teamName,
+                laneId: normalizedLaneId,
+                runId: input.runId,
+                capabilitySnapshotId: bound.capabilitySnapshotId,
+                behaviorFingerprint: input.behaviorFingerprint,
+                cwd: input.cwd,
+                body: bound.body,
+              },
+              current
+            ),
+            manifest: current,
+            expectedClient: this.expectedClientIdentity,
+            handshakePort: this.handshakePort,
+            bridge: this.bridge,
+            ledger: this.ledger,
+            timeoutMs: input.timeoutMs,
+          });
+        } finally {
+          await this.leaseStore.release(lease.leaseId);
+        }
+      }
+    }
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
-      expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+      expectedCapabilitySnapshotId: capabilitySnapshotId,
       expectedManifestHighWatermark,
       cwd: input.cwd,
+      teamId: input.teamName,
+      laneId: normalizedLaneId,
+      ...(isRecord(commandBody) && commandBody.allowEmptyLaneStop === true
+        ? { allowEmptyLaneStop: true }
+        : {}),
+      ...(input.command === 'opencode.launchTeam' && isRecord(commandBody)
+        ? {
+            selectedModel:
+              typeof commandBody.selectedModel === 'string' ? commandBody.selectedModel : null,
+            toolApprovalMode:
+              commandBody.skipPermissions === false ? ('manual' as const) : ('auto' as const),
+          }
+        : {}),
     });
     const handshakeValidation = validateOpenCodeBridgeHandshake({
       handshake,
       expectedClient: this.expectedClientIdentity,
       requiredCommand: input.command,
-      expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+      expectedCapabilitySnapshotId: capabilitySnapshotId,
       expectedManifestHighWatermark,
       expectedRunId: input.runId,
       requiresDeliveryAcceptanceContract: requiresOpenCodeDeliveryAcceptanceContract(
         input.command,
-        input.body
+        commandBody
       ),
       requiresVideoFilePartsContract: requiresOpenCodeVideoFilePartsContract(
         input.command,
-        input.body
+        commandBody
       ),
     });
 
@@ -151,13 +248,16 @@ export class OpenCodeStateChangingBridgeCommandService {
       throw new Error(handshakeValidation.reason);
     }
 
-    const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
-      command: input.command,
-      teamName: input.teamName,
-      laneId: normalizedLaneId,
-      runId: input.runId,
-      body: input.body,
-    });
+    if (
+      input.command === 'opencode.stopTeam' &&
+      handshake.stopRecoveryContractVersion !== undefined &&
+      (handshake.stopRecoveryContractVersion !== 1 ||
+        !handshake.acceptedCommands.includes('opencode.stopOutcome') ||
+        !handshake.acceptedCommands.includes('opencode.reconcileStop') ||
+        !handshake.server.bridgeProtocol.supportedCommands.includes('opencode.stopOutcome') ||
+        !handshake.server.bridgeProtocol.supportedCommands.includes('opencode.reconcileStop'))
+    )
+      throw new Error('Unsupported Stop recovery capability/version; reconciliation unknown');
     const commandRequestId = this.requestIdFactory();
     const lease = await this.acquireLease({
       teamName: input.teamName,
@@ -168,16 +268,56 @@ export class OpenCodeStateChangingBridgeCommandService {
     });
 
     try {
-      const bodyWithPreconditions = attachBridgePreconditions(input.body, {
-        handshakeIdentityHash: handshake.identityHash,
-        laneId: normalizedLaneId,
-        expectedRunId: input.runId,
-        expectedCapabilitySnapshotId: input.capabilitySnapshotId,
-        expectedBehaviorFingerprint: input.behaviorFingerprint,
-        expectedManifestHighWatermark,
-        commandLeaseId: lease.leaseId,
-        idempotencyKey,
-      });
+      const stopManifest =
+        input.command === 'opencode.stopTeam'
+          ? await this.manifestReader.read(input.teamName, normalizedLaneId, true)
+          : manifest;
+      const stopTarget =
+        input.command === 'opencode.stopTeam'
+          ? createStopTarget(
+              {
+                teamName: input.teamName,
+                laneId: normalizedLaneId,
+                runId: input.runId,
+                capabilitySnapshotId,
+                behaviorFingerprint: input.behaviorFingerprint,
+                cwd: input.cwd,
+                body: commandBody,
+              },
+              stopManifest
+            )
+          : null;
+      if (
+        stopTarget &&
+        (stopManifest.activeRunId !== manifest.activeRunId ||
+          stopManifest.capabilitySnapshotId !== manifest.capabilitySnapshotId ||
+          stopManifest.sessionIdentityHash !== manifest.sessionIdentityHash)
+      )
+        throw new Error('Stop target changed before dispatch; reconciliation required');
+      // Runtime v1 retains its explicit empty-lane command. It rechecks absence
+      // before effects; empty lanes have no versioned session receipt target.
+      const stopRequest =
+        stopTarget &&
+        handshake.stopRecoveryContractVersion === 1 &&
+        !(isRecord(commandBody) && commandBody.allowEmptyLaneStop === true)
+          ? runtimeStopRequest({ requestId: commandRequestId, idempotencyKey }, stopTarget)
+          : null;
+      const bodyWithPreconditions = attachBridgePreconditions(
+        stopRequest
+          ? { ...(isRecord(commandBody) && commandBody), stopRecovery: stopRequest }
+          : commandBody,
+        {
+          handshakeIdentityHash: handshake.identityHash,
+          laneId: normalizedLaneId,
+          expectedRunId: input.runId,
+          expectedCapabilitySnapshotId: capabilitySnapshotId,
+          expectedBehaviorFingerprint:
+            stopRequest?.target.expectedBehaviorFingerprint ?? input.behaviorFingerprint,
+          expectedManifestHighWatermark,
+          commandLeaseId: lease.leaseId,
+          idempotencyKey,
+        }
+      );
 
       const begin = await this.ledger.begin({
         idempotencyKey,
@@ -186,20 +326,25 @@ export class OpenCodeStateChangingBridgeCommandService {
         teamName: input.teamName,
         laneId: input.laneId,
         runId: input.runId,
+        ...(stopTarget ? { stopTarget } : {}),
         requestHash: stableHash({
           command: input.command,
           teamName: input.teamName,
           laneId: normalizedLaneId,
           runId: input.runId,
-          capabilitySnapshotId: input.capabilitySnapshotId,
+          capabilitySnapshotId: capabilitySnapshotId,
           behaviorFingerprint: input.behaviorFingerprint,
           manifestHighWatermark: expectedManifestHighWatermark,
-          body: input.body,
+          body: commandBody,
         }),
       });
 
       if (begin === 'duplicate_same_payload_completed') {
-        throw new Error('OpenCode bridge command already completed; recover through commandStatus');
+        throw new Error(
+          input.command === 'opencode.stopTeam'
+            ? 'OpenCode bridge command completed concurrently; retry recovery'
+            : 'OpenCode bridge command already completed; recover through commandStatus'
+        );
       }
 
       const result = await this.bridge.execute<typeof bodyWithPreconditions, TData>(
@@ -245,16 +390,48 @@ export class OpenCodeStateChangingBridgeCommandService {
           requestId: commandRequestId,
           command: input.command,
           runId: input.runId,
-          capabilitySnapshotId: input.capabilitySnapshotId,
+          capabilitySnapshotId: capabilitySnapshotId,
           manifest,
           idempotencyKey,
           enforceManifestHighWatermark,
           allowCapabilitySnapshotRecovery: isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt(
             input.command,
-            input.body
+            commandBody
           ),
         });
+        assertLaunchResultBehaviorFingerprint(
+          input.command,
+          input.behaviorFingerprint,
+          result.data
+        );
       } catch (error) {
+        if (
+          isLaunchFingerprintEchoMismatch(
+            input.command,
+            input.behaviorFingerprint,
+            result.data,
+            error
+          )
+        ) {
+          const ambiguousResult = reconciliationRequiredLaunchResult<TData>(result);
+          await this.ledger
+            .markUnknownAfterTimeout({
+              idempotencyKey,
+              error: ambiguousResult.error.message,
+            })
+            .catch(() => undefined); // The existing started ledger entry still fences replay.
+          await this.appendUnknownOutcomeDiagnostic({
+            result: ambiguousResult,
+            teamName: input.teamName,
+            laneId: normalizedLaneId,
+            runId: input.runId,
+            command: input.command,
+            idempotencyKey,
+            leaseId: lease.leaseId,
+          }).catch(() => undefined); // Diagnostic storage cannot make a post-effect outcome terminal.
+          await this.leaseStore.release(lease.leaseId).catch(() => undefined);
+          return ambiguousResult;
+        }
         await this.ledger.markFailed({
           idempotencyKey,
           error: stringifyError(error),
@@ -262,7 +439,49 @@ export class OpenCodeStateChangingBridgeCommandService {
         });
         throw error;
       }
-      await this.ledger.markCompleted({ idempotencyKey, response: result });
+      if (input.command === 'opencode.launchTeam') {
+        try {
+          if (!input.runId || !result.runtime.capabilitySnapshotId || !input.behaviorFingerprint) {
+            throw new Error('Validated OpenCode launch authority is incomplete');
+          }
+          await this.launchAuthorityWriter.publish({
+            teamName: input.teamName,
+            laneId: normalizedLaneId,
+            runId: input.runId,
+            capabilitySnapshotId: result.runtime.capabilitySnapshotId,
+            behaviorFingerprint: input.behaviorFingerprint,
+          });
+        } catch (error) {
+          const ambiguousResult = reconciliationRequiredLaunchResult<TData>(
+            result,
+            `OpenCode launch authority publication failed; reconcile before retry: ${stringifyError(error)}`
+          );
+          await this.ledger
+            .markUnknownAfterTimeout({
+              idempotencyKey,
+              error: ambiguousResult.error.message,
+            })
+            .catch(() => undefined); // The existing started ledger entry still fences replay.
+          await this.appendUnknownOutcomeDiagnostic({
+            result: ambiguousResult,
+            teamName: input.teamName,
+            laneId: normalizedLaneId,
+            runId: input.runId,
+            command: input.command,
+            idempotencyKey,
+            leaseId: lease.leaseId,
+          }).catch(() => undefined); // Diagnostic storage cannot make a post-effect outcome terminal.
+          await this.leaseStore.release(lease.leaseId).catch(() => undefined);
+          return ambiguousResult;
+        }
+      }
+      if (input.command === 'opencode.stopTeam') assertStopDomainResult(result);
+      if (stopRequest) validateRuntimeStopData(result.data, stopRequest);
+      await this.ledger.markCompleted({
+        idempotencyKey,
+        response: result,
+        ...(stopTarget ? { stopRecovery: { target: stopTarget, result } } : {}),
+      });
       await this.leaseStore.release(lease.leaseId);
       return result;
     } catch (error) {
@@ -337,9 +556,38 @@ export class OpenCodeStateChangingBridgeCommandService {
       severity: 'warning',
       message: isOpenCodeBridgeEmptyOutputFailure(input.result)
         ? 'OpenCode bridge command exited without output; outcome must be reconciled before retry'
-        : 'OpenCode bridge command timed out; outcome must be reconciled before retry',
+        : 'OpenCode bridge command outcome must be reconciled before retry',
       createdAt: completedAt,
     });
+  }
+}
+
+function assertLaunchBehaviorFingerprint(
+  command: OpenCodeBridgeCommandName,
+  behaviorFingerprint: string | null,
+  body: unknown
+): void {
+  if (command !== 'opencode.launchTeam') {
+    return;
+  }
+  if (!isLowercaseSha256(behaviorFingerprint)) {
+    throw new Error('OpenCode launch requires a lowercase SHA-256 behavior fingerprint');
+  }
+  if (!isRecord(body) || body.expectedBehaviorFingerprint !== behaviorFingerprint) {
+    throw new Error('OpenCode launch behavior fingerprint does not match its command body');
+  }
+}
+
+function assertLaunchResultBehaviorFingerprint(
+  command: OpenCodeBridgeCommandName,
+  expectedBehaviorFingerprint: string | null,
+  data: unknown
+): void {
+  if (command !== 'opencode.launchTeam') {
+    return;
+  }
+  if (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint) {
+    throw new Error('OpenCode launch result behavior fingerprint mismatch');
   }
 }
 
@@ -400,7 +648,16 @@ function requiresOpenCodeVideoFilePartsContract(
 function commandRequiresRuntimeStoreManifestPrecondition(
   command: OpenCodeBridgeCommandName
 ): boolean {
-  return command !== 'opencode.sendMessage';
+  // App metadata and runtime stores own independent watermarks. Lifecycle commands
+  // are fenced by exact lane/run/capability authority, not cross-domain counters.
+  // Launch binds fresh capability/behavior proof and owned session materialization;
+  // message delivery has its own durable acceptance evidence.
+  return (
+    command !== 'opencode.launchTeam' &&
+    command !== 'opencode.sendMessage' &&
+    command !== 'opencode.stopTeam' &&
+    command !== 'opencode.reconcileTeam'
+  );
 }
 
 export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {
@@ -415,6 +672,48 @@ export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {
 
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isLaunchFingerprintEchoMismatch(
+  command: OpenCodeBridgeCommandName,
+  expectedBehaviorFingerprint: string | null,
+  data: unknown,
+  error: unknown
+): boolean {
+  return (
+    command === 'opencode.launchTeam' &&
+    stringifyError(error) === 'OpenCode launch result behavior fingerprint mismatch' &&
+    (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint)
+  );
+}
+
+function reconciliationRequiredLaunchResult<TData>(
+  result: Extract<OpenCodeBridgeResult<TData>, { ok: true }>,
+  message = 'OpenCode launch result behavior fingerprint mismatch'
+): Extract<OpenCodeBridgeResult<TData>, { ok: false }> {
+  return {
+    ok: false,
+    schemaVersion: result.schemaVersion,
+    requestId: result.requestId,
+    command: result.command,
+    completedAt: result.completedAt,
+    durationMs: result.durationMs,
+    error: {
+      kind: 'contract_violation',
+      message,
+      retryable: false,
+    },
+    diagnostics: [
+      ...result.diagnostics,
+      {
+        type: 'opencode_bridge_unknown_outcome',
+        providerId: 'opencode',
+        severity: 'warning',
+        message,
+        createdAt: result.completedAt,
+      },
+    ],
+  };
 }
 
 function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLeaseError): boolean {

@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const claudeBinaryResolverClearCacheMock = vi.hoisted(() => vi.fn());
@@ -95,7 +97,9 @@ function provider(
     supported: true,
     authenticated: false,
     authMethod: null,
-    verificationState: 'unknown',
+    verificationState: overrides.authenticated && providerId !== 'gemini' ? 'verified' : 'unknown',
+    statusCheckOutcome:
+      overrides.authenticated && providerId !== 'gemini' ? 'authoritative' : 'pending',
     modelVerificationState: 'idle',
     modelCatalogRefreshState: 'idle',
     statusMessage: null,
@@ -170,7 +174,7 @@ describe('cliInstaller IPC handlers', () => {
     vi.clearAllMocks();
   });
 
-  it('does not let explicit hidden Gemini refresh poison cached frontend auth status', async () => {
+  it('revokes passive hidden Gemini authority without poisoning cached frontend status', async () => {
     service.getStatus.mockResolvedValue(
       status([
         provider({ providerId: 'anthropic' }),
@@ -202,7 +206,11 @@ describe('cliInstaller IPC handlers', () => {
       'gemini'
     )) as IpcResult<CliProviderStatus | null>;
     expect(gemini.success).toBe(true);
-    expect(gemini.data?.authenticated).toBe(true);
+    expect(gemini.data).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+    });
 
     const cached = (await ipcMain.invoke(
       CLI_INSTALLER_GET_STATUS
@@ -216,6 +224,76 @@ describe('cliInstaller IPC handlers', () => {
     ]);
     expect(cached.data?.authLoggedIn).toBe(false);
     expect(cached.data?.authMethod).toBeNull();
+  });
+
+  it('retains cached catalog evidence when an authoritative provider summary is still loading', async () => {
+    const previousCatalog = {
+      schemaVersion: 1 as const,
+      providerId: 'opencode' as const,
+      source: 'app-server' as const,
+      status: 'ready' as const,
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
+      defaultModelId: 'opencode/big-pickle',
+      defaultLaunchModel: 'opencode/big-pickle',
+      models: [
+        {
+          id: 'opencode/big-pickle',
+          launchModel: 'opencode/big-pickle',
+          displayName: 'Big Pickle',
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text' as const],
+          supportsPersonality: true,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server' as const,
+        },
+      ],
+      diagnostics: { configReadState: 'ready' as const, appServerState: 'healthy' as const },
+    };
+    service.getStatus.mockResolvedValue(
+      status([
+        provider({
+          providerId: 'opencode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          statusCheckOutcome: 'authoritative',
+          modelCatalogRefreshState: 'ready',
+          models: ['opencode/big-pickle'],
+          modelCatalog: previousCatalog,
+        }),
+      ])
+    );
+    service.getProviderStatus.mockResolvedValue(
+      provider({
+        providerId: 'opencode',
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'loading',
+        models: ['opencode/big-pickle'],
+        modelCatalog: null,
+      })
+    );
+
+    await ipcMain.invoke(CLI_INSTALLER_GET_STATUS);
+    await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode');
+    const cached = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
+    const opencode = cached.data?.providers.find((entry) => entry.providerId === 'opencode');
+
+    expect(opencode).toMatchObject({
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      statusCheckOutcome: 'authoritative',
+      modelCatalogRefreshState: 'loading',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { ...previousCatalog, status: 'stale' },
+    });
   });
 
   it('does not patch the global status cache with a project-scoped OpenCode catalog', async () => {
@@ -247,18 +325,20 @@ describe('cliInstaller IPC handlers', () => {
     )) as IpcResult<CliInstallationStatus>;
 
     expect(scoped.data?.models).toEqual(['ollama/qwen2.5:0.5b']);
+    // The handler resolves the path before it reaches the service, which on
+    // Windows also puts the current drive in front of it.
     expect(service.getProviderStatus).toHaveBeenCalledWith('opencode', {
-      projectPath: '/tmp/project-a',
+      projectPath: path.resolve('/tmp/project-a'),
     });
     expect(cached.data?.providers[0]?.models).toEqual(['opencode/big-pickle']);
     expect(service.getStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('clears Claude and Codex binary resolver caches when status is invalidated', async () => {
+  it('delegates runtime cache invalidation to the service and clears the Codex cache', async () => {
     const result = (await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS)) as IpcResult<void>;
 
     expect(result.success).toBe(true);
-    expect(claudeBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
+    expect(claudeBinaryResolverClearCacheMock).not.toHaveBeenCalled();
     expect(codexBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
     expect(service.invalidateStatusCache).toHaveBeenCalledTimes(1);
   });

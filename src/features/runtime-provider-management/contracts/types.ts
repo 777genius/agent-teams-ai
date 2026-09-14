@@ -1,3 +1,5 @@
+import type { RuntimeErrorDetails } from './errorDiagnostics';
+
 export type RuntimeProviderManagementRuntimeId = 'opencode';
 
 export const RUNTIME_PROVIDER_COMPANION_IDS = ['kiro-cli', 'cursor-agent'] as const;
@@ -337,7 +339,7 @@ export type RuntimeProviderManagementErrorCodeDto =
   | 'model-test-failed'
   | 'unsupported-auth-method';
 
-export interface RuntimeProviderManagementErrorDiagnosticsDto {
+export interface RuntimeProviderManagementErrorDiagnosticsDto extends RuntimeErrorDetails {
   errorCode?: RuntimeProviderManagementErrorCodeDto | null;
   summary: string | null;
   likelyCause: string | null;
@@ -444,6 +446,8 @@ export interface RuntimeProviderManagementModelsDto {
   models: readonly RuntimeProviderModelDto[];
   defaultModelId: string | null;
   diagnostics: readonly string[];
+  /** Optional while older packaged orchestrators are still supported. */
+  catalogState?: 'fresh' | 'stale';
   totalCount?: number;
   returnedCount?: number;
   limit?: number | null;
@@ -548,6 +552,8 @@ export interface RuntimeProviderManagementLoadModelsInput {
   query?: string | null;
   limit?: number | null;
   cursor?: string | null;
+  /** Bypass an app-local completed response cache. It is not forwarded to the runtime CLI. */
+  refresh?: boolean | null;
   /** App-local cancellation group. It is not forwarded to the runtime CLI. */
   requestGroupId?: string | null;
 }
@@ -562,6 +568,10 @@ export interface RuntimeProviderManagementTestModelInput {
 }
 
 export interface RuntimeProviderManagementCancelModelTestInput {
+  requestGroupId: string;
+}
+
+export interface RuntimeProviderManagementCancelModelLoadInput {
   requestGroupId: string;
 }
 
@@ -673,6 +683,12 @@ export interface RuntimeLocalProviderListEntryDto {
   baseUrl: string;
   hasConfiguredApiKey?: boolean;
   configuredModelIds: readonly string[];
+  /**
+   * `options.reasoningEffort` per configured model id, when set in the config.
+   * The coordination probe mirrors it so it exercises the mode OpenCode runs
+   * the model in (a thinking model behaves differently with thinking off).
+   */
+  configuredModelReasoningEffort?: Readonly<Record<string, string>>;
   defaultModelId: string | null;
   /** Selected lightweight-task model when small_model points at this provider. */
   smallModelId?: string | null;

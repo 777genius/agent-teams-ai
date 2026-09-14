@@ -16,7 +16,7 @@ on:
       - 'src/main/utils/pathDecoder.ts'
       - 'tsconfig*.json'
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - '.github/workflows/codex-runtime-smoke.yml'
       - 'package.json'

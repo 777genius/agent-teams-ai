@@ -14,6 +14,7 @@ export const TEAM_CHANGES_UNKNOWN_SCAN_LIMIT = 32;
 export const TEAM_CHANGES_MAX_RENDERED_FILE_ROWS = 300;
 
 interface TeamChangeRequestPlanOptions {
+  retryBackfill?: boolean;
   maxRequests?: number;
   unknownScanLimit?: number;
   satisfiedTaskIds?: ReadonlySet<string>;
@@ -170,6 +171,7 @@ export function buildTeamChangeRequestPlan(
       ...candidate.options,
       summaryOnly: true,
       forceFresh: forceFresh ? true : candidate.options.forceFresh,
+      retryBackfill: options.retryBackfill === true,
     };
     requestOptionsByTaskId.set(candidate.task.id, requestOptions);
     return {

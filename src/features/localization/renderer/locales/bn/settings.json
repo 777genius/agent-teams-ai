@@ -54,19 +54,25 @@
       "choosingAllProjects": "ওভাররাইড নেই এমন প্রকল্পগুলির জন্য একটি মডেল বেছে নিন।",
       "choosingProject": "শুধু {{project}}-এর জন্য একটি মডেল বেছে নিন।",
       "cancelChoosing": "বাতিল করুন",
+      "select": "নির্বাচন করুন",
+      "selected": "নির্বাচিত",
       "testAndUse": "পরীক্ষা করে ব্যবহার করুন",
       "testAndUseAllProjects": "সব প্রকল্পের জন্য পরীক্ষা করে ব্যবহার করুন",
       "testAndUseProject": "এই প্রকল্পের জন্য পরীক্ষা করে ব্যবহার করুন"
     },
     "diagnostics": {
+      "previousPage": "আগের পৃষ্ঠা",
+      "nextPage": "পরের পৃষ্ঠা",
       "copied": "ডায়াগনস্টিক কপি করেছেন",
       "copiedShort": "প্রতিলিপি",
       "copy": "ডায়গনিস্টিক কপি করুন",
+      "copyAll": "সব কপি করুন",
       "hints": "ইঙ্গিত",
       "likelyCause": "হতে পারে:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI অ্যাডমিনিস্ট্রেটর হিসেবে চালান"
     },
     "models": {
+      "testingElapsed": "পরীক্ষার ফলাফলের অপেক্ষায়... {{seconds}} সেকেন্ড",
       "alreadyDefault": "বর্তমানে নির্বাচিত ডিফল্ট মান ।",
       "empty": "কোনো মডেল পাওয়া যায়নি।",
       "emptyFree": "কোন ফ্রি মডেল পাওয়া যায়নি।",

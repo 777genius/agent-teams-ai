@@ -32,6 +32,7 @@ const logger = createLogger('Service:TeamDataWorkerClient');
 const WORKER_CALL_TIMEOUT_MS = 30_000;
 const WORKER_FATAL_RESTART_COOLDOWN_MS = 30_000;
 const SAFE_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+const MAX_TRACKED_ADVISORY_RUN_FLOORS = 64;
 const SAFE_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
 const FATAL_WORKER_ERROR_PATTERNS = [
   'ERR_WORKER_OUT_OF_MEMORY',
@@ -235,6 +236,17 @@ export class TeamDataWorkerClient {
   private getMemberActivityMetaInFlight = new Map<string, Promise<TeamMemberActivityMeta>>();
   private fatalRestartCooldownUntilMs = 0;
   private lastFatalWorkerError: string | null = null;
+  /**
+   * Advisory run-scope floors, mirrored on the main thread.
+   *
+   * The authoritative floor lives in the worker's per-instance run scope, and
+   * every respawn builds a fresh one. Without a replay the new worker would
+   * re-derive advisories from the dead run's delivery ledger and log tails, so
+   * the member card resurrects the previous run's error with its dead
+   * `observedAt`. Keep the latest floor per team here and re-post it before the
+   * first request reaches a newly spawned worker.
+   */
+  private readonly advisoryRunFloorMsByTeam = new Map<string, number>();
 
   private failWorker(worker: Worker, error: Error): void {
     if (this.worker !== worker) return;
@@ -322,7 +334,49 @@ export class TeamDataWorkerClient {
       this.failWorker(w, new Error(`Worker exited with code ${code}`));
     });
 
+    this.replayAdvisoryRunFloors(w);
     return w;
+  }
+
+  /**
+   * A freshly spawned worker starts with an empty run scope. Re-floor it here,
+   * before `processQueue` posts the request that triggered the spawn, so the
+   * first snapshot the new worker serves already excludes dead-run evidence.
+   */
+  private replayAdvisoryRunFloors(worker: Worker): void {
+    for (const [teamName, runStartedAtMs] of this.advisoryRunFloorMsByTeam) {
+      const request: TeamDataWorkerRequest = {
+        id: makeId(),
+        op: 'invalidateMemberRuntimeAdvisory',
+        payload: { teamName, runStartedAtMs },
+      };
+      try {
+        worker.postMessage(request);
+      } catch (error) {
+        logger.warn(
+          `advisory run-scope replay failed team=${teamName} runStartedAtMs=${runStartedAtMs} error=${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return;
+      }
+    }
+  }
+
+  private rememberAdvisoryRunFloor(teamName: string, runStartedAtMs: number): void {
+    if (!Number.isFinite(runStartedAtMs) || runStartedAtMs <= 0) {
+      return;
+    }
+    // Re-insert so the eviction order below stays least-recently-launched first.
+    this.advisoryRunFloorMsByTeam.delete(teamName);
+    this.advisoryRunFloorMsByTeam.set(teamName, Math.floor(runStartedAtMs));
+    while (this.advisoryRunFloorMsByTeam.size > MAX_TRACKED_ADVISORY_RUN_FLOORS) {
+      const oldestKey = this.advisoryRunFloorMsByTeam.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      this.advisoryRunFloorMsByTeam.delete(oldestKey);
+    }
   }
 
   private clearActiveCall(id?: string): void {
@@ -452,21 +506,24 @@ export class TeamDataWorkerClient {
     }
   }
 
+  /** @returns whether the message actually reached a live worker. */
   private postBestEffort(
     op: TeamDataWorkerRequest['op'],
     payload: TeamDataWorkerRequest['payload']
-  ): void {
+  ): boolean {
     const worker = this.worker;
-    if (!worker) return;
+    if (!worker) return false;
     const request = { id: makeId(), op, payload } as TeamDataWorkerRequest;
     try {
       worker.postMessage(request);
+      return true;
     } catch (error) {
       logger.debug(
         `worker best-effort post failed op=${op} payload=${JSON.stringify(
           summarizeWorkerRequest(request)
         )} error=${error instanceof Error ? error.message : String(error)}`
       );
+      return false;
     }
   }
 
@@ -503,6 +560,24 @@ export class TeamDataWorkerClient {
       teamName,
       ...(memberName ? { memberName } : {}),
     });
+  }
+
+  resetMemberRuntimeAdvisoriesForNewRun(teamName: string, runStartedAtMs?: number): void {
+    if (!SAFE_NAME_RE.test(teamName)) return;
+    const runFloorMs = runStartedAtMs ?? Date.now();
+    this.rememberAdvisoryRunFloor(teamName, runFloorMs);
+    const delivered = this.postBestEffort('invalidateMemberRuntimeAdvisory', {
+      teamName,
+      runStartedAtMs: runFloorMs,
+    });
+    if (!delivered) {
+      // Durable: a reset dropped here (fatal-restart cooldown, or a launch that
+      // beats the worker's first read) is the window in which the member card
+      // can still show the previous run, until the replay lands.
+      logger.warn(
+        `advisory run-scope reset not delivered team=${teamName} runStartedAtMs=${runFloorMs} liveWorker=${this.worker !== null} replayOnNextWorkerSpawn=true`
+      );
+    }
   }
 
   async getMessagesPage(
@@ -573,6 +648,7 @@ export class TeamDataWorkerClient {
     this.getTeamDataInFlight.clear();
     this.getMessagesPageInFlight.clear();
     this.getMemberActivityMetaInFlight.clear();
+    this.advisoryRunFloorMsByTeam.clear();
     this.clearActiveCall();
     for (const [, entry] of this.pending) {
       entry.reject(new Error('Client disposed'));

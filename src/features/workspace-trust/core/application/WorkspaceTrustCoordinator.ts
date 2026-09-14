@@ -1,12 +1,11 @@
 import {
-  buildCodexTrustedProjectConfigOverrides,
-  buildCodexWorkspaceTrustSettingsArgs,
   type WorkspaceTrustFeatureFlags,
   type WorkspaceTrustLaunchArgPatch,
   type WorkspaceTrustLaunchArgTargetSurface,
   type WorkspaceTrustProvider,
   type WorkspaceTrustWorkspace,
 } from '../domain';
+import { buildCodexTrustPatches } from '../domain/buildCodexTrustPatches';
 
 import {
   WorkspaceTrustLockCancelledError,
@@ -55,58 +54,12 @@ export interface WorkspaceTrustCoordinator {
   execute(plan: WorkspaceTrustExecutionPlan): Promise<WorkspaceTrustExecutionResult>;
 }
 
-const DEFAULT_CODEX_TARGET_SURFACES: WorkspaceTrustLaunchArgTargetSurface[] = [
-  'primary_provider_args',
-  'cross_provider_member_args',
-  'provider_facts_probe',
-  'default_model_probe',
-];
-
 function providerSet(providers: WorkspaceTrustProvider[]): Set<WorkspaceTrustProvider> {
   return new Set(providers.map((provider) => (provider === 'anthropic' ? 'claude' : provider)));
 }
 
 function requiresClaudeWorkspaceTrustPreflight(providers: WorkspaceTrustProvider[]): boolean {
   return providerSet(providers).has('claude');
-}
-
-function buildCodexPatches(input: {
-  providers: WorkspaceTrustProvider[];
-  workspaces: WorkspaceTrustWorkspace[];
-  targetSurfaces?: WorkspaceTrustLaunchArgTargetSurface[];
-  featureFlags: WorkspaceTrustFeatureFlags;
-}): WorkspaceTrustLaunchArgPatch[] {
-  if (!input.featureFlags.enabled || !input.featureFlags.codexArgs) {
-    return [];
-  }
-  if (!providerSet(input.providers).has('codex')) {
-    return [];
-  }
-
-  const configKeys = input.workspaces.flatMap((workspace) => [
-    workspace.configKeyCwd,
-    workspace.realCwd,
-    ...(workspace.gitRootConfigKey ? [workspace.gitRootConfigKey] : []),
-  ]);
-  const overrides = buildCodexTrustedProjectConfigOverrides(configKeys);
-  const args = buildCodexWorkspaceTrustSettingsArgs(overrides);
-  if (args.length === 0) {
-    return [];
-  }
-
-  const workspaceIds = input.workspaces.map((workspace) => workspace.id);
-  const surfaces = input.targetSurfaces ?? DEFAULT_CODEX_TARGET_SURFACES;
-  return surfaces.map((surface) => ({
-    id: `workspace-trust:codex:${surface}`,
-    owner: 'workspace-trust' as const,
-    targetProvider: 'codex' as const,
-    targetSurface: surface,
-    dialect: 'claude-codex-runtime-settings' as const,
-    args,
-    dedupeKey: `workspace-trust:codex:${surface}:${overrides.join('|')}`,
-    sourceWorkspaceIds: workspaceIds,
-    reason: 'Carry app-owned Codex workspace trust overrides through sibling runtime settings.',
-  }));
 }
 
 export class DefaultWorkspaceTrustCoordinator implements WorkspaceTrustCoordinator {
@@ -119,7 +72,7 @@ export class DefaultWorkspaceTrustCoordinator implements WorkspaceTrustCoordinat
     request: WorkspaceTrustArgsOnlyPlanRequest
   ): Promise<WorkspaceTrustArgsOnlyPlanResult> {
     return {
-      launchArgPatches: buildCodexPatches(request),
+      launchArgPatches: buildCodexTrustPatches(request),
     };
   }
 
@@ -127,7 +80,7 @@ export class DefaultWorkspaceTrustCoordinator implements WorkspaceTrustCoordinat
     return {
       providers: [...providerSet(request.providers)],
       workspaces: request.workspaces,
-      launchArgPatches: buildCodexPatches(request),
+      launchArgPatches: buildCodexTrustPatches(request),
     };
   }
 

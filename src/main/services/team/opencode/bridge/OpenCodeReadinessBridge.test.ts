@@ -1,13 +1,22 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+
+import { prepareCursorAcpLaunchMcpConfig } from '../config/CursorMcpConfigWriter';
 
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
+  type OpenCodeReadinessBridgeOptions,
+} from './OpenCodeReadinessBridge';
+import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
-} from './OpenCodeReadinessBridge';
+} from './OpenCodeReadinessTimeoutPolicy';
 
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
+
+vi.mock('../config/CursorMcpConfigWriter', () => ({
+  prepareCursorAcpLaunchMcpConfig: vi.fn(async () => undefined),
+}));
 
 describe('resolveOpenCodeLaunchTimeoutMs', () => {
   it('keeps the standard launch timeout for regular OpenCode providers', () => {
@@ -23,9 +32,27 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
     ];
 
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'cursor-acp/auto', members })).toBe(
-      270_000
+      600_000
     );
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(270_000);
+  });
+
+  it.each([
+    ['cursor-acp/auto', 0, 300_000],
+    ['cursor-acp/auto', 1, 570_000],
+    ['cursor-acp/auto', 2, 600_000],
+    ['cursor-acp/auto', 20, 600_000],
+    ['kiro/auto', 0, 120_000],
+    ['kiro/auto', 1, 180_000],
+    ['kiro/auto', 20, 600_000],
+    ['openai/gpt-5.4', 20, 120_000],
+  ] as const)('budgets %s with %i teammates', (selectedModel, count, expected) => {
+    const members = Array.from({ length: count }, (_, i) => ({
+      name: `member-${i}`,
+      role: 'developer',
+      prompt: 'fixture',
+    }));
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel, members })).toBe(expected);
   });
 
   it('honors an explicit launch timeout override', () => {
@@ -109,5 +136,59 @@ describe('OpenCodeReadinessBridge project identity', () => {
         configurable: true,
       });
     }
+  });
+});
+
+describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
+  const launchData = { runId: 'run-1', teamLaunchState: 'launched', members: {} };
+  const launchBody = {
+    runId: 'run-1',
+    laneId: 'lane-1',
+    teamName: 'team',
+    projectPath: 'C:\\workspaces\\example',
+    members: [],
+    leadPrompt: 'lead',
+    expectedCapabilitySnapshotId: null,
+    executionProof: { profileRootKey: 'account-1' },
+  } as unknown as Parameters<OpenCodeReadinessBridge['launchOpenCodeTeam']>[0];
+
+  const buildBridge = (
+    options: OpenCodeReadinessBridgeOptions
+  ): { bridge: OpenCodeReadinessBridge; execute: Mock } => {
+    const execute = vi.fn(async () => ({ ok: true, data: launchData }));
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      options
+    );
+    return { bridge, execute };
+  };
+
+  beforeEach(() => {
+    vi.mocked(prepareCursorAcpLaunchMcpConfig).mockClear();
+  });
+
+  it.each(['cursor-acp/auto'])(
+    'leaves global registration untouched when launching %s',
+    async (selectedModel) => {
+      const { bridge, execute } = buildBridge({});
+
+      await expect(bridge.launchOpenCodeTeam({ ...launchBody, selectedModel })).resolves.toEqual(
+        launchData
+      );
+
+      expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+      expect(execute).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('registers nothing when no Agent Teams MCP URL is wired', async () => {
+    const { bridge, execute } = buildBridge({});
+
+    await expect(
+      bridge.launchOpenCodeTeam({ ...launchBody, selectedModel: 'cursor-acp/auto' })
+    ).resolves.toEqual(launchData);
+
+    expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });

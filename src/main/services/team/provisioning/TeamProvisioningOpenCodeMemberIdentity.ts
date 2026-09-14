@@ -15,7 +15,7 @@ import { resolveOpenCodeSoloMemberIdentityFromDirectory } from './TeamProvisioni
 import type {
   OpenCodeMemberDirectory,
   OpenCodeMemberIdentityResolution,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamProviderId } from '@shared/types';
 
 export interface OpenCodeSecondaryRuntimeRunIdentity {

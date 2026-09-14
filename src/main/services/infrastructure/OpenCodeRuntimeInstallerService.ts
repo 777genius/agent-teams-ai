@@ -1,3 +1,8 @@
+import {
+  type OpenCodeBinaryCandidateFailure,
+  type OpenCodeBinaryVersionProbe,
+  probeOpenCodeBinaryVersion,
+} from '@features/runtime-provider-management/main';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
@@ -19,8 +24,30 @@ import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
+import {
+  clearOpenCodeRuntimeResolverCache,
+  getOpenCodeRuntimeResolverCacheGeneration,
+  pathProbeCache,
+  pathProbeInFlight,
+  runtimeBinaryResolveCache,
+  runtimeBinaryResolveInFlight,
+  setPathProbeCacheEntry,
+  setPathProbeInFlight,
+  setRuntimeBinaryResolveCacheEntry,
+  setRuntimeBinaryResolveInFlight,
+  setVersionProbeCacheEntry,
+  setVersionProbeInFlight,
+  versionProbeCache,
+  versionProbeInFlight,
+} from './openCodeRuntimeResolverCache';
+
+import type { VerifiedOpenCodeBinaryProbe } from './openCodeRuntimeResolverCache';
 import type { OpenCodeRuntimeInstallProgress, OpenCodeRuntimeStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
+export {
+  clearOpenCodeRuntimeResolverCache as clearOpenCodeRuntimeBinaryResolverCache,
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
+} from './openCodeRuntimeResolverCache';
 
 const logger = createLogger('OpenCodeRuntimeInstallerService');
 
@@ -219,52 +246,6 @@ function collectVersionedOpenCodeBinaryCandidates(rootPath: string, binSegment =
     });
 }
 
-type OpenCodeBinaryVersionProbe =
-  | { ok: true; version: string | null }
-  | { ok: false; error: string };
-
-type VerifiedOpenCodeBinaryProbe =
-  | { ok: true; binaryPath: string; version: string | null }
-  | { ok: false; firstFailure: { binaryPath: string; error: string } | null };
-
-interface CachedVersionProbe {
-  result: OpenCodeBinaryVersionProbe;
-  cachedAt: number;
-  ttlMs: number;
-}
-
-interface CachedPathProbe {
-  result: VerifiedOpenCodeBinaryProbe;
-  cachedAt: number;
-  ttlMs: number;
-}
-
-interface CachedRuntimeBinaryResolve {
-  binaryPath: string | null;
-  cachedAt: number;
-  ttlMs: number;
-}
-
-const versionProbeCache = new Map<string, CachedVersionProbe>();
-const versionProbeInFlight = new Map<string, Promise<OpenCodeBinaryVersionProbe>>();
-const pathProbeCache = new Map<string, CachedPathProbe>();
-const pathProbeInFlight = new Map<string, Promise<VerifiedOpenCodeBinaryProbe>>();
-const runtimeBinaryResolveCache = new Map<string, CachedRuntimeBinaryResolve>();
-const runtimeBinaryResolveInFlight = new Map<string, Promise<string | null>>();
-let runtimeResolverCacheGeneration = 0;
-
-async function probeOpenCodeBinaryVersion(binaryPath: string): Promise<OpenCodeBinaryVersionProbe> {
-  try {
-    const { stdout } = await execCli(binaryPath, ['--version'], {
-      timeout: VERSION_TIMEOUT_MS,
-      windowsHide: true,
-    });
-    return { ok: true, version: stdout.trim() || null };
-  } catch (error) {
-    return { ok: false, error: getErrorMessage(error) };
-  }
-}
-
 function normalizeBinaryCandidateForCompare(binaryPath: string): string {
   const normalized = path.resolve(binaryPath);
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
@@ -288,11 +269,11 @@ async function probeOpenCodeBinaryVersionCached(
     return inFlight;
   }
 
-  const cacheGeneration = runtimeResolverCacheGeneration;
+  const cacheGeneration = getOpenCodeRuntimeResolverCacheGeneration();
   const request = probeOpenCodeBinaryVersion(binaryPath)
     .then((result) => {
-      if (cacheGeneration === runtimeResolverCacheGeneration) {
-        versionProbeCache.set(cacheKey, {
+      if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
+        setVersionProbeCacheEntry(cacheKey, {
           result,
           cachedAt: Date.now(),
           ttlMs: getVersionProbeTtlMs(result),
@@ -305,14 +286,14 @@ async function probeOpenCodeBinaryVersionCached(
         versionProbeInFlight.delete(cacheKey);
       }
     });
-  versionProbeInFlight.set(cacheKey, request);
+  setVersionProbeInFlight(cacheKey, request);
   return request;
 }
 
 async function probeFirstWorkingOpenCodeBinaryCandidate(
   candidates: string[],
   seen: Set<string>,
-  firstFailure: { binaryPath: string; error: string } | null
+  firstFailure: OpenCodeBinaryCandidateFailure | null
 ): Promise<VerifiedOpenCodeBinaryProbe> {
   let nextFirstFailure = firstFailure;
   for (const binaryPath of candidates) {
@@ -331,6 +312,9 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
         };
       }
       nextFirstFailure ??= {
+        ...(!version.ok
+          ? { diagnostics: { ...version.diagnostics, binarySource: 'path' as const } }
+          : {}),
         binaryPath: launchBinaryPath,
         error: version.ok
           ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
@@ -367,7 +351,7 @@ async function probeFirstWorkingPathOpenCodeBinary(
   options: OpenCodeRuntimeBinaryResolveOptions = {}
 ): Promise<VerifiedOpenCodeBinaryProbe> {
   const seenCandidates = new Set<string>();
-  let firstFailure: { binaryPath: string; error: string } | null = null;
+  let firstFailure: OpenCodeBinaryCandidateFailure | null = null;
 
   const cachedProbe = await probeFirstWorkingOpenCodeBinaryCandidate(
     collectPathOpenCodeBinaryCandidates([], {
@@ -428,11 +412,11 @@ async function probeFirstWorkingPathOpenCodeBinaryCached(
     return inFlight;
   }
 
-  const cacheGeneration = runtimeResolverCacheGeneration;
+  const cacheGeneration = getOpenCodeRuntimeResolverCacheGeneration();
   const request = probeFirstWorkingPathOpenCodeBinary(options)
     .then((result) => {
-      if (cacheGeneration === runtimeResolverCacheGeneration) {
-        pathProbeCache.set(cacheKey, {
+      if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
+        setPathProbeCacheEntry(cacheKey, {
           result,
           cachedAt: Date.now(),
           ttlMs: getPathProbeTtlMs(result),
@@ -445,7 +429,7 @@ async function probeFirstWorkingPathOpenCodeBinaryCached(
         pathProbeInFlight.delete(cacheKey);
       }
     });
-  pathProbeInFlight.set(cacheKey, request);
+  setPathProbeInFlight(cacheKey, request);
   return request;
 }
 
@@ -454,16 +438,6 @@ async function resolveVerifiedPathOpenCodeBinaryPath(
 ): Promise<string | null> {
   const result = await probeFirstWorkingPathOpenCodeBinaryCached(options);
   return result.ok ? result.binaryPath : null;
-}
-
-export function clearOpenCodeRuntimeBinaryResolverCache(): void {
-  runtimeResolverCacheGeneration += 1;
-  versionProbeCache.clear();
-  versionProbeInFlight.clear();
-  pathProbeCache.clear();
-  pathProbeInFlight.clear();
-  runtimeBinaryResolveCache.clear();
-  runtimeBinaryResolveInFlight.clear();
 }
 
 export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
@@ -480,13 +454,13 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
     return inFlight;
   }
 
-  const cacheGeneration = runtimeResolverCacheGeneration;
+  const cacheGeneration = getOpenCodeRuntimeResolverCacheGeneration();
   const request = (async () =>
     (await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()) ??
     (await resolveVerifiedPathOpenCodeBinaryPath(options)))()
     .then((binaryPath) => {
-      if (cacheGeneration === runtimeResolverCacheGeneration) {
-        runtimeBinaryResolveCache.set(cacheKey, {
+      if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
+        setRuntimeBinaryResolveCacheEntry(cacheKey, {
           binaryPath,
           cachedAt: Date.now(),
           ttlMs: getRuntimeBinaryResolveTtlMs(binaryPath),
@@ -499,7 +473,7 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
         runtimeBinaryResolveInFlight.delete(cacheKey);
       }
     });
-  runtimeBinaryResolveInFlight.set(cacheKey, request);
+  setRuntimeBinaryResolveInFlight(cacheKey, request);
   return request;
 }
 
@@ -743,7 +717,7 @@ export class OpenCodeRuntimeInstallerService {
     this.latestStatus = null;
     this.latestStatusAt = 0;
     this.statusPromise = null;
-    clearOpenCodeRuntimeBinaryResolverCache();
+    clearOpenCodeRuntimeResolverCache();
   }
 
   async getStatus(): Promise<OpenCodeRuntimeStatus> {
@@ -859,6 +833,9 @@ export class OpenCodeRuntimeInstallerService {
       version: manifest.version,
       source: 'app-managed',
       state: 'failed',
+      ...(!version.ok
+        ? { diagnostics: { ...version.diagnostics, binarySource: 'app-managed' as const } }
+        : {}),
       error: version.ok
         ? getUnsupportedAgentTeamsOpenCodeVersionMessage(version.version)
         : version.error,
@@ -885,6 +862,7 @@ export class OpenCodeRuntimeInstallerService {
       source: 'path',
       state: 'failed',
       error: result.firstFailure.error,
+      diagnostics: result.firstFailure.diagnostics,
     };
   }
 
@@ -1008,7 +986,7 @@ export class OpenCodeRuntimeInstallerService {
         installedAt: new Date().toISOString(),
       };
       await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`);
-      clearOpenCodeRuntimeBinaryResolverCache();
+      clearOpenCodeRuntimeResolverCache();
 
       const status: OpenCodeRuntimeStatus = {
         installed: true,

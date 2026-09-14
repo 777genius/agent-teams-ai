@@ -46,7 +46,7 @@ export interface TeamChangeStats {
 }
 
 interface TeamChangesLoadOptions {
-  forceFresh?: boolean;
+  retryBackfill?: boolean;
   showSpinner?: boolean;
   preserveOnError?: boolean;
   storeSummaries?: boolean;
@@ -349,7 +349,7 @@ export function useTeamChangesSummaries({
 
   const loadSummaries = useCallback(
     async ({
-      forceFresh = false,
+      retryBackfill = false,
       showSpinner = false,
       preserveOnError = true,
       storeSummaries = true,
@@ -361,7 +361,7 @@ export function useTeamChangesSummaries({
       satisfiedTaskIds,
       stagedRefreshPlan,
     }: TeamChangesLoadOptions = {}): Promise<void> => {
-      if (forceFresh) {
+      if (retryBackfill) {
         autoRefreshBlockedUntilRef.current = 0;
       } else if (autoRefreshBlockedUntilRef.current > Date.now()) {
         return;
@@ -381,7 +381,7 @@ export function useTeamChangesSummaries({
       if (activeRequestSeqRef.current !== null || queuedRefreshOptionsRef.current !== null) {
         const previous = queuedRefreshOptionsRef.current;
         queuedRefreshOptionsRef.current = {
-          forceFresh: Boolean(previous?.forceFresh || forceFresh),
+          retryBackfill: Boolean(previous?.retryBackfill || retryBackfill),
           showSpinner: Boolean(previous?.showSpinner || showSpinner),
           preserveOnError: previous
             ? Boolean(previous.preserveOnError && preserveOnError)
@@ -427,8 +427,8 @@ export function useTeamChangesSummaries({
         }
         return;
       }
-
-      const plan = buildTeamChangeRequestPlan(tasks, unknownScanCursorRef.current, forceFresh, {
+      const plan = buildTeamChangeRequestPlan(tasks, unknownScanCursorRef.current, retryBackfill, {
+        retryBackfill,
         maxRequests,
         unknownScanLimit,
         satisfiedTaskIds,
@@ -462,7 +462,7 @@ export function useTeamChangesSummaries({
       }
       activeRequestSeqRef.current = requestSeq;
       activeRequestOptionsRef.current = {
-        forceFresh,
+        retryBackfill,
         showSpinner,
         preserveOnError,
         storeSummaries,
@@ -604,7 +604,7 @@ export function useTeamChangesSummaries({
             plan.requestOptionsByTaskId
           );
           queuedRefreshOptionsRef.current = {
-            forceFresh,
+            retryBackfill,
             showSpinner: false,
             preserveOnError: true,
             storeSummaries: true,
@@ -804,7 +804,7 @@ export function useTeamChangesSummaries({
 
   const refresh = useCallback(() => {
     void loadSummaries({
-      forceFresh: true,
+      retryBackfill: true,
       showSpinner: true,
       preserveOnError: false,
       maxRequests: TEAM_CHANGES_FIRST_PAINT_REQUESTS,

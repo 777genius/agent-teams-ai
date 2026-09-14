@@ -150,6 +150,7 @@ function createHost(
       calls.push('recordCancelledLaunch');
       return { runId: 'cancelled-run' };
     },
+    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
     resetTeamScopedTransientStateForNewRun: () => {
       calls.push('resetTransientState');
     },
@@ -200,6 +201,9 @@ function createHost(
       calls.push('persistRuntimeResult');
       return { result };
     },
+    deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+      calls.push(`deliverLaunchPrompt:${promptInput.leadName}:${promptInput.prompt}`);
+    },
     syncOpenCodeRuntimeToolApprovals: () => {
       calls.push('syncApprovals');
     },
@@ -230,6 +234,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       appShellBoundary: {
         getOpenCodeRuntimeAdapter: baseHost.getOpenCodeRuntimeAdapter,
       },
+      defaultLaunchStateStore: { beginLaunch: baseHost.beginLaunchPublication },
       launchStateStore: {
         read: baseHost.readLaunchState,
       },
@@ -265,6 +270,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       syncRunMemberSpawnStatusesFromSnapshot: baseHost.syncRunMemberSpawnStatusesFromSnapshot,
       deleteSecondaryRuntimeRun: baseHost.deleteSecondaryRuntimeRun,
       persistOpenCodeRuntimeAdapterLaunchResult: baseHost.persistOpenCodeRuntimeAdapterLaunchResult,
+      deliverOpenCodeLaunchPromptToLead: baseHost.deliverOpenCodeLaunchPromptToLead,
     } satisfies TeamProvisioningOpenCodeLaunchWiringServiceHost<OpenCodeAggregateProvisioningRun>;
     const host = createTeamProvisioningOpenCodeLaunchWiringHostFromService(serviceHost);
 
@@ -321,7 +327,11 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       }),
     } as unknown as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, ({ teamName, runId }) => {
+      expect(host.aliveRuns.get(teamName)).toBe(runId);
+      expect(host.runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(runId);
+      calls.push('registeredInboxWake');
+    });
     const onProgress = vi.fn();
 
     const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({
@@ -343,7 +353,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'progress:validating',
       'resetTransientState',
       'readLaunchState',
-      'clearPersistedLaunchState',
+      'beginLaunchPublication',
       'getLaunchCwd',
       'progress:spawning',
       'adapter.launch',
@@ -351,6 +361,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'syncApprovals',
       'progress:ready',
       'setAliveRun',
+      'registeredInboxWake',
       'invalidateCaches',
       'emit:process:ready',
     ]);
@@ -360,7 +371,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     const calls: string[] = [];
     const adapter = {} as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, ({ teamName, runId }) => {
+      expect(host.aliveRuns.get(teamName)).toBe(runId);
+      calls.push('registeredInboxWake');
+    });
     const alice = member('alice');
     const bob = member('bob');
 
@@ -382,15 +396,19 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'readLaunchState',
       'progress:validating',
       'resetTransientState',
-      'clearPersistedLaunchState',
+      'beginLaunchPublication',
       'invalidateCaches',
       'progress:spawning',
       'launchPrimary',
       'launchSecondary:secondary:opencode:bob',
       'summarizeAggregateState',
       'persistSnapshot:finished',
+      // Proof the port reached the aggregate launch ports, not the
+      // runtime-adapter launch ports next to them.
+      'deliverLaunchPrompt:team-lead:launch',
       'progress:ready',
       'setAliveRun',
+      'registeredInboxWake',
       'invalidateCaches',
       'emit:process:ready',
     ]);
@@ -419,15 +437,21 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       ),
     } as unknown as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    host.runtimeAdapterRunByTeam.set('team-a', {
-      runId: 'newer-run',
-      providerId: 'opencode',
-    });
-    host.aliveRuns.set('team-a', 'newer-run');
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const onRuntimeRegistered = vi.fn();
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, onRuntimeRegistered);
     const artifactModule = await import('../../TeamLaunchFailureArtifactPack');
     const storageModule =
       await import('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader');
+    vi.mocked(storageModule.clearOpenCodeRuntimeLaneStorage).mockImplementationOnce(async () => {
+      // A successor arrives during awaited failure cleanup, after preflight
+      // has retired any previous owner. Keep exercising the ownership CAS below.
+      host.runtimeAdapterRunByTeam.set('team-a', {
+        runId: 'newer-run',
+        providerId: 'opencode',
+      });
+      host.aliveRuns.set('team-a', 'newer-run');
+      return true;
+    });
 
     const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({
       request: request([{ name: 'alice', role: 'Engineer', providerId: 'opencode' }]),
@@ -448,5 +472,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     );
     expect(host.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('newer-run');
     expect(host.aliveRuns.get('team-a')).toBe('newer-run');
+    expect(host.provisioningRunByTeam.has('team-a')).toBe(false);
+    expect(calls).toContain('emit:process:failed');
+    expect(calls).not.toContain('clearPrimaryIfOwned');
+    expect(calls).not.toContain('deleteAliveRun');
+    expect(onRuntimeRegistered).not.toHaveBeenCalled();
   });
 });

@@ -6,13 +6,14 @@ import {
 } from '@features/team-runtime-lanes';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { randomUUID } from 'crypto';
+import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import { createCodexChatGptModelSupportProbe } from './TeamProvisioningCodexChatGptModelGate';
 import { pushUniqueSupportDiagnostics } from './TeamProvisioningDiagnosticsHelpers';
 import {
   isAnthropicDirectCredentialAuthSource,
@@ -23,10 +24,6 @@ import {
   buildEffectiveTeamMemberSpec,
   normalizeTeamMemberProviderId,
 } from './TeamProvisioningMemberSpecs';
-import {
-  normalizeOpenCodePrepareDiagnostic,
-  selectOpenCodePrepareProviderDiagnostic,
-} from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './TeamProvisioningOpenCodeModelPreparation';
 import { isAuthFailureWarning, isQuotaRetryMessage } from './TeamProvisioningOutputErrorPolicy';
 import { createPrepareForProvisioningInFlightKey as buildPrepareForProvisioningInFlightKey } from './TeamProvisioningPrepareCachePolicy';
@@ -38,6 +35,8 @@ import {
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
   validatePrepareCwd as validatePrepareCwdForProvisioning,
   verifySelectedProviderModelsForProvisioning,
+  type VerifySelectedProviderModelsInput,
+  type VerifySelectedProviderModelsResult,
 } from './TeamProvisioningProviderPreflight';
 import {
   cachedProviderProbeResultToProbeResult,
@@ -63,7 +62,6 @@ import type {
   ProviderProbeCachePort,
 } from './TeamProvisioningProviderProbeCache';
 import type {
-  EffortLevel,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
@@ -106,7 +104,8 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
+    providerArgs: string[],
+    diagnosticModel?: string
   ): Promise<{ warning?: string }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
@@ -135,19 +134,9 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     opts: { cwd: string; env: NodeJS.ProcessEnv; timeout: number }
   ): Promise<{ stdout: string }>;
   validatePrepareCwd?(cwd: string): Promise<void>;
-  verifySelectedProviderModels?(input: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    modelIds: string[];
-    modelChecks?: { modelId: string; effort?: EffortLevel }[];
-    limitContext: boolean;
-  }): Promise<{
-    details: string[];
-    warnings: string[];
-    blockingMessages: string[];
-    issues?: TeamProvisioningPrepareIssue[];
-  }>;
+  verifySelectedProviderModels?(
+    input: VerifySelectedProviderModelsInput
+  ): Promise<VerifySelectedProviderModelsResult>;
   resolveProviderDefaultModel?(
     claudePath: string,
     cwd: string,
@@ -156,6 +145,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     providerArgs: string[],
     limitContext: boolean
   ): Promise<string | null>;
+  readOpenCodeProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
   inspectOpenCodeLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
   info(message: string): void;
   warn(message: string): void;
@@ -271,6 +261,7 @@ export class TeamProvisioningPrepareCoordinator {
         : selectedModelIds;
 
       if (providerId === 'opencode') {
+        const verificationMode = opts?.modelVerificationMode ?? 'deep';
         const adapter = this.ports.getOpenCodeRuntimeAdapter();
         if (!adapter) {
           blockingMessages.push(
@@ -278,48 +269,17 @@ export class TeamProvisioningPrepareCoordinator {
           );
           continue;
         }
-
         if (providerSelectedModelIds.length === 0) {
-          const prepare = await adapter.prepare({
-            runId: `prepare-${randomUUID()}`,
-            teamName: '__prepare_opencode__',
-            cwd: targetCwd,
-            providerId: 'opencode',
-            model: undefined,
-            runtimeOnly: true,
-            skipPermissions: true,
-            expectedMembers: [],
-            previousLaunchState: null,
-          });
-          const prepareReason = prepare.ok ? undefined : prepare.reason;
-          details.push(
-            ...prepare.diagnostics.map((diagnostic) =>
-              normalizeOpenCodePrepareDiagnostic(diagnostic, prepareReason)
-            )
-          );
-          warnings.push(
-            ...prepare.warnings.map((warning) =>
-              normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
-            )
-          );
-          pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
-          if (!prepare.ok) {
-            const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
-            blockingMessages.push(
-              providerDiagnostic
-                ? normalizeOpenCodePrepareDiagnostic(providerDiagnostic, prepare.reason)
-                : normalizeOpenCodePrepareDiagnostic(`OpenCode: ${prepare.reason}`, prepare.reason)
-            );
-          }
+          details.push('OpenCode readiness is deferred until launch has a selected model.');
           continue;
         }
-
         const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({
           adapter,
           cwd: targetCwd,
           modelIds: providerSelectedModelIds,
-          verificationMode: opts?.modelVerificationMode ?? 'deep',
+          verificationMode,
           appendPreflightDebugLog,
+          readProviderStatus: this.ports.readOpenCodeProviderStatus,
           inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
         });
         details.push(...openCodeModelPrepare.details);
@@ -329,7 +289,6 @@ export class TeamProvisioningPrepareCoordinator {
         pushUniqueSupportDiagnostics(supportDiagnostics, openCodeModelPrepare.supportDiagnostics);
         continue;
       }
-
       const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
       const probeResult = cached
         ? cachedProviderProbeResultToProbeResult(cached)
@@ -362,6 +321,7 @@ export class TeamProvisioningPrepareCoordinator {
           modelIds: providerSelectedModelIds,
           modelChecks: providerModelChecks,
           limitContext: opts?.limitContext === true,
+          modelVerificationMode: opts?.modelVerificationMode,
         });
         details.push(...modelVerification.details);
         warnings.push(...modelVerification.warnings);
@@ -416,12 +376,17 @@ export class TeamProvisioningPrepareCoordinator {
           warnings.push(prefixedWarning);
           return;
         }
+        const diagnosticModel =
+          providerId === 'codex'
+            ? providerSelectedModelIds.find((model) => !isDefaultProviderModelSelection(model))
+            : undefined;
         const diagnostic = await this.ports.runProviderOneShotDiagnostic(
           probeResult.claudePath,
           targetCwd,
           resolvedEnv.env,
           providerId,
-          resolvedEnv.providerArgs ?? []
+          resolvedEnv.providerArgs ?? [],
+          ...(diagnosticModel ? ([diagnosticModel] as const) : [])
         );
         if (diagnostic.warning) {
           const prefixedWarning =
@@ -529,39 +494,20 @@ export class TeamProvisioningPrepareCoordinator {
     };
   }
 
-  async verifySelectedProviderModels({
-    claudePath,
-    cwd,
-    providerId,
-    modelIds,
-    modelChecks,
-    limitContext,
-  }: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    modelIds: string[];
-    modelChecks?: { modelId: string; effort?: EffortLevel }[];
-    limitContext: boolean;
-  }): Promise<{
-    details: string[];
-    warnings: string[];
-    blockingMessages: string[];
-    issues?: TeamProvisioningPrepareIssue[];
-  }> {
+  async verifySelectedProviderModels(
+    input: VerifySelectedProviderModelsInput
+  ): Promise<VerifySelectedProviderModelsResult> {
     return verifySelectedProviderModelsForProvisioning({
-      claudePath,
-      cwd,
-      providerId,
-      modelIds,
-      modelChecks,
-      limitContext,
+      ...input,
       ports: {
         buildProvisioningEnv: (providerIdForEnv) =>
           this.ports.buildProvisioningEnv(providerIdForEnv),
         readRuntimeProviderLaunchFacts: (params) =>
           this.ports.readRuntimeProviderLaunchFacts(params),
         appendPreflightDebugLog,
+        probeCodexChatGptModelSupport: createCodexChatGptModelSupportProbe({
+          execCli: (binaryPath, args, options) => this.ports.execCli(binaryPath, args, options),
+        }),
       },
     });
   }
@@ -674,7 +620,6 @@ export class TeamProvisioningPrepareCoordinator {
         defaultLaunchModel,
       });
     }
-
     return defaultLaunchModel;
   }
 
@@ -686,6 +631,7 @@ export class TeamProvisioningPrepareCoordinator {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;
@@ -767,6 +713,12 @@ export class TeamProvisioningPrepareCoordinator {
       if (providerId === 'anthropic' || effectiveMember.model?.trim()) {
         effectiveMembers.push(effectiveMember);
         continue;
+      }
+      if (providerId === 'opencode') {
+        throw new Error(
+          'Could not resolve the runtime default model for OpenCode teammates. ' +
+            'Select an explicit model and retry.'
+        );
       }
 
       effectiveMembers.push({

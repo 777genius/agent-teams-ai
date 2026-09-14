@@ -119,6 +119,70 @@ describe('agent-teams-mcp tools', () => {
     };
   }
 
+  it.each(['task_complete', 'task_set_status'])('issue-618 resolves dependencies through %s with owner notices and deduplicated retries', async (completionTool) => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'issue618';
+    writeTeamConfig(claudeDir, teamName, {
+      projectPath: claudeDir,
+      members: [{ name: 'lead', role: 'team-lead' }, { name: 'alice', role: 'developer' }],
+    });
+    const call = async (name: string, args: Record<string, unknown>) =>
+      parseJsonToolResult(await getTool(name).execute({ claudeDir, teamName, ...args }));
+    let sequence = 0;
+    const create = async (blockedBy: string[] = []) =>
+      await call('task_create', { subject: `Disposable dependency test ${++sequence}`, owner: 'alice', blockedBy });
+    const inbox = (owner: string): Array<{ text: string; messageId?: string }> => {
+      const file = path.join(claudeDir, 'teams', teamName, 'inboxes', `${owner}.json`);
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+    const first = await create();
+    const second = await create();
+    const dependent = await create([first.id, second.id]);
+    const protectedCalls: Array<[string, Record<string, unknown>]> = [
+      ['task_start', {}], ['task_complete', {}],
+      ['task_set_status', { status: 'in_progress' }], ['task_set_status', { status: 'completed' }],
+    ];
+    for (const blockerStatus of ['pending', 'in_progress']) {
+      await call('task_set_status', { taskId: first.id, actor: 'alice', status: blockerStatus });
+      const before = fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8');
+      const notices = inbox('alice');
+      for (const [name, args] of protectedCalls) {
+        await expect(call(name, { taskId: dependent.id, actor: 'alice', ...args })).rejects.toThrow('unresolved dependencies');
+      }
+      expect(fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8')).toBe(before);
+      expect(inbox('alice')).toEqual(notices);
+    }
+    const finish = async (taskId: string) => await call(completionTool, { taskId, actor: 'alice', status: 'completed' });
+    await finish(first.id);
+    const partial = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
+    expect(partial).toHaveLength(1);
+    expect(partial[0].text).toContain('Still waiting on:');
+    expect(partial[0].text).not.toContain('task_start');
+    for (const [name, args] of protectedCalls) {
+      await expect(call(name, { taskId: dependent.id, actor: 'alice', ...args })).rejects.toThrow(`#${second.displayId} (pending)`);
+    }
+    await finish(second.id);
+    await finish(second.id);
+    await call('task_complete', { taskId: second.id, actor: 'alice' });
+    await call('task_set_status', { taskId: second.id, actor: 'alice', status: 'completed' });
+    const notices = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
+    expect(notices).toHaveLength(2);
+    expect(notices[1].text).toContain(`task_get { teamName: "${teamName}", taskId: "${dependent.id}" }`);
+    expect(notices[1].text).toContain(`task_start { teamName: "${teamName}", taskId: "${dependent.id}", actor: "alice" }`);
+    expect(inbox('lead').filter((row) => row.text.includes('Dependency resolved'))).toHaveLength(0);
+    const stored = JSON.parse(fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8'));
+    expect(stored.comments.map((comment: { id: string }) => comment.id)).toEqual([
+      `dep-resolved-${first.id}-${dependent.id}`, `dep-resolved-${second.id}-${dependent.id}`,
+    ]);
+    for (const [name, args] of protectedCalls) {
+      expect((await call(name, { taskId: dependent.id, actor: 'alice', ...args })).status).toBe(
+        name === 'task_start' || args.status === 'in_progress' ? 'in_progress' : 'completed'
+      );
+    }
+    await finish(dependent.id);
+    expect(inbox('lead').filter((row) => row.messageId?.startsWith('board-complete:'))).toHaveLength(1);
+  });
+
   it('registers the full expected MCP tool surface', () => {
     expect([...tools.keys()].sort()).toEqual([...AGENT_TEAMS_REGISTERED_TOOL_NAMES].sort());
   });
@@ -854,13 +918,13 @@ describe('agent-teams-mcp tools', () => {
         teamName,
         subject: 'Review MCP adapter',
         owner: 'alice',
-        createdBy: 'ui-fixer',
+        createdBy: 'lead',
         descriptionTaskRefs: [dependencyRef],
         promptTaskRefs: [dependencyRef],
       })
     );
     expect(createdTask.status).toBe('pending');
-    expect(createdTask.historyEvents?.[0]?.actor).toBe('ui-fixer');
+    expect(createdTask.historyEvents?.[0]?.actor).toBe('lead');
     expect(createdTask.descriptionTaskRefs).toEqual([dependencyRef]);
     expect(createdTask.promptTaskRefs).toEqual([dependencyRef]);
 
@@ -1088,7 +1152,11 @@ describe('agent-teams-mcp tools', () => {
       'Use task_list only to search/browse inventory rows, not as your working queue.'
     );
     expect(memberBriefingText).toContain('Review MCP adapter');
-    expect(memberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    // Observed on a live run: the example's hex-looking ids were copied verbatim by an 8B
+    // teammate, and `#efgh5678` rendered as a dead `task://` link.
+    expect(memberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(memberBriefingText).not.toContain('e5f6a7b8');
+    expect(memberBriefingText).not.toContain('efgh5678');
     expect(memberBriefingText).not.toContain('task_get_comment {');
 
     const openCodeMemberBriefing = await getTool('member_briefing').execute({
@@ -1103,7 +1171,9 @@ describe('agent-teams-mcp tools', () => {
     expect(openCodeMemberBriefingText).toContain('agent-teams_message_send');
     expect(openCodeMemberBriefingText).toContain('OpenCode bootstrap silence rule');
     expect(openCodeMemberBriefingText).toContain('stop and wait silently');
-    expect(openCodeMemberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    expect(openCodeMemberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(openCodeMemberBriefingText).not.toContain('e5f6a7b8');
+    expect(openCodeMemberBriefingText).not.toContain('efgh5678');
     expect(openCodeMemberBriefingText).toContain(
       'Never invent placeholder task refs such as #00000000'
     );
@@ -1319,6 +1389,104 @@ describe('agent-teams-mcp tools', () => {
     expect(inboxResolvedBriefingText).not.toContain(
       'Warning: Member metadata was not found in config.json, members.meta.json, or inbox files yet.'
     );
+  });
+
+  it('preserves the raw headless task_create defaults and requires explicit user-origin immediate delivery to the lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'headless-task-create';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'removed-member', role: 'developer' },
+      ],
+    });
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', teamName, 'members.meta.json'),
+      JSON.stringify({
+        version: 1,
+        members: [
+          { name: 'meta-only', role: 'developer' },
+          { name: 'removed-member', removedAt: Date.now() },
+        ],
+      })
+    );
+
+    const leadInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'lead.json');
+    const queuedTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Queue raw headless work',
+        owner: 'lead',
+      })
+    );
+
+    expect(queuedTask.status).toBe('pending');
+    expect(queuedTask.createdBy).toBeUndefined();
+    expect(queuedTask.historyEvents?.[0]?.actor).toBeUndefined();
+    expect(fs.existsSync(leadInboxPath)).toBe(false);
+
+    const taskDir = path.join(claudeDir, 'tasks', teamName);
+    const metaActorTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Accept canonical metadata actor',
+        createdBy: 'META-ONLY',
+      })
+    );
+    expect(metaActorTask.createdBy).toBe('meta-only');
+    expect(metaActorTask.historyEvents?.[0]?.actor).toBe('meta-only');
+
+    const taskFilesBeforeRejectedActor = fs.readdirSync(taskDir);
+    for (const [actorField, actor] of [
+      ['createdBy', 'external-integration'],
+      ['from', 'external-integration'],
+      ['createdBy', 'removed-member'],
+    ] as const) {
+      await expect(
+        getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Reject forged ${actorField} actor`,
+          owner: 'lead',
+          [actorField]: actor,
+          startImmediately: true,
+        })
+      ).rejects.toThrow(
+        `Unknown task actor "${actor}". Use "user" or a configured team member name.`
+      );
+    }
+    expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
+    expect(fs.existsSync(leadInboxPath)).toBe(false);
+
+    const activeTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Deliver raw headless work now',
+        owner: 'lead',
+        createdBy: 'user',
+        startImmediately: true,
+      })
+    );
+
+    expect(activeTask.status).toBe('in_progress');
+    expect(activeTask.createdBy).toBe('user');
+    expect(activeTask.historyEvents?.[0]?.actor).toBe('user');
+    const leadInbox = JSON.parse(fs.readFileSync(leadInboxPath, 'utf8'));
+    expect(leadInbox).toHaveLength(1);
+    expect(leadInbox[0]).toMatchObject({
+      from: 'user',
+      to: 'lead',
+      source: 'system_notification',
+    });
+    expect(leadInbox[0].summary).toContain(`#${activeTask.displayId}`);
+
+    expect(getTool('task_create').description).toContain(
+      'Raw/headless calls do not inject a user actor or auto-start'
+    );
+    expect(getTool('task_create').description).toContain("createdBy: 'user'");
   });
 
   it('uses Codex-native MCP wording for task_create owner notifications', async () => {
@@ -1872,6 +2040,63 @@ describe('agent-teams-mcp tools', () => {
     expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);
   });
 
+  it('tells the model not to resend a deduplicated message', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'dedup-instruction';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+    const send = async (overrides: Record<string, unknown>) =>
+      parseJsonToolResult(
+        await getTool('message_send').execute({
+          claudeDir,
+          teamName,
+          to: 'user',
+          from: 'alice',
+          leadSessionId: 'session-dedup',
+          ...overrides,
+        })
+      );
+
+    const first = await send({ text: 'Report is written to docs/report.md' });
+    expect(first.deduplicated).toBeUndefined();
+
+    const repeat = await send({ text: 'Report is written to docs/report.md' });
+    expect(repeat.deduplicated).toBe(true);
+    expect(repeat.duplicateOfMessageId).toBe(first.messageId);
+    expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
+    expect(repeat.protocolInstruction).toContain('do not resend or rephrase it');
+
+    // Negative control: the dedup branch must not swallow the two instructions
+    // that already existed for delivered messages.
+    const fresh = await send({ text: 'One more finding: the report needs a diagram' });
+    expect(fresh.deduplicated).toBeUndefined();
+    expect(fresh.protocolInstruction).toContain(
+      'do not call message_send again for the same answer'
+    );
+
+    const relayed = await send({
+      text: 'Answering the app-delivered prompt',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'msg-inbound-1',
+    });
+    expect(relayed.deduplicated).toBeUndefined();
+    expect(relayed.protocolInstruction).toContain(
+      'do not call message_send again for the same inbound message'
+    );
+
+    const inboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'user.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Array<{ text: string }>;
+    expect(rows.map((row) => row.text)).toEqual([
+      'Report is written to docs/report.md',
+      'One more finding: the report needs a diagram',
+      'Answering the app-delivered prompt',
+    ]);
+  });
+
   it('uses forced app claude dir over model-supplied claudeDir when configured', async () => {
     const forcedClaudeDir = makeClaudeDir();
     const wrongClaudeDir = makeClaudeDir();
@@ -2028,6 +2253,187 @@ describe('agent-teams-mcp tools', () => {
     expect(reloaded.comments[0].text).toBe('Comment should persist despite broken inbox');
   });
 
+  describe('task_add_comment completion-claim protocol instruction', () => {
+    function setupCommentTeam() {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'completion-claim';
+      fs.mkdirSync(path.join(claudeDir, 'tasks', teamName), { recursive: true });
+      writeTeamConfig(claudeDir, teamName, {
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+          { name: 'bob', role: 'reviewer' },
+        ],
+      });
+      return { claudeDir, teamName };
+    }
+
+    async function createOwnedTask(claudeDir: string, teamName: string, subject: string) {
+      return parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject,
+          owner: 'alice',
+          notifyOwner: false,
+        })
+      );
+    }
+
+    it('tells the owner to call task_complete after a completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Completion claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Implemented the parser in src/app.ts, tests green.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toContain('task_complete');
+      expect(commented.protocolInstruction).toContain(`#${task.displayId}`);
+    });
+
+    it('leaves a pending task untouched until the owner explicitly starts it', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Pending auto-start');
+
+      expect(task.status).toBe('pending');
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Gotovo, spremno za pregled.',
+          from: 'alice',
+        })
+      );
+
+      // A comment records progress but is not an implicit task_start command.
+      expect(commented.task.status).toBe('pending');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent on a plain progress comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Progress note');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Reading src/app.ts now.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when the completion-shaped comment asks a question', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Blocking question');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Should I also update the docs?',
+          from: 'alice',
+        })
+      );
+
+      // The desktop stall monitor classifies this text as blocker_or_clarification,
+      // so the MCP surface must not answer the same comment with "call
+      // task_complete NOW" and close the task with the question unanswered.
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when a non-owner posts the completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Non-owner claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done, looks complete to me.',
+          from: 'bob',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent once the task is already completed', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Already completed');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+      await getTool('task_complete').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'alice',
+      });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('completed');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('keeps the slim task payload after the execute body restructure', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Slim payload');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.commentId).toBeTruthy();
+      expect(commented.comment.text).toBe('All done.');
+      expect(commented.task.commentCount).toBe(1);
+      expect(commented.task.comments).toBeUndefined();
+      expect(commented.task.historyEvents).toBeUndefined();
+      expect(commented.task.workIntervals).toBeUndefined();
+    });
+  });
+
   it('write operations return slim task and task_list returns allowlisted inventory rows', async () => {
     expect(getTool('task_list').description).toContain(
       'Use it to browse, filter, and drill into inventory, not as a primary working queue.'
@@ -2178,6 +2584,20 @@ describe('agent-teams-mcp tools', () => {
         timestamp: '2026-03-15T10:00:00.000Z',
         source: 'user_sent',
       });
+
+      const taskDir = path.join(claudeDir, 'tasks', teamName);
+      await expect(
+        getTool('task_create_from_message').execute({
+          claudeDir,
+          teamName,
+          messageId,
+          subject: 'Reject forged message-task actor',
+          createdBy: 'external-integration',
+        })
+      ).rejects.toThrow(
+        'Unknown task actor "external-integration". Use "user" or a configured team member name.'
+      );
+      expect(fs.readdirSync(taskDir)).toEqual([]);
 
       const created = parseJsonToolResult(
         await getTool('task_create_from_message').execute({

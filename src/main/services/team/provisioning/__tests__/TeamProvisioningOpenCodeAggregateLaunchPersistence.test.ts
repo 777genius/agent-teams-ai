@@ -297,7 +297,18 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       requireTrackedRun: true,
       runId: 'run-1',
     });
-    expect(persisted.result).toBe(result);
+    // A primary-lane member that claims confirmation without a runtime session
+    // id now carries the reason it could not be committed. Nothing else about
+    // the result changes: same state, same phase, same members.
+    expect(persisted.result).toMatchObject({
+      teamLaunchState: 'clean_success',
+      launchPhase: 'finished',
+      diagnostics: ['opencode_bootstrap_session_not_committed:alice:missing_runtime_session_id'],
+    });
+    expect(persisted.result.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      diagnostics: ['opencode_bootstrap_session_not_committed:alice:missing_runtime_session_id'],
+    });
     expect(persisted.snapshot).toMatchObject({
       teamName: 'team-a',
       expectedMembers: ['alice'],
@@ -330,14 +341,22 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     const boundary = new TeamProvisioningLaunchStateStoreBoundary({
       launchStateStore: {
         read: async () => persistedSnapshot,
-        write: async (_teamName, snapshot) => {
+        write: async (_teamName, snapshot, options) => {
           writeCount += 1;
           storeEvents.push(`write:${snapshot.members.alice?.model}`);
           if (writeCount === 1) {
             staleWriteStarted.resolve();
             await staleWriteGate.promise;
           }
+          // The store owns the final authority check inside its publication queue.
+          if (options?.isAuthorized?.() === false) {
+            storeEvents.push(`reject:${snapshot.members.alice?.model}`);
+            expect(persistedSnapshot).toBeNull();
+            return false;
+          }
+          expect(options?.runId).toBe(trackedRunId);
           persistedSnapshot = snapshot;
+          return true;
         },
         clear: async () => {
           storeEvents.push('clear');
@@ -390,7 +409,11 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     staleWriteGate.resolve();
 
     const [, successor] = await Promise.all([stalePersistence, successorPersistence]);
-    expect(storeEvents).toEqual(['write:stale-model', 'clear', 'write:successor-model']);
+    expect(storeEvents).toEqual([
+      'write:stale-model',
+      'reject:stale-model',
+      'write:successor-model',
+    ]);
     expect(persistedSnapshot).toEqual(successor.snapshot);
     expect((persistedSnapshot as PersistedTeamLaunchSnapshot | null)?.members.alice?.model).toBe(
       'successor-model'
@@ -614,7 +637,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       throw new Error('cleanup transport failed');
     });
     const logWarning = vi.fn();
-    const laneIndexWrites: Array<{ state: string; diagnostics?: string[] }> = [];
+    const laneIndexWrites: { state: string; diagnostics?: string[] }[] = [];
     let runtimeOwner:
       | Parameters<LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']>[1]
       | undefined;

@@ -42,8 +42,13 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
 import {
+  registerTeamQueuedUserMessagesIpc,
+  removeTeamQueuedUserMessagesIpc,
+} from './teams/teamQueuedUserMessagesIpc';
+import {
   createDesktopTeamLegacyAdapters,
   type DesktopTeamLegacyAdapterDependencies,
+  executeLegacyTeamHandler,
   registerLegacyTeamProcessIpc,
   removeLegacyTeamProcessIpc,
 } from './teamLegacyAdapters';
@@ -58,9 +63,13 @@ import {
   removeTeamHandlers,
 } from './teams';
 
+import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { TeamProvisioningProgress } from '@shared/types';
 
-export type DesktopTeamFeatureCompositionDependencies = DesktopTeamLegacyAdapterDependencies;
+export interface DesktopTeamFeatureCompositionDependencies
+  extends DesktopTeamLegacyAdapterDependencies {
+  teamScopedResourceReleaser?: TeamScopedResourceReleaser;
+}
 
 export interface DesktopTeamFeatureComposition {
   initializeLegacyHandlers(): void;
@@ -103,7 +112,8 @@ export function createDesktopTeamFeatureComposition(
         dependencies.teamLogSourceTracker,
         dependencies.branchStatusService,
         dependencies.launchIoGovernor,
-        dependencies.teamPermanentDeletionLifecycle
+        dependencies.teamPermanentDeletionLifecycle,
+        dependencies.teamScopedResourceReleaser
       );
     },
     register(ipcMain: IpcMain): void {
@@ -123,6 +133,11 @@ export function createDesktopTeamFeatureComposition(
         createTeamMessageDeliveryIpcMainPort(ipcMain),
         adapters.messageDelivery
       );
+      registerTeamQueuedUserMessagesIpc(
+        ipcMain,
+        dependencies.teamDataService,
+        executeLegacyTeamHandler
+      );
       registerLegacyTeamProcessIpc(ipcMain, adapters.legacyProcess);
       registerTeamRosterMutationIpc(ipcMain, adapters.rosterMutation);
       registerTeamViewReadModelIpc(ipcMain, adapters.viewReadModel);
@@ -141,6 +156,7 @@ export function removeDesktopTeamFeatureComposition(ipcMain: IpcMain): void {
   removeTeamProvisioningIpc(ipcMain);
   removeTeamConfigurationIpc(ipcMain);
   removeTeamMessageDeliveryIpc(createTeamMessageDeliveryIpcMainPort(ipcMain));
+  removeTeamQueuedUserMessagesIpc(ipcMain);
   removeLegacyTeamProcessIpc(ipcMain);
   removeTeamRosterMutationIpc(ipcMain);
   removeTeamViewReadModelIpc(ipcMain);

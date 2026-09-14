@@ -72,7 +72,30 @@
       "externalTeam": "timu ya nje",
       "crossTeamAwaitingReply": "Ujumbe wa timu mtambuka umetumwa, inasubiri jibu",
       "user": "mtumiaji",
-      "awaitingApproval": "inasubiri idhini"
+      "awaitingApproval": "inasubiri idhini",
+      "discardQueued": {
+        "action": "Tupa ujumbe uliopo foleni",
+        "alreadyDelivered": "Hakuna kilichotupwa: ujumbe huo ulikuwa tayari umewasilishwa kwa \"{{member}}\".",
+        "cancelLabel": "Ghairi",
+        "confirmLabel": "Tupa",
+        "count": "{{count}} kwenye foleni",
+        "count_few": "{{count}} kwenye foleni",
+        "count_many": "{{count}} kwenye foleni",
+        "count_one": "{{count}} kwenye foleni",
+        "count_other": "{{count}} kwenye foleni",
+        "failedFallbackMessage": "Hitilafu isiyotarajiwa imetokea",
+        "failedTitle": "Imeshindwa kutupa ujumbe uliopo foleni",
+        "message": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_few": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_many": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_one": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_other": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "okLabel": "Sawa",
+        "remaining": "Umetupa {{discarded}}. Bado kwenye foleni: {{remaining}}.",
+        "resultTitle": "Ujumbe uliopo foleni",
+        "title": "Tupa ujumbe uliopo foleni",
+        "tooltip": "Tupa ujumbe uliopo foleni wa mwanachama huyu"
+      }
     },
     "reply": {
       "replyingTo": "Inajibu",
@@ -312,8 +335,14 @@
       "saved": "Imehifadhiwa"
     },
     "worktree": {
-      "description": "Endesha mwenzako huyu wa timu katika git worktree tofauti. Kukubali/kukataa mabadiliko kunalenga worktree hiyo, si eneo-kazi la kiongozi.",
-      "label": "Worktree"
+      "description": "Ikichaguliwa: mwanatimu huyu anaendeshwa katika worktree tofauti. Worktree iliyopo ikitumiwa tena, inaendelea kwenye tawi lake lililo checkout kwa sasa. Ikiwa worktree haipo, itaundwa wakati wa uzinduzi. Isipochaguliwa: anatumia eneo la kazi la pamoja la mradi. Kuondoa chaguo hakufuti worktree iliyopo.",
+      "label": "Worktree",
+      "existing": "Eneo la kazi la mwisho: {{path}}. Worktree inayosimamiwa itatumika tena ikiwa inapatikana; vinginevyo itaundwa wakati wa uzinduzi.",
+      "new": "Worktree: itatumika tena ikiwa inapatikana, vinginevyo itaundwa wakati wa uzinduzi. Tawi litaonyeshwa baada ya uzinduzi.",
+      "shared": "Eneo la kazi la pamoja la mradi: {{path}}. Linatumia tawi la mradi.",
+      "sharedPending": "Eneo la kazi la pamoja: litaamuliwa wakati wa uzinduzi pamoja na worktree ya kiongozi. Tawi litaonyeshwa baada ya uzinduzi.",
+      "branch": "Tawi la worktree: {{branch}}",
+      "branchUnavailable": "Haipatikani"
     },
     "addMembers": {
       "title": "Ongeza Wanachama",
@@ -333,6 +362,7 @@
       "launch": "Zindua",
       "remove": "Ondoa",
       "stop": "Simamisha",
+      "stopping": "Inasimamisha...",
       "task": "Kazi",
       "visualize": "Onyesha kwa picha",
       "usage": "Matumizi"
@@ -354,6 +384,14 @@
       "member_one": "mwanachama",
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
+    },
+    "stopFailed": {
+      "title": "Imeshindikana kusimamisha timu",
+      "message": "Timu bado inaendelea. Angalia hali yake kisha ubofye Simamisha tena."
+    },
+    "stopUnknown": {
+      "title": "Imeshindikana kuthibitisha kusimamishwa",
+      "message": "Hakuna jibu lililopokelewa kutoka kwa runtime. Onyesha upya hali ya timu kabla ya kujaribu tena."
     },
     "invalidTab": "Kichupo batili cha timu",
     "kanbanSafeData": "Imeshindwa kupakia kanban kikamilifu. Inaonyesha data salama.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Zindua tena timu",
       "relaunching": "Inazindua tena...",
       "saveChanges": "Hifadhi Mabadiliko",
-      "saving": "Inahifadhi..."
+      "saving": "Inahifadhi...",
+      "skipPreflightAndLaunch": "Ruka ukaguzi wa awali na uanzishe"
+    },
+    "workspaceTrust": {
+      "description": "Amri za mradi na seva za MCP zinaweza kuendeshwa timu inapoanza."
     },
     "billing": {
       "prefix": "Kuanzia Juni 15, 2026, Anthropic inalipia",
@@ -1540,6 +1582,11 @@
       "message": "Futa timu \"{{teamName}}\" kwa kudumu? Data zote zitapotea.",
       "confirmLabel": "Futa kabisa",
       "cancelLabel": "Ghairi"
+    },
+    "deleteFailed": {
+      "title": "Imeshindwa kufuta timu",
+      "fallbackMessage": "Hitilafu isiyotarajiwa imetokea",
+      "confirmLabel": "Sawa"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Iwapo saraka haipo, itaundwa kiotomatiki."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Mwenzako wa timu hakujiunga ndani ya muda wa neema wa uzinduzi."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Wanachama",
       "addMember": "Ongeza mwanachama",
       "editAsJson": "Hariri kama JSON",
-      "runInSeparateWorktrees": "Endesha wenzako wa timu katika worktree tofauti",
+      "runInSeparateWorktrees": "Endesha wanatimu wote katika worktrees tofauti",
       "agentTeamsMcpOnly": "Agent Teams MCP pekee",
       "removedCount": "Waliondolewa ({{count}})",
       "removedModelLockReason": "Wanachama walioondolewa wanahifadhiwa kwa historia ya ufutaji laini. Warejeshe ili kuhariri mipangilio.",
-      "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee"
+      "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee",
+      "worktreeDescription": "Imechaguliwa: worktrees tofauti kwa wanatimu wote. Mchanganyiko: kwa wanatimu waliochaguliwa pekee. Haijachaguliwa: eneo la kazi la pamoja la mradi. Kuzima chaguo hili huacha worktrees zilizopo kwenye diski."
     },
     "stats": {
       "computing": "Inakokotoa takwimu...",
@@ -2401,7 +2452,7 @@
   },
   "advancedCli": {
     "title": "Kina",
-    "useWorktree": "Tumia worktree",
+    "useWorktree": "Endesha kiongozi wa timu katika worktree tofauti. Worktrees za wanatimu zinasanidiwa hapo juu.",
     "recent": "Hivi karibuni",
     "commandPreview": "Hakikisho la amri",
     "customArguments": "Hoja maalum",

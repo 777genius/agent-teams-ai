@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
+  mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { useStore } from '@renderer/store';
@@ -11,9 +12,12 @@ import {
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
-import { isTeamProviderModelCatalogSettled } from '@renderer/utils/teamModelAvailability';
+import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+
+export const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
 
 export interface EffectiveCliProviderStatusSnapshot {
   cliStatus: CliInstallationStatus | null;
@@ -21,6 +25,139 @@ export interface EffectiveCliProviderStatusSnapshot {
   providerStatus: CliProviderStatus | null;
   loading: boolean;
   codexSnapshotPending: boolean;
+}
+
+interface ConservativeClockSnapshot {
+  source: unknown;
+  now: number;
+}
+
+/** Revalidates each source before paint without reading the clock during render. */
+function useConservativeNow(source: unknown): readonly [number, (now: number) => void] {
+  const [snapshot, publishSnapshot] = useReducer(
+    (_current: ConservativeClockSnapshot, next: ConservativeClockSnapshot) => next,
+    { source: null, now: Number.POSITIVE_INFINITY }
+  );
+  const publishNow = useCallback((now: number) => publishSnapshot({ source, now }), [source]);
+
+  useLayoutEffect(() => {
+    publishNow(Date.now());
+  }, [publishNow]);
+
+  return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];
+}
+
+export { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
+
+function gateProviderLaunch(provider: CliProviderStatus, now: number): CliProviderStatus {
+  return {
+    ...provider,
+    capabilities: {
+      ...provider.capabilities,
+      teamLaunch: hasEffectiveProviderLaunchAuthority(provider, now),
+    },
+  };
+}
+
+function gateStatusLaunch(status: CliInstallationStatus | null, now: number) {
+  return status
+    ? {
+        ...status,
+        providers: status.providers.map((provider) => gateProviderLaunch(provider, now)),
+      }
+    : null;
+}
+
+/** Keeps renderer launch authority synchronized with exact catalog expiry boundaries. */
+export function useLaunchAuthorityGatedCliStatus(
+  status: CliInstallationStatus | null
+): CliInstallationStatus | null {
+  const [authorityNow, publishAuthorityNow] = useConservativeNow(status);
+  const gatedStatus = useMemo(() => gateStatusLaunch(status, authorityNow), [authorityNow, status]);
+  const nextCatalogStaleAt = gatedStatus?.providers.reduce<number | null>((nearest, provider) => {
+    if (!provider.capabilities.teamLaunch || provider.modelCatalog?.status !== 'ready') {
+      return nearest;
+    }
+    const staleAt = Date.parse(provider.modelCatalog.staleAt);
+    return Number.isFinite(staleAt) &&
+      staleAt > authorityNow &&
+      (nearest === null || staleAt < nearest)
+      ? staleAt
+      : nearest;
+  }, null);
+
+  useEffect(() => {
+    if (nextCatalogStaleAt === null || nextCatalogStaleAt === undefined) {
+      return;
+    }
+
+    let timeoutId: number | null = null;
+    let cancelled = false;
+    const scheduleNextChunk = (): void => {
+      if (cancelled) return;
+      const currentNow = Date.now();
+      const remainingMs = nextCatalogStaleAt - currentNow;
+      if (remainingMs <= 0) {
+        publishAuthorityNow(currentNow);
+        return;
+      }
+      timeoutId = window.setTimeout(
+        scheduleNextChunk,
+        Math.min(remainingMs, MAX_BROWSER_TIMEOUT_MS)
+      );
+    };
+
+    scheduleNextChunk();
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [nextCatalogStaleAt, publishAuthorityNow]);
+
+  return gatedStatus;
+}
+
+/** Resolves one exact project scope without borrowing global catalog or launch authority. */
+export function resolveProjectScopedProviderStatus(
+  providerId: CliProviderId,
+  scopedProviderStatus: CliProviderStatus | null,
+  globalProviderStatus: CliProviderStatus | null,
+  now: number = Date.now(),
+  codexSnapshot: CodexAccountSnapshotDto | null = null
+): CliProviderStatus | null {
+  if (scopedProviderStatus?.providerId === providerId) {
+    // The scoped runtime remains the launch authority. The app-managed Codex
+    // snapshot is shared connection evidence and must be reflected here too,
+    // otherwise the global Ready pill and scoped launch dialog disagree.
+    const scopedWithAccount =
+      providerId === 'codex'
+        ? mergeCodexProviderStatusWithSnapshot(scopedProviderStatus, codexSnapshot)
+        : scopedProviderStatus;
+    const resolved = reconcileCliStatus(undefined, scopedWithAccount);
+    return {
+      ...resolved,
+      capabilities: gateProviderLaunch(scopedWithAccount, now).capabilities,
+    };
+  }
+  if (!globalProviderStatus || globalProviderStatus.providerId !== providerId) {
+    return null;
+  }
+  return reconcileCliStatus(undefined, {
+    ...globalProviderStatus,
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'unknown',
+    statusCheckOutcome: 'pending',
+    statusCheckErrorCode: 'partial_response',
+    models: [],
+    modelAvailability: [],
+    modelCatalog: null,
+    modelCatalogRefreshState: 'loading',
+    capabilities: {
+      ...globalProviderStatus.capabilities,
+      teamLaunch: false,
+    },
+  });
 }
 
 export function useEffectiveCliProviderStatus(
@@ -56,7 +193,19 @@ export function useEffectiveCliProviderStatus(
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
 
-  const effectiveCliStatus = useMemo(() => {
+  const authorityClockSource = useMemo(
+    () => ({
+      loadingCliStatus,
+      codexSnapshot: codexAccount.snapshot,
+      projectPath: options.projectPath,
+      providerId,
+      scopedProviderStatus,
+    }),
+    [codexAccount.snapshot, loadingCliStatus, options.projectPath, providerId, scopedProviderStatus]
+  );
+  const [authorityNow] = useConservativeNow(authorityClockSource);
+
+  const resolvedCliStatus = useMemo(() => {
     const withCodexSnapshot = mergeCodexCliStatusWithSnapshot(
       loadingCliStatus,
       codexAccount.snapshot
@@ -68,66 +217,13 @@ export function useEffectiveCliProviderStatus(
     const globalProvider = withCodexSnapshot.providers.find(
       (provider) => provider.providerId === providerId
     );
-    const scopedProviderFailed =
-      scopedProviderStatus?.verificationState === 'error' ||
-      scopedProviderStatus?.modelCatalogRefreshState === 'error';
-    const scopedProviderNeedsReadinessFallback =
-      scopedProviderStatus?.statusCheckOutcome === 'pending' ||
-      scopedProviderStatus?.statusCheckOutcome === 'transient_error' ||
-      scopedProviderStatus?.statusCheckOutcome === 'model_only';
-    const scopedProviderSettled = Boolean(
-      scopedProviderStatus && isTeamProviderModelCatalogSettled(providerId, scopedProviderStatus)
+    const projectProvider = resolveProjectScopedProviderStatus(
+      providerId,
+      scopedProviderStatus,
+      globalProvider ?? null,
+      authorityNow,
+      codexAccount.snapshot
     );
-    const projectProviderBase = scopedProviderStatus ?? globalProvider ?? null;
-    const catalogFallbackProvider =
-      scopedProviderStatus?.modelCatalog != null ? scopedProviderStatus : (globalProvider ?? null);
-    const canReuseOpenCodeCatalog = Boolean(
-      providerId === 'opencode' && (catalogFallbackProvider?.modelCatalog?.models.length ?? 0) > 0
-    );
-    const projectProviderWithCatalogFallback =
-      projectProviderBase && catalogFallbackProvider && canReuseOpenCodeCatalog
-        ? {
-            ...projectProviderBase,
-            models:
-              projectProviderBase.models.length > 0
-                ? projectProviderBase.models
-                : catalogFallbackProvider.models,
-            modelAvailability:
-              (projectProviderBase.modelAvailability?.length ?? 0) > 0
-                ? projectProviderBase.modelAvailability
-                : catalogFallbackProvider.modelAvailability,
-            modelCatalog: projectProviderBase.modelCatalog ?? catalogFallbackProvider.modelCatalog,
-          }
-        : projectProviderBase;
-    let projectProvider: CliProviderStatus | null = null;
-    if (scopedProviderNeedsReadinessFallback && projectProviderBase) {
-      projectProvider = reconcileCliStatus(
-        undefined,
-        projectProviderWithCatalogFallback ?? projectProviderBase,
-        globalProvider ?? undefined
-      );
-    } else if (scopedProviderSettled) {
-      projectProvider = scopedProviderStatus;
-    } else if (scopedProviderFailed) {
-      projectProvider =
-        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
-          ? projectProviderWithCatalogFallback
-          : scopedProviderStatus;
-    } else if (projectProviderBase) {
-      projectProvider =
-        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
-          ? {
-              ...projectProviderWithCatalogFallback,
-              modelCatalogRefreshState: 'loading',
-            }
-          : {
-              ...projectProviderBase,
-              models: [],
-              modelAvailability: [],
-              modelCatalog: null,
-              modelCatalogRefreshState: 'loading',
-            };
-    }
     if (!projectProvider) {
       return withCodexSnapshot;
     }
@@ -141,11 +237,13 @@ export function useEffectiveCliProviderStatus(
     };
   }, [
     codexAccount.snapshot,
+    authorityNow,
     loadingCliStatus,
     options.projectPath,
     providerId,
     scopedProviderStatus,
   ]);
+  const effectiveCliStatus = useLaunchAuthorityGatedCliStatus(resolvedCliStatus);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,

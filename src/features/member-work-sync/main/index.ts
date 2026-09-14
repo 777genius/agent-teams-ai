@@ -18,7 +18,9 @@ export type {
   MemberWorkSyncHttpUnexpectedErrorMapping,
   MemberWorkSyncHttpUnexpectedErrorPort,
 } from './composition/memberWorkSyncHttpPorts';
+export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
 export {
+  buildWorkSyncHardFailedMembers,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
   hasWorkSyncReachableRuntime,

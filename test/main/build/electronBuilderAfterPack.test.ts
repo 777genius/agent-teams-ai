@@ -8,7 +8,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 const afterPackModule = require('../../../scripts/electron-builder/afterPack.cjs');
 
 const {
+  OPENCODE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
+  isKnownAllowedNativeMismatch,
   parseElf,
   parseMachO,
   parsePortableExecutable,
@@ -390,6 +392,69 @@ describe('electron-builder afterPack', () => {
         archs: ['x64'],
       },
     ]);
+  });
+
+  it('accepts the managed AnyCPU OpenCode console wrapper in Windows bundles', async () => {
+    for (const targetArch of ['x64', 'arm64'] as const) {
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+
+      writeFile(
+        path.join(tempDir, ...OPENCODE_CONSOLE_WRAPPER_PATH.split('/')),
+        createPortableExecutableBuffer('ia32')
+      );
+      writeFile(
+        path.join(tempDir, 'resources', 'runtime', 'claude-multimodel.exe'),
+        createPortableExecutableBuffer(targetArch)
+      );
+
+      await expect(validateNativeBinaries(tempDir, 'win32', targetArch)).resolves.toEqual([]);
+    }
+  });
+
+  it('keeps the console wrapper exception fail-closed', () => {
+    const ia32 = new Set(['ia32']);
+    expect(
+      isKnownAllowedNativeMismatch(
+        OPENCODE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
+        'pe',
+        ia32,
+        'win32'
+      )
+    ).toBe(true);
+    // The same managed binary anywhere else in the bundle is still a mismatch.
+    expect(
+      isKnownAllowedNativeMismatch(
+        path.join('resources', 'runtime', 'opencode.exe'),
+        'pe',
+        ia32,
+        'win32'
+      )
+    ).toBe(false);
+    expect(
+      isKnownAllowedNativeMismatch(
+        path.join('resources', 'app.asar.unpacked', ...OPENCODE_CONSOLE_WRAPPER_PATH.split('/')),
+        'pe',
+        ia32,
+        'win32'
+      )
+    ).toBe(false);
+    expect(
+      isKnownAllowedNativeMismatch(
+        OPENCODE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
+        'pe',
+        new Set(['armv7l']),
+        'win32'
+      )
+    ).toBe(false);
+    expect(
+      isKnownAllowedNativeMismatch(
+        OPENCODE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
+        'pe',
+        ia32,
+        'linux'
+      )
+    ).toBe(false);
   });
 
   it('rejects the x64 terminal addon in an arm64 Windows bundle', async () => {

@@ -1,3 +1,4 @@
+import { buildProviderPrepareAttemptRuntimeSignature } from './providerPrepareAttemptIdentity';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   getProviderPrepareCachedSnapshot,
@@ -72,7 +73,9 @@ export function buildProviderPreparePlans({
       selectedModel: '',
       selectedMemberProviders: [providerId],
       limitContext,
-      runtimeStatusSignature,
+      runtimeStatusSignature: buildProviderPrepareAttemptRuntimeSignature(
+        runtimeProviderStatusById.get(providerId)
+      ),
       modelChecksSignature,
     });
     const cacheKey = buildProviderPrepareModelCacheKey({

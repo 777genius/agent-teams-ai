@@ -1,31 +1,26 @@
-import { request as makeHttpRequest } from 'node:http';
-
-import {
-  type CanonicalListTeamLifecycleResult,
-  TEAM_LIFECYCLE_LIST_ROUTE,
-  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-} from '@features/team-lifecycle';
 import { registerTeamRoutes } from '@main/http/teams';
-import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
 import type { HttpServices } from '@main/http';
-import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
   TeamHttpHandlerApis,
+  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
+  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
+  MemberSpawnStatusesSnapshot,
+  TeamAgentRuntimeSnapshot,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamGetDataOptions,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningProgress,
@@ -68,12 +63,35 @@ describe('HTTP team runtime routes', () => {
         ) => Promise<TeamCreateResponse>
       >();
     const listTeams = vi.fn<() => Promise<TeamSummary[]>>();
-    const getTeamData = vi.fn<(teamName: string) => Promise<TeamViewSnapshot>>();
+    const getTeamData =
+      vi.fn<(teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>>();
     const getSavedRequest = vi.fn<(teamName: string) => Promise<TeamCreateRequest | null>>();
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
+    const renameDraftTeam = vi.fn<(oldTeamName: string, newTeamName: string) => Promise<void>>(() =>
+      Promise.resolve()
+    );
     const resumeTeam = vi.fn<(teamName: string) => void>();
+    const getMemberSpawnStatuses =
+      vi.fn<(teamName: string) => Promise<MemberSpawnStatusesSnapshot>>();
+    const getTeamAgentRuntimeSnapshot =
+      vi.fn<
+        (
+          teamName: string,
+          options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+        ) => Promise<TeamAgentRuntimeSnapshot>
+      >();
+    // The route is write-free by contract, so it may only reach the `...ReadOnly`
+    // members. The mutating names are here purely as tripwires.
+    const getMemberSpawnStatusesWriting = vi.fn<(teamName: string) => Promise<never>>();
+    const getTeamAgentRuntimeSnapshotWriting = vi.fn<(teamName: string) => Promise<never>>();
+    const teamMemberDiagnosticsApi = {
+      getMemberSpawnStatusesReadOnly: getMemberSpawnStatuses,
+      getTeamAgentRuntimeSnapshotReadOnly: getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatuses: getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshot: getTeamAgentRuntimeSnapshotWriting,
+    } as TeamHttpMemberDiagnosticsApi;
     const teamProvisioningStartApi = {
       createTeam,
       launchTeam,
@@ -89,27 +107,30 @@ describe('HTTP team runtime routes', () => {
       stopTeam,
       getAliveTeams,
     } satisfies TeamHttpRuntimeApi;
-    const teamRuntimeIngressApi = {
-      recordRuntimeBootstrapCheckin: recordOpenCodeRuntimeBootstrapCheckin,
-      deliverRuntimeMessage: deliverOpenCodeRuntimeMessage,
-      recordRuntimeTaskEvent: recordOpenCodeRuntimeTaskEvent,
-      recordRuntimeHeartbeat: recordOpenCodeRuntimeHeartbeat,
-    } satisfies TeamApplicationRuntimeIngressApi;
+    const teamRuntimeControlApi = {
+      recordOpenCodeRuntimeBootstrapCheckin,
+      deliverOpenCodeRuntimeMessage,
+      recordOpenCodeRuntimeTaskEvent,
+      recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
+    } satisfies TeamRuntimeControlCompatibilityApi;
     const teamDataApi = {
       listTeams,
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      renameDraftTeam,
     } as Pick<
       TeamHttpDataApi,
-      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
+      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig' | 'renameDraftTeam'
     > as HttpServices['teamDataApi'];
     const teamApis = {
       provisioningStart: teamProvisioningStartApi,
       provisioningStatus: teamProvisioningStatusApi,
       taskActivity: teamTaskActivityRepairApi,
       runtime: teamRuntimeApi,
-      runtimeIngress: teamRuntimeIngressApi,
+      runtimeControl: teamRuntimeControlApi,
+      memberDiagnostics: teamMemberDiagnosticsApi,
     } satisfies TeamHttpHandlerApis;
 
     const services = {
@@ -145,7 +166,12 @@ describe('HTTP team runtime routes', () => {
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      renameDraftTeam,
       resumeTeam,
+      getMemberSpawnStatuses,
+      getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshotWriting,
     };
   }
 
@@ -156,175 +182,6 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
     return { app, ...mocks };
   }
-
-  it('returns the canonical team lifecycle read envelope and contains host failures', async () => {
-    const app = Fastify();
-    const mocks = createServicesMock();
-    const success = {
-      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-      kind: 'success',
-      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
-      items: [
-        {
-          workspaceId: parseWorkspaceId(`workspace_${'b'.repeat(32)}`),
-          teamId: parseTeamId(`team_${'c'.repeat(32)}`),
-          displayName: 'demo-team',
-          lifecycle: 'ready',
-          revision: parseRevision(`revision_${'d'.repeat(64)}`),
-        },
-      ],
-      nextCursor: null,
-    } satisfies CanonicalListTeamLifecycleResult;
-    const teamLifecycleReadHost = {
-      listTeamLifecycle: vi.fn(() => Promise.resolve(success)),
-    } satisfies TeamLifecycleReadHost;
-    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
-    await app.ready();
-
-    try {
-      const response = await app.inject({
-        method: 'POST',
-        url: TEAM_LIFECYCLE_LIST_ROUTE,
-        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
-      });
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual(success);
-
-      teamLifecycleReadHost.listTeamLifecycle.mockRejectedValueOnce(
-        new Error('private identity storage diagnostic')
-      );
-      const failure = await app.inject({
-        method: 'POST',
-        url: TEAM_LIFECYCLE_LIST_ROUTE,
-        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
-      });
-      expect(failure.statusCode).toBe(200);
-      expect(failure.json()).toEqual({
-        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-        kind: 'failure',
-        error: { code: 'unavailable', reason: 'transport_unavailable' },
-        retryable: true,
-      });
-      expect(failure.body).not.toContain('private identity storage diagnostic');
-    } finally {
-      await app.close();
-    }
-  });
-
-  it('aborts a disconnected team lifecycle read before later filesystem or runtime work', async () => {
-    const app = Fastify();
-    const mocks = createServicesMock();
-    const success = {
-      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-      kind: 'success',
-      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
-      items: [],
-      nextCursor: null,
-    } satisfies CanonicalListTeamLifecycleResult;
-    const filesystemWork = vi.fn();
-    const runtimeWork = vi.fn();
-    let receivedSignal: AbortSignal | undefined;
-    let resolveStarted!: () => void;
-    let resolveFinished!: () => void;
-    const started = new Promise<void>((resolve) => {
-      resolveStarted = resolve;
-    });
-    const finished = new Promise<void>((resolve) => {
-      resolveFinished = resolve;
-    });
-    const teamLifecycleReadHost = {
-      listTeamLifecycle: vi.fn(async (_request: unknown, signal?: AbortSignal) => {
-        receivedSignal = signal;
-        resolveStarted();
-        try {
-          if (!signal) throw new Error('missing request signal');
-          await new Promise<void>((resolve) => {
-            if (signal.aborted) {
-              resolve();
-              return;
-            }
-            signal.addEventListener('abort', () => resolve(), { once: true });
-          });
-          if (!signal.aborted) {
-            filesystemWork();
-            runtimeWork();
-          }
-          return success;
-        } finally {
-          resolveFinished();
-        }
-      }),
-    } satisfies TeamLifecycleReadHost;
-    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
-    await app.listen({ host: '127.0.0.1', port: 0 });
-    const address = app.server.address();
-    if (!address || typeof address === 'string') {
-      await app.close();
-      throw new Error('test server address unavailable');
-    }
-    const payload = JSON.stringify({ schemaVersion: 1, cursor: null, expectedRevision: null });
-    const clientRequest = makeHttpRequest({
-      hostname: '127.0.0.1',
-      port: address.port,
-      path: TEAM_LIFECYCLE_LIST_ROUTE,
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(payload),
-      },
-    });
-    clientRequest.on('error', () => undefined);
-
-    try {
-      clientRequest.end(payload);
-      await started;
-      clientRequest.destroy();
-      await finished;
-
-      expect(receivedSignal?.aborted).toBe(true);
-      expect(filesystemWork).not.toHaveBeenCalled();
-      expect(runtimeWork).not.toHaveBeenCalled();
-    } finally {
-      clientRequest.destroy();
-      await app.close();
-    }
-  });
-
-  it('detaches team lifecycle read listeners without aborting a normal completion', async () => {
-    const app = Fastify();
-    const mocks = createServicesMock();
-    const success = {
-      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-      kind: 'success',
-      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
-      items: [],
-      nextCursor: null,
-    } satisfies CanonicalListTeamLifecycleResult;
-    let receivedSignal: AbortSignal | undefined;
-    const teamLifecycleReadHost = {
-      listTeamLifecycle: vi.fn((_request: unknown, signal?: AbortSignal) => {
-        receivedSignal = signal;
-        return Promise.resolve(success);
-      }),
-    } satisfies TeamLifecycleReadHost;
-    registerTeamRoutes(app, { ...mocks.services, teamLifecycleReadHost });
-    await app.ready();
-
-    try {
-      const payload = { schemaVersion: 1, cursor: null, expectedRevision: null };
-      const response = await app.inject({
-        method: 'POST',
-        url: TEAM_LIFECYCLE_LIST_ROUTE,
-        payload,
-      });
-      expect(response.statusCode).toBe(200);
-      expect(teamLifecycleReadHost.listTeamLifecycle).toHaveBeenCalledWith(payload, receivedSignal);
-      expect(receivedSignal?.aborted).toBe(false);
-    } finally {
-      await app.close();
-    }
-    expect(receivedSignal?.aborted).toBe(false);
-  });
 
   it('lists, gets, and creates draft teams through team data service', async () => {
     const { app, listTeams, getTeamData, createTeamConfig, resumeTeam } = await createApp();
@@ -491,17 +348,6 @@ describe('HTTP team runtime routes', () => {
       });
       expect(getTeamData).toHaveBeenCalledWith('demo-team');
       expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
-
-      getRuntimeState.mockRejectedValueOnce(new Error('runtime read failed'));
-      const fallbackResponse = await app.inject({
-        method: 'GET',
-        url: '/api/teams/demo-team',
-      });
-      expect(fallbackResponse.statusCode).toBe(200);
-      expect(fallbackResponse.json()).toMatchObject({
-        teamName: 'demo-team',
-        isAlive: false,
-      });
     } finally {
       await app.close();
     }
@@ -824,6 +670,97 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('renames the draft directory before create when launch carries the final team name', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam, resumeTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-renamed' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'fixteam-test',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ runId: 'run-renamed' });
+      expect(renameDraftTeam).toHaveBeenCalledWith('signal-ops', 'fixteam-test');
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'fixteam-test', cwd: '/Users/test/project' }),
+        expect.any(Function)
+      );
+      expect(resumeTeam).toHaveBeenCalledWith('fixteam-test');
+      const renameOrder = renameDraftTeam.mock.invocationCallOrder[0];
+      const createOrder = createTeam.mock.invocationCallOrder[0];
+      expect(renameOrder).toBeLessThan(createOrder);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not rename the draft directory when the launch body team name matches', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-same-name' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'signal-ops',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(renameDraftTeam).not.toHaveBeenCalled();
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'signal-ops' }),
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails the draft launch when the draft directory rename fails', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    renameDraftTeam.mockRejectedValue(new Error('Team already exists: fixteam-test'));
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'fixteam-test',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(createTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('drops stale saved draft backend when draft launch switches provider over HTTP', async () => {
     const { app, createTeam, getSavedRequest } = await createApp();
     getSavedRequest.mockResolvedValue({
@@ -1112,7 +1049,7 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('routes OpenCode runtime callbacks through the application-host runtime ingress capability', async () => {
+  it('routes OpenCode runtime callbacks through the runtime API facade', async () => {
     const {
       app,
       recordOpenCodeRuntimeBootstrapCheckin,
@@ -1388,7 +1325,7 @@ describe('HTTP team runtime routes', () => {
 
       expect(response.statusCode).toBe(501);
       expect(response.json()).toEqual({
-        error: 'Team runtime ingress is not available in this mode',
+        error: 'Team runtime callbacks are not available in this mode',
       });
       expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
@@ -1424,13 +1361,784 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('registers the feature-owned member work sync HTTP adapter', async () => {
+  // mixrun42 live run: the Olla lane raised runtimeAdvisory api_error/backend_error while the
+  // team stayed alive, and that advisory was visible only in the in-memory member diagnostics.
+  function createMixrun42Diagnostics() {
+    const memberSnapshot = {
+      teamName: 'mixrun42',
+      config: null,
+      tasks: [],
+      kanbanState: null,
+      processes: [],
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic', model: 'grok-4.6' },
+        {
+          name: 'Olla',
+          agentType: 'reviewer',
+          providerId: 'opencode',
+          model: 'ollama/qwen3-8b-32k',
+          runtimeAdvisory: {
+            kind: 'api_error',
+            reasonCode: 'backend_error',
+            observedAt: '2026-08-27T14:48:33.000Z',
+            message: 'OpenCode API error',
+          },
+        },
+        { name: 'Qwen', agentType: 'developer', providerId: 'opencode', model: 'qwen3.8-27b' },
+      ],
+    } as unknown as TeamViewSnapshot;
+    const spawnSnapshot = {
+      runId: 'run-mixrun42',
+      source: 'live',
+      teamLaunchState: 'clean_success',
+      launchPhase: 'active',
+      updatedAt: '2026-08-27T14:48:41.000Z',
+      expectedMembers: ['team-lead', 'Olla', 'Qwen'],
+      statuses: {
+        'team-lead': {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          livenessSource: 'heartbeat',
+          livenessKind: 'confirmed_bootstrap',
+          updatedAt: '2026-08-27T14:42:41.000Z',
+        },
+        Olla: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          agentToolAccepted: true,
+          livenessSource: 'heartbeat',
+          livenessKind: 'runtime_process',
+          firstSpawnAcceptedAt: '2026-08-27T14:42:31.000Z',
+          lastHeartbeatAt: '2026-08-27T14:48:41.000Z',
+          livenessLastCheckedAt: '2026-08-27T14:49:37.000Z',
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+        Qwen: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-08-27T14:44:02.000Z',
+        },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot;
+    const runtimeSnapshot = {
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: {
+        'team-lead': {
+          memberName: 'team-lead',
+          alive: true,
+          restartable: false,
+          pid: 4242,
+          rssBytes: 570_949_632,
+          cpuPercent: 3.5,
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+        Olla: {
+          memberName: 'Olla',
+          alive: true,
+          restartable: true,
+          providerId: 'opencode',
+          laneId: 'secondary-olla',
+          laneKind: 'secondary',
+          pid: 5150,
+          runtimePid: 5151,
+          runtimeSessionId: 'ses_olla_mixrun42',
+          processCommand: 'opencode serve --port 41231',
+          rssBytes: 268_435_456,
+          cpuPercent: 11.25,
+          runtimeLoadScope: 'shared-host',
+          livenessKind: 'runtime_process',
+          runtimeLastSeenAt: '2026-08-27T14:49:31.000Z',
+          diagnostics: ['lane bootstrap confirmed'],
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+        Qwen: {
+          memberName: 'Qwen',
+          alive: true,
+          restartable: true,
+          providerId: 'opencode',
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+      },
+    } as unknown as TeamAgentRuntimeSnapshot;
+    return { memberSnapshot, spawnSnapshot, runtimeSnapshot };
+  }
+
+  it('serves the full per-member spawn and runtime diagnostics projection', async () => {
+    const {
+      app,
+      getTeamData,
+      getMemberSpawnStatuses,
+      getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshotWriting,
+    } = await createApp();
+    const { memberSnapshot, spawnSnapshot, runtimeSnapshot } = createMixrun42Diagnostics();
+    getTeamData.mockResolvedValue(memberSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue(spawnSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue(runtimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(getMemberSpawnStatuses).toHaveBeenCalledWith('mixrun42');
+      expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42', {
+        memberSpawnStatuses: spawnSnapshot,
+      });
+      expect(getMemberSpawnStatusesWriting).not.toHaveBeenCalled();
+      expect(getTeamAgentRuntimeSnapshotWriting).not.toHaveBeenCalled();
+      expect(body).toMatchObject({
+        teamName: 'mixrun42',
+        runId: 'run-mixrun42',
+        spawnSource: 'live',
+        teamLaunchState: 'clean_success',
+        launchPhase: 'active',
+        spawnUpdatedAt: '2026-08-27T14:48:41.000Z',
+        runtimeUpdatedAt: '2026-08-27T14:49:37.000Z',
+      });
+      expect(typeof body.generatedAt).toBe('string');
+      expect(body.members.map((member: { memberName: string }) => member.memberName)).toEqual([
+        'team-lead',
+        'Olla',
+        'Qwen',
+      ]);
+      expect(body.members[0]).toMatchObject({
+        memberName: 'team-lead',
+        isLead: true,
+        rssBytes: 570_949_632,
+        cpuPercent: 3.5,
+      });
+      expect(body.members[1]).toMatchObject({
+        memberName: 'Olla',
+        isLead: false,
+        providerId: 'opencode',
+        laneId: 'secondary-olla',
+        laneKind: 'secondary',
+        memberCardError: 'OpenCode API error',
+        runtimeAdvisoryKind: 'api_error',
+        runtimeAdvisoryReasonCode: 'backend_error',
+        runtimeAdvisoryObservedAt: '2026-08-27T14:48:33.000Z',
+        runtimeAdvisoryMessage: 'OpenCode API error',
+        diagnostics: ['OpenCode API error', 'lane bootstrap confirmed'],
+        spawnStatus: 'online',
+        launchState: 'confirmed_alive',
+        livenessKind: 'runtime_process',
+        livenessSource: 'heartbeat',
+        alive: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        rssBytes: 268_435_456,
+        cpuPercent: 11.25,
+        // Lets an external monitor tell a per-member sample from a shared one.
+        runtimeLoadScope: 'shared-host',
+        runtimePid: 5151,
+        runtimeSessionId: 'ses_olla_mixrun42',
+        processCommand: 'opencode serve --port 41231',
+        firstSpawnAcceptedAt: '2026-08-27T14:42:31.000Z',
+        lastHeartbeatAt: '2026-08-27T14:48:41.000Z',
+        livenessLastCheckedAt: '2026-08-27T14:49:37.000Z',
+        runtimeLastSeenAt: '2026-08-27T14:49:31.000Z',
+        spawnUpdatedAt: '2026-08-27T14:48:41.000Z',
+        runtimeUpdatedAt: '2026-08-27T14:49:37.000Z',
+      });
+      expect(body.members[2]).toMatchObject({ memberName: 'Qwen', diagnostics: [] });
+      expect(body.members[2].memberCardError).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('prefers spawn failure evidence over the runtime advisory for the member card error', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    getTeamData.mockResolvedValue({
+      teamName: 'mixrun42',
+      members: [
+        {
+          name: 'Olla',
+          runtimeAdvisory: {
+            kind: 'api_error',
+            reasonCode: 'backend_error',
+            observedAt: '2026-08-27T14:48:33.000Z',
+            message: 'OpenCode API error',
+          },
+        },
+      ],
+    } as unknown as TeamViewSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: null,
+      statuses: {
+        Olla: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          error: 'OpenCode lane never confirmed bootstrap',
+          hardFailure: true,
+          hardFailureReason: 'bootstrap_timeout',
+          runtimeDiagnostic: 'no runtime session recorded',
+          runtimeDiagnosticSeverity: 'error',
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: null,
+      members: {},
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().members[0]).toMatchObject({
+        memberName: 'Olla',
+        memberCardError: 'OpenCode lane never confirmed bootstrap',
+        hardFailure: true,
+        hardFailureReason: 'bootstrap_timeout',
+        spawnStatus: 'error',
+        launchState: 'failed_to_start',
+        runtimeAdvisoryKind: 'api_error',
+        diagnostics: [
+          'OpenCode lane never confirmed bootstrap',
+          'no runtime session recorded',
+          'OpenCode API error',
+          'bootstrap_timeout',
+        ],
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  // The runtime snapshot builds a spawn-status projection of its own unless it
+  // is handed one, and the read-only projection neither coalesces nor caches.
+  // A second projection is not only wasted work: a launch transition between
+  // the two - the second call here answers for a different run - used to leave
+  // one response describing two runs at once.
+  it('answers a member diagnostics GET from a single spawn-status projection', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    const { memberSnapshot, spawnSnapshot, runtimeSnapshot } = createMixrun42Diagnostics();
+    getTeamData.mockResolvedValue(memberSnapshot);
+    getMemberSpawnStatuses.mockResolvedValueOnce(spawnSnapshot).mockResolvedValue({
+      ...spawnSnapshot,
+      runId: 'run-mixrun42-next',
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue(runtimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(getMemberSpawnStatuses).toHaveBeenCalledTimes(1);
+      expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42', {
+        memberSpawnStatuses: spawnSnapshot,
+      });
+      expect(response.json().runId).toBe('run-mixrun42');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('still serves member diagnostics when the team view snapshot is unavailable', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    getTeamData.mockRejectedValue(new Error('team data worker unavailable'));
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: 'run-mixrun42',
+      statuses: {
+        Olla: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: {
+        Olla: {
+          memberName: 'Olla',
+          alive: true,
+          restartable: true,
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+      },
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.members).toHaveLength(1);
+      expect(body.members[0]).toMatchObject({ memberName: 'Olla', alive: true, isLead: false });
+      expect(body.members[0].runtimeAdvisoryKind).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects member diagnostics for an invalid team name before touching the facades', async () => {
+    const { app, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/..%2Fescape/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(getMemberSpawnStatuses).not.toHaveBeenCalled();
+      expect(getTeamAgentRuntimeSnapshot).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for member diagnostics when the team apis are not bound in this mode', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
-    const metrics = { teamName: 'demo-team', marker: 'feature-owned-adapter' };
-    const getMetrics = vi.fn(() => Promise.resolve(metrics));
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Team member diagnostics are not available in this mode',
+      });
+      expect(mocks.getMemberSpawnStatuses).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose unexpected member diagnostics failures over HTTP', async () => {
+    const { app, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } = await createApp();
+    getMemberSpawnStatuses.mockRejectedValue(new Error('spawn snapshot store corrupted'));
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: null,
+      members: {},
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({ error: 'Internal server error' });
+      expect(response.body).not.toContain('spawn snapshot store corrupted');
+      expect(console.error).toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('redacts secrets and bounds every diagnostics string before it leaves the HTTP port', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    const secret = 'sk-abc123def456ghi789';
+    getTeamData.mockResolvedValue({
+      teamName: 'mixrun42',
+      members: [
+        {
+          name: 'Olla',
+          providerId: 'opencode',
+          runtimeAdvisory: {
+            kind: 'api_error',
+            reasonCode: 'auth_error',
+            observedAt: '2026-08-27T14:48:33.000Z',
+            message: `OpenCode API error for OPENCODE_API_KEY=${secret}`,
+          },
+        },
+      ],
+    } as unknown as TeamViewSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: 'run-mixrun42',
+      statuses: {
+        Olla: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          error: `spawn failed for ANTHROPIC_AUTH_TOKEN=${secret} opencode serve`,
+          hardFailureReason: `wrapper --api-key ${secret} exited`,
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: {
+        Olla: {
+          memberName: 'Olla',
+          alive: true,
+          providerId: 'opencode',
+          processCommand: `API_KEY=${secret} opencode serve --port 41231`,
+          diagnostics: [`lane env carried API_KEY=${secret}`, 'x'.repeat(600)],
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+      },
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(getTeamData).toHaveBeenCalledWith('mixrun42', { includeMemberBranches: false });
+      expect(response.body).not.toContain(secret);
+      const member = response.json().members[0];
+      expect(member).toMatchObject({
+        memberName: 'Olla',
+        processCommand: '[redacted] opencode serve --port 41231',
+        error: 'spawn failed for [redacted] opencode serve',
+        hardFailureReason: 'wrapper --api-key [redacted] exited',
+        memberCardError: 'spawn failed for [redacted] opencode serve',
+        runtimeAdvisoryMessage: 'OpenCode API error for [redacted]',
+      });
+      expect(member.diagnostics).toContain('lane env carried [redacted]');
+      expect(member.diagnostics).toContain(`${'x'.repeat(497)}...`);
+      expect(member.diagnostics.every((diagnostic: string) => diagnostic.length <= 500)).toBe(true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not report advisories the member card deliberately keeps clean', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    getTeamData.mockResolvedValue({
+      teamName: 'mixrun42',
+      members: [
+        {
+          name: 'Olla',
+          providerId: 'opencode',
+          runtimeAdvisory: {
+            kind: 'api_error',
+            reasonCode: 'protocol_proof_missing',
+            observedAt: '2026-08-27T14:48:33.000Z',
+            message: 'visible_reply_still_required',
+          },
+        },
+        {
+          name: 'Qwen',
+          providerId: 'opencode',
+          runtimeAdvisory: {
+            kind: 'api_error',
+            reasonCode: 'backend_error',
+            observedAt: '2026-08-27T14:48:35.000Z',
+            message: 'OpenCode session refresh scheduled after resolved behavior changed',
+          },
+        },
+      ],
+    } as unknown as TeamViewSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: 'run-mixrun42',
+      statuses: {
+        Olla: { status: 'online', launchState: 'confirmed_alive', bootstrapConfirmed: true },
+        Qwen: { status: 'online', launchState: 'confirmed_alive', bootstrapConfirmed: true },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: {
+        Olla: { memberName: 'Olla', alive: true, providerId: 'opencode' },
+        Qwen: { memberName: 'Qwen', alive: true, providerId: 'opencode' },
+      },
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const [olla, qwen] = response.json().members;
+      expect(olla.memberCardError).toBeUndefined();
+      expect(olla).toMatchObject({
+        runtimeAdvisoryKind: 'api_error',
+        runtimeAdvisoryReasonCode: 'protocol_proof_missing',
+        diagnostics: ['visible_reply_still_required'],
+      });
+      expect(qwen.memberCardError).toBeUndefined();
+      expect(qwen).toMatchObject({
+        runtimeAdvisoryKind: 'api_error',
+        diagnostics: ['OpenCode session refresh scheduled after resolved behavior changed'],
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('drops healed spawn failures from the member card error but keeps unsafe ones', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    const provisionedButNotAlive =
+      'CLI process exited (code unknown) - team provisioned but not alive';
+    getTeamData.mockResolvedValue({
+      teamName: 'mixrun42',
+      members: [{ name: 'Olla' }, { name: 'Qwen' }],
+    } as unknown as TeamViewSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: 'run-mixrun42',
+      statuses: {
+        Olla: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          hardFailure: true,
+          error: provisionedButNotAlive,
+          hardFailureReason: provisionedButNotAlive,
+          bootstrapConfirmed: true,
+          livenessKind: 'confirmed_bootstrap',
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+        Qwen: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          hardFailure: true,
+          error: provisionedButNotAlive,
+          hardFailureReason: provisionedButNotAlive,
+          bootstrapConfirmed: true,
+          livenessKind: 'not_found',
+          updatedAt: '2026-08-27T14:48:41.000Z',
+        },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: {
+        Olla: {
+          memberName: 'Olla',
+          alive: true,
+          livenessKind: 'runtime_process',
+          updatedAt: '2026-08-27T14:49:37.000Z',
+        },
+      },
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const [olla, qwen] = response.json().members;
+      expect(olla.memberCardError).toBeUndefined();
+      // The evidence stays in the payload; only the card-error claim is dropped.
+      expect(olla).toMatchObject({
+        hardFailureReason: provisionedButNotAlive,
+        diagnostics: [provisionedButNotAlive],
+      });
+      expect(qwen.memberCardError).toBe(provisionedButNotAlive);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('answers 404 for member diagnostics of an unknown team', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    getTeamData.mockRejectedValue(new Error('Team not found: ghost-team'));
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: null,
+      statuses: {},
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'ghost-team',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: null,
+      members: {},
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/ghost-team/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({ error: 'Team not found: ghost-team' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('drops removed members unless the spawn or runtime snapshots still track them', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    const removedAt = 1_756_300_000_000;
+    getTeamData.mockResolvedValue({
+      teamName: 'mixrun42',
+      members: [{ name: 'Olla' }, { name: 'Ghost', removedAt }, { name: 'Tracked', removedAt }],
+    } as unknown as TeamViewSnapshot);
+    getMemberSpawnStatuses.mockResolvedValue({
+      runId: 'run-mixrun42',
+      statuses: {
+        Olla: { status: 'online', launchState: 'confirmed_alive' },
+        Tracked: { status: 'online', launchState: 'confirmed_alive' },
+      },
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'mixrun42',
+      updatedAt: '2026-08-27T14:49:37.000Z',
+      runId: 'run-mixrun42',
+      members: { Olla: { memberName: 'Olla', alive: true } },
+    } as unknown as TeamAgentRuntimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const members = response.json().members;
+      expect(members.map((member: { memberName: string }) => member.memberName)).toEqual([
+        'Olla',
+        'Tracked',
+      ]);
+      expect(members[0].removedAt).toBeUndefined();
+      expect(members[1].removedAt).toBe(removedAt);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('serves member work sync diagnostics and explicit refresh routes', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const queueDiagnostics = {
+      queued: 0,
+      running: 0,
+      enqueued: 2,
+      coalesced: 1,
+      reconciled: 1,
+      dropped: 0,
+      failed: 0,
+      queuedItems: [],
+      runningItems: [],
+    };
+    const metrics = {
+      teamName: 'demo-team',
+      generatedAt: '2026-05-05T00:00:00.000Z',
+      memberCount: 1,
+      stateCounts: {
+        caught_up: 1,
+        needs_sync: 0,
+        still_working: 0,
+        blocked: 0,
+        inactive: 0,
+        unknown: 0,
+      },
+      actionableItemCount: 0,
+      wouldNudgeCount: 0,
+      fingerprintChangeCount: 0,
+      reportAcceptedCount: 0,
+      reportRejectedCount: 0,
+      recentEvents: [],
+      phase2Readiness: {
+        state: 'collecting_shadow_data',
+        reasons: ['insufficient_members'],
+        thresholds: {
+          minObservedMembers: 2,
+          minStatusEvents: 10,
+          minObservationHours: 1,
+          maxWouldNudgesPerMemberHour: 1,
+          maxFingerprintChangesPerMemberHour: 1,
+          maxReportRejectionRate: 0.1,
+        },
+        rates: {
+          observationHours: 0,
+          statusEventCount: 0,
+          wouldNudgesPerMemberHour: 0,
+          fingerprintChangesPerMemberHour: 0,
+          reportRejectionRate: 0,
+        },
+        diagnostics: [],
+      },
+    };
+    const refreshedStatus = {
+      teamName: 'demo-team',
+      memberName: 'bob',
+      state: 'caught_up',
+      agenda: {
+        teamName: 'demo-team',
+        memberName: 'bob',
+        generatedAt: '2026-05-05T00:00:00.000Z',
+        fingerprint: 'empty',
+        items: [],
+        diagnostics: [],
+      },
+      evaluatedAt: '2026-05-05T00:00:00.000Z',
+      diagnostics: [],
+    };
     const memberWorkSyncFeature = {
-      getMetrics,
+      getStatus: vi.fn(),
+      refreshStatus: vi.fn(() => Promise.resolve(refreshedStatus)),
+      getMetrics: vi.fn(() => Promise.resolve(metrics)),
+      report: vi.fn(() =>
+        Promise.resolve({
+          accepted: true,
+          code: 'accepted',
+          message: 'ok',
+          status: refreshedStatus,
+        })
+      ),
+      noteTeamChange: vi.fn(),
+      enqueueStartupScan: vi.fn(),
+      replayPendingReports: vi.fn(),
+      dispatchDueNudges: vi.fn(),
+      buildRuntimeTurnSettledHookSettings: vi.fn(),
+      buildRuntimeTurnSettledEnvironment: vi.fn(),
+      drainRuntimeTurnSettledEvents: vi.fn(),
+      getQueueDiagnostics: vi.fn(() => queueDiagnostics),
+      dispose: vi.fn(),
     } as unknown as NonNullable<HttpServices['memberWorkSyncFeature']>;
     registerTeamRoutes(app, {
       ...mocks.services,
@@ -1439,13 +2147,49 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
 
     try {
-      const response = await app.inject({
+      const diagnosticsResponse = await app.inject({
         method: 'GET',
-        url: '/api/teams/demo-team/member-work-sync/metrics',
+        url: '/api/teams/demo-team/member-work-sync/diagnostics',
       });
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual(metrics);
-      expect(getMetrics).toHaveBeenCalledWith({ teamName: 'demo-team' });
+      expect(diagnosticsResponse.statusCode).toBe(200);
+      expect(diagnosticsResponse.json()).toMatchObject({
+        teamName: 'demo-team',
+        queue: queueDiagnostics,
+        metrics,
+      });
+
+      const refreshResponse = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/member-work-sync/bob/refresh',
+      });
+      expect(refreshResponse.statusCode).toBe(200);
+      expect(refreshResponse.json()).toMatchObject(refreshedStatus);
+      expect(memberWorkSyncFeature.refreshStatus).toHaveBeenCalledWith({
+        teamName: 'demo-team',
+        memberName: 'bob',
+      });
+
+      const reportResponse = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/member-work-sync/report',
+        payload: {
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:abc',
+          reportToken: 'wrs:v1.test.token',
+          taskIds: [' task-a ', '', 'task-a'],
+        },
+      });
+      expect(reportResponse.statusCode).toBe(200);
+      expect(memberWorkSyncFeature.report).toHaveBeenCalledWith({
+        teamName: 'demo-team',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:abc',
+        reportToken: 'wrs:v1.test.token',
+        taskIds: ['task-a'],
+        source: 'mcp',
+      });
     } finally {
       await app.close();
     }

@@ -1,4 +1,5 @@
 export const TEAM_ALIVE_LIST = 'team:aliveList';
+export const TEAM_FORCE_STOP = 'team:forceStop';
 export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
 export const TEAM_GET_RUNTIME_LOGS = 'team:getClaudeLogs';
 export const TEAM_GET_LOGS_FOR_TASK = 'team:getLogsForTask';

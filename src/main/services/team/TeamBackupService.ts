@@ -10,9 +10,7 @@ import {
   removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
 import {
-  getAppDataPath,
   getBackupsBasePath,
-  getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
@@ -22,24 +20,25 @@ import {
   BackupPublicationFencedError,
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
-import { TaskAttachmentBackupSource } from './TaskAttachmentBackupSource';
-import * as backupAttachmentSettlement from './TeamBackupAttachmentSettlement';
+import type { BackupFileDescriptor } from './TeamBackupFileCollection';
 import {
-  type BackupFileDescriptor,
-  collectBackupRelativePaths,
-  collectRecursiveFiles,
-  collectRecursiveFilesSync,
-} from './TeamBackupFileCollection';
-import * as backupFileIdentity from './TeamBackupFileIdentity';
+  enumerateBackupFiles,
+  enumerateTeamFilesSync,
+  enumerateTeamFilesWithErrors,
+  getBackupSourcePath,
+} from './TeamBackupFileEnumerator';
 import {
-  isValidConfig,
-  isValidJson,
-  shouldRestoreTaskAttachmentBackupPath,
-} from './TeamBackupFilePolicy';
+  type BackupManifest,
+  getBackupManifestPath,
+  readBackupManifest,
+  readBackupManifestSync,
+  writeBackupManifest,
+  writeBackupManifestSync,
+} from './teamBackupManifest';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
-import type { TaskAttachmentDeletionBackupFence } from './TaskAttachmentDeletionJournal';
 
 export type {
   PermanentDeletionTarget,
@@ -48,19 +47,9 @@ export type {
 
 const logger = createLogger('TeamBackupService');
 
+// ---------------------------------------------------------------------------
 // Types
-
-interface BackupManifest {
-  teamName: string;
-  identityId: string;
-  projectPath?: string;
-  displayName?: string;
-  status: 'active' | 'deleted_by_user';
-  deletedByUserAt?: string;
-  firstBackupAt: string;
-  lastBackupAt: string;
-  fileStats: Record<string, backupFileIdentity.BackupFileStat>;
-}
+// ---------------------------------------------------------------------------
 
 interface BackupRegistry {
   version: 1;
@@ -84,24 +73,6 @@ const TASK_DEBOUNCE_MS = 500;
 const DELETED_RETENTION_DAYS = 30;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
-const TEAM_ROOT_FILES = [
-  'config.json',
-  'team.meta.json',
-  'launch-state.json',
-  'launch-summary.json',
-  'kanban-state.json',
-  'sentMessages.json',
-  'sent-cross-team.json',
-  'members.meta.json',
-  'comment-notification-journal.json',
-];
-
-// Subdirs under ~/.claude/teams/{teamName}/
-const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
-const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members'];
-// Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
-const APP_DATA_SUBDIRS = ['attachments'];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -112,6 +83,24 @@ function isEnoent(err: unknown): boolean {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function isValidJson(content: string): boolean {
+  try {
+    JSON.parse(content);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isValidConfig(content: string): boolean {
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    return typeof parsed.name === 'string' && parsed.name.trim() !== '';
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -140,17 +129,9 @@ export class TeamBackupService {
   private readonly restoreService = new TeamBackupRestoreService({
     loadManifest: (teamName) => this.loadManifest(teamName),
     getBackupDir: (teamName) => this.getBackupDir(teamName),
-    getSourcePathForRelPath: (teamName, relPath) => this.getSourcePathForRelPath(teamName, relPath),
-    enumerateRestorableBackupFiles: async (teamName) =>
-      (await collectBackupRelativePaths(this.getBackupDir(teamName))).filter(
-        shouldRestoreTaskAttachmentBackupPath
-      ),
+    getSourcePathForRelPath: getBackupSourcePath,
+    enumerateBackupFiles: (teamName) => enumerateBackupFiles(this.getBackupDir(teamName)),
   });
-  private readonly taskAttachmentBackupSource: TaskAttachmentBackupSource;
-
-  constructor(taskAttachmentDeletionFence?: TaskAttachmentDeletionBackupFence) {
-    this.taskAttachmentBackupSource = new TaskAttachmentBackupSource(taskAttachmentDeletionFence);
-  }
 
   // ── Public API ───────────────────────────────────────────────────────
 
@@ -160,10 +141,8 @@ export class TeamBackupService {
   }
 
   private async initializeOnce(): Promise<void> {
-    await this.taskAttachmentBackupSource.reconcilePendingDeletions();
     this.registry = await this.loadRegistry();
     await this.permanentDeletion.initialize();
-    await this.settlePendingTaskAttachmentDeletionBackups();
     await this.reconcileResurrectedTeams();
     await this.restoreIfNeeded();
     void this.pruneStaleBackups().catch((err: unknown) =>
@@ -331,7 +310,7 @@ export class TeamBackupService {
           validateDetached: async (detachedPath) => {
             try {
               const manifest = JSON.parse(
-                await fs.promises.readFile(path.join(detachedPath, 'manifest.json'), 'utf8')
+                await fs.promises.readFile(getBackupManifestPath(detachedPath), 'utf8')
               ) as BackupManifest;
               return (
                 manifest.teamName === teamName &&
@@ -404,7 +383,7 @@ export class TeamBackupService {
     if (!(await this.isConfigReady(teamName))) return;
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
-    const { files: sourceFiles, hasErrors } = await this.enumerateTeamFilesWithErrors(teamName);
+    const { files: sourceFiles, hasErrors } = await enumerateTeamFilesWithErrors(teamName);
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
@@ -462,22 +441,18 @@ export class TeamBackupService {
     const assertPublicationCurrent = (): Promise<void> =>
       this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
 
-    let anyChanged = await this.taskAttachmentBackupSource.prunePendingBackups(
-      teamName,
-      backupDir,
-      manifest.fileStats
-    );
+    // Prune stale backup files (only if source enumeration was error-free)
     if (!hasErrors) {
-      anyChanged =
-        (await this.pruneStaleBackupFiles(
-          teamName,
-          sourceFiles,
-          backupDir,
-          manifest,
-          assertPublicationCurrent
-        )) || anyChanged;
+      await this.pruneStaleBackupFiles(
+        teamName,
+        sourceFiles,
+        backupDir,
+        manifest,
+        assertPublicationCurrent
+      );
     }
 
+    let anyChanged = false;
     for (const descriptor of sourceFiles) {
       if (this.backupGeneration !== gen) return;
       const changed = await this.backupSingleFile(
@@ -528,26 +503,6 @@ export class TeamBackupService {
       if (this.backupGeneration !== gen) return;
       await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
     }
-    await backupAttachmentSettlement.settleBackupRunAttachmentDeletions({
-      source: this.taskAttachmentBackupSource,
-      teamName,
-      backupDirectory: backupDir,
-      manifest,
-      isCurrent: () => !this.isShuttingDown && this.backupGeneration === gen,
-      persistManifest: async () => {
-        manifest.lastBackupAt = nowIso();
-        await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
-      },
-    });
-  }
-
-  private async settlePendingTaskAttachmentDeletionBackups(): Promise<void> {
-    await backupAttachmentSettlement.settleStartupAttachmentDeletions({
-      source: this.taskAttachmentBackupSource,
-      getBackupDirectory: (teamName) => this.getBackupDir(teamName),
-      loadManifest: (teamName) => this.loadManifest(teamName),
-      persistManifest: (teamName, manifest) => this.saveManifest(teamName, manifest, true),
-    });
   }
 
   private doBackupTeamSync(teamName: string): void {
@@ -561,17 +516,12 @@ export class TeamBackupService {
       return;
     }
 
-    const sourceFiles = this.enumerateTeamFilesSync(teamName);
+    const sourceFiles = enumerateTeamFilesSync(teamName);
     if (sourceFiles.length === 0) return;
 
     const backupDir = this.getBackupDir(teamName);
-    let manifest: BackupManifest | null = null;
-    try {
-      const raw = fs.readFileSync(path.join(backupDir, 'manifest.json'), 'utf8');
-      manifest = JSON.parse(raw) as BackupManifest;
-    } catch {
-      // A missing manifest is initialized below after source identity ownership is known.
-    }
+    // A missing manifest is initialized below after source identity ownership is known.
+    let manifest = readBackupManifestSync(backupDir);
 
     if (
       manifest?.status === 'deleted_by_user' ||
@@ -618,6 +568,7 @@ export class TeamBackupService {
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }
+    this.pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
 
     manifest.lastBackupAt = nowIso();
     this.saveManifestSync(teamName, manifest);
@@ -629,6 +580,26 @@ export class TeamBackupService {
       deletedByUserAt: manifest.deletedByUserAt,
       lastBackupAt: manifest.lastBackupAt,
     };
+  }
+
+  /**
+   * The shutdown backup only adds files, so a stop marker the team no longer
+   * has would stay in the backup and freeze every later restore of its launch
+   * state. Only a proven ENOENT drops it: unreadable is not absent.
+   */
+  private pruneStaleStopMarkerBackupSync(
+    teamName: string,
+    backupDir: string,
+    manifest: BackupManifest
+  ): void {
+    try {
+      fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
+      return;
+    } catch (err: unknown) {
+      if (!isEnoent(err)) return;
+    }
+    fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
+    delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
   }
 
   private async backupSingleFile(
@@ -646,7 +617,7 @@ export class TeamBackupService {
       }
 
       const cached = manifest.fileStats[descriptor.relPath];
-      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) {
+      if (cached?.mtime === stat.mtimeMs && cached.size === stat.size) {
         return false; // not dirty
       }
 
@@ -670,7 +641,7 @@ export class TeamBackupService {
         });
       }
 
-      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
+      manifest.fileStats[descriptor.relPath] = { mtime: stat.mtimeMs, size: stat.size };
       return true;
     } catch (err: unknown) {
       if (err instanceof BackupPublicationFencedError) throw err;
@@ -692,7 +663,7 @@ export class TeamBackupService {
       if (stat.size > MAX_FILE_SIZE_BYTES) return; // skip oversized silently during shutdown
 
       const cached = manifest.fileStats[descriptor.relPath];
-      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) return;
+      if (cached?.mtime === stat.mtimeMs && cached.size === stat.size) return;
 
       const destPath = path.join(backupDir, descriptor.relPath);
 
@@ -705,7 +676,7 @@ export class TeamBackupService {
         fs.copyFileSync(descriptor.sourcePath, destPath);
       }
 
-      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
+      manifest.fileStats[descriptor.relPath] = { mtime: stat.mtimeMs, size: stat.size };
     } catch {
       // best-effort during shutdown
     }
@@ -717,18 +688,9 @@ export class TeamBackupService {
     backupDir: string,
     manifest: BackupManifest,
     assertPublicationCurrent: () => Promise<void>
-  ): Promise<boolean> {
-    const backupFiles = await collectBackupRelativePaths(backupDir);
+  ): Promise<void> {
+    const backupFiles = await enumerateBackupFiles(this.getBackupDir(teamName));
     const sourceRelPaths = new Set(sourceFiles.map((f) => f.relPath));
-    const backupRelPaths = new Set(backupFiles);
-    let changed = false;
-
-    for (const manifestRelPath of Object.keys(manifest.fileStats)) {
-      if (!sourceRelPaths.has(manifestRelPath) && !backupRelPaths.has(manifestRelPath)) {
-        delete manifest.fileStats[manifestRelPath];
-        changed = true;
-      }
-    }
 
     for (const backupRelPath of backupFiles) {
       if (backupRelPath === 'manifest.json') continue;
@@ -744,189 +706,18 @@ export class TeamBackupService {
               return isSameDurablePathIdentity(identity, observed);
             },
           });
-          if (removal !== 'changed')
-            changed = Reflect.deleteProperty(manifest.fileStats, backupRelPath) || changed;
+          if (removal !== 'changed') delete manifest.fileStats[backupRelPath];
         } catch (error) {
           if (!isEnoent(error)) throw error;
-          changed = Reflect.deleteProperty(manifest.fileStats, backupRelPath) || changed;
         }
       }
     }
-    return changed;
   }
 
   // ── Internal: restore ────────────────────────────────────────────────
 
   private restoreTeam(teamName: string): Promise<boolean> {
     return this.restoreService.restoreTeam(teamName);
-  }
-
-  // ── Internal: enumeration ────────────────────────────────────────────
-
-  private async enumerateTeamFilesWithErrors(
-    teamName: string
-  ): Promise<{ files: BackupFileDescriptor[]; hasErrors: boolean }> {
-    const files: BackupFileDescriptor[] = [];
-    let hasErrors = false;
-    const teamDir = path.join(getTeamsBasePath(), teamName);
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-
-    // Root files
-    for (const fileName of TEAM_ROOT_FILES) {
-      const sourcePath = path.join(teamDir, fileName);
-      try {
-        const stat = await fs.promises.stat(sourcePath);
-        if (stat.isFile()) files.push({ sourcePath, relPath: fileName });
-      } catch (err: unknown) {
-        if (!isEnoent(err)) hasErrors = true;
-      }
-    }
-
-    // Flat subdirs under team dir (inboxes/, review-decisions/)
-    for (const subdir of TEAM_SUBDIRS) {
-      const dirPath = path.join(teamDir, subdir);
-      try {
-        const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isFile() && entry.name.endsWith('.json')) {
-            files.push({
-              sourcePath: path.join(dirPath, entry.name),
-              relPath: `${subdir}/${entry.name}`,
-            });
-          }
-        }
-      } catch (err: unknown) {
-        if (!isEnoent(err)) hasErrors = true;
-      }
-    }
-
-    for (const subdir of TEAM_RECURSIVE_SUBDIRS) {
-      const dirPath = path.join(teamDir, subdir);
-      try {
-        files.push(...(await collectRecursiveFiles(dirPath, subdir)));
-      } catch (err: unknown) {
-        if (!isEnoent(err)) hasErrors = true;
-      }
-    }
-
-    // Flat subdirs under app data dir (attachments/)
-    const appDataDir = getAppDataPath();
-    for (const subdir of APP_DATA_SUBDIRS) {
-      const dirPath = path.join(appDataDir, subdir, teamName);
-      try {
-        const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isFile()) {
-            files.push({
-              sourcePath: path.join(dirPath, entry.name),
-              relPath: `${subdir}/${entry.name}`,
-            });
-          }
-        }
-      } catch (err: unknown) {
-        if (!isEnoent(err)) hasErrors = true;
-      }
-    }
-
-    const taskAttachments = await this.taskAttachmentBackupSource.collect(teamName);
-    files.push(...taskAttachments.files);
-    hasErrors ||= taskAttachments.hasErrors;
-
-    // Tasks (from separate dir)
-    try {
-      const entries = await fs.promises.readdir(tasksDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.json')) {
-          files.push({
-            sourcePath: path.join(tasksDir, entry.name),
-            relPath: `tasks/${entry.name}`,
-          });
-        }
-        // Skip _internal/ directory
-      }
-    } catch (err: unknown) {
-      if (!isEnoent(err)) hasErrors = true;
-    }
-
-    return { files, hasErrors };
-  }
-
-  private enumerateTeamFilesSync(teamName: string): BackupFileDescriptor[] {
-    const files: BackupFileDescriptor[] = [];
-    const teamDir = path.join(getTeamsBasePath(), teamName);
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-
-    for (const fileName of TEAM_ROOT_FILES) {
-      const sourcePath = path.join(teamDir, fileName);
-      try {
-        const stat = fs.statSync(sourcePath);
-        if (stat.isFile()) files.push({ sourcePath, relPath: fileName });
-      } catch {
-        // skip
-      }
-    }
-
-    for (const subdir of TEAM_SUBDIRS) {
-      try {
-        const entries = fs.readdirSync(path.join(teamDir, subdir), { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isFile() && entry.name.endsWith('.json')) {
-            files.push({
-              sourcePath: path.join(teamDir, subdir, entry.name),
-              relPath: `${subdir}/${entry.name}`,
-            });
-          }
-        }
-      } catch {
-        // skip
-      }
-    }
-
-    for (const subdir of TEAM_RECURSIVE_SUBDIRS) {
-      try {
-        files.push(...collectRecursiveFilesSync(path.join(teamDir, subdir), subdir));
-      } catch {
-        // skip
-      }
-    }
-
-    // Flat subdirs under app data dir (attachments/)
-    const appDataDir = getAppDataPath();
-    for (const subdir of APP_DATA_SUBDIRS) {
-      try {
-        const entries = fs.readdirSync(path.join(appDataDir, subdir, teamName), {
-          withFileTypes: true,
-        });
-        for (const entry of entries) {
-          if (entry.isFile()) {
-            files.push({
-              sourcePath: path.join(appDataDir, subdir, teamName, entry.name),
-              relPath: `${subdir}/${entry.name}`,
-            });
-          }
-        }
-      } catch {
-        // skip
-      }
-    }
-
-    files.push(...this.taskAttachmentBackupSource.collectSync(teamName));
-
-    try {
-      const entries = fs.readdirSync(tasksDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.json')) {
-          files.push({
-            sourcePath: path.join(tasksDir, entry.name),
-            relPath: `tasks/${entry.name}`,
-          });
-        }
-      }
-    } catch {
-      // skip
-    }
-
-    return files;
   }
 
   // ── Internal: registry + manifest ────────────────────────────────────
@@ -937,29 +728,6 @@ export class TeamBackupService {
 
   private getBackupDir(teamName: string): string {
     return path.join(getBackupsBasePath(), 'teams', teamName);
-  }
-
-  private getSourcePathForRelPath(teamName: string, relPath: string): string {
-    if (relPath.startsWith('tasks/')) {
-      return path.join(getTasksBasePath(), teamName, relPath.slice('tasks/'.length));
-    }
-    if (relPath.startsWith('attachments/')) {
-      return path.join(
-        getAppDataPath(),
-        'attachments',
-        teamName,
-        relPath.slice('attachments/'.length)
-      );
-    }
-    if (relPath.startsWith('task-attachments/')) {
-      return path.join(
-        getAppDataPath(),
-        'task-attachments',
-        teamName,
-        relPath.slice('task-attachments/'.length)
-      );
-    }
-    return path.join(getTeamsBasePath(), teamName, relPath);
   }
 
   private async loadRegistry(): Promise<BackupRegistry> {
@@ -1041,15 +809,7 @@ export class TeamBackupService {
   }
 
   private async loadManifest(teamName: string): Promise<BackupManifest | null> {
-    try {
-      const raw = await fs.promises.readFile(
-        path.join(this.getBackupDir(teamName), 'manifest.json'),
-        'utf8'
-      );
-      return JSON.parse(raw) as BackupManifest;
-    } catch {
-      return null;
-    }
+    return readBackupManifest(this.getBackupDir(teamName));
   }
 
   private async saveManifest(
@@ -1060,23 +820,11 @@ export class TeamBackupService {
   ): Promise<void> {
     if (this.isShuttingDown) return;
     await beforeCommit?.();
-    await atomicWriteAsync(
-      path.join(this.getBackupDir(teamName), 'manifest.json'),
-      JSON.stringify(manifest, null, 2),
-      {
-        ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
-        ...(beforeCommit ? { beforeCommit } : {}),
-      }
-    );
+    await writeBackupManifest(this.getBackupDir(teamName), manifest, { strict, beforeCommit });
   }
 
   private saveManifestSync(teamName: string, manifest: BackupManifest): void {
-    try {
-      const manifestPath = path.join(this.getBackupDir(teamName), 'manifest.json');
-      atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
-    } catch {
-      // best-effort
-    }
+    writeBackupManifestSync(this.getBackupDir(teamName), manifest);
   }
 
   // ── Internal: validation ─────────────────────────────────────────────

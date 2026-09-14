@@ -71,7 +71,15 @@ vi.mock('@sentry/react', () => sentryNoOp);
 // some services persist state in best-effort background writes after a test has
 // already reset path overrides.
 const testHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), TEST_HOME_PREFIX));
-vi.stubEnv('HOME', testHomeDir);
+// getHomeDir() reads HOME before USERPROFILE, and on Windows only USERPROFILE is
+// actually set, so both must point inside the test home. Re-applied before every
+// test: twelve test files call vi.unstubAllEnvs(), after which the rest of that
+// worker resolves ~/.claude to the developer's real home.
+function applyTestHomeEnv(): void {
+  vi.stubEnv('HOME', testHomeDir);
+  vi.stubEnv('USERPROFILE', testHomeDir);
+}
+applyTestHomeEnv();
 let testHomeDirRemoved = false;
 function removeTestHomeDir(): void {
   if (testHomeDirRemoved) {
@@ -102,6 +110,7 @@ function formatConsoleCall(args: unknown[]): string {
 }
 
 beforeEach(() => {
+  applyTestHomeEnv();
   errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });

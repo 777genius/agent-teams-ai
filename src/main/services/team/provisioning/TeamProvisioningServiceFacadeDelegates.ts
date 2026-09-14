@@ -5,7 +5,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { resolve as resolvePath } from 'path';
 
-import { type OpenCodeMemberIdentityResolution } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { type OpenCodeMemberIdentityResolution } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import { type TeamRuntimeStopInput } from '../runtime';
 
 import { TeamProvisioningBootstrapEvidenceCompatibilityFacade } from './TeamProvisioningBootstrapEvidenceCompatibilityFacade';
@@ -256,8 +256,8 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
     this.transientRunState.clearLeadInboxFollowUpRelayTimer(teamName);
   }
 
-  protected scheduleLeadInboxFollowUpRelay(teamName: string): void {
-    this.transientRunState.scheduleLeadInboxFollowUpRelay(teamName);
+  protected scheduleLeadInboxFollowUpRelay(teamName: string, delayMs?: number): void {
+    this.transientRunState.scheduleLeadInboxFollowUpRelay(teamName, delayMs);
   }
 
   protected resetTeamScopedTransientStateForNewRun(teamName: string): void {

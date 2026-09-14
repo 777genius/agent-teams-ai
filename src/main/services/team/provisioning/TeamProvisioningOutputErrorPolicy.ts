@@ -7,6 +7,15 @@ export interface TeamProvisioningStallWarningRequest {
 
 export function isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
   const lower = text.toLowerCase();
+
+  // Assistant text can quote or paraphrase a login prompt without the CLI
+  // actually being unauthenticated. Keep only the explicit credential error
+  // wording that the CLI emits in place of a reply; ambiguous 401s and login
+  // prompts remain untrusted here to avoid a self-sustaining respawn loop.
+  if (source === 'assistant') {
+    return lower.includes('invalid api key') || lower.includes('missing api key');
+  }
+
   const hasExplicitCliAuthSignal =
     lower.includes('not authenticated') ||
     lower.includes('not logged in') ||
@@ -27,7 +36,7 @@ export function isAuthFailureWarning(text: string, source: AuthWarningSource): b
     return true;
   }
 
-  if (source === 'assistant' || source === 'stdout') {
+  if (source === 'stdout') {
     return false;
   }
 

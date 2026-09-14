@@ -12,28 +12,73 @@ type RuntimeLivenessKind = NonNullable<TeamAgentRuntimeEntry['livenessKind']>;
 
 const WORK_SYNC_RESERVED_MEMBER_NAMES = new Set(['team-lead', 'user']);
 
+// registered_only / stale_metadata are NOT listed: an on-demand OpenCode lane
+// degrades to those kinds between turns while staying deliverable (alive:true).
+// Entries that are genuinely dead still fail the alive check first.
 const WORK_SYNC_INACTIVE_LIVENESS_KINDS = new Set<RuntimeLivenessKind>([
   'permission_blocked',
   'runtime_process_candidate',
   'shell_only',
-  'registered_only',
-  'stale_metadata',
   'not_found',
 ]);
 
 const WORK_SYNC_BOOTSTRAP_ONLY_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
-  'runtime_bootstrap',
   'persisted_metadata',
 ]);
 
+// runtime_bootstrap counts as active: an on-demand OpenCode lane holds no live
+// pid between turns, yet a confirmed bootstrap check-in means deliveries reach
+// it (delivery itself spins the runtime up). Rejecting it deadlocks assignment
+// nudges: the lane only earns an opencode_bridge pid AFTER a first delivery.
 const WORK_SYNC_MEMBER_CONFIRMED_BOOTSTRAP_ACTIVE_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
   'agent_process_table',
   'opencode_bridge',
+  'runtime_bootstrap',
 ]);
 
 const WORK_SYNC_LEAD_CONFIRMED_BOOTSTRAP_ACTIVE_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
   'lead_process',
 ]);
+
+/**
+ * Member names (normalized) whose launch hard-failed - grace timeout expired,
+ * bootstrap evidence rejected, etc. A hard-failed member can still resolve
+ * `alive: true` in the runtime snapshot (no pid ever disproves it), which is
+ * correct for the "alive between turns" case this snapshot also has to serve,
+ * but it must never make an assignment nudge target a member that is not
+ * coming back on its own.
+ */
+export type WorkSyncHardFailedMembers = ReadonlySet<string>;
+
+/** Builds the lookup isRuntimeEntryActiveForWorkSync et al. take from a member-spawn-status snapshot. */
+export function buildWorkSyncHardFailedMembers(
+  statuses: Record<string, Pick<{ hardFailure?: boolean }, 'hardFailure'>> | null | undefined
+): WorkSyncHardFailedMembers {
+  const hardFailedMembers = new Set<string>();
+  for (const [memberName, entry] of Object.entries(statuses ?? {})) {
+    if (entry.hardFailure === true) {
+      const normalized = normalizeMemberName(memberName);
+      if (normalized) {
+        hardFailedMembers.add(normalized);
+      }
+    }
+  }
+  return hardFailedMembers;
+}
+
+function isWorkSyncHardFailedMemberName(
+  normalizedMemberName: string,
+  hardFailedMembers: WorkSyncHardFailedMembers | undefined
+): boolean {
+  return hardFailedMembers?.has(normalizedMemberName) === true;
+}
+
+function isWorkSyncHardFailedMember(
+  entry: Pick<TeamAgentRuntimeEntry, 'memberName'>,
+  hardFailedMembers: WorkSyncHardFailedMembers | undefined
+): boolean {
+  return isWorkSyncHardFailedMemberName(normalizeMemberName(entry.memberName), hardFailedMembers);
+}
 
 function isWorkSyncLeadLikeMemberName(memberName: string): boolean {
   const normalized = normalizeMemberName(memberName).replace(/[\s_]+/g, '-');
@@ -73,7 +118,8 @@ export function isRuntimeEntryActiveForWorkSync(
         'alive' | 'backendType' | 'livenessKind' | 'memberName' | 'pidSource'
       >
     | null
-    | undefined
+    | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   if (!entry) {
     return false;
@@ -82,6 +128,9 @@ export function isRuntimeEntryActiveForWorkSync(
     entry.backendType === 'lead' ||
     WORK_SYNC_RESERVED_MEMBER_NAMES.has(entry.memberName.trim().toLowerCase())
   ) {
+    return false;
+  }
+  if (isWorkSyncHardFailedMember(entry, hardFailedMembers)) {
     return false;
   }
   if (
@@ -131,32 +180,48 @@ function runtimeEntryMentionsProcessTableUnavailable(
   );
 }
 
+/**
+ * A member whose launch hard-failed is never uncertain: the caller answers null
+ * on uncertainty and then falls back to team-wide liveness, which would hand the
+ * hard-failed member back as active. An unreadable process table only clouds
+ * members whose fate is still open.
+ */
 export function hasUncertainWorkSyncRuntimeActivity(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   return Object.values(snapshot?.members ?? {}).some(
     (entry) =>
-      isRuntimeEntryRelevantForWorkSync(entry) && runtimeEntryMentionsProcessTableUnavailable(entry)
+      isRuntimeEntryRelevantForWorkSync(entry) &&
+      !isWorkSyncHardFailedMember(entry, hardFailedMembers) &&
+      runtimeEntryMentionsProcessTableUnavailable(entry)
   );
 }
 
 export function hasWorkSyncActiveRuntime(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
-  return Object.values(snapshot?.members ?? {}).some(isRuntimeEntryActiveForWorkSync);
+  return Object.values(snapshot?.members ?? {}).some((entry) =>
+    isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers)
+  );
 }
 
 export function hasWorkSyncReachableRuntime(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   return Object.values(snapshot?.members ?? {}).some(
-    (entry) => isRuntimeEntryActiveForWorkSync(entry) || isRuntimeLeadEntryActiveForWorkSync(entry)
+    (entry) =>
+      isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers) ||
+      isRuntimeLeadEntryActiveForWorkSync(entry)
   );
 }
 
 export function isRuntimeMemberActiveForWorkSync(
   snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
-  memberName: string
+  memberName: string,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   const normalizedMemberName = normalizeMemberName(memberName);
   if (!normalizedMemberName) {
@@ -165,7 +230,7 @@ export function isRuntimeMemberActiveForWorkSync(
   return Object.values(snapshot?.members ?? {}).some(
     (entry) =>
       normalizeMemberName(entry.memberName) === normalizedMemberName &&
-      (isRuntimeEntryActiveForWorkSync(entry) ||
+      (isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers) ||
         (isWorkSyncLeadLikeMemberName(normalizedMemberName) &&
           isRuntimeLeadEntryActiveForWorkSync(entry)))
   );
@@ -173,10 +238,14 @@ export function isRuntimeMemberActiveForWorkSync(
 
 export function isRuntimeMemberActivityUncertainForWorkSync(
   snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
-  memberName: string
+  memberName: string,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   const normalizedMemberName = normalizeMemberName(memberName);
   if (!normalizedMemberName) {
+    return false;
+  }
+  if (isWorkSyncHardFailedMemberName(normalizedMemberName, hardFailedMembers)) {
     return false;
   }
   return Object.values(snapshot?.members ?? {}).some(

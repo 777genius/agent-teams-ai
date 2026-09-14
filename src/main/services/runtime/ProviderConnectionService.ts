@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
+import {
+  ANTHROPIC_DEFAULT_API_BASE_URL,
+  verifyAnthropicApiKeyWithApi,
+} from '@main/utils/anthropicApiKeyVerification';
 import { execCli } from '@main/utils/childProcess';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 import {
@@ -17,6 +21,7 @@ import { ConfigManager } from '../infrastructure/ConfigManager';
 
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
+import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -32,6 +37,10 @@ import type {
   CodexModelCatalogFeatureFacade,
   CodexModelCatalogRequest,
 } from '@features/codex-model-catalog/main';
+import type {
+  AnthropicApiKeyVerificationResult,
+  AnthropicApiKeyVerifier,
+} from '@main/utils/anthropicApiKeyVerification';
 import type {
   CliProviderAuthMode,
   CliProviderConnectionInfo,
@@ -102,9 +111,7 @@ const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
-const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
-const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
 const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
 const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
@@ -121,23 +128,8 @@ type CodexCliLoginStatusChecker = (params: {
   env: NodeJS.ProcessEnv;
 }) => Promise<CodexCliLoginStatusCheckResult>;
 
-type AnthropicApiKeyVerificationState = 'valid' | 'invalid' | 'unknown';
-
-interface AnthropicApiKeyVerificationResult {
-  state: AnthropicApiKeyVerificationState;
-  status?: number | null;
-  errorType?: string | null;
-  errorMessage?: string | null;
-}
-
-type AnthropicApiKeyVerifier = (
-  apiKey: string,
-  baseUrl?: string | null
-) => Promise<AnthropicApiKeyVerificationResult>;
-
-type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> & {
-  refreshSnapshot?: CodexAccountFeatureFacade['refreshSnapshot'];
-};
+type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> &
+  Partial<Pick<CodexAccountFeatureFacade, 'getCachedSnapshot' | 'refreshSnapshot'>>;
 
 interface ProviderStatusEnrichmentOptions {
   hydrateModelCatalog?: boolean;
@@ -163,23 +155,6 @@ function normalizeAnthropicApiKeyVerificationMessage(
   }
 
   return 'unknown verification error';
-}
-
-function buildAnthropicModelsUrl(baseUrl?: string | null): string {
-  const url = new URL(baseUrl?.trim() || ANTHROPIC_DEFAULT_API_BASE_URL);
-  let pathname = url.pathname;
-  while (pathname.endsWith('/')) {
-    pathname = pathname.slice(0, -1);
-  }
-  if (pathname.endsWith('/v1/models')) {
-    url.pathname = pathname;
-  } else if (pathname.endsWith('/v1')) {
-    url.pathname = `${pathname}/models`;
-  } else {
-    url.pathname = `${pathname}/v1/models`;
-  }
-  url.search = '';
-  return url.toString();
 }
 
 function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
@@ -232,59 +207,6 @@ function isUsableAnthropicCompatibleEndpoint(
     );
   } catch {
     return false;
-  }
-}
-
-async function verifyAnthropicApiKeyWithApi(
-  apiKey: string,
-  baseUrl?: string | null
-): Promise<AnthropicApiKeyVerificationResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS);
-  try {
-    const response = await fetch(buildAnthropicModelsUrl(baseUrl), {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-    });
-    const text = await response.text();
-    let body: { error?: { type?: string; message?: string } } | null = null;
-    try {
-      body = text ? (JSON.parse(text) as { error?: { type?: string; message?: string } }) : null;
-    } catch {
-      body = null;
-    }
-
-    if (response.ok) {
-      return { state: 'valid', status: response.status };
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      return {
-        state: 'invalid',
-        status: response.status,
-        errorType: body?.error?.type ?? null,
-        errorMessage: body?.error?.message ?? null,
-      };
-    }
-
-    return {
-      state: 'unknown',
-      status: response.status,
-      errorType: body?.error?.type ?? null,
-      errorMessage: body?.error?.message ?? null,
-    };
-  } catch (error) {
-    return {
-      state: 'unknown',
-      status: null,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -425,9 +347,10 @@ function createCodexCustomProviderCatalog(
 
 function applyCodexRuntimeContextEnv(
   env: NodeJS.ProcessEnv,
-  snapshot: CodexAccountSnapshotDto
+  snapshot: CodexAccountSnapshotDto,
+  binaryPathOverride?: string
 ): void {
-  const binaryPath = snapshot.runtimeContext?.binaryPath?.trim();
+  const binaryPath = binaryPathOverride?.trim() || snapshot.runtimeContext?.binaryPath?.trim();
   if (binaryPath) {
     env[CODEX_CLI_PATH_ENV_VAR] = binaryPath;
   }
@@ -886,6 +809,45 @@ export class ProviderConnectionService {
     return env;
   }
 
+  /**
+   * Projects cached Codex account context into a read-only runtime status probe.
+   * This does not decrypt credentials, refresh account state, install runtimes,
+   * or run launch/login commands. The runtime status command remains responsible
+   * for producing authoritative authentication and launch evidence.
+   */
+  async applyPassiveProviderStatusConnectionEnv(
+    env: NodeJS.ProcessEnv,
+    providerId: CliProviderId
+  ): Promise<NodeJS.ProcessEnv> {
+    if (providerId !== 'codex') {
+      return env;
+    }
+
+    const snapshot = this.codexAccountFeature?.getCachedSnapshot?.() ?? null;
+    if (!snapshot) {
+      return env;
+    }
+    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
+    const readiness = evaluateCodexLaunchReadiness({
+      preferredAuthMode: snapshot.preferredAuthMode,
+      managedAccount: snapshot.managedAccount,
+      apiKey: snapshot.apiKey,
+      appServerState: snapshot.appServerState,
+      appServerStatusMessage: snapshot.appServerStatusMessage,
+      localActiveChatgptAccountPresent: snapshot.localActiveChatgptAccountPresent,
+    });
+
+    if (readiness.effectiveAuthMode === 'chatgpt') {
+      delete env.OPENAI_API_KEY;
+      delete env[CODEX_NATIVE_API_KEY_ENV_VAR];
+      applyCodexForcedLoginMethodEnv(env, 'chatgpt');
+      return env;
+    }
+
+    applyCodexForcedLoginMethodEnv(env, readiness.effectiveAuthMode === 'api_key' ? 'api' : null);
+    return env;
+  }
+
   async applyAllConfiguredConnectionEnv(
     env: NodeJS.ProcessEnv,
     options?: StoredApiKeyAccessOptions
@@ -1189,17 +1151,15 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const model = catalog.defaultLaunchModel ?? customProvider.model;
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(withConnection, catalog, 'ready');
       const statusMessage =
         withConnection.statusMessage ??
         (withConnection.connection?.apiKeyConfigured
           ? 'Codex custom provider configured'
           : 'Codex custom provider configured. API key is not set.');
-
       return {
         ...withConnection,
-        models: [model],
-        modelCatalog: catalog,
+        ...catalogDisplay,
         subscriptionRateLimits: null,
         backend: withConnection.backend
           ? {
@@ -1234,7 +1194,6 @@ export class ProviderConnectionService {
       ) {
         return withConnection;
       }
-
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
@@ -1244,11 +1203,11 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-
-      const models = catalog.models
-        .filter((model) => !model.hidden)
-        .map((model) => model.launchModel.trim())
-        .filter(Boolean);
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
+        withConnection,
+        catalog,
+        catalog.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
+      );
       const reasoningEfforts = Array.from(
         new Set(
           catalog.models.flatMap<CliProviderReasoningEffort>(
@@ -1267,8 +1226,7 @@ export class ProviderConnectionService {
             };
       return {
         ...withConnection,
-        models: models.length > 0 ? models : withConnection.models,
-        modelCatalog: catalog,
+        ...catalogDisplay,
         runtimeCapabilities: {
           ...withConnection.runtimeCapabilities,
           modelCatalog: modelCatalogCapability,
@@ -1373,11 +1331,9 @@ export class ProviderConnectionService {
       if (apiVerification?.state === 'valid') {
         return {
           ...provider,
-          authenticated: true,
-          authMethod: 'api_key',
           subscriptionRateLimits: null,
-          verificationState: 'verified',
-          statusMessage: 'Connected via API key',
+          statusMessage:
+            'Anthropic API key is configured, but has not been verified by the runtime yet.',
         };
       }
 

@@ -2,7 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
-import { assertConfiguredTeam } from '../utils/teamConfig';
+import { assertConfiguredTaskActor, assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
 import {
@@ -11,6 +11,7 @@ import {
   resolveMessageTaskCommandId,
   resolveOptionalTaskCreateCommandId,
 } from '../utils/taskCreationIdempotency';
+import { buildCommentCompletionInstruction } from './taskCommentInstruction';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
 const stripAgentBlocksFn = (text: string): string => agentBlocks.stripAgentBlocks(text);
@@ -40,6 +41,23 @@ function normalizeTaskListLimit(limit: number | undefined): number {
     return DEFAULT_TASK_LIST_LIMIT;
   }
   return Math.min(Math.max(1, Math.floor(limit)), MAX_TASK_LIST_LIMIT);
+}
+
+function resolveTaskCreationActor(params: {
+  teamName: string;
+  claudeDir?: string;
+  createdBy?: string;
+  from?: string;
+}): { createdBy?: string; from?: string } {
+  const explicitActor = params.createdBy?.trim();
+  const fallbackActor = params.from?.trim();
+  const actor = explicitActor || fallbackActor;
+  if (!actor) {
+    return {};
+  }
+
+  const validatedActor = assertConfiguredTaskActor(params.teamName, actor, params.claudeDir);
+  return explicitActor ? { createdBy: validatedActor } : { from: validatedActor };
 }
 
 /** Allowed message source types for task_create_from_message provenance. Fail closed — only explicit user-originated sources. */
@@ -90,20 +108,36 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create',
     description:
-      'Create a team task. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.',
+      "Create a team task. Raw/headless calls do not inject a user actor or auto-start: owner without createdBy/from/startImmediately creates a pending task with no recorded actor, and assigning it to the lead suppresses the lead's self-notification. For an immediate user-origin assignment, pass createdBy: 'user' and startImmediately: true. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.",
     parameters: z.object({
       ...toolContextSchema,
       subject: z.string().min(1),
       description: z.string().optional(),
-      owner: z.string().optional(),
-      createdBy: z.string().optional(),
-      from: z.string().optional(),
+      owner: z
+        .string()
+        .optional()
+        .describe('Configured teammate to assign. An owner alone does not auto-start the task.'),
+      createdBy: z
+        .string()
+        .optional()
+        .describe(
+          "Explicit creation actor and assignment-notification sender. Use 'user' for a user-origin headless assignment."
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe('Legacy actor/sender alternative, used only when createdBy is omitted.'),
       blockedBy: z.array(z.string().min(1)).optional(),
       related: z.array(z.string().min(1)).optional(),
       prompt: z.string().optional(),
       descriptionTaskRefs: z.array(taskRefSchema).optional(),
       promptTaskRefs: z.array(taskRefSchema).optional(),
-      startImmediately: z.boolean().optional(),
+      startImmediately: z
+        .boolean()
+        .optional()
+        .describe(
+          'Opt in to in_progress when an owner is present. Omitted/false stays pending; blocked tasks stay pending.'
+        ),
       commandId: z
         .string()
         .regex(CANONICAL_TASK_UUID_PATTERN, 'Must be a canonical task UUID (version 1-5)')
@@ -137,12 +171,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
       const { taskBoard } = controller;
+      const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy, from });
       const payload = buildCreateTaskPayload({
         subject,
         description,
         owner,
-        createdBy,
-        from,
+        ...taskActor,
         blockedBy,
         related,
         prompt,
@@ -283,11 +317,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       }
 
       // 5. Forward into canonical create-task path
+      const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy });
       const payload = buildCreateTaskPayload({
         subject,
         description,
         owner,
-        createdBy,
+        ...taskActor,
         blockedBy,
         related,
         prompt,
@@ -395,7 +430,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_set_status',
     description:
-      'Set task work status. Execution transitions require the current owner; lead override is limited to administrative transitions.',
+      'Set task work status. Open dependencies prevent in_progress/completed. Execution transitions require the current owner; lead override is limited to administrative transitions.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -444,7 +479,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_start',
-    description: 'Mark task as in progress. Only the current owner may start it.',
+    description: 'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -467,7 +502,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_complete',
-    description: 'Mark task as completed. Only the current owner may complete it.',
+    description: 'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -527,16 +562,15 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, taskId, text, from, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
+      const result = getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
+        text,
+        ...(from ? { from } : {}),
+        ...(taskRefs?.length ? { taskRefs } : {}),
+      }) as Record<string, unknown>;
+      const payload = taskWriteResult(result);
+      const protocolInstruction = buildCommentCompletionInstruction(payload);
       return await Promise.resolve(
-        jsonTextContent(
-          taskWriteResult(
-            getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
-              text,
-              ...(from ? { from } : {}),
-              ...(taskRefs?.length ? { taskRefs } : {}),
-            }) as Record<string, unknown>
-          )
-        )
+        jsonTextContent(protocolInstruction ? { ...payload, protocolInstruction } : payload)
       );
     },
   });

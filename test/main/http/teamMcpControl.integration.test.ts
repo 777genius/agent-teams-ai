@@ -15,6 +15,7 @@ import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contr
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
+  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -307,6 +308,13 @@ function createServices(claudeRoot: string): {
       Promise.resolve(runtimeAck('recorded')),
   } satisfies TeamApplicationRuntimeIngressApi;
 
+  const teamMemberDiagnosticsApi = {
+    getMemberSpawnStatusesReadOnly: () =>
+      Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
+    getTeamAgentRuntimeSnapshotReadOnly: () =>
+      Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
+  } satisfies TeamHttpMemberDiagnosticsApi;
+
   return {
     createTeamCalls,
     resumeTeamCalls,
@@ -330,6 +338,8 @@ function createServices(claudeRoot: string): {
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
         runtimeIngress: teamRuntimeIngressApi,
+        runtimeControl: teamRuntimeControlApi,
+        memberDiagnostics: teamMemberDiagnosticsApi,
       } satisfies TeamHttpHandlerApis,
     },
   };

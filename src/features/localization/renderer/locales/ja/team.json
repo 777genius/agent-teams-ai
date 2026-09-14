@@ -72,7 +72,30 @@
       "externalTeam": "外部チーム",
       "crossTeamAwaitingReply": "返信をお待ちしています。",
       "user": "ユーザ名",
-      "awaitingApproval": "承認待ち"
+      "awaitingApproval": "承認待ち",
+      "discardQueued": {
+        "action": "キューにあるメッセージを破棄",
+        "alreadyDelivered": "破棄されたものはありません。これらのメッセージはすでに「{{member}}」へ配信済みです。",
+        "cancelLabel": "キャンセル",
+        "confirmLabel": "破棄",
+        "count": "キュー {{count}} 件",
+        "count_few": "キュー {{count}} 件",
+        "count_many": "キュー {{count}} 件",
+        "count_one": "キュー {{count}} 件",
+        "count_other": "キュー {{count}} 件",
+        "failedFallbackMessage": "予期しないエラーが発生しました",
+        "failedTitle": "キューのメッセージを破棄できませんでした",
+        "message": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_few": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_many": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_one": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_other": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} 件を破棄しました。キューに残り: {{remaining}} 件。",
+        "resultTitle": "キューのメッセージ",
+        "title": "キューのメッセージを破棄",
+        "tooltip": "このメンバーのキューにあるメッセージを破棄"
+      }
     },
     "reply": {
       "replyingTo": "返信する",
@@ -312,8 +335,14 @@
       "saved": "保存済み"
     },
     "worktree": {
-      "description": "別のgitワークツリーでこのチームメイトを実行します。 リードワークスペースではなく、ワークツリーが変更対象を適用する/拒否します。",
-      "label": "ワークツリー"
+      "description": "オン: 必要に応じて起動時に作成される別の Git worktree を使用します。既存の worktree は現在のブランチを維持します。オフ: 共有プロジェクトワークスペースを使用し、以前の worktree は保持されます。",
+      "label": "ワークツリー",
+      "existing": "前回のワークスペース: {{path}}。管理対象の worktree が利用可能なら再利用し、なければ起動時に作成します。",
+      "new": "Worktree: 利用可能なら再利用し、なければ起動時に作成します。ブランチは起動後に表示されます。",
+      "shared": "共有プロジェクトワークスペース: {{path}}。プロジェクトのブランチを使用します。",
+      "sharedPending": "共有ワークスペース: 起動時にリードの worktree とともに確定します。ブランチは起動後に表示されます。",
+      "branch": "Worktree のブランチ: {{branch}}",
+      "branchUnavailable": "利用できません"
     },
     "addMembers": {
       "title": "メンバーの追加",
@@ -333,6 +362,7 @@
       "launch": "リリース",
       "remove": "削除",
       "stop": "ストップ",
+      "stopping": "停止しています...",
       "task": "タスク",
       "visualize": "可視化",
       "usage": "使用状況"
@@ -354,6 +384,14 @@
       "member_one": "メンバー",
       "member_other": "メンバー",
       "title": "チームはまだ起動しません"
+    },
+    "stopFailed": {
+      "title": "チームを停止できません",
+      "message": "チームはまだ実行中です。状態を確認して、もう一度「停止」を押してください。"
+    },
+    "stopUnknown": {
+      "title": "停止を確認できません",
+      "message": "ランタイムから応答がありませんでした。再試行する前にチームの状態を更新してください。"
     },
     "invalidTab": "無効なチームタブ",
     "kanbanSafeData": "完全にカンバンをロードできなかった。 安全なデータの表示。",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "チーム紹介",
       "relaunching": "リリース",
       "saveChanges": "変更を保存",
-      "saving": "保存..."
+      "saving": "保存...",
+      "skipPreflightAndLaunch": "事前チェックをスキップして起動"
+    },
+    "workspaceTrust": {
+      "description": "チームの開始時に、プロジェクトのコマンドやMCPサーバーが実行される場合があります。"
     },
     "billing": {
       "prefix": "2026年6月15日(金)より、無農薬請求書",
@@ -1540,6 +1582,11 @@
       "message": "チーム「{{teamName}}」を永久に削除しますか? すべてのデータは失われます。",
       "confirmLabel": "永遠に削除",
       "cancelLabel": "キャンセル"
+    },
+    "deleteFailed": {
+      "title": "チームを削除できませんでした",
+      "fallbackMessage": "予期しないエラーが発生しました",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "ディレクトリが存在しない場合、自動的に作成されます。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "チームメイトが起動の猶予時間内に参加しませんでした。"
+    },
     "badges": {
       "worktree": "ワークツリー"
     },
@@ -1799,11 +1849,12 @@
       "title": "メンバー",
       "addMember": "メンバーの追加",
       "editAsJson": "JSONとして編集",
-      "runInSeparateWorktrees": "チームメイトを別のワークツリーで実行する",
+      "runInSeparateWorktrees": "すべてのチームメイトに worktree を使用",
       "agentTeamsMcpOnly": "エージェントチーム MCP のみ",
       "removedCount": "削除({{count}})",
       "removedModelLockReason": "削除されたメンバーは、ソフト削除履歴を保持します。 設定を編集するために復元します。",
-      "memberNamesUnique": "会員名はユニークでなければなりません"
+      "memberNamesUnique": "会員名はユニークでなければなりません",
+      "worktreeDescription": "オン: すべてのチームメイトに個別の worktree を使用します。一部選択: 選択したチームメイトのみに使用します。オフ: 共有プロジェクトワークスペースを使用します。オフにしても既存の worktree はディスクに保持されます。"
     },
     "stats": {
       "computing": "計算の統計...",
@@ -2401,7 +2452,7 @@
   },
   "advancedCli": {
     "title": "アドバンスト",
-    "useWorktree": "ワークツリーを使う",
+    "useWorktree": "リード用 worktree (チームメイト用 worktree とは別)",
     "recent": "最近の投稿",
     "commandPreview": "コマンドプレビュー",
     "customArguments": "カスタム引数",

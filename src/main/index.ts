@@ -23,10 +23,13 @@ import {
   earlyElectronDevPathOverrideResult,
   earlyElectronUserDataMigrationResult,
 } from './bootstrapUserDataMigration';
+import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
 
-import { TEAM_TOOL_APPROVAL_EVENT } from '@features/team-approvals/contracts';
-import type { AppCloseReason } from '@features/app-close-coordination/contracts';
+import type {
+  AppCloseReadinessResult,
+  AppCloseReason,
+} from '@features/app-close-coordination/contracts';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
@@ -45,6 +48,7 @@ import {
 } from '@features/member-log-stream/main';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
+  buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
@@ -59,12 +63,11 @@ import {
   type InternalStorageFeature,
 } from '@features/internal-storage/main';
 import {
+  createOrganizationsFeature,
   type OrganizationsFeatureFacade,
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
-// eslint-disable-next-line no-restricted-imports -- The app shell is the sole concrete composition root for organizations.
-import { createOrganizationsFeature } from '@features/organizations/main/composition';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -94,12 +97,16 @@ import {
   removeTeamImportIpc,
   type TeamImportFeatureFacade,
 } from '@features/team-import/main';
-import * as teamMemberSettings from './composition/team/createDesktopTeamMemberSettingsFeature';
+import * as teamMemberSettings from '@features/team-provisioning/main';
 import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  createApplicationCommandLedgerFeature,
+  NodeApplicationCommandHasher,
+} from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import {
   createTokenUsageFeature,
@@ -109,12 +116,11 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import { createApplicationCommandLedgerFeature } from '@main/composition/applicationCommandLedgerComposition';
+import * as workspaceTrustFeature from '@features/workspace-trust/main';
 import {
-  createUnavailableTeamLifecycleReadHost,
-  type TeamLifecycleReadHost,
-} from '@main/composition/hosted/teamLifecycleReadComposition';
-import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
@@ -125,6 +131,7 @@ import {
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
+import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -132,10 +139,14 @@ import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/Json
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
-import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
-import { isInformationalOpenCodeRuntimeDeliveryDiagnostic } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryDiagnostics';
 import {
-  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildMemberWorkSyncReviewPickupEscalationMessageId,
+  buildMemberWorkSyncReviewPickupEscalationText,
+} from '@main/services/team/escalation/memberWorkSyncReviewPickupEscalationMessage';
+import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
+import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
+import {
+  buildOpenCodeAppProfileScope,
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
@@ -148,13 +159,14 @@ import {
   bindTeamCrossTeamMessagingApi,
   bindTeamHttpDataApi,
   bindTeamHttpHandlerApis,
+  bindTeamIpcHandlerApis,
+  type TeamDiagnosticsApi,
   type TeamHttpHandlerApis,
-  type TeamMessagingApi,
+  type TeamIpcHandlerApis,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
-import * as TeamBackup from '@main/services/team/TeamBackupComposition';
+import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { createNodeTeamMemberSettingsFeature } from '@main/services/team/createNodeTeamMemberSettingsFeature';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
   resolveAgentTeamsMcpLaunchSpec,
@@ -165,6 +177,11 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
+import {
+  formatTokenUsageBudgetMetricLabel,
+  formatTokenUsageBudgetValue,
+} from '@main/utils/tokenUsageBudgetNotificationText';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -176,6 +193,7 @@ import {
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_PROJECT_BRANCH_CHANGE,
+  TEAM_TOOL_APPROVAL_EVENT,
   WINDOW_FULLSCREEN_CHANGED,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 } from '@preload/constants/ipcChannels';
@@ -187,20 +205,17 @@ import {
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
 import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idleNotificationSemantics';
-import { parseInboxJson } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
-import { createHash } from 'crypto';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
-import * as desktopLifecycle from './desktopLifecycle';
 import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
-import { initializeTeamLifecycleReadHandler } from './ipc/teams';
+import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
@@ -237,8 +252,23 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  buildOpenCodeProcessOwnershipMarkers,
+  cleanupOpenCodeHostProcessFallback,
+  runOpenCodeLifecycleCleanupTail,
+  runOpenCodeStartupCleanupMaintenance,
+  type OpenCodeLifecycleCleanupTailPorts,
+} from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
+import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import {
+  OpenCodeWindowsStartupCleanup,
+  stopAdmittingOpenCodeStartupCleanup,
+} from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
+import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTeamControlApiBaseUrl,
@@ -248,6 +278,7 @@ import {
 import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
 import { getTeamFsWorkerClient } from './services/team/TeamFsWorkerClient';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
+import { createMemberRuntimeAdvisoryInvalidator } from './services/team/TeamMemberRuntimeAdvisoryInvalidation';
 import { TeamMemberRuntimeAdvisoryService } from './services/team/TeamMemberRuntimeAdvisoryService';
 import { createTeamProvisioningMemberWorkSyncBusySignals } from './services/team/provisioning/TeamProvisioningMemberWorkSyncBusySignals';
 import { notifyTeamChangeObserversSafely } from './services/team/TeamChangeFanout';
@@ -292,6 +323,7 @@ import {
   ClaudeBinaryResolver,
   CliInstallerService,
   configManager,
+  configureCursorAgentAtomicReapBridge,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
@@ -320,10 +352,10 @@ import {
   TeamTaskStallSnapshotSource,
   TeamTranscriptSourceLocator,
   UpdaterService,
+  applyCursorAgentAttributionEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 
-import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -332,41 +364,17 @@ import type {
   TeamChangeEvent,
 } from '@shared/types';
 
-interface WorkspaceTrustCompositionModule {
-  createWorkspaceTrustFeatures(input: {
-    getClaudeConfigDir: () => string;
-    getAutoDetectedClaudeConfigDir: () => string;
-    getHomeDir: () => string;
-  }): {
-    coordinator: WorkspaceTrustCoordinator;
-    registerIpc(ipc: typeof ipcMain): void;
-    removeIpc(ipc: typeof ipcMain): void;
-  };
-}
-
-const [{ createWorkspaceTrustFeatures }] = Object.values(
-  import.meta.glob<WorkspaceTrustCompositionModule>(
-    '../features/workspace-trust/main/composition/createWorkspaceTrustFeatures.ts',
-    { eager: true }
-  )
-);
-
-export {
-  reportDesktopShutdownFailure,
-  runDesktopQuitLifecycle,
-  runDesktopUpdateInstallLifecycle,
-  runDesktopWindowCloseLifecycle,
-  shouldQuitAfterDesktopWindowClose,
-} from './desktopLifecycle';
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
+
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
+
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -379,48 +387,19 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
-  return diagnostics.some(
-    (diagnostic) => !isInformationalOpenCodeRuntimeDeliveryDiagnostic(diagnostic)
-  );
-}
-/**
- * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
- * reason) on every file change, flooding the dev console with identical lines.
- * Log a given team/inbox diagnostics message at most once per window; a
- * CHANGED message always logs immediately so real transitions stay visible.
- */
-const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
-const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
-const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
-function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
-  const previous = relayDiagnosticsLogDedup.get(dedupKey);
-  if (
-    previous &&
-    previous.message === message &&
-    nowMs - previous.loggedAt < RELAY_DIAGNOSTICS_LOG_DEDUP_MS
-  ) {
-    return false;
-  }
-  if (!previous && relayDiagnosticsLogDedup.size >= RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES) {
-    const oldestKey = relayDiagnosticsLogDedup.keys().next();
-    if (!oldestKey.done) {
-      relayDiagnosticsLogDedup.delete(oldestKey.value);
-    }
-  }
-  relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
-  return true;
-}
+
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
+
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
+
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -440,20 +419,7 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
-  return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
-}
-function formatTokenUsageBudgetValue(
-  value: number,
-  metric: 'tokens' | 'apiEquivalentCostUsd'
-): string {
-  if (metric === 'apiEquivalentCostUsd') {
-    return `$${value.toFixed(value >= 10 ? 0 : 2)}`;
-  }
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M tokens`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tokens`;
-  return `${Math.round(value)} tokens`;
-}
+
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -476,12 +442,14 @@ if (
   logger.warn(`Electron userData migration failed, using legacy path for this run`);
 }
 startEventLoopLagMonitor();
+
 // Windows: set AppUserModelId early so native notifications show the correct
 // application title instead of the default "electron.app.{name}" identifier.
 // Must match the appId in electron-builder config (package.json → build.appId).
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.agent-teams.app');
 }
+
 // --- Team message notification tracking ---
 const teamInboxReader = new TeamInboxReader();
 const teamInboxWriter = new TeamInboxWriter();
@@ -495,65 +463,7 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-function buildMemberWorkSyncReviewPickupEscalationMessageId(input: {
-  teamName: string;
-  memberName: string;
-  reason: string;
-  reviewRequestEventIds?: readonly string[];
-  taskRefs: readonly { taskId: string; displayId?: string }[];
-}): string {
-  const stableKey = JSON.stringify({
-    teamName: input.teamName,
-    memberName: input.memberName.trim().toLowerCase(),
-    reason: input.reason,
-    reviewRequestEventIds: [...new Set(input.reviewRequestEventIds ?? [])].sort(),
-    taskIds: [...new Set(input.taskRefs.map((taskRef) => taskRef.taskId).filter(Boolean))].sort(),
-  });
-  const digest = createHash('sha256').update(stableKey).digest('hex').slice(0, 20);
-  return `member-work-sync-review-pickup-escalation:${digest}`;
-}
-function buildMemberWorkSyncReviewPickupEscalationText(input: {
-  memberName: string;
-  reason: string;
-  diagnostics?: readonly string[];
-  taskRefs: readonly { taskId: string; displayId?: string }[];
-}): string {
-  const taskLines = input.taskRefs.length
-    ? input.taskRefs
-        .map((taskRef) => `- ${taskRef.displayId ?? taskRef.taskId.slice(0, 8)}`)
-        .join('\n')
-    : '- No task refs recorded';
-  const reasonText = describeMemberWorkSyncReviewPickupEscalationReason(input.reason);
-  return [
-    'Review pickup needs lead attention.',
-    '',
-    `Reviewer: ${input.memberName}`,
-    reasonText,
-    '',
-    'Tasks:',
-    taskLines,
-    '',
-    'No review_start, review_approve, or review_request_changes was recorded for the current review request.',
-    'Consider reassigning the reviewer or sending a direct instruction.',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-function describeMemberWorkSyncReviewPickupEscalationReason(reason: string): string {
-  if (reason.startsWith('provider_not_supported:')) {
-    return 'Direct review-pickup wake is not available for this member runtime, so the lead needs to handle the stuck review.';
-  }
-  if (reason === 'review_pickup_already_delivered_still_stuck') {
-    return 'A review-pickup reminder was delivered, but the review is still waiting for a review tool action.';
-  }
-  if (reason === 'review_pickup_delivery_failed_still_stuck') {
-    return 'The review-pickup reminder could not be delivered reliably, and the review is still waiting.';
-  }
-  if (reason.includes('delivery_port_unavailable')) {
-    return 'No reliable review-pickup delivery path is available for this member runtime.';
-  }
-  return 'The current review request is still waiting for explicit review pickup.';
-}
+
 async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
   includeShellEnv?: boolean;
 }): Promise<string | null> {
@@ -561,9 +471,11 @@ async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
     includeShellEnv: options?.includeShellEnv,
   });
   if (resolvedBinaryPath) return resolvedBinaryPath;
+
   if (options?.includeShellEnv === false) {
     return null;
   }
+
   try {
     const status = await openCodeRuntimeInstallerService?.getStatus();
     return status?.installed === true && status.binaryPath ? status.binaryPath : null;
@@ -576,6 +488,7 @@ async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
     return null;
   }
 }
+
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined
 ): Promise<TeamRuntimeAdapterRegistry> {
@@ -589,20 +502,31 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
+
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
     ...process.env,
     PATH: buildMergedCliPath(binaryPath),
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
+  const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns - read back under this
+  // same scope, however the Claude root moves later.
+  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
+  bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
     CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+    CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
+  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
   if (explicitLocalMcpLaunchEnv) {
@@ -628,6 +552,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
       mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
         CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
       });
     }
   };
@@ -644,6 +569,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
+
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -684,7 +610,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
@@ -704,18 +631,21 @@ async function createOpenCodeRuntimeAdapterRegistry(
   ) {
     await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
   }
+
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
     await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
     if (!useHttpMcpBridge) {
+      applyAgentTeamsMcpAppContext(nextEnv);
       return nextEnv;
     }
     try {
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
-        openCodeManagedHostInstanceId
+        openCodeManagedHostInstanceId,
+        profileScope
       );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
@@ -725,8 +655,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     } catch (error) {
       delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
       delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
@@ -734,6 +662,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
         }`
       );
     }
+    applyAgentTeamsMcpAppContext(nextEnv);
     return nextEnv;
   };
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -746,11 +675,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
   });
+  configureCursorAgentAtomicReapBridge(bridgeClient);
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
     buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
   });
+  const manifestOptions = { teamsBasePath: getTeamsBasePath() };
   const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
     handshakePort: new OpenCodeBridgeCommandHandshakePort({
@@ -764,9 +695,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       filePath: join(bridgeControlDir, 'command-ledger.json'),
     }),
     bridge: bridgeClient,
-    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
-      teamsBasePath: getTeamsBasePath(),
-    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader(manifestOptions),
   });
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
@@ -779,6 +709,14 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
+const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
+  logSweepResult: (message) => logger.diagnostic(message),
+  logWarning: (message) => logger.warn(message),
+  logError: (message) => logger.error(message),
+};
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -808,47 +746,30 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
-  if (reason === 'startup' && !registryCleanupAvailable) {
-    logger.warn(
-      '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
-    );
-    return;
-  }
-  await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
-    mode: reason === 'shutdown' ? 'force' : 'orphaned',
-    excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
-    startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
+  // After the command, not before it: the managed host the registry sweep
+  // boots in this process directory is younger than the moment the command was
+  // issued, so an issue-time fence keeps the one host the tail below exists to
+  // reap.
+  const sweepCommandSettledAtMs = Date.now();
+
+  await runOpenCodeLifecycleCleanupTail({
+    reason,
+    registryHostPids,
+    registryCleanupAvailable,
+    appStartedAtMs,
+    sweepCommandSettledAtMs,
+    managedHostInstanceId: openCodeManagedHostInstanceId,
+    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+    ports: openCodeLifecycleCleanupTailPorts,
   });
 }
-function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
-  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
-> {
-  return process.platform === 'win32'
-    ? {
-        requiredServeConfigMarkersAny: [
-          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
-        ],
-      }
-    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
-}
-async function cleanupOpenCodeHostProcessFallback(
-  label: string,
-  options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
-): Promise<void> {
-  const fallback = await cleanupManagedOpenCodeServeProcesses(options);
-  if (fallback.killed > 0) {
-    logger.info(`[OpenCode] ${label} cleanup killed ${fallback.killed} managed host(s)`);
-  }
-  for (const diagnostic of fallback.diagnostics) {
-    logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
-  }
-}
+
 // --- Team display name cache (avoid listTeams() on every notification) ---
 const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
 const teamDisplayNameCache = new Map<string, { value: string; expiresAt: number }>();
 let teamListInFlight: Promise<Map<string, string>> | null = null;
+
 async function refreshTeamDisplayNameCache(): Promise<Map<string, string>> {
   if (teamListInFlight) {
     return teamListInFlight;
@@ -891,25 +812,6 @@ async function resolveTeamDisplayName(teamName: string): Promise<string> {
   return resolved;
 }
 
-/**
- * Extracts human-readable summary and body from an inbox message.
- * Handles both plain text and serialized JSON ({"type":"message","content":"...","summary":"..."}).
- */
-function extractNotificationContent(text: string): { summary: string; body: string } {
-  const parsed = parseInboxJson(text);
-  if (!parsed) return { summary: text.slice(0, 80), body: text };
-
-  const content = typeof parsed.content === 'string' ? parsed.content : null;
-  const summary = typeof parsed.summary === 'string' ? parsed.summary : null;
-  const message = typeof parsed.message === 'string' ? parsed.message : null;
-
-  const bestBody = content || message || summary || text;
-  const bestSummary =
-    summary || (content ? content.slice(0, 80) : null) || message || text.slice(0, 80);
-
-  return { summary: bestSummary, body: bestBody };
-}
-
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
   logger.debug(`[inbox-notify] called: team=${teamName} detail=${detail}`);
   const config = configManager.getConfig();
@@ -928,9 +830,10 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
   if (!match) return;
   const memberName = match[1];
+
   // Determine inbox type and per-type toggle state.
   // Storage is always unconditional; toggles only suppress the OS toast.
-  const leadName = (await teamDataService?.messagePersistence.getLeadMemberName(teamName)) ?? null;
+  const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
   const isLeadInbox = leadName !== null && memberName === leadName;
   const isUserInbox = memberName === 'user';
 
@@ -972,13 +875,13 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
 
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip app-owned private bootstrap/control prompts. They are durable runtime proof inputs,
       // not user-visible conversation messages.
       if (isTeamInternalControlMessageEnvelope(msg)) continue;
-      // Skip internal review-pickup escalations. They are control-plane signals to the lead runtime,
-      // not user-facing inbox messages.
+      // Skip internal review-pickup escalations to the lead runtime.
       if (isReviewPickupEscalationMessage(msg)) continue;
       // Skip internal coordination noise (idle_notification, shutdown_*, etc.)
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
@@ -1052,7 +955,8 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
       if ((msg.to ?? '').trim() !== 'user') continue;
-      // Skip messages sent from our own UI
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip internal coordination noise
       if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
@@ -1100,6 +1004,7 @@ let appQuitFlow: Promise<boolean> | null = null;
 
 // Service registry and global services
 let contextRegistry: ServiceContextRegistry;
+let workspaceTrustStatus: workspaceTrustFeature.WorkspaceTrustStatusFeatureFacade;
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
@@ -1111,12 +1016,10 @@ let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
 let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
-let workspaceTrustFeature: ReturnType<typeof createWorkspaceTrustFeatures> | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
-let productTeamProvisioning: ReturnType<typeof createProductTeamProvisioning> | null = null;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
@@ -1126,15 +1029,13 @@ let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
-let teamLifecycleReadHost: TeamLifecycleReadHost | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
-let teamBackupService: TeamBackup.TeamBackupService | null = null;
+let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let rendererRecoveryAttempts = 0;
 let servicesReady = false;
 let rendererDidFinishLoad = false;
-let fileWatcherStartupStarted = false;
 let backgroundStartupTasksStarted = false;
 let appStartupHandlersRegistered = false;
 
@@ -1142,9 +1043,17 @@ let appStartupHandlersRegistered = false;
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
 let teamChangeCleanup: (() => void) | null = null;
+let revokeMcpAppContext: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
+const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
+  isServicesReady: () => servicesReady,
+  isShutdownStarted,
+  getActiveContext: () => contextRegistry.getActive(),
+  schedule: scheduleStartupTask,
+  platform: process.platform,
+});
 
 const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
@@ -1265,6 +1174,52 @@ function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
 }
 
+function hasActiveTeamRuntimesForWindowClose(): boolean {
+  if (!servicesReady || !teamProvisioningService) {
+    return false;
+  }
+
+  try {
+    return teamProvisioningService.hasActiveTeamRuntimes();
+  } catch (error) {
+    logger.warn(
+      `Failed to check active team runtimes before closing last window: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return false;
+  }
+}
+
+function formatCloseReadinessBlockers(results: readonly AppCloseReadinessResult[]): string[] {
+  return results.flatMap((result) => result.blockers).slice(0, 10);
+}
+
+async function confirmUnsafeAppClose(
+  window: BrowserWindow,
+  blockers: readonly string[],
+  unsafeActionLabel: string
+): Promise<boolean> {
+  if (window.isDestroyed()) return false;
+  window.show();
+  window.focus();
+  const detail =
+    blockers.length > 0
+      ? blockers.map((blocker) => `- ${blocker}`).join('\n')
+      : 'Changes did not confirm that its latest state was saved.';
+  const choice = await dialog.showMessageBox(window, {
+    type: 'warning',
+    title: 'Changes is not ready to close',
+    message: 'Some Changes state may not be saved yet.',
+    detail,
+    buttons: ['Keep Open', unsafeActionLabel],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  return choice.response === 1;
+}
+
 async function requestWindowCloseReadiness(
   window: BrowserWindow,
   reason: AppCloseReason,
@@ -1273,7 +1228,7 @@ async function requestWindowCloseReadiness(
   if (!rendererDidFinishLoad) return true;
   const result = await rendererCloseReadinessCoordinator.request(window, reason);
   if (result.ok) return true;
-  return desktopLifecycle.confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
+  return confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
 }
 
 async function requestAllWindowsCloseReadiness(
@@ -1288,9 +1243,9 @@ async function requestAllWindowsCloseReadiness(
   );
   const failedResults = results.filter((result) => !result.ok);
   if (failedResults.length === 0) return true;
-  return desktopLifecycle.confirmUnsafeAppClose(
+  return confirmUnsafeAppClose(
     windows[0],
-    desktopLifecycle.formatCloseReadinessBlockers(failedResults),
+    formatCloseReadinessBlockers(failedResults),
     unsafeActionLabel
   );
 }
@@ -1299,28 +1254,10 @@ async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
   if (windowCloseReadinessInFlight.has(window) || window.isDestroyed()) return;
   windowCloseReadinessInFlight.add(window);
   try {
-    await desktopLifecycle.runDesktopWindowCloseLifecycle({
-      isWindowUsable: () => !window.isDestroyed(),
-      shouldQuitAfterClose: () => {
-        const remainingWindowCount = BrowserWindow.getAllWindows().filter(
-          (candidate) => candidate !== window && !candidate.isDestroyed()
-        ).length;
-        return desktopLifecycle.shouldQuitAfterDesktopWindowClose({
-          platform: process.platform,
-          remainingWindowCount,
-          hasActiveTeamRuntimes: desktopLifecycle.hasActiveTeamRuntimesForWindowClose(
-            servicesReady,
-            teamProvisioningService
-          ),
-          showDockIcon: configManager.getConfig().general.showDockIcon,
-        });
-      },
-      requestAppQuit: () => requestGuardedAppQuit('app-quit'),
-      requestWindowCloseReadiness: () =>
-        requestWindowCloseReadiness(window, 'window-close', 'Close Anyway'),
-      authorizeWindowClose: () => authorizedWindowCloses.add(window),
-      closeWindow: () => window.close(),
-    });
+    if (!(await requestWindowCloseReadiness(window, 'window-close', 'Close Anyway'))) return;
+    if (window.isDestroyed()) return;
+    authorizedWindowCloses.add(window);
+    window.close();
   } catch (error) {
     logger.error(
       `Window close readiness failed: ${error instanceof Error ? error.message : String(error)}`
@@ -1328,12 +1265,6 @@ async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
   } finally {
     windowCloseReadinessInFlight.delete(window);
   }
-}
-
-async function shutdownServicesAndDrainPersistentLog(): Promise<void> {
-  await shutdownServices();
-  persistentAppLog?.dispose();
-  await persistentAppLog?.flush();
 }
 
 async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<boolean> {
@@ -1352,23 +1283,21 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       );
       if (!ready) return false;
 
-      return desktopLifecycle.runDesktopQuitLifecycle(reason, {
-        flushConfig: () => configManager.flush(),
-        shutdownServices: shutdownServicesAndDrainPersistentLog,
-        reportShutdownFailure: (error) =>
-          desktopLifecycle.reportDesktopShutdownFailure(reason, error),
-        prepareToQuit: () => {
-          notificationManager?.closeActiveNativeNotifications('app-before-quit');
-          for (const window of BrowserWindow.getAllWindows()) {
-            if (!window.isDestroyed()) window.hide();
-          }
-        },
-        markShutdownComplete: () => {
-          shutdownComplete = true;
-        },
-        relaunch: () => app.relaunch(),
-        quit: () => app.quit(),
-      });
+      if (reason === 'relaunch') app.relaunch();
+      notificationManager?.closeActiveNativeNotifications('app-before-quit');
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.hide();
+      }
+      try {
+        await shutdownServices();
+      } catch (error) {
+        logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      persistentAppLog?.dispose();
+      await persistentAppLog?.flush();
+      shutdownComplete = true;
+      app.quit();
+      return true;
     } catch (error) {
       logger.error(
         `App ${reason} readiness failed: ${error instanceof Error ? error.message : String(error)}`
@@ -1400,6 +1329,7 @@ function registerAppStartupHandlers(): void {
   }
   appStartupHandlersRegistered = true;
   registerRendererLogHandlers(ipcMain);
+  registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
 }
@@ -1763,17 +1693,12 @@ function wireFileWatcherEvents(context: ServiceContext): void {
             void teamProvisioningService
               .relayInboxFileToLiveRecipient(teamName, inboxName)
               .then((relay) => {
-                if (relay.diagnostics?.length) {
-                  const message = `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}: ${relay.diagnostics.join('; ')}`;
-                  if (!shouldLogRelayDiagnostics(`${teamName}/${inboxName}`, message, Date.now())) {
-                    return;
-                  }
-                  if (hasWarningRelayDiagnostics(relay.diagnostics)) {
-                    logger.warn(message);
-                  } else {
-                    logger.info(message);
-                  }
-                }
+                openCodeRelayDiagnosticsLogGate.log(logger, {
+                  dedupKey: `${teamName}/${inboxName}`,
+                  prefix: `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}`,
+                  diagnostics: relay.diagnostics,
+                  nowMs: Date.now(),
+                });
               })
               .catch((e: unknown) =>
                 logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
@@ -1844,11 +1769,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
 
-  // Scope team-root/task file watching to alive + UI-engaged teams, and scope
-  // inbox watching to live teams only. Idle historical teams cannot produce
-  // immediate runtime inbox activity, so their inbox files do not need live fd
-  // watchers; when a team launches, target reconciliation backfills existing
-  // inbox files before live delivery resumes.
+  // Scope artifacts and inboxes to alive + recently engaged teams. Provisioning
+  // can assign work before final readiness, so its engaged window must include
+  // inbox delivery too. The bounded TTL excludes historical idle teams;
+  // reconciliation backfills assignments written before watcher readiness.
   setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
   setTeamWatchScopeChangeListener(() => {
     void context.fileWatcher.refreshTeamWatchScope();
@@ -1919,7 +1843,9 @@ function reconfigureLocalContextForClaudeRoot(): void {
     const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
     const projectsDir = getProjectsBasePath();
     const todosDir = getTodosBasePath();
+
     logger.info(`Reconfiguring local context: projectsDir=${projectsDir}, todosDir=${todosDir}`);
+
     if (wasLocalActive) {
       currentLocal.stopFileWatcher();
     }
@@ -1930,9 +1856,6 @@ function reconfigureLocalContextForClaudeRoot(): void {
       fsProvider: new LocalFileSystemProvider(),
       projectsDir,
       todosDir,
-      getCustomProjectPaths: () => configManager.getCustomProjectPaths(),
-      shouldIncludeSubagentErrors: () =>
-        configManager.getConfig().notifications.includeSubagentErrors,
     });
 
     if (notificationManager) {
@@ -1957,7 +1880,22 @@ function reconfigureLocalContextForClaudeRoot(): void {
 /**
  * Initializes all services.
  */
+const announcementsLifecycle = new AnnouncementsLifecycle();
+
 async function initializeServices(): Promise<void> {
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
+  void announcementsLifecycle
+    .initialize({
+      userDataPath: app.getPath('userData'),
+      profile: earlyAnnouncementsProfile,
+      production: app.isPackaged,
+      isolatedProfile:
+        !!earlyElectronDevPathOverrideResult.userDataDir &&
+        !!earlyElectronDevPathOverrideResult.claudeRoot,
+      sourceOverride: process.env.AGENT_TEAMS_ANNOUNCEMENTS_FEED_URL,
+    })
+    .catch((error: unknown) => logger.warn('Announcements initialization unavailable', error));
   logger.info('Initializing services...');
   publishStartupStatus({
     phase: 'services',
@@ -1967,18 +1905,17 @@ async function initializeServices(): Promise<void> {
   });
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
+  // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
+  // Create local context
   const localContext = new ServiceContext({
     id: 'local',
     type: 'local',
     fsProvider: new LocalFileSystemProvider(),
     projectsDir: localProjectsDir,
     todosDir: localTodosDir,
-    getCustomProjectPaths: () => configManager.getCustomProjectPaths(),
-    shouldIncludeSubagentErrors: () =>
-      configManager.getConfig().notifications.includeSubagentErrors,
   });
   // Register context and start cache cleanup only.
   // FileWatcher is deferred to did-finish-load to avoid blocking window creation
@@ -2001,15 +1938,17 @@ async function initializeServices(): Promise<void> {
     if (!(await requestAllWindowsCloseReadiness('update-install', 'Install Anyway'))) {
       throw new Error('Update install canceled because Changes is not ready to close.');
     }
-    await desktopLifecycle.runDesktopUpdateInstallLifecycle({
-      flushConfig: () => configManager.flush(),
-      shutdownServices: shutdownServicesAndDrainPersistentLog,
-      reportShutdownFailure: (error) =>
-        desktopLifecycle.reportDesktopShutdownFailure('update-install', error),
-      markShutdownComplete: () => {
-        shutdownComplete = true;
-      },
-    });
+    try {
+      await shutdownServices();
+    } catch (error) {
+      logger.error(
+        `Shutdown before update install failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      shutdownComplete = true;
+    }
   });
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
@@ -2062,10 +2001,10 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   teamDataService = new TeamDataService();
-  const persistence = teamDataService.messagePersistence;
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
+    const applicationCommandHasher = new NodeApplicationCommandHasher();
     const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
       storageGateway: applicationCommandLedgerBackend.gateway,
     });
@@ -2074,7 +2013,7 @@ async function initializeServices(): Promise<void> {
       new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
         isDurableStorageAvailable: () =>
           applicationCommandLedgerBackend.selector.select(true, false),
-        hashPayload: (payload) => applicationCommandLedgerFeature.hasher.hashJson(payload),
+        hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
       })
     );
   }
@@ -2082,26 +2021,28 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  productTeamProvisioning = createProductTeamProvisioning();
-  teamProvisioningService = productTeamProvisioning.service;
-  const teamFeatureCapabilitySources = productTeamProvisioning.capabilities;
+  const teamProduct = createProductTeamProvisioning();
+  teamProvisioningService = teamProduct.service;
+  const teamFeatureCapabilitySources = teamProduct.capabilities;
+  const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
-  const teamMessagingApi: TeamMessagingApi = teamFeatureCapabilitySources.messaging;
-  teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
-  initializeTeamLifecycleReadHandler(teamLifecycleReadHost);
-  const teamMemberSettingsFeature = createNodeTeamMemberSettingsFeature({
+  const teamMessagingApi = teamFeatureCapabilitySources.messaging;
+  const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
-    runtime: createTeamProvisioningLeadRuntimeSettingsCapability(teamProvisioningService),
+    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
-  workspaceTrustFeature = createWorkspaceTrustFeatures({
+  const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
     getHomeDir,
+    isLocalContext: () =>
+      contextRegistry.getActive().type === 'local' && !sshConnectionManager.isRemote(),
   });
-  teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrustFeature.coordinator);
-  workspaceTrustFeature.registerIpc(ipcMain);
+  workspaceTrustStatus = workspaceTrust.status;
+  teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
+  workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -2110,7 +2051,7 @@ async function initializeServices(): Promise<void> {
     isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
     getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
     getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
-    getLeadName: (teamName) => persistence.getLeadMemberName(teamName),
+    getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
     getTeamDisplayName: (teamName) => teamDataService.getTeamDisplayName(teamName),
     getInboxMessages: (teamName, memberName) =>
       teamInboxReader.getMessagesFor(teamName, memberName),
@@ -2125,14 +2066,45 @@ async function initializeServices(): Promise<void> {
     addNotification: (payload) => notificationManager.addTeamNotification(payload),
     logger: createLogger('Feature:TeamRuntimeRecovery'),
   });
-  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
-    await productTeamProvisioning?.observeFailure(failure, logger);
-    teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
+  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
+  );
+  teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
+    createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
+  );
+  // Reap older, profile-owned orphans before adapter initialization so the
+  // first launch cannot race a stale host holding its loopback port.
+  publishStartupStatus({
+    phase: 'runtime-host-preflight',
+    message: 'Cleaning up stale runtime hosts...',
   });
-  teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
-    teamDataService?.invalidateMemberRuntimeAdvisory(teamName, memberName);
-    getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(teamName, memberName);
-  });
+  const windowsStartupCleanup =
+    process.platform === 'win32'
+      ? new OpenCodeWindowsStartupCleanup({
+          appStartedAtMs,
+          profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+          ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          maintenance: (canAdmitStartupWork) =>
+            runOpenCodeStartupCleanupMaintenance({
+              appStartedAtMs,
+              ports: openCodeLifecycleCleanupTailPorts,
+              canAdmitStartupWork,
+            }),
+          logWarning: (message) => logger.warn(message),
+        })
+      : null;
+  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  else
+    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+      appStartedAtMs,
+      requiredProfileScope: buildOpenCodeAppProfileScope(
+        app.getPath('userData'),
+        getClaudeBasePath()
+      ),
+      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+      logWarning: (message) => logger.warn(message),
+      logError: (message) => logger.error(message),
+    });
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
@@ -2143,11 +2115,26 @@ async function initializeServices(): Promise<void> {
     )
   );
   teamRuntimeRecoveryFeature.start();
-  scheduleStartupTask(() => {
-    void cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
-      logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-    );
-  }, STARTUP_RECOVERY_DELAY_MS);
+  // Armed before the delay, not inside the task, so a launch requested during
+  // the scheduling delay serialises behind the sweep as well.
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
+  }
+  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted()
+    ? null
+    : startPeriodicOpenCodeHostStartupLockPurge({
+        logInfo: (message) => logger.info(message),
+        logWarning: (message) => logger.warn(message),
+      });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
@@ -2155,7 +2142,7 @@ async function initializeServices(): Promise<void> {
     .catch((error: unknown) =>
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
-  teamBackupService = TeamBackup.createTeamBackupService(teamDataService);
+  teamBackupService = new TeamBackupService();
   // Fire-and-forget: initializeServices() is sync, cannot await.
   // Safe because TeamBackupService.initialized flag blocks all backup/restore
   // operations until initialize() completes internally (restore → prune → set flag).
@@ -2179,10 +2166,10 @@ async function initializeServices(): Promise<void> {
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
-    new TeamTaskStallSnapshotSource(teamTranscriptSourceLocator),
+    new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
     new TeamTaskStallPolicy(),
     new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
-    new TeamTaskStallNotifier(persistence, teamProvisioningService)
+    new TeamTaskStallNotifier(teamDataService, teamProvisioningService)
   );
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
@@ -2252,9 +2239,8 @@ async function initializeServices(): Promise<void> {
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
   teamProvisioningService.setControlApiBaseUrlResolver(async () => {
-    if (!httpServer.isRunning()) {
-      await startHttpServer(handleModeSwitch);
-    }
+    // Listening alone does not prove that Host publication has committed.
+    await startHttpServer(handleModeSwitch);
 
     return getTeamControlApiBaseUrl();
   });
@@ -2295,6 +2281,7 @@ async function initializeServices(): Promise<void> {
       );
     }
   );
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
     notifyTeamChangeObserversSafely(
       event,
@@ -2340,7 +2327,6 @@ async function initializeServices(): Promise<void> {
           activeTeamNames,
           STARTUP_RECOVERY_CONCURRENCY,
           async (teamName) => {
-            await productTeamProvisioning?.ensureAdmissionAbsent(teamName, 'startup');
             await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
           }
         );
@@ -2370,20 +2356,11 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(
-    {
-      createTeamConfig: (request) => teamDataService.createTeamConfig(request),
-    },
-    (teamName) => {
-      memberWorkSyncFeature?.resumeTeam(teamName);
-    }
-  );
+  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
+    memberWorkSyncFeature?.resumeTeam(teamName);
+  });
   organizationsFeature = createOrganizationsFeature({
-    teamData: {
-      listTeams: () => teamDataService.listTeams(),
-      getAllTasks: () => teamDataService.getAllTasks(),
-      listAliveProcessTeams: () => teamDataService.listAliveProcessTeams(),
-    },
+    teamDataService,
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
@@ -2467,7 +2444,7 @@ async function initializeServices(): Promise<void> {
   tokenUsageStartupRefreshTimer.unref?.();
   const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
   type MemberWorkSyncRuntimeSnapshot = Awaited<
-    ReturnType<(typeof teamDiagnosticsApi)['getTeamAgentRuntimeSnapshot']>
+    ReturnType<TeamDiagnosticsApi['getTeamAgentRuntimeSnapshot']>
   >;
   const memberWorkSyncRuntimeSnapshotInFlightByTeam = new Map<
     string,
@@ -2531,14 +2508,36 @@ async function initializeServices(): Promise<void> {
     memberWorkSyncRuntimeSnapshotInFlightByTeam.set(input.teamName, request);
     return request;
   };
+  // Best-effort: a member the runtime snapshot cannot itself disprove (no pid
+  // recorded, e.g. an OpenCode lane between turns) still resolves alive:true.
+  // That is correct for that case, but not for a member whose launch already
+  // hard-failed - the grace timeout expired, bootstrap evidence was rejected -
+  // which must never be treated as an assignment nudge target. A failure to
+  // read spawn statuses degrades to the pre-existing runtime-only behavior
+  // rather than blocking the activity check.
+  const getMemberWorkSyncHardFailedMembers = async (
+    teamName: string
+  ): Promise<ReturnType<typeof buildWorkSyncHardFailedMembers>> => {
+    try {
+      const snapshot = await teamProvisioningService.getMemberSpawnStatuses(teamName);
+      return buildWorkSyncHardFailedMembers(snapshot.statuses);
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync hard-failure lookup failed', {
+        teamName,
+        error: String(error),
+      });
+      return buildWorkSyncHardFailedMembers(null);
+    }
+  };
   const getMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean | null> => {
     try {
       const snapshot = await getMemberWorkSyncRuntimeSnapshot({ teamName });
       if (!snapshot) {
         return null;
       }
-      const active = hasWorkSyncReachableRuntime(snapshot);
-      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot)) {
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(teamName);
+      const active = hasWorkSyncReachableRuntime(snapshot, hardFailedMembers);
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)) {
         return null;
       }
       return active;
@@ -2559,8 +2558,16 @@ async function initializeServices(): Promise<void> {
       if (!snapshot) {
         return null;
       }
-      const active = isRuntimeMemberActiveForWorkSync(snapshot, input.memberName);
-      if (!active && isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName)) {
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(input.teamName);
+      const active = isRuntimeMemberActiveForWorkSync(
+        snapshot,
+        input.memberName,
+        hardFailedMembers
+      );
+      if (
+        !active &&
+        isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName, hardFailedMembers)
+      ) {
         return null;
       }
       return active;
@@ -2579,8 +2586,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamFeatureCapabilitySources.runtime.isTeamAlive(teamName) ||
-      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(teamName)
+      teamIpcHandlerApis.runtime.isTeamAlive(teamName) ||
+      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2588,7 +2595,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamFeatureCapabilitySources.runtime.isTeamAlive(teamName);
+    return teamIpcHandlerApis.runtime.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2599,8 +2606,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamFeatureCapabilitySources.runtime.isTeamAlive(input.teamName) ||
-      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(input.teamName)
+      teamIpcHandlerApis.runtime.isTeamAlive(input.teamName) ||
+      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2620,8 +2627,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamFeatureCapabilitySources.runtime.isTeamAlive(team.teamName) ||
-            teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(team.teamName)
+            teamIpcHandlerApis.runtime.isTeamAlive(team.teamName) ||
+            teamIpcHandlerApis.provisioningRun.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }
@@ -2643,9 +2650,7 @@ async function initializeServices(): Promise<void> {
     listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
     ...createTeamProvisioningMemberWorkSyncBusySignals(teamProvisioningService),
     resolveControlUrl: async () => {
-      if (!httpServer.isRunning()) {
-        await startHttpServer(handleModeSwitch);
-      }
+      await startHttpServer(handleModeSwitch);
       return getTeamControlApiBaseUrl();
     },
     proofMissingRecoveryGuard: {
@@ -2705,7 +2710,7 @@ async function initializeServices(): Promise<void> {
           return;
         }
 
-        const leadName = await persistence.getLeadMemberName(input.teamName).catch(() => null);
+        const leadName = await teamDataService.getLeadMemberName(input.teamName).catch(() => null);
         if (leadName?.trim().toLowerCase() !== input.memberName.trim().toLowerCase()) {
           return;
         }
@@ -2804,7 +2809,7 @@ async function initializeServices(): Promise<void> {
     },
     reviewPickupEscalation: {
       escalate: async (input) => {
-        const leadName = (await persistence.getLeadMemberName(input.teamName)) ?? 'team-lead';
+        const leadName = (await teamDataService.getLeadMemberName(input.teamName)) ?? 'team-lead';
         const messageId = buildMemberWorkSyncReviewPickupEscalationMessageId(input);
         const existing = await teamInboxReader.getMessagesFor(input.teamName, leadName);
         if (existing.some((message) => message.messageId === messageId)) {
@@ -2899,8 +2904,6 @@ async function initializeServices(): Promise<void> {
       await requestGuardedAppQuit('relaunch');
     },
   });
-
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -3029,13 +3032,13 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         organizationsFeature,
+        workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
-        teamLifecycleReadHost: teamLifecycleReadHost ?? undefined,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
@@ -3058,15 +3061,22 @@ async function startHttpServer(
  * Shuts down all services.
  */
 async function shutdownServices(): Promise<void> {
+  stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
     return shutdownPromise;
   }
 
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();
     clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
@@ -3074,27 +3084,36 @@ async function shutdownServices(): Promise<void> {
       teamRuntimeRecoveryFeature = null;
     });
 
+    // Kill all team CLI processes via SIGKILL before anything else.
+    // This must happen before the OS closes stdin pipes on app exit, because
+    // stdin EOF triggers CLI cleanup that can delete team files.
     if (teamProvisioningService) {
-      await runShutdownStep('stop all teams', () => productTeamProvisioning!.stop(), 10_000);
+      await runShutdownStep('stop all teams', () => teamProvisioningService.stopAllTeams(), 10_000);
     }
     await runShutdownStep(
       'OpenCode host registry cleanup',
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
-      agentTeamsMcpHttpServer.stop({ preventRestart: true })
-    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
+      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
+      revokeMcpAppContext = null;
+      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
+    });
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );
     await runShutdownStep(
       'OpenCode post-subprocess fallback cleanup',
       () =>
-        cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
-          mode: 'force',
-          ...getOpenCodeShutdownProcessOwnershipMarkers(),
-        }),
+        cleanupOpenCodeHostProcessFallback(
+          'post-subprocess shutdown fallback',
+          {
+            mode: 'force',
+            ...buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          },
+          openCodeLifecycleCleanupTailPorts
+        ),
       5_000
     );
 
@@ -3177,7 +3196,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
-      workspaceTrustFeature?.removeIpc(ipcMain);
+      workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
@@ -3231,22 +3250,6 @@ function attachMainWindowToServices(): void {
 function runPostRendererStartupTasks(): void {
   if (!servicesReady || !rendererDidFinishLoad || !mainWindow || mainWindow.isDestroyed()) {
     return;
-  }
-
-  if (!fileWatcherStartupStarted) {
-    fileWatcherStartupStarted = true;
-    // Start file watchers after both the visible window and main services are ready.
-    const activeContext = contextRegistry.getActive();
-    if (process.platform === 'win32') {
-      scheduleStartupTask(() => {
-        if (!fileWatcherStartupStarted || !servicesReady || !rendererDidFinishLoad) {
-          return;
-        }
-        activeContext.startFileWatcher();
-      }, 1500);
-    } else if (!isShutdownStarted()) {
-      activeContext.startFileWatcher();
-    }
   }
 
   if (backgroundStartupTasksStarted) {
@@ -3345,7 +3348,7 @@ function createWindow(): void {
     height: DEFAULT_WINDOW_HEIGHT,
     ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.cjs'),
+      preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
       // In development, use a persistent partition so that renderer-side storage
@@ -3358,6 +3361,7 @@ function createWindow(): void {
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'Agent Teams AI',
   });
+  announcementsLifecycle.registerMainWindow(mainWindow);
   markRendererUnavailable(mainWindow);
 
   // Load the renderer
@@ -3561,9 +3565,7 @@ function createWindow(): void {
     }
     markRendererUnavailable(mainWindow);
     rendererDidFinishLoad = false;
-    fileWatcherStartupStarted = false;
     branchStatusService?.resetAllTracking();
-    contextRegistry?.getActive()?.stopFileWatcher();
     if (mainWindow) {
       scheduleRendererRecovery(mainWindow);
     }
@@ -3642,6 +3644,7 @@ void app.whenReady().then(async () => {
       ready: true,
       error: null,
     });
+    fileWatcherStartupCoordinator.startWhenServicesReady();
     runPostRendererStartupTasks();
 
     // Listen for notification click events
@@ -3682,17 +3685,11 @@ void app.whenReady().then(async () => {
  * All windows closed handler.
  */
 app.on('window-all-closed', () => {
-  if (shutdownComplete || appQuitFlow) return;
-  const hasActiveTeamRuntimes = desktopLifecycle.hasActiveTeamRuntimesForWindowClose(
-    servicesReady,
-    teamProvisioningService
-  );
-  const shouldQuitWhenAllWindowsClosed = desktopLifecycle.shouldQuitAfterDesktopWindowClose({
-    platform: process.platform,
-    remainingWindowCount: 0,
-    hasActiveTeamRuntimes,
-    showDockIcon: configManager.getConfig().general.showDockIcon,
-  });
+  const hasActiveTeamRuntimes = hasActiveTeamRuntimesForWindowClose();
+  const shouldQuitWhenAllWindowsClosed =
+    hasActiveTeamRuntimes ||
+    process.platform !== 'darwin' ||
+    !configManager.getConfig().general.showDockIcon;
 
   if (shouldQuitWhenAllWindowsClosed) {
     if (hasActiveTeamRuntimes) {

@@ -15,6 +15,7 @@ const electronMock = vi.hoisted(() => {
       getVersion: vi.fn(() => '1.3.0'),
       isPackaged: false,
       on: vi.fn(),
+      setAppUserModelId: vi.fn(),
       whenReady: vi.fn(() => new Promise<void>(() => undefined)),
     },
     BrowserWindow: class BrowserWindow {
@@ -46,7 +47,6 @@ const electronUpdaterMock = vi.hoisted(() => {
     },
   };
 });
-
 vi.mock('electron', () => electronMock);
 vi.mock('electron-updater', () => {
   const { autoUpdater } = electronUpdaterMock;

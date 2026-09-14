@@ -1,4 +1,5 @@
 import { buildTeamRuntimeDisplayRows } from '@renderer/components/team/teamRuntimeDisplayRows';
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it } from 'vitest';
 
 import type {
@@ -251,6 +252,31 @@ describe('buildTeamRuntimeDisplayRows', () => {
       stateReason: 'Bootstrap command failed. Process is still alive.',
       actionsAllowed: false,
     });
+  });
+
+  // The launch grace verdict reaches this row as the identifier the main
+  // process writes. Live Runtime Status prints `stateReason` verbatim, so the
+  // identifier has to be turned into a sentence before it gets here.
+  it('reads out the launch grace timeout identifier instead of printing it', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      runtimeSnapshot: createRuntimeSnapshot({}),
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          hardFailure: true,
+          hardFailureReason: MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      stateReason: 'Teammate did not join within the launch grace window.',
+      diagnostic: 'Teammate did not join within the launch grace window.',
+    });
+    expect(rows[0]?.stateReason).not.toContain(MEMBER_LAUNCH_GRACE_TIMEOUT_REASON);
   });
 
   it('does not degrade bootstrap-confirmed provisioned-but-not-alive rows', () => {

@@ -17,6 +17,15 @@ import { promises as fsp, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
+import {
+  CODEX_RUNTIME_VERSION_TIMEOUT_MS as VERSION_TIMEOUT_MS,
+  probeManagedCodexVersion,
+} from './probeManagedCodexVersion';
+import {
+  getNetworkRetryDelayMs,
+  shouldRetryTransientNetworkError,
+} from './transientNetworkRetry';
+
 import type { CodexRuntimeInstallerPort } from '../../core/application/ports/CodexRuntimeInstallerPort';
 import type {
   CodexRuntimeInstallProgress,
@@ -32,14 +41,12 @@ const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org';
 const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
-const FETCH_TIMEOUT_MS = 60_000;
-const DOWNLOAD_TIMEOUT_MS = 180_000;
-const NETWORK_MAX_ATTEMPTS = 3;
-const NETWORK_RETRY_BASE_DELAY_MS = 1_000;
+const METADATA_FETCH_TIMEOUT_MS = 60_000;
+// The platform package can approach MAX_TARBALL_BYTES. A one-minute wall-clock
+// deadline aborts healthy downloads on ordinary slower connections, so package
+// downloads time out only after a full minute without network progress.
+const PACKAGE_DOWNLOAD_IDLE_TIMEOUT_MS = 60_000;
 const LATEST_VERSION_TIMEOUT_MS = 8_000;
-const VERSION_TIMEOUT_MS = 10_000;
-const TRANSIENT_ERROR_CODE =
-  /^(?:ECONNRESET|EAI_AGAIN|ETIMEDOUT|UND_ERR_(?:BODY|CONNECT|HEADERS)_TIMEOUT)$/;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -121,10 +128,7 @@ export async function resolveVerifiedAppManagedCodexRuntimeBinaryPath(): Promise
     return null;
   }
   try {
-    await execCli(binaryPath, ['--version'], {
-      timeout: VERSION_TIMEOUT_MS,
-      windowsHide: true,
-    });
+    await probeManagedCodexVersion(binaryPath);
     return binaryPath;
   } catch {
     return null;
@@ -239,23 +243,11 @@ export function getCodexRuntimePlatformCandidates(
   throw new Error(`Codex app install is not supported on ${platform}/${arch}`);
 }
 
-function isTransientNetworkError(error: unknown): boolean {
-  let current = error;
-  while (current && typeof current === 'object') {
-    const candidate = current as { name?: unknown; code?: unknown; cause?: unknown };
-    if (
-      candidate.name === 'AbortError' ||
-      candidate.name === 'TimeoutError' ||
-      (typeof candidate.code === 'string' && TRANSIENT_ERROR_CODE.test(candidate.code))
-    ) {
-      return true;
-    }
-    current = candidate.cause;
-  }
-  return false;
-}
-
-async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS, attempt = 1): Promise<string> {
+async function fetchText(
+  url: string,
+  timeoutMs = METADATA_FETCH_TIMEOUT_MS,
+  attempt = 1
+): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -265,8 +257,8 @@ async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS, attempt = 1)
     }
     return await response.text();
   } catch (error) {
-    if (attempt >= NETWORK_MAX_ATTEMPTS || !isTransientNetworkError(error)) throw error;
-    const delayMs = NETWORK_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+    if (!shouldRetryTransientNetworkError(error, attempt)) throw error;
+    const delayMs = getNetworkRetryDelayMs(attempt);
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     return fetchText(url, timeoutMs, attempt + 1);
   } finally {
@@ -277,7 +269,7 @@ async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS, attempt = 1)
 async function fetchPackageMetadata(
   packageName: string,
   version = 'latest',
-  timeoutMs = FETCH_TIMEOUT_MS
+  timeoutMs = METADATA_FETCH_TIMEOUT_MS
 ): Promise<NpmPackageMetadata> {
   const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
   const raw = await fetchText(url, timeoutMs);
@@ -318,7 +310,12 @@ async function downloadTarball(
   attempt = 1
 ): Promise<Buffer> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const resetIdleTimeout = (): void => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), PACKAGE_DOWNLOAD_IDLE_TIMEOUT_MS);
+  };
+  resetIdleTimeout();
   try {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok || !response.body) {
@@ -338,6 +335,7 @@ async function downloadTarball(
       if (done) {
         break;
       }
+      resetIdleTimeout();
       const chunk = Buffer.from(value);
       downloadedBytes += chunk.length;
       if (downloadedBytes > MAX_TARBALL_BYTES) {
@@ -358,12 +356,12 @@ async function downloadTarball(
     }
     return Buffer.concat(chunks, downloadedBytes);
   } catch (error) {
-    if (attempt >= NETWORK_MAX_ATTEMPTS || !isTransientNetworkError(error)) throw error;
-    const delayMs = NETWORK_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+    if (!shouldRetryTransientNetworkError(error, attempt)) throw error;
+    const delayMs = getNetworkRetryDelayMs(attempt);
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     return downloadTarball(url, onProgress, attempt + 1);
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -618,10 +616,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       };
     }
     try {
-      const { stdout } = await execCli(manifest.binaryPath, ['--version'], {
-        timeout: VERSION_TIMEOUT_MS,
-        windowsHide: true,
-      });
+      const stdout = await probeManagedCodexVersion(manifest.binaryPath);
       return {
         installed: true,
         binaryPath: manifest.binaryPath,

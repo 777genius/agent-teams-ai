@@ -16,7 +16,7 @@ import type {
 } from '@shared/types';
 
 const { AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES } = agentTeamsControllerModule;
-const RUN_TIMEOUT_MS = 300_000;
+export const RUN_TIMEOUT_MS = 300_000;
 
 export interface TeamProvisioningRunTimeoutInput {
   deterministicBootstrap: boolean;

@@ -1834,11 +1834,12 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
-  it('moves worktree branch details into the worktree badge tooltip', async () => {
+  it('shows a visible branch beside the worktree badge and preserves tooltip details', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const onClick = vi.fn();
 
     await act(async () => {
       root.render(
@@ -1852,6 +1853,7 @@ describe('MemberCard starting-state visuals', () => {
           },
           memberColor: 'turquoise',
           isTeamAlive: true,
+          onClick,
         })
       );
       await Promise.resolve();
@@ -1862,11 +1864,79 @@ describe('MemberCard starting-state visuals', () => {
       'Path: /Users/belief/.claude/team-worktrees/sol-team-proj-abc/room/jack'
     );
     expect(host.textContent).toContain('Branch: agent-teams/room/jack-abc');
-    expect(host.textContent?.match(/agent-teams\/room\/jack-abc/g)).toHaveLength(1);
+    expect(host.querySelector('[data-member-branch]')?.textContent).toBe(
+      'agent-teams/room/jack-abc'
+    );
+    expect(host.querySelector('[data-member-branch]')?.getAttribute('tabindex')).toBe('0');
+    expect(host.querySelector('[data-member-branch]')?.closest('.grid')).toBeNull();
+
+    const branchBadge = host.querySelector('[data-member-branch]') as HTMLElement;
+    await act(async () => {
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(onClick).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+});
+
+describe('MemberCard failed secondary retry', () => {
+  it.each([
+    { laneKind: 'secondary', persisted: false, lead: false, alive: true, visible: true },
+    { laneKind: 'secondary', persisted: true, lead: false, alive: true, visible: true },
+    { laneKind: 'primary', persisted: false, lead: false, alive: true, visible: false },
+    { laneKind: undefined, persisted: false, lead: false, alive: true, visible: false },
+    { laneKind: 'secondary', persisted: false, lead: true, alive: true, visible: false },
+    { laneKind: 'secondary', persisted: false, lead: false, alive: false, visible: false },
+  ] as const)('preserves scope and retry eligibility: %j', async (scenario) => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRestartMember = vi.fn(async () => undefined);
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member: {
+            ...member,
+            providerId: 'opencode',
+            agentType: scenario.lead ? 'team-lead' : 'reviewer',
+            laneKind: scenario.persisted ? scenario.laneKind : undefined,
+          },
+          memberColor: 'blue',
+          isTeamAlive: scenario.alive,
+          spawnStatus: 'error',
+          spawnLaunchState: 'failed_to_start',
+          spawnRuntimeAlive: false,
+          spawnEntry: failedSpawnEntry,
+          runtimeEntry: {
+            memberName: 'alice',
+            providerId: 'opencode',
+            alive: false,
+            restartable: false,
+            laneKind: scenario.persisted ? undefined : scenario.laneKind,
+            updatedAt: '2026-04-24T12:00:00.000Z',
+          },
+          onRestartMember,
+        })
+      );
+    });
+    const button = host.querySelector<HTMLButtonElement>('[aria-label="Relaunch OpenCode"]');
+    expect(Boolean(button)).toBe(scenario.visible);
+    if (button) {
+      await act(async () => {
+        button.click();
+      });
+      expect(onRestartMember).toHaveBeenCalledExactlyOnceWith('alice', true);
+    }
+    await act(async () => {
+      root.unmount();
+    });
+    host.remove();
   });
 });

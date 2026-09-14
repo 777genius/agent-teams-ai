@@ -126,6 +126,30 @@ export class TeamAgentRuntimeResourceHistory {
     return nextHistory.map((entry) => ({ ...entry }));
   }
 
+  /**
+   * The series `record` would have returned for these identifiers, without the
+   * sample itself: what a member's history already is, as opposed to what it
+   * becomes once this observation joins it.
+   *
+   * The write-free snapshot build reports history through this, so that polling
+   * an observation endpoint cannot lengthen the series every other reader sees.
+   * The key is still announced through `activeKeys` when one is passed, because
+   * a caller that does prune must not treat a member it resolved as gone.
+   */
+  read(
+    params: TeamAgentRuntimeResourceHistoryRecordInput
+  ): TeamAgentRuntimeResourceSample[] | undefined {
+    const key = this.buildKey(params);
+    if (!key) {
+      return undefined;
+    }
+    params.activeKeys?.add(key);
+    const existingHistory = this.historyByTeam.get(params.teamName)?.get(key);
+    return existingHistory && existingHistory.length > 0
+      ? existingHistory.map((sample) => ({ ...sample }))
+      : undefined;
+  }
+
   prune(teamName: string, activeKeys: ReadonlySet<string>): void {
     const historyByKey = this.historyByTeam.get(teamName);
     if (!historyByKey) {

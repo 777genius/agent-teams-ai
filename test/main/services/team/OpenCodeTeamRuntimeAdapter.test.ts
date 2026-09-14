@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
+  createOpenCodeCanonicalProjectPathFingerprint,
+  createOpenCodeExecutionProofHash,
+  createOpenCodeExpectedBehaviorFingerprint,
+} from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import { shouldRetryTransientOpenCodeSharedRuntimeFailure } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
+import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
   type TeamRuntimeLaunchInput,
@@ -35,6 +41,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
   });
@@ -55,6 +62,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: null,
       requireExecutionProbe: false,
+      skipPermissions: true,
     });
   });
 
@@ -76,7 +84,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       members: {
         alice: {
           launchState: 'failed_to_start',
-          hardFailureReason: 'OpenCode is temporarily unavailable. Retry the launch.',
+          // The prepended reassurance text is generic UI framing, not a
+          // diagnostic: hardFailureReason must be the concrete bridge
+          // message behind it (this is also what a transient shared-runtime
+          // timeout is pattern-matched against to decide whether to retry).
+          hardFailureReason:
+            'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
           diagnostics: [
             'OpenCode is temporarily unavailable. Retry the launch.',
             'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
@@ -85,6 +98,31 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         },
       },
     });
+  });
+
+  it('makes a real transient shared-runtime timeout retryable through the full launch path', async () => {
+    // End-to-end regression for the transient-retry feature: constructing a
+    // TeamRuntimeLaunchResult by hand (as the failure-policy unit tests do)
+    // cannot catch hardFailureReason being masked by blockedLaunchResult's
+    // own reassurance-text prepending - only driving the real launch() path
+    // can. Before the isGenericOpenCodeFailureMessage fix, the reassurance
+    // text always won as hardFailureReason for this reason, so this pattern
+    // never matched and the retry never fired.
+    const bridge = bridgePort(
+      readiness({
+        state: 'unknown_error',
+        launchAllowed: false,
+        diagnostics: ['Failed to query OpenCode models: OpenCode command timed out after 10000ms'],
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.members.alice?.hardFailureReason).toBe(
+      'Failed to query OpenCode models: OpenCode command timed out after 10000ms'
+    );
+    expect(shouldRetryTransientOpenCodeSharedRuntimeFailure(result)).toBe(true);
   });
 
   it('surfaces Cursor quota instead of generic readiness diagnostics on launch', async () => {
@@ -152,6 +190,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
               message: 'alice: sample reconcile diagnostic',
             },
           ],
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const bridge = bridgePort(
@@ -209,6 +248,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'cursor-acp/auto',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
   });
 
@@ -345,6 +385,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'ollama/qwen3:8b',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result).toMatchObject({
@@ -527,11 +568,18 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const worktreePath = '/tmp/generated-worktrees/alice';
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(async () => successfulOpenCodeLaunchData());
-    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
-      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-worktree')),
-      launchOpenCodeTeam,
-    });
+    >(async () => successfulOpenCodeLaunchData({ projectPath: worktreePath }));
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: executionProofFor(worktreePath, 'openai/gpt-5.4-mini'),
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-worktree')),
+        launchOpenCodeTeam,
+      }
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
 
     const result = await adapter.launch(
@@ -554,6 +602,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: worktreePath,
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -598,6 +647,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       },
       warnings: [],
       diagnostics: [],
+      expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
     }));
     const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-lead')),
@@ -706,14 +756,19 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
     });
-    const expectedMembers = ['lead', 'researcher', 'implementer', 'reviewer', 'tester', 'writer'].map(
-      (name) => ({
-        name,
-        providerId: 'opencode' as const,
-        model: 'openai/gpt-5.4-mini',
-        cwd: '/repo',
-      })
-    );
+    const expectedMembers = [
+      'lead',
+      'researcher',
+      'implementer',
+      'reviewer',
+      'tester',
+      'writer',
+    ].map((name) => ({
+      name,
+      providerId: 'opencode' as const,
+      model: 'openai/gpt-5.4-mini',
+      cwd: '/repo',
+    }));
 
     await expect(adapter.prepare(launchInput({ expectedMembers }))).resolves.toEqual({
       ok: false,
@@ -868,7 +923,13 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           diagnostics: ['OpenCode /experimental/tool/ids unavailable - Unable to connect'],
         })
       )
-      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'ready',
+          launchAllowed: true,
+          executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-fresh'),
+        })
+      );
     const getLastOpenCodeRuntimeSnapshot = vi.fn(() => runtimeSnapshot('cap-fresh'));
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -896,6 +957,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(getLastOpenCodeRuntimeSnapshot).toHaveBeenCalledWith(
       '/repo',
       'openai/gpt-5.4-mini',
+      true,
       true
     );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
@@ -923,17 +985,135 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     await adapter.launch(launchInput());
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
-    expect(launchOpenCodeTeam).toHaveBeenCalledWith(expect.objectContaining({ executionProof }));
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionProof,
+        expectedBehaviorFingerprint:
+          executionProof.expectedBehaviorEvidence.expectedBehaviorFingerprint,
+      })
+    );
   });
 
-  it('does not reuse OAuth execution proof across prepare and launch', async () => {
-    const oauthProof = {
-      ...reusableExecutionProof(),
-      credentialMode: 'oauth' as const,
+  it('rejects readiness evidence for a different requested model before launch', async () => {
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({
+          state: 'ready',
+          launchAllowed: true,
+          modelId: 'anthropic/claude-sonnet-4-6',
+          executionProof: executionProofFor('/repo', 'anthropic/claude-sonnet-4-6'),
+        })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput({ model: 'openai/gpt-5.4-mini' }));
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain(
+      'OpenCode readiness returned model anthropic/claude-sonnet-4-6 for requested model openai/gpt-5.4-mini'
+    );
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+  });
+
+  it('rejects an initial execution proof from a stale capability snapshot', async () => {
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({
+          state: 'ready',
+          launchAllowed: true,
+          executionProof: executionProofWith({ capabilitySnapshotId: 'cap-stale' }),
+        })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-current')),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain(
+      'OpenCode launch execution proof belongs to another capability snapshot'
+    );
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+  });
+
+  it('launches with execution proof bound to the current capability snapshot', async () => {
+    const executionProof = executionProofWith({ capabilitySnapshotId: 'cap-current' });
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ state: 'ready', launchAllowed: true, executionProof })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-current')),
+      launchOpenCodeTeam,
+    });
+
+    await expect(adapter.launch(launchInput())).resolves.toMatchObject({
+      teamLaunchState: 'clean_success',
+    });
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedCapabilitySnapshotId: 'cap-current',
+        executionProof,
+      })
+    );
+  });
+
+  it('blocks missing behavior evidence before state-changing dispatch', async () => {
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ state: 'ready', launchAllowed: true, executionProof: undefined })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain(
+      'OpenCode launch requires fresh expected behavior evidence for the selected model'
+    );
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+  });
+
+  it('rejects a ready launch result committed with another behavior digest', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => ({
+      ...successfulOpenCodeLaunchData(),
+      expectedBehaviorFingerprint: 'f'.repeat(64),
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+        launchOpenCodeTeam,
+      })
+    );
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain('OpenCode launch result behavior fingerprint mismatch');
+  });
+
+  it('retains a fresh API execution proof for its immediate launch', async () => {
+    const apiProof = executionProofWith({
+      credentialMode: 'api' as const,
       reusable: false,
-    };
+    });
     const checkReadiness = vi.fn(async () =>
-      readiness({ state: 'ready', launchAllowed: true, executionProof: oauthProof })
+      readiness({ state: 'ready', launchAllowed: true, executionProof: apiProof })
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -949,7 +1129,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.not.objectContaining({ executionProof: expect.anything() })
+      expect.objectContaining({ executionProof: apiProof })
     );
   });
 
@@ -979,14 +1159,71 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(checkReadiness).toHaveBeenCalledTimes(1);
   });
 
+  it('reuses valid cached launch readiness with strict proof evidence', async () => {
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: reusableExecutionProof(),
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.prepare(launchInput());
+    await adapter.prepare(launchInput({ skipPermissions: undefined }));
+
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('never reuses readiness across approval modes', async () => {
+    const bridge = bridgePort(
+      readiness({ state: 'ready', launchAllowed: true, executionProof: reusableExecutionProof() })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+    await adapter.prepare(launchInput({ skipPermissions: true }));
+    await adapter.prepare(launchInput({ skipPermissions: false }));
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(2);
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenLastCalledWith(
+      expect.objectContaining({ skipPermissions: false })
+    );
+  });
+
+  it('refreshes readiness instead of returning cached launch-ready state after proof rejection', async () => {
+    const cached = readiness({
+      state: 'ready',
+      launchAllowed: true,
+      executionProof: reusableExecutionProof(),
+    });
+    const refreshed = readiness({ state: 'ready', launchAllowed: true });
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(cached)
+      .mockResolvedValueOnce(refreshed);
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    await adapter.prepare(launchInput());
+    cached.executionProof = executionProofWith({ expectedBehaviorEvidence: undefined });
+
+    await expect(adapter.prepare(launchInput())).resolves.toMatchObject({ ok: true });
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(refreshed);
+  });
+
   it('passes manual tool approval intent with a fresh capability precondition', async () => {
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const checkReadiness = vi.fn(async () =>
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-manual'),
+      })
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
-      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
-        readiness({ state: 'ready', launchAllowed: true })
-      ),
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-manual')),
       launchOpenCodeTeam,
     });
@@ -995,6 +1232,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       teamLaunchState: 'clean_success',
     });
 
+    expect(checkReadiness).toHaveBeenCalledWith(
+      expect.objectContaining({ skipPermissions: false })
+    );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         skipPermissions: false,
@@ -1014,6 +1254,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           launchAllowed: true,
           modelId: 'kimi-for-coding/k3',
           availableModels: ['kimi-for-coding/k3'],
+          executionProof: executionProofFor('/repo', 'kimi-for-coding/k3', 'cap-kimi-k3'),
         })
       ),
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-kimi-k3')),
@@ -1299,6 +1540,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           },
           warnings: [],
           diagnostics: [],
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(
@@ -1347,7 +1589,10 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       'That bootstrap restriction is only about team registry/startup files'
     );
     expect(launchArg?.members[0]?.prompt).toContain(
-      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+      'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
+    );
+    expect(launchArg?.members[0]?.prompt).toContain(
+      'registered for you as the MCP server named "agent-teams"'
     );
     expect(launchArg?.members[0]?.prompt).toContain('Launch bootstrap is a silent attach');
     expect(launchArg?.members[0]?.prompt).toContain('stay idle silently');
@@ -1386,10 +1631,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           readiness({
             state: 'ready',
             launchAllowed: true,
-            executionProof: {
-              ...reusableExecutionProof(),
-              capabilitySnapshotId,
-            },
+            executionProof: executionProofWith({ capabilitySnapshotId }),
           })
         );
       }
@@ -1421,6 +1663,45 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
   });
 
+  it('rejects stale capability snapshot proof after readiness recovery refresh', async () => {
+    let readinessCalls = 0;
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
+      () => {
+        readinessCalls += 1;
+        return Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofWith({ capabilitySnapshotId: 'cap-old' }),
+          })
+        );
+      }
+    );
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() =>
+      Promise.resolve(
+        failedCapabilitySnapshotLaunchData('Bridge server capability snapshot mismatch')
+      )
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() =>
+        runtimeSnapshot(readinessCalls === 1 ? 'cap-old' : 'cap-new')
+      ),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain(
+      'OpenCode launch execution proof belongs to another capability snapshot'
+    );
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(launchOpenCodeTeam).toHaveBeenCalledTimes(1);
+  });
+
   it('refreshes readiness and retries once when the launch command sees a newer capability snapshot', async () => {
     const { result, checkReadiness, launchOpenCodeTeam } =
       await launchWithStaleCapabilitySnapshotRecovery(
@@ -1443,7 +1724,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
       () => {
         readinessCalls += 1;
-        return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
+        const capabilitySnapshotId =
+          capabilitySnapshots[Math.max(0, Math.min(readinessCalls - 1, 3))] ?? 'cap-4';
+        return Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', capabilitySnapshotId),
+          })
+        );
       }
     );
     const launchOpenCodeTeam = vi.fn<
@@ -1490,7 +1779,13 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
       () => {
         readinessCalls += 1;
-        return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
+        return Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-1'),
+          })
+        );
       }
     );
     const launchOpenCodeTeam = vi.fn<
@@ -1527,7 +1822,14 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
   it('retries pre-launch capability mismatch reported in member diagnostics', async () => {
     const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
-      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+      () =>
+        Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-1'),
+          })
+        )
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -1558,7 +1860,14 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
   it('does not retry a successful launch just because stale diagnostics mention pre-launch mismatch', async () => {
     const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
-      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+      () =>
+        Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-1'),
+          })
+        )
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -1603,7 +1912,14 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
   it('keeps the original precondition mismatch when the recovery retry also fails', async () => {
     const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(
-      () => Promise.resolve(readiness({ state: 'ready', launchAllowed: true }))
+      () =>
+        Promise.resolve(
+          readiness({
+            state: 'ready',
+            launchAllowed: true,
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-1'),
+          })
+        )
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -1662,6 +1978,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           ],
           manifestHighWatermark: null,
           runtimeStoreManifestHighWatermark: null,
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(
@@ -1754,7 +2071,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         cwd: '/repo',
         text: 'hello bob',
         messageId: 'msg-1',
-        replyRecipient: 'alice',
+        replyRecipient: 'team-lead',
         actionMode: 'delegate',
         forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
         taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
@@ -1785,9 +2102,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
     const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
     expect(sentText).toContain('hello bob');
-    expect(sentText).toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
     expect(sentText).toContain(
-      'Required message_send argument envelope: {"teamName":"team-a","to":"alice","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
+      'Use teamName="team-a", to="team-lead", from="bob", text, and summary.'
+    );
+    expect(sentText).toContain(
+      'Required message_send argument envelope: {"teamName":"team-a","to":"team-lead","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
     );
     expect(sentText).toContain(
       'If message_send reports parameter validation failure, correct the missing or invalid arguments'
@@ -1796,6 +2115,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('Include relayOfMessageId="msg-1"');
     expect(sentText).toContain('Action mode for this message: delegate.');
     expect(sentText).toContain('Action mode DELEGATE is orchestration-only');
+    expect(sentText).toContain(
+      'then END the turn - never wait or poll for teammates inside the turn (their work is dispatched only after your turn ends)'
+    );
     expect(sentText).not.toContain('If this delivered message assigns implementation');
     expect(sentText).toContain('You must not end this turn empty.');
     expect(sentText).toContain('<opencode_delivery_context>');
@@ -1805,6 +2127,45 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).not.toContain('The inbound app messageId is');
     expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(sentText).toContain('never use #00000000');
+  });
+
+  it('delivers teammate-originated messages with the reply-optional teammate report contract', async () => {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(() =>
+      Promise.resolve({
+        accepted: true,
+        memberName: 'bob',
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_1',
+        diagnostics: [],
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      sendOpenCodeTeamMessage,
+    } as unknown as OpenCodeTeamRuntimeBridgePort);
+
+    await adapter.sendMessageToMember({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:bob',
+      memberName: 'bob',
+      cwd: '/repo',
+      text: '#abcd1234 done. Review posted in task comment 1234abcd.',
+      messageId: 'msg-1',
+      replyRecipient: 'alice',
+      taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
+    });
+
+    const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
+    expect(sentText).toContain('status report from your teammate "alice"');
+    expect(sentText).toContain('Do NOT reply by default');
+    expect(sentText).toContain(
+      '{"teamName":"team-a","to":"alice","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
+    );
+    expect(sentText).not.toContain('Required message_send argument envelope');
+    expect(sentText).not.toContain('You must not end this turn empty.');
+    expect(sentText).toContain('Do not end this turn empty.');
   });
 
   it('uses observed settlement for member-work-sync nudges so turn-settled can drive reconcile', async () => {
@@ -1954,9 +2315,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('For agenda sync, only agent-teams_member_work_sync_report');
     expect(sentText).not.toContain('Concrete task progress');
     expect(sentText).toContain('If this delivered message assigns implementation');
+    expect(sentText).not.toContain('never wait or poll for teammates inside the turn');
     expect(sentText).toContain(
-      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+      'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
     );
+    expect(sentText).toContain('go ONLY through the MCP server named "agent-teams"');
     expect(sentText).toContain('A status-only tool call is incomplete');
     expect(sentText).toContain('teamName="team-a"');
     expect(sentText).toContain('memberName="bob"');
@@ -2104,7 +2467,69 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
-  it('acknowledges stop without mutating live OpenCode ownership in the adapter shell', async () => {
+  it('consumes current Stop reconciliation as an observation and preserves the original member identity', async () => {
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      stopOpenCodeTeam: vi.fn(async () => ({
+        status: 'reconciled_stopped' as const,
+        target: {
+          teamId: 'team-a',
+          laneId: 'primary',
+          runId: 'run-1',
+          projectPath: '/tmp/test-only',
+          capabilitySnapshotId: `opencode:${'a'.repeat(32)}`,
+          expectedBehaviorFingerprint: 'b'.repeat(64),
+          members: [{ memberName: 'alice', sessionId: 'original-session' }],
+        },
+        binding: [
+          {
+            memberName: 'alice',
+            sessionId: 'original-session',
+            hostKey: 'original-host',
+            createdAt: 'original-generation',
+          },
+        ],
+        sessionSetToken: 'validated-by-command-service',
+      })),
+    });
+    const result = await new OpenCodeTeamRuntimeAdapter(bridge).stop({
+      runId: 'run-1',
+      teamName: 'team-a',
+      providerId: 'opencode',
+      laneId: 'primary',
+      reason: 'user_requested',
+      previousLaunchState: null,
+    });
+    expect(result).toMatchObject({
+      stopped: true,
+      members: { alice: { sessionId: 'original-session', stopped: true } },
+      diagnostics: ['Original Stop outcome unknown; current exact target reconciled stopped'],
+    });
+  });
+
+  it('preserves runtime Stop warning strings and a false domain outcome', async () => {
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      stopOpenCodeTeam: vi.fn(async () => ({
+        runId: 'run-1',
+        stopped: false,
+        members: {},
+        warnings: ['opencode_stop_status_unconfirmed'],
+        diagnostics: [],
+      })),
+    });
+    const result = await new OpenCodeTeamRuntimeAdapter(bridge).stop({
+      runId: 'run-1',
+      teamName: 'team-a',
+      providerId: 'opencode',
+      reason: 'user_requested',
+      previousLaunchState: null,
+    });
+    expect(result).toMatchObject({
+      stopped: false,
+      warnings: ['opencode_stop_status_unconfirmed'],
+    });
+  });
+
+  it('keeps Stop unknown when the runtime command is unavailable', async () => {
     const adapter = new OpenCodeTeamRuntimeAdapter(
       bridgePort(readiness({ state: 'adapter_disabled', launchAllowed: false }))
     );
@@ -2118,11 +2543,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         previousLaunchState: launchSnapshot(),
       })
     ).resolves.toMatchObject({
-      stopped: true,
+      stopped: false,
       members: {
         alice: {
           providerId: 'opencode',
-          stopped: true,
+          stopped: false,
         },
       },
     });
@@ -2566,7 +2991,13 @@ async function launchWithStaleCapabilitySnapshotRecovery(message: string) {
     () => {
       readinessCalls += 1;
       capabilitySnapshotId = readinessCalls === 1 ? 'cap-old' : 'cap-new';
-      return Promise.resolve(readiness({ state: 'ready', launchAllowed: true }));
+      return Promise.resolve(
+        readiness({
+          state: 'ready',
+          launchAllowed: true,
+          executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', capabilitySnapshotId),
+        })
+      );
     }
   );
   const launchOpenCodeTeam = vi.fn<
@@ -2602,29 +3033,50 @@ function runtimeSnapshot(capabilitySnapshotId: string) {
 }
 
 function reusableExecutionProof() {
-  return {
+  return executionProofFor('/repo', 'openai/gpt-5.4-mini');
+}
+
+function executionProofWith(
+  changes: Partial<Omit<ReturnType<typeof reusableExecutionProof>, 'proofHash'>>
+) {
+  const { proofHash: _proofHash, ...unsigned } = reusableExecutionProof();
+  const changed = { ...unsigned, ...changes };
+  return { ...changed, proofHash: createOpenCodeExecutionProofHash(changed) };
+}
+
+function executionProofFor(
+  projectPath: string,
+  fullModelId: string,
+  capabilitySnapshotId = 'cap-proof'
+) {
+  const tuple = expectedBehaviorTuple(projectPath, fullModelId);
+  const unsigned = {
     schemaVersion: 1 as const,
     providerId: 'opencode' as const,
-    modelId: 'openai/gpt-5.4-mini',
-    projectPath: '/repo',
+    modelId: fullModelId,
+    projectPath,
     profileRootKey: 'profile-root',
-    projectBehaviorFingerprint: 'behavior-v1',
+    projectBehaviorFingerprint: tuple.projectBehaviorFingerprint,
     managedConfigFingerprint: 'config-v1',
     managedAuthFingerprint: 'auth-v1',
     binaryPath: '/opt/homebrew/bin/opencode',
     binaryFingerprint: 'binary-v1',
     opencodeVersion: '1.14.19',
-    capabilitySnapshotId: 'cap-proof',
+    capabilitySnapshotId,
     credentialMode: 'api' as const,
     reusable: true,
     verifiedAt: new Date(Date.now() - 1_000).toISOString(),
     expiresAt: new Date(Date.now() + 45_000).toISOString(),
-    proofHash: 'proof-hash',
+    expectedBehaviorEvidence: {
+      ...tuple,
+      expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(tuple),
+    },
   };
+  return { ...unsigned, proofHash: createOpenCodeExecutionProofHash(unsigned) };
 }
 
 function successfulOpenCodeLaunchData(
-  overrides: { model?: string } = {}
+  overrides: { model?: string; projectPath?: string } = {}
 ): OpenCodeLaunchTeamCommandData {
   return {
     runId: 'run-1',
@@ -2645,6 +3097,12 @@ function successfulOpenCodeLaunchData(
     },
     warnings: [],
     diagnostics: [],
+    expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(
+      expectedBehaviorTuple(
+        overrides.projectPath ?? '/repo',
+        overrides.model ?? 'openai/gpt-5.4-mini'
+      )
+    ),
   };
 }
 
@@ -2688,7 +3146,26 @@ function bridgePort(
   overrides: Partial<OpenCodeTeamRuntimeBridgePort> = {}
 ): OpenCodeTeamRuntimeBridgePort {
   return {
-    checkOpenCodeTeamLaunchReadiness: vi.fn(async () => readinessResult),
+    checkOpenCodeTeamLaunchReadiness: vi.fn(async (input) => {
+      const capabilitySnapshotId = overrides.getLastOpenCodeRuntimeSnapshot?.(
+        input.projectPath,
+        input.selectedModel,
+        input.requireExecutionProbe
+      )?.capabilitySnapshotId;
+      const proof = readinessResult.executionProof;
+      if (capabilitySnapshotId && proof?.capabilitySnapshotId === 'cap-proof') {
+        const { proofHash: _proofHash, ...unsigned } = proof;
+        const boundProof = { ...unsigned, capabilitySnapshotId };
+        return {
+          ...readinessResult,
+          executionProof: {
+            ...boundProof,
+            proofHash: createOpenCodeExecutionProofHash(boundProof),
+          },
+        };
+      }
+      return readinessResult;
+    }),
     ...overrides,
   };
 }
@@ -2717,7 +3194,7 @@ function launchInput(overrides: Partial<TeamRuntimeLaunchInput> = {}): TeamRunti
 function readiness(
   overrides: Partial<OpenCodeTeamLaunchReadiness> = {}
 ): OpenCodeTeamLaunchReadiness {
-  return {
+  const result: OpenCodeTeamLaunchReadiness = {
     state: 'adapter_disabled',
     launchAllowed: false,
     modelId: 'openai/gpt-5.4-mini',
@@ -2741,6 +3218,33 @@ function readiness(
     },
     ...overrides,
   };
+  if (
+    result.launchAllowed &&
+    !Object.prototype.hasOwnProperty.call(overrides, 'executionProof') &&
+    !result.executionProof &&
+    result.modelId
+  ) {
+    result.executionProof = executionProofFor('/repo', result.modelId);
+  }
+  return result;
+}
+
+function expectedBehaviorTuple(projectPath: string, fullModelId: string) {
+  return {
+    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint(projectPath),
+    modelProviderId: fullModelId.slice(0, fullModelId.indexOf('/')).toLowerCase(),
+    fullModelId,
+    projectBehaviorFingerprint: 'c'.repeat(64),
+    effectiveConfigFingerprint: 'd'.repeat(64),
+    effectiveSelectedAuthFingerprint: 'e'.repeat(64),
+  };
+}
+
+function expectedBehaviorFingerprint(
+  projectPath: string,
+  fullModelId = 'openai/gpt-5.4-mini'
+): string {
+  return createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorTuple(projectPath, fullModelId));
 }
 
 function launchSnapshot(): PersistedTeamLaunchSnapshot {
