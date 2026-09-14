@@ -4,6 +4,7 @@ import {
   parseStrictQualifiedModelRef,
   qualifyModelId,
 } from '../../core/domain/openCodeModelIdentity';
+import { normalizeOpenCodeCatalogSourceProviderId } from '../view-models/openCodeCatalogSelection';
 
 import { loadOpenCodeScopedCatalog, MODEL_CATALOG_FRESHNESS_MS } from './loadOpenCodeScopedCatalog';
 import {
@@ -11,10 +12,9 @@ import {
   normalizePassiveProviderOverview,
   normalizeProviderIdentity,
 } from './openCodePassiveCatalogNormalization';
-import { normalizeOpenCodeCatalogSourceProviderId } from '../view-models/openCodeCatalogSelection';
 
-import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type { RuntimeProviderModelDto } from '../../contracts';
+import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type {
   CliProviderModelAvailability,
   CliProviderModelCatalog,

@@ -9,11 +9,11 @@ import {
   useOpenCodeConnectedModelCatalog,
 } from './useOpenCodeConnectedModelCatalog';
 
+import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type {
   OpenCodeConnectedCatalogDependencies,
   OpenCodeConnectedCatalogTransportPort,
 } from '../ports/OpenCodeCatalogTransportPort';
-import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type { CliProviderStatus } from '@shared/types';
 
 const mocks = vi.hoisted(() => ({

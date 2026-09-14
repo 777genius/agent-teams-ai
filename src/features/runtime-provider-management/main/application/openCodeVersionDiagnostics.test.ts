@@ -5,8 +5,8 @@ import {
   probeOpenCodeBinaryVersion,
 } from './openCodeVersionDiagnostics';
 
-import type { OpenCodeVersionDiagnosticPorts } from './OpenCodeVersionDiagnosticPorts';
 import type { RuntimeProviderManagementErrorDiagnosticsDto } from '../../contracts';
+import type { OpenCodeVersionDiagnosticPorts } from './OpenCodeVersionDiagnosticPorts';
 
 function createPorts(input: {
   execute?: OpenCodeVersionDiagnosticPorts['execute'];

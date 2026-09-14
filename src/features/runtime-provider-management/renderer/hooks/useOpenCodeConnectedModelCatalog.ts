@@ -11,8 +11,8 @@ import {
 import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
-import type { OpenCodeConnectedCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
+import type { OpenCodeConnectedCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type { CliProviderStatus } from '@shared/types';
 
 const CONCURRENT_SOURCE_LOADS = 1;

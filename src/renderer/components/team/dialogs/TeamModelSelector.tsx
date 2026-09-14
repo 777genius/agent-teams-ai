@@ -13,7 +13,6 @@ import {
   resolveOpenCodeSelectionScopeDecision,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
-  useOpenCodeProviderModelCatalog,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
 import { api } from '@renderer/api';
@@ -34,6 +33,7 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useOpenCodeProviderModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';

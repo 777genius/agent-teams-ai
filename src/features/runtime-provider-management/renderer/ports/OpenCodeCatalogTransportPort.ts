@@ -1,8 +1,8 @@
 import type {
   RuntimeProviderManagementCancelModelLoadInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
-  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestControlResponse,
 } from '../../contracts';

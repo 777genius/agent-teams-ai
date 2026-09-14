@@ -1,15 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
+import {
+  type OpenCodeBinaryVersionProbe,
+  type OpenCodeVersionDiagnosticPorts,
+  probeOpenCodeBinaryVersion as runOpenCodeBinaryVersionProbe,
+} from '@features/runtime-provider-management/main';
 import { execCli } from '@main/utils/childProcess';
 import { APP_VERSION } from '@shared/utils/buildMetadata';
 import { createLogger } from '@shared/utils/logger';
-
-import {
-  probeOpenCodeBinaryVersion as runOpenCodeBinaryVersionProbe,
-  type OpenCodeBinaryVersionProbe,
-} from '../application/openCodeVersionDiagnostics';
-
-import type { OpenCodeVersionDiagnosticPorts } from '../application/OpenCodeVersionDiagnosticPorts';
 
 const logger = createLogger('OpenCodeVersionDiagnostics');
 const ports: OpenCodeVersionDiagnosticPorts = {

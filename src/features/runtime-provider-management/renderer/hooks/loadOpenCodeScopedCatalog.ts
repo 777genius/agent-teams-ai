@@ -5,11 +5,11 @@ import {
 
 import { catalogFailure, CatalogFailureError, mainCatalogFailure } from './catalogFailure';
 
-import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type {
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderModelDto,
 } from '../../contracts';
+import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 
 const MAX_MODEL_PAGES = 20;
 export const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;

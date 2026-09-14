@@ -19,16 +19,6 @@ export {
   type OpenCodeProviderModelCatalogResult,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
-export type {
-  OpenCodeCatalogDependencies,
-  OpenCodeCatalogTransportPort,
-  OpenCodeConnectedCatalogDependencies,
-  OpenCodeConnectedCatalogTransportPort,
-} from './ports/OpenCodeCatalogTransportPort';
-export {
-  resolveOpenCodeCatalogSourceProviderId,
-  resolveOpenCodeSelectionScopeDecision,
-} from './view-models/openCodeCatalogSelection';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
@@ -39,6 +29,12 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
+export type {
+  OpenCodeCatalogDependencies,
+  OpenCodeCatalogTransportPort,
+  OpenCodeConnectedCatalogDependencies,
+  OpenCodeConnectedCatalogTransportPort,
+} from './ports/OpenCodeCatalogTransportPort';
 export type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
@@ -54,3 +50,7 @@ export { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPr
 export { OpenCodeCatalogErrorAlert } from './ui/OpenCodeCatalogErrorAlert';
 export { ProviderBrandIcon } from './ui/providerBrandIcons';
 export { RuntimeProviderErrorAlert } from './ui/RuntimeProviderErrorAlert';
+export {
+  resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeSelectionScopeDecision,
+} from './view-models/openCodeCatalogSelection';

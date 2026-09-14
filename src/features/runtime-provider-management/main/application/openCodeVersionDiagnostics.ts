@@ -1,7 +1,7 @@
 import { cleanRuntimeDiagnosticText } from '../../contracts';
 
-import type { OpenCodeVersionDiagnosticPorts } from './OpenCodeVersionDiagnosticPorts';
 import type { RuntimeProviderManagementErrorDiagnosticsDto } from '../../contracts';
+import type { OpenCodeVersionDiagnosticPorts } from './OpenCodeVersionDiagnosticPorts';
 
 export const OPEN_CODE_VERSION_TIMEOUT_MS = 30_000;
 

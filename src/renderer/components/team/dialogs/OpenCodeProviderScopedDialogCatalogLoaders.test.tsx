@@ -32,7 +32,7 @@ function buildStatus(sourceId: string): CliProviderStatus {
   } as unknown as CliProviderStatus;
 }
 
-vi.mock('@features/runtime-provider-management/renderer', () => ({
+vi.mock('@renderer/hooks/useOpenCodeCatalogs', () => ({
   useOpenCodeProviderModelCatalog: ({
     sourceProviderId,
     refreshRevision,
