@@ -18,6 +18,12 @@ import {
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
@@ -225,29 +231,40 @@ export const LeadModelRow = ({
               isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
             )}
           >
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                hasModelIssue &&
-                  'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
-                hasModelAdvisory &&
-                  'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
-              )}
-              aria-label={modelButtonAriaLabel}
-              onClick={() => setModelExpanded((prev) => !prev)}
-            >
-              {modelExpanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )}
-              <TeamModelBrandIcon providerId={providerId} model={model} />
-              <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
-              {hasModelIssue ? <AlertTriangle className="size-3.5 shrink-0 text-red-300" /> : null}
-              {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
-            </Button>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                      hasModelIssue &&
+                        'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
+                      hasModelAdvisory &&
+                        'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
+                    )}
+                    aria-label={modelButtonAriaLabel}
+                    onClick={() => setModelExpanded((prev) => !prev)}
+                  >
+                    {modelExpanded ? (
+                      <ChevronDown className="size-3.5" />
+                    ) : (
+                      <ChevronRight className="size-3.5" />
+                    )}
+                    <TeamModelBrandIcon providerId={providerId} model={model} />
+                    <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                    {hasModelIssue ? (
+                      <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
+                    ) : null}
+                    {hasModelAdvisory ? (
+                      <Info className="size-3.5 shrink-0 text-amber-300" />
+                    ) : null}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-80 break-words">{modelButtonLabel}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {isFlatRoster ? (
             <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">

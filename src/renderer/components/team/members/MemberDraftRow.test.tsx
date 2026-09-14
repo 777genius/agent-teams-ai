@@ -592,7 +592,8 @@ describe('MemberDraftRow', () => {
 
     expect(host.textContent).toContain(issueText);
     expect(modelButton.getAttribute('aria-describedby')).toContain('member-member-1-model-issue');
-    expect(modelButton.parentElement?.getAttribute('title')).toBe(issueText);
+    expect(modelButton.parentElement?.getAttribute('title')).toBeNull();
+    expect(modelButton.parentElement?.hasAttribute('data-state')).toBe(true);
 
     act(() => {
       modelButton.click();
