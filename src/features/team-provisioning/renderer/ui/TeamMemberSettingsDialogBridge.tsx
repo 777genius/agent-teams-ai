@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import { isCanonicalSettingsLead } from '../utils/memberSettingsPresentation';
 
 import type { TeamMemberSettingsApi } from '../../contracts';
+import type { SavedLaunchSettingsReader } from '../hooks/useSavedLaunchSettingsFingerprint';
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { EffortLevel, ResolvedTeamMember } from '@shared/types';
 
@@ -17,6 +18,7 @@ export interface TeamMemberSettingsDialogBridgeProps {
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
   projectPath?: string | null;
+  getSavedRequest: SavedLaunchSettingsReader;
   updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   onClose: () => void;
   onRefresh: (settings?: {
@@ -33,6 +35,7 @@ export const TeamMemberSettingsDialogBridge = ({
   isTeamAlive,
   isTeamProvisioning,
   projectPath,
+  getSavedRequest,
   updateMemberSettings,
   onClose,
   onRefresh,
@@ -71,6 +74,7 @@ export const TeamMemberSettingsDialogBridge = ({
         leadEffort={lead?.effort}
         projectPath={projectPath}
         targetAvailable={targetAvailable}
+        getSavedRequest={getSavedRequest}
         updateMemberSettings={updateMemberSettings}
         isLead={isCanonicalSettingsLead(member)}
         onClose={onClose}

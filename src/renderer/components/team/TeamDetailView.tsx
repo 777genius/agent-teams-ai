@@ -3432,7 +3432,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onSaved={() => void selectTeam(teamName)}
                 />
               )}
-
               {editTarget?.kind === 'member' ? (
                 <TeamMemberSettingsDialogBridge
                   teamName={teamName}
@@ -3441,6 +3440,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
+                  getSavedRequest={api.teams.getSavedRequest}
                   updateMemberSettings={teamMemberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
                   onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}

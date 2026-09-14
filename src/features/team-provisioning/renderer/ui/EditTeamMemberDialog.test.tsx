@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const updateMemberSettings = vi.hoisted(() => vi.fn());
 const getSavedRequest = vi.hoisted(() => vi.fn());
 
-vi.mock('@renderer/api', () => ({ api: { teams: { updateMemberSettings, getSavedRequest } } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -153,6 +152,7 @@ function render(overrides: Partial<React.ComponentProps<typeof EditTeamMemberDia
       isTeamAlive={false}
       isTeamProvisioning={false}
       isMixedTeam={false}
+      getSavedRequest={getSavedRequest}
       updateMemberSettings={updateMemberSettings}
       onClose={onClose}
       onRefresh={onRefresh}
@@ -577,16 +577,43 @@ describe('EditTeamMemberDialog', () => {
     expect(host.textContent).toContain('editTeam.errors.settingsChanged');
     expect(saveButton().disabled).toBe(true);
   });
-});
+  it('freezes injected saved launch defaults through rerender and relaunch handoff', async () => {
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    getSavedRequest.mockResolvedValue({ savedSettingsFingerprint: 'newer-team-defaults' });
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+    );
+    const button = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'activity.actions.restartTeam'
+    )!;
+    await act(async () => button.click());
 
+    expect(getSavedRequest).toHaveBeenCalledTimes(1);
+    expect(getSavedRequest).toHaveBeenCalledWith('alpha');
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' })
+    );
+  });
 
-it('freezes saved launch defaults at editor opening through a later rerender and relaunch handoff', async () => {
-  await act(async () => render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' }));
-  getSavedRequest.mockResolvedValue({ savedSettingsFingerprint: 'newer-team-defaults' });
-  await act(async () => render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' }));
-  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click());
-  const button = Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'activity.actions.restartTeam')!;
-  await act(async () => button.click());
-  expect(getSavedRequest).toHaveBeenCalledTimes(1);
-  expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' }));
+  it('fails a relaunch closed when the injected saved-request reader rejects', async () => {
+    getSavedRequest.mockRejectedValueOnce(new Error('read failed'));
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+    );
+    const button = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'activity.actions.restartTeam'
+    )!;
+    await act(async () => button.click());
+
+    expect(button.disabled).toBe(true);
+    expect(onRelaunchRequired).not.toHaveBeenCalled();
+  });
 });

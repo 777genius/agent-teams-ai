@@ -80,6 +80,9 @@ lead metadata update. Missing tokens fail closed. The mutation boundary also
 checks the existing `hasProvisioningRun` query, because a configuring successor
 has not yet become an alive team.
 
+The renderer shell injects that saved-request reader through the public dialog bridge;
+the feature renderer entrypoint does not import the concrete renderer API boundary.
+
 Settings roster projection uses the same canonical legacy-lead classification as
 member settings. Canonical metadata launch discovery also excludes those leads.
 Native launch setup carries `configuredMemberSpecs` separately through run and

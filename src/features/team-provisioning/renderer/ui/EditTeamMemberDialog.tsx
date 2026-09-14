@@ -16,7 +16,10 @@ import {
 } from '@renderer/components/ui/dialog';
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
 
-import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
+import {
+  type SavedLaunchSettingsReader,
+  useSavedLaunchSettingsFingerprint,
+} from '../hooks/useSavedLaunchSettingsFingerprint';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -42,6 +45,7 @@ export interface EditTeamMemberDialogProps {
   leadEffort?: EffortLevel;
   projectPath?: string | null;
   targetAvailable?: boolean;
+  getSavedRequest: SavedLaunchSettingsReader;
   updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   isLead?: boolean;
   onClose: () => void;
@@ -80,6 +84,7 @@ export const EditTeamMemberDialog = ({
   leadEffort,
   projectPath,
   targetAvailable = true,
+  getSavedRequest,
   updateMemberSettings,
   isLead = false,
   onClose,
@@ -88,7 +93,7 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
-  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName);
+  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName, getSavedRequest);
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
@@ -136,7 +141,10 @@ export const EditTeamMemberDialog = ({
     }
     setError(null);
     if (impact === 'relaunch') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
@@ -202,7 +210,10 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'team_relaunch_required') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
