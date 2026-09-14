@@ -4,7 +4,6 @@ import {
   OpenCodeStartupCleanupBusyError,
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import type { ElectronAPI } from '@shared/types/api';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
@@ -12,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ElectronAPI } from '@shared/types/api';
 import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -30,7 +30,7 @@ import type {
 } from '@shared/types/team';
 
 const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
-vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
+vi.mock('@main/composition/team/persistNodeMemberSettingsRelaunch', () => ({
   persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
 }));
 

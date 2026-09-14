@@ -23,10 +23,7 @@ import {
   createDesktopTeamMessageDeliveryFeature,
   type DesktopTeamMessageDeliveryFeature,
 } from '@features/team-message-delivery/main';
-import {
-  persistNodeMemberSettingsRelaunch,
-  type TeamProvisioningFeature,
-} from '@features/team-provisioning/main';
+import { type TeamProvisioningFeature } from '@features/team-provisioning/main';
 import {
   createTeamRosterMutationFeature as createRosterMutationFeature,
   type TeamRosterMutationFeature,
@@ -43,6 +40,7 @@ import {
   createTeamViewReadModelFeature as createViewReadModelFeature,
   type TeamViewReadModelFeature,
 } from '@features/team-view-read-model/main';
+import { persistNodeMemberSettingsRelaunch } from '@main/composition/team/persistNodeMemberSettingsRelaunch';
 import { buildActionModeAgentBlock } from '@main/services/team/actionModeInstructions';
 import { NodeToolApprovalFileReader } from '@main/services/team/approvals/NodeToolApprovalFileReader';
 import { FileSystemDraftTeamConfigGuard } from '@main/services/team/configuration/FileSystemDraftTeamConfigGuard';

@@ -1,13 +1,15 @@
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
-import { TeamProvisioningRuntimeStateProjection } from '@main/services/team/provisioning/TeamProvisioningRuntimeStateProjection';
-import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
 import { validateMemberSettingsRelaunch } from '@features/team-provisioning/main/adapters/input/validateMemberSettingsRelaunch';
-import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsRepositoryAdapter';
 import { persistMemberSettingsRelaunch } from '@features/team-provisioning/main/adapters/output/MemberSettingsRelaunchPersistence';
+import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/composition/LegacyMemberSettingsRepository';
+import { applyLeadRuntimeSettingsToTeamMeta } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeRestart';
+import { TeamProvisioningRuntimeStateProjection } from '@main/services/team/provisioning/TeamProvisioningRuntimeStateProjection';
+import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LegacyMemberSettingsRepositoryDependencies } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsRepositoryAdapter';
+import type { MemberSettingsEffort } from '@features/team-provisioning/contracts';
+import type { LegacyMemberSettingsRepositoryDependencies } from '@features/team-provisioning/main/composition/LegacyMemberSettingsRepository';
 import type { TeamMembersMetaFile } from '@main/services/team/TeamMembersMetaStore';
 import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 
@@ -37,7 +39,9 @@ function fixture() {
   const writeConfig = vi.fn(async (_name: string, value: string) => {
     config = value;
   });
-  const deps: LegacyMemberSettingsRepositoryDependencies & { hasProvisioningRun: (name: string) => boolean } = {
+  const deps: LegacyMemberSettingsRepositoryDependencies & {
+    hasProvisioningRun: (name: string) => boolean;
+  } = {
     hasProvisioningRun: () => false,
     membersMetaStore: {
       getMeta: async () => structuredClone(meta),
@@ -74,6 +78,20 @@ function fixture() {
       }
     ),
   };
+  const savedLaunch = {
+    get: (name: string) => teamMetaStore.getMeta(name),
+    updateLead: (
+      name: string,
+      expectedFingerprint: string,
+      settings: { model: string | null; effort: MemberSettingsEffort | null }
+    ) =>
+      teamMetaStore.updateMeta(name, (current) => {
+        if (fingerprintSavedLaunchSettings(current) !== expectedFingerprint) {
+          throw new Error('Team launch settings changed during relaunch');
+        }
+        return applyLeadRuntimeSettingsToTeamMeta(current, settings, null);
+      }),
+  };
   const repository = new LegacyMemberSettingsRepositoryAdapter(deps);
   async function intent(memberName = 'worker') {
     const snapshots = await Promise.all(
@@ -96,6 +114,7 @@ function fixture() {
   }
   return {
     deps,
+    savedLaunch,
     teamMetaStore,
     repository,
     intent,
@@ -127,7 +146,7 @@ describe('model relaunch durable persistence', () => {
       'sandbox',
       { members, memberSettingsRelaunch: intent },
       f.deps,
-      f.teamMetaStore
+      f.savedLaunch
     );
     expect((await f.repository.findTarget('sandbox', 'worker'))?.settings.model).toBe(
       'glm-5.3-flash'
@@ -152,7 +171,7 @@ describe('model relaunch durable persistence', () => {
         'sandbox',
         { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
         f.deps,
-        f.teamMetaStore
+        f.savedLaunch
       )
     ).rejects.toThrow(/changed|conflict/i);
     expect(f.writeConfig).not.toHaveBeenCalled();
@@ -165,7 +184,7 @@ describe('model relaunch durable persistence', () => {
       'sandbox',
       { members: f.meta.members.slice(1), memberSettingsRelaunch: await f.intent('team-lead') },
       f.deps,
-      f.teamMetaStore
+      f.savedLaunch
     );
     expect(f.team.model).toBe('glm-5.3-flash');
     expect(f.meta.members[0].model).toBe('glm-5.3-flash');
@@ -185,7 +204,7 @@ describe('relaunch persistence failure and inheritance safety', () => {
         'sandbox',
         { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
         f.deps,
-        f.teamMetaStore
+        f.savedLaunch
       )
     ).rejects.toThrow(/Stop the team/);
     expect(f.writeConfig).not.toHaveBeenCalled();
@@ -199,7 +218,7 @@ describe('relaunch persistence failure and inheritance safety', () => {
       'sandbox',
       { members, memberSettingsRelaunch: { ...intent, model: null } },
       f.deps,
-      f.teamMetaStore
+      f.savedLaunch
     );
     expect((await f.repository.findTarget('sandbox', 'worker'))?.settings.model).toBeNull();
     expect(f.config.members[1]).not.toHaveProperty('model');
@@ -218,7 +237,7 @@ describe('relaunch persistence failure and inheritance safety', () => {
         'sandbox',
         { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
         f.deps,
-        f.teamMetaStore
+        f.savedLaunch
       )
     ).rejects.toThrow('disk full');
     expect(f.meta).toEqual(before);
@@ -244,7 +263,7 @@ describe('relaunch persistence failure and inheritance safety', () => {
       'sandbox',
       { members: f.meta.members.slice(1), memberSettingsRelaunch: await f.intent('team-lead') },
       f.deps,
-      f.teamMetaStore
+      f.savedLaunch
     );
     expect(f.team.launchIdentity).toMatchObject({
       selectedModel: 'glm-5.3-flash',
@@ -273,12 +292,18 @@ it('validates optional relaunch IPC intent and rejects malformed or duplicate ba
   }
 });
 
-
 it('refuses stale sibling settings at the write boundary', async () => {
   const f = fixture();
   const intent = await f.intent();
   f.meta.members[2].model = 'external-choice';
-  await expect(persistMemberSettingsRelaunch('sandbox', { members: f.meta.members.slice(1), memberSettingsRelaunch: intent }, f.deps, f.teamMetaStore)).rejects.toThrow(/changed/);
+  await expect(
+    persistMemberSettingsRelaunch(
+      'sandbox',
+      { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
+      f.deps,
+      f.savedLaunch
+    )
+  ).rejects.toThrow(/changed/);
   expect(f.writeConfig).not.toHaveBeenCalled();
   expect(f.meta.members[2].model).toBe('external-choice');
 });
@@ -286,15 +311,28 @@ it('refuses stale sibling settings at the write boundary', async () => {
 it('refuses config-only roster additions at the write boundary', async () => {
   const f = fixture();
   const intent = await f.intent();
-  f.deps.readConfigJson = async () => JSON.stringify({ ...f.config, members: [...f.config.members, { name: 'new-member' }] });
-  await expect(persistMemberSettingsRelaunch('sandbox', { members: f.meta.members.slice(1), memberSettingsRelaunch: intent }, f.deps, f.teamMetaStore)).rejects.toThrow(/roster changed/);
+  f.deps.readConfigJson = async () =>
+    JSON.stringify({ ...f.config, members: [...f.config.members, { name: 'new-member' }] });
+  await expect(
+    persistMemberSettingsRelaunch(
+      'sandbox',
+      { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
+      f.deps,
+      f.savedLaunch
+    )
+  ).rejects.toThrow(/roster changed/);
   expect(f.writeConfig).not.toHaveBeenCalled();
 });
 
 it('clears lead defaults without materializing them into inherited siblings', async () => {
   const f = fixture();
-  const intent = { ...await f.intent('team-lead'), model: null };
-  await persistMemberSettingsRelaunch('sandbox', { members: f.meta.members.slice(1), memberSettingsRelaunch: intent }, f.deps, f.teamMetaStore);
+  const intent = { ...(await f.intent('team-lead')), model: null };
+  await persistMemberSettingsRelaunch(
+    'sandbox',
+    { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
+    f.deps,
+    f.savedLaunch
+  );
   expect(f.team.model).toBeUndefined();
   expect(f.config.members[0]).not.toHaveProperty('model');
   expect(f.meta.members[0]).not.toHaveProperty('model');
@@ -309,56 +347,128 @@ it('rejects a lead-only configuring successor under the existing mutation gate w
   f.deps.readConfigJson = async () => JSON.stringify({ members: f.meta.members });
   const intent = await f.intent('team-lead');
   const provisioningRunByTeam = new Map<string, string>();
-  const run = { runId: 'successor', child: {}, processKilled: false, cancelRequested: false,
-    progress: { runId: 'successor', teamName: 'sandbox', state: 'configuring' as const, message: '', startedAt: '', updatedAt: '' } };
+  const run = {
+    runId: 'successor',
+    child: {},
+    processKilled: false,
+    cancelRequested: false,
+    progress: {
+      runId: 'successor',
+      teamName: 'sandbox',
+      state: 'configuring' as const,
+      message: '',
+      startedAt: '',
+      updatedAt: '',
+    },
+  };
   const projection = new TeamProvisioningRuntimeStateProjection({
-    state: { provisioningRunByTeam, runs: new Map([['successor', run]]), runtimeAdapterRunByTeam: new Map(),
-      runtimeAdapterProgressByRunId: new Map(), getRetainedProvisioningProgressMap: () => new Map() },
-    ports: { getAliveRunId: () => null, getTrackedRunId: () => provisioningRunByTeam.get('sandbox') ?? null,
-      getAliveTeamNames: () => [], hasSecondaryRuntimeRuns: () => false, readBootstrapRuntimeState: async () => null },
+    state: {
+      provisioningRunByTeam,
+      runs: new Map([['successor', run]]),
+      runtimeAdapterRunByTeam: new Map(),
+      runtimeAdapterProgressByRunId: new Map(),
+      getRetainedProvisioningProgressMap: () => new Map(),
+    },
+    ports: {
+      getAliveRunId: () => null,
+      getTrackedRunId: () => provisioningRunByTeam.get('sandbox') ?? null,
+      getAliveTeamNames: () => [],
+      hasSecondaryRuntimeRuns: () => false,
+      readBootstrapRuntimeState: async () => null,
+    },
   });
-  f.deps.isTeamAlive = name => projection.isTeamAlive(name);
+  f.deps.isTeamAlive = (name) => projection.isTeamAlive(name);
   const launchTeam = vi.fn();
   let mutationLocked = false;
   const gate = f.deps.withConfigLock;
-  f.deps.withConfigLock = (name, operation) => gate(name, async () => {
-    mutationLocked = true;
-    try { return await operation(); } finally { mutationLocked = false; }
-  });
-  f.deps.hasProvisioningRun = name => { expect(mutationLocked).toBe(true); return projection.hasProvisioningRun(name); };
-  await expect(executeTeamRelaunch({
-    teamName: 'sandbox', isTeamAlive: true, request: { teamName: 'sandbox', cwd: '/sandbox/test-only' },
-    members: [], memberSettingsRelaunch: intent,
-    stopTeam: async () => {
-      // Competing admission captures old settings, then releases the same gate.
-      await f.deps.withConfigLock('sandbox', async () => { provisioningRunByTeam.set('sandbox', run.runId); });
-      expect(projection.isTeamAlive('sandbox')).toBe(false);
-      expect(projection.hasProvisioningRun('sandbox')).toBe(true);
-      expect(run.progress.state).toBe('configuring');
-    },
-    replaceMembers: (name, request) => persistMemberSettingsRelaunch(name, request, f.deps, f.teamMetaStore), launchTeam,
-  })).rejects.toThrow(/Stop the team/);
+  f.deps.withConfigLock = (name, operation) =>
+    gate(name, async () => {
+      mutationLocked = true;
+      try {
+        return await operation();
+      } finally {
+        mutationLocked = false;
+      }
+    });
+  f.deps.hasProvisioningRun = (name) => {
+    expect(mutationLocked).toBe(true);
+    return projection.hasProvisioningRun(name);
+  };
+  await expect(
+    executeTeamRelaunch({
+      teamName: 'sandbox',
+      isTeamAlive: true,
+      request: { teamName: 'sandbox', cwd: '/sandbox/test-only' },
+      members: [],
+      memberSettingsRelaunch: intent,
+      stopTeam: async () => {
+        // Competing admission captures old settings, then releases the same gate.
+        await f.deps.withConfigLock('sandbox', async () => {
+          provisioningRunByTeam.set('sandbox', run.runId);
+        });
+        expect(projection.isTeamAlive('sandbox')).toBe(false);
+        expect(projection.hasProvisioningRun('sandbox')).toBe(true);
+        expect(run.progress.state).toBe('configuring');
+      },
+      replaceMembers: (name, request) =>
+        persistMemberSettingsRelaunch(name, request, f.deps, f.savedLaunch),
+      launchTeam,
+    })
+  ).rejects.toThrow(/Stop the team/);
   expect(f.writeConfig).not.toHaveBeenCalled();
   expect(f.deps.membersMetaStore.writeMembers).not.toHaveBeenCalled();
   expect(f.teamMetaStore.updateMeta).not.toHaveBeenCalled();
   expect(launchTeam).not.toHaveBeenCalled();
 });
 
-it.each(['model', 'effort', 'syncModelsWithLead', 'fastMode', 'skipPermissions', 'worktree', 'extraCliArgs', 'limitContext', 'providerId', 'launchIdentity'] as const)(
-  'rejects teammeta-only stale %s from the editor baseline with zero writes', async key => {
+it.each([
+  'model',
+  'effort',
+  'syncModelsWithLead',
+  'fastMode',
+  'skipPermissions',
+  'worktree',
+  'extraCliArgs',
+  'limitContext',
+  'providerId',
+  'launchIdentity',
+] as const)(
+  'rejects teammeta-only stale %s from the editor baseline with zero writes',
+  async (key) => {
     const f = fixture();
     const intent = await f.intent('team-lead');
     const changes = {
-      model: 'newer-external-default', effort: 'high', syncModelsWithLead: false, fastMode: 'on',
-      skipPermissions: true, worktree: 'external-branch', extraCliArgs: '--max-turns 5', limitContext: true,
-      providerId: 'codex', launchIdentity: {
-        providerId: 'opencode', providerBackendId: 'opencode-cli', selectedModel: 'newer-external-default',
-        selectedModelKind: 'explicit', resolvedLaunchModel: 'newer-external-default', catalogId: null,
-        catalogSource: 'runtime', catalogFetchedAt: null, selectedEffort: null, resolvedEffort: null,
+      model: 'newer-external-default',
+      effort: 'high',
+      syncModelsWithLead: false,
+      fastMode: 'on',
+      skipPermissions: true,
+      worktree: 'external-branch',
+      extraCliArgs: '--max-turns 5',
+      limitContext: true,
+      providerId: 'codex',
+      launchIdentity: {
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        selectedModel: 'newer-external-default',
+        selectedModelKind: 'explicit',
+        resolvedLaunchModel: 'newer-external-default',
+        catalogId: null,
+        catalogSource: 'runtime',
+        catalogFetchedAt: null,
+        selectedEffort: null,
+        resolvedEffort: null,
       },
     };
     Object.assign(f.team, { [key]: changes[key] });
-    await expect(persistMemberSettingsRelaunch('sandbox', { members: f.meta.members.slice(1), memberSettingsRelaunch: intent }, f.deps, f.teamMetaStore)).rejects.toThrow(/launch settings changed/);
+    await expect(
+      persistMemberSettingsRelaunch(
+        'sandbox',
+        { members: f.meta.members.slice(1), memberSettingsRelaunch: intent },
+        f.deps,
+        f.savedLaunch
+      )
+    ).rejects.toThrow(/launch settings changed/);
     expect(f.writeConfig).not.toHaveBeenCalled();
     expect(f.deps.membersMetaStore.writeMembers).not.toHaveBeenCalled();
     expect(f.teamMetaStore.updateMeta).not.toHaveBeenCalled();

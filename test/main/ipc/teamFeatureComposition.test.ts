@@ -222,6 +222,8 @@ vi.mock('@features/team-provisioning/main', () => ({
   createTeamProvisioningFeature: mocks.createTeamProvisioningFeature,
   registerTeamProvisioningIpc: mocks.registerTeamProvisioningIpc,
   removeTeamProvisioningIpc: mocks.removeTeamProvisioningIpc,
+}));
+vi.mock('@main/composition/team/persistNodeMemberSettingsRelaunch', () => ({
   persistNodeMemberSettingsRelaunch: mocks.persistNodeMemberSettingsRelaunch,
 }));
 vi.mock('@features/team-roster-mutations/main', () => ({

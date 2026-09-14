@@ -105,6 +105,8 @@ const EXACT_PUBLIC_EXPORTS = {
     typeExports: [
       'LegacyMemberSettingsMetadataFile',
       'LegacyMemberSettingsRepositoryDependencies',
+      'MemberSettingsRelaunchFeature',
+      'MemberSettingsRelaunchFeatureDependencies',
       'TeamMemberSettingsFeatureApi',
       'TeamMemberSettingsFeatureDependencies',
       'TeamMemberSettingsIpcRegistrar',
@@ -118,11 +120,11 @@ const EXACT_PUBLIC_EXPORTS = {
     ],
     valueExports: [
       'createLegacyMemberSettingsRepository',
+      'createMemberSettingsRelaunchFeature',
       'createTeamMemberSettingsFeature',
       'createTeamProvisioningApplicationFeature',
       'createTeamProvisioningFeature',
       'createTeamProvisioningStatusFeature',
-      'persistNodeMemberSettingsRelaunch',
       'registerTeamMemberSettingsIpc',
       'registerTeamProvisioningIpc',
       'removeTeamMemberSettingsIpc',

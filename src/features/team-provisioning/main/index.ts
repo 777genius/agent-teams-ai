@@ -1,4 +1,9 @@
 export {
+  createMemberSettingsRelaunchFeature,
+  type MemberSettingsRelaunchFeature,
+  type MemberSettingsRelaunchFeatureDependencies,
+} from './composition/createMemberSettingsRelaunchFeature';
+export {
   createTeamMemberSettingsFeature,
   type TeamMemberSettingsFeatureApi,
   type TeamMemberSettingsFeatureDependencies,
@@ -20,7 +25,6 @@ export {
   type LegacyMemberSettingsMetadataFile,
   type LegacyMemberSettingsRepositoryDependencies,
 } from './composition/LegacyMemberSettingsRepository';
-export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';
 export {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,

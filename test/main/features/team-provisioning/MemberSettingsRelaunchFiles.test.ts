@@ -6,15 +6,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp', isPackaged: false } }));
 
-import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
-import { applyEffectiveLaunchStateToConfig } from '@main/services/team/provisioning/TeamProvisioningConfigMaterialization';
 import {
   fingerprintResolvedMember,
   memberToEditableSettings,
 } from '@features/team-provisioning/renderer/utils/memberSettingsPresentation';
-import type { TeamConfig } from '@shared/types';
+import { applyEffectiveLaunchStateToConfig } from '@main/services/team/provisioning/TeamProvisioningConfigMaterialization';
+import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
 
 import { prepareModelLaunchFixture } from './prepareModelLaunchFixture';
+
+import type { TeamConfig } from '@shared/types';
 
 const sandbox = vi.hoisted(() => ({ root: '' }));
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
@@ -22,30 +23,28 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
   getTeamsBasePath: () => sandbox.root,
 }));
 
+import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
+import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
+import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/composition/LegacyMemberSettingsRepository';
 import {
   applyMemberSettingsRelaunch,
   buildMemberSettingsRelaunchIntent,
   filterMemberSettingsRelaunchInputs,
 } from '@features/team-provisioning/renderer/utils/memberSettingsRelaunch';
+import { createNodeMemberSettingsRepositoryDependencies } from '@main/composition/team/createNodeMemberSettingsRepositoryDependencies';
+import { persistNodeMemberSettingsRelaunch } from '@main/composition/team/persistNodeMemberSettingsRelaunch';
+import { persistDeterministicLaunchMetadata } from '@main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow';
+import { resolveLaunchExpectedMembers } from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
+import { buildLaunchSyntheticRequest } from '@main/services/team/provisioning/TeamProvisioningLaunchTeamFlow';
+import { buildEffectiveTeamMemberSpecs } from '@main/services/team/provisioning/TeamProvisioningMemberSpecs';
+import { TeamDataService } from '@main/services/team/TeamDataService';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
 import {
   buildMembersFromDrafts,
   createMemberDraftsFromInputs,
 } from '@renderer/components/team/members/membersEditorUtils';
-import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
-import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
-import { persistDeterministicLaunchMetadata } from '@main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow';
-import { buildLaunchSyntheticRequest } from '@main/services/team/provisioning/TeamProvisioningLaunchTeamFlow';
-import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
-import {
-  createNodeLegacyMemberSettingsRepositoryDependencies,
-  LegacyMemberSettingsRepositoryAdapter,
-} from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsRepositoryAdapter';
-import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch';
-import { resolveLaunchExpectedMembers } from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
-import { buildEffectiveTeamMemberSpecs } from '@main/services/team/provisioning/TeamProvisioningMemberSpecs';
-import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { TeamDataService } from '@main/services/team/TeamDataService';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 afterEach(async () => {
   if (sandbox.root) await rm(sandbox.root, { recursive: true, force: true });
@@ -80,7 +79,7 @@ describe('model relaunch file round trip', () => {
         model: 'glm-5.3',
         syncModelsWithLead: true,
       });
-      const dependencies = createNodeLegacyMemberSettingsRepositoryDependencies({
+      const dependencies = createNodeMemberSettingsRepositoryDependencies({
         isTeamAlive: () => false,
         invalidateWorkerCache: vi.fn(),
       });
@@ -117,7 +116,7 @@ describe('model relaunch file round trip', () => {
       });
 
       const reopened = new LegacyMemberSettingsRepositoryAdapter(
-        createNodeLegacyMemberSettingsRepositoryDependencies({
+        createNodeMemberSettingsRepositoryDependencies({
           isTeamAlive: () => false,
           invalidateWorkerCache: vi.fn(),
         })
@@ -228,7 +227,7 @@ it.each([false, true])(
       invalidateWorkerCache: vi.fn(),
     };
     const repository = new LegacyMemberSettingsRepositoryAdapter(
-      createNodeLegacyMemberSettingsRepositoryDependencies(options)
+      createNodeMemberSettingsRepositoryDependencies(options)
     );
     const snapshots = await Promise.all(
       rows.map((row) => repository.findTarget(teamName, row.name))
@@ -334,7 +333,7 @@ it.each([false, true])(
     );
     const reopened = await reopen();
     const reopenedRepository = new LegacyMemberSettingsRepositoryAdapter(
-      createNodeLegacyMemberSettingsRepositoryDependencies(options)
+      createNodeMemberSettingsRepositoryDependencies(options)
     );
     for (const name of legacyLead ? ['inherited'] : ['cleared', 'inherited']) {
       const member = reopened.find((row) => row.name === name)!;

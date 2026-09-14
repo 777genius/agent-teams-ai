@@ -62,8 +62,10 @@ replacement (and before stopping a live team).
 
 For a settings-originated relaunch, the optional `memberSettingsRelaunch` field on
 `ReplaceMembersRequest` carries the target and roster fingerprints into the
-existing IPC mutation gate. `persistNodeMemberSettingsRelaunch` validates this
-intent and composes the existing member repository and team metadata store.
+existing IPC mutation gate. The portable `createMemberSettingsRelaunchFeature`
+operation validates this intent and coordinates feature-owned persistence. The app-owned
+`persistNodeMemberSettingsRelaunch` compatibility wrapper supplies Node filesystem and metadata
+stores through the same construction path used by ordinary member settings.
 The config lock covers conflict checks, configured member writes and rollback;
 lead model/effort also update saved launch defaults and launch identity. This
 bounded path keeps the roster identity unchanged; add/remove members separately.
