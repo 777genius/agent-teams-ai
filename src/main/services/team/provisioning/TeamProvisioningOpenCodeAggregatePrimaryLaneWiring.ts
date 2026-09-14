@@ -9,13 +9,13 @@ import type {
   OpenCodeAggregatePrimaryProgressPublisher,
   OpenCodeAggregatePrimaryProgressPublisherPorts,
 } from './OpenCodeAggregatePrimaryProgressPublisher';
+import type { PendingOpenCodePrimaryCleanup } from './TeamProvisioningLaunchStateStoreBoundary';
 import type {
   OpenCodePrimaryLaneRebootstrapPorts,
   OpenCodePrimaryLaneRebootstrapRun,
 } from './TeamProvisioningOpenCodePrimaryLaneRebootstrap';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComposition';
-import type { PendingOpenCodePrimaryCleanup } from './TeamProvisioningLaunchStateStoreBoundary';
 import type { PersistedTeamLaunchPhase, TeamCreateRequest } from '@shared/types';
 
 /**

@@ -1,4 +1,5 @@
 import { mkdir, readdir, readFile, stat } from 'node:fs/promises';
+
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import {
   durablePathExistsAsync,
@@ -10,7 +11,9 @@ import {
   withIdentityStableIndexedDirectoryLocksAsync,
 } from '@main/utils/durablePathOperations';
 import * as path from 'path';
+
 import { withFileLock } from '../../fileLock';
+
 import {
   type ClearOpenCodeRuntimeLaneStorageParams,
   type ClearOpenCodeRuntimeLaneStorageResult,

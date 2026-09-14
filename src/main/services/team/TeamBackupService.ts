@@ -20,7 +20,6 @@ import {
   BackupPublicationFencedError,
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
-import type { BackupFileDescriptor } from './TeamBackupFileCollection';
 import {
   enumerateBackupFiles,
   enumerateTeamFilesSync,
@@ -39,6 +38,7 @@ import { TeamBackupRestoreService } from './TeamBackupRestoreService';
 import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
+import type { BackupFileDescriptor } from './TeamBackupFileCollection';
 
 export type {
   PermanentDeletionTarget,

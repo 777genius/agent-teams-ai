@@ -52,11 +52,11 @@ import {
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
 import { prepareOpenCodePromptDispatch } from './OpenCodePromptDispatchPreparation';
-import { applyOpenCodeStalePendingResolution } from './OpenCodeStalePendingResolutionApplier';
 import {
   logOpenCodeStalePendingResolution,
   readOpenCodeStalePendingTurnUsedTokens,
 } from './OpenCodeStalePendingObservationSignals';
+import { applyOpenCodeStalePendingResolution } from './OpenCodeStalePendingResolutionApplier';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {

@@ -4,9 +4,8 @@ import * as path from 'path';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
 import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
-import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
-
 import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,

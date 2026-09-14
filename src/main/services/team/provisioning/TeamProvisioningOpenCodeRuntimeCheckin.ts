@@ -15,8 +15,8 @@ import { resolveEffectiveConfiguredMember } from './TeamProvisioningMemberStatus
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
   hasCommittedOpenCodeRuntimeBootstrapSessionEvidence,
-  type OpenCodeRuntimeBootstrapEvidencePorts,
   type OpenCodeRuntimeBootstrapCheckinIdempotencyResult,
+  type OpenCodeRuntimeBootstrapEvidencePorts,
   resolveOpenCodeRuntimeBootstrapCheckinIdempotencyFromMember,
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { summarizeRuntimeLaunchResultMembers } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
