@@ -454,6 +454,50 @@ describe.each(['json', 'sqlite'] as const)(
       expect(stored.lastAcceptedReport?.note).toBe('accepted I1');
     });
 
+    it('does not let a delayed stale replay replace a newer accepted report after journal refresh', async () => {
+      const h = await setup(kind);
+      const i1 = createMemberWorkSyncReportJournalInput({
+        request: h.request,
+        incarnation,
+        receivedAt: initialTime,
+        hash: h.hash,
+      });
+      expect((await h.reportJournal.ensure(i1)).state).toBe('present');
+      const replayed = await h.run(async (bound) => {
+        const port = bound.statusMutations!;
+        let reads = 0;
+        return new MemberWorkSyncReporter({
+          ...bound,
+          statusMutations: {
+            ...port,
+            readSnapshot: async (input) => {
+              const snapshot = await port.readSnapshot(input);
+              if (++reads === 2) {
+                h.setTime('2026-09-10T00:01:00.000Z');
+                await new MemberWorkSyncReporter(bound).execute({
+                  ...h.request,
+                  note: 'accepted I2',
+                });
+                return port.readSnapshot(input);
+              }
+              return snapshot;
+            },
+          },
+        }).execute(h.request, {
+          intentId: i1.intentId,
+          incarnation,
+          requestDigest: i1.requestDigest,
+          receivedAt: i1.receivedAt,
+          origin: 'online',
+        });
+      });
+      expect(replayed.accepted).toBe(false);
+      expect(replayed.code).toBe('superseded');
+      const stored = await h.read();
+      expect(stored.lastAcceptedReport?.note).toBe('accepted I2');
+      expect(stored.pendingReportReceipt?.intentId).not.toBe(i1.intentId);
+    });
+
     it('marks projection degraded when post-commit transfer fails after I1 is accepted', async () => {
       const h = await setup(kind);
       vi.spyOn(h.reportJournal, 'transfer').mockResolvedValue({ state: 'unavailable' });

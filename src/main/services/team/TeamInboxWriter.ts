@@ -446,9 +446,9 @@ export class TeamInboxWriter {
     teamName: string,
     member: string,
     input: { beforeControlRevision: number }
-  ): Promise<{ invalidated: number }> {
+  ): Promise<{ invalidated: number; messageIds: string[] }> {
     const inboxPath = resolveInboxPath(teamName, member);
-    let invalidated = 0;
+    const messageIds: string[] = [];
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
         let parsed: unknown;
@@ -466,20 +466,23 @@ export class TeamInboxWriter {
             typeof row.workSyncControlRevision === 'number' ? row.workSyncControlRevision : -1;
           if (
             row.messageKind !== 'member_work_sync_nudge' ||
-            revision >= input.beforeControlRevision
+            revision >= input.beforeControlRevision ||
+            row.read === true
           ) {
             continue;
           }
           row.read = true;
           row.messageKind = 'default';
-          invalidated += 1;
+          if (typeof row.messageId === 'string' && row.messageId.length > 0) {
+            messageIds.push(row.messageId);
+          }
         }
-        if (invalidated > 0) {
+        if (messageIds.length > 0) {
           await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
         }
       });
     });
-    return { invalidated };
+    return { invalidated: messageIds.length, messageIds };
   }
 
   async mergeRuntimeDeliveryTaskRefs(

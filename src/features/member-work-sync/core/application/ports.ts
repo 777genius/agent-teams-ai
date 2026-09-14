@@ -224,7 +224,7 @@ export interface MemberWorkSyncInboxNudgePort {
     teamName: string;
     memberName: string;
     beforeControlRevision: number;
-  }): Promise<{ invalidated: number }>;
+  }): Promise<{ invalidated: number; messageIds?: string[] }>;
 }
 
 export interface MemberWorkSyncWatchdogCooldownPort {

@@ -1523,19 +1523,7 @@ liveDescribe('Member work sync recovery live canary', () => {
             .catch(() => undefined);
           kickLeadInboxRelay(activeService, teamName!, leadRelay);
           const canary = await fs.readFile(canaryPath, 'utf8').catch(() => '');
-          if (/^\s*done\s*$/i.test(canary)) {
-            return true;
-          }
-          const nested = await fs.readFile(path.join(tempDir, 'CANARY.txt'), 'utf8').catch(() => '');
-          if (/^\s*done\s*$/i.test(nested)) {
-            return true;
-          }
-          const status = await feature!.getStatus({ teamName: teamName!, memberName });
-          return (
-            status.state === 'caught_up' &&
-            status.agenda.items.length === 0 &&
-            status.report?.accepted === true
-          );
+          return /^\s*done\s*$/i.test(canary);
         },
         420_000,
         2_000,

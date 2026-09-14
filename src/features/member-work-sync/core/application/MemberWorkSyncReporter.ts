@@ -217,6 +217,20 @@ export class MemberWorkSyncReporter {
     if (replacedReceipt && replacedReceipt.intentId === journalInput?.intentId) {
       replacedReceipt = undefined;
     }
+    if (
+      replay &&
+      isOlderThanAcceptedMemberWorkSyncReportReplay(
+        replay.receivedAt,
+        getMemberWorkSyncAcceptedReport(read.status)?.reportedAt
+      )
+    ) {
+      return this.completeHistoricalReplay({
+        request,
+        mutationId,
+        replay,
+        read,
+      });
+    }
 
     const status = await attachMemberWorkSyncReportToken(this.deps, {
       ...read.status,

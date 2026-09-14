@@ -379,6 +379,8 @@ class InMemoryInboxNudge implements MemberWorkSyncInboxNudgePort {
   readonly invalidated: Array<
     Parameters<NonNullable<MemberWorkSyncInboxNudgePort['invalidateDeliveredNudges']>>[0]
   > = [];
+  readonly readMessageIds = new Set<string>();
+  readonly revokedMessageIds = new Set<string>();
   fail = false;
   conflict = false;
   repairFail = false;
@@ -415,7 +417,19 @@ class InMemoryInboxNudge implements MemberWorkSyncInboxNudgePort {
     input: Parameters<NonNullable<MemberWorkSyncInboxNudgePort['invalidateDeliveredNudges']>>[0]
   ) {
     this.invalidated.push(input);
-    return { invalidated: 1 };
+    const messageIds = this.inserted
+      .filter(
+        (row) =>
+          row.teamName === input.teamName &&
+          row.memberName === input.memberName &&
+          !this.readMessageIds.has(row.messageId) &&
+          !this.revokedMessageIds.has(row.messageId)
+      )
+      .map((row) => row.messageId);
+    for (const messageId of messageIds) {
+      this.revokedMessageIds.add(messageId);
+    }
+    return { invalidated: messageIds.length, messageIds };
   }
 }
 
@@ -509,6 +523,15 @@ function createInMemoryStatusMutations(
 ): NonNullable<MemberWorkSyncUseCaseDeps['statusMutations']> {
   let token = 'cas-0';
   let nextMutation = 0;
+  let chain = Promise.resolve();
+  const serialize = <T>(work: () => Promise<T>): Promise<T> => {
+    const run = chain.then(work, work);
+    chain = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  };
   return {
     createMutationId: () => `mutation-${++nextMutation}`,
     async readSnapshot() {
@@ -521,29 +544,31 @@ function createInMemoryStatusMutations(
         },
       };
     },
-    async compareAndWrite(input) {
-      if (input.expectedToken !== token) {
+    compareAndWrite(input) {
+      return serialize(async () => {
+        if (input.expectedToken !== token) {
+          return {
+            committed: false as const,
+            reason: 'conflict' as const,
+            current: {
+              status: await store.read(),
+              token,
+              incarnation: 'inc-a',
+            },
+          };
+        }
+        token = `cas-${nextMutation}-${input.mutationId}`;
+        await store.write(input.nextStatus);
         return {
-          committed: false,
-          reason: 'conflict',
-          current: {
-            status: await store.read(),
+          committed: true as const,
+          snapshot: {
+            status: input.nextStatus,
             token,
             incarnation: 'inc-a',
           },
+          projectionDegraded: [],
         };
-      }
-      token = `cas-${nextMutation}-${input.mutationId}`;
-      await store.write(input.nextStatus);
-      return {
-        committed: true,
-        snapshot: {
-          status: input.nextStatus,
-          token,
-          incarnation: 'inc-a',
-        },
-        projectionDegraded: [],
-      };
+      });
     },
   };
 }
@@ -3060,6 +3085,126 @@ describe('MemberWorkSync use cases', () => {
     ).toHaveLength(1);
   });
 
+  it('allocates a fresh Continue after Stop revokes an unread delivered recovery', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    const ordinary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    expect(ordinary.delivered).toBeGreaterThanOrEqual(1);
+    const ordinaryId = inbox.inserted[0]?.messageId;
+    expect(ordinaryId).toBeTruthy();
+    inbox.readMessageIds.add(ordinaryId!);
+    const commands = new MemberWorkSyncRecoveryCommands(deps);
+    const first = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const delivered = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-continue',
+    });
+    expect(delivered.delivered).toBeGreaterThanOrEqual(1);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+    const stopped = await commands.stop({
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'user_stop',
+    });
+    expect(stopped.ok).toBe(true);
+    if (stopped.ok) {
+      expect(stopped.status.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    }
+    await commands.resume({ teamName: 'team-a', memberName: 'bob' });
+    const second = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.status.recoveryHealth?.unresolvedIntentId).not.toBe(firstIntentId);
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'pending'
+    );
+    const resumed = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-resume',
+    });
+    expect(resumed.delivered).toBeGreaterThanOrEqual(1);
+    expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
+      'delivered'
+    );
+  });
+
+  it('keeps a delivered Continue after Stop when the inbox row was already read', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+    const ordinaryId = inbox.inserted[0]?.messageId;
+    expect(ordinaryId).toBeTruthy();
+    inbox.readMessageIds.add(ordinaryId!);
+    const commands = new MemberWorkSyncRecoveryCommands(deps);
+    const first = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const delivered = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-continue',
+    });
+    expect(delivered.delivered).toBeGreaterThanOrEqual(1);
+    inbox.readMessageIds.add(firstIntentId!);
+    const stopped = await commands.stop({
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'user_stop',
+    });
+    expect(stopped.ok).toBe(true);
+    if (!stopped.ok) {
+      return;
+    }
+    expect(stopped.status.recoveryHealth?.unresolvedIntentId).toBe(firstIntentId);
+    expect(outbox.items.get(firstIntentId!)?.status).toBe('delivered');
+  });
+
   it.each(['pending', 'claimed', 'failed_retryable'] as const)(
     'keeps a %s automatic recovery slot instead of allocating a second Continue',
     async (outboxStatus) => {
@@ -3249,6 +3394,85 @@ describe('MemberWorkSync use cases', () => {
     expect(outbox.items.get(second.status.recoveryHealth?.unresolvedIntentId ?? '')?.status).toBe(
       'pending'
     );
+  });
+
+  it('delivers only one Continue when two retries race after a released default row', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    const { deps, store } = createDeps({
+      providerId: 'codex',
+      outboxStore: outbox,
+      inboxNudge: inbox,
+    });
+    deps.statusMutations = createInMemoryStatusMutations(store);
+    store.phase2ReadinessState = 'shadow_ready';
+    await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-race-base',
+    });
+    const commands = new MemberWorkSyncRecoveryCommands(deps);
+    const first = await commands.continueManually({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    const firstIntentId = first.status.recoveryHealth?.unresolvedIntentId;
+    expect(firstIntentId).toBeTruthy();
+    const firstItem = outbox.items.get(firstIntentId!);
+    expect(firstItem).toBeTruthy();
+    outbox.items.set(firstIntentId!, {
+      ...firstItem!,
+      status: 'delivered',
+      deliveredMessageId: firstIntentId,
+    });
+    const current = await store.read();
+    store.write({
+      ...current!,
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: current?.recoveryHealth?.episodes ?? [],
+        controlRevision: current?.recoveryHealth?.controlRevision ?? 1,
+        reservations: (current?.recoveryHealth?.reservations ?? []).map((reservation) =>
+          reservation.intentId === firstIntentId
+            ? { ...reservation, state: 'resolved' as const }
+            : reservation
+        ),
+      },
+    });
+    const [left, right] = await Promise.all([
+      commands.continueManually({ teamName: 'team-a', memberName: 'bob' }),
+      commands.continueManually({ teamName: 'team-a', memberName: 'bob' }),
+    ]);
+    expect(left.ok && right.ok).toBe(true);
+    if (!left.ok || !right.ok) {
+      return;
+    }
+    expect(left.status.recoveryHealth?.unresolvedIntentId).toBe(
+      right.status.recoveryHealth?.unresolvedIntentId
+    );
+    const winnerId = left.status.recoveryHealth?.unresolvedIntentId;
+    expect(winnerId).toBeTruthy();
+    expect(winnerId).not.toBe(firstIntentId);
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher-race',
+    });
+    expect(summary.delivered).toBeGreaterThanOrEqual(1);
+    const fresh = [...outbox.items.values()].filter(
+      (item) =>
+        item.payload.workSyncIntentKey?.includes('manual-continue') && item.id !== firstIntentId
+    );
+    expect(fresh.filter((item) => item.status === 'delivered').map((item) => item.id)).toEqual([
+      winnerId,
+    ]);
+    expect(fresh.filter((item) => item.status === 'pending')).toEqual([]);
   });
 
   it('promotes a watchdog stall into attention and keeps it across reconcile', async () => {

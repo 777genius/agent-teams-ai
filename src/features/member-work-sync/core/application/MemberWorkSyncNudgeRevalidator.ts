@@ -12,6 +12,7 @@ import {
   isManualContinueOutboxItem,
   isReviewPickupOutboxItem,
   isStatusOnlyRecoveryOutboxItem,
+  isUnauthorizedManualContinue,
   memberNudgeRateLimitRetryAt,
   preserveCurrentRuntimeStallDiagnostics,
   reviewPickupRequestIdsStillMatch,
@@ -108,6 +109,9 @@ export class MemberWorkSyncNudgeRevalidator {
       })
     ) {
       return { ok: false, reason: 'stale_control_revision', retryable: false };
+    }
+    if (isUnauthorizedManualContinue({ status: previous, item })) {
+      return { ok: false, reason: 'unauthorized_recovery', retryable: false };
     }
 
     let source;

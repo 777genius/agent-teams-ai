@@ -239,7 +239,7 @@ describe('TeamInboxWriter work-sync nudge invalidation', () => {
     const result = await writer.invalidateMemberWorkSyncNudges('team', 'worker', {
       beforeControlRevision: 2,
     });
-    expect(result).toEqual({ invalidated: 1 });
+    expect(result).toEqual({ invalidated: 1, messageIds: ['nudge-old'] });
 
     const inbox = readInbox('worker');
     expect(inbox.find((row) => row.messageId === 'nudge-old')).toMatchObject({
@@ -253,6 +253,47 @@ describe('TeamInboxWriter work-sync nudge invalidation', () => {
     expect(inbox.find((row) => row.messageId === 'nudge-new')).toMatchObject({
       read: false,
       messageKind: 'member_work_sync_nudge',
+    });
+  });
+
+  it('keeps already-read work-sync nudges when revoking older unread ones', async () => {
+    await writer.sendMessage('team', {
+      member: 'worker',
+      from: 'system',
+      text: 'already read continuation',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncControlRevision: 0,
+      messageId: 'nudge-read',
+    });
+    const inboxPath = path.join(hoisted.teamsBase, 'team', 'inboxes', 'worker.json');
+    const parsed = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Array<Record<string, unknown>>;
+    parsed[0]!.read = true;
+    fs.writeFileSync(inboxPath, JSON.stringify(parsed, null, 2));
+    await writer.sendMessage('team', {
+      member: 'worker',
+      from: 'system',
+      text: 'unread continuation',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncControlRevision: 0,
+      messageId: 'nudge-unread',
+    });
+
+    const result = await writer.invalidateMemberWorkSyncNudges('team', 'worker', {
+      beforeControlRevision: 2,
+    });
+    expect(result).toEqual({ invalidated: 1, messageIds: ['nudge-unread'] });
+    const inbox = readInbox('worker');
+    expect(inbox.find((row) => row.messageId === 'nudge-read')).toMatchObject({
+      read: true,
+      messageKind: 'member_work_sync_nudge',
+    });
+    expect(inbox.find((row) => row.messageId === 'nudge-unread')).toMatchObject({
+      read: true,
+      messageKind: 'default',
     });
   });
 });

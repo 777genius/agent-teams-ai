@@ -127,6 +127,19 @@ export function isManualContinueOutboxItem(item: MemberWorkSyncOutboxItem): bool
   return item.payload.workSyncIntentKey?.startsWith('manual-continue:') === true;
 }
 
+export function isUnauthorizedManualContinue(input: {
+  status: MemberWorkSyncStatus | null | undefined;
+  item: MemberWorkSyncOutboxItem;
+}): boolean {
+  const unresolvedIntentId = input.status?.recoveryHealth?.unresolvedIntentId;
+  return (
+    isManualContinueOutboxItem(input.item) &&
+    typeof unresolvedIntentId === 'string' &&
+    unresolvedIntentId.length > 0 &&
+    unresolvedIntentId !== input.item.id
+  );
+}
+
 export function isAgendaSyncStillStuckRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
   return (
     item.payload.workSyncIntentKey?.startsWith(AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX) ===
@@ -184,6 +197,9 @@ export function isMemberWorkSyncNudgeDeliveryStale(input: {
     })
   ) {
     return { abort: true, reason: 'stale_control_revision' };
+  }
+  if (isUnauthorizedManualContinue({ status: input.status, item: input.item })) {
+    return { abort: true, reason: 'unauthorized_recovery' };
   }
   const decision = decideMemberWorkSyncStatus({
     agenda: input.status.agenda,

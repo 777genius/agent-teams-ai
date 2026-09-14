@@ -115,7 +115,7 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
     teamName: string;
     memberName: string;
     beforeControlRevision: number;
-  }): Promise<{ invalidated: number }> {
+  }): Promise<{ invalidated: number; messageIds?: string[] }> {
     if (typeof this.inboxWriter.invalidateMemberWorkSyncNudges !== 'function') {
       return { invalidated: 0 };
     }

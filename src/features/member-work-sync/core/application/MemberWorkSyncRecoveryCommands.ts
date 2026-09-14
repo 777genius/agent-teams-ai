@@ -7,6 +7,7 @@ import {
 } from '../domain';
 
 import { isMemberWorkSyncRecoveryAllocationEnabled } from './MemberWorkSyncNudgeOutboxPlanHelpers';
+import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 import {
   commitMemberWorkSyncStatus,
   readMemberWorkSyncStatus,
@@ -53,8 +54,12 @@ export class MemberWorkSyncRecoveryCommands {
         evaluatedAt: nowIso,
       }))
     ).then(async (status) => {
-      await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
-      return { ok: true as const, status, code: 'stopped' as const };
+      const revoked = await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
+      return {
+        ok: true as const,
+        status: await retireRevokedDeliveredRecovery(this.deps, status, revoked.messageIds),
+        code: 'stopped' as const,
+      };
     });
   }
 
@@ -192,10 +197,6 @@ export class MemberWorkSyncRecoveryCommands {
       if (needsFreshIntent) {
         const retryKey = `${defaultIntentKey}:${mutationId}`;
         recoveryInput = buildRecoveryInput(retryKey, `${baseInput.id}:${retryKey}`);
-        ensured = await outboxStore.ensurePending(recoveryInput);
-      }
-      if (!ensured.ok) {
-        return { ok: false as const, code: 'payload_conflict' as const };
       }
       let committedStatus = read.status;
       if (!hadUnresolvedIntent || needsFreshIntent) {
@@ -215,6 +216,12 @@ export class MemberWorkSyncRecoveryCommands {
               }
             : committedStatus;
         committedStatus = await attachReservation(recoveryInput, previous);
+      }
+      if (needsFreshIntent) {
+        ensured = await outboxStore.ensurePending(recoveryInput);
+      }
+      if (!ensured.ok) {
+        return { ok: false as const, code: 'payload_conflict' as const };
       }
       return { ok: true as const, status: committedStatus, code: 'continued' as const };
     });
@@ -309,16 +316,51 @@ export class MemberWorkSyncRecoveryCommands {
 export async function invalidateStaleMemberWorkSyncInboxNudges(
   deps: MemberWorkSyncUseCaseDeps,
   status: MemberWorkSyncStatus
-): Promise<void> {
+): Promise<{ invalidated: number; messageIds: string[] }> {
   const beforeControlRevision = status.recoveryHealth?.controlRevision;
   if (typeof beforeControlRevision !== 'number') {
-    return;
+    return { invalidated: 0, messageIds: [] };
   }
-  await deps.inboxNudge?.invalidateDeliveredNudges?.({
+  const result = await deps.inboxNudge?.invalidateDeliveredNudges?.({
     teamName: status.teamName,
     memberName: status.memberName,
     beforeControlRevision,
   });
+  return {
+    invalidated: result?.invalidated ?? 0,
+    messageIds: result?.messageIds ?? [],
+  };
+}
+
+async function retireRevokedDeliveredRecovery(
+  deps: MemberWorkSyncUseCaseDeps,
+  status: MemberWorkSyncStatus,
+  revokedMessageIds: string[]
+): Promise<MemberWorkSyncStatus> {
+  const intentId = status.recoveryHealth?.unresolvedIntentId;
+  if (!intentId || revokedMessageIds.length === 0 || !deps.outboxStore?.readItem) {
+    return status;
+  }
+  const item = await deps.outboxStore.readItem({
+    teamName: status.teamName,
+    memberName: status.memberName,
+    id: intentId,
+  });
+  if (!item || item.status !== 'delivered') {
+    return status;
+  }
+  const deliveredId = item.deliveredMessageId ?? item.id;
+  if (!revokedMessageIds.includes(deliveredId) && !revokedMessageIds.includes(item.id)) {
+    return status;
+  }
+  const retired = await retireMemberWorkSyncRecoveryIntent({
+    deps,
+    teamName: status.teamName,
+    memberName: status.memberName,
+    intentId,
+    receiptId: `inbox-revoked:${intentId}`,
+  });
+  return retired ?? status;
 }
 
 export function isAutomaticRecoveryAllocationEnabled(deps: MemberWorkSyncUseCaseDeps): boolean {
