@@ -3,6 +3,10 @@ import {
   buildOpenCodeAttachmentDeliveryParts,
   type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
+import {
+  consumeOpenCodeWorkSyncLane,
+  hasOpenCodeWorkSyncLaneReservation,
+} from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -187,6 +191,22 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
     const { config } = directory;
+    const consumedLane = consumeOpenCodeWorkSyncLane({
+      teamName,
+      memberName: input.memberName,
+      messageId: input.messageId,
+      foreground: input.source === 'ui-send' || input.source === 'manual',
+    });
+    if (
+      input.messageKind === 'member_work_sync_nudge' &&
+      consumedLane === 'absent' &&
+      hasOpenCodeWorkSyncLaneReservation({
+        teamName,
+        memberName: input.memberName,
+      })
+    ) {
+      return { delivered: false, reason: 'work_sync_lane_reserved' };
+    }
     const { canonicalMemberName, laneIdentity, configMember, metaMember, memberRuntimeCwd } =
       identity;
     const normalizedMemberName = input.memberName.trim();

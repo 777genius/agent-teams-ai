@@ -243,6 +243,28 @@ describe('memberWorkSyncStatusViewModel', () => {
     expect(viewModel.canStop).toBe(true);
     expect(viewModel.canResume).toBeUndefined();
   });
+
+  it('does not present unknown runtime Stop as fully applied', () => {
+    const viewModel = toMemberWorkSyncStatusViewModel(
+      makeStatus({
+        recoveryHealth: {
+          schemaVersion: 1,
+          episodes: [],
+          autoResumeStopLatch: {
+            stoppedAt: '2026-04-29T00:21:00.000Z',
+            reason: 'user_stop',
+            controlRevision: 2,
+          },
+          controlRevision: 2,
+        },
+        runtimeAdmission: { state: 'unknown' },
+      })
+    );
+    expect(viewModel.autoResumeStopped).toBe(true);
+    expect(viewModel.canResume).toBe(true);
+    expect(viewModel.attention).toBe(true);
+    expect(viewModel.tooltip).toContain('runtime admission is not fully confirmed');
+  });
 });
 
 it('shows the accepted lease even when the last diagnostic report was rejected', () => {

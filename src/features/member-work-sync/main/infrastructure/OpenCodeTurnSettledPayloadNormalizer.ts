@@ -31,6 +31,15 @@ function getString(record: Record<string, unknown>, ...keys: string[]): string |
   return undefined;
 }
 
+function deriveOpenCodeCompletedGeneration(identity: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < identity.length; index += 1) {
+    hash ^= identity.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 export class OpenCodeTurnSettledPayloadNormalizer implements RuntimeTurnSettledPayloadNormalizerPort {
   constructor(private readonly hash: MemberWorkSyncHashPort) {}
 
@@ -93,6 +102,15 @@ export class OpenCodeTurnSettledPayloadNormalizer implements RuntimeTurnSettledP
     const cwd = getString(payload, 'cwd', 'projectPath', 'project_path');
     const agentId = getString(payload, 'agentId', 'agent_id', 'laneId', 'lane_id');
     const outcome = getString(payload, 'outcome');
+    const laneId = getString(payload, 'laneId', 'lane_id', 'agentId', 'agent_id');
+    const runtimeInstanceId =
+      getString(payload, 'runtimeInstanceId', 'runtime_instance_id') ??
+      (laneId ? `opencode:${laneId}` : `opencode:${sessionId}`);
+    const completedGenerationRaw = payload.completedGeneration ?? payload.completed_generation;
+    const completedGeneration =
+      typeof completedGenerationRaw === 'number' && Number.isInteger(completedGenerationRaw)
+        ? completedGenerationRaw
+        : deriveOpenCodeCompletedGeneration(turnId ?? sessionId);
 
     return {
       ok: true,
@@ -118,6 +136,8 @@ export class OpenCodeTurnSettledPayloadNormalizer implements RuntimeTurnSettledP
         ...(agentId ? { agentId } : {}),
         ...(promptMessageId ? { threadId: promptMessageId } : {}),
         ...(outcome ? { outcome } : {}),
+        runtimeInstanceId,
+        completedGeneration,
       },
     };
   }

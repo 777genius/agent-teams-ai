@@ -24,7 +24,6 @@ import { TeamTaskStallJournalWorkSyncCooldown } from '../adapters/output/TeamTas
 import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
 import { ClaudeStopHookPayloadNormalizer } from '../infrastructure/ClaudeStopHookPayloadNormalizer';
 import { CodexNativeTurnSettledPayloadNormalizer } from '../infrastructure/CodexNativeTurnSettledPayloadNormalizer';
-import { CompositeMemberWorkSyncBusySignal } from '../infrastructure/CompositeMemberWorkSyncBusySignal';
 import { CompositeRuntimeTurnSettledPayloadNormalizer } from '../infrastructure/CompositeRuntimeTurnSettledPayloadNormalizer';
 import { FileMemberWorkSyncAuditJournal } from '../infrastructure/FileMemberWorkSyncAuditJournal';
 import { FileRuntimeTurnSettledEventStore } from '../infrastructure/FileRuntimeTurnSettledEventStore';
@@ -37,7 +36,6 @@ import {
   startScheduledDispatch,
 } from '../infrastructure/memberWorkSyncScheduledDispatchLifetime';
 import { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
-import { MemberWorkSyncToolActivityBusySignal } from '../infrastructure/MemberWorkSyncToolActivityBusySignal';
 import { NodeHashAdapter } from '../infrastructure/NodeHashAdapter';
 import { OpenCodeTurnSettledPayloadNormalizer } from '../infrastructure/OpenCodeTurnSettledPayloadNormalizer';
 import { QuiescingMemberWorkSyncAuditJournal } from '../infrastructure/QuiescingMemberWorkSyncAuditJournal';
@@ -46,12 +44,13 @@ import { RuntimeTurnSettledSpoolInitializer } from '../infrastructure/RuntimeTur
 import { SystemClockAdapter } from '../infrastructure/SystemClockAdapter';
 
 import { bindMemberWorkSyncUseCaseDeps } from './bindMemberWorkSyncUseCaseDeps';
+import { createDefaultMemberWorkSyncRuntimeTicketAdmission } from './createDefaultMemberWorkSyncRuntimeTicketAdmission';
+import { createMemberWorkSyncBusySignal } from './createMemberWorkSyncBusySignal';
 import { createMemberWorkSyncPersistence } from './createMemberWorkSyncPersistence';
 import {
   createMemberWorkSyncRestoreParticipant,
   type MemberWorkSyncRestoreParticipant,
 } from './createMemberWorkSyncRestoreParticipant';
-import { createUnsupportedMemberWorkSyncRuntimeTicketAdmission } from './createUnsupportedMemberWorkSyncRuntimeTicketAdmission';
 import {
   buildProofMissingRecoveryIntentKey,
   normalizeRecoveryTaskRefs,
@@ -69,7 +68,6 @@ export {
   type MemberWorkSyncProofMissingRecoveryScheduleRequest,
   type MemberWorkSyncProofMissingRecoveryScheduleResult,
 } from './memberWorkSyncFeatureContracts';
-
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type {
   MemberWorkSyncBusySignalPort,
@@ -92,7 +90,6 @@ import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
 import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
-
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
 export function createMemberWorkSyncFeature(deps: {
@@ -183,8 +180,13 @@ export function createMemberWorkSyncFeature(deps: {
     createMemberWorkSyncRestoreParticipant(store, reportToken, storePaths)
   );
   const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(deps.teamsBasePath);
-  const toolActivityBusySignal = new MemberWorkSyncToolActivityBusySignal();
-  const busySignal = CompositeMemberWorkSyncBusySignal.compose(toolActivityBusySignal, deps);
+  const { busySignal, noteTeamChange } = createMemberWorkSyncBusySignal({
+    teamsBasePath: deps.teamsBasePath,
+    recoveryProtocolVersion: deps.recoveryProtocol?.version,
+    priorityBusySignals: deps.priorityBusySignals,
+    extraBusySignals: deps.extraBusySignals,
+    logger: deps.logger,
+  });
   const inboxNudge = new TeamInboxMemberWorkSyncNudgeSink(
     undefined,
     undefined,
@@ -216,7 +218,11 @@ export function createMemberWorkSyncFeature(deps: {
     ...(deps.runtimeTicketAdmission
       ? { runtimeTicketAdmission: deps.runtimeTicketAdmission }
       : (deps.recoveryProtocol?.version ?? 0) >= 2
-        ? { runtimeTicketAdmission: createUnsupportedMemberWorkSyncRuntimeTicketAdmission() }
+        ? {
+            runtimeTicketAdmission: createDefaultMemberWorkSyncRuntimeTicketAdmission(
+              deps.teamsBasePath
+            ),
+          }
         : {}),
     reportToken,
     auditJournal,
@@ -733,7 +739,7 @@ export function createMemberWorkSyncFeature(deps: {
     completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),
     resumeTeam: (teamName) => deletionCoordinator.resume(teamName),
     noteTeamChange: (event) => {
-      toolActivityBusySignal.noteTeamChange(event);
+      noteTeamChange(event);
       if (deletionCoordinator.interceptTeamChange(event)) return;
       router.noteTeamChange(event);
       if (event.type === 'process' || event.type === 'member-spawn') {

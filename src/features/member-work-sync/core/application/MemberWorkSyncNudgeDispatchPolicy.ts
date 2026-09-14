@@ -127,6 +127,10 @@ export function isManualContinueOutboxItem(item: MemberWorkSyncOutboxItem): bool
   return item.payload.workSyncIntentKey?.startsWith('manual-continue:') === true;
 }
 
+export function isEarlyContinuationOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
+  return item.payload.workSyncIntentKey?.startsWith('early-continuation:') === true;
+}
+
 export function isUnauthorizedManualContinue(input: {
   status: MemberWorkSyncStatus | null | undefined;
   item: MemberWorkSyncOutboxItem;
@@ -148,6 +152,18 @@ export function isAuthorizedManualContinueWake(input: {
   return (
     isManualContinueOutboxItem(input.item) &&
     !isUnauthorizedManualContinue(input) &&
+    input.status.agenda.items.length > 0 &&
+    input.agendaStillMatches
+  );
+}
+
+export function isAuthorizedEarlyContinuationWake(input: {
+  status: MemberWorkSyncStatus;
+  item: MemberWorkSyncOutboxItem;
+  agendaStillMatches: boolean;
+}): boolean {
+  return (
+    isEarlyContinuationOutboxItem(input.item) &&
     input.status.agenda.items.length > 0 &&
     input.agendaStillMatches
   );
@@ -230,6 +246,11 @@ export function isMemberWorkSyncNudgeDeliveryStale(input: {
   ) {
     if (
       isAuthorizedManualContinueWake({
+        status: input.status,
+        item: input.item,
+        agendaStillMatches,
+      }) ||
+      isAuthorizedEarlyContinuationWake({
         status: input.status,
         item: input.item,
         agendaStillMatches,

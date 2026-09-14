@@ -250,6 +250,7 @@ export interface MemberWorkSyncBusySignalPort {
     workSyncIntent?: MemberWorkSyncOutboxItem['payload']['workSyncIntent'];
     workSyncIntentKey?: MemberWorkSyncOutboxItem['payload']['workSyncIntentKey'];
     taskRefs?: MemberWorkSyncOutboxItem['payload']['taskRefs'];
+    exactRuntimeTicket?: MemberWorkSyncRuntimeTicket;
   }): Promise<{ busy: boolean; reason?: string; retryAfterIso?: string }>;
 }
 
@@ -373,26 +374,50 @@ export type MemberWorkSyncRuntimeTicketAdmissionCode =
   | 'unknown';
 
 export interface MemberWorkSyncRuntimeTicket {
+  teamName: string;
+  teamIncarnation: string;
+  memberName: string;
+  runtimeInstanceId: string;
+  expectedGeneration: number;
   ticketId: string;
-  generation: number;
   intentId: string;
+  controlRevision: number;
+  admissionPayloadHash: string;
 }
 
 export interface MemberWorkSyncRuntimeTicketAdmissionPort {
   admit(input: {
     teamName: string;
     memberName: string;
+    teamIncarnation: string;
     intentId: string;
-    payloadHash: string;
+    admissionPayloadHash: string;
+    expectedGeneration: number;
+    runtimeInstanceId?: string;
     controlRevision: number;
+    providerId?: string;
   }): Promise<
-    | { admitted: true; ticketId: string; generation: number }
+    | { admitted: true; ticket: MemberWorkSyncRuntimeTicket }
     | { admitted: false; code: MemberWorkSyncRuntimeTicketAdmissionCode }
   >;
-  start(
-    ticket: MemberWorkSyncRuntimeTicket
-  ): Promise<{ ok: true } | { ok: false; code: 'stale' | 'busy' | 'stopped' }>;
   cancel(ticket: MemberWorkSyncRuntimeTicket): Promise<void>;
+  syncControl?(input: {
+    teamName: string;
+    memberName: string;
+    teamIncarnation?: string;
+    runtimeInstanceId: string;
+    controlRevision: number;
+    stopped: boolean;
+  }): Promise<
+    | { ok: true; code: 'closed' | 'open'; controlRevision: number }
+    | { ok: false; code: 'unknown' | 'superseded' | 'conflict' | 'instance_mismatch' }
+  >;
+  readLiveControl?(input: { teamName: string; memberName: string }): Promise<{
+    runtimeInstanceId: string;
+    controlRevision: number;
+    stopped: boolean;
+    handshakeCompleted: boolean;
+  } | null>;
 }
 
 export interface LatestAcceptedReportLookup {

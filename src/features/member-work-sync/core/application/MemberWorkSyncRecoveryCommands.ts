@@ -17,11 +17,17 @@ import {
 import type { MemberWorkSyncStatus } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
+export type MemberWorkSyncRuntimeAdmissionOutcome = {
+  state: 'applied' | 'pending' | 'unknown' | 'superseded';
+  controlRevision?: number;
+};
+
 export type MemberWorkSyncRecoveryCommandResult =
   | {
       ok: true;
       status: MemberWorkSyncStatus;
       code: 'stopped' | 'resumed' | 'continued' | 'observed';
+      runtimeAdmission?: MemberWorkSyncRuntimeAdmissionOutcome;
     }
   | {
       ok: false;
@@ -55,10 +61,26 @@ export class MemberWorkSyncRecoveryCommands {
       }))
     ).then(async (status) => {
       const revoked = await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
+      const nextStatus = await retireRevokedDeliveredRecovery(
+        this.deps,
+        status,
+        revoked.messageIds
+      );
+      const runtimeAdmission = await this.syncRuntimeControl({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        teamIncarnation: nextStatus.statusRevision?.incarnation ?? 'legacy',
+        stopped: true,
+        controlRevision: nextStatus.recoveryHealth?.controlRevision ?? 1,
+      });
       return {
         ok: true as const,
-        status: await retireRevokedDeliveredRecovery(this.deps, status, revoked.messageIds),
+        status: {
+          ...nextStatus,
+          runtimeAdmission,
+        },
         code: 'stopped' as const,
+        runtimeAdmission,
       };
     });
   }
@@ -75,7 +97,19 @@ export class MemberWorkSyncRecoveryCommands {
       }))
     ).then(async (status) => {
       await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
-      return { ok: true as const, status, code: 'resumed' as const };
+      const runtimeAdmission = await this.syncRuntimeControl({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        teamIncarnation: status.statusRevision?.incarnation ?? 'legacy',
+        stopped: false,
+        controlRevision: status.recoveryHealth?.controlRevision ?? 1,
+      });
+      return {
+        ok: true as const,
+        status: { ...status, runtimeAdmission },
+        code: 'resumed' as const,
+        runtimeAdmission,
+      };
     });
   }
 
@@ -326,6 +360,34 @@ export class MemberWorkSyncRecoveryCommands {
       mutationId
     );
     return committed.status;
+  }
+
+  private async syncRuntimeControl(input: {
+    teamName: string;
+    memberName: string;
+    teamIncarnation?: string;
+    stopped: boolean;
+    controlRevision: number;
+    runtimeInstanceId?: string;
+  }): Promise<MemberWorkSyncRuntimeAdmissionOutcome> {
+    if (!this.deps.runtimeTicketAdmission?.syncControl) {
+      return { state: 'unknown' };
+    }
+    const result = await this.deps.runtimeTicketAdmission.syncControl({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      teamIncarnation: input.teamIncarnation,
+      runtimeInstanceId: input.runtimeInstanceId ?? '',
+      controlRevision: input.controlRevision,
+      stopped: input.stopped,
+    });
+    if (result.ok) {
+      return { state: 'applied', controlRevision: result.controlRevision };
+    }
+    if (result.code === 'superseded') {
+      return { state: 'superseded', controlRevision: input.controlRevision };
+    }
+    return { state: result.code === 'conflict' ? 'unknown' : 'pending' };
   }
 }
 

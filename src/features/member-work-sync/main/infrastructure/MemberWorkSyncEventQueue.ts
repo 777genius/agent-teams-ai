@@ -5,6 +5,8 @@ import {
   MemberWorkSyncTeamQuiescedError,
 } from '../../core/application';
 
+import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
+
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
 
 export type MemberWorkSyncTriggerReason =
@@ -77,19 +79,6 @@ interface RunningItem {
   triggerReasons: Set<MemberWorkSyncTriggerReason>;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
   settlement?: MemberWorkSyncReconcileContext['settlement'];
-}
-
-function preferLaterSettlement(
-  current: MemberWorkSyncReconcileContext['settlement'],
-  next: MemberWorkSyncReconcileContext['settlement']
-): MemberWorkSyncReconcileContext['settlement'] {
-  if (!next) {
-    return current;
-  }
-  if (!current) {
-    return next;
-  }
-  return Date.parse(next.recordedAt) >= Date.parse(current.recordedAt) ? next : current;
 }
 
 interface TriggerTimingPolicy {
@@ -230,7 +219,10 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         running.recovery = input.recovery;
       }
-      running.settlement = preferLaterSettlement(running.settlement, input.settlement);
+      running.settlement = preferLaterMemberWorkSyncSettlement(
+        running.settlement,
+        input.settlement
+      );
       this.counters.coalesced += 1;
       this.appendAudit({
         teamName,
@@ -248,7 +240,10 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         existing.recovery = input.recovery;
       }
-      existing.settlement = preferLaterSettlement(existing.settlement, input.settlement);
+      existing.settlement = preferLaterMemberWorkSyncSettlement(
+        existing.settlement,
+        input.settlement
+      );
       existing.lastQueuedAt = now;
       existing.maxRunAt = Math.max(
         existing.maxRunAt,
@@ -304,7 +299,15 @@ export class MemberWorkSyncEventQueue {
   enqueueTurnSettled(input: {
     teamName: string;
     memberName: string;
-    event: { sourceId: string; recordedAt: string; turnId?: string; threadId?: string };
+    event: {
+      sourceId: string;
+      recordedAt: string;
+      turnId?: string;
+      threadId?: string;
+      runtimeInstanceId?: string;
+      completedGeneration?: number;
+      outcome?: string;
+    };
   }): boolean {
     return this.enqueue({
       teamName: input.teamName,
@@ -315,6 +318,13 @@ export class MemberWorkSyncEventQueue {
         recordedAt: input.event.recordedAt,
         ...(input.event.turnId ? { turnId: input.event.turnId } : {}),
         ...(input.event.threadId ? { threadId: input.event.threadId } : {}),
+        ...(input.event.runtimeInstanceId
+          ? { runtimeInstanceId: input.event.runtimeInstanceId }
+          : {}),
+        ...(typeof input.event.completedGeneration === 'number'
+          ? { completedGeneration: input.event.completedGeneration }
+          : {}),
+        ...(input.event.outcome ? { outcome: input.event.outcome } : {}),
       },
     });
   }
@@ -558,7 +568,7 @@ export class MemberWorkSyncEventQueue {
     const now = this.now();
     const retryCount = quiesced ? item.retryCount : item.retryCount + 1;
     const recovery = running.recovery ?? item.recovery;
-    const settlement = preferLaterSettlement(item.settlement, running.settlement);
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     this.items.set(key, {
       ...item,
       lastQueuedAt: now,
@@ -589,7 +599,7 @@ export class MemberWorkSyncEventQueue {
   private enqueueFollowUp(item: QueueItem, running: RunningItem): void {
     const reasons = [...running.triggerReasons].sort();
     const recovery = running.recovery ?? item.recovery;
-    const settlement = preferLaterSettlement(item.settlement, running.settlement);
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     const primaryReason =
       reasons.find((reason) => reason === 'manual_refresh') ??
       reasons.find((reason) => reason === 'turn_settled' || reason === 'tool_finished') ??
@@ -629,7 +639,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     const recovery = running.recovery ?? item.recovery;
-    const settlement = preferLaterSettlement(item.settlement, running.settlement);
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     await this.runReconcileWithTimeout(
       { teamName: item.teamName, memberName: item.memberName },
       {

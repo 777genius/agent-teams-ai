@@ -1,7 +1,8 @@
 import {
+  buildMemberWorkSyncAdmissionPayloadHash,
+  buildMemberWorkSyncEarlyOutboxEnsureInput,
   buildMemberWorkSyncNudgeId,
   buildMemberWorkSyncNudgePayloadHash,
-  buildMemberWorkSyncOutboxEnsureInput,
   isMemberWorkSyncEarlyContinuationEnabled,
 } from '../domain';
 
@@ -9,6 +10,7 @@ import {
   EARLY_CONTINUATION_INTENT_PREFIX,
   isOutboxItemAwaitingDelivery,
 } from './MemberWorkSyncNudgeOutboxPlanHelpers';
+import { hasActiveAcceptedWorkLease } from './MemberWorkSyncNudgeRecoveryPolicy';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 
@@ -17,6 +19,7 @@ import type {
   MemberWorkSyncOutboxItem,
   MemberWorkSyncStatus,
 } from '../../contracts';
+import type { MemberWorkSyncSettlementTrigger } from './MemberWorkSyncReconciler';
 import type {
   MemberWorkSyncRuntimeTicket,
   MemberWorkSyncRuntimeTicketAdmissionPort,
@@ -38,12 +41,37 @@ interface EarlyContinuationPlanResult {
     | 'existing';
 }
 
+export function buildMemberWorkSyncEarlyContinuationIntentKey(input: {
+  agendaFingerprint: string;
+  teamIncarnation: string;
+  runtimeInstanceId: string;
+  completedGeneration: number;
+}): string {
+  return [
+    EARLY_CONTINUATION_INTENT_PREFIX,
+    input.teamIncarnation,
+    input.agendaFingerprint,
+    input.runtimeInstanceId,
+    String(input.completedGeneration),
+  ].join(':');
+}
+
+function resolveTeamIncarnation(status: MemberWorkSyncStatus): string {
+  return status.statusRevision?.incarnation ?? 'legacy';
+}
+
 function buildEarlyContinuationInput(
   status: MemberWorkSyncStatus,
   baseInput: MemberWorkSyncOutboxEnsureInput,
-  hash: MemberWorkSyncUseCaseDeps['hash']
+  hash: MemberWorkSyncUseCaseDeps['hash'],
+  settlement: MemberWorkSyncSettlementTrigger
 ): MemberWorkSyncOutboxEnsureInput {
-  const intentKey = `${EARLY_CONTINUATION_INTENT_PREFIX}:${status.agenda.fingerprint}`;
+  const intentKey = buildMemberWorkSyncEarlyContinuationIntentKey({
+    agendaFingerprint: status.agenda.fingerprint,
+    teamIncarnation: resolveTeamIncarnation(status),
+    runtimeInstanceId: settlement.runtimeInstanceId!,
+    completedGeneration: settlement.completedGeneration!,
+  });
   const payload = {
     ...baseInput.payload,
     workSyncIntentKey: intentKey,
@@ -69,13 +97,17 @@ function buildEarlyContinuationInput(
 
 function attachRuntimeTicket(
   input: MemberWorkSyncOutboxEnsureInput,
-  ticket: { ticketId: string; generation: number },
+  ticket: MemberWorkSyncRuntimeTicket,
   hash: MemberWorkSyncUseCaseDeps['hash']
 ): MemberWorkSyncOutboxEnsureInput {
   const payload = {
     ...input.payload,
     workSyncRuntimeTicketId: ticket.ticketId,
-    workSyncRuntimeGeneration: ticket.generation,
+    workSyncRuntimeGeneration: ticket.expectedGeneration,
+    workSyncRuntimeInstanceId: ticket.runtimeInstanceId,
+    workSyncAdmissionPayloadHash: ticket.admissionPayloadHash,
+    workSyncTeamIncarnation: ticket.teamIncarnation,
+    workSyncControlRevision: ticket.controlRevision,
   };
   return {
     ...input,
@@ -105,14 +137,9 @@ function refusalCode(
 
 async function cancelAdmittedTicket(
   admission: MemberWorkSyncRuntimeTicketAdmissionPort,
-  ticket: { ticketId: string; generation: number },
-  intentId: string
+  ticket: MemberWorkSyncRuntimeTicket
 ): Promise<void> {
-  await admission.cancel({
-    ticketId: ticket.ticketId,
-    generation: ticket.generation,
-    intentId,
-  });
+  await admission.cancel(ticket);
 }
 
 export function readMemberWorkSyncRuntimeTicket(
@@ -120,42 +147,25 @@ export function readMemberWorkSyncRuntimeTicket(
 ): MemberWorkSyncRuntimeTicket | null {
   const ticketId = item.payload.workSyncRuntimeTicketId?.trim();
   const generation = item.payload.workSyncRuntimeGeneration;
-  if (!ticketId || generation == null || !Number.isInteger(generation)) {
+  const runtimeInstanceId = item.payload.workSyncRuntimeInstanceId?.trim();
+  const admissionPayloadHash = item.payload.workSyncAdmissionPayloadHash?.trim();
+  if (!ticketId || generation == null || !Number.isInteger(generation) || !runtimeInstanceId) {
     return null;
   }
-  return { ticketId, generation, intentId: item.id };
+  return {
+    teamName: item.teamName,
+    teamIncarnation: item.payload.workSyncTeamIncarnation?.trim() || 'legacy',
+    memberName: item.memberName,
+    runtimeInstanceId,
+    expectedGeneration: generation,
+    ticketId,
+    intentId: item.id,
+    controlRevision: item.payload.workSyncControlRevision ?? 0,
+    admissionPayloadHash: admissionPayloadHash ?? item.payloadHash,
+  };
 }
 
-export function isEarlyContinuationOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
-  return (
-    item.payload.workSyncIntentKey?.startsWith(`${EARLY_CONTINUATION_INTENT_PREFIX}:`) === true
-  );
-}
-
-export async function startMemberWorkSyncRuntimeTicketForOutboxItem(
-  admission: MemberWorkSyncRuntimeTicketAdmissionPort | undefined,
-  item: MemberWorkSyncOutboxItem
-): Promise<{ ok: true } | { ok: false; code: 'stale' | 'busy' | 'stopped' }> {
-  const ticket = readMemberWorkSyncRuntimeTicket(item);
-  if (!ticket) {
-    return isEarlyContinuationOutboxItem(item) ? { ok: false, code: 'stale' } : { ok: true };
-  }
-  if (!admission) {
-    return { ok: false, code: 'stale' };
-  }
-  return admission.start(ticket);
-}
-
-async function cancelStartedRuntimeTicket(
-  admission: MemberWorkSyncRuntimeTicketAdmissionPort | undefined,
-  item: MemberWorkSyncOutboxItem
-): Promise<void> {
-  const ticket = readMemberWorkSyncRuntimeTicket(item);
-  if (!ticket || !admission) {
-    return;
-  }
-  await admission.cancel(ticket);
-}
+export { isEarlyContinuationOutboxItem } from './MemberWorkSyncNudgeDispatchPolicy';
 
 export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
   admission?: MemberWorkSyncRuntimeTicketAdmissionPort;
@@ -174,12 +184,8 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
   if (!input.inbox) {
     return { status: 'stale' };
   }
-  const started = await startMemberWorkSyncRuntimeTicketForOutboxItem(input.admission, input.item);
-  if (!started.ok) {
-    return { status: started.code };
-  }
   if (await input.shouldAbort()) {
-    await cancelStartedRuntimeTicket(input.admission, input.item);
+    await cancelAdmittedTicketIfPresent(input.admission, input.item);
     return { status: 'aborted' };
   }
   const inserted = await input.inbox.insertIfAbsent({
@@ -192,11 +198,11 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
     shouldAbort: input.shouldAbort,
   });
   if (inserted.aborted) {
-    await cancelStartedRuntimeTicket(input.admission, input.item);
+    await cancelAdmittedTicketIfPresent(input.admission, input.item);
     return { status: 'aborted' };
   }
   if (inserted.conflict) {
-    await cancelStartedRuntimeTicket(input.admission, input.item);
+    await cancelAdmittedTicketIfPresent(input.admission, input.item);
     return { status: 'conflict' };
   }
   return {
@@ -206,12 +212,44 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
   };
 }
 
+async function cancelAdmittedTicketIfPresent(
+  admission: MemberWorkSyncRuntimeTicketAdmissionPort | undefined,
+  item: MemberWorkSyncOutboxItem
+): Promise<void> {
+  const ticket = readMemberWorkSyncRuntimeTicket(item);
+  if (!ticket || !admission) {
+    return;
+  }
+  await admission.cancel(ticket);
+}
+
+export function hasMemberWorkSyncEarlyContinuationIdentity(
+  settlement?: MemberWorkSyncSettlementTrigger
+): settlement is MemberWorkSyncSettlementTrigger & {
+  runtimeInstanceId: string;
+  completedGeneration: number;
+} {
+  return (
+    typeof settlement?.runtimeInstanceId === 'string' &&
+    settlement.runtimeInstanceId.trim().length > 0 &&
+    typeof settlement.completedGeneration === 'number' &&
+    Number.isInteger(settlement.completedGeneration)
+  );
+}
+
 /** Protocol-2 early continuation. No-ops unless version >= 2 and a ticket port exists. */
 export async function planMemberWorkSyncEarlyContinuation(
   deps: MemberWorkSyncUseCaseDeps,
-  status: MemberWorkSyncStatus
+  status: MemberWorkSyncStatus,
+  settlement?: MemberWorkSyncSettlementTrigger
 ): Promise<EarlyContinuationPlanResult> {
   if (!isMemberWorkSyncEarlyContinuationEnabled(deps)) {
+    return { planned: false, code: 'early_continuation_disabled' };
+  }
+  if (!hasMemberWorkSyncEarlyContinuationIdentity(settlement)) {
+    return { planned: false, code: 'early_continuation_disabled' };
+  }
+  if (settlement.outcome && settlement.outcome !== 'success') {
     return { planned: false, code: 'early_continuation_disabled' };
   }
   if (!deps.outboxStore) {
@@ -220,7 +258,10 @@ export async function planMemberWorkSyncEarlyContinuation(
   if (status.recoveryHealth?.autoResumeStopLatch) {
     return { planned: false, code: 'member_stopped' };
   }
-  const baseInput = buildMemberWorkSyncOutboxEnsureInput({
+  if (!hasActiveAcceptedWorkLease(status)) {
+    return { planned: false, code: 'early_continuation_disabled' };
+  }
+  const baseInput = buildMemberWorkSyncEarlyOutboxEnsureInput({
     status,
     hash: deps.hash,
     nowIso: status.evaluatedAt,
@@ -228,14 +269,38 @@ export async function planMemberWorkSyncEarlyContinuation(
   if (!baseInput) {
     return { planned: false, code: 'status_not_nudgeable' };
   }
-  const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash);
+  const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash, settlement);
   const admission = deps.runtimeTicketAdmission!;
+  if (admission.syncControl) {
+    const handshake = await admission.syncControl({
+      teamName: status.teamName,
+      memberName: status.memberName,
+      teamIncarnation: resolveTeamIncarnation(status),
+      runtimeInstanceId: settlement.runtimeInstanceId,
+      controlRevision: status.recoveryHealth?.controlRevision ?? 1,
+      stopped: false,
+    });
+    if (!handshake.ok && handshake.code !== 'unknown') {
+      return {
+        planned: false,
+        code: refusalCode(handshake.code === 'conflict' ? 'conflict' : 'instance_mismatch'),
+      };
+    }
+  }
+  const admissionPayloadHash = buildMemberWorkSyncAdmissionPayloadHash(
+    deps.hash,
+    recoveryInput.payload
+  );
   const ticket = await admission.admit({
     teamName: status.teamName,
     memberName: status.memberName,
+    teamIncarnation: resolveTeamIncarnation(status),
     intentId: recoveryInput.id,
-    payloadHash: recoveryInput.payloadHash,
+    admissionPayloadHash,
+    expectedGeneration: settlement.completedGeneration,
+    runtimeInstanceId: settlement.runtimeInstanceId,
     controlRevision: status.recoveryHealth?.controlRevision ?? 1,
+    providerId: status.providerId,
   });
   if (!ticket.admitted) {
     if (ticket.code === 'not_early') {
@@ -252,12 +317,13 @@ export async function planMemberWorkSyncEarlyContinuation(
       workSyncIntent: recoveryInput.payload.workSyncIntent,
       workSyncIntentKey: recoveryInput.payload.workSyncIntentKey,
       taskRefs: recoveryInput.payload.taskRefs,
+      exactRuntimeTicket: ticket.ticket,
     });
     if (busy?.busy) {
-      await cancelAdmittedTicket(admission, ticket, recoveryInput.id);
+      await cancelAdmittedTicket(admission, ticket.ticket);
       return { planned: false, code: 'member_busy' };
     }
-    const ticketedInput = attachRuntimeTicket(recoveryInput, ticket, deps.hash);
+    const ticketedInput = attachRuntimeTicket(recoveryInput, ticket.ticket, deps.hash);
     const reserved = await reserveMemberWorkSyncRecoveryIntent({
       deps,
       status,
@@ -265,7 +331,7 @@ export async function planMemberWorkSyncEarlyContinuation(
       trigger: 'automatic',
     });
     if (!reserved.ok) {
-      await cancelAdmittedTicket(admission, ticket, ticketedInput.id);
+      await cancelAdmittedTicket(admission, ticket.ticket);
       return {
         planned: false,
         code: reserved.code === 'member_stopped' ? 'member_stopped' : 'slot_occupied',
@@ -275,7 +341,7 @@ export async function planMemberWorkSyncEarlyContinuation(
     const ensured = await deps.outboxStore.ensurePending(ticketedInput);
     persistOutcome = ensured.ok ? 'written' : 'none';
     if (!ensured.ok) {
-      await cancelAdmittedTicket(admission, ticket, ticketedInput.id);
+      await cancelAdmittedTicket(admission, ticket.ticket);
       await retireMemberWorkSyncRecoveryIntent({
         deps,
         teamName: status.teamName,
@@ -291,7 +357,7 @@ export async function planMemberWorkSyncEarlyContinuation(
     };
   } catch (error) {
     if (persistOutcome === 'none') {
-      await cancelAdmittedTicket(admission, ticket, recoveryInput.id);
+      await cancelAdmittedTicket(admission, ticket.ticket);
     }
     throw error;
   }

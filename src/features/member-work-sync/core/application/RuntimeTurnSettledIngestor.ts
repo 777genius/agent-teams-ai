@@ -44,14 +44,14 @@ function getIgnoredReason(event: RuntimeTurnSettledEvent): string | null {
   if (event.provider !== 'opencode') {
     return null;
   }
-  if (event.threadId?.trim()) {
-    return null;
-  }
   const outcome = event.outcome?.trim();
-  if (!outcome || !NON_TERMINAL_OPENCODE_OUTCOMES.has(outcome)) {
+  if (outcome && NON_TERMINAL_OPENCODE_OUTCOMES.has(outcome)) {
+    return `opencode_non_terminal_outcome:${outcome}`;
+  }
+  if (!event.threadId?.trim() && !event.turnId?.trim()) {
     return 'opencode_missing_prompt_identity';
   }
-  return `opencode_non_terminal_outcome:${outcome}`;
+  return null;
 }
 
 export class RuntimeTurnSettledIngestor {

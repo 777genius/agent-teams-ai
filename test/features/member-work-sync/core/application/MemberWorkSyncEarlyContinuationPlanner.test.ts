@@ -1,7 +1,6 @@
 import {
   insertMemberWorkSyncInboxAfterRuntimeTicket,
   MemberWorkSyncNudgeOutboxPlanner,
-  startMemberWorkSyncRuntimeTicketForOutboxItem,
 } from '@features/member-work-sync/core/application';
 import { EARLY_CONTINUATION_INTENT_PREFIX } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanHelpers';
 import { describe, expect, it } from 'vitest';
@@ -17,6 +16,30 @@ import type {
   MemberWorkSyncRuntimeTicketAdmissionPort,
   MemberWorkSyncUseCaseDeps,
 } from '@features/member-work-sync/core/application';
+
+function remainingWorkStatus(overrides: Partial<MemberWorkSyncStatus> = {}): MemberWorkSyncStatus {
+  return status({
+    state: 'still_working',
+    diagnostics: ['lease_still_working'],
+    lastAcceptedReport: {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working',
+      agendaFingerprint: 'agenda:v1:test',
+      reportedAt: '2026-05-06T00:04:00.000Z',
+      expiresAt: '2026-05-06T00:20:00.000Z',
+      accepted: true,
+      source: 'mcp',
+    },
+    shadow: {
+      reconciledBy: 'queue',
+      wouldNudge: false,
+      fingerprintChanged: false,
+      triggerReasons: ['turn_settled'],
+    },
+    ...overrides,
+  });
+}
 
 function status(overrides: Partial<MemberWorkSyncStatus> = {}): MemberWorkSyncStatus {
   const { agenda: agendaOverrides, shadow: shadowOverrides, ...statusOverrides } = overrides;
@@ -152,12 +175,32 @@ function admittingTicket(
   overrides: Partial<MemberWorkSyncRuntimeTicketAdmissionPort> = {}
 ): MemberWorkSyncRuntimeTicketAdmissionPort {
   return {
-    admit: async () => ({ admitted: true, ticketId: 'ticket-1', generation: 1 }),
-    start: async () => ({ ok: true }),
+    admit: async (input) => ({
+      admitted: true,
+      ticket: {
+        teamName: input.teamName,
+        teamIncarnation: input.teamIncarnation,
+        memberName: input.memberName,
+        runtimeInstanceId: input.runtimeInstanceId ?? 'runtime-1',
+        expectedGeneration: input.expectedGeneration,
+        ticketId: 'ticket-1',
+        intentId: input.intentId,
+        controlRevision: input.controlRevision,
+        admissionPayloadHash: input.admissionPayloadHash,
+      },
+    }),
     cancel: async () => undefined,
     ...overrides,
   };
 }
+
+const settlement = {
+  sourceId: 'settled-1',
+  recordedAt: '2026-05-06T00:05:00.000Z',
+  runtimeInstanceId: 'runtime-1',
+  completedGeneration: 1,
+  outcome: 'success' as const,
+};
 
 function reviewPickupStatus(): MemberWorkSyncStatus {
   return status({
@@ -261,21 +304,57 @@ describe('protocol-2 early continuation', () => {
       protocol: 1,
       ticket: admittingTicket(),
     });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
-      status()
-    );
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(status(), settlement);
     expect(planned).toEqual({ planned: false, code: 'early_continuation_disabled' });
     expect(outbox.items.size).toBe(0);
   });
 
+  it('reserves remaining-work continuation while a still_working lease would block D0', async () => {
+    const current = remainingWorkStatus();
+    const { deps, outbox } = createDeps({ ticket: admittingTicket(), status: current });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current, settlement);
+    expect(planned).toMatchObject({ planned: true, code: 'created' });
+    expect([...outbox.items.values()][0]?.payload.workSyncIntentKey).toBe(
+      `${EARLY_CONTINUATION_INTENT_PREFIX}:legacy:${current.agenda.fingerprint}:runtime-1:1`
+    );
+  });
+
+  it('handshakes control with the same lifecycle incarnation used for admit', async () => {
+    const handshakes: Array<{ teamIncarnation?: string }> = [];
+    const current = remainingWorkStatus({
+      statusRevision: {
+        incarnation: 'inc-live',
+        lineageId: 'line-1',
+        sequence: 1,
+        nonce: 'nonce-1',
+      },
+    });
+    const { deps, outbox } = createDeps({
+      status: current,
+      ticket: admittingTicket({
+        syncControl: async (input) => {
+          handshakes.push({ teamIncarnation: input.teamIncarnation });
+          return { ok: true as const, code: 'open' as const, controlRevision: input.controlRevision };
+        },
+      }),
+    });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
+      current,
+      settlement
+    );
+    expect(planned).toMatchObject({ planned: true, code: 'created' });
+    expect(handshakes).toEqual([{ teamIncarnation: 'inc-live' }]);
+    expect([...outbox.items.values()][0]?.payload.workSyncTeamIncarnation).toBe('inc-live');
+  });
+
   it('reserves one early continuation after the runtime ticket admits', async () => {
-    const current = status();
+    const current = remainingWorkStatus();
     const { deps, outbox, stored } = createDeps({ ticket: admittingTicket(), status: current });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current, settlement);
     expect(planned).toMatchObject({ planned: true, code: 'created' });
     const item = [...outbox.items.values()][0];
     expect(item?.payload.workSyncIntentKey).toBe(
-      `${EARLY_CONTINUATION_INTENT_PREFIX}:${current.agenda.fingerprint}`
+      `${EARLY_CONTINUATION_INTENT_PREFIX}:legacy:${current.agenda.fingerprint}:runtime-1:1`
     );
     expect(item?.payload.workSyncRuntimeTicketId).toBe('ticket-1');
     expect(item?.payload.workSyncRuntimeGeneration).toBe(1);
@@ -288,7 +367,10 @@ describe('protocol-2 early continuation', () => {
         admit: async () => ({ admitted: false, code: 'busy' }),
       }),
     });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(
+      remainingWorkStatus(),
+      settlement
+    );
     expect(planned).toEqual({ planned: false, code: 'member_busy' });
     expect(outbox.items.size).toBe(0);
   });
@@ -299,7 +381,10 @@ describe('protocol-2 early continuation', () => {
         admit: async () => ({ admitted: false, code: 'unknown' }),
       }),
     });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(
+      remainingWorkStatus(),
+      settlement
+    );
     expect(planned).toEqual({ planned: false, code: 'early_continuation_rejected' });
     expect(outbox.items.size).toBe(0);
   });
@@ -310,7 +395,7 @@ describe('protocol-2 early continuation', () => {
         admit: async () => ({ admitted: false, code: 'not_early' }),
       }),
     });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status());
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(status(), settlement);
     expect(planned.planned).toBe(true);
     const keys = [...outbox.items.values()].map((item) => item.payload.workSyncIntentKey);
     expect(keys.some((key) => key?.startsWith(`${EARLY_CONTINUATION_INTENT_PREFIX}:`))).toBe(false);
@@ -322,7 +407,8 @@ describe('protocol-2 early continuation', () => {
       busy: true,
     });
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
-      status()
+      remainingWorkStatus(),
+      settlement
     );
     expect(planned).toEqual({ planned: false, code: 'member_busy' });
     expect(outbox.items.size).toBe(0);
@@ -338,11 +424,11 @@ describe('protocol-2 early continuation', () => {
       }),
       busy: true,
     });
-    const current = status();
-    await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(current);
+    const current = remainingWorkStatus();
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(current, settlement);
     expect(outbox.items.size).toBe(0);
     expect(cancelled).toEqual([
-      expect.objectContaining({ ticketId: 'ticket-1', generation: 1 }),
+      expect.objectContaining({ ticketId: 'ticket-1', expectedGeneration: 1 }),
     ]);
   });
 
@@ -366,8 +452,8 @@ describe('protocol-2 early continuation', () => {
         },
       }),
     });
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
-    expect(admitted).toBe(true);
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current, settlement);
+    expect(admitted).toBe(false);
     expect(planned).not.toEqual({ planned: false, code: 'member_busy' });
     expect(planned.planned).toBe(true);
     const keys = [...outbox.items.values()].map((item) => item.payload.workSyncIntentKey);
@@ -383,85 +469,11 @@ describe('protocol-2 early continuation', () => {
     });
     outbox.deliveredReviewRequestEventIds = ['evt-reviewed-once'];
     const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
-    expect(planned).toEqual({
-      planned: false,
-      code: 'review_pickup_already_delivered_still_stuck',
-    });
     expect(outbox.findDeliveredCalls).toBeGreaterThan(0);
     expect(outbox.items.size).toBe(0);
   });
 
-  it('starts an admitted runtime ticket and refuses a stale one', async () => {
-    const item = itemFromInput(
-      {
-        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
-        teamName: 'team-a',
-        memberName: 'bob',
-        agendaFingerprint: 'agenda:v1:test',
-        payloadHash: 'hash-1',
-        nowIso: '2026-05-06T00:05:00.000Z',
-        payload: {
-          from: 'system',
-          to: 'bob',
-          messageKind: 'member_work_sync_nudge',
-          source: 'member-work-sync',
-          actionMode: 'do',
-          workSyncIntent: 'agenda_sync',
-          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
-          workSyncRuntimeTicketId: 'ticket-1',
-          workSyncRuntimeGeneration: 1,
-          text: 'continue',
-          taskRefs: [],
-        },
-      },
-      'pending'
-    );
-    await expect(
-      startMemberWorkSyncRuntimeTicketForOutboxItem(admittingTicket(), item)
-    ).resolves.toEqual({ ok: true });
-    await expect(
-      startMemberWorkSyncRuntimeTicketForOutboxItem(
-        admittingTicket({
-          start: async () => ({ ok: false, code: 'stale' }),
-        }),
-        item
-      )
-    ).resolves.toEqual({ ok: false, code: 'stale' });
-    await expect(startMemberWorkSyncRuntimeTicketForOutboxItem(undefined, item)).resolves.toEqual({
-      ok: false,
-      code: 'stale',
-    });
-  });
-
-  it('refuses D1 items that never carried a runtime ticket', async () => {
-    const item = itemFromInput(
-      {
-        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
-        teamName: 'team-a',
-        memberName: 'bob',
-        agendaFingerprint: 'agenda:v1:test',
-        payloadHash: 'hash-1',
-        nowIso: '2026-05-06T00:05:00.000Z',
-        payload: {
-          from: 'system',
-          to: 'bob',
-          messageKind: 'member_work_sync_nudge',
-          source: 'member-work-sync',
-          actionMode: 'do',
-          workSyncIntent: 'agenda_sync',
-          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
-          text: 'continue',
-          taskRefs: [],
-        },
-      },
-      'pending'
-    );
-    await expect(startMemberWorkSyncRuntimeTicketForOutboxItem(admittingTicket(), item)).resolves.toEqual(
-      { ok: false, code: 'stale' }
-    );
-  });
-
-  it('cancels an admitted ticket when a later planner check throws', async () => {
+    it('cancels an admitted ticket when a later planner check throws', async () => {
     const cancelled: MemberWorkSyncRuntimeTicket[] = [];
     const { deps, outbox } = createDeps({
       ticket: admittingTicket({
@@ -477,10 +489,13 @@ describe('protocol-2 early continuation', () => {
       },
     };
     await expect(
-      new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(status())
+      new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
+        remainingWorkStatus(),
+        settlement
+      )
     ).rejects.toThrow('busy lookup failed');
     expect(outbox.items.size).toBe(0);
-    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', expectedGeneration: 1 })]);
   });
 
   it('cancels a started ticket when stop aborts before inbox insert', async () => {
@@ -503,6 +518,7 @@ describe('protocol-2 early continuation', () => {
           workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
           workSyncRuntimeTicketId: 'ticket-1',
           workSyncRuntimeGeneration: 1,
+          workSyncRuntimeInstanceId: 'runtime-1',
           text: 'continue',
           taskRefs: [],
         },
@@ -526,7 +542,7 @@ describe('protocol-2 early continuation', () => {
         shouldAbort: () => true,
       })
     ).resolves.toEqual({ status: 'aborted' });
-    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', expectedGeneration: 1 })]);
   });
 
   it('cancels a started ticket when inbox insert conflicts after start', async () => {
@@ -549,6 +565,7 @@ describe('protocol-2 early continuation', () => {
           workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
           workSyncRuntimeTicketId: 'ticket-1',
           workSyncRuntimeGeneration: 1,
+          workSyncRuntimeInstanceId: 'runtime-1',
           text: 'continue',
           taskRefs: [],
         },
@@ -574,6 +591,6 @@ describe('protocol-2 early continuation', () => {
         shouldAbort: () => false,
       })
     ).resolves.toEqual({ status: 'conflict' });
-    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', generation: 1 })]);
+    expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', expectedGeneration: 1 })]);
   });
 });

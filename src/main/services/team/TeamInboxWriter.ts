@@ -9,6 +9,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
+import { pickTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
 import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
 
@@ -177,21 +178,7 @@ export class TeamInboxWriter {
       ...(request.messageKind && { messageKind: request.messageKind }),
       ...(request.agentError && { agentError: request.agentError }),
       ...(request.runtimeRecovery && { runtimeRecovery: request.runtimeRecovery }),
-      ...(request.workSyncIntent && { workSyncIntent: request.workSyncIntent }),
-      ...(request.workSyncIntentKey && { workSyncIntentKey: request.workSyncIntentKey }),
-      ...(request.workSyncReviewRequestEventIds?.length
-        ? { workSyncReviewRequestEventIds: request.workSyncReviewRequestEventIds }
-        : {}),
-      ...(request.workSyncRuntimeTicketId
-        ? { workSyncRuntimeTicketId: request.workSyncRuntimeTicketId }
-        : {}),
-      ...(request.workSyncRuntimeGeneration != null
-        ? { workSyncRuntimeGeneration: request.workSyncRuntimeGeneration }
-        : {}),
-      ...(request.workSyncControlRevision != null
-        ? { workSyncControlRevision: request.workSyncControlRevision }
-        : {}),
-      ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
+      ...pickTeamInboxWorkSyncFields(request),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
     };
@@ -358,13 +345,7 @@ export class TeamInboxWriter {
       agentError: message.agentError,
       runtimeRecovery: message.runtimeRecovery,
       color: message.color,
-      workSyncIntent: message.workSyncIntent,
-      workSyncIntentKey: message.workSyncIntentKey,
-      workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
-      workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
-      workSyncRuntimeGeneration: message.workSyncRuntimeGeneration,
-      workSyncControlRevision: message.workSyncControlRevision,
-      workSyncPayloadHash: message.workSyncPayloadHash,
+      ...pickTeamInboxWorkSyncFields(message),
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,
     };

@@ -80,7 +80,13 @@ export class CodexNativeTurnSettledPayloadNormalizer implements RuntimeTurnSettl
 
     const payloadHash = this.hash.sha256Hex(input.raw);
     const threadId = getString(payload, 'threadId', 'thread_id');
-    const turnId = getString(payload, 'turnId', 'turn_id') ?? threadId;
+    const turnId = getString(payload, 'turnId', 'turn_id');
+    const runtimeInstanceId = getString(payload, 'runtimeInstanceId', 'runtime_instance_id');
+    const completedGenerationRaw = payload.completedGeneration ?? payload.completed_generation;
+    const completedGeneration =
+      typeof completedGenerationRaw === 'number' && Number.isInteger(completedGenerationRaw)
+        ? completedGenerationRaw
+        : undefined;
     const cwd = getString(payload, 'cwd');
     const agentId = getString(payload, 'agentId', 'agent_id');
     const outcome = getString(payload, 'outcome');
@@ -95,7 +101,11 @@ export class CodexNativeTurnSettledPayloadNormalizer implements RuntimeTurnSettl
         sourceId: buildRuntimeTurnSettledSourceId({
           provider: 'codex',
           sessionId,
-          turnId,
+          turnId:
+            turnId ??
+            (runtimeInstanceId && completedGeneration != null
+              ? `${runtimeInstanceId}:${completedGeneration}`
+              : undefined),
           payloadHash,
         }),
         sessionId,
@@ -106,6 +116,8 @@ export class CodexNativeTurnSettledPayloadNormalizer implements RuntimeTurnSettl
         ...(agentId ? { agentId } : {}),
         ...(threadId ? { threadId } : {}),
         ...(outcome ? { outcome } : {}),
+        ...(runtimeInstanceId ? { runtimeInstanceId } : {}),
+        ...(completedGeneration != null ? { completedGeneration } : {}),
       },
     };
   }

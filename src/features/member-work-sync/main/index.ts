@@ -9,6 +9,10 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
+export {
+  consumeOpenCodeWorkSyncLane,
+  hasOpenCodeWorkSyncLaneReservation,
+} from './adapters/output/OpenCodeWorkSyncLaneReservationStore';
 export type { MemberWorkSyncFeatureFacade } from './composition/createMemberWorkSyncFeature';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,

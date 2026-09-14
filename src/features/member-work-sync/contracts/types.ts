@@ -225,6 +225,10 @@ export interface MemberWorkSyncStatus {
   diagnostics: string[];
   providerId?: MemberWorkSyncProviderId;
   recoveryHealth?: MemberWorkSyncRecoveryHealth;
+  runtimeAdmission?: {
+    state: 'applied' | 'pending' | 'unknown' | 'superseded';
+    controlRevision?: number;
+  };
 }
 
 export type MemberWorkSyncMetricEventKind =
@@ -352,6 +356,9 @@ export interface MemberWorkSyncNudgePayload {
   workSyncReviewRequestEventIds?: string[];
   workSyncRuntimeTicketId?: string;
   workSyncRuntimeGeneration?: number;
+  workSyncRuntimeInstanceId?: string;
+  workSyncAdmissionPayloadHash?: string;
+  workSyncTeamIncarnation?: string;
   workSyncControlRevision?: number;
   text: string;
   taskRefs: {

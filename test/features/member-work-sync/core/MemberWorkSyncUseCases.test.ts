@@ -3863,17 +3863,29 @@ describe('MemberWorkSync use cases', () => {
     expect(protocol2).toEqual({ planned: false, code: 'early_continuation_disabled' });
   });
 
-  it('releases the recovery slot when D1 start refuses before send', async () => {
+  it('persists a D1 inbox nudge without a remote start call', async () => {
     const outbox = new InMemoryOutboxStore();
     const inbox = new InMemoryInboxNudge();
-    const { deps, source, store } = createDeps({
+    const { deps, store } = createDeps({
       providerId: 'codex',
       outboxStore: outbox,
       inboxNudge: inbox,
       recoveryProtocol: { version: 2 },
       runtimeTicketAdmission: {
-        admit: async () => ({ admitted: true, ticketId: 'ticket-1', generation: 1 }),
-        start: async () => ({ ok: false, code: 'stale' }),
+        admit: async (input) => ({
+          admitted: true,
+          ticket: {
+            teamName: input.teamName,
+            teamIncarnation: input.teamIncarnation,
+            memberName: input.memberName,
+            runtimeInstanceId: input.runtimeInstanceId ?? 'runtime-1',
+            expectedGeneration: input.expectedGeneration,
+            ticketId: 'ticket-1',
+            intentId: input.intentId,
+            controlRevision: input.controlRevision,
+            admissionPayloadHash: input.admissionPayloadHash,
+          },
+        }),
         cancel: async () => undefined,
       },
     });
@@ -3883,43 +3895,28 @@ describe('MemberWorkSync use cases', () => {
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
     );
-    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(firstStatus);
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(firstStatus, {
+      sourceId: 'settled-1',
+      recordedAt: firstStatus.evaluatedAt,
+      runtimeInstanceId: 'runtime-1',
+      completedGeneration: 1,
+      outcome: 'success',
+    });
     const early = [...outbox.items.values()].find((item) =>
       item.payload.workSyncIntentKey?.startsWith('early-continuation:')
     );
     expect(early).toBeTruthy();
+    expect(early?.payload.workSyncRuntimeTicketId).toBe('ticket-1');
     expect(store.writes.at(-1)?.recoveryHealth?.unresolvedIntentId).toBe(early?.id);
 
     const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
       teamNames: ['team-a'],
       claimedBy: 'test-dispatcher',
     });
-    expect(summary).toMatchObject({ claimed: 1, delivered: 0, superseded: 1 });
-    expect(inbox.inserted).toHaveLength(0);
-    const afterStartRefusal = await store.read();
-    expect(afterStartRefusal?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
-    expect(afterStartRefusal?.recoveryHealth?.reservations?.[0]?.pendingAck).toBeUndefined();
-
-    source.agenda = {
-      ...source.agenda,
-      generatedAt: '2026-04-29T00:10:00.000Z',
-      items: [
-        ...source.agenda.items,
-        {
-          ...source.agenda.items[0]!,
-          taskId: 'task-2',
-          displayId: '44444444',
-          subject: 'More work',
-        },
-      ],
-    };
-    const nextStatus = await reconciler.execute(
-      { teamName: 'team-a', memberName: 'bob' },
-      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    expect(summary.delivered).toBeGreaterThanOrEqual(1);
+    expect(inbox.inserted.some((item) => item.payload.workSyncRuntimeTicketId === 'ticket-1')).toBe(
+      true
     );
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(nextStatus);
-    expect(planned.code).not.toBe('slot_occupied');
-    expect(planned.planned).toBe(true);
   });
 
   it('records runtime-stall diagnostics when a settled turn leaves the same agenda needing sync', async () => {

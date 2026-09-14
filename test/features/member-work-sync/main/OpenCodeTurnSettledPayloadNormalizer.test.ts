@@ -40,9 +40,13 @@ describe('OpenCodeTurnSettledPayloadNormalizer', () => {
         agentId: 'lane-jack',
         cwd: '/tmp/project',
         outcome: 'success',
+        runtimeInstanceId: 'opencode:lane-jack',
         recordedAt: '2026-04-29T12:00:00.000Z',
       }),
     });
+    if (result.ok) {
+      expect(result.event.completedGeneration).toEqual(expect.any(Number));
+    }
   });
 
   it('rejects OpenCode payloads without durable team/member identity', () => {
