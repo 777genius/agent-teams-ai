@@ -1,3 +1,8 @@
+import { createDesktopTeamFeatureCapabilities } from '@main/ipc/teamFeatureCapabilities';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
   beginOpenCodeStartupRuntimeSweep,
@@ -164,9 +169,6 @@ vi.mock('@main/services/team/AutoResumeService', async (importOriginal) => {
 });
 
 import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
   waitForPendingPermanentDeletionRecoveryForTests,
 } from '../../../src/main/ipc/teams';
 import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigManager';
@@ -587,6 +589,7 @@ describe('ipc teams handlers', () => {
     createTeamConfig: vi.fn(() => resolvedUndefined()),
     getSavedRequest: vi.fn<() => Promise<TeamCreateRequest | null>>(() => resolved(null)),
   };
+  Object.assign(service, { messagePersistence: service });
   const teamHandlerMocks = {
     getCliHelpOutput: vi.fn(() => resolved('Usage')),
     prepareForProvisioning: vi.fn(() =>
@@ -789,6 +792,40 @@ describe('ipc teams handlers', () => {
     ),
   };
 
+  function initializeTestTeamFeatureComposition(
+    capabilityOverrides: Partial<typeof teamHandlerApis> = {},
+    register = true
+  ): void {
+    const capabilities = createDesktopTeamFeatureCapabilities({
+      ...teamHandlerApis,
+      ...capabilityOverrides,
+    } as never);
+    const composition = createDesktopTeamFeatureComposition({
+      teamDataService: service as never,
+      capabilities,
+      teamMemberLogsFinder: {
+        findMemberLogs: vi.fn(() => resolved([])),
+        findLogsForTask: vi.fn(() => resolved([])),
+      } as never,
+      memberStatsComputer: {
+        getStats: vi.fn(() => resolved({})),
+      } as never,
+      boardTaskActivityService: boardTaskActivityService as never,
+      boardTaskActivityDetailService: boardTaskActivityDetailService as never,
+      boardTaskLogStreamService: boardTaskLogStreamService as never,
+      boardTaskExactLogsService: boardTaskExactLogsService as never,
+      boardTaskExactLogDetailService: boardTaskExactLogDetailService as never,
+      teammateToolTracker: undefined,
+      teamLogSourceTracker: undefined,
+      branchStatusService: undefined,
+      teamBackupService: teamBackupService as never,
+      launchIoGovernor,
+      teamPermanentDeletionLifecycle: permanentDeletionLifecycle,
+    });
+    composition.initializeLegacyHandlers();
+    if (register) composition.register(ipcMain as never);
+  }
+
   beforeEach(() => {
     resetTeamWatchScopeForTests();
     handlers.clear();
@@ -893,24 +930,7 @@ describe('ipc teams handlers', () => {
       );
     });
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
-    initializeTeamHandlers(
-      service as never,
-      teamHandlerApis,
-      undefined,
-      undefined,
-      teamBackupService as never,
-      undefined,
-      undefined,
-      undefined,
-      boardTaskActivityService as never,
-      boardTaskActivityDetailService as never,
-      boardTaskLogStreamService as never,
-      boardTaskExactLogsService as never,
-      boardTaskExactLogDetailService as never,
-      launchIoGovernor,
-      permanentDeletionLifecycle
-    );
-    registerTeamHandlers(ipcMain as never);
+    initializeTestTeamFeatureComposition();
   });
 
   afterEach(() => {
@@ -936,7 +956,7 @@ describe('ipc teams handlers', () => {
       getMemberSpawnStatusesReadOnly,
     };
 
-    initializeTeamHandlers(service as never, { ...teamHandlerApis, memberLifecycle });
+    initializeTestTeamFeatureComposition({ memberLifecycle });
 
     const result = await handlers.get(TEAM_MEMBER_SPAWN_STATUSES)!({} as never, 'my-team');
 
@@ -956,10 +976,7 @@ describe('ipc teams handlers', () => {
       },
     };
 
-    initializeTeamHandlers(service as never, {
-      ...teamHandlerApis,
-      runtime: runtimeFacade,
-    });
+    initializeTestTeamFeatureComposition({ runtime: runtimeFacade });
 
     const result = await handlers.get(TEAM_STOP)!({} as never, 'my-team');
 
@@ -5141,23 +5158,7 @@ describe('ipc teams handlers', () => {
         .mockResolvedValue(true);
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
@@ -5199,23 +5200,7 @@ describe('ipc teams handlers', () => {
         .mockResolvedValue(true);
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(permanentDeletionLifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
@@ -5241,23 +5226,7 @@ describe('ipc teams handlers', () => {
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
       teamBackupService.isPermanentDeletionTargetCurrent.mockResolvedValueOnce(false);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
@@ -6470,7 +6439,7 @@ describe('ipc teams handlers', () => {
       expect(stopResult.success).toBe(true);
       expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
       expect(restartResult.success).toBe(true);
-      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice', undefined);
       vi.mocked(console.error).mockClear();
     });
 
@@ -6672,7 +6641,7 @@ describe('ipc teams handlers', () => {
   });
 
   it('removes all expected handlers', () => {
-    removeTeamHandlers(ipcMain as never);
+    removeDesktopTeamFeatureComposition(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
     expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(
       new Set(TEAM_HANDLER_KEYS)

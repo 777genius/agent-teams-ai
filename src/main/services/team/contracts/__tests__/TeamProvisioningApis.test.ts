@@ -11,15 +11,17 @@ import {
   bindTeamApplicationTaskActivityApi,
 } from '../TeamApplicationCapabilityApiBinder';
 import { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from '../TeamMessagingApiBinder';
-import { bindTeamHttpHandlerApis } from '../TeamProvisioningApiBinders';
+import {
+  bindTeamHttpDataApi,
+  bindTeamHttpHandlerApis,
+  bindTeamProvisioningStartApi,
+} from '../TeamProvisioningApis';
 import {
   bindTeamClaudeLogsApi,
   bindTeamDiagnosticsApi,
-  bindTeamHttpDataApi,
   bindTeamMemberLifecycleApi,
   bindTeamProvisioningPreflightApi,
   bindTeamProvisioningRunApi,
-  bindTeamProvisioningStartApi,
   bindTeamProvisioningStatusApi,
   bindTeamTaskActivityRepairApi,
   bindTeamToolApprovalApi,
@@ -653,18 +655,18 @@ describe('TeamProvisioning API binders', () => {
     const provisioningStart = api.provisioningStart;
     const provisioningStatus = api.provisioningStatus;
     const runtime = api.runtime;
-    const runtimeIngress = api.runtimeIngress;
+    const runtimeControl = api.runtimeControl;
     const createTeam = provisioningStart.createTeam.bind(undefined);
     const launchTeam = provisioningStart.launchTeam.bind(undefined);
     const getRuntimeState = runtime.getRuntimeState.bind(undefined);
-    const deliverRuntimeMessage = runtimeIngress.deliverRuntimeMessage.bind(undefined);
+    const deliverOpenCodeRuntimeMessage = runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
       'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeIngress',
+      'runtimeControl',
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
@@ -688,7 +690,7 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-http',
     });
     await expect(getRuntimeState('team-http')).resolves.toMatchObject({ runId: 'run-http' });
-    await expect(deliverRuntimeMessage({})).resolves.toMatchObject({
+    await expect(deliverOpenCodeRuntimeMessage({} as never)).resolves.toMatchObject({
       runId: 'run-http',
       state: 'delivered',
     });
