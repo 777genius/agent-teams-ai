@@ -4,10 +4,10 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 
-import { useMemberLogStream } from '../hooks/useMemberLogStream';
-import { ExecutionLogStreamView } from '../ui/ExecutionLogStreamView';
+import { useMemberLogStream } from './hooks/useMemberLogStream';
+import { ExecutionLogStreamView } from './ui/ExecutionLogStreamView';
 
-import type { MemberLogStreamSegment } from '../../contracts';
+import type { MemberLogStreamSegment } from '../contracts';
 import type { ResolvedTeamMember } from '@shared/types';
 
 interface MemberLogStreamSectionProps {

@@ -3,7 +3,7 @@ import { configureMemberLogObservationRendererPorts } from './ports/MemberLogObs
 
 configureMemberLogObservationRendererPorts(productionMemberLogObservationRendererPorts);
 
-export { MemberLogStreamSection } from './adapters/MemberLogStreamSection';
+export { MemberLogStreamSection } from './MemberLogStreamSection';
 export type {
   MemberLogObservationChange,
   MemberLogObservationListener,

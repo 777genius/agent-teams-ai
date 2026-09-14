@@ -1,7 +1,6 @@
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
-import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -279,6 +278,7 @@ import {
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
 import { createElectronAnnouncementsBridge } from './createElectronAnnouncementsBridge';
+import { createElectronMemberLogStreamBridge } from './createElectronMemberLogStreamBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -515,7 +515,7 @@ const electronAPI: ElectronAPI = {
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
-  memberLogStream: createMemberLogStreamBridge(),
+  memberLogStream: createElectronMemberLogStreamBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),

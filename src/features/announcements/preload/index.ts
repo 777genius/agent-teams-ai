@@ -1,10 +1,10 @@
 import {
+  type AnnouncementDocument,
   ANNOUNCEMENTS_CHANNELS as channels,
   type AnnouncementsApi,
-  type AnnouncementDocument,
+  type AnnouncementsSnapshot,
   type ClaimAnnouncementInput,
   type PreparedAnnouncement,
-  type AnnouncementsSnapshot,
 } from '@features/announcements/contracts';
 
 export interface AnnouncementsBridgeTransport {

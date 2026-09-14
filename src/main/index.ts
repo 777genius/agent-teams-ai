@@ -41,11 +41,12 @@ import {
   type CodexModelCatalogFeatureFacade,
   createCodexModelCatalogFeature,
 } from '@features/codex-model-catalog/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
 import {
   createMemberLogStreamFeature,
   registerMemberLogStreamIpc,
   removeMemberLogStreamIpc,
-} from '@features/member-log-stream/main';
+} from '@features/member-log-stream/main/composition';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
