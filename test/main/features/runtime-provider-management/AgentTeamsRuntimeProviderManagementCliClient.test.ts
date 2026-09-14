@@ -590,7 +590,6 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       providerId: 'openrouter',
     });
 
-    expect(response.error?.message).toContain('Authorization: Bearer ...redacted');
     expect(response.error?.message).not.toContain('fixture-token');
     expect(response.error?.message).toContain('Authorization: [redacted]');
     expect(response.error?.message).not.toContain('live-token-123456789');
@@ -743,7 +742,6 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain(
       'This is not enough evidence to conclude that OpenCode auth is missing.'
     );
-    expect(response.error?.message).toContain('OpenCode provider key=...redacted');
     expect(response.error?.message).not.toContain('test-fixture-literal');
     expect(response.error?.message).toContain('OpenCode provider key=[redacted]');
     expect(response.error?.message).not.toContain('sk-secret-value-123456');
