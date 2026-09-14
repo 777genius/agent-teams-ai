@@ -160,10 +160,13 @@ export class MemberWorkSyncNudgeRevalidator {
     const agendaStillMatches =
       agenda.fingerprint === item.agendaFingerprint ||
       (isReviewPickupOutboxItem(item) && reviewPickupRequestIdsStillMatch(item, agenda));
-    if (decision.state !== 'needs_sync' || agenda.items.length === 0 || !agendaStillMatches) {
+    const manualContinue = isManualContinueOutboxItem(item);
+    if (agenda.items.length === 0 || !agendaStillMatches) {
       return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
     }
-    const manualContinue = isManualContinueOutboxItem(item);
+    if (decision.state !== 'needs_sync' && !manualContinue) {
+      return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
+    }
     const suppressionStatus = await applyMemberWorkSyncNudgeSuppression(this.deps, {
       status: revalidatedStatus,
       previousStatus: previous,

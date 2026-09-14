@@ -224,7 +224,8 @@ export async function waitForOpenCodePeerRelay(
   teamName: string,
   memberName: string,
   messageId: string,
-  timeoutMs: number
+  timeoutMs: number,
+  options?: { requireAccepted?: boolean }
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastRelay: Awaited<
@@ -246,6 +247,7 @@ export async function waitForOpenCodePeerRelay(
     // Our prompt is in-flight. Stop hammering so OpenCode can finish the turn.
     // queued-behind is not ours — wait and retry after the active relay clears.
     if (
+      options?.requireAccepted !== true &&
       delivery?.delivered === true &&
       delivery.accepted !== true &&
       delivery.responsePending === true &&

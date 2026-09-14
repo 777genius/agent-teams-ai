@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createDeferredWorkSyncStallObservation,
+  isAcceptedMemberWorkSyncLeadProof,
   runShutdownBackupAfterWorkSyncDrain,
   startPreparedMemberWorkSyncFeature,
 } from '../../src/main/startMemberWorkSyncFeature';
@@ -357,5 +358,63 @@ describe('startPreparedMemberWorkSyncFeature', () => {
     expect(dispose).not.toHaveBeenCalled();
     expect(startBackground).toHaveBeenCalledOnce();
     expect(attach).toHaveBeenCalledOnce();
+  });
+});
+
+describe('isAcceptedMemberWorkSyncLeadProof', () => {
+  const baseStatus = {
+    teamName: 'alpha',
+    memberName: 'lead',
+    state: 'still_working' as const,
+    evaluatedAt: '2026-09-14T00:00:00.000Z',
+    diagnostics: [],
+    agenda: {
+      teamName: 'alpha',
+      memberName: 'lead',
+      generatedAt: '2026-09-14T00:00:00.000Z',
+      fingerprint: 'agenda-1',
+      items: [],
+      diagnostics: [],
+    },
+  };
+
+  it('treats an unexpired still_working lease as proof', () => {
+    expect(
+      isAcceptedMemberWorkSyncLeadProof(
+        {
+          ...baseStatus,
+          lastAcceptedReport: {
+            teamName: 'alpha',
+            memberName: 'lead',
+            state: 'still_working',
+            agendaFingerprint: 'agenda-1',
+            reportedAt: '2026-09-14T00:00:00.000Z',
+            expiresAt: '2026-09-14T00:10:00.000Z',
+            accepted: true,
+          },
+        },
+        Date.parse('2026-09-14T00:05:00.000Z')
+      )
+    ).toBe(true);
+  });
+
+  it('does not treat an expired still_working lease as proof', () => {
+    expect(
+      isAcceptedMemberWorkSyncLeadProof(
+        {
+          ...baseStatus,
+          lastAcceptedReport: {
+            teamName: 'alpha',
+            memberName: 'lead',
+            state: 'still_working',
+            agendaFingerprint: 'agenda-1',
+            reportedAt: '2026-09-14T00:00:00.000Z',
+            expiresAt: '2026-09-14T00:01:00.000Z',
+            accepted: true,
+          },
+        },
+        Date.parse('2026-09-14T00:05:00.000Z')
+      )
+    ).toBe(false);
   });
 });

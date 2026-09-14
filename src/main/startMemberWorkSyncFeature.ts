@@ -1,6 +1,9 @@
+import {
+  getMemberWorkSyncAcceptedReport,
+  type MemberWorkSyncFeatureFacade,
+} from '@features/member-work-sync/main';
 import { createLogger } from '@shared/utils/logger';
 
-import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { TeamTaskStallObservationPort } from '@main/services/team/stallMonitor/TeamTaskStallNotifier';
 import type { TeamBackupService } from '@main/services/team/TeamBackupService';
 
@@ -136,6 +139,37 @@ export function createDeferredWorkSyncStallObservation(options?: {
   };
 }
 
+export function isAcceptedMemberWorkSyncLeadProof(
+  status: Parameters<typeof getMemberWorkSyncAcceptedReport>[0],
+  nowMs = Date.now()
+): boolean {
+  const report = getMemberWorkSyncAcceptedReport(status);
+  if (
+    !status ||
+    report?.accepted !== true ||
+    report.agendaFingerprint !== status.agenda.fingerprint
+  ) {
+    return false;
+  }
+  if (report.state !== 'still_working' && report.state !== 'blocked') {
+    return true;
+  }
+  const expiresAtMs = Date.parse(report.expiresAt ?? '');
+  return Number.isFinite(expiresAtMs) && expiresAtMs > nowMs;
+}
+
+export function createMemberWorkSyncAcceptedReportChecker(
+  getFeature: () => MemberWorkSyncFeatureFacade | null
+): (input: { teamName: string; memberName: string }) => Promise<boolean> {
+  return async (input) => {
+    const feature = getFeature();
+    if (!feature) {
+      return false;
+    }
+    return isAcceptedMemberWorkSyncLeadProof(await feature.getStatus(input));
+  };
+}
+
 export function bindMemberWorkSyncProvisioningRuntime(
   provisioning: {
     setRuntimeTurnSettledHookSettingsProvider(
@@ -146,6 +180,9 @@ export function bindMemberWorkSyncProvisioningRuntime(
     ): void;
     setMemberWorkSyncProofMissingRecoveryScheduler(
       scheduler: MemberWorkSyncFeatureFacade['scheduleProofMissingRecovery']
+    ): void;
+    setMemberWorkSyncAcceptedReportChecker(
+      checker: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean
     ): void;
   },
   getFeature: () => MemberWorkSyncFeatureFacade | null
@@ -164,6 +201,9 @@ export function bindMemberWorkSyncProvisioningRuntime(
       ? current.scheduleProofMissingRecovery(input)
       : Promise.resolve({ scheduled: false, reason: 'invalid' });
   });
+  provisioning.setMemberWorkSyncAcceptedReportChecker(
+    createMemberWorkSyncAcceptedReportChecker(getFeature)
+  );
 }
 
 export async function startPreparedMemberWorkSyncFeature(input: {

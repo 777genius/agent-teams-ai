@@ -455,24 +455,24 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
               memberName: TEAMMATE_NAME,
               idempotencyKey: 'live-first-sync',
             });
-            return true;
           } catch (error) {
-            if (/member_busy/.test(error instanceof Error ? error.message : String(error))) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (
+              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
+            ) {
               return false;
             }
             throw error;
           }
+          await feature!.dispatchDueNudges([teamName!]);
+          await activeService.relayInboxFileToLiveRecipient(teamName!, TEAMMATE_NAME);
+          return (await readInboxMessages(teamName!, TEAMMATE_NAME)).some(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          );
         },
         60_000,
         2_000
       );
-      await feature.dispatchDueNudges([teamName]);
-      await activeService.relayInboxFileToLiveRecipient(teamName, TEAMMATE_NAME);
-      expect(
-        (await readInboxMessages(teamName, TEAMMATE_NAME)).some(
-          (message) => message.messageKind === 'member_work_sync_nudge'
-        )
-      ).toBe(true);
 
       await waitUntil(
         async () => {

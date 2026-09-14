@@ -209,4 +209,31 @@ describe('MemberWorkSyncNudge', () => {
       buildMemberWorkSyncNudgePayloadHash(hash, withHealth)
     );
   });
+
+  it('tells the member to finish remaining work after a previous still_working report', () => {
+    expect(
+      buildMemberWorkSyncNudgePayload(
+        makeStatus({
+          lastAcceptedReport: {
+            teamName: 'sable-ops',
+            memberName: 'team-lead',
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:test',
+            reportedAt: '2026-05-13T13:02:44.291Z',
+            expiresAt: '2026-05-13T13:17:44.291Z',
+            accepted: true,
+          },
+        })
+      ).text
+    ).toContain('finish the remaining work now; do not only re-report still_working');
+  });
+
+  it('keeps the first-turn still_working report instruction when no working lease exists', () => {
+    expect(buildMemberWorkSyncNudgePayload(makeStatus()).text).toContain(
+      'If you are still working, report state "still_working"'
+    );
+    expect(buildMemberWorkSyncNudgePayload(makeStatus()).text).not.toContain(
+      'finish the remaining work now'
+    );
+  });
 });

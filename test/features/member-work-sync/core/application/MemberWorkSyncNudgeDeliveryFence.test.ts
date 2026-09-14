@@ -125,4 +125,36 @@ describe('isMemberWorkSyncNudgeDeliveryStale', () => {
       reason: 'stale_control_revision',
     });
   });
+
+  it('keeps an authorized remaining-work Continue while a still_working lease covers the agenda', () => {
+    const continueItem: MemberWorkSyncOutboxItem = {
+      ...item,
+      id: 'continue-1',
+      payload: {
+        ...item.payload,
+        workSyncIntentKey: 'manual-continue:live-progress',
+      },
+    };
+    const status: MemberWorkSyncStatus = {
+      ...needsSync,
+      state: 'still_working',
+      lastAcceptedReport: {
+        state: 'still_working',
+        agendaFingerprint: 'agenda-1',
+        memberName: 'bob',
+        teamName: 'team-a',
+        reportedAt: nowIso,
+        expiresAt: '2026-04-29T00:10:00.000Z',
+        accepted: true,
+      },
+      recoveryHealth: {
+        schemaVersion: 1,
+        episodes: [],
+        unresolvedIntentId: continueItem.id,
+      },
+    };
+    expect(
+      isMemberWorkSyncNudgeDeliveryStale({ status, item: continueItem, nowIso })
+    ).toEqual({ abort: false });
+  });
 });

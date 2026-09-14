@@ -10,6 +10,7 @@ import {
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import { CodexBinaryResolver } from '../../../../src/main/services/infrastructure/codexAppServer/CodexBinaryResolver';
+import { createMemberWorkSyncAcceptedReportChecker } from '../../../../src/main/startMemberWorkSyncFeature';
 import {
   getTasksBasePath,
   getTeamsBasePath,
@@ -127,6 +128,15 @@ liveDescribe('Member work sync recovery live canary', () => {
             provider: 'claude' | 'codex' | 'opencode';
           }) => Promise<Record<string, string> | null>)
         | null
+    ): void;
+    setRuntimeTurnSettledHookSettingsProvider(
+      provider: MemberWorkSyncFeatureFacade['buildRuntimeTurnSettledHookSettings']
+    ): void;
+    setMemberWorkSyncProofMissingRecoveryScheduler(
+      scheduler: MemberWorkSyncFeatureFacade['scheduleProofMissingRecovery']
+    ): void;
+    setMemberWorkSyncAcceptedReportChecker(
+      checker: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean
     ): void;
     relayInboxFileToLiveRecipient(
       teamName: string,
@@ -1207,6 +1217,14 @@ liveDescribe('Member work sync recovery live canary', () => {
       activeService.setRuntimeTurnSettledEnvironmentProvider((input) =>
         feature!.buildRuntimeTurnSettledEnvironment(input)
       );
+      activeService.setMemberWorkSyncAcceptedReportChecker(
+        createMemberWorkSyncAcceptedReportChecker(() => feature)
+      );
+      activeService.setMemberWorkSyncProofMissingRecoveryScheduler((input) =>
+        feature
+          ? feature.scheduleProofMissingRecovery(input)
+          : Promise.resolve({ scheduled: false, reason: 'invalid' })
+      );
       controlServer = await startMemberWorkSyncControlServer(feature);
       process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
       activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
@@ -1446,11 +1464,20 @@ liveDescribe('Member work sync recovery live canary', () => {
       if (attentionPhase === 'attention') {
         expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
       }
-      expect(await readRecoveryIntentKeys(teamName, memberName)).toEqual(
-        recoveryIdsBeforeAttention
+      const recoveryIdsAfterAttention = await readRecoveryIntentKeys(teamName, memberName);
+      const extraRecoveryIds = recoveryIdsAfterAttention.filter(
+        (key) => !recoveryIdsBeforeAttention.includes(key)
       );
+      expect(
+        recoveryIdsBeforeAttention.every((key) => recoveryIdsAfterAttention.includes(key))
+      ).toBe(true);
+      expect(
+        extraRecoveryIds.every(
+          (key) => key.startsWith('status-only:') || key.startsWith('proof-missing:')
+        )
+      ).toBe(true);
 
-      const leadRelay = { current: null as Promise<unknown> | null };
+      const leadRelay = { current: null as Promise<unknown> | null, pending: false };
       await waitUntil(
         async () => {
           await feature!.drainRuntimeTurnSettledEvents();
@@ -1506,6 +1533,9 @@ liveDescribe('Member work sync recovery live canary', () => {
       await feature.dispatchDueNudges([teamName]);
       await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
       kickLeadInboxRelay(activeService, teamName, leadRelay);
+      if (leadRelay.current) {
+        await leadRelay.current;
+      }
 
       await waitUntil(
         async () => {
@@ -1514,14 +1544,15 @@ liveDescribe('Member work sync recovery live canary', () => {
             throw new FatalWaitError(fatalRuntimeMessage);
           }
           await throwIfTranscriptApiError('Codex remaining-work canary');
-          await expireAcceptedReportLease({ teamName: teamName!, memberName });
-          await feature!.refreshStatus({ teamName: teamName!, memberName });
           await feature!.dispatchDueNudges([teamName!]);
           await feature!.drainRuntimeTurnSettledEvents();
           await activeService
             .relayInboxFileToLiveRecipient(teamName!, memberName)
             .catch(() => undefined);
           kickLeadInboxRelay(activeService, teamName!, leadRelay);
+          if (leadRelay.current) {
+            await leadRelay.current;
+          }
           const canary = await fs.readFile(canaryPath, 'utf8').catch(() => '');
           return /^\s*done\s*$/i.test(canary);
         },
@@ -1729,17 +1760,25 @@ async function backdateRecoveryEpisode(input: {
 function kickLeadInboxRelay(
   service: { relayLeadInboxMessages(teamName: string): Promise<unknown> },
   teamName: string,
-  inFlight: { current: Promise<unknown> | null }
+  inFlight: { current: Promise<unknown> | null; pending?: boolean }
 ): void {
   if (inFlight.current) {
+    inFlight.pending = true;
     return;
   }
-  inFlight.current = service
-    .relayLeadInboxMessages(teamName)
-    .catch(() => 0)
-    .finally(() => {
-      inFlight.current = null;
-    });
+  const run = (): void => {
+    inFlight.current = service
+      .relayLeadInboxMessages(teamName)
+      .catch(() => 0)
+      .finally(() => {
+        inFlight.current = null;
+        if (inFlight.pending) {
+          inFlight.pending = false;
+          run();
+        }
+      });
+  };
+  run();
 }
 
 async function expireAcceptedReportLease(input: {

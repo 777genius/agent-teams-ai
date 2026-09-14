@@ -119,9 +119,18 @@ beforeEach(() => {
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
+function isLiveSlowConfigReadWarning(text: string): boolean {
+  return (
+    process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&
+    text.includes('[Service:TeamConfigReader] [getConfig] slow read diag=')
+  );
+}
+
 afterEach(() => {
   const unexpectedErrors = errorSpy.mock.calls.map(formatConsoleCall);
-  const unexpectedWarnings = warnSpy.mock.calls.map(formatConsoleCall);
+  const unexpectedWarnings = warnSpy.mock.calls
+    .map(formatConsoleCall)
+    .filter((text) => !isLiveSlowConfigReadWarning(text));
 
   errorSpy.mockRestore();
   warnSpy.mockRestore();

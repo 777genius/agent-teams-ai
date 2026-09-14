@@ -51,7 +51,6 @@ import {
   buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
-  getMemberWorkSyncAcceptedReport,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
   isRuntimeMemberActivityUncertainForWorkSync,
@@ -2856,21 +2855,6 @@ async function initializeServices(): Promise<void> {
     stallObservation: memberWorkSyncStallObservation,
   });
   bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
-  teamProvisioningService.setMemberWorkSyncAcceptedReportChecker(async (input) => {
-    if (!memberWorkSyncFeature) {
-      return false;
-    }
-    const status = await memberWorkSyncFeature.getStatus(input);
-    const report = getMemberWorkSyncAcceptedReport(status);
-    if (report?.accepted !== true || report.agendaFingerprint !== status.agenda.fingerprint) {
-      return false;
-    }
-    if (report.state !== 'still_working' && report.state !== 'blocked') {
-      return true;
-    }
-    const expiresAtMs = Date.parse(report.expiresAt ?? '');
-    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
-  });
   scheduleStartupTask(() => {
     void listMemberWorkSyncLifecycleActiveTeamNames()
       .then(async (lifecycleActiveTeamNames) => {

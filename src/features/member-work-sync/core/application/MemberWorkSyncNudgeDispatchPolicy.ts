@@ -140,6 +140,19 @@ export function isUnauthorizedManualContinue(input: {
   );
 }
 
+export function isAuthorizedManualContinueWake(input: {
+  status: MemberWorkSyncStatus;
+  item: MemberWorkSyncOutboxItem;
+  agendaStillMatches: boolean;
+}): boolean {
+  return (
+    isManualContinueOutboxItem(input.item) &&
+    !isUnauthorizedManualContinue(input) &&
+    input.status.agenda.items.length > 0 &&
+    input.agendaStillMatches
+  );
+}
+
 export function isAgendaSyncStillStuckRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
   return (
     item.payload.workSyncIntentKey?.startsWith(AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX) ===
@@ -215,6 +228,15 @@ export function isMemberWorkSyncNudgeDeliveryStale(input: {
     input.status.agenda.items.length === 0 ||
     !agendaStillMatches
   ) {
+    if (
+      isAuthorizedManualContinueWake({
+        status: input.status,
+        item: input.item,
+        agendaStillMatches,
+      })
+    ) {
+      return { abort: false };
+    }
     return { abort: true, reason: 'status_no_longer_matches_outbox' };
   }
   return { abort: false };
