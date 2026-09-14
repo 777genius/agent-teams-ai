@@ -15,6 +15,7 @@ export {
   type TeamProvisioningStatusFeatureDeps,
   type TeamProvisioningStatusRun,
 } from './composition/createTeamProvisioningStatusFeature';
+export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';
 export {
   createLegacyMemberSettingsRepository,
   type LegacyMemberSettingsMetadataFile,
@@ -31,4 +32,3 @@ export {
   type TeamProvisioningFeature,
   type TeamProvisioningIpcRegistrar,
 } from './composition/TeamProvisioningIpcBoundary';
-export { persistNodeMemberSettingsRelaunch } from './composition/persistNodeMemberSettingsRelaunch';

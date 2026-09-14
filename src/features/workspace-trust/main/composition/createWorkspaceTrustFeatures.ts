@@ -25,6 +25,7 @@ export function createWorkspaceTrustFeatures(input: {
     ...shared,
     getHomeDir: input.getHomeDir,
     env: input.env,
+    isLocalContext: input.isLocalContext,
   });
   return {
     coordinator: createWorkspaceTrustCoordinator(shared),
@@ -33,11 +34,5 @@ export function createWorkspaceTrustFeatures(input: {
       registerWorkspaceTrustIpc(ipcMain, status),
     removeIpc: (ipcMain: Parameters<typeof removeWorkspaceTrustIpc>[0]) =>
       removeWorkspaceTrustIpc(ipcMain),
-    status: createWorkspaceTrustStatusFeature({
-      ...shared,
-      getHomeDir: input.getHomeDir,
-      env: input.env,
-      isLocalContext: input.isLocalContext,
-    }),
   };
 }

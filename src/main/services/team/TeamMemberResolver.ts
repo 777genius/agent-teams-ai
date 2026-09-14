@@ -392,36 +392,6 @@ export class TeamMemberResolver {
             ? (options?.leadFastMode ?? undefined)
             : undefined),
         configuredRuntimeSettings: {
-          providerId:
-            configMember?.providerId ??
-            metaMember?.providerId ??
-            (memberIsLead
-              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.providerId
-              : undefined),
-          providerBackendId:
-            configMember?.configuredProviderBackendId ??
-            metaMember?.configuredProviderBackendId ??
-            (memberIsLead
-              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.providerBackendId
-              : undefined),
-          model:
-            configMember?.model ??
-            metaMember?.model ??
-            (memberIsLead
-              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.model
-              : undefined),
-          effort:
-            configMember?.effort ??
-            metaMember?.effort ??
-            (memberIsLead
-              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.effort
-              : undefined),
-          fastMode:
-            configMember?.fastMode ??
-            metaMember?.fastMode ??
-            (memberIsLead
-              ? options?.leadRuntimeSettings?.configuredRuntimeSettings?.fastMode
-              : undefined),
           providerId: configuredMember?.providerId,
           providerBackendId: configuredMember?.configuredProviderBackendId,
           model: configuredMember?.model,

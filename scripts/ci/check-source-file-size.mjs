@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_MAX_LINES = 800;
 const POLICY_URL = new URL('./source-file-size-baseline.json', import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const POLICY_PATH = 'scripts/ci/source-file-size-baseline.json';
+const NO_PRIOR_COMMIT_REF = '0'.repeat(40);
 
 const SOURCE_EXTENSION_PATTERN =
   /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|css|scss|sass|less|html|sh)$/i;
@@ -162,6 +164,47 @@ export function strictSourceFileSizeViolations(result) {
   ];
 }
 
+export function evaluateSourceFileSizePolicyRatchet(policy, baselinePolicy) {
+  if (baselinePolicy === null) return [];
+
+  const violations = [];
+  const maxLines = policy.maxLines ?? DEFAULT_MAX_LINES;
+  const baselineMaxLines = baselinePolicy.maxLines ?? DEFAULT_MAX_LINES;
+  if (maxLines > baselineMaxLines) {
+    violations.push({
+      code: 'raised-global-limit',
+      path: POLICY_PATH,
+      message:
+        `${POLICY_PATH}: global limit ${maxLines} exceeds the base limit ` +
+        `${baselineMaxLines}.`,
+    });
+  }
+
+  const legacy = policy.legacy ?? {};
+  const baselineLegacy = baselinePolicy.legacy ?? {};
+  for (const [filePath, legacyCap] of Object.entries(legacy).sort(([left], [right]) =>
+    left.localeCompare(right)
+  )) {
+    const normalizedPath = normalizeRepoPath(filePath);
+    const baselineCap = baselineLegacy[normalizedPath];
+    if (baselineCap === undefined) {
+      violations.push({
+        code: 'new-legacy-exception',
+        path: normalizedPath,
+        message: `${normalizedPath}: new oversized-file exceptions are forbidden.`,
+      });
+    } else if (legacyCap > baselineCap) {
+      violations.push({
+        code: 'raised-legacy-cap',
+        path: normalizedPath,
+        message: `${normalizedPath}: legacy cap ${legacyCap} exceeds the base cap ${baselineCap}.`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function splitNullDelimited(output) {
   return output.split('\0').filter(Boolean);
 }
@@ -204,6 +247,28 @@ function loadPolicy() {
   return JSON.parse(readFileSync(POLICY_URL, 'utf8'));
 }
 
+function loadBaselinePolicy({ requireBaseline = false } = {}) {
+  const configuredRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  if (configuredRef === undefined || configuredRef === '') {
+    if (requireBaseline) {
+      throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode.');
+    }
+    return null;
+  }
+  if (!/^[0-9a-f]{40}$/i.test(configuredRef)) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA.');
+  }
+  if (configuredRef === NO_PRIOR_COMMIT_REF) return null;
+
+  try {
+    return JSON.parse(gitOutput(['show', `${configuredRef}:${POLICY_PATH}`]));
+  } catch {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${POLICY_PATH} in source-size ratchet mode.`
+    );
+  }
+}
+
 function printBaselineFromHead() {
   const records = readHeadRecords();
   const legacy = Object.fromEntries(
@@ -215,9 +280,13 @@ function printBaselineFromHead() {
   process.stdout.write(`${JSON.stringify({ maxLines: DEFAULT_MAX_LINES, legacy }, null, 2)}\n`);
 }
 
-function runGuard() {
-  const result = evaluateSourceFileSizes(readWorkingTreeRecords(), loadPolicy());
-  const violations = strictSourceFileSizeViolations(result);
+function runGuard({ requireBaseline = false } = {}) {
+  const policy = loadPolicy();
+  const result = evaluateSourceFileSizes(readWorkingTreeRecords(), policy);
+  const violations = [
+    ...evaluateSourceFileSizePolicyRatchet(policy, loadBaselinePolicy({ requireBaseline })),
+    ...strictSourceFileSizeViolations(result),
+  ];
   if (violations.length > 0) {
     console.error(`Source file size guard failed with ${violations.length} violation(s):\n`);
     for (const violation of violations) console.error(`- ${violation.message}`);
@@ -241,5 +310,14 @@ const isEntrypoint =
 
 if (isEntrypoint) {
   if (process.argv.includes('--print-baseline-from-head')) printBaselineFromHead();
-  else runGuard();
+  else {
+    try {
+      runGuard({ requireBaseline: process.argv.includes('--require-baseline') });
+    } catch (error) {
+      console.error(
+        `Source file size guard failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      process.exitCode = 1;
+    }
+  }
 }

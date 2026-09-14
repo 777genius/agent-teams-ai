@@ -91,7 +91,7 @@
     "guard:hosted-phase0-evidence": "node ./scripts/ci/verify-hosted-phase0-evidence-integrity.mjs",
     "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
-    "guard:source-file-size:ci": "node ./scripts/ci/verify-source-file-size.mjs --require-baseline",
+    "guard:source-file-size:ci": "node ./scripts/ci/check-source-file-size.mjs --require-baseline",
     "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",
     "test:chunks": "tsx test/test-chunk-building.ts",
     "test:semantic": "tsx test/test-semantic-steps.ts",
