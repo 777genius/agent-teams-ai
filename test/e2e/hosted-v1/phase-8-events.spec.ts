@@ -3,9 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
 import { encodeReplayCursor, HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE } from '@features/coordination-events';
-import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page, test, type TestInfo } from '@playwright/test';
 
-import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
+import { restartHostedV1LifecycleOwnerWithDiagnostics } from '../../../scripts/e2e/hosted-v1/restartDiagnostics';
 import {
   waitForProductionCoordinationRetention,
   writeProviderInbox,
@@ -152,23 +152,20 @@ async function openAuthenticatedEventObserver(browser: Browser): Promise<{
   }
 }
 
-async function restartController(): Promise<void> {
-  await restartHostedV1LifecycleOwner({
-    compose: async (...args) =>
-      (
-        await execFileAsync(
-          'docker',
-          [
-            'compose',
-            '--project-name',
-            runtime.composeProject,
-            '--file',
-            runtime.composeFile,
-            ...args,
-          ],
-          { maxBuffer: 8 * 1024 * 1024, timeout: 60_000 }
-        )
-      ).stdout,
+async function restartController(testInfo: TestInfo): Promise<void> {
+  await restartHostedV1LifecycleOwnerWithDiagnostics({
+    composeArgs: [
+      'compose',
+      '--project-name',
+      runtime.composeProject,
+      '--file',
+      runtime.composeFile,
+    ],
+    origin: runtime.origin,
+    emit: (report) => testInfo.attach('restart-diagnostics.json', {
+      body: JSON.stringify(report, null, 2),
+      contentType: 'application/json',
+    }),
   });
 }
 
@@ -695,7 +692,7 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
     expect(initialEvent.id).toBe(journalCursor);
     expect(initialEvent.data.eventCursor).toBe(journalCursor);
 
-    await restartController();
+    await restartController(testInfo);
     await expect
       .poll(() => observerPage.goto(`${runtime.origin}/api/auth/status`).then((r) => r?.status()))
       .toBe(200);
@@ -751,7 +748,7 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
 
 test('Phase 8 lifecycle recovery survives a lost response, renderer reload, reauthentication, and production controller restart', async ({
   browser,
-}) => {
+}, testInfo) => {
   test.setTimeout(3 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
   let csrfToken = await authCsrf(page);
@@ -808,7 +805,7 @@ test('Phase 8 lifecycle recovery survives a lost response, renderer reload, reau
       expect.objectContaining({ commandId })
     );
 
-    await restartController();
+    await restartController(testInfo);
     await expect
       .poll(() => page.goto(runtime.origin).then((response) => response?.status()))
       .toBe(200);
@@ -879,7 +876,7 @@ test('Phase 8 production retention expiry emits resync and remains expired after
     expect(beforeRestart).toMatchObject({
       eventType: 'resync_required', data: { kind: 'resync_required', reason: 'cursor_expired' },
     });
-    await restartController();
+    await restartController(testInfo);
     await expect.poll(() => observer!.page.goto(`${runtime.origin}/api/auth/status`).then((r) => r?.status())).toBe(200);
     const afterRestart = await nextSseEvent(observer.page, firstEvent.id);
     evidence.push({ afterRestart: { eventType: afterRestart.eventType, trace: afterRestart.trace } });
