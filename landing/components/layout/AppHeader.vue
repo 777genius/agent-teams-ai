@@ -397,7 +397,6 @@ const navItems = computed(() => [
   font-weight: 700 !important;
   letter-spacing: clamp(0.03em, 0.12vw, 0.07em) !important;
   text-transform: uppercase !important;
-  text-shadow: 0 0 16px rgba(244, 247, 255, 0.16);
 }
 
 .app-header__nav :deep(.v-btn:not(:last-child)::after) {
