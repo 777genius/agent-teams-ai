@@ -1,5 +1,3 @@
-import { api } from '@renderer/api';
-
 import {
   parseStrictQualifiedModelRef,
   qualifyModelId,
@@ -7,6 +5,7 @@ import {
 
 import { catalogFailure, CatalogFailureError, mainCatalogFailure } from './catalogFailure';
 
+import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type {
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderModelDto,
@@ -73,7 +72,8 @@ export async function loadOpenCodeScopedCatalog(
   projectPath: string | null,
   requestGroupId: string,
   isCurrentRequest: () => boolean,
-  refresh = true
+  refresh: boolean,
+  dependencies: OpenCodeCatalogDependencies
 ) {
   const validationError = (message: string) =>
     new CatalogFailureError(
@@ -93,7 +93,7 @@ export async function loadOpenCodeScopedCatalog(
     if (!isCurrentRequest()) {
       throw validationError('Catalog request cancelled.');
     }
-    const response = await api.runtimeProviderManagement.loadModels({
+    const response = await dependencies.transport.loadModels({
       runtimeId: 'opencode',
       providerId: sourceProviderId,
       projectPath,

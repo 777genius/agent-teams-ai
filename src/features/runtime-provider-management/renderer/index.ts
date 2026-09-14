@@ -17,10 +17,18 @@ export {
 } from './hooks/useOpenCodeLocalProviders';
 export {
   type OpenCodeProviderModelCatalogResult,
-  resolveOpenCodeCatalogSourceProviderId,
-  resolveOpenCodeSelectionScopeDecision,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
+export type {
+  OpenCodeCatalogDependencies,
+  OpenCodeCatalogTransportPort,
+  OpenCodeConnectedCatalogDependencies,
+  OpenCodeConnectedCatalogTransportPort,
+} from './ports/OpenCodeCatalogTransportPort';
+export {
+  resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeSelectionScopeDecision,
+} from './view-models/openCodeCatalogSelection';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
