@@ -1,13 +1,159 @@
+import { isDeepStrictEqual } from 'node:util';
+
 import { canonicalJson } from './contracts';
 import {
   appliedHttpReceipt,
   assertSubmittedCondition,
   decodeConditionalRequest,
   decodeReadResponse,
+  type ValidatedObservationResult,
 } from './http-entity';
 import type { NativeCaptureRecord, NativeCaptureShard } from './native-captures';
 import { httpCheck } from './raw-http';
 import type { HttpRequestObservation, HttpResponseObservation } from './raw-http-types';
+
+export interface OpenCodeApprovalOperationTuple {
+  readonly runtimeInstanceId: string;
+  readonly configGeneration: string;
+  readonly sessionId: string;
+  readonly requestId: string;
+  readonly sessionIncarnation: string;
+  readonly requestIncarnation: string;
+  readonly permissionDigest: string;
+}
+
+export interface OpenCodeApprovalOperationBinding {
+  readonly key: string;
+  readonly tuple: OpenCodeApprovalOperationTuple;
+  /** Exact Slice A response bytes and their independently checked length/hash commitment. */
+  readonly responseBody: ValidatedObservationResult['responseBody'];
+}
+
+export interface OpenCodeApprovalOperationIndex {
+  readonly size: number;
+  readonly entries: readonly OpenCodeApprovalOperationBinding[];
+  readonly get: (
+    tuple: OpenCodeApprovalOperationTuple
+  ) => OpenCodeApprovalOperationBinding | null;
+}
+
+const approvalTupleFields = [
+  'runtimeInstanceId',
+  'configGeneration',
+  'sessionId',
+  'requestId',
+  'sessionIncarnation',
+  'requestIncarnation',
+  'permissionDigest',
+] as const;
+
+function approvalTuple(
+  value: OpenCodeApprovalOperationTuple
+): OpenCodeApprovalOperationTuple {
+  const tuple = Object.fromEntries(
+    approvalTupleFields.map((field) => {
+      httpCheck(typeof value[field] === 'string' && value[field].length > 0, 'approval_tuple');
+      return [field, value[field]];
+    })
+  ) as unknown as OpenCodeApprovalOperationTuple;
+  return Object.freeze(tuple);
+}
+
+export function openCodeApprovalOperationKey(
+  value: OpenCodeApprovalOperationTuple
+): string {
+  return canonicalJson(approvalTuple(value));
+}
+
+function openCodeApprovalIdentityKey(value: OpenCodeApprovalOperationTuple): string {
+  const { permissionDigest: _permissionDigest, ...identity } = approvalTuple(value);
+  return canonicalJson(identity);
+}
+
+function revalidateApprovalObservation(
+  observation: ValidatedObservationResult
+): ValidatedObservationResult {
+  httpCheck(
+    Object.keys(observation.responseBody).length === 3 &&
+      ['byteLength', 'sha256', 'bodyBase64'].every((field) => field in observation.responseBody),
+    'approval_response_commitment'
+  );
+  // Only the body and the expected route session participate in Slice A decoding. The remaining
+  // response fields are inert carrier fields and are deliberately unavailable to the index.
+  const decoded = decodeReadResponse(
+    { kind: 'observe', sessionId: observation.sessionId },
+    {
+      phase: 'response-retained',
+      ownerExchangeNonce: 'approval-operation-index',
+      requestRecordId: 'approval-operation-index',
+      status: 200,
+      responseHeaders: [],
+      peerOperationNonce: null,
+      nonceStatus: 'missing',
+      connectedPeer: {
+        localAddress: '127.0.0.1',
+        localPort: 1,
+        remoteAddress: '127.0.0.1',
+        remotePort: 1,
+      },
+      body: observation.responseBody,
+      complete: true,
+    }
+  );
+  httpCheck(
+    decoded.kind === 'observation' && isDeepStrictEqual(observation, decoded),
+    'approval_observation_disagreement'
+  );
+  return decoded;
+}
+
+/**
+ * Indexes only Slice A validated observation tuples. Metadata and surrounding fixture/record IDs
+ * are deliberately absent from both keys. This binds operations but confers no P1 admission and
+ * exposes no manual-approval decision surface.
+ */
+export function buildOpenCodeApprovalOperationIndex(
+  observations: readonly ValidatedObservationResult[]
+): OpenCodeApprovalOperationIndex {
+  const byKey = new Map<string, OpenCodeApprovalOperationBinding>();
+  const digestByIdentity = new Map<string, string>();
+  for (const suppliedObservation of observations) {
+    const observation = revalidateApprovalObservation(suppliedObservation);
+    for (const permission of observation.permissions) {
+      const tuple = approvalTuple(permission);
+      const key = canonicalJson(tuple);
+      httpCheck(!byKey.has(key), 'approval_tuple_duplicate');
+      const identityKey = openCodeApprovalIdentityKey(tuple);
+      const existingDigest = digestByIdentity.get(identityKey);
+      httpCheck(
+        existingDigest === undefined || existingDigest === tuple.permissionDigest,
+        'approval_tuple_ambiguous'
+      );
+      digestByIdentity.set(identityKey, tuple.permissionDigest);
+      byKey.set(
+        key,
+        Object.freeze({
+          key,
+          tuple,
+          responseBody: Object.freeze({
+            byteLength: observation.responseBody.byteLength,
+            sha256: observation.responseBody.sha256,
+            bodyBase64: observation.responseBody.bodyBase64,
+          }),
+        })
+      );
+    }
+  }
+  const entries = Object.freeze(
+    [...byKey.values()].sort((a, b) => Buffer.from(a.key).compare(Buffer.from(b.key)))
+  );
+  return Object.freeze({
+    size: entries.length,
+    entries,
+    get: (value: OpenCodeApprovalOperationTuple) =>
+      byKey.get(openCodeApprovalOperationKey(value)) ?? null,
+  });
+}
 
 export interface NativeFactLocator {
   readonly captureSha256: string;
