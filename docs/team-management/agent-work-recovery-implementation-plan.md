@@ -622,7 +622,7 @@ type ContinuationTicket = {
 ```
 
 1. Runtime проверяет capability, текущую incarnation/instance/generation, work-continuation origin, stop latch, user queue, approval, bootstrap/compaction и guard state. Reserve синхронен и предшествует первому await. Не повышать advisory idle до authority.
-2. Ticket принадлежит конкретному intent и reservationNonce. Пока runtime асинхронно сохраняет mailbox/admission receipt, guard удерживает **именно этот** ticket. Нет глобального mutex через provider await; сериализуется только lane admission, а не наблюдение других команд.
+2. Ticket принадлежит конкретному intent и reservationNonce. Пока desktop сохраняет CAS reservation/outbox/inbox, а runtime готовит admission receipt, guard удерживает **именно этот** ticket. Нет глобального mutex через provider await; сериализуется только lane admission, а не наблюдение других команд.
 3. Перед фактическим start после последнего await снова проверить ticket, instance, stop latch и higher-priority input. `startReservedContinuation(ticket)` синхронно делает переход в running и выдаёт query generation. Между этой проверкой и существующим synchronous start entrypoint не добавлять await; если provider API требует отдельного await до принятия, это уже `start_unknown` window с durable intent, не повод повторить start.
 4. Continuation-specific start не вызывает голый `tryStart()` после утраты ticket. Cancel/forceEnd/user input инвалидируют ticket. Поздний finally освобождает только свой ticket/generation, не новую пользовательскую query. Не менять семантику всех обычных user submits без отдельной проверки call sites; сохранить их допустимый direct path, но запретить им случайно «потребить» чужую continuation reservation.
 5. User input во время durable await выигрывает: отменяет ожидающее автоматическое reservation и идёт через обычный user path. Если автоматическая query уже реально запущена, новый input обслуживается существующим steer/queue/cancel поведением, а не новым параллельным стартом. Гарантия приоритета относится к моменту admission, не отменяет прошлое.
@@ -631,6 +631,20 @@ type ContinuationTicket = {
 8. Proof «вызвали start» и proof «получили task progress» различаются. Принятие model turn переводит доставку в awaiting outcome, но не освобождает member slot. Только correlated terminal proof по §19.15 завершает попытку; status-only settled сохраняет budget/возраст и возвращает управление planner.
 
 Обязательная timeline-проверка: reserve C1 → pause before durable receipt → user stop → receipt C1 завершился → start(C1) отклонён → user query U2 стартует → stale finally(C1) не освобождает U2. Отдельно проверить cancellation при idle, cancel до reserve, user input после reserve и crash в каждом окне таблицы 8.6.
+
+#### 10.6.1. Уточнение границы процессов D1, 2026-09-14
+
+Исполняемый контракт и проверенные SHA: [agent-work-recovery-d1-runtime-admission-plan.md](./agent-work-recovery-d1-runtime-admission-plan.md). Первый срез - managed native Codex teammate/app-server, два PR (orchestrator + desktop). Claude, OpenCode и lead квалифицируются следующими срезами, каждый со своим canary.
+
+Desktop резервирует ticket удалённо, затем сохраняет CAS/outbox/inbox. **Фактический `startReservedContinuation` выполняется только в native REPL admission boundary после async preprocessing**. Текущий stub-порт `admit/start/cancel` на базе #650 не является окончательным контрактом: desktop pre-inbox `start` удаляется, остаются `admit/cancel`; native local start не вызывает повторный generic tryStart. Для OpenCode единственный send остаётся у существующего delivery owner после durable intent, adapter его не дублирует.
+
+Durable ticket должен содержать scope/incarnation/instance/generation/nonce/intent/controlRevision. Admission hash до ticket fields и полный immutable envelope hash различаются явно; существующая outbox idempotency не меняется. Reservation cleanup тоже owner-aware: поздний `cancelReservation` не снимает чужой pending ticket. Pending ticket expiry освобождает только local guard, не unresolved slot и не право replay.
+
+Identity проводится через normalizer, queue/coalescing, reconcile и early eligibility. `threadId` не подставляется вместо отсутствующего provider turnId. Correlated settled позволяет обойти только ordinary lease wait, сохраняя остальные policy guards; старое или безадресное событие не даёт permit. Native событие должно стать пригодным для планирования после owner release, иначе transient busy может потерять единственный wake.
+
+В проверенном orchestrator main нет заявлявшейся runtime-проверки controlRevision. Её доставка и fail-closed проверка входят в первый срез, а не считаются готовым D0 механизмом. До protocol-2 handshake новый runtime сохраняет legacy D0 поведение; после handshake все work-sync automatic producers qualified instance проходят общий control gate, чтобы D0 не обходил Stop.
+
+Desktop-origin Stop имеет две границы: durable CAS запрещает новые desktop intents; runtime ACK конкретных instance/controlRevision подтверждает закрытие local admission и отзыв pending tickets. Между ними уже мог быть admitted ход; он получает existing cancellation. ACK не равен завершению provider query. Timeout сохраняет latch и показывает pending/unknown, не полное применение Stop. Native-local Stop закрывает admission синхронно до persistence; старый control sync не снимает этот локальный запрет. Подробности и crash/replay matrix находятся в исполняемом D1-плане.
 
 ### 10.7. Пользовательский stop: durable latch и границы действия
 
@@ -1296,7 +1310,7 @@ Regression для этой границы: primary содержит reservation 
 | B | Scheduler + agenda source + main health projection | Timeout изолирован; stale reads не публикуются; bounded retention видим пользователю | A висит 100 ticks, B/C обслуживаются; discovery exhausted даёт health, не тихое отсутствие работы |
 | C preparation | Episode planner + outbox projection + attention UI | Один durable intent/budget/member slot, repair без новых ID | Crash после reservation до enqueue → восстановлен один и тот же payload; automatic send пока выключен |
 | D0 + C activation | Ordinary poller/relay + control transport | Protocol 1 проверяет stop/resume revision и сохраняет correlated terminal proof | Stop → resume → late old command не стартует; accepted report при running tool не освобождает slot |
-| D1 | QueryGuard/provider admission + events | Protocol 2: reserve → persist → synchronous ticket-aware start | User input во время persistence выигрывает; stale finally не освобождает пользовательскую query |
+| D1 | QueryGuard/provider admission + events | Первый срез Codex: remote reserve → desktop persist/inbox → local synchronous ticket-aware start; §10.6.1 | User input/Stop во время persistence выигрывает; stale cleanup не освобождает чужую reservation/query; unknown не повторяет start |
 | E | Sandbox desktop + настоящий выбранный runtime | Сквозная проверка заявленных provider modes и отказов | Зафиксированные intent/turn IDs, число starts, budget, stop ack, restart/attention; никакой реальной команды пользователя |
 
 Для A4 использовать exhaustive поиск `store.write`, `writeMemberStatus`, `writeStatus`, `compareAndWrite` и прямых операций status table/file в пределах feature и вызывающих adapters. Число найденных вызовов не является стабильным acceptance: для каждого writer записать, normal это путь или privileged migration, кто выдаёт admission и какой тест его покрывает. Не оставлять deprecated blind method в normal application port «на случай совместимости».
