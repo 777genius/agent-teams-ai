@@ -173,8 +173,13 @@ defineProps<{
     0 0 50px -20px var(--accent);
 }
 
+.v-theme--light .feature-card__title {
+  color: #1e293b;
+}
+
 .v-theme--light .feature-card__desc {
-  opacity: 0.6;
+  color: #475569;
+  opacity: 1;
 }
 
 @media (max-width: 960px) {
