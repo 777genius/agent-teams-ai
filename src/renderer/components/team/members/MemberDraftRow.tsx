@@ -331,7 +331,6 @@ export const MemberDraftRow = ({
         return t('memberDraft.mcp.scopes.local');
     }
   };
-
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -341,7 +340,6 @@ export const MemberDraftRow = ({
       onWorkflowChange(member.id, workflowDraft.value);
     }
   }, [workflowDraft.value, member.id, member.workflow, onWorkflowChange]);
-
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
