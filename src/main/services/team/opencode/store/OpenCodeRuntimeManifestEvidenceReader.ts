@@ -45,10 +45,7 @@ import {
   RuntimeStoreFileInspector,
   validateRuntimeStoreManifest,
 } from './RuntimeStoreManifest';
-export type {
-  OpenCodeRuntimeLaneIndex,
-  OpenCodeRuntimeLaneIndexEntry,
-} from './OpenCodeRuntimeLaneIndexStore';
+export type { OpenCodeRuntimeLaneIndex, OpenCodeRuntimeLaneIndexEntry } from './OpenCodeRuntimeLaneIndexStore';
 export {
   createEmptyOpenCodeRuntimeLaneIndex,
   normalizeOpenCodeRuntimeLaneIndex,
