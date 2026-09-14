@@ -2444,7 +2444,11 @@
       "yes": "お問い合わせ",
       "no": "お問い合わせ",
       "moreActionableItems": "{{count}} より実用的な項目",
-      "diagnostics": "診断: {{diagnostics}}"
+      "diagnostics": "診断: {{diagnostics}}",
+      "autoResumeStopped": "自動継続は停止されています。",
+      "continue": "続行",
+      "stopAutoResume": "自動再開を停止",
+      "resumeAutoResume": "自動再開を再開"
     },
     "title": "会員作品の同期",
     "loadingDiagnostics": "ローディングのメンバーの仕事は診断をsyncします。",

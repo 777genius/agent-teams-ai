@@ -2444,7 +2444,11 @@
       "yes": "是的",
       "no": "不",
       "moreActionableItems": "{{count}} 更多可操作项目",
-      "diagnostics": "诊断：{{diagnostics}}"
+      "diagnostics": "诊断：{{diagnostics}}",
+      "autoResumeStopped": "自动续跑已停止。",
+      "continue": "继续",
+      "stopAutoResume": "停止自动恢复",
+      "resumeAutoResume": "恢复自动恢复"
     },
     "title": "成员工作同步",
     "loadingDiagnostics": "正在加载成员工作同步诊断。",

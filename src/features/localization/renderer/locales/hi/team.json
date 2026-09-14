@@ -2444,7 +2444,11 @@
       "yes": "हाँ",
       "no": "नहीं",
       "moreActionableItems": "{{count}} अधिक कार्रवाई योग्य आइटम (s)",
-      "diagnostics": "निदान: {{diagnostics}}"
+      "diagnostics": "निदान: {{diagnostics}}",
+      "autoResumeStopped": "स्वचालित जारी रखना रोका गया है।",
+      "continue": "जारी रखें",
+      "stopAutoResume": "ऑटो-रिज्यूम रोकें",
+      "resumeAutoResume": "ऑटो-रिज्यूम फिर शुरू करें"
     },
     "title": "सदस्य कार्य सिंक",
     "loadingDiagnostics": "सदस्य कार्य सिंक निदान लोड हो रहा है।",

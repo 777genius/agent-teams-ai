@@ -25,6 +25,9 @@ import {
   type PermanentDeletionTargetRemovalProof,
   type TeamPermanentDeletionIntent,
 } from './TeamPermanentDeletionTypes';
+import { TeamWorkSyncIdentityAccess } from './TeamWorkSyncIdentityAccess';
+import { observeTeamWorkSyncPriorIdentity } from './TeamWorkSyncPriorIdentity';
+import { isTeamWorkSyncRestoreReady } from './TeamWorkSyncRestoreReadiness';
 
 interface BackupManifestPort {
   teamName: string;
@@ -87,6 +90,14 @@ export class TeamPermanentDeletionCoordinator {
   );
 
   constructor(private readonly ports: TeamPermanentDeletionCoordinatorPorts) {}
+
+  readonly workSyncIdentity = new TeamWorkSyncIdentityAccess({
+    withFence: this.withTeamIdentityFence.bind(this),
+    isFenced: this.isPermanentDeletionFenced.bind(this),
+    isRestoreReady: (name) => isTeamWorkSyncRestoreReady(name, this.ports),
+    observePriorIdentity: (name) => observeTeamWorkSyncPriorIdentity(name, this.ports),
+    claimMarker: (name, id) => this.identity.claimIdentityMarker(name, id, true),
+  });
 
   async initialize(): Promise<void> {
     await this.store.loadPermanentDeletionIntents();

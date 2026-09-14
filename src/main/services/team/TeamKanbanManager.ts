@@ -41,22 +41,58 @@ function sanitizeColumnOrder(raw: unknown): KanbanState['columnOrder'] | undefin
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+/** Validate before the tolerant projection can discard evidence used by automatic work selection. */
+function validateSafetyState(value: unknown, teamName: string): void {
+  const record = (item: unknown): item is Record<string, unknown> =>
+    item !== null && typeof item === 'object' && !Array.isArray(item);
+  const invalid = (): never => {
+    throw new Error('Kanban safety state is corrupt');
+  };
+  if (!record(value) || !record(value.tasks)) return invalid();
+  if (
+    value.teamName !== undefined &&
+    (typeof value.teamName !== 'string' ||
+      value.teamName.trim().toLowerCase() !== teamName.trim().toLowerCase())
+  )
+    return invalid();
+  if (
+    value.reviewers !== undefined &&
+    (!Array.isArray(value.reviewers) ||
+      value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
+  )
+    return invalid();
+  for (const [taskId, task] of Object.entries(value.tasks)) {
+    if (
+      !taskId.trim() ||
+      !record(task) ||
+      !isValidColumn(task.column) ||
+      typeof task.movedAt !== 'string' ||
+      !Number.isFinite(Date.parse(task.movedAt)) ||
+      (task.reviewer !== undefined && task.reviewer !== null && typeof task.reviewer !== 'string')
+    )
+      return invalid();
+  }
+}
+
 export class TeamKanbanManager {
-  async getState(teamName: string): Promise<KanbanState> {
+  async getState(teamName: string, options: { strict?: boolean } = {}): Promise<KanbanState> {
     const statePath = this.getStatePath(teamName);
 
     let raw: string;
+    let observed = false;
     try {
       const stat = await fs.promises.stat(statePath);
+      observed = true;
       if (!stat.isFile() || stat.size > MAX_KANBAN_STATE_BYTES) {
+        if (options.strict) throw new Error('Kanban safety state is unavailable');
         return createDefaultState(teamName);
       }
       raw = await readFileUtf8WithTimeout(statePath, 5_000);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT' && (!options.strict || !observed)) {
         return createDefaultState(teamName);
       }
-      if (error instanceof FileReadTimeoutError) {
+      if (error instanceof FileReadTimeoutError && !options.strict) {
         return createDefaultState(teamName);
       }
       throw error;
@@ -66,8 +102,10 @@ export class TeamKanbanManager {
     try {
       parsed = JSON.parse(raw) as Partial<KanbanState>;
     } catch {
+      if (options.strict) throw new Error('Kanban safety state is corrupt');
       return createDefaultState(teamName);
     }
+    if (options.strict) validateSafetyState(parsed, teamName);
     const sanitizedTasks: KanbanState['tasks'] = {};
     if (parsed.tasks && typeof parsed.tasks === 'object') {
       for (const [taskId, value] of Object.entries(parsed.tasks)) {

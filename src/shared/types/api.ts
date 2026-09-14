@@ -648,6 +648,13 @@ export interface MemberWorkSyncElectronApi {
   refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
   getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
   report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
+  stopAutoResume(
+    request: MemberWorkSyncStatusRequest & { reason?: string }
+  ): Promise<MemberWorkSyncStatus>;
+  resumeAutoResume(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
+  continueManually(
+    request: MemberWorkSyncStatusRequest & { idempotencyKey?: string }
+  ): Promise<MemberWorkSyncStatus>;
 }
 
 // =============================================================================

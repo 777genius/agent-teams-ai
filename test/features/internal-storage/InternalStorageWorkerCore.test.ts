@@ -65,6 +65,22 @@ describe('InternalStorageWorkerCore', () => {
     }
   });
 
+  it('migrates v4 report intents without losing legacy rows', async () => {
+    const dbPath = await makeTmpDbPath();
+    const seed = track(makeCore(dbPath));
+    seed.handle('ping', {});
+    seed.close();
+    const raw = new Database(dbPath);
+    raw.exec("ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json; PRAGMA user_version = 4;");
+    raw.prepare('INSERT INTO member_work_sync_report_intents (team_name,id,member_key,member_name,status,reason,recorded_at,request_json) VALUES (?,?,?,?,?,?,?,?)').run('sandbox','legacy','alice','alice','pending','fallback','2026-09-10T00:00:00Z','{}');
+    raw.close();
+    const upgraded = track(makeCore(dbPath));
+    expect((upgraded.handle('ping', {}) as InternalStorageBackendInfo).schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+    const check = new Database(dbPath, {readonly: true});
+    try { expect(check.prepare('SELECT id,journal_json FROM member_work_sync_report_intents').get()).toEqual({id:'legacy',journal_json:null}); }
+    finally { check.close(); }
+  });
+
   it('ping opens the database, migrates schema and reports backend info', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));

@@ -325,7 +325,7 @@ describe('CodexBinaryResolver', () => {
           CODEX_RESOLVER_TEST_BINARY: codexShim,
           PATH: `enriched:${codexShim}`,
         }),
-        timeout: 3_000,
+        timeout: 15_000,
         windowsHide: true,
       })
     );
@@ -500,7 +500,7 @@ describe('CodexBinaryResolver', () => {
           CODEX_RESOLVER_TEST_BINARY: codexShim,
           PATH: `enriched:${codexShim}`,
         }),
-        timeout: 3_000,
+        timeout: 15_000,
       })
     );
   });

@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+
 import { isStrictReviewPickupItem } from './MemberWorkSyncNudgeAgendaPredicates';
 import {
   MEMBER_WORK_SYNC_RUNTIME_STALL_DIAGNOSTIC,
@@ -84,7 +86,7 @@ function parseTime(value: string | undefined): number | null {
 }
 
 function hasActiveAcceptedWorkLease(status: MemberWorkSyncStatus): boolean {
-  const report = status.report;
+  const report = getMemberWorkSyncAcceptedReport(status);
   if (
     report?.accepted !== true ||
     report.agendaFingerprint !== status.agenda.fingerprint ||

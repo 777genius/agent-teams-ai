@@ -14,14 +14,23 @@ type MemberWorkSyncStatusPanelProps = Readonly<{
   showDiagnostics?: boolean;
 }>;
 
-export function MemberWorkSyncStatusPanel({
+export const MemberWorkSyncStatusPanel = ({
   teamName,
   memberName,
   enabled = true,
   showDiagnostics = false,
-}: MemberWorkSyncStatusPanelProps): React.ReactElement | null {
+}: MemberWorkSyncStatusPanelProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
-  const { status, viewModel, loading, error } = useMemberWorkSyncStatus({
+  const {
+    status,
+    viewModel,
+    loading,
+    error,
+    continueManually,
+    stopAutoResume,
+    resumeAutoResume,
+    recoveryActionsAvailable,
+  } = useMemberWorkSyncStatus({
     teamName,
     memberName,
     enabled,
@@ -32,7 +41,21 @@ export function MemberWorkSyncStatusPanel({
   }
 
   if (status) {
-    return <MemberWorkSyncDetails status={status} showDiagnostics={showDiagnostics} />;
+    const recoveryActions = recoveryActionsAvailable
+      ? {
+          onContinue: continueManually,
+          onStop: stopAutoResume,
+          onResume: resumeAutoResume,
+        }
+      : {};
+    return (
+      <MemberWorkSyncDetails
+        status={status}
+        actionError={error}
+        showDiagnostics={showDiagnostics}
+        {...recoveryActions}
+      />
+    );
   }
 
   return (
@@ -54,4 +77,4 @@ export function MemberWorkSyncStatusPanel({
       </div>
     </section>
   );
-}
+};

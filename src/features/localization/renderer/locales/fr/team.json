@@ -2444,7 +2444,11 @@
       "yes": "oui",
       "no": "Aucun",
       "moreActionableItems": "{{count}} élément(s) pouvant donner lieu à une action",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "La continuation automatique est arrêtée.",
+      "continue": "Continuer",
+      "stopAutoResume": "Arrêter la reprise auto",
+      "resumeAutoResume": "Reprendre la reprise auto"
     },
     "title": "Synchronisation des travaux des membres",
     "loadingDiagnostics": "Chargement du diagnostic de synchronisation des membres.",

@@ -1,3 +1,4 @@
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -273,6 +274,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader: new TeamTaskReader(),
@@ -533,6 +535,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader: new TeamTaskReader(),
@@ -752,6 +755,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const taskReader = new TeamTaskReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader,
@@ -1195,6 +1199,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const teamDataService = new TeamDataService();
     const taskReader = new TeamTaskReader();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader,

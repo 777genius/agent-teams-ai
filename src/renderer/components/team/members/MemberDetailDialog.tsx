@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-// import { MemberWorkSyncStatusPanel } from '@features/member-work-sync/renderer';
+import { MemberWorkSyncStatusPanel } from '@features/member-work-sync/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -371,13 +371,11 @@ export const MemberDetailDialog = ({
           </TabsList>
           <TabsContent value="tasks">
             <div className="space-y-3">
-              {/*
               <MemberWorkSyncStatusPanel
                 teamName={teamName}
                 memberName={member.name}
                 enabled={open && !member.removedAt}
               />
-              */}
               <MemberTasksTab tasks={memberTasks} onTaskClick={onTaskClick} />
             </div>
           </TabsContent>

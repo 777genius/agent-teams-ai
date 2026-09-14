@@ -2444,7 +2444,11 @@
       "yes": "হ্যাঁ",
       "no": "না",
       "moreActionableItems": "{{count}} অতিরিক্ত বস্তু চিহ্নিত করুন",
-      "diagnostics": "ডায়াগনস্টিক: {{diagnostics}}"
+      "diagnostics": "ডায়াগনস্টিক: {{diagnostics}}",
+      "autoResumeStopped": "স্বয়ংক্রিয় ধারাবাহিকতা বন্ধ আছে।",
+      "continue": "চালিয়ে যান",
+      "stopAutoResume": "অটো-রিজিউম বন্ধ করুন",
+      "resumeAutoResume": "অটো-রিজিউম আবার চালু করুন"
     },
     "title": "সদস্য কাজের তালিকা",
     "loadingDiagnostics": "সদস্য হিসেবে কাজ করা ডায়গনিস্টিক পরীক্ষা।",

@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { HttpAPIClient } from '@renderer/api/httpClient';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class FakeEventSource {
   onopen: (() => void) | null = null;
@@ -91,6 +90,20 @@ describe('HttpAPIClient memberWorkSync', () => {
         signal: expect.any(AbortSignal),
       })
     );
+  });
+
+  it('rejects recovery commands that have no browser-mode HTTP route', async () => {
+    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    await expect(
+      client.memberWorkSync.stopAutoResume({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    await expect(
+      client.memberWorkSync.resumeAutoResume({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    await expect(
+      client.memberWorkSync.continueManually({ teamName: 'demo team', memberName: 'bob' })
+    ).rejects.toThrow('not available in browser mode');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

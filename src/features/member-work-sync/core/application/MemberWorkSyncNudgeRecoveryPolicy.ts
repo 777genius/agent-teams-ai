@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+
 import type {
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxItem,
@@ -16,7 +18,7 @@ export function parseTime(value: string | undefined): number | null {
 }
 
 export function hasActiveAcceptedWorkLease(status: MemberWorkSyncStatus): boolean {
-  const report = status.report;
+  const report = getMemberWorkSyncAcceptedReport(status);
   if (
     report?.accepted !== true ||
     report.agendaFingerprint !== status.agenda.fingerprint ||

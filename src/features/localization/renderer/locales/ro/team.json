@@ -2444,7 +2444,11 @@
       "yes": "da",
       "no": "nu",
       "moreActionableItems": "încă {{count}} element(e) acționabil(e)",
-      "diagnostics": "Diagnostice: {{diagnostics}}"
+      "diagnostics": "Diagnostice: {{diagnostics}}",
+      "autoResumeStopped": "Continuarea automată este oprită.",
+      "continue": "Continuă",
+      "stopAutoResume": "Oprește reluarea automată",
+      "resumeAutoResume": "Reia reluarea automată"
     },
     "title": "Sincronizare muncă membru",
     "loadingDiagnostics": "Se încarcă diagnosticele de sincronizare a muncii membrului.",

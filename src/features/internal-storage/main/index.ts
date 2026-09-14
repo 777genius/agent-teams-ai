@@ -1,3 +1,4 @@
+export { InternalStorageOperationInterruptedError } from '../core/application/InternalStorageOperationInterruptedError';
 export { KeyedMutex } from '../core/application/KeyedMutex';
 export type { MemberWorkSyncStorageGateway } from '../core/application/ports';
 export {

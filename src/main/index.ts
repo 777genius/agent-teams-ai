@@ -50,11 +50,13 @@ import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
+  MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
   isRuntimeMemberActivityUncertainForWorkSync,
   isRuntimeMemberActiveForWorkSync,
   type MemberWorkSyncFeatureFacade,
+  MemberWorkSyncTeamOperationGate,
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
@@ -210,6 +212,12 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import {
+  bindMemberWorkSyncProvisioningRuntime,
+  createDeferredWorkSyncStallObservation,
+  runShutdownBackupAfterWorkSyncDrain,
+  startPreparedMemberWorkSyncFeature,
+} from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -1529,6 +1537,7 @@ export async function disposeInternalStorageAfterWriterDrains(
       stepTimeoutMs
     );
   }
+  await internalStorageDispose.catch(() => undefined);
 }
 
 /**
@@ -2140,15 +2149,8 @@ async function initializeServices(): Promise<void> {
     .catch((error: unknown) =>
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
-  teamBackupService = new TeamBackupService();
-  // Fire-and-forget: initializeServices() is sync, cannot await.
-  // Safe because TeamBackupService.initialized flag blocks all backup/restore
-  // operations until initialize() completes internally (restore → prune → set flag).
-  void teamBackupService
-    .initialize()
-    .catch((error: unknown) =>
-      logger.warn(`[Init] TeamBackupService init failed: ${String(error)}`)
-    );
+  const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2162,12 +2164,19 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
+  const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
     new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
     new TeamTaskStallPolicy(),
     new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
-    new TeamTaskStallNotifier(teamDataService, teamProvisioningService)
+    new TeamTaskStallNotifier(
+      teamDataService,
+      teamProvisioningService,
+      undefined,
+      undefined,
+      memberWorkSyncStallObservation
+    )
   );
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
@@ -2635,7 +2644,13 @@ async function initializeServices(): Promise<void> {
     );
     return activeTeamNames;
   };
-  memberWorkSyncFeature = createMemberWorkSyncFeature({
+  const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+    lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
+    operationGate: workSyncRestoreGate,
+    startBackground: false,
+    ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+    bindRestoreParticipant: (participant) =>
+      initializedBackupOwner.configureWorkSyncRestore(workSyncRestoreGate, participant),
     teamsBasePath: getTeamsBasePath(),
     configReader: new TeamConfigReader(),
     taskReader: new TeamTaskReader(),
@@ -2834,36 +2849,12 @@ async function initializeServices(): Promise<void> {
     },
     logger: memberWorkSyncLogger,
   });
-  teamProvisioningService.setRuntimeTurnSettledHookSettingsProvider((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.buildRuntimeTurnSettledHookSettings(input)
-      : Promise.resolve(null)
-  );
-  teamProvisioningService.setRuntimeTurnSettledEnvironmentProvider((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.buildRuntimeTurnSettledEnvironment(input)
-      : Promise.resolve(null)
-  );
-  teamProvisioningService.setMemberWorkSyncProofMissingRecoveryScheduler((input) =>
-    memberWorkSyncFeature
-      ? memberWorkSyncFeature.scheduleProofMissingRecovery(input)
-      : Promise.resolve({ scheduled: false, reason: 'invalid' })
-  );
-  teamProvisioningService.setMemberWorkSyncAcceptedReportChecker(async (input) => {
-    if (!memberWorkSyncFeature) {
-      return false;
-    }
-    const status = await memberWorkSyncFeature.getStatus(input);
-    const report = status.report;
-    if (report?.accepted !== true || report.agendaFingerprint !== status.agenda.fingerprint) {
-      return false;
-    }
-    if (report.state !== 'still_working' && report.state !== 'blocked') {
-      return true;
-    }
-    const expiresAtMs = Date.parse(report.expiresAt ?? '');
-    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+  memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
+    backup: initializedBackupOwner,
+    prepared: preparedMemberWorkSyncFeature,
+    stallObservation: memberWorkSyncStallObservation,
   });
+  bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
   scheduleStartupTask(() => {
     void listMemberWorkSyncLifecycleActiveTeamNames()
       .then(async (lifecycleActiveTeamNames) => {
@@ -3119,14 +3110,22 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());
 
-    // Sync backup all team data. Files are stable after SIGKILL.
-    if (teamBackupService) {
-      await runShutdownStep('team backup sync', () => teamBackupService?.runShutdownBackupSync());
-    }
+    await runShutdownBackupAfterWorkSyncDrain({
+      closeIngress: () => {
+        removeMemberWorkSyncIpc(ipcMain);
+        return httpServer?.isRunning() ? httpServer.stop() : undefined;
+      },
+      drainWorkSync: () =>
+        disposeInternalStorageAfterWriterDrains({
+          teamDataService,
+          teamTaskStallMonitor,
+          memberWorkSyncFeature,
+          internalStorageFeature,
+        }),
+      backup: teamBackupService,
+    });
+    teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
 
-    if (httpServer?.isRunning()) {
-      await runShutdownStep('HTTP server stop', () => httpServer.stop());
-    }
     await runShutdownStep('team control state cleanup', () => clearTeamControlApiState());
 
     await runShutdownStep('file watcher event cleanup', () => {
@@ -3154,15 +3153,6 @@ async function shutdownServices(): Promise<void> {
       await runShutdownStep('SSH connection manager dispose', () => sshConnectionManager.dispose());
     }
 
-    await disposeInternalStorageAfterWriterDrains({
-      teamDataService,
-      teamTaskStallMonitor,
-      memberWorkSyncFeature,
-      internalStorageFeature,
-    });
-    teamTaskStallMonitor = null;
-    memberWorkSyncFeature = null;
-    internalStorageFeature = null;
     if (updaterService) {
       await runShutdownStep('updater periodic check stop', () =>
         updaterService.stopPeriodicCheck()
@@ -3699,9 +3689,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-/**
- * Before quit handler - cleanup.
- */
 app.on('before-quit', (event) => {
   if (shutdownComplete) {
     return;

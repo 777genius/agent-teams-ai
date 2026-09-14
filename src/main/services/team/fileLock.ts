@@ -11,6 +11,8 @@ export interface FileLockOptions {
   /** Compatibility only: expiry of legacy runtime directories, never PID owners. */
   staleTimeoutMs?: number;
   retryIntervalMs?: number;
+  /** Hold ownership until physical completion; age alone cannot evict a live writer. */
+  preventLiveOwnerTakeover?: boolean;
 }
 
 // Protocol must stay equivalent to agent-teams-controller/src/internal/fileLock.js.
@@ -99,7 +101,9 @@ function recoverGate(gate: string): void {
   }
   if (entries.length !== 1) return; // Unknown state fails closed.
   const entry = entries[0];
-  const match = /^owner-([1-9][0-9]*)-([a-f0-9-]{36})$/.exec(entry);
+  // Same grammar as agent-teams-controller/src/internal/fileLock.js: UUID or
+  // Windows-safe `strict-`/`strict:` + UUID. Dead strict gates must be reclaimable.
+  const match = /^owner-([1-9][0-9]*)-((?:strict[-:])?[a-f0-9-]{36})$/.exec(entry);
   if (!match) return;
   const pid = parsePid(match[1]);
   if (pid === null) return;
@@ -172,15 +176,16 @@ function sameLock(left: LockInfo, right: LockInfo | null): boolean {
   );
 }
 
-function recoverDataLock(lockPath: string, staleTimeoutMs: number): void {
+function recoverDataLock(lockPath: string, options: Required<FileLockOptions>): void {
   const observed = readLockInfo(lockPath);
   if (!observed) return;
   if (observed.stat.isDirectory()) {
     // BASELINE compatibility with proper-lockfile's empty directory protocol.
     // Its age policy does NOT protect indefinitely paused runtime holders.
     // Never extend this policy to anonymous regular locks or new PID gates.
+    if (options.preventLiveOwnerTakeover) return;
     if (
-      Date.now() - observed.stat.mtimeMs > staleTimeoutMs &&
+      Date.now() - observed.stat.mtimeMs > options.staleTimeoutMs &&
       sameLock(observed, readLockInfo(lockPath))
     )
       removeEmptyGate(lockPath);
@@ -210,7 +215,7 @@ function tryAcquire(lockPath: string, options: Required<FileLockOptions>, token:
   let published = false;
   try {
     try {
-      recoverDataLock(lockPath, options.staleTimeoutMs);
+      recoverDataLock(lockPath, options);
       if (statOrMissing(lockPath)) return false;
       const candidate = `${lockPath}.candidate-${process.pid}-${randomUUID()}`;
       try {
@@ -252,6 +257,7 @@ function resolveLockOptions(options: FileLockOptions): Required<FileLockOptions>
     acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
     staleTimeoutMs: options.staleTimeoutMs ?? STALE_TIMEOUT_MS,
     retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
+    preventLiveOwnerTakeover: options.preventLiveOwnerTakeover ?? false,
   };
 }
 
@@ -263,7 +269,7 @@ export function withFileLockSync<T>(
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-  const token = randomUUID();
+  const token = resolvedOptions.preventLiveOwnerTakeover ? `strict-${randomUUID()}` : randomUUID();
 
   while (!tryAcquire(lockPath, resolvedOptions, token)) {
     if (Date.now() >= deadline) {
@@ -287,7 +293,7 @@ export async function withFileLock<T>(
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-  const token = randomUUID();
+  const token = resolvedOptions.preventLiveOwnerTakeover ? `strict-${randomUUID()}` : randomUUID();
 
   while (!tryAcquire(lockPath, resolvedOptions, token)) {
     if (Date.now() >= deadline) {

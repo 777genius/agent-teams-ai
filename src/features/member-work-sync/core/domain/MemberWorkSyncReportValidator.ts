@@ -95,6 +95,8 @@ export function validateMemberWorkSyncReport(input: {
   nowIso: string;
   activeMemberNames: string[];
   tokenValidation: MemberWorkSyncReportTokenValidation;
+  /** Trusted receipt time, fixed across conditional retries; never taken from the model request. */
+  leaseOriginIso?: string;
 }): MemberWorkSyncReportValidation {
   const memberName = normalizeMemberName(input.request.memberName);
   const activeMemberNames = new Set(input.activeMemberNames.map(normalizeMemberName));
@@ -173,12 +175,24 @@ export function validateMemberWorkSyncReport(input: {
   }
 
   const leaseTtlMs = clampLeaseTtlMs(input.request.leaseTtlMs, input.request.state, input.agenda);
+  const expiresAtMs =
+    leaseTtlMs === undefined
+      ? undefined
+      : Date.parse(input.leaseOriginIso ?? input.nowIso) + leaseTtlMs;
+  if (
+    expiresAtMs !== undefined &&
+    (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.parse(input.nowIso))
+  ) {
+    return {
+      ok: false,
+      code: 'report_lease_expired',
+      message: 'Original report lease expired before acceptance. Send a fresh report.',
+    };
+  }
   return {
     ok: true,
     code: 'accepted',
     message: 'Member work sync report accepted.',
-    ...(leaseTtlMs
-      ? { expiresAt: new Date(Date.parse(input.nowIso) + leaseTtlMs).toISOString() }
-      : {}),
+    ...(expiresAtMs !== undefined ? { expiresAt: new Date(expiresAtMs).toISOString() } : {}),
   };
 }

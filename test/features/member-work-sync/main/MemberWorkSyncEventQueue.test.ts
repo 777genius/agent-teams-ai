@@ -1,3 +1,4 @@
+import { MemberWorkSyncTeamQuiescedError } from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -244,6 +245,55 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('keeps the later turn-settled identity when coalescing queue items', async () => {
+    const reconciles: unknown[] = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 100,
+      reconcile: async (_request, context) => {
+        reconciles.push(context);
+      },
+      isTeamActive: () => true,
+    });
+
+    expect(
+      queue.enqueueTurnSettled({
+        teamName: 'team-a',
+        memberName: 'bob',
+        event: {
+          sourceId: 'newer',
+          recordedAt: '2026-05-05T12:00:01.000Z',
+          turnId: 'turn-new',
+        },
+      })
+    ).toBe(true);
+    expect(
+      queue.enqueueTurnSettled({
+        teamName: 'team-a',
+        memberName: 'bob',
+        event: {
+          sourceId: 'older',
+          recordedAt: '2026-05-05T12:00:00.000Z',
+          turnId: 'turn-old',
+        },
+      })
+    ).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(reconciles).toHaveLength(1);
+    expect(reconciles[0]).toMatchObject({
+      reconciledBy: 'queue',
+      triggerReasons: ['turn_settled'],
+      settlement: {
+        sourceId: 'newer',
+        recordedAt: '2026-05-05T12:00:01.000Z',
+        turnId: 'turn-new',
+      },
+    });
+    expect(queue.getDiagnostics()).toMatchObject({ coalesced: 1 });
+    await queue.stop();
+  });
+
   it('does not let a later quiet-window event delay a queued manual refresh', async () => {
     const reconciles: unknown[] = [];
     const queue = new MemberWorkSyncEventQueue({
@@ -485,6 +535,48 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('retries a quiesced reconcile without consuming retry attempts', async () => {
+    const reconciles: unknown[] = [];
+    const auditReasons: Array<string | undefined> = [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      maxRetryAttempts: 0,
+      reconcile: async (request) => {
+        reconciles.push(request);
+        throw new MemberWorkSyncTeamQuiescedError('team-a');
+      },
+      isTeamActive: () => true,
+      auditJournal: {
+        append: async (event) => {
+          auditReasons.push(event.reason);
+        },
+      },
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reconciles).toHaveLength(1);
+    expect(queue.getDiagnostics()).toMatchObject({
+      failed: 1,
+      queued: 1,
+      dropped: 0,
+      reconciled: 0,
+    });
+    expect(auditReasons).toEqual(['turn_settled', 'team_quiesced']);
+
+    await vi.advanceTimersByTimeAsync(10);
+    expect(reconciles).toHaveLength(2);
+    expect(queue.getDiagnostics()).toMatchObject({
+      failed: 2,
+      queued: 1,
+      dropped: 0,
+      reconciled: 0,
+    });
+
+    await queue.stop();
+  });
+
   it('waits for a timed-out reconcile to settle before retrying that member', async () => {
     let releaseFirst!: () => void;
     let reconcileCalls = 0;
@@ -552,6 +644,41 @@ describe('MemberWorkSyncEventQueue', () => {
     expect(auditEvents).toEqual(['queue_enqueued', 'queue_retry_scheduled', 'queue_reconciled']);
 
     await queue.stop();
+  });
+
+  it('waits for a timed-out reconcile to settle during stop', async () => {
+    let releaseFirst!: () => void;
+    let settled = false;
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 1,
+      retryDelayMs: 10,
+      reconcileTimeoutMs: 20,
+      maxRetryAttempts: 1,
+      reconcile: async () => {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        settled = true;
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'turn_settled' });
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(20);
+
+    let stopped = false;
+    const stop = queue.stop().then(() => {
+      stopped = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stopped).toBe(false);
+    expect(settled).toBe(false);
+
+    releaseFirst();
+    await stop;
+    expect(stopped).toBe(true);
+    expect(settled).toBe(true);
   });
 
   it('releases global concurrency after timeout while keeping the same member locked', async () => {

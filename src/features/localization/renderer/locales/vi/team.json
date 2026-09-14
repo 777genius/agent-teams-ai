@@ -2444,7 +2444,11 @@
       "yes": "có",
       "no": "không",
       "moreActionableItems": "{{count}} mục có thể hành động nữa",
-      "diagnostics": "Chẩn đoán: {{diagnostics}}"
+      "diagnostics": "Chẩn đoán: {{diagnostics}}",
+      "autoResumeStopped": "Tiếp tục tự động đã dừng.",
+      "continue": "Tiếp tục",
+      "stopAutoResume": "Dừng tự động tiếp tục",
+      "resumeAutoResume": "Tiếp tục tự động"
     },
     "title": "Đồng bộ công việc thành viên",
     "loadingDiagnostics": "Đang tải chẩn đoán đồng bộ công việc thành viên.",

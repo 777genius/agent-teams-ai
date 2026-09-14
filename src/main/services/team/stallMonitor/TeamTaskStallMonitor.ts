@@ -113,6 +113,7 @@ export class TeamTaskStallMonitor {
     }
 
     this.started = false;
+    this.notifier.dispose?.();
     if (this.scanTimer) {
       clearTimeout(this.scanTimer);
       this.scanTimer = null;
@@ -367,6 +368,12 @@ export class TeamTaskStallMonitor {
     const routableAlerts = [...ownerAlerts, ...leadOnlyAlerts];
 
     const alertedEpochKeys = new Set<string>();
+    if (alerts.length > 0) {
+      await this.notifier.recordWorkSyncObservations?.(teamName, alerts);
+    }
+    if (!this.shouldContinueScan(scanRun)) {
+      return;
+    }
     if (openCodeRemediationEnabled && ownerAlerts.length > 0) {
       const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, ownerAlerts);
       if (!this.shouldContinueScan(scanRun)) {
@@ -523,8 +530,9 @@ export class TeamTaskStallMonitor {
     }
 
     const displayId = getTaskDisplayId(task);
-    const ownerProviderId = task.owner
-      ? snapshot.providerByMemberName.get(task.owner.trim().toLowerCase())
+    const observationMember = evaluation.branch === 'review' ? evaluation.memberName : task.owner;
+    const ownerProviderId = observationMember
+      ? snapshot.providerByMemberName.get(observationMember.trim().toLowerCase())
       : undefined;
     return {
       teamName: snapshot.teamName,
@@ -538,6 +546,9 @@ export class TeamTaskStallMonitor {
       reason: evaluation.reason,
       epochKey: evaluation.epochKey,
       ...(task.owner ? { owner: task.owner } : {}),
+      ...(evaluation.branch === 'review' && evaluation.memberName
+        ? { reviewer: evaluation.memberName }
+        : {}),
       ...(ownerProviderId ? { ownerProviderId } : {}),
       taskRef: {
         taskId: task.id,

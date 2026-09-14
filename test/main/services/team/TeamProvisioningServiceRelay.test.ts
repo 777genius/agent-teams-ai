@@ -1092,9 +1092,11 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('Message kind: member_work_sync_nudge');
     expect(payload).toContain('Work-sync intent: agenda_sync');
     expect(payload).toContain('it is actionable work-sync control traffic');
-    expect(payload).toContain('A member_work_sync_status call alone is incomplete');
     expect(payload).toContain(
-      'Call member_work_sync_status with teamName=\\"my-team\\", memberName=\\"team-lead\\", controlUrl=\\"http://127.0.0.1:43123\\"'
+      'A member_work_sync_status or mcp__agent-teams__member_work_sync_status call alone is incomplete'
+    );
+    expect(payload).toContain(
+      'Call member_work_sync_status or mcp__agent-teams__member_work_sync_status with teamName=\\"my-team\\", memberName=\\"team-lead\\", controlUrl=\\"http://127.0.0.1:43123\\"'
     );
     expect(payload).toContain('call member_work_sync_report');
     expect(payload).toContain('controlUrl=\\"http://127.0.0.1:43123\\"');

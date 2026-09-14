@@ -1,3 +1,4 @@
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -103,6 +104,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
           activeService = svc;
           const configReader = new TeamConfigReader();
           feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
             teamsBasePath: getTeamsBasePath(),
             configReader,
             taskReader: new TeamTaskReader(),
@@ -264,6 +266,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
       teamName = `member-work-sync-opencode-idle-${Date.now()}`;
       const taskId = 'task-opencode-idle';
       feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
         configReader: {
           getConfig: async () => ({

@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 
 import { toMemberWorkSyncStatusViewModel } from '../view-models/memberWorkSyncStatusViewModel';
 
@@ -9,7 +10,11 @@ import type React from 'react';
 
 type MemberWorkSyncDetailsProps = Readonly<{
   status: MemberWorkSyncStatus | null;
+  actionError?: string | null;
   showDiagnostics?: boolean;
+  onContinue?: (input: { teamName: string; memberName: string }) => void;
+  onStop?: (input: { teamName: string; memberName: string }) => void;
+  onResume?: (input: { teamName: string; memberName: string }) => void;
 }>;
 
 function shortFingerprint(fingerprint?: string): string {
@@ -20,10 +25,14 @@ function shortFingerprint(fingerprint?: string): string {
   return suffix.length > 12 ? `${suffix.slice(0, 12)}...` : suffix;
 }
 
-export function MemberWorkSyncDetails({
+export const MemberWorkSyncDetails = ({
   status,
+  actionError,
   showDiagnostics = false,
-}: MemberWorkSyncDetailsProps): React.ReactElement {
+  onContinue,
+  onStop,
+  onResume,
+}: MemberWorkSyncDetailsProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const viewModel = toMemberWorkSyncStatusViewModel(status);
   const agendaItems = status?.agenda.items ?? [];
@@ -73,6 +82,89 @@ export function MemberWorkSyncDetails({
         </div>
       </dl>
 
+      {viewModel.attentionSummary ||
+      viewModel.autoResumeStopped ||
+      viewModel.canContinue ||
+      viewModel.canStop ||
+      viewModel.canResume ||
+      actionError ? (
+        <div className="mt-3 space-y-2">
+          {viewModel.attentionSummary ? (
+            <p
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100"
+              data-testid="member-work-sync-attention"
+            >
+              {viewModel.attentionSummary}
+            </p>
+          ) : null}
+          {viewModel.autoResumeStopped ? (
+            <p
+              className="text-xs text-[var(--color-text-muted)]"
+              data-testid="member-work-sync-stopped"
+            >
+              {t('memberWorkSync.details.autoResumeStopped')}
+            </p>
+          ) : null}
+          {status && (viewModel.canContinue || viewModel.canStop || viewModel.canResume) ? (
+            <div className="flex flex-wrap gap-2">
+              {viewModel.canContinue && onContinue ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-continue"
+                  onClick={() => {
+                    onContinue({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.continue')}
+                </Button>
+              ) : null}
+              {viewModel.canStop && onStop ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-stop"
+                  onClick={() => {
+                    onStop({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.stopAutoResume')}
+                </Button>
+              ) : null}
+              {viewModel.canResume && onResume ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-resume"
+                  onClick={() => {
+                    onResume({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.resumeAutoResume')}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {actionError ? (
+            <p className="text-xs text-red-400" data-testid="member-work-sync-action-error">
+              {actionError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {agendaItems.length > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-[var(--color-text-secondary)]">
           {agendaItems.slice(0, 3).map((item) => (
@@ -95,4 +187,4 @@ export function MemberWorkSyncDetails({
       ) : null}
     </section>
   );
-}
+};
