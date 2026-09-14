@@ -18,6 +18,16 @@ const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
 
 export type AgentTeamsMcpLaunchEnv = Record<string, string | undefined>;
 
+export function isPackagedAgentTeamsMcpApp(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron');
+    return app.isPackaged;
+  } catch {
+    return false;
+  }
+}
+
 /** Project existing app authority only; never resolve or start a server on a read. */
 export function applyAgentTeamsMcpAppContext(
   env: AgentTeamsMcpLaunchEnv,
