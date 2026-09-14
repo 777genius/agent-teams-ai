@@ -268,8 +268,12 @@ describe('TeamInboxWriter work-sync nudge invalidation', () => {
       messageId: 'nudge-read',
     });
     const inboxPath = path.join(hoisted.teamsBase, 'team', 'inboxes', 'worker.json');
-    const parsed = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Array<Record<string, unknown>>;
-    parsed[0]!.read = true;
+    const parsed = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Record<string, unknown>[];
+    const first = parsed[0];
+    if (!first) {
+      throw new Error('expected the already-read work-sync nudge in the inbox');
+    }
+    first.read = true;
     fs.writeFileSync(inboxPath, JSON.stringify(parsed, null, 2));
     await writer.sendMessage('team', {
       member: 'worker',
