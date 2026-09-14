@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RUNTIME_CAPTURE_NAMES } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
+import { RUNTIME_CAPTURE_NAMES, sha256 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import { assembleEvidence, makeRawRecord, parseRawOrigin, prepareEvidence } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 import { prepareNativeEvidence } from '../../../../scripts/e2e/hosted-actual-owner/evidence-preparation';
 import { P1AdmissionUnverified } from '../../../../scripts/e2e/hosted-actual-owner/p1-admission';
@@ -10,6 +10,7 @@ import { assertRawRecordWriters } from '../../../../scripts/e2e/hosted-actual-ow
 import { legacyOpenCodeRecord, rewriteContext, rewriteNative, selectionFixture } from './p1-repair.fixtures';
 import { context, fixture, hex, joint, ledger, owner, peer, rawRecord, recordData, retainChanges } from './raw-http.fixtures';
 
+import type { P1HttpCorrelationResult } from '../../../../scripts/e2e/hosted-actual-owner/native-http-join';
 import type { HttpFixture } from './raw-http.fixtures';
 
 function admissionFailure(input: HttpFixture): P1AdmissionUnverified {
@@ -21,6 +22,113 @@ function admissionFailure(input: HttpFixture): P1AdmissionUnverified {
   }
   throw new Error('P1 must remain unverified');
 }
+
+function assemblyAdmissionFailure(input: HttpFixture): P1AdmissionUnverified {
+  try {
+    assembleEvidence({ ...input, httpCorrelations: input.correlations });
+  } catch (error) {
+    expect(error).toBeInstanceOf(P1AdmissionUnverified);
+    return error as P1AdmissionUnverified;
+  }
+  throw new Error('P1 assembly must remain unavailable');
+}
+
+describe('authoritative correlation cannot widen P1 admission', () => {
+  it('keeps P1 execution unavailable after a valid authoritative correlation', () => {
+    const input = fixture();
+    const authoritative = joint(input);
+    const failure = assemblyAdmissionFailure(input);
+
+    expect(authoritative.status).toBe('correlated-unverified');
+    expect(failure.correlation).toEqual(authoritative);
+    expect(failure.correlation).toMatchObject({
+      controllerNonce: input.controllerNonce,
+      runId: input.runId,
+      ledgerSha256: sha256(input.raw.opencode),
+      recordIds: input.records.map(({ recordId }) => recordId),
+      exchanges: [{
+        requestRecordId: input.records[0]!.recordId,
+        responseRecordId: input.records[1]!.recordId,
+        ownerExchangeNonce: recordData(input.records[0]!).observation.ownerExchangeNonce,
+        status: 'correlated-unverified',
+      }],
+    });
+    expect(failure.admission).toBe('unverified');
+    expect(failure.missing).toHaveLength(6);
+  });
+
+  it('does not promote authority-shaped metadata into an admission capability', () => {
+    const input = fixture();
+    const authority = {
+      bootstrapDigest: sha256('authority-bootstrap'),
+      admissionDocumentDigest: `sha256:${sha256('authority-admission')}`,
+      ownerArtifactDigest: `sha256:${sha256('authority-owner')}`,
+      claimedActivationPublicationSha256: sha256('authority-publication'),
+    };
+    rewriteContext(input, {
+      ...context,
+      activation: {
+        ...context.activation,
+        bootstrapDigest: authority.bootstrapDigest,
+        admissionDocumentDigest: authority.admissionDocumentDigest,
+        ownerArtifactDigest: authority.ownerArtifactDigest,
+      },
+    });
+    input.correlations[0] = {
+      ...input.correlations[0]!,
+      claimedActivationPublicationSha256: authority.claimedActivationPublicationSha256,
+    };
+    const authoritative: P1HttpCorrelationResult = joint(input);
+    const failure = assemblyAdmissionFailure(input);
+
+    expect(authoritative.status).toBe('correlated-unverified');
+    expect(failure.correlation).toEqual(authoritative);
+    expect(failure.correlation?.exchanges[0]).toMatchObject({
+      context: {
+        activation: {
+          bootstrapDigest: authority.bootstrapDigest,
+          admissionDocumentDigest: authority.admissionDocumentDigest,
+          ownerArtifactDigest: authority.ownerArtifactDigest,
+        },
+      },
+      claimedActivationPublicationSha256: authority.claimedActivationPublicationSha256,
+      status: 'correlated-unverified',
+    });
+    expect(failure.admission).toBe('unverified');
+    expect(failure.missing).toContain(
+      'verified-ed25519-activation-publication-and-signed-routes-bound-to-owner-start'
+    );
+  });
+
+  it('keeps manual approval unavailable after an applied allow-once reply', () => {
+    const input = fixture();
+    const request = recordData(input.records[0]!).observation;
+    const response = recordData(input.records[1]!).observation;
+    const authoritative = joint(input);
+    const failure = assemblyAdmissionFailure(input);
+    const exchange = failure.correlation?.exchanges[0];
+
+    expect(request).toMatchObject({
+      phase: 'request-retained',
+      operation: { kind: 'reply', decision: 'allow_once' },
+    });
+    expect(response).toMatchObject({ phase: 'response-retained', status: 200, complete: true });
+    expect(authoritative.exchanges[0]).toMatchObject({
+      terminalObservation: 'applied',
+      appliedReceiptObservation: { status: 'applied', decision: 'allow_once' },
+    });
+    expect(exchange).toEqual(authoritative.exchanges[0]);
+    expect(exchange?.requestRecordId).toBe(input.records[0]!.recordId);
+    expect(exchange?.responseRecordId).toBe(input.records[1]!.recordId);
+    expect(exchange?.facts).toHaveLength(3);
+    expect(failure.correlation?.ledgerSha256).toBe(sha256(input.raw.opencode));
+    expect(failure.correlation?.recordIds).toEqual(input.records.map(({ recordId }) => recordId));
+    expect(failure.admission).toBe('unverified');
+    expect(failure.missing).toContain(
+      'opencode-coordinator-readiness-bound-to-retained-child-and-selected-profile'
+    );
+  });
+});
 
 describe('P1 admission is separate from retained-byte correlation', () => {
   it('never presents a caller publication digest as a verified receipt', () => {
