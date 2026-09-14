@@ -47,6 +47,7 @@ import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
 } from './composition/hosted/hostedDiagnosticsComposition';
+import { sameOrchestratorLifecycleOwnerBinding } from './composition/hosted/hostedLifecycleOrchestratorReadiness';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
@@ -107,6 +108,7 @@ import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLi
 import { sshConnectionManagerStub, updaterServiceStub } from './standaloneServiceStubs';
 import {
   createStandaloneFatalFailStop,
+  createStandaloneOrderlyOwnerLossGuard,
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
@@ -120,6 +122,7 @@ export type {
 } from './standaloneShutdownLifecycle';
 export {
   createStandaloneFatalFailStop,
+  createStandaloneOrderlyOwnerLossGuard,
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
@@ -169,6 +172,9 @@ let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
 let fatalFailStop = false;
 let standaloneRequestedExitCode = 0;
 let requestStandaloneFatalFailStop: ((label: string, error: unknown) => void) | null = null;
+const orderlyOwnerLossGuard = createStandaloneOrderlyOwnerLossGuard(
+  sameOrchestratorLifecycleOwnerBinding
+);
 
 function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteReadiness> {
   const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
@@ -437,7 +443,11 @@ async function start(): Promise<void> {
           orchestratorExpectedUid: process.getuid?.(),
           orchestratorExpectedGid: process.getgid?.(),
           orchestratorExpectedMode: 0o600,
-          onFatalOwnerLoss: (error) => {
+          onFatalOwnerLoss: (error, ownerBinding) => {
+            if (orderlyOwnerLossGuard.isExpectedOwnerLoss(ownerBinding)) {
+              logger.info('Hosted lifecycle owner closed during authenticated orderly shutdown');
+              return;
+            }
             requestStandaloneFatalFailStop?.('Hosted lifecycle orchestrator owner lost', error);
           },
           registerReadinessCleanup: (cleanup) => {
@@ -760,6 +770,11 @@ if (!process.env.VITEST) {
   registerStandaloneShutdownSignalHandlers({
     platform: process.platform,
     onSignal: (signal, listener) => process.on(signal, listener),
+    beforeShutdown: () => {
+      orderlyOwnerLossGuard.beginOrderlyShutdown(
+        hostedLifecycleCommands?.mutationLease.currentBinding() ?? null
+      );
+    },
     shutdown,
   });
 

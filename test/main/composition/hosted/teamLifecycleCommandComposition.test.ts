@@ -527,7 +527,8 @@ describe('team lifecycle command hosted composition', () => {
       expect(composition.isReady()).toBe(false);
       expect(onFatalOwnerLoss).toHaveBeenCalledOnce();
       expect(onFatalOwnerLoss).toHaveBeenCalledWith(
-        new Error('hosted-lifecycle-orchestrator-owner-lost')
+        new Error('hosted-lifecycle-orchestrator-owner-lost'),
+        OWNER_BINDING
       );
       await vi.waitFor(async () => {
         const unavailable = await app.inject({
