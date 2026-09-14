@@ -14,36 +14,37 @@ export interface TeamStoreEventTransport {
   subscribeToToolApprovalEvents?: Subscription<ToolApprovalEvent>;
 }
 
-export function createTeamStoreEventTransport(): TeamStoreEventTransport {
-  const teams = api.teams;
-  const setChangePresenceTracking = teams?.setChangePresenceTracking?.bind(teams);
-  const setTaskLogStreamTracking = teams?.setTaskLogStreamTracking?.bind(teams);
-  const setToolActivityTracking = teams?.setToolActivityTracking?.bind(teams);
-  const onProjectBranchChange = teams?.onProjectBranchChange?.bind(teams);
-  const onTeamChange = teams?.onTeamChange?.bind(teams);
-  const onToolApprovalEvent = teams?.onToolApprovalEvent?.bind(teams);
+const noOpCleanup = (): void => undefined;
 
+export function createTeamStoreEventTransport(): TeamStoreEventTransport {
   return {
-    ...(setChangePresenceTracking ? { trackChangePresence: setChangePresenceTracking } : undefined),
-    ...(setTaskLogStreamTracking ? { trackTaskLogs: setTaskLogStreamTracking } : undefined),
-    ...(setToolActivityTracking ? { trackToolActivity: setToolActivityTracking } : undefined),
-    ...(onProjectBranchChange
-      ? {
-          subscribeToProjectBranchChanges: (listener: (event: ProjectBranchChangeEvent) => void) =>
-            onProjectBranchChange((_event, event) => listener(event)),
-        }
-      : undefined),
-    ...(onTeamChange
-      ? {
-          subscribeToTeamChanges: (listener: (event: TeamChangeEvent) => void) =>
-            onTeamChange((_event, event) => listener(event)),
-        }
-      : undefined),
-    ...(onToolApprovalEvent
-      ? {
-          subscribeToToolApprovalEvents: (listener: (event: ToolApprovalEvent) => void) =>
-            onToolApprovalEvent((_event, event) => listener(event)),
-        }
-      : undefined),
+    trackChangePresence: (teamName, enabled) => {
+      const teams = api.teams;
+      return teams?.setChangePresenceTracking?.call(teams, teamName, enabled) ?? Promise.resolve();
+    },
+    trackTaskLogs: (teamName, enabled) => {
+      const teams = api.teams;
+      return teams?.setTaskLogStreamTracking?.call(teams, teamName, enabled) ?? Promise.resolve();
+    },
+    trackToolActivity: (teamName, enabled) => {
+      const teams = api.teams;
+      return teams?.setToolActivityTracking?.call(teams, teamName, enabled) ?? Promise.resolve();
+    },
+    subscribeToProjectBranchChanges: (listener) => {
+      const teams = api.teams;
+      return (
+        teams?.onProjectBranchChange?.call(teams, (_event, event) => listener(event)) ?? noOpCleanup
+      );
+    },
+    subscribeToTeamChanges: (listener) => {
+      const teams = api.teams;
+      return teams?.onTeamChange?.call(teams, (_event, event) => listener(event)) ?? noOpCleanup;
+    },
+    subscribeToToolApprovalEvents: (listener) => {
+      const teams = api.teams;
+      return (
+        teams?.onToolApprovalEvent?.call(teams, (_event, event) => listener(event)) ?? noOpCleanup
+      );
+    },
   };
 }
