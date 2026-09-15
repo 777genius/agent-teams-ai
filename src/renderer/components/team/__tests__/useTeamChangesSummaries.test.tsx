@@ -520,7 +520,11 @@ describe('useTeamChangesSummaries', () => {
 
       await act(async () => {
         root?.render(
-          React.createElement(HookHarness, { tasks: [task()], onSnapshot: () => undefined })
+          React.createElement(HookHarness, {
+            tasks: [task()],
+            sectionOpen: false,
+            onSnapshot: () => undefined,
+          })
         );
       });
       expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
