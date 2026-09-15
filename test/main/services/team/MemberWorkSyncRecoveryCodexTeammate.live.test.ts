@@ -155,6 +155,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
   let previousBootstrapTimeout: string | undefined;
   let previousDebug: string | undefined;
   let previousDevRuntimeRoot: string | undefined;
+  let previousHoldConsume: string | undefined;
   let usingConnectedChatGptAccount = false;
   let codexHomeDir = '';
   let ownsCodexHomeDir = false;
@@ -215,8 +216,10 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     previousBootstrapTimeout = process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS;
     previousDebug = process.env.DEBUG;
     previousDevRuntimeRoot = process.env.CLAUDE_DEV_RUNTIME_ROOT;
+    previousHoldConsume = process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
     delete process.env.CLAUDE_DEV_RUNTIME_ROOT;
     delete process.env.DEBUG;
+    delete process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
     usingConnectedChatGptAccount = allowConnectedChatGptAccount && !hasCodexApiKey;
 
     const connectedHome = os.userInfo().homedir;
@@ -309,6 +312,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     restoreEnv('CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS', previousBootstrapTimeout);
     restoreEnv('DEBUG', previousDebug);
     restoreEnv('CLAUDE_DEV_RUNTIME_ROOT', previousDevRuntimeRoot);
+    restoreEnv('CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH', previousHoldConsume);
     setClaudeBasePathOverride(null);
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecoveryCodexTeammate.live] preserved temp dir: ${tempDir}`);
@@ -631,6 +635,379 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             taskId: task.id,
           })
       );
+
+      await feature.prepareTeamDeletion(teamName);
+      feature.completeTeamDeletion(teamName);
+    },
+    1_200_000
+  );
+
+  remainingWorkIt(
+    'holds Codex consume, survives desktop restart on the same ticket, then Stop before start',
+    async () => {
+      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+      expect(orchestratorCli).toBeTruthy();
+      await assertExecutable(orchestratorCli!);
+
+      const holdPath = path.join(tempDir, 'HOLD_CONSUME');
+      process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH = holdPath;
+
+      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+      const marker = `codex-d1-stop-restart-${Date.now()}`;
+      teamName = `member-work-sync-recovery-codex-d1-canary-${Date.now()}`;
+      const projectPath = path.join(tempDir, 'project');
+      const canaryPath = path.join(projectPath, 'CANARY.txt');
+      const startedAt = Date.now();
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.writeFile(
+        path.join(projectPath, 'README.md'),
+        '# Member work sync D1 Stop-before-consume and desktop-restart canary\n',
+        'utf8'
+      );
+
+      const {
+        TeamProvisioningService,
+        TeamDataService,
+        TeamConfigReader,
+        TeamTaskReader,
+        TeamKanbanManager,
+        TeamMembersMetaStore,
+        createCodexAccountFeature,
+        ProviderConnectionService,
+      } = await loadCodexLiveServices();
+
+      codexAccountFeature = createCodexAccountFeature({
+        logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+        configManager: {
+          getConfig: () => ({
+            providerConnections: {
+              codex: { preferredAuthMode: hasCodexApiKey ? 'auto' : ('chatgpt' as const) },
+            },
+          }),
+        },
+      });
+      providerConnectionService = ProviderConnectionService.getInstance();
+      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+      svc = new TeamProvisioningService();
+      const activeService = svc;
+      setClaudeBasePathOverride(tempClaudeRoot);
+      activeService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+      await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
+      const teamDataService = new TeamDataService();
+      const createFeature = () =>
+        createMemberWorkSyncFeature({
+          lifecycleIdentity: owned!.identity,
+          teamsBasePath: getTeamsBasePath(),
+          ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+          configReader: new TeamConfigReader(),
+          taskReader: new TeamTaskReader(),
+          kanbanManager: new TeamKanbanManager(),
+          membersMetaStore: new TeamMembersMetaStore(),
+          isTeamActive: (name) =>
+            activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+          listLifecycleActiveTeamNames: async () => [teamName!],
+          resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+          queueQuietWindowMs: 500,
+          nudgeDeliveryWake: {
+            schedule: async (input) => {
+              const timer = setTimeout(
+                () => {
+                  void activeService
+                    .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
+                    .catch(() => undefined);
+                },
+                Math.max(0, input.delayMs ?? 0)
+              );
+              timer.unref?.();
+            },
+          },
+        });
+
+      feature = createFeature();
+      wireLiveFeature(activeService, feature);
+      controlServer = await startMemberWorkSyncControlServer(feature);
+      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+      await fs.writeFile(
+        path.join(tempClaudeRoot, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+        'utf8'
+      );
+      await assertCodexLaunchAllowed(codexAccountFeature);
+
+      const progressEvents: TeamProvisioningProgress[] = [];
+      await activeService.createTeam(
+        {
+          teamName,
+          cwd: projectPath,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model,
+          effort: DEFAULT_EFFORT,
+          fastMode: 'off',
+          skipPermissions: true,
+          prompt: [
+            'Keep launch work minimal.',
+            'Do not write CANARY.txt during launch.',
+            'Do not take teammate tasks. Wait for operator instructions.',
+          ].join(' '),
+          members: [
+            {
+              name: TEAMMATE_NAME,
+              role: 'Developer',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model,
+              effort: DEFAULT_EFFORT,
+            },
+          ],
+          extraCliArgs: '--debug',
+        },
+        (progress) => {
+          progressEvents.push(progress);
+          console.info(
+            `[codex-live] ${progress.state}${progress.message ? ` | ${progress.message}` : ''}${
+              progress.error ? ` | ${progress.error}` : ''
+            }`
+          );
+        }
+      );
+
+      await waitForCodexTeamReady({
+        progressEvents,
+        teamName,
+        projectPath,
+        tempClaudeRoot,
+        startedAt,
+        context: 'Codex D1 stop/restart launch',
+      });
+      expect(activeService.isTeamAlive(teamName)).toBe(true);
+      await waitUntil(
+        async () => (await readMemberRuntimePids(teamName!, TEAMMATE_NAME)).length > 0,
+        120_000,
+        2_000
+      );
+      await seedShadowReadyMetrics({ teamName, memberName: TEAMMATE_NAME });
+      await fs.writeFile(holdPath, 'hold\n', 'utf8');
+
+      const task = await teamDataService.createTask(teamName, {
+        subject: `Keep remaining work open ${marker}`,
+        owner: TEAMMATE_NAME,
+        startImmediately: false,
+        prompt: [
+          `This is a live D1 stop/restart canary. Marker: ${marker}.`,
+          'Your only actions in this turn are the work-sync tools.',
+          `Call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${TEAMMATE_NAME}", and controlUrl "${controlServer.baseUrl}".`,
+          `Then immediately call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${TEAMMATE_NAME}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and this task id.`,
+          'Do not write, create, or edit any project files, including CANARY.txt.',
+          'Do not complete the task and do not post a done comment.',
+          'After the report is accepted, stop and wait.',
+        ].join('\n'),
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+      await feature.refreshStatus({ teamName, memberName: TEAMMATE_NAME });
+
+      await waitUntil(
+        async () => {
+          try {
+            await feature!.continueManually({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+              idempotencyKey: 'live-first-sync',
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (
+              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
+            ) {
+              return false;
+            }
+            throw error;
+          }
+          await feature!.dispatchDueNudges([teamName!]);
+          await activeService.relayInboxFileToLiveRecipient(teamName!, TEAMMATE_NAME);
+          return (await readInboxMessages(teamName!, TEAMMATE_NAME)).some(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          );
+        },
+        60_000,
+        2_000
+      );
+
+      await waitUntil(
+        async () => {
+          await pumpCodexTeammate({
+            feature: feature!,
+            svc: activeService,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            projectPath,
+            tempClaudeRoot,
+            startedAt,
+            context: 'Codex D1 stop/restart first still_working report',
+          });
+          const teammateStatus = await feature!.getStatus({
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+          });
+          if (
+            teammateStatus.report?.accepted === true &&
+            teammateStatus.report.state === 'still_working'
+          ) {
+            return true;
+          }
+          console.info(
+            `[codex-live] waiting first still_working | state=${teammateStatus.state} report=${teammateStatus.report?.state ?? 'none'}`
+          );
+          return false;
+        },
+        420_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
+      );
+
+      await waitUntil(
+        async () => {
+          await pumpCodexTeammate({
+            feature: feature!,
+            svc: activeService,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            projectPath,
+            tempClaudeRoot,
+            startedAt,
+            context: 'Codex D1 ticket before consume',
+          });
+          const inbox = await readInboxMessages(teamName!, TEAMMATE_NAME);
+          const hasTicket = Boolean(findEarlyContinuationTicket(inbox));
+          if (!hasTicket) {
+            console.info(
+              `[codex-live] waiting D1 ticket | hold=${await fs
+                .access(holdPath)
+                .then(() => 'open')
+                .catch(() => 'closed')} rows=${inbox.length}`
+            );
+          }
+          return hasTicket;
+        },
+        90_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
+      );
+
+      const ticketBefore = findEarlyContinuationTicket(
+        await readInboxMessages(teamName, TEAMMATE_NAME)
+      );
+      expect(ticketBefore?.workSyncRuntimeTicketId).toBeTruthy();
+      expect(ticketBefore?.read).not.toBe(true);
+      expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
+
+      await feature.dispose();
+      await controlServer.close().catch(() => undefined);
+      feature = createFeature();
+      controlServer = await startMemberWorkSyncControlServer(feature);
+      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+      wireLiveFeature(activeService, feature);
+      await feature.dispatchDueNudges([teamName]);
+
+      const ticketAfterRestart = findEarlyContinuationTicket(
+        await readInboxMessages(teamName, TEAMMATE_NAME)
+      );
+      expect(ticketAfterRestart?.workSyncRuntimeTicketId).toBe(
+        ticketBefore?.workSyncRuntimeTicketId
+      );
+
+      const stopped = await feature.stopAutoResume({
+        teamName,
+        memberName: TEAMMATE_NAME,
+        reason: 'user_stop',
+      });
+      expect(stopped.recoveryHealth?.autoResumeStopLatch).toBeDefined();
+      console.info(
+        `[codex-live] stop runtimeAdmission=${JSON.stringify(stopped.runtimeAdmission)}`
+      );
+      await waitUntil(
+        async () => {
+          const snapshotPath = path.join(
+            getTeamsBasePath(),
+            teamName!,
+            'members',
+            TEAMMATE_NAME,
+            '.member-work-sync',
+            'runtime-admission',
+            'snapshot.json'
+          );
+          const raw = await fs.readFile(snapshotPath, 'utf8').catch(() => '');
+          try {
+            return (JSON.parse(raw) as { stopped?: boolean }).stopped === true;
+          } catch {
+            return false;
+          }
+        },
+        30_000,
+        500
+      );
+      await fs.unlink(holdPath).catch(() => undefined);
+      delete process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
+
+      const stopProbeUntil = Date.now() + 30_000;
+      while (Date.now() < stopProbeUntil) {
+        await pumpCodexTeammate({
+          feature: feature!,
+          svc: activeService,
+          teamName: teamName!,
+          memberName: TEAMMATE_NAME,
+          projectPath,
+          tempClaudeRoot,
+          startedAt,
+          context: 'Codex D1 after Stop before consume',
+        });
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+      expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
+      const afterStop = await feature.getStatus({
+        teamName,
+        memberName: TEAMMATE_NAME,
+      });
+      expect(afterStop.recoveryHealth?.autoResumeStopLatch).toBeDefined();
+
+      const evidence = {
+        scenario: 'stop-before-consume-and-desktop-restart',
+        desktopSha: spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(),
+        orchestratorSha: spawnSync('git', ['rev-parse', 'HEAD'], {
+          cwd: path.dirname(orchestratorCli!),
+          encoding: 'utf8',
+        }).stdout.trim(),
+        teamName,
+        memberName: TEAMMATE_NAME,
+        ticketId: ticketBefore?.workSyncRuntimeTicketId,
+        runtimeInstanceId: ticketBefore?.workSyncRuntimeInstanceId,
+        intentKey: ticketBefore?.workSyncIntentKey,
+        settledAt: new Date(startedAt).toISOString(),
+        canary: (await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim(),
+        runtimeAdmission: afterStop.runtimeAdmission,
+        stopLatch: afterStop.recoveryHealth?.autoResumeStopLatch,
+      };
+      await fs.writeFile(
+        path.join(tempDir, 'd1-canary-evidence.json'),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        'utf8'
+      );
+      console.info(`[codex-live] D1 canary evidence: ${JSON.stringify(evidence)}`);
 
       await feature.prepareTeamDeletion(teamName);
       feature.completeTeamDeletion(teamName);
@@ -1302,12 +1679,30 @@ async function readInboxMessages(
     workSyncIntentKey?: string;
     workSyncRuntimeTicketId?: string;
     workSyncRuntimeInstanceId?: string;
+    read?: boolean;
   }>
 > {
   const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
   const raw = await fs.readFile(inboxPath, 'utf8').catch(() => '[]');
   const parsed = JSON.parse(raw) as unknown;
   return Array.isArray(parsed) ? parsed : [];
+}
+
+function findEarlyContinuationTicket(
+  inbox: Array<{
+    messageKind?: string;
+    workSyncIntentKey?: string;
+    workSyncRuntimeTicketId?: string;
+    workSyncRuntimeInstanceId?: string;
+    read?: boolean;
+  }>
+) {
+  return [...inbox].reverse().find(
+    (message) =>
+      typeof message.workSyncIntentKey === 'string' &&
+      message.workSyncIntentKey.startsWith('early-continuation:') &&
+      Boolean(message.workSyncRuntimeTicketId)
+  );
 }
 
 async function listNudgeMessageIds(teamName: string, memberName: string): Promise<string[]> {
