@@ -5,13 +5,13 @@ import {
   MemberWorkSyncTeamQuiescedError,
 } from '../../core/application';
 
-import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
 import {
   buildMemberWorkSyncTurnSettledSettlement,
   dropMemberWorkSyncLastSettlementsForTeam,
   rememberMemberWorkSyncLastSettlement,
   resetMemberWorkSyncLastSettlements,
 } from './memberWorkSyncLastSettlementStore';
+import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
 
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
 

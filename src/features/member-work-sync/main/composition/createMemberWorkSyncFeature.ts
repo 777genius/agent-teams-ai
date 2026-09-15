@@ -120,11 +120,6 @@ export function createMemberWorkSyncFeature(deps: {
   recoveryAllocation?: { enabled: boolean };
   recoveryProtocol?: { version: number };
   runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
-  /**
-   * SQLite backend handle from the internal-storage feature. When present,
-   * persistence routes through SQLite (with the JSON store as the session
-   * fallback and one-time legacy import); when absent, JSON stays primary.
-   */
   internalStorageBackend?: InternalStorageMemberWorkSyncBackend | null;
   logger?: MemberWorkSyncLoggerPort;
 }): MemberWorkSyncFeatureFacade {
