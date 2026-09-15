@@ -2,7 +2,6 @@ import {
   HOSTED_AUTH_HEADERS,
   HOSTED_AUTH_ROUTES,
   type HostedPrincipal,
-  parseOidcLoginAttemptId,
   parseOpaqueAuthoritySecret,
 } from '../../../../contracts';
 import {
@@ -12,8 +11,6 @@ import {
   sanitizeHostedAuthenticatedPrincipal,
 } from '../../../../core/application';
 import {
-  type AdmissionWindow,
-  admitFixedWindow,
   bodyRecord,
   classifyHostedHttpAuthorization,
   clearCookie,
@@ -23,15 +20,9 @@ import {
   type HostedHttpReply,
   type HostedHttpRequest,
   OIDC_ATTEMPT_COOKIE,
-  OIDC_BACKCHANNEL_GLOBAL_LIMIT,
-  OIDC_BACKCHANNEL_LIMIT_PER_SOURCE,
-  OIDC_BACKCHANNEL_MAX_CONCURRENCY,
-  OIDC_LOGIN_LIMIT_PER_SOURCE,
-  OIDC_LOGIN_WINDOW_MS,
   OIDC_STATE_COOKIE,
   parseCookies,
   roleAllows,
-  safeReturnTo,
   SESSION_COOKIE,
 } from '../../../../core/domain';
 
@@ -45,6 +36,7 @@ import {
   isHostedReplyWritable,
   sendIfWritable,
 } from './HostedHttpReplyAvailability';
+import { HostedOidcRequestPolicy } from './HostedOidcRequestPolicy';
 import {
   isHostedTeamWorkspaceAuthorized,
   isHostedTeamWorkspaceEventAuthorized,
@@ -69,11 +61,8 @@ export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
   private readonly eventStreamRequestFences: HostedEventStreamRequestFenceRegistry;
   private readonly admittedRequests = new WeakSet<object>();
-  private readonly oidcLoginAdmission = new Map<string, AdmissionWindow>();
-  private readonly oidcBackchannelAdmission = new Map<string, AdmissionWindow>();
-  private readonly oidcBackchannelGlobalAdmission: AdmissionWindow = { startedAt: 0, count: 0 };
+  private readonly oidcPolicy = new HostedOidcRequestPolicy();
   private readonly workspaceAccess: HostedWorkspaceAccessService;
-  private oidcBackchannelInFlight = 0;
   constructor(private readonly dependencies: HostedAuthHttpControllerDependencies) {
     this.workspaceAccess = new HostedWorkspaceAccessService(
       dependencies.repository,
@@ -352,12 +341,12 @@ export class HostedAuthHttpController {
       if (this.dependencies.oidc === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
       }
-      if (!this.admitOidcLogin(request.ip)) {
+      if (!this.oidcPolicy.admitLogin(request.ip)) {
         reply.header('retry-after', '60');
         return reply.code(429).send({ error: 'oidc_login_rate_limited' });
       }
       const query = request.query as { returnTo?: unknown };
-      const returnTo = safeReturnTo(query.returnTo, this.dependencies.publicOrigin);
+      const returnTo = this.oidcPolicy.returnTo(query.returnTo, this.dependencies.publicOrigin);
       try {
         const begun = await this.dependencies.oidc.beginLogin(returnTo);
         if (!continueHostedReplyIfWritable(reply)) return;
@@ -405,7 +394,7 @@ export class HostedAuthHttpController {
         const issued = await this.dependencies.oidc.completeLogin({
           callbackUrl,
           expectedState: state,
-          attemptId: parseOidcLoginAttemptId(attempt),
+          attemptId: this.oidcPolicy.parseLoginAttemptId(attempt),
           sourceIp: request.ip,
         });
         if (!continueHostedReplyIfWritable(reply)) return;
@@ -535,7 +524,7 @@ export class HostedAuthHttpController {
       if (typeof token !== 'string') {
         return reply.code(400).send({ error: 'logout_token_missing' });
       }
-      if (!this.admitOidcBackchannel(request.ip)) {
+      if (!this.oidcPolicy.admitBackchannel(request.ip)) {
         reply.header('retry-after', '1');
         return reply.code(429).send({ error: 'oidc_backchannel_logout_rate_limited' });
       }
@@ -556,7 +545,7 @@ export class HostedAuthHttpController {
         }
         return sendIfWritable(reply, 400, { error: 'logout_token_invalid' });
       } finally {
-        this.oidcBackchannelInFlight -= 1;
+        this.oidcPolicy.leaveBackchannel();
       }
     });
   }
@@ -807,36 +796,5 @@ export class HostedAuthHttpController {
         this.dependencies.oidc === null ? null : this.dependencies.authentication.displayName,
       runtimeIdentity: this.dependencies.runtimeIdentity,
     });
-  }
-  private admitOidcLogin(source: string): boolean {
-    return admitFixedWindow(
-      this.oidcLoginAdmission,
-      source,
-      Date.now(),
-      OIDC_LOGIN_LIMIT_PER_SOURCE
-    );
-  }
-  private admitOidcBackchannel(source: string): boolean {
-    if (this.oidcBackchannelInFlight >= OIDC_BACKCHANNEL_MAX_CONCURRENCY) return false;
-    const now = Date.now();
-    const global = this.oidcBackchannelGlobalAdmission;
-    if (now - global.startedAt >= OIDC_LOGIN_WINDOW_MS) {
-      global.startedAt = now;
-      global.count = 0;
-    }
-    if (global.count >= OIDC_BACKCHANNEL_GLOBAL_LIMIT) return false;
-    if (
-      !admitFixedWindow(
-        this.oidcBackchannelAdmission,
-        source,
-        now,
-        OIDC_BACKCHANNEL_LIMIT_PER_SOURCE
-      )
-    ) {
-      return false;
-    }
-    global.count += 1;
-    this.oidcBackchannelInFlight += 1;
-    return true;
   }
 }
