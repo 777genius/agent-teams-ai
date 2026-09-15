@@ -5,6 +5,7 @@ import { request as makeHttpRequest } from 'node:http';
 import {
   classifyHostedHttpAuthorization,
   HOSTED_AUTH_HEADERS,
+  HOSTED_AUTH_ROUTES,
   HostedWorkspaceAccessService,
   parseUserId,
 } from '@features/hosted-access';
@@ -21,7 +22,7 @@ import type {
   OidcAuthenticationCapability,
   PersonalAuthenticationCapability,
 } from '@features/hosted-access';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 
 const apps: FastifyInstance[] = [];
 const HOSTED_TASK_BOARD_TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
@@ -91,6 +92,17 @@ interface HarnessOperationFailures {
   readonly workspaceGrantActive?: () => boolean;
   readonly grantRevision?: () => string;
   readonly listWorkspaceGrants?: Error;
+  readonly beforeListWorkspaceGrants?: () => Promise<void>;
+  readonly beforeAuthenticate?: () => Promise<void>;
+  readonly beforeVerifyCsrf?: () => Promise<void>;
+  readonly beforeBeginLogin?: () => Promise<void>;
+  readonly beforeCompleteLogin?: () => Promise<void>;
+  readonly completeLoginSucceeds?: boolean;
+  readonly beforeLogout?: () => Promise<void>;
+  readonly captureReply?: (reply: FastifyReply) => void;
+  readonly afterProjectionOnSend?: () => void;
+  readonly versionHandlerError?: Error;
+  readonly captureFastifyError?: (error: Error) => void;
   readonly listWorkspaces?: Error;
   readonly teamRuntimeWorkspaceId?: string | null;
   readonly additionalGrantedRuntimeWorkspaceId?: string;
@@ -106,6 +118,12 @@ interface HarnessOperationFailures {
 interface PersonalHarnessFailures {
   readonly logout?: Error;
   readonly forgetDeviceCode?: string;
+  readonly pairSucceeds?: boolean;
+  readonly beforePair?: () => Promise<void>;
+  readonly beforeLogout?: () => Promise<void>;
+  readonly beforeForgetDevice?: () => Promise<void>;
+  readonly captureReply?: (reply: FastifyReply) => void;
+  readonly afterControllerOnSend?: () => void;
 }
 
 afterEach(async () => {
@@ -147,6 +165,11 @@ function harness(
 ) {
   const app = Fastify();
   apps.push(app);
+  if (operationFailures.captureReply) {
+    app.addHook('onRequest', async (_request, reply) => {
+      operationFailures.captureReply?.(reply);
+    });
+  }
   const sourceIps: string[] = [];
   const returnTos: string[] = [];
   const resolvedTeamIds: string[] = [];
@@ -156,6 +179,7 @@ function harness(
     mode: 'oidc',
     displayName: 'Synthetic IdP',
     beginLogin: async (returnTo: string) => {
+      await operationFailures.beforeBeginLogin?.();
       returnTos.push(returnTo);
       return {
         redirectUrl: 'https://idp.test/authorize',
@@ -164,6 +188,7 @@ function harness(
       };
     },
     authenticate: async (input: { sessionSecret?: string; sourceIp?: string }) => {
+      await operationFailures.beforeAuthenticate?.();
       if (authenticationFailure !== null) throw authenticationFailure;
       if (!input.sessionSecret) return { authenticated: false, reason: 'invalid' } as const;
       if (operationFailures.liveAuthentication?.() === false) {
@@ -182,16 +207,28 @@ function harness(
       } as const;
     },
     verifyCsrf: async (_context: unknown, token: string) => {
+      await operationFailures.beforeVerifyCsrf?.();
       if (operationFailures.verifyCsrf) throw operationFailures.verifyCsrf;
       return token === 'csrf-token' && (operationFailures.csrfValid?.() ?? true);
     },
     logout: async () => {
+      await operationFailures.beforeLogout?.();
       if (operationFailures.logout) throw operationFailures.logout;
       return { redirectUrl: operationFailures.logoutRedirectUrl ?? null };
     },
     auditAuthorization: async () => {},
     completeLogin: async () => {
+      await operationFailures.beforeCompleteLogin?.();
       if (operationFailures.completeLogin) throw operationFailures.completeLogin;
+      if (operationFailures.completeLoginSucceeds) {
+        return {
+          sessionSecret: 'synthetic-session-secret',
+          csrfToken: 'csrf-token',
+          principal: makePrincipal(role),
+          session: {},
+          returnTo: '/',
+        };
+      }
       throw new Error('not_used');
     },
     backchannelLogout: async (token: string) => {
@@ -206,6 +243,7 @@ function harness(
     isWorkspaceRegistered: async (runtimeWorkspaceId: string) =>
       workspaceRegistered && runtimeWorkspaceId === 'project_synthetic-1',
     listWorkspaceGrants: async () => {
+      await operationFailures.beforeListWorkspaceGrants?.();
       if (operationFailures.listWorkspaceGrants) throw operationFailures.listWorkspaceGrants;
       return workspaceRegistered && (operationFailures.workspaceGrantActive?.() ?? true)
         ? [
@@ -312,15 +350,31 @@ function harness(
     authorizationPolicy: teamConfigurationAuthorizationPolicy,
   });
   controller.register(app);
+  if (operationFailures.afterProjectionOnSend) {
+    app.addHook('onSend', async () => {
+      operationFailures.afterProjectionOnSend?.();
+    });
+  }
+  if (operationFailures.captureFastifyError) {
+    app.setErrorHandler((error, _request, reply) => {
+      operationFailures.captureFastifyError?.(error);
+      return reply.code(500).send({ error: 'synthetic_error' });
+    });
+  }
   app.get('/api/version', async (_request, reply) => {
     if (abortVersionResponse) {
       reply.raw.destroy();
       return reply;
     }
+    if (operationFailures.versionHandlerError) throw operationFailures.versionHandlerError;
     return versionResponse;
   });
   app.post('/api/hosted/v1/team-task-board/page', async () => ({ ok: true }));
-  app.post(HOSTED_TEAM_MESSAGE_PAGE_PATH, async () => ({ ok: true }));
+  let teamMessagePageRequests = 0;
+  app.post(HOSTED_TEAM_MESSAGE_PAGE_PATH, async () => {
+    teamMessagePageRequests += 1;
+    return { ok: true };
+  });
   app.post(HOSTED_TEAM_MESSAGE_SEND_PATH, async () => ({ ok: true }));
   let taskBoardMutationRequest: object | null = null;
   app.post(HOSTED_TASK_BOARD_MUTATION_PATH, async (request) => {
@@ -349,6 +403,7 @@ function harness(
     returnTos,
     sourceIps,
     resolvedTeamIds,
+    teamMessagePageRequestCount: () => teamMessagePageRequests,
     teamConfigurationRequests,
     authorizeTeamConfigurationScope: (
       request: object,
@@ -400,10 +455,29 @@ function harness(
 function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
   const app = Fastify();
   apps.push(app);
+  if (failures.captureReply) {
+    app.addHook('onRequest', async (_request, reply) => {
+      failures.captureReply?.(reply);
+    });
+  }
   const authentication = {
     mode: 'personal',
     displayName: 'Personal pairing',
     pair: async () => {
+      await failures.beforePair?.();
+      if (failures.pairSucceeds) {
+        return {
+          ok: true,
+          code: 'paired',
+          value: {
+            principal: { ...makePrincipal('owner'), authenticationMethod: 'personal' },
+            sessionSecret: 'synthetic-session-secret',
+            deviceSecret: 'synthetic-device-secret',
+            csrfToken: 'csrf-token',
+            sessionId: PERSONAL_SESSION_ID,
+          },
+        } as const;
+      }
       throw new Error('personal_identity_storage_unavailable');
     },
     authenticate: async (input: { sessionSecret?: string }) =>
@@ -425,13 +499,16 @@ function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
         : ({ authenticated: false, reason: 'invalid' } as const),
     verifyCsrf: async (_context: unknown, token: string) => token === 'csrf-token',
     logout: async () => {
+      await failures.beforeLogout?.();
       if (failures.logout) throw failures.logout;
       return { redirectUrl: null };
     },
-    forgetDevice: async () =>
-      failures.forgetDeviceCode
+    forgetDevice: async () => {
+      await failures.beforeForgetDevice?.();
+      return failures.forgetDeviceCode
         ? ({ ok: false, code: failures.forgetDeviceCode } as const)
-        : ({ ok: true, code: 'device_forgotten' } as const),
+        : ({ ok: true, code: 'device_forgotten' } as const);
+    },
     auditAuthorization: async () => {},
     auditPersonalAuthentication: async () => {},
   } as unknown as PersonalAuthenticationCapability;
@@ -455,10 +532,52 @@ function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
     isPublicAccessActive: () => true,
   });
   controller.register(app);
+  if (failures.afterControllerOnSend) {
+    app.addHook('onSend', async () => {
+      failures.afterControllerOnSend?.();
+    });
+  }
   return { app, controller };
 }
 
 const cookie = '__Host-agent-teams-session=opaque-session-secret';
+
+type UnavailableReplyProperty = 'headersSent' | 'writableEnded' | 'destroyed' | 'closed';
+
+function deferredOperation(): {
+  readonly started: Promise<void>;
+  readonly suspend: () => Promise<void>;
+  readonly resume: () => void;
+} {
+  let signalStarted!: () => void;
+  let resume!: () => void;
+  const started = new Promise<void>((resolve) => {
+    signalStarted = resolve;
+  });
+  const blocked = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  return {
+    started,
+    suspend: async () => {
+      signalStarted();
+      await blocked;
+    },
+    resume,
+  };
+}
+
+function makeReplyUnavailable(reply: FastifyReply, property: UnavailableReplyProperty): void {
+  Object.defineProperty(reply.raw, property, {
+    configurable: true,
+    writable: true,
+    value: true,
+  });
+}
+
+function restoreReplyAvailability(reply: FastifyReply, property: UnavailableReplyProperty): void {
+  delete (reply.raw as unknown as Record<string, unknown>)[property];
+}
 
 describe('HostedAuthHttpController authorization boundary', () => {
   it('fails every public and protected route closed after a durable mode transition', async () => {
@@ -1706,6 +1825,413 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(attributionResponse.json()).toEqual({ error: 'workspace_attribution_unavailable' });
     expect(grantResponse.statusCode).toBe(503);
     expect(grantResponse.json()).toEqual({ error: 'hosted_projection_unavailable' });
+  });
+
+  it.each(
+    (['authentication', 'csrf'] as const).flatMap((stage) =>
+      (
+        [
+          ['committed', 'headersSent'],
+          ['ended', 'writableEnded'],
+          ['destroyed', 'destroyed'],
+          ['closed', 'closed'],
+        ] as const
+      ).map(([state, property]) => [stage, state, property] as const)
+    )
+  )(
+    'stops protected dispatch when successful %s resumes after the response becomes %s (%s)',
+    async (stage, _state, lifecycleProperty) => {
+      const operation = deferredOperation();
+      let capturedReply: FastifyReply | undefined;
+      let hijacks = 0;
+      let sends = 0;
+      let writeHeads = 0;
+      let laterOnSendCalls = 0;
+      const { app, teamMessagePageRequestCount } = harness('member', true, true, null, {
+        ...(stage === 'authentication'
+          ? { beforeAuthenticate: operation.suspend }
+          : { beforeVerifyCsrf: operation.suspend }),
+        captureReply: (reply) => {
+          capturedReply = reply;
+          const hijack = reply.hijack.bind(reply);
+          reply.hijack = (() => {
+            hijacks += 1;
+            return hijack();
+          }) as typeof reply.hijack;
+          const send = reply.send.bind(reply);
+          reply.send = ((payload?: unknown) => {
+            sends += 1;
+            return send(payload);
+          }) as typeof reply.send;
+          const writeHead = reply.raw.writeHead.bind(reply.raw);
+          reply.raw.writeHead = ((...args: Parameters<typeof reply.raw.writeHead>) => {
+            writeHeads += 1;
+            return writeHead(...args);
+          }) as typeof reply.raw.writeHead;
+        },
+        afterProjectionOnSend: () => {
+          laterOnSendCalls += 1;
+        },
+      });
+      const response = app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_PATH,
+        headers: {
+          cookie,
+          origin: 'https://agent-teams.test',
+          'sec-fetch-site': 'same-origin',
+          'x-agent-teams-csrf': 'csrf-token',
+        },
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+
+      await operation.started;
+      if (!capturedReply) throw new Error('Fastify reply was not captured');
+      makeReplyUnavailable(capturedReply, lifecycleProperty);
+      operation.resume();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(hijacks).toBe(1);
+      expect(sends).toBe(0);
+      expect(writeHeads).toBe(0);
+      expect(laterOnSendCalls).toBe(0);
+      expect(teamMessagePageRequestCount()).toBe(0);
+
+      restoreReplyAvailability(capturedReply, lifecycleProperty);
+      capturedReply.raw.end();
+      await expect(response).resolves.toBeDefined();
+    }
+  );
+
+  it.each(
+    (['pair', 'login', 'callback', 'logout', 'forget-device'] as const).flatMap((route) =>
+      (
+        [
+          ['committed', 'headersSent'],
+          ['ended', 'writableEnded'],
+          ['destroyed', 'destroyed'],
+          ['closed', 'closed'],
+        ] as const
+      ).map(([state, property]) => [route, state, property] as const)
+    )
+  )(
+    'abandons successful public auth %s when its awaited operation resumes after %s (%s)',
+    async (route, _state, lifecycleProperty) => {
+      const operation = deferredOperation();
+      let capturedReply: FastifyReply | undefined;
+      let hijacks = 0;
+      let responseContinuations = 0;
+      let writeHeads = 0;
+      let laterOnSendCalls = 0;
+      const captureReply = (reply: FastifyReply) => {
+        capturedReply = reply;
+        const hijack = reply.hijack.bind(reply);
+        reply.hijack = (() => {
+          hijacks += 1;
+          return hijack();
+        }) as typeof reply.hijack;
+        const header = reply.header.bind(reply);
+        reply.header = ((name: string, value: unknown) => {
+          responseContinuations += 1;
+          return header(name, value);
+        }) as typeof reply.header;
+        const headers = reply.headers.bind(reply);
+        reply.headers = ((values: Record<string, unknown>) => {
+          responseContinuations += 1;
+          return headers(values);
+        }) as typeof reply.headers;
+        const redirect = reply.redirect.bind(reply);
+        reply.redirect = ((url: string, code?: number) => {
+          responseContinuations += 1;
+          return code === undefined ? redirect(url) : redirect(url, code);
+        }) as typeof reply.redirect;
+        const send = reply.send.bind(reply);
+        reply.send = ((payload?: unknown) => {
+          responseContinuations += 1;
+          return send(payload);
+        }) as typeof reply.send;
+        const writeHead = reply.raw.writeHead.bind(reply.raw);
+        reply.raw.writeHead = ((...args: Parameters<typeof reply.raw.writeHead>) => {
+          writeHeads += 1;
+          return writeHead(...args);
+        }) as typeof reply.raw.writeHead;
+      };
+
+      let app: FastifyInstance;
+      let request: Parameters<FastifyInstance['inject']>[0];
+      if (route === 'pair' || route === 'forget-device') {
+        app = personalStorageFailureHarness({
+          ...(route === 'pair'
+            ? { pairSucceeds: true, beforePair: operation.suspend }
+            : { beforeForgetDevice: operation.suspend }),
+          captureReply,
+          afterControllerOnSend: () => {
+            laterOnSendCalls += 1;
+          },
+        }).app;
+        request =
+          route === 'pair'
+            ? {
+                method: 'POST',
+                url: HOSTED_AUTH_ROUTES.pair,
+                headers: {
+                  origin: 'https://agent-teams.test',
+                  'sec-fetch-site': 'same-origin',
+                },
+                payload: {
+                  pairingCode:
+                    'authority_pairing-challenge_00000001_abcdefghijklmnopqrstuvwxyz0123456789',
+                },
+              }
+            : {
+                method: 'POST',
+                url: HOSTED_AUTH_ROUTES.forgetDevice,
+                headers: {
+                  cookie,
+                  origin: 'https://agent-teams.test',
+                  'sec-fetch-site': 'same-origin',
+                  'x-agent-teams-csrf': 'csrf-token',
+                },
+                payload: {},
+              };
+      } else {
+        app = harness('viewer', true, true, null, {
+          ...(route === 'login'
+            ? { beforeBeginLogin: operation.suspend }
+            : route === 'callback'
+              ? { beforeCompleteLogin: operation.suspend, completeLoginSucceeds: true }
+              : { beforeLogout: operation.suspend }),
+          captureReply,
+          afterProjectionOnSend: () => {
+            laterOnSendCalls += 1;
+          },
+        }).app;
+        request =
+          route === 'login'
+            ? { method: 'GET', url: HOSTED_AUTH_ROUTES.login }
+            : route === 'callback'
+              ? {
+                  method: 'GET',
+                  url: `${HOSTED_AUTH_ROUTES.callback}?code=synthetic-code&state=synthetic-state-123456789`,
+                  headers: {
+                    cookie:
+                      '__Host-agent-teams-oidc-attempt=ola_synthetic-attempt-1; ' +
+                      '__Host-agent-teams-oidc-state=synthetic-state-123456789',
+                  },
+                }
+              : {
+                  method: 'POST',
+                  url: HOSTED_AUTH_ROUTES.logout,
+                  headers: {
+                    cookie,
+                    origin: 'https://agent-teams.test',
+                    'sec-fetch-site': 'same-origin',
+                    'x-agent-teams-csrf': 'csrf-token',
+                  },
+                  payload: { global: false },
+                };
+      }
+      const response = app.inject(request);
+
+      await operation.started;
+      if (!capturedReply) throw new Error('Fastify reply was not captured');
+      makeReplyUnavailable(capturedReply, lifecycleProperty);
+      operation.resume();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(hijacks).toBe(1);
+      expect(responseContinuations).toBe(0);
+      expect(writeHeads).toBe(0);
+      expect(laterOnSendCalls).toBe(0);
+
+      restoreReplyAvailability(capturedReply, lifecycleProperty);
+      capturedReply.raw.end();
+      await expect(response).resolves.toBeDefined();
+    }
+  );
+
+  it.each([
+    ['success', false, 'committed', 'headersSent'],
+    ['success', false, 'ended', 'writableEnded'],
+    ['success', false, 'destroyed', 'destroyed'],
+    ['success', false, 'closed', 'closed'],
+    ['denial', false, 'committed', 'headersSent'],
+    ['denial', false, 'ended', 'writableEnded'],
+    ['denial', false, 'destroyed', 'destroyed'],
+    ['denial', false, 'closed', 'closed'],
+    ['rejection', true, 'committed', 'headersSent'],
+    ['rejection', true, 'ended', 'writableEnded'],
+    ['rejection', true, 'destroyed', 'destroyed'],
+    ['rejection', true, 'closed', 'closed'],
+  ] as const)(
+    'stops Fastify dispatch after grant %s (rejects: %s) when the response becomes %s (%s)',
+    async (outcome, rejects, _state, lifecycleProperty) => {
+      let authorizationStarted!: () => void;
+      let resumeAuthorization!: () => void;
+      const started = new Promise<void>((resolve) => {
+        authorizationStarted = resolve;
+      });
+      const suspended = new Promise<void>((resolve) => {
+        resumeAuthorization = resolve;
+      });
+      let capturedReply: FastifyReply | undefined;
+      let sendsAfterCapture = 0;
+      let hijacks = 0;
+      let writeHeads = 0;
+      let laterOnSendCalls = 0;
+      const { app, teamMessagePageRequestCount } = harness('member', true, true, null, {
+        beforeListWorkspaceGrants: async () => {
+          authorizationStarted();
+          await suspended;
+        },
+        ...(rejects
+          ? { listWorkspaceGrants: new Error('identity_storage_unavailable') }
+          : { workspaceGrantActive: () => outcome === 'success' }),
+        captureReply: (reply) => {
+          capturedReply = reply;
+          const send = reply.send.bind(reply);
+          reply.send = ((payload?: unknown) => {
+            sendsAfterCapture += 1;
+            return send(payload);
+          }) as typeof reply.send;
+          const hijack = reply.hijack.bind(reply);
+          reply.hijack = (() => {
+            hijacks += 1;
+            return hijack();
+          }) as typeof reply.hijack;
+          const writeHead = reply.raw.writeHead.bind(reply.raw);
+          reply.raw.writeHead = ((...args: Parameters<typeof reply.raw.writeHead>) => {
+            writeHeads += 1;
+            return writeHead(...args);
+          }) as typeof reply.raw.writeHead;
+        },
+        afterProjectionOnSend: () => {
+          laterOnSendCalls += 1;
+        },
+      });
+      const response = app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_PATH,
+        headers: {
+          cookie,
+          origin: 'https://agent-teams.test',
+          'sec-fetch-site': 'same-origin',
+          'x-agent-teams-csrf': 'csrf-token',
+        },
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      });
+
+      await started;
+      if (!capturedReply) throw new Error('Fastify reply was not captured');
+      makeReplyUnavailable(capturedReply, lifecycleProperty);
+      resumeAuthorization();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(hijacks).toBe(1);
+      expect(sendsAfterCapture).toBe(0);
+      expect(teamMessagePageRequestCount()).toBe(0);
+      expect(laterOnSendCalls).toBe(0);
+      expect(writeHeads).toBe(0);
+
+      restoreReplyAvailability(capturedReply, lifecycleProperty);
+      capturedReply.raw.end();
+      await expect(response).resolves.toBeDefined();
+    }
+  );
+
+  it.each([
+    ['success', false, 'committed', 'headersSent'],
+    ['success', false, 'ended', 'writableEnded'],
+    ['success', false, 'destroyed', 'destroyed'],
+    ['success', false, 'closed', 'closed'],
+    ['rejection', true, 'committed', 'headersSent'],
+    ['rejection', true, 'ended', 'writableEnded'],
+    ['rejection', true, 'destroyed', 'destroyed'],
+    ['rejection', true, 'closed', 'closed'],
+  ] as const)(
+    'terminates Fastify projection after %s (rejects: %s) when the response becomes %s (%s)',
+    async (_outcome, rejects, _state, lifecycleProperty) => {
+      let projectionStarted!: () => void;
+      let resumeProjection!: () => void;
+      const started = new Promise<void>((resolve) => {
+        projectionStarted = resolve;
+      });
+      const suspended = new Promise<void>((resolve) => {
+        resumeProjection = resolve;
+      });
+      let capturedReply: FastifyReply | undefined;
+      let writes = 0;
+      let laterOnSendCalls = 0;
+      const { app } = harness('viewer', true, true, null, {
+        beforeListWorkspaceGrants: async () => {
+          projectionStarted();
+          await suspended;
+        },
+        ...(rejects
+          ? { listWorkspaceGrants: new Error('identity_storage_unavailable') }
+          : {}),
+        captureReply: (reply) => {
+          capturedReply = reply;
+          const writeHead = reply.raw.writeHead.bind(reply.raw);
+          reply.raw.writeHead = ((...args: Parameters<typeof reply.raw.writeHead>) => {
+            writes += 1;
+            return writeHead(...args);
+          }) as typeof reply.raw.writeHead;
+          const write = reply.raw.write.bind(reply.raw);
+          reply.raw.write = ((...args: Parameters<typeof reply.raw.write>) => {
+            writes += 1;
+            return write(...args);
+          }) as typeof reply.raw.write;
+        },
+        afterProjectionOnSend: () => {
+          laterOnSendCalls += 1;
+        },
+      });
+      const response = app.inject({
+        method: 'GET',
+        url: '/api/version',
+        headers: { cookie },
+      });
+
+      await started;
+      if (!capturedReply) throw new Error('Fastify reply was not captured');
+      Object.defineProperty(capturedReply.raw, lifecycleProperty, {
+        configurable: true,
+        writable: true,
+        value: true,
+      });
+      resumeProjection();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(laterOnSendCalls).toBe(0);
+      expect(writes).toBe(0);
+
+      delete (capturedReply.raw as unknown as Record<string, unknown>)[lifecycleProperty];
+      capturedReply.raw.end();
+      await expect(response).resolves.toBeDefined();
+      expect(writes).toBe(1);
+    }
+  );
+
+  it('continues to propagate unrelated handler rejections through Fastify error handling', async () => {
+    const unrelated = new Error('synthetic_unrelated_failure');
+    let captured: Error | undefined;
+    const { app } = harness('viewer', true, true, null, {
+      versionHandlerError: unrelated,
+      captureFastifyError: (error) => {
+        captured = error;
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/version',
+      headers: { cookie },
+    });
+
+    expect(captured).toBe(unrelated);
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: 'synthetic_error' });
   });
 
   it('denies arbitrary workspace ids even to an authenticated member', async () => {

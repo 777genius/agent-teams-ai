@@ -40,6 +40,12 @@ import { applyHostedCapabilityAdvertisements } from './HostedCapabilityAdvertise
 import { setHostedCredentialCookies as setCookies } from './HostedCredentialCookies';
 import { HostedEventStreamRequestFenceRegistry } from './HostedEventStreamRequestFence';
 import {
+  abandonHostedReply,
+  continueHostedReplyIfWritable,
+  isHostedReplyWritable,
+  sendIfWritable,
+} from './HostedHttpReplyAvailability';
+import {
   isHostedTeamWorkspaceAuthorized,
   isHostedTeamWorkspaceEventAuthorized,
 } from './HostedTeamWorkspaceEventAuthorization';
@@ -58,6 +64,7 @@ export type { HostedAuthHttpControllerDependencies } from './HostedAuthHttpContr
 export type { HostedRequestGrantFence } from './HostedTeamWorkspaceGrantFence';
 
 type RequestAuthContext = HostedAuthenticationContext;
+
 export class HostedAuthHttpController {
   private readonly requestContexts = new WeakMap<object, RequestAuthContext>();
   private readonly eventStreamRequestFences: HostedEventStreamRequestFenceRegistry;
@@ -98,8 +105,10 @@ export class HostedAuthHttpController {
         this.leavePublicRequest(request);
       });
       await this.authorize(request, reply);
+      if (!reply.sent) continueHostedReplyIfWritable(reply);
     });
-    app.addHook('onSend', async (request, reply, payload) => {
+    app.addHook('onSend', (request, reply, payload, done) => {
+      if (!continueHostedReplyIfWritable(reply)) return;
       const requestPath = request.url.split('?', 1)[0];
       if (requestPath?.startsWith('/api/auth/')) {
         reply.header('cache-control', 'no-store, private');
@@ -115,7 +124,10 @@ export class HostedAuthHttpController {
         reply.header(HOSTED_AUTH_HEADERS.lifecycleOwnerReadiness, 'ready');
       }
       const context = this.requestContexts.get(request);
-      if (!context) return payload;
+      if (!context) {
+        done(null, payload);
+        return;
+      }
       applyHostedCapabilityAdvertisements(
         request,
         reply,
@@ -125,24 +137,43 @@ export class HostedAuthHttpController {
       );
       reply.header('cache-control', 'no-store, private');
       reply.header('pragma', 'no-cache');
-      if (typeof payload !== 'string') return payload;
+      if (typeof payload !== 'string') {
+        done(null, payload);
+        return;
+      }
       if (request.url.split('?', 1)[0] === HOSTED_AUTH_ROUTES.logout) {
-        return payload;
+        done(null, payload);
+        return;
       }
       let parsed: unknown;
       try {
         parsed = JSON.parse(payload);
       } catch {
-        return payload;
+        done(null, payload);
+        return;
       }
-      try {
-        return JSON.stringify(
-          await this.workspaceAccess.projectPayload(context.principal.userId, parsed)
-        );
-      } catch {
-        reply.code(503);
-        return JSON.stringify({ error: 'hosted_projection_unavailable' });
-      }
+      void this.workspaceAccess
+        .projectPayload(context.principal.userId, parsed)
+        .then(
+          (projected) => {
+            if (!isHostedReplyWritable(reply)) {
+              abandonHostedReply(reply);
+              return;
+            }
+            done(null, JSON.stringify(projected));
+          },
+          () => {
+            if (!isHostedReplyWritable(reply)) {
+              abandonHostedReply(reply);
+              return;
+            }
+            reply.code(503);
+            done(null, JSON.stringify({ error: 'hosted_projection_unavailable' }));
+          }
+        )
+        .catch((error: unknown) => {
+          done(error instanceof Error ? error : new Error('hosted_projection_failed'));
+        });
     });
     app.addHook('onResponse', async (request) => {
       this.leavePublicRequest(request);
@@ -271,7 +302,7 @@ export class HostedAuthHttpController {
   private registerAuthRoutes(app: HostedHttpApplication): void {
     app.get(HOSTED_AUTH_ROUTES.status, async (request, reply) => {
       const authenticated = await this.authenticate(request, reply, true);
-      if (reply.sent) return;
+      if (!continueHostedReplyIfWritable(reply)) return;
       if (authenticated === null) return this.status(null, null);
       return this.status(authenticated.principal, authenticated.csrfToken);
     });
@@ -289,7 +320,7 @@ export class HostedAuthHttpController {
         );
         if (!result.ok) {
           await this.auditPersonal(request, null, 'auth.personal.pair', 'denied', result.code);
-          return reply.code(401).send({ error: result.code });
+          return sendIfWritable(reply, 401, { error: result.code });
         }
         await this.auditPersonal(
           request,
@@ -297,6 +328,7 @@ export class HostedAuthHttpController {
           'auth.personal.pair',
           'success'
         );
+        if (!continueHostedReplyIfWritable(reply)) return;
         setCookies(reply, result.value.sessionSecret, result.value.deviceSecret, this.dependencies);
         return this.status(result.value.principal, result.value.csrfToken);
       } catch (error) {
@@ -311,7 +343,7 @@ export class HostedAuthHttpController {
           'failure',
           storageUnavailable ? 'identity_storage_unavailable' : 'invalid_request'
         );
-        return reply.code(storageUnavailable ? 503 : 401).send({
+        return sendIfWritable(reply, storageUnavailable ? 503 : 401, {
           error: storageUnavailable ? 'identity_storage_unavailable' : 'pairing_code_invalid',
         });
       }
@@ -328,6 +360,7 @@ export class HostedAuthHttpController {
       const returnTo = safeReturnTo(query.returnTo, this.dependencies.publicOrigin);
       try {
         const begun = await this.dependencies.oidc.beginLogin(returnTo);
+        if (!continueHostedReplyIfWritable(reply)) return;
         reply.headers({
           'cache-control': 'no-store',
           'set-cookie': [
@@ -345,7 +378,7 @@ export class HostedAuthHttpController {
         });
         return reply.redirect(begun.redirectUrl);
       } catch (error) {
-        return reply.code(503).send({
+        return sendIfWritable(reply, 503, {
           error:
             error instanceof Error && error.message === 'oidc_provider_unavailable'
               ? 'oidc_provider_unavailable'
@@ -375,6 +408,7 @@ export class HostedAuthHttpController {
           attemptId: parseOidcLoginAttemptId(attempt),
           sourceIp: request.ip,
         });
+        if (!continueHostedReplyIfWritable(reply)) return;
         reply.headers({
           'cache-control': 'no-store',
           'set-cookie': [
@@ -389,6 +423,7 @@ export class HostedAuthHttpController {
         });
         return reply.redirect(issued.returnTo);
       } catch (error) {
+        if (!continueHostedReplyIfWritable(reply)) return;
         reply.header('set-cookie', [
           clearCookie(OIDC_ATTEMPT_COOKIE, this.dependencies.secureCookies),
           clearCookie(OIDC_STATE_COOKIE, this.dependencies.secureCookies),
@@ -402,12 +437,12 @@ export class HostedAuthHttpController {
           : code === 'oidc_user_disabled'
             ? 403
             : 401;
-        return reply.code(statusCode).send({ error: code });
+        return sendIfWritable(reply, statusCode, { error: code });
       }
     });
     app.post(HOSTED_AUTH_ROUTES.logout, async (request, reply) => {
       const context = await this.requireContext(request, reply);
-      if (context === null) return;
+      if (!continueHostedReplyIfWritable(reply) || context === null) return;
       const global = bodyRecord(request.body).global === true;
       let redirectUrl: string | null = null;
       let providerLogoutError: string | null = null;
@@ -420,7 +455,7 @@ export class HostedAuthHttpController {
             sourceIp: request.ip,
           });
         } catch {
-          return reply.code(503).send({ error: 'personal_logout_unavailable' });
+          return sendIfWritable(reply, 503, { error: 'personal_logout_unavailable' });
         }
         await this.auditPersonal(
           request,
@@ -428,6 +463,7 @@ export class HostedAuthHttpController {
           'auth.personal.logout',
           'success'
         );
+        if (!continueHostedReplyIfWritable(reply)) return;
       } else {
         try {
           redirectUrl = (
@@ -443,10 +479,11 @@ export class HostedAuthHttpController {
             providerLogoutError = 'oidc_provider_unavailable';
           } else {
             // Preserve the cookie when revocation is unconfirmed; clearing it could leave a stolen copy active.
-            return reply.code(503).send({ error: 'oidc_logout_unavailable' });
+            return sendIfWritable(reply, 503, { error: 'oidc_logout_unavailable' });
           }
         }
       }
+      if (!continueHostedReplyIfWritable(reply)) return;
       reply.header('set-cookie', clearCookie(SESSION_COOKIE, this.dependencies.secureCookies));
       return { ok: true, redirectUrl, providerLogoutError };
     });
@@ -455,7 +492,7 @@ export class HostedAuthHttpController {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
       }
       const context = await this.requireContext(request, reply);
-      if (context === null) return;
+      if (!continueHostedReplyIfWritable(reply) || context === null) return;
       try {
         const result = await this.dependencies.personal.forgetDevice(context);
         await this.auditPersonal(
@@ -466,13 +503,14 @@ export class HostedAuthHttpController {
           result.ok ? undefined : result.code
         );
         if (!result.ok) {
-          return reply.code(result.code === 'session_invalid' ? 401 : 503).send({
+          return sendIfWritable(reply, result.code === 'session_invalid' ? 401 : 503, {
             error:
               result.code === 'session_invalid'
                 ? 'session_invalid'
                 : 'personal_forget_device_unavailable',
           });
         }
+        if (!continueHostedReplyIfWritable(reply)) return;
         reply.header('set-cookie', [
           clearCookie(SESSION_COOKIE, this.dependencies.secureCookies),
           clearCookie(DEVICE_COOKIE, this.dependencies.secureCookies),
@@ -486,7 +524,7 @@ export class HostedAuthHttpController {
           'failure',
           'authority_unavailable'
         );
-        return reply.code(503).send({ error: 'personal_forget_device_unavailable' });
+        return sendIfWritable(reply, 503, { error: 'personal_forget_device_unavailable' });
       }
     });
     app.post(HOSTED_AUTH_ROUTES.backchannelLogout, async (request, reply) => {
@@ -503,10 +541,10 @@ export class HostedAuthHttpController {
       }
       try {
         await this.dependencies.oidc.backchannelLogout(token);
-        return reply.code(204).send();
+        return sendIfWritable(reply, 204);
       } catch (error) {
         if (error instanceof Error && error.message.endsWith('_unavailable')) {
-          return reply.code(503).send({
+          return sendIfWritable(reply, 503, {
             error:
               error.message === 'oidc_provider_unavailable'
                 ? 'oidc_provider_unavailable'
@@ -514,9 +552,9 @@ export class HostedAuthHttpController {
           });
         }
         if (!(error instanceof Error && /^oidc_[a-z0-9_]+$/.test(error.message))) {
-          return reply.code(503).send({ error: 'oidc_backchannel_logout_unavailable' });
+          return sendIfWritable(reply, 503, { error: 'oidc_backchannel_logout_unavailable' });
         }
-        return reply.code(400).send({ error: 'logout_token_invalid' });
+        return sendIfWritable(reply, 400, { error: 'logout_token_invalid' });
       } finally {
         this.oidcBackchannelInFlight -= 1;
       }
@@ -534,20 +572,20 @@ export class HostedAuthHttpController {
       return;
     }
     const context = await this.authenticate(request, reply, false);
+    if (!continueHostedReplyIfWritable(reply)) return;
     if (context === null) {
-      if (reply.sent) return;
-      await reply.code(401).send({ error: 'authentication_required' });
+      await sendIfWritable(reply, 401, { error: 'authentication_required' });
       return;
     }
     if (!roleAllows(context.principal.role, policy.permission)) {
       await this.auditDenied(request, context, policy.permission, 'permission_denied');
-      await reply.code(403).send({ error: 'permission_denied' });
+      await sendIfWritable(reply, 403, { error: 'permission_denied' });
       return;
     }
     if (policy.csrfRequired) {
       if (!this.hasTrustedOrigin(request)) {
         await this.auditDenied(request, context, policy.permission, 'origin_invalid');
-        await reply.code(403).send({ error: 'origin_invalid' });
+        await sendIfWritable(reply, 403, { error: 'origin_invalid' });
         return;
       }
       const presented = request.headers[HOSTED_AUTH_HEADERS.csrf];
@@ -557,12 +595,13 @@ export class HostedAuthHttpController {
           typeof presented === 'string' &&
           (await this.dependencies.authentication.verifyCsrf(context, presented));
       } catch {
-        await reply.code(503).send({ error: 'identity_storage_unavailable' });
+        await sendIfWritable(reply, 503, { error: 'identity_storage_unavailable' });
         return;
       }
+      if (!continueHostedReplyIfWritable(reply)) return;
       if (!csrfValid) {
         await this.auditDenied(request, context, policy.permission, 'csrf_invalid');
-        await reply.code(403).send({ error: 'csrf_invalid' });
+        await sendIfWritable(reply, 403, { error: 'csrf_invalid' });
         return;
       }
     }
@@ -585,13 +624,14 @@ export class HostedAuthHttpController {
             publicWorkspaceId
           );
         } catch {
-          await reply.code(503).send({ error: 'identity_storage_unavailable' });
+          await sendIfWritable(reply, 503, { error: 'identity_storage_unavailable' });
           return;
         }
+        if (!continueHostedReplyIfWritable(reply)) return;
       }
       if (grant === null) {
         await this.auditDenied(request, context, policy.permission, 'workspace_denied');
-        await reply.code(403).send({ error: 'workspace_access_denied' });
+        await sendIfWritable(reply, 403, { error: 'workspace_access_denied' });
         return;
       }
       if (typeof parameters.projectId === 'string') {
@@ -627,12 +667,13 @@ export class HostedAuthHttpController {
         error instanceof Error && error.message === 'identity_storage_unavailable'
           ? error.message
           : 'workspace_attribution_unavailable';
-      await reply.code(503).send({ error: code });
+      await sendIfWritable(reply, 503, { error: code });
       return false;
     }
+    if (!continueHostedReplyIfWritable(reply)) return false;
     if (!granted) {
       await this.auditDenied(request, context, permission, 'workspace_denied');
-      await reply.code(403).send({ error: 'workspace_access_denied' });
+      await sendIfWritable(reply, 403, { error: 'workspace_access_denied' });
       return false;
     }
     return true;
@@ -670,9 +711,11 @@ export class HostedAuthHttpController {
         allowRenewal,
         sourceIp: request.ip,
       });
+      if (!continueHostedReplyIfWritable(reply)) return null;
       if (!result.authenticated) {
         if (this.dependencies.personal !== null && allowRenewal && deviceSecret) {
           await this.auditPersonal(request, null, 'auth.personal.renew', 'failure', result.reason);
+          if (!continueHostedReplyIfWritable(reply)) return null;
         }
         return null;
       }
@@ -683,6 +726,7 @@ export class HostedAuthHttpController {
           'auth.personal.renew',
           'success'
         );
+        if (!continueHostedReplyIfWritable(reply)) return null;
         setCookies(
           reply,
           result.context.sessionSecret,
@@ -709,7 +753,7 @@ export class HostedAuthHttpController {
             'identity_storage_unavailable'
           );
         }
-        await reply.code(503).send({ error: 'identity_storage_unavailable' });
+        await sendIfWritable(reply, 503, { error: 'identity_storage_unavailable' });
         return null;
       }
       return null;
