@@ -57,20 +57,17 @@ import {
   type HostedTaskBoardReadRouteFactory,
 } from './composition/hosted/hostedTaskBoardReadComposition';
 import {
-  classifyHostedTeamConfigurationAuthorization as classifyHostedTeamConfigurationAuthorizationFallback,
   createHostedTeamConfigurationComposition,
   createHostedTeamConfigurationRouteAdmissionBinding,
   type HostedTeamConfigurationComposition,
 } from './composition/hosted/hostedTeamConfigurationComposition';
 import {
-  classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
   type HostedTeamMessageRouteFactory,
 } from './composition/hosted/hostedTeamMessageComposition';
 import { HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 import {
-  classifyHostedWorkspaceRegistryAuthorization,
   createHostedWorkspaceRegistryComposition,
 } from './composition/hosted/hostedWorkspaceRegistryComposition';
 import {
@@ -104,6 +101,7 @@ import {
   getTodosBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
+import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 import { sshConnectionManagerStub, updaterServiceStub } from './standaloneServiceStubs';
 import {
@@ -134,13 +132,7 @@ import type { RuntimeInstanceContext } from '@features/runtime-instance-context/
 import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
 const logger = createLogger('Standalone');
 const classifyHostedTeamConfigurationAuthorization = (method: string, url: string) =>
-  classifyHostedTeamMessageAuthorization(method, url, (messageMethod, messageUrl) =>
-    classifyHostedWorkspaceRegistryAuthorization(
-      messageMethod,
-      messageUrl,
-      classifyHostedTeamConfigurationAuthorizationFallback
-    )
-  );
+  classifyHostedWorkspaceRegistryAuthorization(method, url);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
