@@ -398,6 +398,12 @@ describe('useTeamChangesSummaries', () => {
       ).toEqual(['task-2']);
 
       await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
         root?.render(
           React.createElement(HookHarness, {
             tasks: [task({ id: 'task-2', subject: 'Task 2' })],
@@ -429,8 +435,10 @@ describe('useTeamChangesSummaries', () => {
       get: () => visibilityState,
     });
     const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    const second = createDeferred<TeamTaskChangeSummariesResponse>();
     hoisted.getTeamTaskChangeSummaries
       .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
       .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
         Promise.resolve(responseForRequests(requests))
       );
@@ -470,6 +478,18 @@ describe('useTeamChangesSummaries', () => {
       expect(
         hoisted.getTeamTaskChangeSummaries.mock.calls[1][1] as TeamTaskChangeSummaryRequest[]
       ).toHaveLength(7);
+
+      const secondRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[1][1] as TeamTaskChangeSummaryRequest[];
+      await act(async () => {
+        second.resolve(responseForRequests(secondRequests));
+        await second.promise;
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(3);
+      expect(
+        hoisted.getTeamTaskChangeSummaries.mock.calls[2][1] as TeamTaskChangeSummaryRequest[]
+      ).toHaveLength(10);
     } finally {
       if (visibilityDescriptor) {
         Object.defineProperty(document, 'visibilityState', visibilityDescriptor);

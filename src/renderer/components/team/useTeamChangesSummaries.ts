@@ -728,7 +728,18 @@ export function useTeamChangesSummaries({
     }
     if (handledVisibleEpochRef.current === visibleEpoch) return;
     handledVisibleEpochRef.current = visibleEpoch;
-    if (activeRequestSeqRef.current !== null || queuedRefreshOptionsRef.current !== null) return;
+    const pendingRefreshCoversRestore = [
+      activeRequestOptionsRef.current,
+      queuedRefreshOptionsRef.current,
+    ].some(
+      (options) =>
+        options !== null &&
+        options.maxRequests === undefined &&
+        options.unknownScanLimit === undefined &&
+        options.satisfiedTaskIds === undefined &&
+        (!sectionOpen || options.storeSummaries !== false)
+    );
+    if (pendingRefreshCoversRestore) return;
     void loadSummaries({
       showSpinner: false,
       preserveOnError: true,

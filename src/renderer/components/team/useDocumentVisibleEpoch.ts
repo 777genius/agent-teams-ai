@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function isDocumentHidden(): boolean {
   return typeof document !== 'undefined' && document.visibilityState === 'hidden';
@@ -6,12 +6,15 @@ export function isDocumentHidden(): boolean {
 
 export function useDocumentVisibleEpoch(): number {
   const [visibleEpoch, setVisibleEpoch] = useState(0);
+  const wasHiddenRef = useRef(isDocumentHidden());
 
   useEffect(() => {
     const handleVisibilityChange = (): void => {
-      if (!isDocumentHidden()) {
+      const isHidden = isDocumentHidden();
+      if (wasHiddenRef.current && !isHidden) {
         setVisibleEpoch((current) => current + 1);
       }
+      wasHiddenRef.current = isHidden;
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

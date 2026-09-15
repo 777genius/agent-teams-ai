@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 
 import WebSocket from 'ws';
 
+import { resolveLiveSmokeOrchestratorCliPath } from '../lib/live-smoke-runtime.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
 const electronViteBin = path.join(repoRoot, 'node_modules/electron-vite/bin/electron-vite.js');
@@ -192,7 +194,8 @@ async function startApp(port, fixture) {
       // Keep the local MCP Node probe deterministic. The E2E never launches agents.
       NODE_BINARY: process.execPath,
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:
-        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || process.execPath,
+        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() ||
+        (devMcpMode ? resolveLiveSmokeOrchestratorCliPath({ repoRoot }) : process.execPath),
     },
   });
   appProcess.stdout.on('data', rememberAppLog);
@@ -281,6 +284,15 @@ async function installSummaryCallCounter() {
 
 async function runVisibilityPollingScenario() {
   await installSummaryCallCounter();
+  await client.send('Page.bringToFront');
+  await client.evaluate(`(() => {
+    window.__teamChangesVisibilityE2E.visibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => window.__teamChangesVisibilityE2E.visibilityState,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  })()`);
   const changesSection = 'document.querySelector(\'section[data-section-id="changes"]\')';
   const expandButton = `${changesSection}?.querySelector('button[aria-label="Expand section"]')`;
   await client.waitFor(expandButton, 'collapsed Changes section');
@@ -302,10 +314,6 @@ async function runVisibilityPollingScenario() {
   await client.evaluate('(async () => window.electronAPI.windowControls.minimize())()');
   await client.evaluate(`(() => {
     window.__teamChangesVisibilityE2E.visibilityState = 'hidden';
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => window.__teamChangesVisibilityE2E.visibilityState,
-    });
     document.dispatchEvent(new Event('visibilitychange'));
   })()`);
   await client.waitFor(`document.visibilityState === 'hidden'`, 'hidden minimized renderer');
