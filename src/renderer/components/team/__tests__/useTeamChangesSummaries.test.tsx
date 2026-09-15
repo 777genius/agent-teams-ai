@@ -506,9 +506,13 @@ describe('useTeamChangesSummaries', () => {
       configurable: true,
       get: () => visibilityState,
     });
-    const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    vi.useFakeTimers();
+    const second = createDeferred<TeamTaskChangeSummariesResponse>();
     hoisted.getTeamTaskChangeSummaries
-      .mockReturnValueOnce(first.promise)
+      .mockImplementationOnce((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      )
+      .mockReturnValueOnce(second.promise)
       .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
         Promise.resolve(responseForRequests(requests))
       );
@@ -526,8 +530,14 @@ describe('useTeamChangesSummaries', () => {
             onSnapshot: () => undefined,
           })
         );
+        await Promise.resolve();
       });
       expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
 
       visibilityState = 'hidden';
       document.dispatchEvent(new Event('visibilitychange'));
@@ -536,17 +546,18 @@ describe('useTeamChangesSummaries', () => {
         document.dispatchEvent(new Event('visibilitychange'));
         await Promise.resolve();
       });
-      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
 
-      const firstRequests = hoisted.getTeamTaskChangeSummaries.mock
-        .calls[0][1] as TeamTaskChangeSummaryRequest[];
+      const secondRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[1][1] as TeamTaskChangeSummaryRequest[];
       await act(async () => {
-        first.resolve(responseForRequests(firstRequests));
-        await first.promise;
+        second.resolve(responseForRequests(secondRequests));
+        await second.promise;
         await Promise.resolve();
       });
-      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(3);
     } finally {
+      vi.useRealTimers();
       if (visibilityDescriptor) {
         Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
       } else {
