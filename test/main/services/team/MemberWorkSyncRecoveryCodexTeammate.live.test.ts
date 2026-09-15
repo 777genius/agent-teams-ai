@@ -36,6 +36,8 @@ import {
   FatalWaitError,
   formatMemberWorkSyncDiagnostics,
   formatProgressDump,
+  isRetryableMemberWorkSyncContinueError,
+  MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
   type MemberWorkSyncLiveControlServer,
   reportWithConflictRetry,
   restoreEnv,
@@ -544,6 +546,10 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       await waitUntil(
         async () => {
           try {
+            await feature!.refreshStatus({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+            });
             await feature!.continueManually({
               teamName: teamName!,
               memberName: TEAMMATE_NAME,
@@ -551,9 +557,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             });
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (
-              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
-            ) {
+            if (isRetryableMemberWorkSyncContinueError(message)) {
               return false;
             }
             throw error;
@@ -564,8 +568,15 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             (message) => message.messageKind === 'member_work_sync_nudge'
           );
         },
-        60_000,
-        2_000
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
       );
 
       await waitUntil(
@@ -624,7 +635,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
               Boolean(message.workSyncRuntimeInstanceId)
           );
         },
-        90_000,
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
         2_000,
         async () =>
           formatMemberWorkSyncDiagnostics({
@@ -834,6 +845,10 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       await waitUntil(
         async () => {
           try {
+            await feature!.refreshStatus({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+            });
             await feature!.continueManually({
               teamName: teamName!,
               memberName: TEAMMATE_NAME,
@@ -841,9 +856,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             });
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (
-              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
-            ) {
+            if (isRetryableMemberWorkSyncContinueError(message)) {
               return false;
             }
             throw error;
@@ -854,8 +867,15 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             (message) => message.messageKind === 'member_work_sync_nudge'
           );
         },
-        60_000,
-        2_000
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
       );
 
       await waitUntil(
@@ -920,7 +940,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
           }
           return hasTicket;
         },
-        90_000,
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
         2_000,
         async () =>
           formatMemberWorkSyncDiagnostics({
@@ -1698,6 +1718,12 @@ async function pumpCodexTeammate(input: {
     throw new FatalWaitError(fatalRuntimeMessage);
   }
   await throwIfTranscriptApiError(input);
+  await input.feature
+    .refreshStatus({
+      teamName: input.teamName,
+      memberName: input.memberName,
+    })
+    .catch(() => undefined);
   await input.feature.dispatchDueNudges([input.teamName]);
   await input.feature.replayPendingReports([input.teamName]);
   await input.feature.drainRuntimeTurnSettledEvents();

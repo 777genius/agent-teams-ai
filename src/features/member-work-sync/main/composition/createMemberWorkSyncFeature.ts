@@ -61,7 +61,7 @@ import {
   uniqueMemberWorkSyncTeamNames,
 } from './memberWorkSyncFeatureStatusRefresh';
 import { MemberWorkSyncTeamDeletionCoordinator } from './MemberWorkSyncTeamDeletionCoordinator';
-
+import { refreshMemberWorkSyncStatus } from './refreshMemberWorkSyncStatus';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   type MemberWorkSyncFeatureFacade,
@@ -120,11 +120,6 @@ export function createMemberWorkSyncFeature(deps: {
   recoveryAllocation?: { enabled: boolean };
   recoveryProtocol?: { version: number };
   runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
-  /**
-   * SQLite backend handle from the internal-storage feature. When present,
-   * persistence routes through SQLite (with the JSON store as the session
-   * fallback and one-time legacy import); when absent, JSON stays primary.
-   */
   internalStorageBackend?: InternalStorageMemberWorkSyncBackend | null;
   logger?: MemberWorkSyncLoggerPort;
 }): MemberWorkSyncFeatureFacade {
@@ -719,11 +714,13 @@ export function createMemberWorkSyncFeature(deps: {
         readStatusWithStaleRefresh(request, bindDeps(request.teamName, admission))
       ),
     refreshStatus: (request) =>
-      operationGate.run(request.teamName, (admission) =>
-        new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(request, {
-          reconciledBy: 'request',
-        })
-      ),
+      refreshMemberWorkSyncStatus({
+        request,
+        teamsBasePath: deps.teamsBasePath,
+        nowIso: clock.now().toISOString(),
+        run: (teamName, work) => operationGate.run(teamName, work),
+        bindDeps,
+      }),
     getMetrics: (request) =>
       operationGate.run(request.teamName, (admission) =>
         new MemberWorkSyncMetricsReader(bindDeps(request.teamName, admission)).execute(request)

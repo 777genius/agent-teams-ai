@@ -8,6 +8,7 @@ import * as path from 'path';
 
 import { estimateCachedValueBytes } from './cacheMemoryEstimate';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
+import { readTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
 import type { InboxMessage } from '@shared/types';
 
@@ -217,19 +218,7 @@ function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
       typeof row.runtimeRecovery.payloadHash === 'string'
         ? row.runtimeRecovery
         : undefined,
-    workSyncIntent:
-      row.workSyncIntent === 'agenda_sync' || row.workSyncIntent === 'review_pickup'
-        ? row.workSyncIntent
-        : undefined,
-    workSyncIntentKey:
-      typeof row.workSyncIntentKey === 'string' ? row.workSyncIntentKey : undefined,
-    workSyncReviewRequestEventIds: Array.isArray(row.workSyncReviewRequestEventIds)
-      ? row.workSyncReviewRequestEventIds.filter(
-          (id): id is string => typeof id === 'string' && id.length > 0
-        )
-      : undefined,
-    workSyncPayloadHash:
-      typeof row.workSyncPayloadHash === 'string' ? row.workSyncPayloadHash : undefined,
+    ...readTeamInboxWorkSyncFields(row),
     slashCommand:
       row.slashCommand &&
       typeof row.slashCommand === 'object' &&

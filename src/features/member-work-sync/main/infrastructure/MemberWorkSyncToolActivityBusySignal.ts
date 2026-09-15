@@ -110,7 +110,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
 
     this.pruneState(key, state, input.nowIso);
 
-    if (state.activeToolStartedAtByToolId.size > 0) {
+    if (state.activeToolStartedAtByToolId.size > 0 && !input.exactRuntimeTicket) {
       return {
         busy: true,
         reason: 'active_tool_activity',

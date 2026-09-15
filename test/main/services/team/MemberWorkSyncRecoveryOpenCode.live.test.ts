@@ -25,11 +25,11 @@ import {
 } from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
-  FatalWaitError,
+  createOpenCodeTeamUntilReady,
   formatMemberWorkSyncDiagnostics,
-  formatProgressDump,
+  isRetryableMemberWorkSyncContinueError,
+  MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
   readMemberWorkSyncOutboxItems,
-  readRuntimeTurnSettledProcessedMetas,
   waitUntil,
 } from './memberWorkSyncLiveHarness';
 import {
@@ -40,7 +40,7 @@ import {
   waitForOpenCodePeerRelay,
 } from './openCodeLiveTestHarness';
 
-import type { TeamChangeEvent, TeamProvisioningProgress } from '../../../../src/shared/types';
+import type { TeamChangeEvent } from '../../../../src/shared/types';
 
 const liveDescribe = process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' ? describe : describe.skip;
 const remainingWorkIt =
@@ -142,42 +142,37 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       },
     });
 
-    const progressEvents: TeamProvisioningProgress[] = [];
-    await harness.svc.createTeam(
-      {
-        teamName,
-        cwd: projectPath,
-        providerId: 'opencode',
-        model: selectedModel,
-        skipPermissions: true,
-        prompt: [
-          'Keep launch work minimal.',
-          'Do not edit files.',
-          'If you receive a task, wait for instructions and do not complete it.',
-        ].join(' '),
-        members: [
+    await createOpenCodeTeamUntilReady({
+      createTeam: (onProgress) =>
+        harness!.svc.createTeam(
           {
-            name: memberName,
-            role: 'Developer',
+            teamName: teamName!,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
+            skipPermissions: true,
+            prompt: [
+              'Keep launch work minimal.',
+              'Do not edit files.',
+              'If you receive a task, wait for instructions and do not complete it.',
+            ].join(' '),
+            members: [
+              {
+                name: memberName,
+                role: 'Developer',
+                providerId: 'opencode',
+                model: selectedModel,
+              },
+            ],
           },
-        ],
+          onProgress
+        ),
+      stopTeam: async () => {
+        await harness!.svc.stopTeam(teamName!).catch(() => undefined);
+        await waitForOpenCodeLanesStopped(teamName!).catch(() => undefined);
+        await fs.rm(path.join(getTeamsBasePath(), teamName!), { recursive: true, force: true }).catch(() => undefined);
       },
-      (progress) => {
-        progressEvents.push(progress);
-      }
-    );
-
-    await waitUntil(async () => {
-      const last = progressEvents.at(-1);
-      if (last?.state === 'failed') {
-        throw new FatalWaitError(formatProgressDump(progressEvents));
-      }
-      return progressEvents.some((progress) =>
-        progress.message.includes('OpenCode team launch is ready')
-      );
-    }, 240_000);
+    });
 
     const task = await new TeamDataService().createTask(teamName, {
       subject: `Recovery OpenCode live canary ${Date.now()}`,
@@ -222,7 +217,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     await feature.prepareTeamDeletion(teamName);
     feature.completeTeamDeletion(teamName);
-  }, 600_000);
+  }, 900_000);
 
   it('restores the same OpenCode recovery intent after a crash between inbox write and restart (D)', async () => {
     const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
@@ -267,43 +262,38 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       },
     });
 
-    const progressEvents: TeamProvisioningProgress[] = [];
-    await harness.svc.createTeam(
-      {
-        teamName,
-        cwd: projectPath,
-        providerId: 'opencode',
-        model: selectedModel,
-        skipPermissions: true,
-        prompt: [
-          'Keep launch work minimal.',
-          'Do not edit files.',
-          'If you receive a task, wait for instructions and do not complete it.',
-        ].join(' '),
-        members: [
+    await createOpenCodeTeamUntilReady({
+      createTeam: (onProgress) =>
+        harness!.svc.createTeam(
           {
-            name: memberName,
-            role: 'Developer',
+            teamName: teamName!,
+            cwd: projectPath,
             providerId: 'opencode',
             model: selectedModel,
+            skipPermissions: true,
+            prompt: [
+              'Keep launch work minimal.',
+              'Do not edit files.',
+              'If you receive a task, wait for instructions and do not complete it.',
+            ].join(' '),
+            members: [
+              {
+                name: memberName,
+                role: 'Developer',
+                providerId: 'opencode',
+                model: selectedModel,
+              },
+            ],
           },
-        ],
+          onProgress
+        ),
+      stopTeam: async () => {
+        await harness!.svc.stopTeam(teamName!).catch(() => undefined);
+        await waitForOpenCodeLanesStopped(teamName!).catch(() => undefined);
+        await fs.rm(path.join(getTeamsBasePath(), teamName!), { recursive: true, force: true }).catch(() => undefined);
       },
-      (progress) => {
-        progressEvents.push(progress);
-      }
-    );
-
-    await waitUntil(async () => {
-      const last = progressEvents.at(-1);
-      if (last?.state === 'failed') {
-        throw new FatalWaitError(formatProgressDump(progressEvents));
-      }
-      return progressEvents.some((progress) =>
-        progress.message.includes('OpenCode team launch is ready')
-      );
-    }, 240_000);
-    expect(harness.svc.isTeamAlive(teamName)).toBe(true);
+    });
+    expect(harness!.svc.isTeamAlive(teamName!)).toBe(true);
 
     await seedOpenCodeShadowReadyMetrics({ teamName, memberName });
     const task = await new TeamDataService().createTask(teamName, {
@@ -316,6 +306,21 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     await waitUntil(
       async () => {
+        try {
+          await feature!.refreshStatus({ teamName: teamName!, memberName });
+          await feature!.continueManually({
+            teamName: teamName!,
+            memberName,
+            idempotencyKey: 'live-first-sync',
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (isRetryableMemberWorkSyncContinueError(message)) {
+            return false;
+          }
+          throw error;
+        }
+        await feature!.dispatchDueNudges([teamName!]);
         const inbox = await readInboxMessages(inboxPath);
         return inbox.some(
           (message) =>
@@ -323,8 +328,15 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             typeof message.messageId === 'string'
         );
       },
-      60_000,
-      500
+      MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
+      2_000,
+      async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName,
+          taskId: task.id,
+        })
     );
     const messageIdsBeforeCrash = (await readInboxMessages(inboxPath))
       .filter((message) => message.messageKind === 'member_work_sync_nudge')
@@ -367,7 +379,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
     await feature.prepareTeamDeletion(teamName);
     feature.completeTeamDeletion(teamName);
-  }, 420_000);
+  }, 900_000);
 
   remainingWorkIt(
     'continues remaining OpenCode work after a settled status-only turn (A/B/C)',
@@ -433,43 +445,38 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
         },
       });
 
-      const progressEvents: TeamProvisioningProgress[] = [];
-      await harness.svc.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'opencode',
-          model: selectedModel,
-          skipPermissions: true,
-          prompt: [
-            'Keep launch work minimal.',
-            'Do not edit files.',
-            'If you receive a task, wait for instructions and do not complete it.',
-          ].join(' '),
-          members: [
+      await createOpenCodeTeamUntilReady({
+        createTeam: (onProgress) =>
+          harness!.svc.createTeam(
             {
-              name: memberName,
-              role: 'Developer',
+              teamName: teamName!,
+              cwd: projectPath,
               providerId: 'opencode',
               model: selectedModel,
+              skipPermissions: true,
+              prompt: [
+                'Keep launch work minimal.',
+                'Do not edit files.',
+                'If you receive a task, wait for instructions and do not complete it.',
+              ].join(' '),
+              members: [
+                {
+                  name: memberName,
+                  role: 'Developer',
+                  providerId: 'opencode',
+                  model: selectedModel,
+                },
+              ],
             },
-          ],
+            onProgress
+          ),
+        stopTeam: async () => {
+          await harness!.svc.stopTeam(teamName!).catch(() => undefined);
+          await waitForOpenCodeLanesStopped(teamName!).catch(() => undefined);
+          await fs.rm(path.join(getTeamsBasePath(), teamName!), { recursive: true, force: true }).catch(() => undefined);
         },
-        (progress) => {
-          progressEvents.push(progress);
-        }
-      );
-
-      await waitUntil(async () => {
-        const last = progressEvents.at(-1);
-        if (last?.state === 'failed') {
-          throw new FatalWaitError(formatProgressDump(progressEvents));
-        }
-        return progressEvents.some((progress) =>
-          progress.message.includes('OpenCode team launch is ready')
-        );
-      }, 240_000);
-      expect(harness.svc.isTeamAlive(teamName)).toBe(true);
+      });
+      expect(harness!.svc.isTeamAlive(teamName!)).toBe(true);
 
       await seedOpenCodeShadowReadyMetrics({ teamName, memberName });
       const task = await new TeamDataService().createTask(teamName, {
@@ -503,6 +510,21 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
       await waitUntil(
         async () => {
+          try {
+            await feature!.refreshStatus({ teamName: teamName!, memberName });
+            await feature!.continueManually({
+              teamName: teamName!,
+              memberName,
+              idempotencyKey: 'live-first-sync',
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (isRetryableMemberWorkSyncContinueError(message)) {
+              return false;
+            }
+            throw error;
+          }
+          await feature!.dispatchDueNudges([teamName!]);
           const inbox = await readInboxMessages(inboxPath);
           return inbox.some(
             (message) =>
@@ -510,8 +532,15 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
               typeof message.messageId === 'string'
           );
         },
-        60_000,
-        500
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName,
+            taskId: task.id,
+          })
       );
       const firstNudge = [...(await readInboxMessages(inboxPath))]
         .reverse()
@@ -527,6 +556,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       }
       await waitForOpenCodePeerRelay(harness.svc, teamName, memberName, firstNudgeId, 180_000, {
         requireAccepted: true,
+        source: 'watchdog',
       });
 
       await waitUntil(
@@ -554,32 +584,12 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
           })
       );
 
-      const processedBeforeSettled = new Set(
-        (await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath())).map(
-          ({ filePath }) => filePath
-        )
-      );
-      await waitUntil(
-        async () => {
-          await feature!.drainRuntimeTurnSettledEvents();
-          const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
-          return metas.some(({ filePath, meta }) => {
-            const event = meta.event as Record<string, unknown> | undefined;
-            return (
-              !processedBeforeSettled.has(filePath) &&
-              event?.provider === 'opencode' &&
-              (event.teamName === teamName || meta.teamName === teamName)
-            );
-          });
-        },
-        60_000,
-        2_000
-      ).catch(() => undefined);
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
       await waitUntil(
         async () => {
           await feature!.drainRuntimeTurnSettledEvents();
+          await feature!.refreshStatus({ teamName: teamName!, memberName });
           await feature!.dispatchDueNudges([teamName!]);
           const inbox = await readInboxMessages(inboxPath);
           return inbox.some((message) => {
@@ -593,7 +603,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
             );
           });
         },
-        90_000,
+        MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS,
         2_000,
         async () =>
           formatMemberWorkSyncDiagnostics({
@@ -619,6 +629,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       }
       await waitForOpenCodePeerRelay(harness.svc, teamName, memberName, earlyContinuationId, 180_000, {
         requireAccepted: true,
+        source: 'watchdog',
       });
 
       await waitUntil(

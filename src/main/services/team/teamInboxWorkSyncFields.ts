@@ -14,6 +14,47 @@ export type TeamInboxWorkSyncFields = Pick<
   | 'workSyncTeamIncarnation'
 >;
 
+export function readTeamInboxWorkSyncFields(row: Partial<InboxMessage>): TeamInboxWorkSyncFields {
+  return {
+    ...(row.workSyncIntent === 'agenda_sync' || row.workSyncIntent === 'review_pickup'
+      ? { workSyncIntent: row.workSyncIntent }
+      : {}),
+    ...(typeof row.workSyncIntentKey === 'string'
+      ? { workSyncIntentKey: row.workSyncIntentKey }
+      : {}),
+    ...(Array.isArray(row.workSyncReviewRequestEventIds)
+      ? {
+          workSyncReviewRequestEventIds: row.workSyncReviewRequestEventIds.filter(
+            (id): id is string => typeof id === 'string' && id.length > 0
+          ),
+        }
+      : {}),
+    ...(typeof row.workSyncPayloadHash === 'string'
+      ? { workSyncPayloadHash: row.workSyncPayloadHash }
+      : {}),
+    ...(typeof row.workSyncRuntimeTicketId === 'string'
+      ? { workSyncRuntimeTicketId: row.workSyncRuntimeTicketId }
+      : {}),
+    ...(typeof row.workSyncRuntimeGeneration === 'number' &&
+    Number.isInteger(row.workSyncRuntimeGeneration)
+      ? { workSyncRuntimeGeneration: row.workSyncRuntimeGeneration }
+      : {}),
+    ...(typeof row.workSyncRuntimeInstanceId === 'string'
+      ? { workSyncRuntimeInstanceId: row.workSyncRuntimeInstanceId }
+      : {}),
+    ...(typeof row.workSyncAdmissionPayloadHash === 'string'
+      ? { workSyncAdmissionPayloadHash: row.workSyncAdmissionPayloadHash }
+      : {}),
+    ...(typeof row.workSyncTeamIncarnation === 'string'
+      ? { workSyncTeamIncarnation: row.workSyncTeamIncarnation }
+      : {}),
+    ...(typeof row.workSyncControlRevision === 'number' &&
+    Number.isInteger(row.workSyncControlRevision)
+      ? { workSyncControlRevision: row.workSyncControlRevision }
+      : {}),
+  };
+}
+
 export function pickTeamInboxWorkSyncFields(
   request: Pick<SendMessageRequest, keyof TeamInboxWorkSyncFields>
 ): TeamInboxWorkSyncFields {
