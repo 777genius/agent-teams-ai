@@ -1367,7 +1367,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     );
 
     await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
-      'Restart for teammate "Worker" was cancelled because the OpenCode runtime for team "team-a" changed during restart'
+      'Team "team-a" is not currently running'
     );
 
     expect(runtimeAdapterRunByTeam.get('team-a')).toMatchObject({ runId: 'adapter-run-2' });

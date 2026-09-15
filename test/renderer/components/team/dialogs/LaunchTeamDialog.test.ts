@@ -88,6 +88,11 @@ const storeState = {
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
+    runtimeProviderManagement: {
+      loadModels: vi.fn(),
+      loadProviderDirectory: vi.fn(),
+      cancelModelLoad: vi.fn(async () => ({ ok: true })),
+    },
     workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
