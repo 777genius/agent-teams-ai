@@ -76,6 +76,9 @@ import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './TeamProv
 
 import type { TeamProvisioningOutputRecoveryFacade } from './TeamProvisioningOutputRecoveryFacade';
 import type { TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
+import type {
+  OpenCodeAggregatePrimaryRestartLease as RuntimeStateOpenCodeAggregatePrimaryRestartLease,
+} from './TeamProvisioningServiceRuntimeStateFacade';
 import type { TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import type { TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import type {
@@ -90,14 +93,9 @@ import type {
 
 const logger = createLogger('Service:TeamProvisioning');
 
-export interface OpenCodeAggregatePrimaryRestartLease {
-  teamName: string;
-  runId: string;
+export interface OpenCodeAggregatePrimaryRestartLease
+  extends RuntimeStateOpenCodeAggregatePrimaryRestartLease {
   candidateRunId?: string;
-  memberName: string;
-  completion: Promise<void>;
-  precedingLifecycleOperations: Promise<void>[];
-  cancelRequested: boolean;
 }
 
 function mergeProvisioningMembersWithRemovalTombstones(
@@ -172,6 +170,10 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
+  protected declare readonly openCodeAggregatePrimaryRestartByTeam: Map<
+    string,
+    OpenCodeAggregatePrimaryRestartLease
+  >;
   async runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void> {
     await this.executeLiveRosterMutation(teamName.trim().toLowerCase(), mutation);
   }

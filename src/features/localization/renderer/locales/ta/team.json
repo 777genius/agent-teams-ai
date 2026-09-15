@@ -2444,7 +2444,11 @@
       "yes": "ஆம்",
       "no": "இல்லை",
       "moreActionableItems": "{{count}} மேலும் செயல்படக்கூடிய உருப்படி(கள்)",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "தானியங்கி தொடர்ச்சி நிறுத்தப்பட்டுள்ளது.",
+      "continue": "தொடரவும்",
+      "stopAutoResume": "தானியங்கி மீள் தொடக்கத்தை நிறுத்து",
+      "resumeAutoResume": "தானியங்கி மீள் தொடக்கத்தை தொடங்கு"
     },
     "title": "உறுப்பினர் work sync",
     "loadingDiagnostics": "உறுப்பினர் work sync diagnostics ஐ ஏற்றுகிறது.",

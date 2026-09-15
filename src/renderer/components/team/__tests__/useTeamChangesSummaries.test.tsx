@@ -335,7 +335,411 @@ describe('useTeamChangesSummaries', () => {
     container?.remove();
     container = null;
     root = null;
+    vi.useRealTimers();
     vi.clearAllMocks();
+  });
+
+  it('pauses automatic summary loads while hidden and refreshes current tasks when visible', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    vi.useFakeTimers();
+    hoisted.getTeamTaskChangeSummaries.mockImplementation(
+      (_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+    );
+
+    try {
+      const snapshots: HookSnapshot[] = [];
+      const onSnapshot = (snapshot: HookSnapshot): void => {
+        snapshots.push(snapshot);
+      };
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(React.createElement(HookHarness, { tasks: [task()], onSnapshot }));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120_000);
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task({ id: 'task-2', subject: 'Task 2' })],
+            onSnapshot,
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+      expect(
+        (hoisted.getTeamTaskChangeSummaries.mock.calls[1][1] as TeamTaskChangeSummaryRequest[]).map(
+          (request) => request.taskId
+        )
+      ).toEqual(['task-2']);
+
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task({ id: 'task-2', subject: 'Task 2' })],
+            onSnapshot,
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(3);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
+  it('keeps a staged refresh queued while hidden and resumes it once without overlap', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    const second = createDeferred<TeamTaskChangeSummariesResponse>();
+    hoisted.getTeamTaskChangeSummaries
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: changedTasks(10),
+            onSnapshot: () => undefined,
+          })
+        );
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      const firstRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[0][1] as TeamTaskChangeSummaryRequest[];
+      await act(async () => {
+        first.resolve(responseForRequests(firstRequests));
+        await first.promise;
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+      expect(
+        hoisted.getTeamTaskChangeSummaries.mock.calls[1][1] as TeamTaskChangeSummaryRequest[]
+      ).toHaveLength(7);
+
+      const secondRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[1][1] as TeamTaskChangeSummaryRequest[];
+      await act(async () => {
+        second.resolve(responseForRequests(secondRequests));
+        await second.promise;
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(3);
+      expect(
+        hoisted.getTeamTaskChangeSummaries.mock.calls[2][1] as TeamTaskChangeSummaryRequest[]
+      ).toHaveLength(10);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
+  it('queues a restore scan behind a full request started before the renderer was hidden', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    vi.useFakeTimers();
+    const second = createDeferred<TeamTaskChangeSummariesResponse>();
+    hoisted.getTeamTaskChangeSummaries
+      .mockImplementationOnce((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      )
+      .mockReturnValueOnce(second.promise)
+      .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task()],
+            sectionOpen: false,
+            onSnapshot: () => undefined,
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      const secondRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[1][1] as TeamTaskChangeSummaryRequest[];
+      await act(async () => {
+        second.resolve(responseForRequests(secondRequests));
+        await second.promise;
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
+  it.each([
+    { label: 'summaries', sectionOpen: true },
+    { label: 'counter', sectionOpen: false },
+  ])(
+    'runs a queued restore $label scan after the pre-hide request fails',
+    async ({ sectionOpen }) => {
+      const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+      let visibilityState: DocumentVisibilityState = 'visible';
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => visibilityState,
+      });
+      const first = createDeferred<TeamTaskChangeSummariesResponse>();
+      hoisted.getTeamTaskChangeSummaries
+        .mockReturnValueOnce(first.promise)
+        .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+          Promise.resolve(responseForRequests(requests))
+        );
+
+      try {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        root = createRoot(container);
+
+        await act(async () => {
+          root?.render(
+            React.createElement(HookHarness, {
+              tasks: [task()],
+              sectionOpen,
+              onSnapshot: () => undefined,
+            })
+          );
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+        visibilityState = 'hidden';
+        document.dispatchEvent(new Event('visibilitychange'));
+        visibilityState = 'visible';
+        await act(async () => {
+          document.dispatchEvent(new Event('visibilitychange'));
+          await Promise.resolve();
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          first.reject(new Error('boom'));
+          await first.promise.catch(() => undefined);
+          await Promise.resolve();
+        });
+        await act(async () => {
+          await Promise.resolve();
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+      } finally {
+        if (visibilityDescriptor) {
+          Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+        } else {
+          delete (document as unknown as Record<string, unknown>).visibilityState;
+        }
+      }
+    }
+  );
+
+  it('preserves a full refresh queued before restore when the active request fails', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    hoisted.getTeamTaskChangeSummaries
+      .mockReturnValueOnce(first.promise)
+      .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+      const onSnapshot = (): undefined => undefined;
+
+      await act(async () => {
+        root?.render(React.createElement(HookHarness, { tasks: [task()], onSnapshot }));
+      });
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task({ updatedAt: '2026-05-10T10:00:02.000Z' })],
+            onSnapshot,
+          })
+        );
+      });
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        first.reject(new Error('boom'));
+        await first.promise.catch(() => undefined);
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
+  it('refreshes a collapsed Changes counter once after visibility restoration', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    hoisted.getTeamTaskChangeSummaries.mockImplementation(
+      (_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+    );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task()],
+            sectionOpen: false,
+            onSnapshot: () => undefined,
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task()],
+            sectionOpen: false,
+            onSnapshot: () => undefined,
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
   });
 
   it('does not keep initial loading stuck when tasks change during an active request', async () => {

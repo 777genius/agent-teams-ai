@@ -339,7 +339,7 @@ describe('bindTeamHttpHandlerApis', () => {
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeIngress',
+      'runtimeControl',
       'taskActivity',
     ]);
   });

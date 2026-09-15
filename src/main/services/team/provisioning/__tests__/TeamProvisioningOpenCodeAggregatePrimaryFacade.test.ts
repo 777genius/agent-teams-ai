@@ -300,7 +300,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
           this.manifest = { highWatermark: 0, activeRunId: runId, capabilitySnapshotId: null };
         },
         clearOpenCodeRuntimeLaneStorage: async ({ expectedRunId }) => {
-          if (this.manifest.activeRunId !== expectedRunId) return false;
+          if (this.manifest.activeRunId !== expectedRunId) return 'owner_changed';
           this.manifest = {
             highWatermark: 0,
             activeRunId: null,
@@ -308,7 +308,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
             stopSessions: [],
             sessionIdentityHash: stableHash([]),
           };
-          return true;
+          return 'cleared';
         },
         persistOpenCodeRuntimeAdapterLaunchResult: async (result, input) => ({
           result,
@@ -437,6 +437,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         getRuntimeOwner: () => owner,
         setRuntimeOwner: vi.fn(),
         deleteRuntimeOwner,
+        appendPendingCleanup: vi.fn(async () => undefined),
         getOpenCodeRuntimeLaunchCwd: () => '/safe-test-workspace/recomputed',
         publishPending: vi.fn(),
         publishFailed: vi.fn(),

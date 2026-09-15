@@ -6,10 +6,12 @@ import { promisify } from 'util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '../../../../src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamKanbanManager } from '../../../../src/main/services/team/TeamKanbanManager';
@@ -19,6 +21,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   formatMemberWorkSyncDiagnostics,
@@ -103,6 +106,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
           activeService = svc;
           const configReader = new TeamConfigReader();
           feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
             teamsBasePath: getTeamsBasePath(),
             configReader,
             taskReader: new TeamTaskReader(),
@@ -264,6 +268,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
       teamName = `member-work-sync-opencode-idle-${Date.now()}`;
       const taskId = 'task-opencode-idle';
       feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
         configReader: {
           getConfig: async () => ({

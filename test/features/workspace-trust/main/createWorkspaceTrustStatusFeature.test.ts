@@ -18,13 +18,16 @@ const request: LaunchTrustRequest = {
   projectPath: '/sandbox/repo',
   providerIds: ['anthropic', 'codex'],
 };
-const config = {
+type NodeWorkspaceTrustFeaturesInput = Parameters<typeof createNodeWorkspaceTrustFeatures>[0];
+
+const config: NodeWorkspaceTrustFeaturesInput = {
   getHomeDir: () => '/sandbox/home',
   getClaudeConfigDir: () => '/sandbox',
   getAutoDetectedClaudeConfigDir: () => '/sandbox/auto-detected',
   env: {},
 };
-const createStatusFeature = (input = config) => createNodeWorkspaceTrustFeatures(input).status;
+const createStatusFeature = (input: NodeWorkspaceTrustFeaturesInput = config) =>
+  createNodeWorkspaceTrustFeatures(input).status;
 const unknown = {
   providers: [
     { providerId: 'anthropic', status: 'unknown' },

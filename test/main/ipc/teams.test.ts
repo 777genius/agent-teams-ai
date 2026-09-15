@@ -629,6 +629,8 @@ describe('ipc teams handlers', () => {
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
+    getPendingToolApprovalFilePath: vi.fn(() => null),
+    getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => resolvedUndefined()),
     updateToolApprovalSettings: vi.fn(),
     relayLeadInboxMessages: vi.fn(() => resolved(0)),
@@ -696,7 +698,7 @@ describe('ipc teams handlers', () => {
       })
     ),
     skipMemberForLaunch: vi.fn(() => resolvedUndefined()),
-    stopTeam: vi.fn(() => Promise.resolve()),
+    stopTeam: vi.fn((_teamName: string) => Promise.resolve()),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
     attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
     detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
@@ -756,6 +758,8 @@ describe('ipc teams handlers', () => {
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
     },
     toolApproval: {
+      getPendingToolApprovalFilePath: teamHandlerMocks.getPendingToolApprovalFilePath,
+      getPendingToolApprovalFileTarget: teamHandlerMocks.getPendingToolApprovalFileTarget,
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
@@ -969,11 +973,14 @@ describe('ipc teams handlers', () => {
     const runtimeCalls: string[] = [];
     const runtimeFacade = {
       ...teamHandlerApis.runtime,
-      stopTeam(teamName: string): Promise<void> {
+      stopTeam: vi.fn(function (
+        this: typeof teamHandlerApis.runtime,
+        teamName: string
+      ): Promise<void> {
         if (this !== runtimeFacade) throw new Error('runtime facade receiver lost');
         runtimeCalls.push(`stop:${teamName}`);
         return Promise.resolve();
-      },
+      }),
     };
 
     initializeTestTeamFeatureComposition({ runtime: runtimeFacade });

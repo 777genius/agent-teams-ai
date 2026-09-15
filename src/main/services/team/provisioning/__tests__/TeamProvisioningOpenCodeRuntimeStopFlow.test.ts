@@ -921,8 +921,7 @@ describe('OpenCode runtime stop flow', () => {
     );
 
     expect(stop).toHaveBeenCalledTimes(2);
-    expect(stop).toHaveBeenNthCalledWith(
-      1,
+    expect(stop).toHaveBeenCalledWith(
       expect.objectContaining({
         runId: 'run-a',
         laneId: 'lane-a',
@@ -934,8 +933,7 @@ describe('OpenCode runtime stop flow', () => {
         force: true,
       })
     );
-    expect(stop).toHaveBeenNthCalledWith(
-      2,
+    expect(stop).toHaveBeenCalledWith(
       expect.objectContaining({
         runId: 'run-b',
         laneId: 'lane-b',

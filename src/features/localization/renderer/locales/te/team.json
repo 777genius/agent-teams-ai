@@ -2444,7 +2444,11 @@
       "yes": "అవును",
       "no": "లేదు",
       "moreActionableItems": "{{count}} మరిన్ని చర్య తీసుకోదగిన అంశం(లు)",
-      "diagnostics": "డయాగ్నొస్టిక్‌లు: {{diagnostics}}"
+      "diagnostics": "డయాగ్నొస్టిక్‌లు: {{diagnostics}}",
+      "autoResumeStopped": "స్వయంచాలక కొనసాగింపు ఆపబడింది.",
+      "continue": "కొనసాగించు",
+      "stopAutoResume": "స్వయం-పునఃప్రారంభాన్ని ఆపు",
+      "resumeAutoResume": "స్వయం-పునఃప్రారంభాన్ని కొనసాగించు"
     },
     "title": "సభ్యుని వర్క్ సింక్",
     "loadingDiagnostics": "సభ్యుని వర్క్ సింక్ డయాగ్నొస్టిక్‌లను లోడ్ చేస్తోంది.",

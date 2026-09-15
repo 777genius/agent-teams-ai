@@ -1,9 +1,9 @@
+import { resolveMemberWorkSyncRuntimePath } from '@main/composition/team/resolveMemberWorkSyncRuntimePath';
 import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
 import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import path from 'path';
 
 import { isReservedMemberName, normalizeMemberName } from '../../../core/domain';
 
@@ -14,13 +14,15 @@ import type {
   RuntimeTurnSettledTargetResolverPort,
 } from '../../../core/application';
 import type { RuntimeTurnSettledEvent } from '../../../core/domain';
-import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import type {
+  MemberWorkSyncConfigReaderPort,
+  MemberWorkSyncMembersReaderPort,
+} from '../../composition/memberWorkSyncPublicContracts';
 import type { TeamMember, TeamProviderId, TeamSummary } from '@shared/types';
 
 export interface RuntimeTurnSettledTeamSource {
   listTeams(): Promise<TeamSummary[]>;
-  getConfig(teamName: string): ReturnType<TeamConfigReader['getConfig']>;
+  getConfig(teamName: string): ReturnType<MemberWorkSyncConfigReaderPort['getConfig']>;
 }
 
 export interface AttributedMemberFileSource {
@@ -31,7 +33,7 @@ export interface AttributedMemberFileSource {
 
 export interface TeamRuntimeTurnSettledTargetResolverDeps {
   teamSource: RuntimeTurnSettledTeamSource;
-  membersMetaStore: TeamMembersMetaStore;
+  membersMetaStore: MemberWorkSyncMembersReaderPort;
   memberLogsFinder?: AttributedMemberFileSource;
   maxTeamsToScan?: number;
 }
@@ -59,13 +61,6 @@ function providerForMember(member: TeamMember | undefined): TeamProviderId | und
   );
 }
 
-function normalizePath(value: string | undefined): string | null {
-  if (!value?.trim()) {
-    return null;
-  }
-  return path.resolve(value.trim());
-}
-
 export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledTargetResolverPort {
   private readonly memberLogsFinder: AttributedMemberFileSource;
   private readonly maxTeamsToScan: number;
@@ -88,7 +83,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       return { ok: false, reason: 'unsupported_provider' };
     }
 
-    const transcriptPath = normalizePath(event.transcriptPath);
+    const transcriptPath = resolveMemberWorkSyncRuntimePath(event.transcriptPath);
     const sessionId = event.sessionId?.trim() || null;
     if (!transcriptPath && !sessionId) {
       return { ok: false, reason: 'missing_session_identity' };
@@ -110,7 +105,9 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
         .listAttributedMemberFiles(team.teamName)
         .catch(() => []);
       for (const file of attributedFiles) {
-        const exactPath = transcriptPath ? normalizePath(file.filePath) === transcriptPath : false;
+        const exactPath = transcriptPath
+          ? resolveMemberWorkSyncRuntimePath(file.filePath) === transcriptPath
+          : false;
         const sessionMatch = sessionId ? file.sessionId === sessionId : false;
         if (!exactPath && !sessionMatch) {
           continue;

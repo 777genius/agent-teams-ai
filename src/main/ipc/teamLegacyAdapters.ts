@@ -173,6 +173,11 @@ interface TeamPermanentDeletionCoordinatorPorts {
   lifecycle(): TeamPermanentDeletionLifecycle | null;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
+  releaseTeamScopedResources?(teamName: string): Promise<void>;
+  restoreTeamScopedResources?(
+    teamName: string,
+    options: { deletionCompleted: boolean }
+  ): Promise<void>;
 }
 
 interface TeamPermanentDeletionCoordinator {

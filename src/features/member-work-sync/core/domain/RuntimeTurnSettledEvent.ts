@@ -16,6 +16,8 @@ export interface RuntimeTurnSettledEvent {
   agentId?: string;
   threadId?: string;
   outcome?: string;
+  runtimeInstanceId?: string;
+  completedGeneration?: number;
 }
 
 export function buildRuntimeTurnSettledSourceId(input: {

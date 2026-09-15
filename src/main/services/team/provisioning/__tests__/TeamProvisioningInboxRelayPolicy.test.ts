@@ -417,8 +417,10 @@ describe('inbox relay prompt builders', () => {
 
     expect(prompt).toContain('The ONLY valid destination is to="worker-1"');
     expect(prompt).toContain('Use the SendMessage tool with to="worker-1".');
-    expect(prompt).toContain('member_work_sync_status call alone is incomplete');
-    expect(prompt).toContain('member_work_sync_report');
+    expect(prompt).toContain(
+      'member_work_sync_status or mcp__agent-teams__member_work_sync_status call alone is incomplete'
+    );
+    expect(prompt).toContain('mcp__agent-teams__member_work_sync_report');
     expect(prompt).toContain('The SendMessage tool input must use the actual tool field names');
     expect(prompt).toContain('Message kind: member_work_sync_nudge');
   });

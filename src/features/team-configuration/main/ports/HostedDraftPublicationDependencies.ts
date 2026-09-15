@@ -9,4 +9,3 @@ export interface HostedDraftPublicationDependencies {
   readonly captureWorkspace: (workspaceId: WorkspaceId, context: QueryContext) => Promise<HostedDraftWorkspaceFence>;
   readonly now?: () => number;
 }
-

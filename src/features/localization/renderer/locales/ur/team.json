@@ -2444,7 +2444,11 @@
       "yes": "جی ہاں",
       "no": "کچھ نہیں",
       "moreActionableItems": "{{count}} مزید قابل عمل آئٹم(s)",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "خودکار تسلسل روک دیا گیا ہے۔",
+      "continue": "جاری رکھیں",
+      "stopAutoResume": "خودکار دوبارہ شروع روکیں",
+      "resumeAutoResume": "خودکار دوبارہ شروع کریں"
     },
     "title": "قیدخانہ کا کام",
     "loadingDiagnostics": "اعضا کی دیکھ‌بھال",

@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from './MemberWorkSyncAcceptedReport';
+
 import type {
   MemberWorkSyncNudgePayload,
   MemberWorkSyncOutboxEnsureInput,
@@ -121,6 +123,7 @@ function buildReviewPickupNudgePayload(status: MemberWorkSyncStatus): MemberWork
     workSyncIntent: 'review_pickup',
     ...(intentKey ? { workSyncIntentKey: intentKey } : {}),
     workSyncReviewRequestEventIds: reviewRequestEventIds,
+    workSyncControlRevision: status.recoveryHealth?.controlRevision ?? 0,
     taskRefs,
     text: [
       'Review pickup required: a current review request is waiting for you.',
@@ -153,6 +156,10 @@ export function buildMemberWorkSyncNudgePayload(
     .map((item) => `${item.displayId ?? item.taskId.slice(0, 8)} ${item.subject}`)
     .join('; ');
   const taskIds = status.agenda.items.map((item) => item.taskId).filter(Boolean);
+  const acceptedReport = getMemberWorkSyncAcceptedReport(status);
+  const remainingWork =
+    acceptedReport?.state === 'still_working' &&
+    acceptedReport.agendaFingerprint === status.agenda.fingerprint;
   const hasLeadClarification = hasLeadClarificationItem(status);
 
   return {
@@ -165,6 +172,7 @@ export function buildMemberWorkSyncNudgePayload(
     ...(status.shadow?.recovery?.intentKey
       ? { workSyncIntentKey: status.shadow.recovery.intentKey }
       : {}),
+    workSyncControlRevision: status.recoveryHealth?.controlRevision ?? 0,
     taskRefs,
     text: [
       'Work sync check: you have current actionable work assigned.',
@@ -177,7 +185,9 @@ export function buildMemberWorkSyncNudgePayload(
         ? `When reporting, include taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.`
         : '',
       `Do not use provider names, runtime names, or team names as memberName; use exactly "${status.memberName}".`,
-      'If you are still working, report state "still_working"; if you are blocked, report state "blocked" and record the blocker on the task.',
+      remainingWork
+        ? 'If you already reported still_working for this agenda, finish the remaining work now; do not only re-report still_working. If blocked, report state "blocked" and record the blocker on the task.'
+        : 'If you are still working, report state "still_working"; if you are blocked, report state "blocked" and record the blocker on the task.',
       hasLeadClarification
         ? 'If a lead clarification was already escalated to the user, update the task board first with task_set_clarification value "user"; do not rely on a message alone.'
         : '',
@@ -193,7 +203,59 @@ export function buildMemberWorkSyncNudgePayloadHash(
   hash: MemberWorkSyncNudgeHash,
   payload: MemberWorkSyncNudgePayload
 ): string {
-  return hash.sha256Hex(stableJson(payload));
+  const { workSyncControlRevision: _controlRevision, ...hashed } = payload;
+  return hash.sha256Hex(stableJson(hashed));
+}
+
+export const MEMBER_WORK_SYNC_ADMISSION_TICKET_FIELDS = [
+  'workSyncRuntimeTicketId',
+  'workSyncRuntimeGeneration',
+  'workSyncRuntimeInstanceId',
+  'workSyncAdmissionPayloadHash',
+  'workSyncTeamIncarnation',
+] as const;
+
+export function buildMemberWorkSyncAdmissionPayloadHash(
+  hash: MemberWorkSyncNudgeHash,
+  payload: MemberWorkSyncNudgePayload
+): string {
+  const {
+    workSyncRuntimeTicketId: _ticketId,
+    workSyncRuntimeGeneration: _generation,
+    workSyncRuntimeInstanceId: _instanceId,
+    workSyncAdmissionPayloadHash: _admissionHash,
+    workSyncTeamIncarnation: _incarnation,
+    ...hashed
+  } = payload;
+  return hash.sha256Hex(stableJson(hashed));
+}
+
+export function buildMemberWorkSyncEarlyOutboxEnsureInput(input: {
+  status: MemberWorkSyncStatus;
+  hash: MemberWorkSyncNudgeHash;
+  nowIso: string;
+}): MemberWorkSyncOutboxEnsureInput | null {
+  const status = input.status;
+  if (status.agenda.items.length === 0) {
+    return null;
+  }
+
+  const payload = buildMemberWorkSyncNudgePayload(status);
+  const intentKey = payload.workSyncIntentKey;
+  return {
+    id: buildMemberWorkSyncNudgeId({
+      teamName: status.teamName,
+      memberName: status.memberName,
+      agendaFingerprint: status.agenda.fingerprint,
+      intentKey,
+    }),
+    teamName: status.teamName,
+    memberName: status.memberName,
+    agendaFingerprint: status.agenda.fingerprint,
+    payloadHash: buildMemberWorkSyncNudgePayloadHash(input.hash, payload),
+    payload,
+    nowIso: input.nowIso,
+  };
 }
 
 export function buildMemberWorkSyncOutboxEnsureInput(input: {

@@ -1,4 +1,8 @@
 import { MemberWorkSyncReporter } from './MemberWorkSyncReporter';
+import {
+  createMemberWorkSyncReportJournalInput,
+  retireRejectedReportJournal,
+} from './MemberWorkSyncReportJournalProtocol';
 
 import type {
   MemberWorkSyncReportIntent,
@@ -22,6 +26,7 @@ function statusForResult(input: {
     return 'accepted';
   }
   if (
+    input.code === 'superseded' ||
     input.code === 'member_inactive' ||
     input.code === 'team_runtime_inactive' ||
     input.code === 'member_runtime_inactive'
@@ -75,10 +80,34 @@ export class MemberWorkSyncPendingReportIntentReplayer {
       } else {
         summary.rejected += 1;
       }
+      const processedAt = this.deps.clock.now().toISOString();
+      if (intent.journal && status !== 'accepted' && this.deps.reportJournal) {
+        await retireRejectedReportJournal(
+          this.deps.reportJournal,
+          createMemberWorkSyncReportJournalInput({
+            request: intent.request,
+            incarnation: intent.journal.incarnation,
+            receivedAt: intent.journal.firstRecordedAt,
+            hash: this.deps.hash,
+            replay: {
+              intentId: intent.id,
+              incarnation: intent.journal.incarnation,
+              requestDigest: intent.journal.requestDigest,
+              receivedAt: intent.journal.firstRecordedAt,
+              origin: intent.journal.origin,
+            },
+          }),
+          {
+            status: status === 'superseded' ? 'superseded' : 'rejected',
+            resultCode,
+            processedAt,
+          }
+        );
+      }
       await store.markPendingReportProcessed(teamName, intent.id, {
         status,
         resultCode,
-        processedAt: this.deps.clock.now().toISOString(),
+        processedAt,
       });
     }
 
@@ -88,52 +117,22 @@ export class MemberWorkSyncPendingReportIntentReplayer {
   private async executeReplay(
     intent: MemberWorkSyncReportIntent
   ): Promise<MemberWorkSyncReportResult> {
-    const result = await this.reporter.execute({
+    const request = {
       ...intent.request,
       source: intent.request.source ?? 'mcp',
-    });
-    const freshToken = await this.getFreshTokenForExpiredFallbackReport(intent, result);
-    if (!freshToken) {
-      return result;
-    }
-    return this.reporter.execute({
-      ...intent.request,
-      agendaFingerprint: freshToken.agendaFingerprint,
-      reportToken: freshToken.reportToken,
-      source: intent.request.source ?? 'mcp',
-    });
-  }
-
-  private async getFreshTokenForExpiredFallbackReport(
-    intent: MemberWorkSyncReportIntent,
-    result: MemberWorkSyncReportResult
-  ): Promise<{ agendaFingerprint: string; reportToken: string } | null> {
-    if (
-      result.accepted ||
-      result.code !== 'invalid_report_token' ||
-      intent.reason !== 'control_api_unavailable' ||
-      !intent.request.reportToken ||
-      !result.status.reportToken ||
-      result.status.agenda.fingerprint !== intent.request.agendaFingerprint ||
-      !this.deps.reportToken
-    ) {
-      return null;
-    }
-
-    const validation = await this.deps.reportToken.verify({
-      token: intent.request.reportToken,
-      teamName: result.status.teamName,
-      memberName: result.status.memberName,
-      agendaFingerprint: result.status.agenda.fingerprint,
-      nowIso: this.deps.clock.now().toISOString(),
-    });
-    if (validation.ok || validation.reason !== 'expired') {
-      return null;
-    }
-
-    return {
-      agendaFingerprint: result.status.agenda.fingerprint,
-      reportToken: result.status.reportToken,
     };
+    const journal = intent.journal;
+    // Legacy unbound pending never receives a backfilled incarnation. Keep the
+    // durable receipt time so a late replay cannot mint a fresh still_working lease.
+    if (!journal) {
+      return this.reporter.execute(request, { receivedAt: intent.recordedAt });
+    }
+    return this.reporter.execute(request, {
+      intentId: intent.id,
+      incarnation: journal.incarnation,
+      requestDigest: journal.requestDigest,
+      receivedAt: journal.firstRecordedAt,
+      origin: journal.origin,
+    });
   }
 }

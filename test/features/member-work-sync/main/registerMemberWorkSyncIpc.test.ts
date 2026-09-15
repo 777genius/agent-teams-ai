@@ -1,8 +1,11 @@
 import {
+  MEMBER_WORK_SYNC_CONTINUE,
   MEMBER_WORK_SYNC_GET_METRICS,
   MEMBER_WORK_SYNC_GET_STATUS,
   MEMBER_WORK_SYNC_REFRESH_STATUS,
   MEMBER_WORK_SYNC_REPORT,
+  MEMBER_WORK_SYNC_RESUME,
+  MEMBER_WORK_SYNC_STOP,
 } from '@features/member-work-sync/contracts';
 import {
   registerMemberWorkSyncIpc,
@@ -45,6 +48,7 @@ function makeIpcMain() {
 
 function makeFeature(): MemberWorkSyncFeatureFacade {
   return {
+    startBackground: vi.fn(),
     getStatus: vi.fn(async (request) => ({
       teamName: request.teamName,
       memberName: request.memberName,
@@ -113,6 +117,26 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
         },
         diagnostics: [],
       },
+      phase2Readiness: {
+        state: 'collecting_shadow_data' as const,
+        reasons: ['insufficient_members' as const],
+        thresholds: {
+          maxFingerprintChangesPerMemberHour: 4,
+          maxReportRejectionRate: 0.2,
+          maxWouldNudgesPerMemberHour: 2,
+          minObservationHours: 24,
+          minObservedMembers: 3,
+          minStatusEvents: 20,
+        },
+        rates: {
+          fingerprintChangesPerMemberHour: 0,
+          observationHours: 0,
+          reportRejectionRate: 0,
+          statusEventCount: 0,
+          wouldNudgesPerMemberHour: 0,
+        },
+        diagnostics: [],
+      },
     })),
     report: vi.fn(async (request) => ({
       accepted: true,
@@ -149,6 +173,11 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
     buildRuntimeTurnSettledEnvironment: vi.fn(),
     drainRuntimeTurnSettledEvents: vi.fn(),
     getQueueDiagnostics: vi.fn(),
+    getSchedulerHealth: vi.fn(),
+    stopAutoResume: vi.fn(),
+    resumeAutoResume: vi.fn(),
+    continueManually: vi.fn(),
+    recordStallObservation: vi.fn(),
     dispose: vi.fn(),
   };
 }
@@ -160,13 +189,16 @@ describe('registerMemberWorkSyncIpc', () => {
 
     registerMemberWorkSyncIpc(ipcMain, feature);
 
-    expect(ipcMain.handle).toHaveBeenCalledTimes(4);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(7);
     expect([...handlers.keys()].sort()).toEqual(
       [
+        MEMBER_WORK_SYNC_CONTINUE,
         MEMBER_WORK_SYNC_GET_METRICS,
         MEMBER_WORK_SYNC_GET_STATUS,
         MEMBER_WORK_SYNC_REFRESH_STATUS,
         MEMBER_WORK_SYNC_REPORT,
+        MEMBER_WORK_SYNC_RESUME,
+        MEMBER_WORK_SYNC_STOP,
       ].sort()
     );
 
@@ -196,6 +228,50 @@ describe('registerMemberWorkSyncIpc', () => {
     expect(feature.refreshStatus).toHaveBeenCalledWith(statusRequest);
     expect(feature.getMetrics).toHaveBeenCalledWith(metricsRequest);
     expect(feature.report).toHaveBeenCalledWith(reportRequest);
+  });
+
+  it('rejects malformed report payloads before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+    const report = handlers.get(MEMBER_WORK_SYNC_REPORT);
+
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        taskIds: [1],
+      })
+    ).rejects.toThrow(/taskIds must be an array of strings/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'done',
+        agendaFingerprint: 'agenda:v1:test',
+      })
+    ).rejects.toThrow(/state must be still_working, blocked, or caught_up/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        note: 12,
+      })
+    ).rejects.toThrow(/note must be a string/i);
+    await expect(
+      report?.({}, {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:test',
+        source: 'hook',
+      })
+    ).rejects.toThrow(/source must be mcp, app, or test/i);
+    expect(feature.report).not.toHaveBeenCalled();
   });
 
   it('propagates feature errors so the renderer receives the real status failure', async () => {
@@ -235,6 +311,60 @@ describe('registerMemberWorkSyncIpc', () => {
     ).rejects.toThrow('report failed');
   });
 
+  it('rejects path-like team and member names before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_CONTINUE)?.({}, { teamName: '../etc', memberName: 'bob' })
+    ).rejects.toThrow(/invalid/i);
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_GET_STATUS)?.({}, { teamName: 'team-a', memberName: '../bob' })
+    ).rejects.toThrow(/invalid/i);
+    expect(feature.continueManually).not.toHaveBeenCalled();
+    expect(feature.getStatus).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-string Continue idempotency key before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_CONTINUE)?.(
+        {},
+        { teamName: 'team-a', memberName: 'bob', idempotencyKey: 12 }
+      )
+    ).rejects.toThrow(/idempotencyKey must be a string/i);
+    expect(feature.continueManually).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-string Stop reason before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_STOP)?.({}, { teamName: 'team-a', memberName: 'bob', reason: 12 })
+    ).rejects.toThrow(/reason must be a string/i);
+    expect(feature.stopAutoResume).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-boolean forceNudge before touching feature storage', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    const feature = makeFeature();
+    registerMemberWorkSyncIpc(ipcMain, feature);
+
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_REFRESH_STATUS)?.(
+        {},
+        { teamName: 'team-a', memberName: 'bob', forceNudge: 'yes' }
+      )
+    ).rejects.toThrow(/forceNudge must be a boolean/i);
+    expect(feature.refreshStatus).not.toHaveBeenCalled();
+  });
+
   it('removes exactly the member work sync handlers', () => {
     const { handlers, ipcMain } = makeIpcMain();
     const feature = makeFeature();
@@ -243,11 +373,23 @@ describe('registerMemberWorkSyncIpc', () => {
 
     removeMemberWorkSyncIpc(ipcMain);
 
-    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(4);
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(7);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_GET_STATUS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_REFRESH_STATUS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_GET_METRICS);
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_REPORT);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_STOP);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_RESUME);
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(MEMBER_WORK_SYNC_CONTINUE);
     expect([...handlers.keys()]).toEqual(['unrelated:channel']);
+  });
+
+  it('registers unavailable handlers when work-sync did not start', async () => {
+    const { handlers, ipcMain } = makeIpcMain();
+    registerMemberWorkSyncIpc(ipcMain, null);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(7);
+    await expect(
+      handlers.get(MEMBER_WORK_SYNC_GET_STATUS)?.({}, { teamName: 'team-a', memberName: 'bob' })
+    ).rejects.toThrow(/member_work_sync_unavailable/);
   });
 });

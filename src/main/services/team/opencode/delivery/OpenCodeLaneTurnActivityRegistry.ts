@@ -143,23 +143,24 @@ export function noteOpenCodeLaneTurnActivity(
       memberName: string;
       laneId: string;
       state: OpenCodeLaneTurnState;
+      observedAt: string;
     }): void;
     logger: { warn(message: string): void };
   }
 ): void {
-  const { teamName, memberName, laneId, state } = input;
+  const { teamName, memberName, laneId, state, observedAt } = input;
   openCodeLaneTurnActivityRegistry.note({
     teamName,
     memberName,
     laneId,
     state,
-    observedAt: input.observedAt,
+    observedAt,
   });
   if (!input.isLeadRecipient || !ports.notifyLeadTurnActivity) {
     return;
   }
   try {
-    ports.notifyLeadTurnActivity({ teamName, memberName, laneId, state });
+    ports.notifyLeadTurnActivity({ teamName, memberName, laneId, state, observedAt });
   } catch (error) {
     ports.logger.warn(
       `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${

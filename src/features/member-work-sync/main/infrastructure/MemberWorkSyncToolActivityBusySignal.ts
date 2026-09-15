@@ -100,6 +100,7 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
     teamName: string;
     memberName: string;
     nowIso: string;
+    exactRuntimeTicket?: { ticketId: string };
   }): Promise<{ busy: boolean; reason?: string; retryAfterIso?: string }> {
     const key = memberKey(input.teamName, input.memberName);
     const state = this.activityByMember.get(key);
@@ -115,6 +116,10 @@ export class MemberWorkSyncToolActivityBusySignal implements MemberWorkSyncBusyS
         reason: 'active_tool_activity',
         retryAfterIso: addMsIso(input.nowIso, this.busyGraceMs),
       };
+    }
+
+    if (input.exactRuntimeTicket) {
+      return { busy: false };
     }
 
     const retryAfterIso = maxIso(state.recentBusyUntilByToolId.values());

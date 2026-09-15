@@ -166,6 +166,7 @@ function recoveryPorts(
 ): StaleMixedSecondaryRecoveryPorts {
   const member: TeamMember = { name: 'Bob', providerId: 'opencode', cwd: '/repo-bob' };
   return {
+    isTeamLaunchStopped: async () => false,
     hasMixedSecondaryLaunchMetadata: () => false,
     shouldRecoverStalePersistedMixedLaunchSnapshot: () => true,
     readTeamMeta: async () => ({ providerId: 'codex' }),

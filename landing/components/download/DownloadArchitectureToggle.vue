@@ -101,7 +101,6 @@ const downloadStore = useDownloadStore();
 :global(.v-theme--light) .download-architecture-toggle__option:hover,
 :global(.v-theme--light) .download-architecture-toggle__option--active {
   color: #f8fbff;
-  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.22);
 }
 
 @media (max-width: 960px) {

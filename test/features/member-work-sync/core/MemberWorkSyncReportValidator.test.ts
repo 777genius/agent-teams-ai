@@ -285,3 +285,22 @@ describe('validateMemberWorkSyncReport', () => {
     expect(invalid.code).toBe('invalid_report_token');
   });
 });
+
+it('cannot accept a lease whose trusted original receipt time already expired', () => {
+  const agenda = agendaWithWork();
+  const result = validateMemberWorkSyncReport({
+    request: {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working',
+      agendaFingerprint: agenda.fingerprint,
+    },
+    agenda,
+    activeMemberNames: ['bob'],
+    tokenValidation: validToken,
+    nowIso: '2026-04-29T00:20:00.000Z',
+    leaseOriginIso: nowIso,
+  });
+  expect(result).toMatchObject({ ok: false, code: 'report_lease_expired' });
+  expect(result.expiresAt).toBeUndefined();
+});

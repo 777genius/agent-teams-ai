@@ -2444,7 +2444,11 @@
       "yes": "ya",
       "no": "tidak",
       "moreActionableItems": "{{count}} item lebih dapat ditindaklanjuti",
-      "diagnostics": "Diagnostik: {{diagnostics}}"
+      "diagnostics": "Diagnostik: {{diagnostics}}",
+      "autoResumeStopped": "Kelanjutan otomatis dihentikan.",
+      "continue": "Lanjutkan",
+      "stopAutoResume": "Hentikan lanjutan otomatis",
+      "resumeAutoResume": "Lanjutkan lanjutan otomatis"
     },
     "title": "Sinkronisasi kerja anggota",
     "loadingDiagnostics": "Memuat anggota bekerja diagnostik sync.",

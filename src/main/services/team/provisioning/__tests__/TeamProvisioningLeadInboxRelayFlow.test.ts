@@ -294,6 +294,36 @@ describe('lead inbox relay flow', () => {
     expect(ports.persistSentMessage).not.toHaveBeenCalled();
   });
 
+  it('relays a later remaining-work nudge after the first accepted report without re-sending the first-turn instruction', async () => {
+    const run = createRun();
+    const first = createMessage({
+      messageId: 'first-sync',
+      messageKind: 'member_work_sync_nudge',
+      text: 'First status-only turn: report still_working and do not write CANARY.txt.',
+    });
+    const ports = createPorts(run, [first]);
+    ports.hasAcceptedLeadWorkSyncReport = vi.fn().mockResolvedValue(false);
+    ports.scheduleLeadProofMissingWorkSyncRecovery = vi.fn().mockResolvedValue(true);
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+    ports.hasAcceptedLeadWorkSyncReport = vi.fn().mockResolvedValue(true);
+    await relayLeadInboxMessagesForTeam('alpha', ports);
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('first-sync')).toBe(true);
+
+    vi.mocked(ports.readLeadInboxMessages).mockResolvedValue([
+      first,
+      createMessage({
+        ...first,
+        messageId: 'remaining-continue',
+        text: 'Later remaining-work nudge: write CANARY.txt with done.',
+      }),
+    ]);
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+    expect(ports.sentMessages.at(-1)).toContain('Later remaining-work nudge');
+    expect(ports.sentMessages.at(-1)).not.toContain('First status-only turn');
+  });
+
   it('records recovery delivery only after terminal-result capture resolution', async () => {
     const run = createRun();
     const ports = createPorts(run, [createRecoveryMessage()]);

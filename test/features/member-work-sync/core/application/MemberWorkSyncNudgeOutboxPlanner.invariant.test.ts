@@ -91,6 +91,26 @@ function metrics(): MemberWorkSyncTeamMetrics {
       },
       diagnostics: [],
     },
+    phase2Readiness: {
+      state: 'shadow_ready',
+      reasons: [],
+      thresholds: {
+        minObservedMembers: 1,
+        minStatusEvents: 20,
+        minObservationHours: 1,
+        maxWouldNudgesPerMemberHour: 2,
+        maxFingerprintChangesPerMemberHour: 1,
+        maxReportRejectionRate: 0.2,
+      },
+      rates: {
+        observationHours: 2,
+        statusEventCount: 24,
+        wouldNudgesPerMemberHour: 0.5,
+        fingerprintChangesPerMemberHour: 0,
+        reportRejectionRate: 0,
+      },
+      diagnostics: [],
+    },
   };
 }
 
@@ -145,8 +165,8 @@ class PlannerOutboxHarness {
     };
   }
 
-  async countRecentDelivered(): Promise<number> {
-    return 0;
+  async countRecentDelivered(): Promise<{ count: number }> {
+    return { count: 0 };
   }
 }
 
@@ -165,6 +185,7 @@ function createDeps(outbox: PlannerOutboxHarness): MemberWorkSyncUseCaseDeps {
       readTeamMetrics: async () => metrics(),
     },
     outboxStore: outbox as never,
+    recoveryAllocation: { enabled: true },
   };
 }
 
@@ -261,5 +282,34 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
     );
     expect(recoveryInputs).toHaveLength(1);
     expect(result).toMatchObject({ planned: false, code: 'existing' });
+  });
+
+  it('still plans status-only recovery when protocol 2 has no settlement identity', async () => {
+    let admitted = false;
+    const outbox = new PlannerOutboxHarness('delivered');
+    const planner = new MemberWorkSyncNudgeOutboxPlanner({
+      ...createDeps(outbox),
+      recoveryProtocol: { version: 2 },
+      runtimeTicketAdmission: {
+        admit: async () => {
+          admitted = true;
+          return { admitted: false, code: 'not_early' };
+        },
+        cancel: async () => undefined,
+      },
+      busySignal: {
+        isBusy: async () => ({ busy: true, reason: 'recent_tool_activity' }),
+      },
+    });
+
+    const result = await planner.plan(status());
+
+    expect(admitted).toBe(false);
+    expect(result.planned).toBe(true);
+    expect(
+      outbox.ensureInputs.some((input) =>
+        input.payload.workSyncIntentKey?.startsWith('status-only:')
+      )
+    ).toBe(true);
   });
 });

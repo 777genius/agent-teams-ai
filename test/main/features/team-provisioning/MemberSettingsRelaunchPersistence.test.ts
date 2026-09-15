@@ -79,7 +79,7 @@ function fixture() {
     ),
   };
   const savedLaunch = {
-    get: (name: string) => teamMetaStore.getMeta(name),
+    get: () => teamMetaStore.getMeta(),
     updateLead: (
       name: string,
       expectedFingerprint: string,

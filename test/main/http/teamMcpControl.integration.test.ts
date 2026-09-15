@@ -11,7 +11,6 @@ import path from 'path';
 import { registerTools } from '../../../mcp-server/src/tools';
 
 import type { HttpServices } from '@main/http';
-import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
@@ -19,6 +18,7 @@ import type {
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
+  TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
@@ -297,16 +297,18 @@ function createServices(claudeRoot: string): {
     },
     getAliveTeams: (): string[] => [...aliveTeams],
   } satisfies TeamHttpRuntimeApi;
-  const teamRuntimeIngressApi = {
-    recordRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
+  const teamRuntimeControlApi = {
+    recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('accepted')),
-    deliverRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
+    deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('delivered')),
-    recordRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordOpenCodeRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-    recordRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
+    recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
-  } satisfies TeamApplicationRuntimeIngressApi;
+    answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('recorded')),
+  } satisfies TeamRuntimeControlCompatibilityApi;
 
   const teamMemberDiagnosticsApi = {
     getMemberSpawnStatusesReadOnly: () =>
@@ -337,7 +339,6 @@ function createServices(claudeRoot: string): {
         provisioningStatus: teamProvisioningStatusApi,
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
-        runtimeIngress: teamRuntimeIngressApi,
         runtimeControl: teamRuntimeControlApi,
         memberDiagnostics: teamMemberDiagnosticsApi,
       } satisfies TeamHttpHandlerApis,

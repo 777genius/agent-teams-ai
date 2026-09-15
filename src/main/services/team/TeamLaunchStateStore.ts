@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { getDurablePathIdentity, isSameDurablePathIdentity } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -35,6 +34,24 @@ const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
+
+/**
+ * Launch publication still has to fence directory replacement on filesystems
+ * that report no usable inode (notably some Windows filesystems). Keep this
+ * compatibility fallback local: other durable path operations require a
+ * positive inode to prove identity.
+ */
+function isSameLaunchDirectoryIdentity(
+  left: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>,
+  right: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
+): boolean {
+  return (
+    left.dev === right.dev &&
+    (left.ino > 0 && right.ino > 0
+      ? left.ino === right.ino
+      : left.birthtimeMs === right.birthtimeMs)
+  );
+}
 
 /** Capture before any caller queue/await; a later Stop revokes this request. */
 export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
@@ -301,11 +318,7 @@ export class TeamLaunchStateStore {
     const directoryIsCurrent = async (): Promise<boolean> => {
       const current = await fs.promises.stat(directory).catch(() => null);
       return (
-        current !== null &&
-        isSameDurablePathIdentity(
-          getDurablePathIdentity(current),
-          getDurablePathIdentity(directoryIdentity)
-        )
+        current !== null && isSameLaunchDirectoryIdentity(current, directoryIdentity)
       );
     };
     const beforeCommit = async (): Promise<void> => {

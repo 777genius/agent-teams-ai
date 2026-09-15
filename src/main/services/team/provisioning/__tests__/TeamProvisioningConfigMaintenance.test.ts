@@ -73,13 +73,10 @@ function createHarness(
     readRegularFileUtf8: vi.fn(async (filePath) => files.get(filePath) ?? null),
     writeFileUtf8:
       options.writeFileUtf8 ??
-      vi.fn(async (filePath, contents) => {
+      vi.fn(async (filePath, contents, writeOptions) => {
+        await writeOptions?.beforeCommit();
         files.set(filePath, contents);
       }),
-    writeFileUtf8: vi.fn(async (filePath, contents, options) => {
-      await options?.beforeCommit();
-      files.set(filePath, contents);
-    }),
     unlink: vi.fn(async (filePath) => {
       if (!files.delete(filePath)) {
         throw new Error('missing');

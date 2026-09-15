@@ -2444,7 +2444,11 @@
       "yes": "ya",
       "no": "tidak",
       "moreActionableItems": "{{count}} item boleh diambil tindakan lagi",
-      "diagnostics": "Diagnostik: {{diagnostics}}"
+      "diagnostics": "Diagnostik: {{diagnostics}}",
+      "autoResumeStopped": "Sambungan automatik dihentikan.",
+      "continue": "Teruskan",
+      "stopAutoResume": "Henti sambung auto",
+      "resumeAutoResume": "Sambung semula auto"
     },
     "title": "Penyelarasan kerja ahli",
     "loadingDiagnostics": "Memuatkan diagnostik penyelarasan kerja ahli.",

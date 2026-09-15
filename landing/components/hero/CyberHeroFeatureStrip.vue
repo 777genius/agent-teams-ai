@@ -77,6 +77,7 @@ const reviewerBubbleText = computed(() => {
           v-if="reviewerBubbleText"
           class="cyber-feature-rail__reviewer-bubble"
           tail="down"
+          with-text-shadow
         >
           {{ reviewerBubbleText }}
         </RobotSpeechBubble>

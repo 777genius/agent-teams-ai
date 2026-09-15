@@ -93,7 +93,9 @@ function recoverGate(gate) {
   }
   if (entries.length !== 1) return; // Unknown state fails closed.
   const entry = entries[0];
-  const match = /^owner-([1-9][0-9]*)-([a-f0-9-]{36})$/.exec(entry);
+  // Same grammar as src/main/services/team/fileLock.ts: UUID or Windows-safe
+  // `strict-`/`strict:` + UUID. A dead desktop strict gate must be reclaimable.
+  const match = /^owner-([1-9][0-9]*)-((?:strict[-:])?[a-f0-9-]{36})$/.exec(entry);
   if (!match) return;
   const pid = parsePid(match[1]);
   if (pid === null) return;

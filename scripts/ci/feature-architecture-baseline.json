@@ -442,14 +442,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver.ts",
-      "specifier": "path",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
-      "exportedName": "createMemberWorkSyncFeature",
-      "importedName": "default"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts",

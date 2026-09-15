@@ -70,6 +70,38 @@ describe('MemberWorkSyncToolActivityBusySignal', () => {
     ).resolves.toEqual({ busy: false });
   });
 
+  it('does not treat the recent-tool quiet window as busy for an exact D1 continuation ticket', async () => {
+    const signal = new MemberWorkSyncToolActivityBusySignal({ busyGraceMs: 90_000 });
+    signal.noteTeamChange(
+      toolEvent('team-a', {
+        action: 'finish',
+        memberName: 'bob',
+        toolUseId: 'tool-1',
+        finishedAt: '2026-04-29T00:01:00.000Z',
+      })
+    );
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:01:30.000Z',
+        exactRuntimeTicket: { ticketId: 'ticket-1' },
+      })
+    ).resolves.toEqual({ busy: false });
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:01:30.000Z',
+      })
+    ).resolves.toMatchObject({
+      busy: true,
+      reason: 'recent_tool_activity',
+    });
+  });
+
   it('does not leak activity across members and clears targeted reset events', async () => {
     const signal = new MemberWorkSyncToolActivityBusySignal({ busyGraceMs: 90_000 });
 

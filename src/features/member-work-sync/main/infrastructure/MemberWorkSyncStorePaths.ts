@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from 'node:fs';
+
 import { TeamMemberStoragePaths } from '@main/services/team/TeamMemberStoragePaths';
 import { dirname, join } from 'path';
 
@@ -34,6 +36,30 @@ export class MemberWorkSyncStorePaths {
 
   getPendingReportsPath(teamName: string): string {
     return join(this.getTeamDir(teamName), 'pending-reports.json');
+  }
+
+  hasPendingReportsFile(teamName: string): boolean {
+    return existsSync(this.getPendingReportsPath(teamName));
+  }
+
+  hasReplayablePendingReports(teamName: string): boolean {
+    if (
+      this.hasPendingReportsFile(teamName) ||
+      existsSync(this.getPendingReportsIndexPath(teamName))
+    ) {
+      return true;
+    }
+    const membersDir = join(this.getTeamRootDir(teamName), 'members');
+    if (!existsSync(membersDir)) {
+      return false;
+    }
+    try {
+      return readdirSync(membersDir).some((memberName) =>
+        existsSync(this.getMemberReportsPath(teamName, memberName))
+      );
+    } catch {
+      return false;
+    }
   }
 
   getOutboxPath(teamName: string): string {

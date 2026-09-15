@@ -1,5 +1,6 @@
 export * from './MemberWorkSyncAudit';
 export * from './MemberWorkSyncDiagnosticsReader';
+export * from './MemberWorkSyncEarlyContinuationPlanner';
 export * from './MemberWorkSyncMetricsReader';
 export * from './MemberWorkSyncNudgeActivationPolicy';
 export * from './MemberWorkSyncNudgeAgendaPredicates';
@@ -9,7 +10,11 @@ export * from './MemberWorkSyncNudgeSuppressionPolicy';
 export * from './MemberWorkSyncPendingReportIntentReplayer';
 export type * from './MemberWorkSyncQueueDiagnostics';
 export * from './MemberWorkSyncReconciler';
+export * from './MemberWorkSyncRecoveryAllocator';
+export * from './MemberWorkSyncRecoveryCommands';
+export * from './MemberWorkSyncRecoveryDispatchOutcome';
 export * from './MemberWorkSyncReporter';
+export type * from './MemberWorkSyncReportJournalPort';
 export * from './MemberWorkSyncRuntimeActivity';
 export * from './MemberWorkSyncRuntimeStallDiagnostics';
 export * from './MemberWorkSyncTargetedRecoveryPolicy';

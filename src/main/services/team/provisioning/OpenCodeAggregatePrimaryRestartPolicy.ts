@@ -2,7 +2,14 @@ import { clearBootstrapState } from '../TeamBootstrapStateReader';
 
 import type { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
-import type { OpenCodeAggregatePrimaryRestartLease } from './TeamProvisioningServiceRuntimeStateFacade';
+import type {
+  OpenCodeAggregatePrimaryRestartLease as RuntimeStateOpenCodeAggregatePrimaryRestartLease,
+} from './TeamProvisioningServiceRuntimeStateFacade';
+
+interface OpenCodeAggregatePrimaryRestartLease
+  extends RuntimeStateOpenCodeAggregatePrimaryRestartLease {
+  candidateRunId?: string;
+}
 
 interface MemberLifecycleCompletion {
   teamKey: string;

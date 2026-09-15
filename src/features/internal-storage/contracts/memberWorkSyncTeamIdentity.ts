@@ -37,6 +37,8 @@ function normalizeStatusRecord(
   const status = parseJsonObject(record.statusJson, 'status');
   normalizeNestedTeamName(status, teamName);
   normalizeNestedTeamName(status.agenda, teamName);
+  if (status.lastAcceptedReport != null)
+    normalizeNestedTeamName(status.lastAcceptedReport, teamName);
   if (status.report != null) {
     normalizeNestedTeamName(status.report, teamName);
   }
@@ -57,6 +59,7 @@ function normalizeReportIntentRecord(
     ...record,
     teamName,
     requestJson: JSON.stringify(request),
+    journalJson: record.journalJson ?? null,
   };
 }
 

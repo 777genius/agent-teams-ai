@@ -109,6 +109,7 @@
     "test:e2e:change-review:dev-mcp": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window",
     "test:e2e:change-review:dev-mcp:restart": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp",
     "test:hosted:e2e": "node --import tsx scripts/e2e/hosted-v1/run.ts",
+    "test:e2e:team-changes-visibility": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window --visibility-only",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:critical": "vitest run --coverage --config vitest.critical.config.ts",

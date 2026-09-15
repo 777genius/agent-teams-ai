@@ -43,7 +43,7 @@ function resolverSource(kind: ResolverKind): string {
       }
       if (
         kind === 'memberWorkSync' &&
-        node.expression.getText(source) === 'createMemberWorkSyncFeature'
+        node.expression.getText(source) === 'createNodeMemberWorkSyncFeature'
       ) {
         const options = node.arguments[0];
         if (ts.isObjectLiteralExpression(options)) {

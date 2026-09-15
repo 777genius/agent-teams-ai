@@ -81,6 +81,26 @@ function metrics(overrides: Partial<MemberWorkSyncTeamMetrics> = {}): MemberWork
       },
       diagnostics: ['delivery_readiness:insufficient_status_events'],
     },
+    phase2Readiness: {
+      state: 'collecting_shadow_data',
+      reasons: ['insufficient_status_events'],
+      thresholds: {
+        minObservedMembers: 1,
+        minStatusEvents: 20,
+        minObservationHours: 1,
+        maxWouldNudgesPerMemberHour: 2,
+        maxFingerprintChangesPerMemberHour: 1,
+        maxReportRejectionRate: 0.2,
+      },
+      rates: {
+        observationHours: 0,
+        statusEventCount: 1,
+        wouldNudgesPerMemberHour: 1,
+        fingerprintChangesPerMemberHour: 0,
+        reportRejectionRate: 0,
+      },
+      diagnostics: ['phase2_readiness:insufficient_status_events'],
+    },
     ...overrides,
   };
 }

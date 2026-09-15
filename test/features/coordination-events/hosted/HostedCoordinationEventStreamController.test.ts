@@ -24,6 +24,9 @@ import type {
   CoordinationReplayBatch,
   ReplayCursor,
 } from '@features/coordination-events/contracts';
+import type {
+  HostedCoordinationEventStreamWriteObservation,
+} from '@features/coordination-events/main/hosted';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
@@ -565,7 +568,8 @@ describe('HostedCoordinationEventStreamController', () => {
       wakeups: createWakeups().source,
       streamIdentityFactory: { createStreamId: () => 'stream_duplicate-response' },
       scheduler: new ManualScheduler(),
-      diagnosticObserver: (observation) => observations.push(observation),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
     });
     const reply = createReply();
     reply.raw.headersSent = true;
@@ -603,7 +607,8 @@ describe('HostedCoordinationEventStreamController', () => {
       wakeups: createWakeups().source,
       streamIdentityFactory: { createStreamId },
       scheduler: new ManualScheduler(),
-      diagnosticObserver: (observation) => observations.push(observation),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
     });
     const handler = registerHandler(controller);
 
@@ -629,7 +634,8 @@ describe('HostedCoordinationEventStreamController', () => {
       wakeups: createWakeups().source,
       streamIdentityFactory: { createStreamId },
       scheduler: new ManualScheduler(),
-      diagnosticObserver: (observation) => observations.push(observation),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
     });
     const handler = registerHandler(controller);
 
@@ -656,7 +662,8 @@ describe('HostedCoordinationEventStreamController', () => {
       wakeups: createWakeups().source,
       streamIdentityFactory: { createStreamId },
       scheduler: new ManualScheduler(),
-      diagnosticObserver: (observation) => observations.push(observation),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
     });
     const releaseDrain = deferred<void>();
     const draining = controller.runWithStreamsDrained(() => releaseDrain.promise);
@@ -732,7 +739,8 @@ describe('HostedCoordinationEventStreamController', () => {
       wakeups: createWakeups().source,
       streamIdentityFactory,
       scheduler: new ManualScheduler(),
-      diagnosticObserver: (observation) => observations.push(observation),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
     });
     const reply = createReply();
     reply.raw.onFlushHeaders = () => {

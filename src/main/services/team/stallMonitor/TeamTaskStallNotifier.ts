@@ -10,6 +10,18 @@ import type { SendMessageRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskStallNotifier');
 
+export interface TeamTaskStallObservationPort {
+  record(input: {
+    teamName: string;
+    memberName: string;
+    taskId: string;
+    reason: string;
+    observedAt: string;
+  }): Promise<void>;
+  isAttached?(): boolean;
+  dispose?(): void;
+}
+
 interface OpenCodeTaskStallRelayOptions {
   onlyMessageId: string;
   source: 'watchdog';
@@ -39,6 +51,13 @@ interface OpenCodeTaskStallRelayService {
     memberName: string,
     options: OpenCodeTaskStallRelayOptions
   ): Promise<OpenCodeTaskStallRelayResult>;
+}
+
+function isWorkSyncConsumerAttached(port?: TeamTaskStallObservationPort): boolean {
+  if (!port) {
+    return false;
+  }
+  return typeof port.isAttached === 'function' ? port.isAttached() : true;
 }
 
 function buildLeadAlertText(alerts: TaskStallAlert[]): string {
@@ -101,12 +120,23 @@ function isOpenCodeDeliveryAccepted(delivery: OpenCodeTaskStallDelivery): boolea
 }
 
 export class TeamTaskStallNotifier {
+  private readonly teamProvisioningService?: OpenCodeTaskStallRelayService;
+  private readonly inboxReader: Pick<TeamInboxReader, 'getMessagesFor'>;
+  private readonly inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
+  private readonly stallObservation?: TeamTaskStallObservationPort;
+
   constructor(
     private readonly messagePersistence: TeamMessageSystemNotificationPort,
-    private readonly teamProvisioningService?: OpenCodeTaskStallRelayService,
-    private readonly inboxReader: Pick<TeamInboxReader, 'getMessagesFor'> = new TeamInboxReader(),
-    private readonly inboxWriter: Pick<TeamInboxWriter, 'sendMessage'> = new TeamInboxWriter()
-  ) {}
+    teamProvisioningService?: OpenCodeTaskStallRelayService,
+    inboxReader?: Pick<TeamInboxReader, 'getMessagesFor'>,
+    inboxWriter?: Pick<TeamInboxWriter, 'sendMessage'>,
+    stallObservation?: TeamTaskStallObservationPort
+  ) {
+    this.teamProvisioningService = teamProvisioningService;
+    this.inboxReader = inboxReader ?? new TeamInboxReader();
+    this.inboxWriter = inboxWriter ?? new TeamInboxWriter();
+    this.stallObservation = stallObservation;
+  }
 
   async notifyLead(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
     if (alerts.length === 0) {
@@ -119,6 +149,43 @@ export class TeamTaskStallNotifier {
       text: buildLeadAlertText(alerts),
       taskRefs: alerts.map((alert) => alert.taskRef),
     });
+  }
+
+  dispose(): void {
+    this.stallObservation?.dispose?.();
+  }
+
+  /**
+   * Stall observations stay with member-work-sync while that consumer is
+   * attached. Automatic owner work/no-start commands are not sent from this
+   * watchdog in that case. If work-sync never attaches, the previous OpenCode
+   * owner relay remains the fallback so a backup-init failure cannot disable
+   * automatic recovery for the rest of the session.
+   */
+  async recordWorkSyncObservations(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
+    if (!isWorkSyncConsumerAttached(this.stallObservation)) {
+      return;
+    }
+    const observedAt = new Date().toISOString();
+    for (const alert of alerts) {
+      const memberName = (alert.branch === 'review' ? alert.reviewer : alert.owner)?.trim();
+      if (!memberName) {
+        continue;
+      }
+      try {
+        await this.stallObservation?.record({
+          teamName,
+          memberName,
+          taskId: alert.taskId,
+          reason: alert.reason,
+          observedAt,
+        });
+      } catch (error) {
+        logger.debug(
+          `Task stall observation into work-sync failed for ${teamName}/${alert.taskId}: ${String(error)}`
+        );
+      }
+    }
   }
 
   private async ensureOpenCodeOwnerNudgeInboxMessage(args: {
@@ -171,7 +238,19 @@ export class TeamTaskStallNotifier {
     teamName: string,
     alerts: TaskStallAlert[]
   ): Promise<TaskStallAlert[]> {
-    if (!this.teamProvisioningService || alerts.length === 0) {
+    if (alerts.length === 0) {
+      return [];
+    }
+    if (isWorkSyncConsumerAttached(this.stallObservation)) {
+      logger.debug(
+        `Task stall observations for ${teamName} are owned by member-work-sync; skipping automatic owner work commands (${alerts.length})`
+      );
+      return [];
+    }
+    if (!this.teamProvisioningService) {
+      logger.debug(
+        `Member work-sync is not attached for ${teamName}; OpenCode owner relay is unavailable (${alerts.length})`
+      );
       return [];
     }
 

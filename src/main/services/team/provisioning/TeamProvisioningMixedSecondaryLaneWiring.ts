@@ -90,7 +90,6 @@ type LaunchQueueServicePortKey =
 
 type StopServicePortKey =
   | 'getOpenCodeRuntimeAdapter'
-  | 'getSecondaryRuntimeRuns'
   | 'readLaunchState'
   | 'deleteSecondaryRuntimeRun';
 
@@ -152,7 +151,6 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
   runtimeLaneCoordinator: {
     buildAggregateLaunchSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildAggregateLaunchSnapshot'];
   };
-  getSecondaryRuntimeRuns: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['getSecondaryRuntimeRuns'];
   deleteSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRun'];
   deleteSecondaryRuntimeRunIfOwned: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRunIfOwned'];
   publishMixedSecondaryLaneStatusChange: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['publishMixedSecondaryLaneStatusChange'];
@@ -245,7 +243,6 @@ export function createSingleMixedSecondaryRuntimeLaneStopPorts<
 ): SingleMixedSecondaryRuntimeLaneStopPorts {
   return {
     teamsBasePath: getTeamsBasePath(),
-    getSecondaryRuntimeRuns: (teamName) => deps.service.getSecondaryRuntimeRuns(teamName),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
     isRuntimeProcessAlive: isProcessAlive,
@@ -334,7 +331,6 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
       deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
         service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
       getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
-      getSecondaryRuntimeRuns: (teamName) => service.getSecondaryRuntimeRuns(teamName),
       publishMixedSecondaryLaneStatusChange: (run, lane) =>
         service.publishMixedSecondaryLaneStatusChange(run, lane),
       readLaunchState: (teamName) => service.launchStateStore.read(teamName),

@@ -2478,7 +2478,11 @@
       "yes": "да",
       "no": "нет",
       "moreActionableItems": "Ещё действий: {{count}}",
-      "diagnostics": "Диагностика: {{diagnostics}}"
+      "diagnostics": "Диагностика: {{diagnostics}}",
+      "autoResumeStopped": "Автоматическое продолжение остановлено.",
+      "continue": "Продолжить",
+      "stopAutoResume": "Остановить авто-возобновление",
+      "resumeAutoResume": "Возобновить авто-возобновление"
     },
     "title": "Синхронизация работы участника",
     "loadingDiagnostics": "Загрузка диагностики синхронизации работы участника.",

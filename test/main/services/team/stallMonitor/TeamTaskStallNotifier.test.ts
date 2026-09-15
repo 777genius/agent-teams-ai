@@ -47,7 +47,108 @@ describe('TeamTaskStallNotifier', () => {
     });
   });
 
-  it('sends OpenCode owner nudges with deterministic message ids', async () => {
+  it('records stall observations into member-work-sync instead of sending owner commands', async () => {
+    const record = vi.fn(async () => undefined);
+    const inboxWriter = { sendMessage: vi.fn() };
+    const relay = vi.fn();
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      { relayOpenCodeMemberInboxMessages: relay } as never,
+      { getMessagesFor: vi.fn(async () => []) } as never,
+      inboxWriter as never,
+      { record }
+    );
+
+    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
+    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
+    expect(record).toHaveBeenCalledWith({
+      teamName: 'demo',
+      memberName: 'alice',
+      taskId: 'task-a',
+      reason: 'Potential work stall after weak start-only task comment.',
+      observedAt: expect.any(String),
+    });
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    expect(relay).not.toHaveBeenCalled();
+  });
+
+  it('records review-stall observations against the reviewer, not the owner', async () => {
+    const record = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record }
+    );
+
+    await expect(
+      notifier.recordWorkSyncObservations('demo', [
+        createAlert({
+          branch: 'review',
+          owner: 'alice',
+          reviewer: 'carol',
+          reason: 'Potential started-review stall after turn ended after touch.',
+        }),
+      ])
+    ).resolves.toBeUndefined();
+    expect(record).toHaveBeenCalledWith({
+      teamName: 'demo',
+      memberName: 'carol',
+      taskId: 'task-a',
+      reason: 'Potential started-review stall after turn ended after touch.',
+      observedAt: expect.any(String),
+    });
+  });
+
+  it('does not queue stall observations when the work-sync consumer is detached', async () => {
+    const record = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record, isAttached: () => false }
+    );
+
+    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('skips automatic owner commands while work-sync is attached', async () => {
+    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true, accepted: true } }));
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
+    };
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      { relayOpenCodeMemberInboxMessages: relay } as never,
+      { getMessagesFor: vi.fn(async () => []) } as never,
+      inboxWriter as never,
+      { record: vi.fn(async () => undefined), isAttached: () => true }
+    );
+
+    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
+    expect(relay).not.toHaveBeenCalled();
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('still notifies the lead for user-visible stall attention', async () => {
+    const sendSystemNotificationToLead = vi.fn(async () => undefined);
+    const notifier = new TeamTaskStallNotifier({ sendSystemNotificationToLead } as never);
+    const alert = createAlert();
+
+    await notifier.notifyLead('demo', [alert]);
+
+    expect(sendSystemNotificationToLead).toHaveBeenCalledWith({
+      teamName: 'demo',
+      summary: 'Potential stalled tasks detected',
+      text: expect.stringContaining('Task A'),
+      taskRefs: [alert.taskRef],
+    });
+  });
+
+  it('sends OpenCode owner nudges with deterministic message ids when work-sync is unattached', async () => {
     const teamDataService = {
       sendSystemNotificationToLead: vi.fn(async () => undefined),
     };
@@ -197,7 +298,6 @@ describe('TeamTaskStallNotifier', () => {
     expect(request.text).toContain('A direct message to the user does not move the board');
     expect(request.text).toContain('task_start');
     expect(request.summary).toBe('Assigned task not started');
-    // Only text and summary change: id, kind and relay metadata stay on the proven path.
     expect(request.messageId).toBe(messageId);
     expect(request.messageKind).toBe('task_stall_remediation');
     expect(request.actionMode).toBe('do');

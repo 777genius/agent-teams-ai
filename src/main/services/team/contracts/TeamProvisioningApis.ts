@@ -6,6 +6,16 @@ import {
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '../opencode/bridge/OpenCodeStartupSweepGate';
 
+import {
+  bindTeamCrossTeamMessagingApi,
+  bindTeamMessagingApi,
+} from './TeamMessagingApiBinder';
+import {
+  bindTeamDiagnosticsApi,
+  bindTeamToolApprovalApi,
+} from './TeamProvisioningCapabilityApiBinder';
+import { bindTeamRuntimeControlCompatibilityApi } from './TeamRuntimeApiBinder';
+
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
 import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
 import type {
@@ -306,6 +316,12 @@ export interface TeamCrossTeamMessagingApi {
 }
 
 export interface TeamToolApprovalApi {
+  getPendingToolApprovalFilePath(teamName: string, runId: string, requestId: string): string | null;
+  getPendingToolApprovalFileTarget(
+    teamName: string,
+    runId: string,
+    requestId: string
+  ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null;
   respondToToolApproval(
     teamName: string,
     runId: string,
@@ -475,19 +491,6 @@ export function bindTeamTaskActivityRepairApi(
   };
 }
 
-export function bindTeamRuntimeControlCompatibilityApi(
-  source: TeamRuntimeControlCompatibilityApi
-): TeamRuntimeControlCompatibilityApi {
-  return {
-    recordOpenCodeRuntimeBootstrapCheckin:
-      source.recordOpenCodeRuntimeBootstrapCheckin.bind(source),
-    deliverOpenCodeRuntimeMessage: source.deliverOpenCodeRuntimeMessage.bind(source),
-    recordOpenCodeRuntimeTaskEvent: source.recordOpenCodeRuntimeTaskEvent.bind(source),
-    recordOpenCodeRuntimeHeartbeat: source.recordOpenCodeRuntimeHeartbeat.bind(source),
-    answerOpenCodeRuntimePermission: source.answerOpenCodeRuntimePermission.bind(source),
-  };
-}
-
 export function bindTeamRuntimeApi(source: TeamRuntimeApi): TeamRuntimeApi {
   return {
     getRuntimeState: source.getRuntimeState.bind(source),
@@ -590,51 +593,16 @@ export function bindTeamMemberLifecycleApi(source: TeamMemberLifecycleApi): Team
   };
 }
 
-export function bindTeamDiagnosticsApi(source: TeamDiagnosticsApi): TeamDiagnosticsApi {
-  return {
-    getLeadActivityState: source.getLeadActivityState.bind(source),
-    getLeadContextUsage: source.getLeadContextUsage.bind(source),
-    getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
-  };
-}
-
 export function bindTeamClaudeLogsApi(source: TeamClaudeLogsApi): TeamClaudeLogsApi {
   return {
     getClaudeLogs: source.getClaudeLogs.bind(source),
   };
 }
 
-export function bindTeamMessagingApi(source: TeamMessagingApi): TeamMessagingApi {
-  return {
-    sendMessageToTeam: source.sendMessageToTeam.bind(source),
-    relayOpenCodeMemberInboxMessages: source.relayOpenCodeMemberInboxMessages.bind(source),
-    relayLeadInboxMessages: source.relayLeadInboxMessages.bind(source),
-    getOpenCodeRuntimeDeliveryStatus: source.getOpenCodeRuntimeDeliveryStatus.bind(source),
-    resolveRuntimeRecipientProviderId: source.resolveRuntimeRecipientProviderId.bind(source),
-    getLiveLeadProcessMessages: source.getLiveLeadProcessMessages.bind(source),
-    getCurrentLeadSessionId: source.getCurrentLeadSessionId.bind(source),
-    pushLiveLeadProcessMessage: source.pushLiveLeadProcessMessage.bind(source),
-  };
-}
-
-export function bindTeamCrossTeamMessagingApi(
-  source: TeamCrossTeamMessagingApi
-): TeamCrossTeamMessagingApi {
-  return {
-    resolveCrossTeamReplyMetadata: source.resolveCrossTeamReplyMetadata.bind(source),
-    registerPendingCrossTeamReplyExpectation:
-      source.registerPendingCrossTeamReplyExpectation.bind(source),
-    clearPendingCrossTeamReplyExpectation:
-      source.clearPendingCrossTeamReplyExpectation.bind(source),
-    isTeamAlive: source.isTeamAlive.bind(source),
-    relayInboxFileToLiveRecipient: source.relayInboxFileToLiveRecipient.bind(source),
-    relayLeadInboxMessages: source.relayLeadInboxMessages.bind(source),
-  };
-}
-
-export function bindTeamToolApprovalApi(source: TeamToolApprovalApi): TeamToolApprovalApi {
-  return {
-    respondToToolApproval: source.respondToToolApproval.bind(source),
-    updateToolApprovalSettings: source.updateToolApprovalSettings.bind(source),
-  };
-}
+export {
+  bindTeamCrossTeamMessagingApi,
+  bindTeamDiagnosticsApi,
+  bindTeamMessagingApi,
+  bindTeamRuntimeControlCompatibilityApi,
+  bindTeamToolApprovalApi,
+};

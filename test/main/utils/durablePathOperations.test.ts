@@ -8,12 +8,14 @@
  * and every other error still reaches the caller on the first attempt.
  */
 
+import {
+  getDurablePathIdentity,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/durablePathOperations';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { removePathWithIdentityFenceAsync } from '@main/utils/durablePathOperations';
 
 const realRename = fs.promises.rename;
 
@@ -82,6 +84,51 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
     ).resolves.toBe('missing');
 
     expect(rename).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers a proof-backed detached object when a successful rename reports ENOENT', async () => {
+    const detachedPath = path.join(root, '.team-alpha.deleting.transaction');
+    const originalIdentity = getDurablePathIdentity(fs.lstatSync(target));
+    const events: string[] = [];
+    const rename = vi
+      .spyOn(fs.promises, 'rename')
+      .mockImplementation(async (from: fs.PathLike, to: fs.PathLike) => {
+        await realRename(from, to);
+        fs.mkdirSync(target);
+        fs.writeFileSync(path.join(target, 'replacement.json'), '{"replacement":true}');
+        throw errnoError('ENOENT');
+      });
+
+    await expect(
+      removePathWithIdentityFenceAsync(target, {
+        recursive: true,
+        force: true,
+        durability: 'strict',
+        validateDetached: async (candidatePath, identity) => {
+          events.push('validated');
+          expect(candidatePath).toBe(detachedPath);
+          expect(identity).toEqual(originalIdentity);
+          return true;
+        },
+        proofHooks: {
+          detachedPath,
+          onDetachedValidated: async () => {
+            events.push('detached-proof');
+            expect(fs.existsSync(detachedPath)).toBe(true);
+          },
+          onRemovalDurable: async () => {
+            events.push('removal-proof');
+            expect(fs.existsSync(detachedPath)).toBe(false);
+          },
+        },
+      })
+    ).resolves.toBe('deleted');
+
+    expect(rename).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(['validated', 'detached-proof', 'removal-proof']);
+    expect(fs.readFileSync(path.join(target, 'replacement.json'), 'utf8')).toBe(
+      '{"replacement":true}'
+    );
   });
 
   it('completes the removal once a transient detach rename clears', async () => {

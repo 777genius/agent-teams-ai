@@ -82,6 +82,10 @@ function applyTestHomeEnv(): void {
 applyTestHomeEnv();
 let testHomeDirRemoved = false;
 function removeTestHomeDir(): void {
+  if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
+    console.info(`[vitest setup] preserved test HOME: ${testHomeDir}`);
+    return;
+  }
   if (testHomeDirRemoved) {
     return;
   }
@@ -115,9 +119,18 @@ beforeEach(() => {
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
+function isLiveSlowConfigReadWarning(text: string): boolean {
+  return (
+    process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&
+    text.includes('[Service:TeamConfigReader] [getConfig] slow read diag=')
+  );
+}
+
 afterEach(() => {
   const unexpectedErrors = errorSpy.mock.calls.map(formatConsoleCall);
-  const unexpectedWarnings = warnSpy.mock.calls.map(formatConsoleCall);
+  const unexpectedWarnings = warnSpy.mock.calls
+    .map(formatConsoleCall)
+    .filter((text) => !isLiveSlowConfigReadWarning(text));
 
   errorSpy.mockRestore();
   warnSpy.mockRestore();
