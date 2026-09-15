@@ -566,6 +566,69 @@ describe('useTeamChangesSummaries', () => {
     }
   });
 
+  it.each([
+    { label: 'summaries', sectionOpen: true },
+    { label: 'counter', sectionOpen: false },
+  ])(
+    'runs a queued restore $label scan after the pre-hide request fails',
+    async ({ sectionOpen }) => {
+      const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+      let visibilityState: DocumentVisibilityState = 'visible';
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => visibilityState,
+      });
+      const first = createDeferred<TeamTaskChangeSummariesResponse>();
+      hoisted.getTeamTaskChangeSummaries
+        .mockReturnValueOnce(first.promise)
+        .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+          Promise.resolve(responseForRequests(requests))
+        );
+
+      try {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        root = createRoot(container);
+
+        await act(async () => {
+          root?.render(
+            React.createElement(HookHarness, {
+              tasks: [task()],
+              sectionOpen,
+              onSnapshot: () => undefined,
+            })
+          );
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+        visibilityState = 'hidden';
+        document.dispatchEvent(new Event('visibilitychange'));
+        visibilityState = 'visible';
+        await act(async () => {
+          document.dispatchEvent(new Event('visibilitychange'));
+          await Promise.resolve();
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          first.reject(new Error('boom'));
+          await first.promise.catch(() => undefined);
+          await Promise.resolve();
+        });
+        await act(async () => {
+          await Promise.resolve();
+        });
+        expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+      } finally {
+        if (visibilityDescriptor) {
+          Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+        } else {
+          delete (document as unknown as Record<string, unknown>).visibilityState;
+        }
+      }
+    }
+  );
+
   it('refreshes a collapsed Changes counter once after visibility restoration', async () => {
     const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
     let visibilityState: DocumentVisibilityState = 'visible';

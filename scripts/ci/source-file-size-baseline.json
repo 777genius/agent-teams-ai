@@ -134,7 +134,7 @@
     "src/renderer/components/team/review/CodeMirrorDiffView.tsx": 975,
     "src/renderer/components/team/TeamDetailView.tsx": 3839,
     "src/renderer/components/team/TeamListView.tsx": 1568,
-    "src/renderer/components/team/useTeamChangesSummaries.ts": 826,
+    "src/renderer/components/team/useTeamChangesSummaries.ts": 811,
     "src/renderer/components/ui/MentionableTextarea.tsx": 1433,
     "src/renderer/index.css": 1950,
     "src/renderer/index.html": 1441,

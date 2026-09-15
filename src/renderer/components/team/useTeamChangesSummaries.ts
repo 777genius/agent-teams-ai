@@ -6,6 +6,7 @@ import { resolveTaskChangePresenceFromResult } from '@renderer/utils/taskChangeP
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { getTaskChangeStateBucket } from '@shared/utils/taskChangeState';
 
+import { isSilentCounterLoad, type TeamChangesLoadOptions } from './teamChangesLoadOptions';
 import { withTeamChangesLoadTimeout } from './teamChangesLoadTimeout';
 import {
   buildTeamChangeRequestPlan,
@@ -45,20 +46,6 @@ export interface TeamChangeStats {
   eligibleCount: number;
   requestedCount: number;
   deferredCount: number;
-}
-
-interface TeamChangesLoadOptions {
-  retryBackfill?: boolean;
-  showSpinner?: boolean;
-  preserveOnError?: boolean;
-  storeSummaries?: boolean;
-  reportError?: boolean;
-  blockAutoRetryOnError?: boolean;
-  maxRequests?: number;
-  unknownScanLimit?: number;
-  queueDeferredRefresh?: boolean;
-  satisfiedTaskIds?: ReadonlySet<string>;
-  stagedRefreshPlan?: readonly number[];
 }
 
 interface UseTeamChangesSummariesInput {
@@ -210,14 +197,6 @@ function sumTeamChangeBadgeContributions(changeBadgeCountByTaskId: Record<string
   }, 0);
 }
 
-function isSilentCounterLoad(options: TeamChangesLoadOptions | null): boolean {
-  return Boolean(
-    options?.storeSummaries === false &&
-    options.reportError === false &&
-    options.showSpinner !== true
-  );
-}
-
 function getUnknownScanLimitForStage(maxRequests: number | undefined): number | undefined {
   if (maxRequests === TEAM_CHANGES_FIRST_PAINT_REQUESTS) {
     return TEAM_CHANGES_FIRST_UNKNOWN_SCAN_LIMIT;
@@ -312,6 +291,7 @@ export function useTeamChangesSummaries({
 
   const loadSummaries = useCallback(
     async ({
+      afterVisibilityRestore = false,
       retryBackfill = false,
       showSpinner = false,
       preserveOnError = true,
@@ -324,10 +304,13 @@ export function useTeamChangesSummaries({
       satisfiedTaskIds,
       stagedRefreshPlan,
     }: TeamChangesLoadOptions = {}): Promise<void> => {
+      afterVisibilityRestore ||= Boolean(
+        visibleEpoch !== 0 && handledVisibleEpochRef.current !== visibleEpoch
+      );
       if (isDocumentHidden()) return;
       if (retryBackfill) {
         autoRefreshBlockedUntilRef.current = 0;
-      } else if (autoRefreshBlockedUntilRef.current > Date.now()) {
+      } else if (!afterVisibilityRestore && autoRefreshBlockedUntilRef.current > Date.now()) {
         return;
       }
 
@@ -345,6 +328,9 @@ export function useTeamChangesSummaries({
       if (activeRequestSeqRef.current !== null || queuedRefreshOptionsRef.current !== null) {
         const previous = queuedRefreshOptionsRef.current;
         queuedRefreshOptionsRef.current = {
+          afterVisibilityRestore: Boolean(
+            previous?.afterVisibilityRestore || afterVisibilityRestore
+          ),
           retryBackfill: Boolean(previous?.retryBackfill || retryBackfill),
           showSpinner: Boolean(previous?.showSpinner || showSpinner),
           preserveOnError: previous
@@ -426,6 +412,7 @@ export function useTeamChangesSummaries({
       }
       activeRequestSeqRef.current = requestSeq;
       activeRequestOptionsRef.current = {
+        afterVisibilityRestore,
         retryBackfill,
         showSpinner,
         preserveOnError,
@@ -591,7 +578,10 @@ export function useTeamChangesSummaries({
           !storeSummaries &&
           !reportError &&
           Boolean(queuedOptions?.showSpinner || queuedOptions?.storeSummaries);
-        if (!shouldRunVisibleQueuedRefreshAfterSilentFailure) {
+        if (
+          !queuedOptions?.afterVisibilityRestore &&
+          !shouldRunVisibleQueuedRefreshAfterSilentFailure
+        ) {
           queuedRefreshOptionsRef.current = null;
         }
         if (blockAutoRetryOnError) {
@@ -746,6 +736,7 @@ export function useTeamChangesSummaries({
     );
     if (pendingRefreshCoversRestore) return;
     void loadSummaries({
+      afterVisibilityRestore: true,
       showSpinner: false,
       preserveOnError: true,
       storeSummaries: sectionOpen,
