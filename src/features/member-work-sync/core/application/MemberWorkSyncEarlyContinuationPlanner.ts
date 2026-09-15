@@ -278,6 +278,15 @@ export async function planMemberWorkSyncEarlyContinuation(
   }
   const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash, settlement);
   const admission = deps.runtimeTicketAdmission!;
+  if (admission.readLiveControl) {
+    const live = await admission.readLiveControl({
+      teamName: status.teamName,
+      memberName: status.memberName,
+    });
+    if (live?.stopped) {
+      return { planned: false, code: 'member_stopped' };
+    }
+  }
   if (admission.syncControl) {
     const handshake = await admission.syncControl({
       teamName: status.teamName,

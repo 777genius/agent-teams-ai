@@ -622,6 +622,31 @@ describe('protocol-2 early continuation', () => {
     expect(outbox.items.size).toBe(0);
   });
 
+  it('does not handshake open when live control is already stopped', async () => {
+    const handshakes: unknown[] = [];
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket({
+        readLiveControl: async () => ({
+          runtimeInstanceId: 'runtime-1',
+          controlRevision: 2,
+          stopped: true,
+          handshakeCompleted: true,
+        }),
+        syncControl: async (input) => {
+          handshakes.push(input);
+          return { ok: true as const, code: 'open' as const, controlRevision: input.controlRevision };
+        },
+      }),
+    });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
+      remainingWorkStatus(),
+      settlement
+    );
+    expect(planned).toEqual({ planned: false, code: 'member_stopped' });
+    expect(handshakes).toEqual([]);
+    expect(outbox.items.size).toBe(0);
+  });
+
   it('does not insert inbox when the persisted runtime ticket is no longer reserved', async () => {
     const item = itemFromInput(
       {
