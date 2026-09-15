@@ -4,11 +4,13 @@ import {
 } from '../domain';
 import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
 
+import { readMemberWorkSyncRuntimeTicket } from './MemberWorkSyncEarlyContinuationPlanner';
 import { decideMemberWorkSyncNudgeActivation } from './MemberWorkSyncNudgeActivationPolicy';
 import {
   AGENDA_SYNC_STILL_STUCK_RECOVERY_INTENT_PREFIX,
   getProofMissingRecoveryOriginalMessageId,
   isAgendaSyncStillStuckRecoveryOutboxItem,
+  isEarlyContinuationOutboxItem,
   isManualContinueOutboxItem,
   isReviewPickupOutboxItem,
   isStatusOnlyRecoveryOutboxItem,
@@ -161,20 +163,22 @@ export class MemberWorkSyncNudgeRevalidator {
       agenda.fingerprint === item.agendaFingerprint ||
       (isReviewPickupOutboxItem(item) && reviewPickupRequestIdsStillMatch(item, agenda));
     const manualContinue = isManualContinueOutboxItem(item);
+    const earlyContinuation = isEarlyContinuationOutboxItem(item);
+    const leaseBypass = manualContinue || earlyContinuation;
     if (agenda.items.length === 0 || !agendaStillMatches) {
       return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
     }
-    if (decision.state !== 'needs_sync' && !manualContinue) {
+    if (decision.state !== 'needs_sync' && !leaseBypass) {
       return { ok: false, reason: 'status_no_longer_matches_outbox', retryable: false };
     }
     const suppressionStatus = await applyMemberWorkSyncNudgeSuppression(this.deps, {
       status: revalidatedStatus,
       previousStatus: previous,
       source: 'nudge_dispatcher',
-      ...(manualContinue ? { forceNudge: true } : {}),
+      ...(leaseBypass ? { forceNudge: true } : {}),
     });
     if (
-      !manualContinue &&
+      !leaseBypass &&
       suppressionStatus.shadow?.wouldNudge !== true &&
       suppressionStatus.diagnostics.includes(MEMBER_WORK_SYNC_SUPPRESSION_DIAGNOSTIC)
     ) {
@@ -194,7 +198,7 @@ export class MemberWorkSyncNudgeRevalidator {
       status: suppressionStatus,
       metrics,
     });
-    if (!activation.active && !manualContinue) {
+    if (!activation.active && !leaseBypass) {
       const reason =
         activation.reason === 'blocking_metrics'
           ? 'blocking_metrics'
@@ -204,6 +208,14 @@ export class MemberWorkSyncNudgeRevalidator {
       return {
         ok: false,
         reason,
+        retryable: true,
+        phase2Readiness: metrics.phase2Readiness,
+      };
+    }
+    if (!activation.active && earlyContinuation && activation.reason === 'blocking_metrics') {
+      return {
+        ok: false,
+        reason: 'blocking_metrics',
         retryable: true,
         phase2Readiness: metrics.phase2Readiness,
       };
@@ -240,7 +252,7 @@ export class MemberWorkSyncNudgeRevalidator {
         : {}),
     });
     if (
-      !manualContinue &&
+      !leaseBypass &&
       recentDelivered != null &&
       recentDelivered.count >= MEMBER_WORK_SYNC_MAX_NUDGES_PER_MEMBER_PER_HOUR
     ) {
@@ -252,6 +264,7 @@ export class MemberWorkSyncNudgeRevalidator {
       };
     }
 
+    const exactRuntimeTicket = readMemberWorkSyncRuntimeTicket(item);
     const busy = await this.deps.busySignal?.isBusy({
       teamName: item.teamName,
       memberName: item.memberName,
@@ -259,11 +272,14 @@ export class MemberWorkSyncNudgeRevalidator {
       workSyncIntent: item.payload.workSyncIntent,
       workSyncIntentKey: item.payload.workSyncIntentKey,
       taskRefs: item.payload.taskRefs,
+      ...(exactRuntimeTicket ? { exactRuntimeTicket } : {}),
     });
     if (
       busy?.busy &&
       !(
-        (isStatusOnlyRecoveryOutboxItem(item) || isManualContinueOutboxItem(item)) &&
+        (isStatusOnlyRecoveryOutboxItem(item) ||
+          isManualContinueOutboxItem(item) ||
+          earlyContinuation) &&
         busy.reason === 'recent_tool_activity'
       )
     ) {
@@ -276,7 +292,7 @@ export class MemberWorkSyncNudgeRevalidator {
     }
 
     const taskIds = item.payload.taskRefs.map((taskRef) => taskRef.taskId);
-    const watchdogCooldown = manualContinue
+    const watchdogCooldown = leaseBypass
       ? { active: false as const }
       : await this.resolveWatchdogCooldown(item, taskIds, nowIso);
     if (watchdogCooldown.active) {

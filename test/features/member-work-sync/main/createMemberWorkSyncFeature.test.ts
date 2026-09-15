@@ -2564,7 +2564,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   });
 
   it.each(['idle_without_assistant_activity', 'timeout'])(
-    'delivers recovery when a delivered OpenCode nudge settles with prompt-owned %s',
+    'does not enqueue remaining-work when a delivered OpenCode nudge settles with %s',
     async (outcome) => {
       const claudeRoot = makeTempRoot();
       setClaudeBasePathOverride(claudeRoot);
@@ -2658,31 +2658,23 @@ describe('createMemberWorkSyncFeature composition', () => {
         await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
           invalid: 0,
           unresolved: 0,
-          ignored: 0,
+          ignored: 1,
         });
 
-        await waitForAssertion(async () => {
-          const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
-            (message) => message.messageKind === 'member_work_sync_nudge'
-          );
-          expect(nudges).toHaveLength(2);
-          expect(nudges[1]?.messageId).toContain('status-only');
-          expect(nudges[1]?.text).toContain('previous work-sync turn appears to have stopped');
-          const status = await feature.getStatus({ teamName, memberName });
-          expect(status.diagnostics).toEqual(
-            expect.arrayContaining(['runtime_stall:same_agenda_still_needs_sync'])
-          );
-        });
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
 
         const processedMeta = JSON.parse(
           await fs.promises.readFile(
             path.join(spoolRoot!, 'processed', `${eventFileName}.meta.json`),
             'utf8'
           )
-        ) as { outcome?: string; event?: { outcome?: string } };
+        ) as { outcome?: string; reason?: string };
         expect(processedMeta).toMatchObject({
-          outcome: 'enqueued',
-          event: { outcome },
+          outcome: 'ignored',
+          reason: `opencode_non_terminal_outcome:${outcome}`,
         });
       } finally {
         await feature.dispose();

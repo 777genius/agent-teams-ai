@@ -34,13 +34,13 @@ import {
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import { getClaudeBasePath, getTeamsBasePath } from '../../../../src/main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import type { HttpServices } from '../../../../src/main/http';
 import type { TaskRef } from '../../../../src/shared/types';
 
 const DEFAULT_ORCHESTRATOR_CLI =
-  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+  '/Users/belief/dev/projects/claude/_worktrees/agent_teams_orchestrator-d1/cli-source';
 
 export interface InboxMessage {
   from?: string;
@@ -51,6 +51,9 @@ export interface InboxMessage {
   read?: boolean;
   taskRefs?: TaskRef[];
   source?: string;
+  workSyncIntentKey?: string;
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeInstanceId?: string;
 }
 
 export interface OpenCodeLiveHarness {
@@ -76,7 +79,9 @@ export async function createOpenCodeLiveHarness(input: {
   await assertExecutable(orchestratorCli);
   const sourceLauncherBunDir = await assertSourceLauncherRuntimeAvailable(orchestratorCli);
 
+  const claudeRoot = getClaudeBasePath();
   const svc = new TeamProvisioningService();
+  setClaudeBasePathOverride(claudeRoot);
   const extraServices = (await input.configureServices?.(svc)) ?? {};
   const controlApi = await startLiveTeamControlApi(svc, extraServices);
   svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);

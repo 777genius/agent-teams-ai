@@ -157,4 +157,34 @@ describe('isMemberWorkSyncNudgeDeliveryStale', () => {
       isMemberWorkSyncNudgeDeliveryStale({ status, item: continueItem, nowIso })
     ).toEqual({ abort: false });
   });
+
+  it('keeps an early continuation while a still_working lease covers the agenda', () => {
+    const earlyItem: MemberWorkSyncOutboxItem = {
+      ...item,
+      id: 'early-1',
+      payload: {
+        ...item.payload,
+        workSyncIntentKey: 'early-continuation:legacy:agenda-1:runtime-1:1',
+        workSyncRuntimeTicketId: 'ticket-1',
+        workSyncRuntimeInstanceId: 'runtime-1',
+        workSyncRuntimeGeneration: 1,
+      },
+    };
+    const status: MemberWorkSyncStatus = {
+      ...needsSync,
+      state: 'still_working',
+      lastAcceptedReport: {
+        state: 'still_working',
+        agendaFingerprint: 'agenda-1',
+        memberName: 'bob',
+        teamName: 'team-a',
+        reportedAt: nowIso,
+        expiresAt: '2026-04-29T00:10:00.000Z',
+        accepted: true,
+      },
+    };
+    expect(isMemberWorkSyncNudgeDeliveryStale({ status, item: earlyItem, nowIso })).toEqual({
+      abort: false,
+    });
+  });
 });

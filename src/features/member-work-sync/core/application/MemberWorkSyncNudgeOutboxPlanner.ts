@@ -6,10 +6,17 @@ import {
 } from '../domain';
 
 import {
+  reserveAllocatedMemberWorkSyncRecovery,
+  skipMemberWorkSyncRecoveryAllocation,
+} from './memberWorkSyncAllocatedRecovery';
+import {
   appendMemberWorkSyncAudit,
   buildMemberWorkSyncPhase2ReadinessAuditFields,
 } from './MemberWorkSyncAudit';
-import { planMemberWorkSyncEarlyContinuation } from './MemberWorkSyncEarlyContinuationPlanner';
+import {
+  hasMemberWorkSyncEarlyContinuationIdentity,
+  planMemberWorkSyncEarlyContinuation,
+} from './MemberWorkSyncEarlyContinuationPlanner';
 import {
   decideMemberWorkSyncNudgeActivation,
   type MemberWorkSyncNudgeActivationReason,
@@ -19,7 +26,6 @@ import {
   DELIVERED_STILL_STUCK_RECOVERY_DELIVERY_WINDOW_MS,
   DELIVERED_STILL_STUCK_RECOVERY_INTENT_PREFIX,
   DELIVERED_STILL_STUCK_RECOVERY_MAX_DELIVERED_PER_WINDOW,
-  filterReviewPickupStatusByRequestIds,
   getDeliveredStillStuckRecoveryBucket,
   getReviewRequestEventIds,
   getTaskProtocolRepairTaskIds,
@@ -37,8 +43,9 @@ import {
   parseTime,
   shouldPlanDeliveredStillStuckRecovery,
 } from './MemberWorkSyncNudgeRecoveryPolicy';
-import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
+import { rejectQualifiedAutomaticWorkSyncIfClosed } from './memberWorkSyncQualifiedAutomaticGate';
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
+import { prepareMemberWorkSyncReviewPickupPlan } from './memberWorkSyncReviewPickupPlan';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -46,6 +53,7 @@ import type {
   MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
+import type { MemberWorkSyncSettlementTrigger } from './MemberWorkSyncReconciler';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
 export interface MemberWorkSyncNudgeOutboxPlanResult {
@@ -79,37 +87,12 @@ export class MemberWorkSyncNudgeOutboxPlanner {
   }
 
   async planEarlyContinuation(
-    status: MemberWorkSyncStatus
-  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
-    const result = await planMemberWorkSyncEarlyContinuation(this.deps, status);
-    await this.appendPlanAudit(status, result);
-    return result;
-  }
-
-  private async skipRecoveryAllocation(
-    status: MemberWorkSyncStatus
-  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
-    const result = { planned: false, code: 'recovery_allocation_disabled' } as const;
-    await this.appendPlanAudit(status, result);
-    return result;
-  }
-
-  private async reserveAllocatedRecovery(
     status: MemberWorkSyncStatus,
-    recoveryInput: MemberWorkSyncOutboxEnsureInput
-  ): Promise<MemberWorkSyncNudgeOutboxPlanResult | null> {
-    const reserved = await reserveMemberWorkSyncRecoveryIntent({
-      deps: this.deps,
-      status,
-      recoveryInput,
-      trigger: 'automatic',
-    });
-    if (reserved.ok) {
-      return null;
-    }
-    const code = reserved.code === 'member_stopped' ? 'member_stopped' : 'slot_occupied';
-    await this.appendPlanAudit(status, { planned: false, code });
-    return { planned: false, code };
+    settlement?: MemberWorkSyncSettlementTrigger
+  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
+    const result = await planMemberWorkSyncEarlyContinuation(this.deps, status, settlement);
+    await this.appendPlanAudit(status, result);
+    return result;
   }
 
   private buildStatusOnlyRecoveryInput(
@@ -235,14 +218,22 @@ export class MemberWorkSyncNudgeOutboxPlanner {
     activationReason?: MemberWorkSyncNudgeActivationReason
   ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
     if (!this.canAllocateRecovery()) {
-      return this.skipRecoveryAllocation(status);
+      return skipMemberWorkSyncRecoveryAllocation({
+        status,
+        appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+      });
     }
     const outboxStore = this.deps.outboxStore;
     if (!outboxStore) {
       return { planned: false, code: 'outbox_unavailable' };
     }
     const recoveryInput = this.buildStatusOnlyRecoveryInput(status, baseInput);
-    const blocked = await this.reserveAllocatedRecovery(status, recoveryInput);
+    const blocked = await reserveAllocatedMemberWorkSyncRecovery({
+      deps: this.deps,
+      status,
+      recoveryInput,
+      appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+    });
     if (blocked) {
       return blocked;
     }
@@ -285,7 +276,10 @@ export class MemberWorkSyncNudgeOutboxPlanner {
     baseInput: MemberWorkSyncOutboxEnsureInput
   ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
     if (!this.canAllocateRecovery()) {
-      return this.skipRecoveryAllocation(status);
+      return skipMemberWorkSyncRecoveryAllocation({
+        status,
+        appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+      });
     }
     const outboxStore = this.deps.outboxStore;
     if (!outboxStore) {
@@ -308,7 +302,12 @@ export class MemberWorkSyncNudgeOutboxPlanner {
     }
 
     const repairInput = this.buildTaskProtocolRepairInput(status, baseInput);
-    const blocked = await this.reserveAllocatedRecovery(status, repairInput);
+    const blocked = await reserveAllocatedMemberWorkSyncRecovery({
+      deps: this.deps,
+      status,
+      recoveryInput: repairInput,
+      appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+    });
     if (blocked) {
       return blocked;
     }
@@ -354,7 +353,10 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       return null;
     }
     if (!this.canAllocateRecovery()) {
-      return this.skipRecoveryAllocation(status);
+      return skipMemberWorkSyncRecoveryAllocation({
+        status,
+        appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+      });
     }
 
     const busy = await this.deps.busySignal?.isBusy({
@@ -391,7 +393,12 @@ export class MemberWorkSyncNudgeOutboxPlanner {
     }
 
     const recoveryInput = this.buildDeliveredStillStuckRecoveryInput(status, baseInput, bucket);
-    const blocked = await this.reserveAllocatedRecovery(status, recoveryInput);
+    const blocked = await reserveAllocatedMemberWorkSyncRecovery({
+      deps: this.deps,
+      status,
+      recoveryInput,
+      appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+    });
     if (blocked) {
       return blocked;
     }
@@ -417,12 +424,25 @@ export class MemberWorkSyncNudgeOutboxPlanner {
     return recoveryPlanResult;
   }
 
-  async plan(status: MemberWorkSyncStatus): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
+  async plan(
+    status: MemberWorkSyncStatus,
+    settlement?: MemberWorkSyncSettlementTrigger
+  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
     if (!this.deps.outboxStore) {
       return { planned: false, code: 'outbox_unavailable' };
     }
     if (!this.deps.statusStore.readTeamMetrics) {
       return { planned: false, code: 'metrics_unavailable' };
+    }
+
+    if (
+      hasMemberWorkSyncEarlyContinuationIdentity(settlement) &&
+      isMemberWorkSyncEarlyContinuationEnabled(this.deps)
+    ) {
+      const early = await this.planEarlyContinuation(status, settlement);
+      if (early.code !== 'early_continuation_disabled') {
+        return early;
+      }
     }
 
     let input = buildMemberWorkSyncOutboxEnsureInput({
@@ -453,64 +473,33 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       return result;
     }
 
-    let planStatus = status;
-    if (input.payload.workSyncIntent === 'review_pickup') {
-      const capability = await this.deps.reviewPickupDelivery?.canDeliver({
-        teamName: status.teamName,
-        memberName: status.memberName,
-        providerId: status.providerId,
-      });
-      if (!capability?.ok) {
-        const diagnostics = [
-          capability?.reason ?? 'review_pickup_delivery_port_unavailable',
-          ...(capability?.diagnostics ?? []),
-        ];
-        await this.appendReviewPickupDeliveryUnavailableAudit(status, diagnostics);
-        const result = {
-          planned: false,
-          code: 'review_pickup_delivery_unavailable',
-        } as const;
-        await this.appendPlanAudit(status, result);
-        return result;
-      }
-
-      const requestedEventIds = input.payload.workSyncReviewRequestEventIds ?? [];
-      const deliveredEventIds =
-        (await this.deps.outboxStore.findDeliveredReviewPickupRequestEventIds?.({
-          teamName: status.teamName,
-          memberName: status.memberName,
-          reviewRequestEventIds: requestedEventIds,
-        })) ?? [];
-      if (deliveredEventIds.length > 0) {
-        const delivered = new Set(deliveredEventIds);
-        const undeliveredEventIds = requestedEventIds.filter((eventId) => !delivered.has(eventId));
-        if (undeliveredEventIds.length === 0) {
-          const code = 'review_pickup_already_delivered_still_stuck' as const;
-          await this.appendReviewPickupEscalationAudit(status, code);
-          await this.appendPlanAudit(status, { planned: false, code });
-          return { planned: false, code };
-        }
-
-        planStatus = filterReviewPickupStatusByRequestIds(status, undeliveredEventIds);
-        const filteredInput = buildMemberWorkSyncOutboxEnsureInput({
-          status: planStatus,
-          hash: this.deps.hash,
-          nowIso: status.evaluatedAt,
-        });
-        if (!filteredInput) {
-          const code = 'status_not_nudgeable' as const;
-          await this.appendPlanAudit(status, { planned: false, code });
-          return { planned: false, code };
-        }
-        input = filteredInput;
-      }
+    const closed = await rejectQualifiedAutomaticWorkSyncIfClosed(this.deps, status);
+    if (closed) {
+      await this.appendPlanAudit(status, closed);
+      return closed;
     }
 
-    if (isMemberWorkSyncEarlyContinuationEnabled(this.deps)) {
-      const early = await this.planEarlyContinuation(planStatus);
-      if (early.code !== 'early_continuation_disabled') {
-        return early;
+    if (input.payload.workSyncIntent === 'review_pickup') {
+      const prepared = await prepareMemberWorkSyncReviewPickupPlan({
+        deps: this.deps,
+        status,
+        ensureInput: input,
+        onUnavailable: (diagnostics) =>
+          this.appendReviewPickupDeliveryUnavailableAudit(status, diagnostics),
+        onAlreadyDelivered: (code) =>
+          this.appendReviewPickupEscalationAudit(status, code).then(() =>
+            this.appendPlanAudit(status, { planned: false, code })
+          ),
+        onNotNudgeable: () =>
+          this.appendPlanAudit(status, { planned: false, code: 'status_not_nudgeable' }),
+      });
+      if (prepared.kind === 'stop') {
+        if (prepared.result.code === 'review_pickup_delivery_unavailable') {
+          await this.appendPlanAudit(status, prepared.result);
+        }
+        return prepared.result;
       }
+      input = prepared.input;
     }
 
     if (activation.reason === 'native_task_protocol_repair') {
@@ -533,10 +522,18 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         })
       ) {
         if (!this.canAllocateRecovery()) {
-          return this.skipRecoveryAllocation(status);
+          return skipMemberWorkSyncRecoveryAllocation({
+            status,
+            appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+          });
         }
         const recoveryInput = this.buildAgendaSyncRefreshRecoveryInput(status, input);
-        const blocked = await this.reserveAllocatedRecovery(status, recoveryInput);
+        const blocked = await reserveAllocatedMemberWorkSyncRecovery({
+          deps: this.deps,
+          status,
+          recoveryInput,
+          appendPlanAudit: (current, result) => this.appendPlanAudit(current, result),
+        });
         if (blocked) {
           return blocked;
         }

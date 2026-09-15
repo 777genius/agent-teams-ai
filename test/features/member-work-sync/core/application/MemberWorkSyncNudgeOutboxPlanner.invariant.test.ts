@@ -264,7 +264,7 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
     expect(result).toMatchObject({ planned: false, code: 'existing' });
   });
 
-  it('still plans status-only recovery when protocol 2 is not_early and recent tool activity is busy', async () => {
+  it('still plans status-only recovery when protocol 2 has no settlement identity', async () => {
     let admitted = false;
     const outbox = new PlannerOutboxHarness('delivered');
     const planner = new MemberWorkSyncNudgeOutboxPlanner({
@@ -275,7 +275,6 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
           admitted = true;
           return { admitted: false, code: 'not_early' };
         },
-        start: async () => ({ ok: false, code: 'stale' }),
         cancel: async () => undefined,
       },
       busySignal: {
@@ -285,7 +284,7 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
 
     const result = await planner.plan(status());
 
-    expect(admitted).toBe(true);
+    expect(admitted).toBe(false);
     expect(result.planned).toBe(true);
     expect(
       outbox.ensureInputs.some((input) =>

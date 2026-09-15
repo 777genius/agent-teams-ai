@@ -32,6 +32,9 @@ export interface MemberWorkSyncSettlementTrigger {
   recordedAt: string;
   turnId?: string;
   threadId?: string;
+  runtimeInstanceId?: string;
+  completedGeneration?: number;
+  outcome?: string;
 }
 
 export interface MemberWorkSyncReconcileContext {
@@ -243,6 +246,7 @@ export class MemberWorkSyncReconciler {
       agenda,
       ...(previous?.report ? { report: previous.report } : {}),
       recoveryHealth,
+      ...(previous?.runtimeAdmission ? { runtimeAdmission: previous.runtimeAdmission } : {}),
       shadow: {
         reconciledBy: context.reconciledBy ?? 'request',
         wouldNudge: decision.state === 'needs_sync' && agenda.items.length > 0,
@@ -290,12 +294,15 @@ export class MemberWorkSyncReconciler {
         });
       }
     }
-    if (committed.canProject) await this.planNudgeOutbox(committed.status);
+    if (committed.canProject) await this.planNudgeOutbox(committed.status, context.settlement);
     return committed.status;
   }
 
-  private async planNudgeOutbox(status: MemberWorkSyncStatus): Promise<void> {
-    const result = await this.nudgeOutboxPlanner.plan(status);
+  private async planNudgeOutbox(
+    status: MemberWorkSyncStatus,
+    settlement?: MemberWorkSyncSettlementTrigger
+  ): Promise<void> {
+    const result = await this.nudgeOutboxPlanner.plan(status, settlement);
     if (result.code !== 'outbox_unavailable' && result.code !== 'status_not_nudgeable') {
       this.deps.logger?.debug('member work sync nudge outbox planning result', {
         teamName: status.teamName,

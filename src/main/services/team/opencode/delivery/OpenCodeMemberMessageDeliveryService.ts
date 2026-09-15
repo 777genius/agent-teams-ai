@@ -3,6 +3,11 @@ import {
   buildOpenCodeAttachmentDeliveryParts,
   type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
+import {
+  buildOpenCodeWorkSyncLaneDeliveryGateInput,
+  gateOpenCodeWorkSyncLaneDelivery,
+  sendOpenCodeWorkSyncAdmittedMessage,
+} from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -57,6 +62,7 @@ import {
   logOpenCodeStalePendingResolution,
   readOpenCodeStalePendingTurnUsedTokens,
 } from './OpenCodeStalePendingObservationSignals';
+import { retireNeverSentOpenCodeWorkSyncDelivery } from './retireNeverSentOpenCodeWorkSyncDelivery';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
@@ -76,15 +82,9 @@ const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
 
-  /**
-   * Apply a stale-pending resolution to the ledger. `settle_plain_text` marks
-   * the record responded (plain-text turn end); `fail_terminal` closes it so it
-   * stops blocking the lane. Returns null when nothing was changed.
-   */
   private async applyStalePendingResolution(input: {
     checkpoint: () => Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -139,8 +139,6 @@ export class OpenCodeMemberMessageDeliveryService {
       input.notifyActivity('idle');
       return failed;
     }
-    // 'none' and 'keep_observing' fall through to the regular follow-up
-    // scheduling, which already logs each observe cycle.
     return null;
   }
 
@@ -187,6 +185,13 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
     const { config } = directory;
+    const lane = await gateOpenCodeWorkSyncLaneDelivery(
+      buildOpenCodeWorkSyncLaneDeliveryGateInput({ teamName, ...input })
+    );
+    const restoreConsumedLane = lane.restore;
+    if (lane.reason && lane.reason !== 'work_sync_ticket_consumed') {
+      return { delivered: false, reason: lane.reason };
+    }
     const { canonicalMemberName, laneIdentity, configMember, metaMember, memberRuntimeCwd } =
       identity;
     const normalizedMemberName = input.memberName.trim();
@@ -195,6 +200,7 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneOwnerProviderId === 'opencode' &&
       this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
     ) {
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
     const cwd =
@@ -206,6 +212,7 @@ export class OpenCodeMemberMessageDeliveryService {
           memberRuntimeCwd ||
           this.deps.readPersistedTeamProjectPath(teamName);
     if (!cwd) {
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_project_path_unavailable' };
     }
 
@@ -229,6 +236,7 @@ export class OpenCodeMemberMessageDeliveryService {
       trackedSecondaryLanePresent = liveLane != null;
       liveSecondaryLaneRunId = liveLane?.runId?.trim() || null;
       if (!liveLane && trackedSecondaryLaneSnapshotKnown) {
+        restoreConsumedLane();
         return { delivered: false, reason: 'opencode_runtime_not_active' };
       }
     }
@@ -252,6 +260,7 @@ export class OpenCodeMemberMessageDeliveryService {
         !trackedSecondaryLanePresent &&
         trackedSecondaryLaneSnapshotKnown
       ) {
+        restoreConsumedLane();
         return { delivered: false, reason: 'opencode_runtime_not_active' };
       }
       runtimeActive = await this.deps.isOpenCodeRuntimeLaneIndexActive(
@@ -351,6 +360,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     if (!runtimeActive) {
       this.deps.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
 
@@ -535,8 +545,6 @@ export class OpenCodeMemberMessageDeliveryService {
 
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
-      // Settling the blocker updates the ledger, which need not emit an inbox event.
-      // Keep the waiting row scheduled too; its normal ledger guards prevent redispatch.
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
         teamName,
         memberName: canonicalMemberName,
@@ -561,9 +569,6 @@ export class OpenCodeMemberMessageDeliveryService {
         laneId: laneIdentity.laneId,
         queuedBehindMessageId: active.inboxMessageId,
         reason: 'opencode_delivery_response_pending',
-        // How long, and how many messages deep. The bare "queued behind <id>"
-        // line could not tell a lane that had been busy for two seconds from one
-        // wedged for a quarter of an hour with a dozen messages waiting.
         diagnostics: [
           noteOpenCodeHeadOfLineBlockDiagnostic({
             teamName,
@@ -1137,16 +1142,22 @@ export class OpenCodeMemberMessageDeliveryService {
     });
     const { controlUrl, deliveryText } = dispatch;
     forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
-    await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
-      result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
-        teamName,
-        laneId: laneIdentity.laneId,
-        memberName: canonicalMemberName,
-        send: async () => {
-          await checkpoint();
-          return await adapter.sendMessageToMember({
+      const admitted = await sendOpenCodeWorkSyncAdmittedMessage({
+        lane,
+        message: input,
+        restore: restoreConsumedLane,
+        checkpoint,
+        serialize: (send) =>
+          this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
+            teamName,
+            laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName,
+            send,
+          }),
+        sendMessage: () =>
+          adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),
             teamName,
             laneId: laneIdentity.laneId,
@@ -1164,9 +1175,18 @@ export class OpenCodeMemberMessageDeliveryService {
             controlUrl: controlUrl ?? undefined,
             taskRefs: input.taskRefs,
             forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
-          });
-        },
+          }),
       });
+      if (!admitted.ok) {
+        await retireNeverSentOpenCodeWorkSyncDelivery({
+          ledger,
+          record: ledgerRecord,
+          reason: admitted.reason,
+          nowIso: now,
+        });
+        return { delivered: false, reason: admitted.reason };
+      }
+      result = admitted.result;
     } catch (error) {
       await checkpoint();
       const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
@@ -1289,15 +1309,9 @@ export class OpenCodeMemberMessageDeliveryService {
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
     const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
     // Riders reach the model only when the attempt carrying them is accepted AND
-    // actually carried them.
-    //
-    // `promptBodyAlreadyDelivered` is the redelivery shape: the prompt body was
-    // accepted by the runtime on an earlier attempt, so this attempt sends only
-    // the missing-proof control text and drops `input.text` entirely - and the
-    // coalesced-notice block lives inside `input.text`. Claiming the riders were
-    // delivered there marks them read in the inbox while their text never
-    // reached the model, and a rider has no ledger row of its own to redeliver
-    // it. The loss is silent and permanent.
+    // actually carried them. `promptBodyAlreadyDelivered` redelivers missing-proof
+    // control text and drops `input.text`, where coalesced notices live. Marking
+    // riders delivered then would read-commit text that never reached the model.
     const coalescedNoticesDispatched =
       Boolean(input.coalescedNoticeText?.trim()) &&
       promptAccepted &&

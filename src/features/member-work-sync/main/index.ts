@@ -9,6 +9,21 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
+export type { OpenCodeWorkSyncLaneDeliveryReason } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
+export {
+  buildOpenCodeWorkSyncLaneDeliveryGateInput,
+  consumeOpenCodeWorkSyncLaneForSend,
+  gateOpenCodeWorkSyncLaneDelivery,
+} from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
+export { readNativeWorkSyncCurrentRuntimeInstanceId } from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
+export {
+  consumeOpenCodeWorkSyncLane,
+  hasOpenCodeWorkSyncLaneReservation,
+  hydrateOpenCodeWorkSyncLaneReservation,
+  peekOpenCodeWorkSyncLane,
+  restoreOpenCodeWorkSyncLane,
+} from './adapters/output/OpenCodeWorkSyncLaneReservationStore';
+export { sendOpenCodeWorkSyncAdmittedMessage } from './adapters/output/sendOpenCodeWorkSyncAdmittedMessage';
 export type { MemberWorkSyncFeatureFacade } from './composition/createMemberWorkSyncFeature';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,

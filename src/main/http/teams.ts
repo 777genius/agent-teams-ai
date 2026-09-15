@@ -1,3 +1,4 @@
+import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -33,6 +34,29 @@ import type {
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
+
+const RUNTIME_STOP_REPLAY_LIMIT = 64;
+const runtimeStopReplay = new Map<
+  string,
+  { ok: true; status: unknown; runtimeAdmission: { state: string } }
+>();
+
+function rememberMemberWorkSyncRuntimeStop(
+  localStopId: string,
+  value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
+) {
+  if (value) {
+    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
+      const oldest = runtimeStopReplay.keys().next().value;
+      if (oldest) {
+        runtimeStopReplay.delete(oldest);
+      }
+    }
+    runtimeStopReplay.set(localStopId, value);
+    return value;
+  }
+  return runtimeStopReplay.get(localStopId);
+}
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
@@ -577,6 +601,75 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
     }
   );
+
+  app.post<{
+    Params: { teamName: string; memberName: string };
+    Body: {
+      incarnation?: unknown;
+      runtimeInstanceId?: unknown;
+      localStopId?: unknown;
+      reason?: unknown;
+    };
+  }>('/api/teams/:teamName/member-work-sync/:memberName/runtime-stop', async (request, reply) => {
+    try {
+      const validatedTeamName = validateTeamName(request.params.teamName);
+      if (!validatedTeamName.valid) {
+        return reply.status(400).send({ error: validatedTeamName.error });
+      }
+      const memberName = request.params.memberName?.trim();
+      if (!memberName) {
+        return reply.status(400).send({ error: 'memberName is required' });
+      }
+      const localStopId =
+        typeof request.body?.localStopId === 'string' ? request.body.localStopId.trim() : '';
+      if (!localStopId) {
+        return reply.status(400).send({ error: 'localStopId is required' });
+      }
+      const runtimeInstanceId =
+        typeof request.body?.runtimeInstanceId === 'string'
+          ? request.body.runtimeInstanceId.trim()
+          : '';
+      if (!runtimeInstanceId) {
+        return reply.status(400).send({ error: 'runtimeInstanceId is required' });
+      }
+      const reason =
+        typeof request.body?.reason === 'string' && request.body.reason.trim()
+          ? request.body.reason.trim()
+          : 'runtime_local_stop';
+      const currentRuntimeInstanceId = await readNativeWorkSyncCurrentRuntimeInstanceId({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: validatedTeamName.value!,
+        memberName: assertValidMemberName(memberName),
+      });
+      if (currentRuntimeInstanceId && currentRuntimeInstanceId !== runtimeInstanceId) {
+        return reply.status(409).send({ error: 'stale_runtime_instance' });
+      }
+      const cached = rememberMemberWorkSyncRuntimeStop(localStopId);
+      if (cached) {
+        return reply.send(cached);
+      }
+      const status = await getMemberWorkSyncFeature(services).stopAutoResume({
+        teamName: validatedTeamName.value!,
+        memberName: assertValidMemberName(memberName),
+        reason,
+      });
+      const response = {
+        ok: true as const,
+        status,
+        runtimeAdmission: status.runtimeAdmission ?? { state: 'unknown' as const },
+      };
+      rememberMemberWorkSyncRuntimeStop(localStopId, response);
+      return reply.send(response);
+    } catch (error) {
+      if (shouldLogError(error)) {
+        logger.error(
+          `Error in POST /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}/runtime-stop:`,
+          getErrorMessage(error)
+        );
+      }
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+    }
+  });
 
   app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
     '/api/teams/:teamName/member-work-sync/report',

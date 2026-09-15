@@ -10,6 +10,14 @@ import {
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
+import {
+  buildCodexTrustedProjectConfigOverrides,
+  buildCodexWorkspaceTrustSettingsArgs,
+  type WorkspaceTrustArgsOnlyPlanRequest,
+  type WorkspaceTrustCoordinator,
+  type WorkspaceTrustLaunchArgPatch,
+  type WorkspaceTrustLaunchArgTargetSurface,
+} from '../../../../src/features/workspace-trust/main';
 import { CodexBinaryResolver } from '../../../../src/main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { getTeamLaunchStatePath } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { killExternalProcessTree } from '../../../../src/main/utils/externalProcessTreeKill';
@@ -67,11 +75,36 @@ const remainingWorkIt =
     ? it
     : it.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI =
-  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_EFFORT = 'low' as const;
 const TEAMMATE_NAME = 'bob';
+const VITEST_HOME_PREFIX = 'agent-teams-vitest-home-';
+const LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES: WorkspaceTrustLaunchArgTargetSurface[] = [
+  'primary_provider_args',
+  'cross_provider_member_args',
+  'provider_facts_probe',
+  'default_model_probe',
+];
+
+function envOrDefaultTimeout(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  return value ? value : fallback;
+}
+
+function formatCodexLiveProgress(progress: {
+  state: string;
+  message?: string;
+  error?: string;
+}): string {
+  const parts = [`[codex-live] ${progress.state}`];
+  if (progress.message) {
+    parts.push(progress.message);
+  }
+  if (progress.error) {
+    parts.push(progress.error);
+  }
+  return parts.join(' | ');
+}
 
 async function resolveLiveCodexCliPath(connectedHome: string): Promise<string> {
   const configured = process.env.CODEX_CLI_PATH?.trim();
@@ -94,6 +127,31 @@ async function resolveLiveCodexCliPath(connectedHome: string): Promise<string> {
   return 'codex';
 }
 
+async function createIsolatedConnectedCodexHome(sourceHome: string): Promise<string> {
+  const isolatedHome = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-codex-home-'));
+  await fs.copyFile(path.join(sourceHome, 'auth.json'), path.join(isolatedHome, 'auth.json'));
+  const accountsSource = path.join(sourceHome, 'accounts');
+  try {
+    await fs.access(accountsSource);
+  } catch {
+    return isolatedHome;
+  }
+  const accountsDest = path.join(isolatedHome, 'accounts');
+  await fs.mkdir(accountsDest, { recursive: true });
+  const entries = await fs.readdir(accountsSource, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (
+      entry.name === 'registry.json' ||
+      entry.name === 'installation_id' ||
+      entry.name.endsWith('.auth.json')
+    ) {
+      await fs.copyFile(path.join(accountsSource, entry.name), path.join(accountsDest, entry.name));
+    }
+  }
+  return isolatedHome;
+}
+
 function prependProcessPath(entries: string[]): void {
   const current = process.env.PATH ?? '';
   const merged = [...entries, ...current.split(path.delimiter).filter(Boolean)];
@@ -113,9 +171,12 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
   let previousUserProfile: string | undefined;
   let previousPath: string | undefined;
   let previousBootstrapTimeout: string | undefined;
+  let previousDebug: string | undefined;
+  let previousDevRuntimeRoot: string | undefined;
+  let previousHoldConsume: string | undefined;
   let usingConnectedChatGptAccount = false;
-  let codexHomeDir: string;
-  let ownsCodexHomeDir: boolean;
+  let codexHomeDir = '';
+  let ownsCodexHomeDir = false;
   let codexAccountFeature: {
     getSnapshot(): Promise<unknown>;
     dispose(): Promise<void>;
@@ -129,6 +190,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     hasProvisioningRun(teamName: string): boolean;
     setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void;
     setControlApiBaseUrlResolver(resolver: (() => Promise<string | null>) | null): void;
+    setWorkspaceTrustCoordinator(coordinator: WorkspaceTrustCoordinator | null): void;
     setRuntimeTurnSettledEnvironmentProvider(
       provider:
         | ((input: {
@@ -170,10 +232,15 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     previousUserProfile = process.env.USERPROFILE;
     previousPath = process.env.PATH;
     previousBootstrapTimeout = process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS;
+    previousDebug = process.env.DEBUG;
+    previousDevRuntimeRoot = process.env.CLAUDE_DEV_RUNTIME_ROOT;
+    previousHoldConsume = process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
+    delete process.env.CLAUDE_DEV_RUNTIME_ROOT;
+    delete process.env.DEBUG;
+    delete process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
     usingConnectedChatGptAccount = allowConnectedChatGptAccount && !hasCodexApiKey;
 
     const connectedHome = os.userInfo().homedir;
-    setClaudeBasePathOverride(tempClaudeRoot);
     if (usingConnectedChatGptAccount) {
       prependProcessPath([
         path.join(connectedHome, '.local', 'bin'),
@@ -183,9 +250,10 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       process.env.CODEX_CLI_PATH = await resolveLiveCodexCliPath(connectedHome);
       vi.stubEnv('CODEX_CLI_PATH', process.env.CODEX_CLI_PATH);
       CodexBinaryResolver.clearCache();
-      codexHomeDir = path.join(connectedHome, '.codex');
-      ownsCodexHomeDir = false;
-      await fs.access(codexHomeDir);
+      const connectedCodexHome = path.join(connectedHome, '.codex');
+      await fs.access(connectedCodexHome);
+      codexHomeDir = await createIsolatedConnectedCodexHome(connectedCodexHome);
+      ownsCodexHomeDir = true;
     } else {
       const codexHomeRoot = path.resolve('temp', 'member-work-sync-recovery-live');
       await fs.mkdir(codexHomeRoot, { recursive: true });
@@ -193,13 +261,26 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       ownsCodexHomeDir = true;
     }
 
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH =
-      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
+    const configuredCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    if (!configuredCli) {
+      throw new Error('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH is required for Codex live recovery');
+    }
+    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = configuredCli;
     process.env.CLAUDE_TEAM_CLI_FLAVOR = 'agent_teams_orchestrator';
     process.env.CODEX_HOME = codexHomeDir;
     process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'true';
-    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS =
-      process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS?.trim() || '240000';
+    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS',
+      '480000'
+    );
+    process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS',
+      '480000'
+    );
+    process.env.CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS',
+      '480000'
+    );
     feature = null;
     controlServer = null;
     svc = null;
@@ -207,7 +288,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     codexAccountFeature = null;
     providerConnectionService = null;
     owned = await createOwnedWorkSyncIdentity();
-  });
+    // TeamBackupService/ConfigManager reset the Claude root; re-apply after identity.
+    setClaudeBasePathOverride(tempClaudeRoot);
+  }, 120_000);
 
   afterEach(async () => {
     const warn = vi.mocked(console.warn);
@@ -254,9 +337,13 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     restoreEnv('USERPROFILE', previousUserProfile);
     restoreEnv('PATH', previousPath);
     restoreEnv('CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS', previousBootstrapTimeout);
+    restoreEnv('DEBUG', previousDebug);
+    restoreEnv('CLAUDE_DEV_RUNTIME_ROOT', previousDevRuntimeRoot);
+    restoreEnv('CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH', previousHoldConsume);
     setClaudeBasePathOverride(null);
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecoveryCodexTeammate.live] preserved temp dir: ${tempDir}`);
+      console.info(`[MemberWorkSyncRecoveryCodexTeammate.live] preserved CODEX_HOME: ${codexHomeDir}`);
     } else {
       await fs.rm(tempDir, { recursive: true, force: true });
       if (ownsCodexHomeDir) {
@@ -311,6 +398,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
       svc = new TeamProvisioningService();
       const activeService = svc;
+      setClaudeBasePathOverride(tempClaudeRoot);
+      activeService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+      await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
       const teamDataService = new TeamDataService();
       const createFeature = (busy = false) =>
         createMemberWorkSyncFeature({
@@ -386,9 +476,13 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
               effort: DEFAULT_EFFORT,
             },
           ],
+          extraCliArgs: '--debug',
         },
         (progress) => {
           progressEvents.push(progress);
+          console.info(
+            formatCodexLiveProgress(progress)
+          );
         }
       );
 
@@ -508,41 +602,38 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
-      await expireAcceptedReportLease({ teamName, memberName: TEAMMATE_NAME });
-      await feature.refreshStatus({ teamName, memberName: TEAMMATE_NAME });
-      const recoveryIdsBeforeAttention = await readRecoveryIntentKeys(teamName, TEAMMATE_NAME);
-      await backdateRecoveryEpisode({ teamName, memberName: TEAMMATE_NAME });
-      const attention = await feature.refreshStatus({ teamName, memberName: TEAMMATE_NAME });
-      expect(attention.recoveryHealth?.episodes[0]?.phase).toBe('attention');
-      expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
-      expect(await readRecoveryIntentKeys(teamName, TEAMMATE_NAME)).toEqual(
-        recoveryIdsBeforeAttention
-      );
-
       await waitUntil(
         async () => {
-          try {
-            await feature!.continueManually({
-              teamName: teamName!,
-              memberName: TEAMMATE_NAME,
-              idempotencyKey: 'live-progress',
-            });
-            return true;
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (/member_busy|status_not_nudgeable/.test(message)) {
-              await expireAcceptedReportLease({ teamName: teamName!, memberName: TEAMMATE_NAME });
-              await feature!.refreshStatus({ teamName: teamName!, memberName: TEAMMATE_NAME });
-              return false;
-            }
-            throw error;
-          }
+          await pumpCodexTeammate({
+            feature: feature!,
+            svc: activeService,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            projectPath,
+            tempClaudeRoot,
+            startedAt,
+            context: 'Codex teammate D1 early continuation after settled',
+          });
+          const inbox = await readInboxMessages(teamName!, TEAMMATE_NAME);
+          return inbox.some(
+            (message) =>
+              message.messageKind === 'member_work_sync_nudge' &&
+              typeof message.workSyncIntentKey === 'string' &&
+              message.workSyncIntentKey.startsWith('early-continuation:') &&
+              Boolean(message.workSyncRuntimeTicketId) &&
+              Boolean(message.workSyncRuntimeInstanceId)
+          );
         },
-        180_000,
-        2_000
+        90_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
       );
-      await feature.dispatchDueNudges([teamName]);
-      await activeService.relayInboxFileToLiveRecipient(teamName, TEAMMATE_NAME);
 
       await waitUntil(
         async () => {
@@ -559,7 +650,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
           const canary = await fs.readFile(canaryPath, 'utf8').catch(() => '');
           return /^\s*done\s*$/i.test(canary);
         },
-        240_000,
+        420_000,
         2_000,
         async () =>
           formatMemberWorkSyncDiagnostics({
@@ -569,6 +660,395 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             taskId: task.id,
           })
       );
+
+      await feature.prepareTeamDeletion(teamName);
+      feature.completeTeamDeletion(teamName);
+    },
+    1_200_000
+  );
+
+  remainingWorkIt(
+    'holds Codex consume, survives desktop restart on the same ticket, then Stop before start',
+    async () => {
+      const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+      expect(orchestratorCli).toBeTruthy();
+      await assertExecutable(orchestratorCli!);
+
+      const holdPath = path.join(tempDir, 'HOLD_CONSUME');
+      process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH = holdPath;
+
+      const model = process.env.MEMBER_WORK_SYNC_CODEX_MODEL?.trim() || DEFAULT_MODEL;
+      const marker = `codex-d1-stop-restart-${Date.now()}`;
+      teamName = `member-work-sync-recovery-codex-d1-canary-${Date.now()}`;
+      const projectPath = path.join(tempDir, 'project');
+      const canaryPath = path.join(projectPath, 'CANARY.txt');
+      const startedAt = Date.now();
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.writeFile(
+        path.join(projectPath, 'README.md'),
+        '# Member work sync D1 Stop-before-consume and desktop-restart canary\n',
+        'utf8'
+      );
+
+      const {
+        TeamProvisioningService,
+        TeamDataService,
+        TeamConfigReader,
+        TeamTaskReader,
+        TeamKanbanManager,
+        TeamMembersMetaStore,
+        createCodexAccountFeature,
+        ProviderConnectionService,
+      } = await loadCodexLiveServices();
+
+      codexAccountFeature = createCodexAccountFeature({
+        logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+        configManager: {
+          getConfig: () => ({
+            providerConnections: {
+              codex: { preferredAuthMode: hasCodexApiKey ? 'auto' : ('chatgpt' as const) },
+            },
+          }),
+        },
+      });
+      providerConnectionService = ProviderConnectionService.getInstance();
+      providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+
+      svc = new TeamProvisioningService();
+      const activeService = svc;
+      setClaudeBasePathOverride(tempClaudeRoot);
+      activeService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+      await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
+      const teamDataService = new TeamDataService();
+      const createFeature = () =>
+        createMemberWorkSyncFeature({
+          lifecycleIdentity: owned!.identity,
+          teamsBasePath: getTeamsBasePath(),
+          ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+          configReader: new TeamConfigReader(),
+          taskReader: new TeamTaskReader(),
+          kanbanManager: new TeamKanbanManager(),
+          membersMetaStore: new TeamMembersMetaStore(),
+          isTeamActive: (name) =>
+            activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
+          listLifecycleActiveTeamNames: async () => [teamName!],
+          resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+          queueQuietWindowMs: 500,
+          nudgeDeliveryWake: {
+            schedule: async (input) => {
+              const timer = setTimeout(
+                () => {
+                  void activeService
+                    .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
+                    .catch(() => undefined);
+                },
+                Math.max(0, input.delayMs ?? 0)
+              );
+              timer.unref?.();
+            },
+          },
+        });
+
+      feature = createFeature();
+      wireLiveFeature(activeService, feature);
+      controlServer = await startMemberWorkSyncControlServer(feature);
+      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+      await fs.writeFile(
+        path.join(tempClaudeRoot, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: controlServer.baseUrl }, null, 2),
+        'utf8'
+      );
+      await assertCodexLaunchAllowed(codexAccountFeature);
+
+      const progressEvents: TeamProvisioningProgress[] = [];
+      await activeService.createTeam(
+        {
+          teamName,
+          cwd: projectPath,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model,
+          effort: DEFAULT_EFFORT,
+          fastMode: 'off',
+          skipPermissions: true,
+          prompt: [
+            'Keep launch work minimal.',
+            'Do not write CANARY.txt during launch.',
+            'Do not take teammate tasks. Wait for operator instructions.',
+          ].join(' '),
+          members: [
+            {
+              name: TEAMMATE_NAME,
+              role: 'Developer',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model,
+              effort: DEFAULT_EFFORT,
+            },
+          ],
+          extraCliArgs: '--debug',
+        },
+        (progress) => {
+          progressEvents.push(progress);
+          console.info(
+            formatCodexLiveProgress(progress)
+          );
+        }
+      );
+
+      await waitForCodexTeamReady({
+        progressEvents,
+        teamName,
+        projectPath,
+        tempClaudeRoot,
+        startedAt,
+        context: 'Codex D1 stop/restart launch',
+      });
+      expect(activeService.isTeamAlive(teamName)).toBe(true);
+      await waitUntil(
+        async () => (await readMemberRuntimePids(teamName!, TEAMMATE_NAME)).length > 0,
+        120_000,
+        2_000
+      );
+      await seedShadowReadyMetrics({ teamName, memberName: TEAMMATE_NAME });
+      await fs.writeFile(holdPath, 'hold\n', 'utf8');
+
+      const task = await teamDataService.createTask(teamName, {
+        subject: `Keep remaining work open ${marker}`,
+        owner: TEAMMATE_NAME,
+        startImmediately: false,
+        prompt: [
+          `This is a live D1 stop/restart canary. Marker: ${marker}.`,
+          'Your only actions in this turn are the work-sync tools.',
+          `Call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${TEAMMATE_NAME}", and controlUrl "${controlServer.baseUrl}".`,
+          `Then immediately call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${TEAMMATE_NAME}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and this task id.`,
+          'Do not write, create, or edit any project files, including CANARY.txt.',
+          'Do not complete the task and do not post a done comment.',
+          'After the report is accepted, stop and wait.',
+        ].join('\n'),
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
+      await feature.refreshStatus({ teamName, memberName: TEAMMATE_NAME });
+
+      await waitUntil(
+        async () => {
+          try {
+            await feature!.continueManually({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+              idempotencyKey: 'live-first-sync',
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (
+              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
+            ) {
+              return false;
+            }
+            throw error;
+          }
+          await feature!.dispatchDueNudges([teamName!]);
+          await activeService.relayInboxFileToLiveRecipient(teamName!, TEAMMATE_NAME);
+          return (await readInboxMessages(teamName!, TEAMMATE_NAME)).some(
+            (message) => message.messageKind === 'member_work_sync_nudge'
+          );
+        },
+        60_000,
+        2_000
+      );
+
+      await waitUntil(
+        async () => {
+          await pumpCodexTeammate({
+            feature: feature!,
+            svc: activeService,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            projectPath,
+            tempClaudeRoot,
+            startedAt,
+            context: 'Codex D1 stop/restart first still_working report',
+          });
+          const teammateStatus = await feature!.getStatus({
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+          });
+          if (
+            teammateStatus.report?.accepted === true &&
+            teammateStatus.report.state === 'still_working'
+          ) {
+            return true;
+          }
+          console.info(
+            `[codex-live] waiting first still_working | state=${teammateStatus.state} report=${teammateStatus.report?.state ?? 'none'}`
+          );
+          return false;
+        },
+        420_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
+      );
+
+      await waitUntil(
+        async () => {
+          await pumpCodexTeammate({
+            feature: feature!,
+            svc: activeService,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            projectPath,
+            tempClaudeRoot,
+            startedAt,
+            context: 'Codex D1 ticket before consume',
+          });
+          const inbox = await readInboxMessages(teamName!, TEAMMATE_NAME);
+          const hasTicket = Boolean(findEarlyContinuationTicket(inbox));
+          if (!hasTicket) {
+            console.info(
+              `[codex-live] waiting D1 ticket | hold=${await fs
+                .access(holdPath)
+                .then(() => 'open')
+                .catch(() => 'closed')} rows=${inbox.length}`
+            );
+          }
+          return hasTicket;
+        },
+        90_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+            taskId: task.id,
+          })
+      );
+
+      const ticketBefore = findEarlyContinuationTicket(
+        await readInboxMessages(teamName, TEAMMATE_NAME)
+      );
+      expect(ticketBefore?.workSyncRuntimeTicketId).toBeTruthy();
+      expect(ticketBefore?.read).not.toBe(true);
+      expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
+
+      await feature.dispose();
+      await controlServer.close().catch(() => undefined);
+      feature = createFeature();
+      controlServer = await startMemberWorkSyncControlServer(feature);
+      process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+      activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
+      wireLiveFeature(activeService, feature);
+      await feature.dispatchDueNudges([teamName]);
+
+      const ticketAfterRestart = findEarlyContinuationTicket(
+        await readInboxMessages(teamName, TEAMMATE_NAME)
+      );
+      expect(ticketAfterRestart?.workSyncRuntimeTicketId).toBe(
+        ticketBefore?.workSyncRuntimeTicketId
+      );
+
+      const stopped = await feature.stopAutoResume({
+        teamName,
+        memberName: TEAMMATE_NAME,
+        reason: 'user_stop',
+      });
+      expect(stopped.recoveryHealth?.autoResumeStopLatch).toBeDefined();
+      console.info(
+        `[codex-live] stop runtimeAdmission=${JSON.stringify(stopped.runtimeAdmission)}`
+      );
+      const snapshotPath = path.join(
+        getTeamsBasePath(),
+        teamName!,
+        'members',
+        TEAMMATE_NAME,
+        '.member-work-sync',
+        'runtime-admission',
+        'snapshot.json'
+      );
+      await waitUntil(
+        async () => {
+          const raw = await fs.readFile(snapshotPath, 'utf8').catch(() => '');
+          try {
+            return (JSON.parse(raw) as { stopped?: boolean }).stopped === true;
+          } catch {
+            return false;
+          }
+        },
+        30_000,
+        500
+      );
+      const snapshotAtStop = JSON.parse(await fs.readFile(snapshotPath, 'utf8')) as {
+        generation?: number;
+        status?: string;
+        stopped?: boolean;
+      };
+      expect(snapshotAtStop.stopped).toBe(true);
+      expect(typeof snapshotAtStop.generation).toBe('number');
+      const generationAtStop = snapshotAtStop.generation;
+      await fs.unlink(holdPath).catch(() => undefined);
+      delete process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
+
+      const stopProbeUntil = Date.now() + 30_000;
+      while (Date.now() < stopProbeUntil) {
+        await pumpCodexTeammate({
+          feature: feature!,
+          svc: activeService,
+          teamName: teamName!,
+          memberName: TEAMMATE_NAME,
+          projectPath,
+          tempClaudeRoot,
+          startedAt,
+          context: 'Codex D1 after Stop before consume',
+        });
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+      expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
+      const snapshotAfterStop = JSON.parse(await fs.readFile(snapshotPath, 'utf8')) as {
+        generation?: number;
+        status?: string;
+      };
+      expect(snapshotAfterStop.generation).toBe(generationAtStop);
+      expect(snapshotAfterStop.status).not.toBe('running');
+      const afterStop = await feature.getStatus({
+        teamName,
+        memberName: TEAMMATE_NAME,
+      });
+      expect(afterStop.recoveryHealth?.autoResumeStopLatch).toBeDefined();
+      expect(afterStop.runtimeAdmission).toBeDefined();
+
+      const evidence = {
+        scenario: 'stop-before-consume-and-desktop-restart',
+        desktopSha: spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(),
+        orchestratorSha: spawnSync('git', ['rev-parse', 'HEAD'], {
+          cwd: path.dirname(orchestratorCli!),
+          encoding: 'utf8',
+        }).stdout.trim(),
+        teamName,
+        memberName: TEAMMATE_NAME,
+        ticketId: ticketBefore?.workSyncRuntimeTicketId,
+        runtimeInstanceId: ticketBefore?.workSyncRuntimeInstanceId,
+        intentKey: ticketBefore?.workSyncIntentKey,
+        settledAt: new Date(startedAt).toISOString(),
+        canary: (await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim(),
+        generationAtStop,
+        generationAfterStop: snapshotAfterStop.generation,
+        snapshotStatusAfterStop: snapshotAfterStop.status,
+        runtimeAdmission: afterStop.runtimeAdmission,
+        stopLatch: afterStop.recoveryHealth?.autoResumeStopLatch,
+      };
+      await fs.writeFile(
+        path.join(tempDir, 'd1-canary-evidence.json'),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        'utf8'
+      );
+      console.info(`[codex-live] D1 canary evidence: ${JSON.stringify(evidence)}`);
 
       await feature.prepareTeamDeletion(teamName);
       feature.completeTeamDeletion(teamName);
@@ -617,6 +1097,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
     svc = new TeamProvisioningService();
     const activeService = svc;
+    setClaudeBasePathOverride(tempClaudeRoot);
+    activeService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+    await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
     const teamDataService = new TeamDataService();
     const createFeature = () =>
       createMemberWorkSyncFeature({
@@ -687,6 +1170,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       },
       (progress) => {
         progressEvents.push(progress);
+        console.info(
+          formatCodexLiveProgress(progress)
+        );
       }
     );
     await waitForCodexTeamReady({
@@ -822,6 +1308,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
     svc = new TeamProvisioningService();
     const activeService = svc;
+    setClaudeBasePathOverride(tempClaudeRoot);
+    activeService.setWorkspaceTrustCoordinator(createCodexOnlyWorkspaceTrustCoordinator());
+    await trustProjectInTempClaudeGlobalConfig({ claudeRoot: tempClaudeRoot, projectPath });
     const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
@@ -880,6 +1369,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         },
         (progress) => {
           progressEvents.push(progress);
+          console.info(
+            formatCodexLiveProgress(progress)
+          );
         }
       );
       await waitForCodexTeamReady({
@@ -1092,22 +1584,75 @@ async function waitForCodexTeamReady(input: {
   startedAt: number;
   context: string;
 }): Promise<void> {
-  await waitUntil(async () => {
-    const last = input.progressEvents.at(-1);
-    if (last?.state === 'failed') {
-      throw new FatalWaitError(formatProgressDump(input.progressEvents));
-    }
-    const dump = formatProgressDump(input.progressEvents);
-    if (/usage limit/i.test(dump)) {
-      throw new FatalWaitError(dump);
-    }
-    await throwIfTranscriptApiError(input);
-    const fatalRuntimeMessage = await readFatalRuntimeMessage(input.teamName);
-    if (fatalRuntimeMessage) {
-      throw new FatalWaitError(fatalRuntimeMessage);
-    }
-    return last?.state === 'ready';
-  }, 240_000);
+  const timeoutMs = Number(process.env.MEMBER_WORK_SYNC_CODEX_READY_TIMEOUT_MS?.trim()) || 480_000;
+  await waitUntil(
+    async () => {
+      const last = input.progressEvents.at(-1);
+      if (last?.state === 'failed') {
+        throw new FatalWaitError(formatProgressDump(input.progressEvents));
+      }
+      const dump = formatProgressDump(input.progressEvents);
+      if (/usage limit/i.test(dump)) {
+        throw new FatalWaitError(dump);
+      }
+      await throwIfTranscriptApiError(input);
+      const fatalRuntimeMessage = await readFatalRuntimeMessage(input.teamName);
+      if (fatalRuntimeMessage) {
+        throw new FatalWaitError(fatalRuntimeMessage);
+      }
+      return last?.state === 'ready';
+    },
+    timeoutMs,
+    2_000,
+    () => formatCodexLaunchDiagnostics(input)
+  );
+}
+
+async function formatCodexLaunchDiagnostics(input: {
+  progressEvents: TeamProvisioningProgress[];
+  teamName: string;
+}): Promise<string> {
+  const teamDir = path.join(getTeamsBasePath(), input.teamName);
+  const launchStatePath = getTeamLaunchStatePath(input.teamName);
+  const bootstrapPath = path.join(teamDir, 'bootstrap-state.json');
+  const debugDir = path.join(getTeamsBasePath(), '..', 'debug');
+  const [entries, launchState, bootstrapState, nestedFiles, debugFiles] = await Promise.all([
+    fs.readdir(teamDir).catch(() => [] as string[]),
+    fs.readFile(launchStatePath, 'utf8').catch(() => ''),
+    fs.readFile(bootstrapPath, 'utf8').catch(() => ''),
+    fs
+      .readdir(teamDir, { recursive: true })
+      .then((names) => names.slice(0, 80).join(','))
+      .catch(() => ''),
+    fs
+      .readdir(debugDir)
+      .then(async (names) => {
+        const files = names.filter((name) => name.endsWith('.txt')).slice(-2);
+        const bodies = await Promise.all(
+          files.map(async (name) => {
+            const raw = await fs.readFile(path.join(debugDir, name), 'utf8').catch(() => '');
+            return `--- ${name} ---\n${raw.slice(-4000)}`;
+          })
+        );
+        return bodies.join('\n');
+      })
+      .catch(() => ''),
+  ]);
+  return [
+    `teamDir=${teamDir}`,
+    `entries=${entries.join(',')}`,
+    `nested=${nestedFiles || '(none)'}`,
+    `codexHome=${process.env.CODEX_HOME ?? '(unset)'}`,
+    `cliPath=${process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH ?? '(unset)'}`,
+    'progress:',
+    formatProgressDump(input.progressEvents) || '(none)',
+    'launch-state:',
+    launchState.slice(0, 4000) || '(missing)',
+    'bootstrap-state:',
+    bootstrapState.slice(0, 4000) || '(missing)',
+    'cli-debug:',
+    debugFiles || '(none)',
+  ].join('\n');
 }
 
 async function throwIfTranscriptApiError(input: {
@@ -1164,11 +1709,37 @@ async function pumpCodexTeammate(input: {
 async function readInboxMessages(
   teamName: string,
   memberName: string
-): Promise<Array<{ messageId?: string; messageKind?: string }>> {
+): Promise<
+  Array<{
+    messageId?: string;
+    messageKind?: string;
+    workSyncIntentKey?: string;
+    workSyncRuntimeTicketId?: string;
+    workSyncRuntimeInstanceId?: string;
+    read?: boolean;
+  }>
+> {
   const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
   const raw = await fs.readFile(inboxPath, 'utf8').catch(() => '[]');
   const parsed = JSON.parse(raw) as unknown;
   return Array.isArray(parsed) ? parsed : [];
+}
+
+function findEarlyContinuationTicket(
+  inbox: Array<{
+    messageKind?: string;
+    workSyncIntentKey?: string;
+    workSyncRuntimeTicketId?: string;
+    workSyncRuntimeInstanceId?: string;
+    read?: boolean;
+  }>
+) {
+  return [...inbox].reverse().find(
+    (message) =>
+      typeof message.workSyncIntentKey === 'string' &&
+      message.workSyncIntentKey.startsWith('early-continuation:') &&
+      Boolean(message.workSyncRuntimeTicketId)
+  );
 }
 
 async function listNudgeMessageIds(teamName: string, memberName: string): Promise<string[]> {
@@ -1409,4 +1980,94 @@ function isPidAlive(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+async function trustProjectInTempClaudeGlobalConfig(input: {
+  claudeRoot: string;
+  projectPath: string;
+}): Promise<void> {
+  const projectRealPath = await fs.realpath(input.projectPath).catch(() => input.projectPath);
+  const projects = Object.fromEntries(
+    [...new Set([input.projectPath, projectRealPath])].map((projectPath) => [
+      projectPath,
+      {
+        allowedTools: [],
+        mcpContextUris: [],
+        mcpServers: {},
+        enabledMcpjsonServers: [],
+        disabledMcpjsonServers: [],
+        projectOnboardingSeenCount: 0,
+        hasClaudeMdExternalIncludesApproved: false,
+        hasClaudeMdExternalIncludesWarningShown: false,
+        hasTrustDialogAccepted: true,
+      },
+    ])
+  );
+  const configPaths = [path.join(input.claudeRoot, '.claude.json')];
+  const homeDir = process.env.HOME?.trim();
+  if (homeDir && path.basename(homeDir).startsWith(VITEST_HOME_PREFIX)) {
+    configPaths.push(path.join(homeDir, '.claude.json'));
+  }
+  for (const configPath of configPaths) {
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, `${JSON.stringify({ projects }, null, 2)}\n`, 'utf8');
+  }
+}
+
+function createCodexOnlyWorkspaceTrustCoordinator(): WorkspaceTrustCoordinator {
+  return {
+    async planArgsOnly(request) {
+      return { launchArgPatches: buildLiveCodexWorkspaceTrustPatches(request) };
+    },
+    async planFull(request) {
+      return {
+        providers: request.providers,
+        workspaces: request.workspaces,
+        launchArgPatches: buildLiveCodexWorkspaceTrustPatches(request),
+      };
+    },
+    async execute(plan) {
+      return {
+        id: 'member-work-sync-recovery-codex-live-workspace-trust',
+        provider: 'claude',
+        status: 'skipped',
+        workspaceIds: plan.workspaces.map((workspace) => workspace.id),
+        evidence: ['live test injects Codex native trusted-project settings'],
+      };
+    },
+  };
+}
+
+function buildLiveCodexWorkspaceTrustPatches(
+  request: WorkspaceTrustArgsOnlyPlanRequest
+): WorkspaceTrustLaunchArgPatch[] {
+  if (
+    !request.featureFlags.enabled ||
+    !request.featureFlags.codexArgs ||
+    !request.providers.includes('codex')
+  ) {
+    return [];
+  }
+  const configKeys = request.workspaces.flatMap((workspace) => [
+    workspace.configKeyCwd,
+    workspace.realCwd,
+    ...(workspace.gitRootConfigKey ? [workspace.gitRootConfigKey] : []),
+  ]);
+  const overrides = buildCodexTrustedProjectConfigOverrides(configKeys);
+  const args = buildCodexWorkspaceTrustSettingsArgs(overrides);
+  if (args.length === 0) {
+    return [];
+  }
+  const workspaceIds = request.workspaces.map((workspace) => workspace.id);
+  return (request.targetSurfaces ?? LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES).map((surface) => ({
+    id: `member-work-sync-recovery-codex-live-workspace-trust:${surface}`,
+    owner: 'workspace-trust',
+    targetProvider: 'codex',
+    targetSurface: surface,
+    dialect: 'claude-codex-runtime-settings',
+    args,
+    dedupeKey: `member-work-sync-recovery-codex-live-workspace-trust:${surface}:${overrides.join('|')}`,
+    sourceWorkspaceIds: workspaceIds,
+    reason: 'Trust the live e2e project for Codex native headless teammate startup.',
+  }));
 }

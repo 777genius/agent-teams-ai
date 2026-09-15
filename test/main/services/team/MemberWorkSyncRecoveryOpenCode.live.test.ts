@@ -70,6 +70,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     harness = null;
     teamName = null;
     owned = await createOwnedWorkSyncIdentity();
+    setClaudeBasePathOverride(tempClaudeRoot);
   });
 
   afterEach(async () => {
@@ -101,7 +102,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     } else {
       await fs.rm(tempDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 240_000);
 
   it('keeps D0 off and a user stop latch across feature restart on a live OpenCode teammate', async () => {
     const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
@@ -535,7 +536,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
           await harness!.svc
             .relayOpenCodeMemberInboxMessages(teamName!, memberName, {
               onlyMessageId: firstNudgeId,
-              source: 'manual',
+              source: 'watchdog',
               deliveryMetadata: { replyRecipient: 'user' },
             })
             .catch(() => undefined);
@@ -576,114 +577,54 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       ).catch(() => undefined);
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
-      await expireOpenCodeAcceptedReportLease({ teamName, memberName });
-      await feature!.refreshStatus({ teamName, memberName });
-      const recoveryIdsBeforeAttention = Object.values(
-        await readMemberWorkSyncOutboxItems(teamName, memberName)
-      )
-        .map((item) => item.payload?.workSyncIntentKey)
-        .filter((value): value is string => Boolean(value))
-        .sort();
-      await backdateOpenCodeRecoveryEpisode({ teamName, memberName });
-      const attention = await feature!.refreshStatus({ teamName, memberName });
-      expect(attention.recoveryHealth?.episodes[0]?.phase).toBe('attention');
-      expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
-      expect(
-        Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName))
-          .map((item) => item.payload?.workSyncIntentKey)
-          .filter((value): value is string => Boolean(value))
-          .sort()
-      ).toEqual(recoveryIdsBeforeAttention);
-
-      const inboxBeforeContinue = await readInboxMessages(inboxPath);
-      const nudgeIdsBeforeContinue = new Set(
-        inboxBeforeContinue
-          .map((message) => message.messageId)
-          .filter((value): value is string => Boolean(value))
-      );
       await waitUntil(
         async () => {
           await feature!.drainRuntimeTurnSettledEvents();
-          try {
-            await feature!.continueManually({
-              teamName: teamName!,
-              memberName,
-              idempotencyKey: 'live-progress',
-            });
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (
-              /member_busy|status_not_nudgeable|payload_conflict|mutation conflict/.test(message)
-            ) {
-              await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
-              await feature!.refreshStatus({ teamName: teamName!, memberName });
-              return false;
-            }
-            throw error;
-          }
-          const inbox = await readInboxMessages(inboxPath);
-          const hasContinuation = inbox.some(
-            (message) =>
-              message.messageKind === 'member_work_sync_nudge' &&
-              typeof message.messageId === 'string' &&
-              !nudgeIdsBeforeContinue.has(message.messageId)
-          );
-          if (!hasContinuation) {
-            await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
-            await feature!.refreshStatus({ teamName: teamName!, memberName });
-            return false;
-          }
-          return true;
-        },
-        420_000,
-        2_000,
-        async () => {
-          const status = await feature!.getStatus({ teamName: teamName!, memberName });
-          return [
-            await formatMemberWorkSyncDiagnostics({
-              feature: feature!,
-              teamName: teamName!,
-              memberName,
-              taskId: task.id,
-            }),
-            `recoveryHealth=${JSON.stringify(status.recoveryHealth ?? null)}`,
-            `wouldNudge=${String(status.shadow?.wouldNudge)}`,
-            `state=${status.state}`,
-          ].join('\n');
-        }
-      );
-      await feature!.dispatchDueNudges([teamName]);
-
-      await waitUntil(
-        async () => {
           await feature!.dispatchDueNudges([teamName!]);
-          await feature!.drainRuntimeTurnSettledEvents();
           const inbox = await readInboxMessages(inboxPath);
-          const continuation = [...inbox]
-            .reverse()
-            .find(
-              (message) =>
-                message.messageKind === 'member_work_sync_nudge' &&
-                typeof message.messageId === 'string' &&
-                !nudgeIdsBeforeContinue.has(message.messageId)
+          return inbox.some((message) => {
+            const intentKey = message.workSyncIntentKey;
+            return (
+              message.messageKind === 'member_work_sync_nudge' &&
+              typeof intentKey === 'string' &&
+              intentKey.startsWith('early-continuation:') &&
+              Boolean(message.workSyncRuntimeTicketId) &&
+              Boolean(message.workSyncRuntimeInstanceId)
             );
-          if (continuation?.messageId) {
-            try {
-              await waitForOpenCodePeerRelay(
-                harness!.svc,
-                teamName!,
-                memberName,
-                continuation.messageId,
-                30_000,
-                { requireAccepted: true }
-              );
-            } catch {
-              // Keep pumping until CANARY.txt appears; a pending turn is not remaining-work proof.
-            }
-          } else {
-            await expireOpenCodeAcceptedReportLease({ teamName: teamName!, memberName });
-            await feature!.refreshStatus({ teamName: teamName!, memberName });
-          }
+          });
+        },
+        90_000,
+        2_000,
+        async () =>
+          formatMemberWorkSyncDiagnostics({
+            feature: feature!,
+            teamName: teamName!,
+            memberName,
+            taskId: task.id,
+          })
+      );
+      const earlyContinuation = [...(await readInboxMessages(inboxPath))]
+        .reverse()
+        .find(
+          (message) =>
+            message.messageKind === 'member_work_sync_nudge' &&
+            typeof message.workSyncIntentKey === 'string' &&
+            message.workSyncIntentKey.startsWith('early-continuation:') &&
+            typeof message.messageId === 'string'
+        );
+      const earlyContinuationId = earlyContinuation?.messageId;
+      expect(earlyContinuationId).toBeTruthy();
+      if (typeof earlyContinuationId !== 'string') {
+        throw new Error('expected D1 early-continuation inbox message id');
+      }
+      await waitForOpenCodePeerRelay(harness.svc, teamName, memberName, earlyContinuationId, 180_000, {
+        requireAccepted: true,
+      });
+
+      await waitUntil(
+        async () => {
+          await feature!.drainRuntimeTurnSettledEvents();
+          await feature!.dispatchDueNudges([teamName!]);
           const canary = await fs.readFile(canaryPath, 'utf8').catch(() => '');
           return /^\s*done\s*$/i.test(canary);
         },

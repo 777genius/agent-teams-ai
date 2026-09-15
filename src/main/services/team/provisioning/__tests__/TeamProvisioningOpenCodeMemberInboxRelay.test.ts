@@ -192,9 +192,30 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       'team',
       expect.objectContaining({ messageId: 'fresh' })
     );
-    expect(ports.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded).not.toHaveBeenCalled();
-    expect(ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
     expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+  });
+
+  it('forwards workSyncControlRevision from the inbox row to OpenCode delivery', async () => {
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn().mockResolvedValue([
+        message({
+          messageId: 'd0-nudge',
+          messageKind: 'member_work_sync_nudge',
+          workSyncControlRevision: 16,
+        }),
+      ]),
+    });
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'opencode:team:worker' },
+      ports
+    );
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({
+        messageId: 'd0-nudge',
+        workSyncControlRevision: 16,
+      })
+    );
   });
 
   it('sanitizes and schedules OpenCode member inbox delivery wakes', () => {

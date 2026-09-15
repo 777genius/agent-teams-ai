@@ -207,6 +207,57 @@ export function buildMemberWorkSyncNudgePayloadHash(
   return hash.sha256Hex(stableJson(hashed));
 }
 
+export const MEMBER_WORK_SYNC_ADMISSION_TICKET_FIELDS = [
+  'workSyncRuntimeTicketId',
+  'workSyncRuntimeGeneration',
+  'workSyncRuntimeInstanceId',
+  'workSyncAdmissionPayloadHash',
+  'workSyncTeamIncarnation',
+] as const;
+
+export function buildMemberWorkSyncAdmissionPayloadHash(
+  hash: MemberWorkSyncNudgeHash,
+  payload: MemberWorkSyncNudgePayload
+): string {
+  const {
+    workSyncRuntimeTicketId: _ticketId,
+    workSyncRuntimeGeneration: _generation,
+    workSyncRuntimeInstanceId: _instanceId,
+    workSyncAdmissionPayloadHash: _admissionHash,
+    workSyncTeamIncarnation: _incarnation,
+    ...hashed
+  } = payload;
+  return hash.sha256Hex(stableJson(hashed));
+}
+
+export function buildMemberWorkSyncEarlyOutboxEnsureInput(input: {
+  status: MemberWorkSyncStatus;
+  hash: MemberWorkSyncNudgeHash;
+  nowIso: string;
+}): MemberWorkSyncOutboxEnsureInput | null {
+  const status = input.status;
+  if (status.agenda.items.length === 0) {
+    return null;
+  }
+
+  const payload = buildMemberWorkSyncNudgePayload(status);
+  const intentKey = payload.workSyncIntentKey;
+  return {
+    id: buildMemberWorkSyncNudgeId({
+      teamName: status.teamName,
+      memberName: status.memberName,
+      agendaFingerprint: status.agenda.fingerprint,
+      intentKey,
+    }),
+    teamName: status.teamName,
+    memberName: status.memberName,
+    agendaFingerprint: status.agenda.fingerprint,
+    payloadHash: buildMemberWorkSyncNudgePayloadHash(input.hash, payload),
+    payload,
+    nowIso: input.nowIso,
+  };
+}
+
 export function buildMemberWorkSyncOutboxEnsureInput(input: {
   status: MemberWorkSyncStatus;
   hash: MemberWorkSyncNudgeHash;
