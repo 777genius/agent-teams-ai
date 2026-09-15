@@ -495,7 +495,7 @@ describe('RuntimeTurnSettledIngestor', () => {
       markInvalid: vi.fn(),
     };
     const resolver: RuntimeTurnSettledTargetResolverPort = {
-      resolve: vi.fn(async () => ({ ok: true, teamName: 'team-a', memberName: 'jack' })),
+      resolve: vi.fn(async () => ({ ok: true as const, teamName: 'team-a', memberName: 'jack' })),
     };
     const enqueueRuntimeTurnSettled = vi.fn(() => true);
 

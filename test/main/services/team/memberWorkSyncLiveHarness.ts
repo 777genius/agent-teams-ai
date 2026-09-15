@@ -147,7 +147,7 @@ export function isRetryableOpenCodeLaunchDump(dump: string): boolean {
 }
 
 export async function createOpenCodeTeamUntilReady(input: {
-  createTeam: (onProgress: (progress: TeamProvisioningProgress) => void) => Promise<void>;
+  createTeam: (onProgress: (progress: TeamProvisioningProgress) => void) => Promise<unknown>;
   stopTeam?: () => Promise<void>;
   attempts?: number;
   timeoutMs?: number;
