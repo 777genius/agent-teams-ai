@@ -2444,7 +2444,11 @@
       "yes": "ndiyo",
       "no": "hapana",
       "moreActionableItems": "kipengee {{count}} zaidi kinachoweza kutekelezwa",
-      "diagnostics": "Utambuzi: {{diagnostics}}"
+      "diagnostics": "Utambuzi: {{diagnostics}}",
+      "autoResumeStopped": "Kuendelea kiotomatiki kumesimamishwa.",
+      "continue": "Endelea",
+      "stopAutoResume": "Simamisha kuendelea kiotomatiki",
+      "resumeAutoResume": "Anzisha tena kuendelea kiotomatiki"
     },
     "title": "Usawazishaji wa kazi ya mwanachama",
     "loadingDiagnostics": "Inapakia utambuzi wa usawazishaji wa kazi ya mwanachama.",

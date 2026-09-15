@@ -93,3 +93,68 @@ describe('MemberWorkSyncTeamOperationGate', () => {
     expect(sideEffectSettled).toBe(true);
   });
 });
+
+
+it('releasing one restore cannot reopen another restore or deletion closure', async () => {
+  const gate = new MemberWorkSyncTeamOperationGate();
+  const first = gate.beginOwnedTeamQuiesce('Team-A');
+  const second = gate.beginOwnedTeamQuiesce(' team-a ');
+  gate.beginTeamQuiesce('TEAM-A');
+  first.release();
+  first.release();
+  gate.resumeTeam('team-a');
+  await expect(gate.run('team-a', async () => 'unsafe')).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+  gate.beginTeamQuiesce('team-a');
+  second.release();
+  await expect(gate.run('team-a', async () => 'unsafe')).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+  gate.resumeTeam('team-a');
+  await expect(gate.run('team-a', async () => 'safe')).resolves.toBe('safe');
+  const third = gate.beginOwnedTeamQuiesce('team-a');
+  first.release();
+  second.release();
+  await expect(gate.run('team-a', async () => 'unsafe')).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+  third.release();
+  await expect(gate.run('team-a', async () => 'safe')).resolves.toBe('safe');
+});
+
+it('owned restore drain retains early-return physical work and leaves another team runnable', async () => {
+  const gate = new MemberWorkSyncTeamOperationGate();
+  const tail = createDeferred<void>();
+  await gate.run('team-a', async admission => { admission.trackSettling(tail.promise); });
+  const restore = gate.beginOwnedTeamQuiesce('team-a');
+  let drained = false;
+  const drain = gate.awaitTeamIdle('team-a').then(() => { drained = true; });
+  try {
+    await gate.run('team-b', async () => undefined);
+    expect(drained).toBe(false);
+    await expect(gate.run('team-a', async () => 'unsafe')).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+  } finally { tail.resolve(); await drain; restore.release(); }
+  expect(drained).toBe(true);
+  await expect(gate.run('team-a', async () => 'safe')).resolves.toBe('safe');
+});
+
+it('closes all admission and drains remaining operations', async () => {
+  const gate = new MemberWorkSyncTeamOperationGate();
+  const admitted = createDeferred<string>();
+  const admittedRun = gate.run('team-a', () => admitted.promise);
+  gate.close();
+
+  await expect(gate.run('team-b', async () => 'must-not-run')).rejects.toEqual(
+    new MemberWorkSyncTeamQuiescedError('team-b')
+  );
+
+  let idle = false;
+  const idlePromise = gate.awaitIdle().then(() => {
+    idle = true;
+  });
+  await Promise.resolve();
+  expect(idle).toBe(false);
+
+  admitted.resolve('done');
+  await expect(admittedRun).resolves.toBe('done');
+  await idlePromise;
+  expect(idle).toBe(true);
+  await expect(gate.run('team-a', async () => 'reopened')).rejects.toBeInstanceOf(
+    MemberWorkSyncTeamQuiescedError
+  );
+});

@@ -1,3 +1,5 @@
+// eslint-disable-next-line no-restricted-imports -- Concrete Node wiring belongs to the architecture-approved composition facet.
+import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_LIST_ROUTE,
@@ -14,6 +16,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
@@ -638,6 +641,17 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
     }
   );
+
+  registerMemberWorkSyncRuntimeStopRoute(app, {
+    getFeature: () => getMemberWorkSyncFeature(services),
+    getTeamsBasePath,
+    readCurrentNativeRuntimeInstanceId: (input) =>
+      memberWorkSyncRuntimeDelivery.readCurrentNativeRuntimeInstanceId(input),
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+  });
 
   app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
     '/api/teams/:teamName/member-work-sync/report',

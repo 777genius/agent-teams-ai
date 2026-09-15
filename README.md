@@ -528,6 +528,8 @@ local packaging.
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
+Human pull requests must be signed under the [Contributor License Agreement](.github/CLA.md) v2 before merge. You keep copyright. Until you sign, GitHub's Terms of Service license the pull request under AGPL-3.0 only.
+
 ## Partnerships
 
 We are open to partnerships and collaboration opportunities. If you see a way to create value together, we are ready to discuss mutually beneficial terms.
@@ -545,3 +547,5 @@ GitHub Dependabot helps surface dependencies with known vulnerabilities and avai
 ## License
 
 [AGPL-3.0](LICENSE)
+
+New contributions also need [CLA v2](.github/CLA.md). That does not replace AGPL-3.0 on the public repository. It lets the project owner sublicense signed work under additional terms (for example a commercial license) while keeping the AGPL-3.0 grant from the submission date.

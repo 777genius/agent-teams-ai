@@ -46,7 +46,6 @@ const { baseURL } = useRuntimeConfig().app;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 16px rgba(0, 240, 255, 0.22);
 }
 </style>
 

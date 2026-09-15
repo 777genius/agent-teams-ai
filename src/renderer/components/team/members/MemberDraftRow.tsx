@@ -27,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
@@ -65,10 +71,8 @@ import type {
   TeamMemberMcpPolicy,
   TeamProviderId,
 } from '@shared/types';
-
 type ModelReasonByValue = Partial<Record<string, string | null | undefined>>;
 type ModelReasonByProvider = Partial<Record<TeamProviderId, ModelReasonByValue>>;
-
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
@@ -129,7 +133,6 @@ interface MemberDraftRowProps {
   };
   layoutVariant?: 'default' | 'flat';
 }
-
 export const MemberDraftRow = ({
   member,
   index,
@@ -207,7 +210,6 @@ export const MemberDraftRow = ({
     enabled: !!draftKey,
   });
   const chips = useMemo(() => member.workflowChips ?? [], [member.workflowChips]);
-
   const handleWorkflowChange = useCallback(
     (v: string) => {
       const reconciled = reconcileChips(chips, v);
@@ -219,14 +221,12 @@ export const MemberDraftRow = ({
     },
     [member.id, chips, onWorkflowChange, onWorkflowChipsChange, workflowDraft]
   );
-
   const handleFileChipInsert = useCallback(
     (chip: InlineChip) => {
       onWorkflowChipsChange?.(member.id, [...chips, chip]);
     },
     [member.id, chips, onWorkflowChipsChange]
   );
-
   const handleChipRemove = useCallback(
     (chipId: string) => {
       const chip = chips.find((c) => c.id === chipId);
@@ -239,7 +239,6 @@ export const MemberDraftRow = ({
     },
     [chips, member.id, onWorkflowChange, onWorkflowChipsChange, workflowDraft]
   );
-
   const effectiveMcpPolicy = useMemo<TeamMemberMcpPolicy | undefined>(
     () => (agentTeamsMcpLocked ? { mode: 'appOnly' } : member.mcpPolicy),
     [agentTeamsMcpLocked, member.mcpPolicy]
@@ -332,7 +331,6 @@ export const MemberDraftRow = ({
         return t('memberDraft.mcp.scopes.local');
     }
   };
-
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -342,7 +340,6 @@ export const MemberDraftRow = ({
       onWorkflowChange(member.id, workflowDraft.value);
     }
   }, [workflowDraft.value, member.id, member.workflow, onWorkflowChange]);
-
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
@@ -404,37 +401,33 @@ export const MemberDraftRow = ({
   const hasModelIssue = Boolean(currentModelIssueText);
   const hasModelAdvisory = Boolean(currentModelAdvisoryText);
   const modelButtonDisabled = (lockProviderModel && !canOpenLockedModelPanel) || isRemoved;
-  const modelButtonTitle =
-    [currentModelIssueText ?? currentModelAdvisoryText, modelTooltipText]
-      .filter((message): message is string => Boolean(message))
-      .join('\n') || undefined;
   const modelIssueDescriptionId =
     hasModelIssue || hasModelAdvisory ? `member-${member.id}-model-issue` : undefined;
   const modelHelpDescriptionId = modelTooltipText ? `member-${member.id}-model-help` : undefined;
   const modelButtonDescribedBy =
     [modelIssueDescriptionId, modelHelpDescriptionId].filter(Boolean).join(' ') || undefined;
-  const modelButtonTooltipContent =
-    currentModelIssueText || currentModelAdvisoryText || modelTooltipText ? (
-      <>
-        {currentModelIssueText ? (
-          <span className="block text-red-300">{currentModelIssueText}</span>
-        ) : null}
-        {currentModelAdvisoryText ? (
-          <span className="block text-amber-200">{currentModelAdvisoryText}</span>
-        ) : null}
-        {modelTooltipText ? (
-          <span
-            className={cn(
-              'block',
-              (currentModelIssueText || currentModelAdvisoryText) &&
-                'mt-1 border-t border-white/10 pt-1'
-            )}
-          >
-            {modelTooltipText}
-          </span>
-        ) : null}
-      </>
-    ) : null;
+  const modelButtonTooltipContent = (
+    <>
+      <span className="block break-words font-medium">{modelButtonLabel}</span>
+      {currentModelIssueText ? (
+        <span className="block text-red-300">{currentModelIssueText}</span>
+      ) : null}
+      {currentModelAdvisoryText ? (
+        <span className="block text-amber-200">{currentModelAdvisoryText}</span>
+      ) : null}
+      {modelTooltipText ? (
+        <span
+          className={cn(
+            'block',
+            (currentModelIssueText || currentModelAdvisoryText) &&
+              'mt-1 border-t border-white/10 pt-1'
+          )}
+        >
+          {modelTooltipText}
+        </span>
+      ) : null}
+    </>
+  );
   const hasCustomProviderOrModel =
     !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
   const showSonnetExtraUsageWarning =
@@ -472,7 +465,6 @@ export const MemberDraftRow = ({
       return next;
     });
   }, [onWorkflowSuggestionsNeeded]);
-
   return (
     <div
       className={cn(
@@ -569,41 +561,49 @@ export const MemberDraftRow = ({
               isFlatRoster ? 'sm:w-[170px] sm:min-w-[140px]' : 'sm:w-[150px] sm:min-w-[150px]'
             )}
           >
-            <HoverTooltip
-              content={modelButtonTooltipContent}
-              title={modelButtonTitle}
-              disabled={!modelButtonTooltipContent}
-              className="w-full"
-              contentClassName="max-w-64"
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                  hasModelIssue &&
-                    'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
-                  hasModelAdvisory &&
-                    'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
-                )}
-                aria-label={modelButtonAriaLabel}
-                aria-describedby={modelButtonDescribedBy}
-                disabled={modelButtonDisabled}
-                onClick={() => setModelExpanded((prev) => !prev)}
-              >
-                {modelExpanded ? (
-                  <ChevronDown className="size-3.5" />
-                ) : (
-                  <ChevronRight className="size-3.5" />
-                )}
-                <TeamModelBrandIcon providerId={effectiveProviderId} model={effectiveModel ?? ''} />
-                <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
-                {hasModelIssue ? (
-                  <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
-                ) : null}
-                {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
-              </Button>
-            </HoverTooltip>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                        hasModelIssue &&
+                          'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
+                        hasModelAdvisory &&
+                          'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
+                      )}
+                      aria-label={modelButtonAriaLabel}
+                      aria-describedby={modelButtonDescribedBy}
+                      disabled={modelButtonDisabled}
+                      onClick={() => setModelExpanded((prev) => !prev)}
+                    >
+                      {modelExpanded ? (
+                        <ChevronDown className="size-3.5" />
+                      ) : (
+                        <ChevronRight className="size-3.5" />
+                      )}
+                      <TeamModelBrandIcon
+                        providerId={effectiveProviderId}
+                        model={effectiveModel ?? ''}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                      {hasModelIssue ? (
+                        <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
+                      ) : null}
+                      {hasModelAdvisory ? (
+                        <Info className="size-3.5 shrink-0 text-amber-300" />
+                      ) : null}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-80 break-words">
+                  {modelButtonTooltipContent}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {modelTooltipText ? (
               <span id={modelHelpDescriptionId} className="sr-only">
                 {modelTooltipText}

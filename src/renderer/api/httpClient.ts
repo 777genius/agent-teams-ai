@@ -47,7 +47,9 @@ import {
 } from '@features/workspace-trust/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
+import { createBrowserMemberWorkSyncApi } from './browserMemberWorkSyncApi';
 import { createBrowserReviewApi } from './browserReviewApi';
+import { listTeamLifecycleOverHttp } from './browserTeamLifecycleRequest';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -147,7 +149,7 @@ import type {
   WindowsElevationStatus,
   WslClaudeRootCandidate,
 } from '@shared/types';
-import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
+import type { AgentConfig } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
 
@@ -296,10 +298,6 @@ export class HttpAPIClient implements ElectronAPI {
     };
   }
 
-  // ---------------------------------------------------------------------------
-  // HTTP helpers
-  // ---------------------------------------------------------------------------
-
   /**
    * JSON reviver that converts ISO 8601 date strings back to Date objects.
    * Electron IPC preserves Date instances via structured clone, but HTTP JSON
@@ -384,6 +382,9 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
+
+  listTeamLifecycle: ElectronAPI['listTeamLifecycle'] = (request) =>
+    listTeamLifecycleOverHttp(<T>(path: string, body?: unknown) => this.post<T>(path, body), request);
 
   // ---------------------------------------------------------------------------
   // Core session/project APIs
@@ -1566,28 +1567,10 @@ export class HttpAPIClient implements ElectronAPI {
     onOAuthProgress: () => () => {},
   };
 
-  memberWorkSync: MemberWorkSyncElectronApi = {
-    getStatus: (request) =>
-      this.get(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}`
-      ),
-    refreshStatus: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}/refresh`,
-        {}
-      ),
-    getMetrics: (request) =>
-      this.get(`/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/metrics`),
-    report: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/report`,
-        request
-      ),
-  };
+  memberWorkSync = createBrowserMemberWorkSyncApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+  });
 
   tmux: TmuxAPI = {
     getStatus: async (): Promise<TmuxStatus> => ({

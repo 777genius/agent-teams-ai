@@ -2444,7 +2444,11 @@
       "yes": "نعم",
       "no": "لا",
       "moreActionableItems": "{{count}} بند (بنود) أكثر قابلية للتداول",
-      "diagnostics": "التشخيص: {{diagnostics}}"
+      "diagnostics": "التشخيص: {{diagnostics}}",
+      "autoResumeStopped": "تم إيقاف الاستمرار التلقائي.",
+      "continue": "متابعة",
+      "stopAutoResume": "إيقاف الاستئناف التلقائي",
+      "resumeAutoResume": "استئناف الاستئناف التلقائي"
     },
     "title": "التزامن",
     "loadingDiagnostics": "التشخيصات المتزامنة",

@@ -939,7 +939,6 @@ function getPowerLabel(power: number): string {
 .comparison-table__cell--yes .comparison-table__cell-content {
   color: #39ff14;
   background: rgba(57, 255, 20, 0.1);
-  text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
 }
 
 .comparison-table__cell--no .comparison-table__cell-content {
@@ -979,7 +978,6 @@ function getPowerLabel(power: number): string {
 .comparison-table__cell--free .comparison-table__cell-content {
   color: #39ff14;
   background: rgba(57, 255, 20, 0.1);
-  text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
 }
 
 .comparison-table__cell--text .comparison-table__cell-content {

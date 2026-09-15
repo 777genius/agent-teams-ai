@@ -457,7 +457,49 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface MemberWorkSyncMessageMetadata {
+  /** Structured member-work-sync intent for runtime delivery and audit. */
+  workSyncIntent?: 'agenda_sync' | 'review_pickup';
+  /** Stable intent key, e.g. one review request event or a small review-request group. */
+  workSyncIntentKey?: string;
+  /** Concrete review_requested event IDs covered by this nudge. */
+  workSyncReviewRequestEventIds?: string[];
+  /** Protocol-2 early-continuation ticket identity. */
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
+  workSyncRuntimeInstanceId?: string;
+  workSyncAdmissionPayloadHash?: string;
+  workSyncTeamIncarnation?: string;
+  /** Recovery control revision that bound this protocol-1/2 inbox nudge. */
+  workSyncControlRevision?: number;
+  /** Durable hash for idempotent hidden member-work-sync automation rows. */
+  workSyncPayloadHash?: string;
+}
+
+export interface TeamMessageContextMetadata extends MemberWorkSyncMessageMetadata {
+  /** Lead session ID that produced this message (for session boundary detection). */
+  leadSessionId?: string;
+  /** Stable cross-team thread ID shared across request/reply turns. */
+  conversationId?: string;
+  /** Explicit parent conversation/message reference for replies. */
+  replyToConversationId?: string;
+  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
+  toolSummary?: string;
+  /** Structured tool call details for tooltip display. */
+  toolCalls?: ToolCallMeta[];
+  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
+  messageKind?: InboxMessageKind;
+  /** Structured terminal runtime failure emitted by a teammate runtime. */
+  agentError?: AgentErrorMetadataV1;
+  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
+  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
+  /** Structured slash-command metadata for sent command rows. */
+  slashCommand?: SlashCommandMeta;
+  /** Structured command-output metadata for session-derived result rows. */
+  commandOutput?: CommandOutputMeta;
+}
+
+export interface InboxMessage extends TeamMessageContextMetadata {
   from: string;
   to?: string;
   text: string;
@@ -483,34 +525,6 @@ export interface InboxMessage {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
-  /** Lead session ID that produced this message (for session boundary detection). */
-  leadSessionId?: string;
-  /** Stable cross-team thread ID shared across request/reply turns. */
-  conversationId?: string;
-  /** Explicit parent conversation/message reference for replies. */
-  replyToConversationId?: string;
-  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
-  toolSummary?: string;
-  /** Structured tool call details for tooltip display. */
-  toolCalls?: ToolCallMeta[];
-  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
-  messageKind?: InboxMessageKind;
-  /** Structured terminal runtime failure emitted by a teammate runtime. */
-  agentError?: AgentErrorMetadataV1;
-  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  /** Structured member-work-sync intent for runtime delivery and audit. */
-  workSyncIntent?: 'agenda_sync' | 'review_pickup';
-  /** Stable intent key, e.g. one review request event or a small review-request group. */
-  workSyncIntentKey?: string;
-  /** Concrete review_requested event IDs covered by this nudge. */
-  workSyncReviewRequestEventIds?: string[];
-  /** Durable hash for idempotent hidden member-work-sync automation rows. */
-  workSyncPayloadHash?: string;
-  /** Structured slash-command metadata for sent command rows. */
-  slashCommand?: SlashCommandMeta;
-  /** Structured command-output metadata for session-derived result rows. */
-  commandOutput?: CommandOutputMeta;
 }
 
 /** Cursor-based paginated messages response. */
@@ -519,16 +533,13 @@ export interface MessagesPage {
   /** Opaque cursor string for fetching older messages. Null when no more pages. */
   nextCursor: string | null;
   hasMore: boolean;
-  /**
-   * Content-stable revision of the full normalized feed that produced this page.
-   * Changes only when the semantic message feed changes.
-   */
+  /** Stable full-feed revision; changes only when the semantic message feed changes. */
   feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends TeamMessageContextMetadata {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -544,21 +555,6 @@ export interface SendMessageRequest {
   color?: string;
   attachments?: AttachmentPayload[];
   source?: InboxMessage['source'];
-  /** Lead session ID for session boundary detection. */
-  leadSessionId?: string;
-  conversationId?: string;
-  replyToConversationId?: string;
-  toolSummary?: string;
-  toolCalls?: ToolCallMeta[];
-  messageKind?: InboxMessageKind;
-  agentError?: AgentErrorMetadataV1;
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  workSyncIntent?: InboxMessage['workSyncIntent'];
-  workSyncIntentKey?: string;
-  workSyncReviewRequestEventIds?: string[];
-  workSyncPayloadHash?: string;
-  slashCommand?: SlashCommandMeta;
-  commandOutput?: CommandOutputMeta;
 }
 
 export interface SendMessageResult {

@@ -2444,7 +2444,11 @@
       "yes": "بله",
       "no": "خیر",
       "moreActionableItems": "{{count}} مورد قابل اقدام بیشتر",
-      "diagnostics": "عیب‌یابی: {{diagnostics}}"
+      "diagnostics": "عیب‌یابی: {{diagnostics}}",
+      "autoResumeStopped": "ادامهٔ خودکار متوقف شده است.",
+      "continue": "ادامه",
+      "stopAutoResume": "توقف ازسرگیری خودکار",
+      "resumeAutoResume": "ازسرگیری خودکار"
     },
     "title": "همگام‌سازی کار عضو",
     "loadingDiagnostics": "در حال بارگذاری عیب‌یابی همگام‌سازی کار عضو.",

@@ -2444,7 +2444,11 @@
       "yes": "이름 *",
       "no": "없음",
       "moreActionableItems": "{{count}} 액션 아이템(s)",
-      "diagnostics": "진단: {{diagnostics}}"
+      "diagnostics": "진단: {{diagnostics}}",
+      "autoResumeStopped": "자동 이어가기가 중지되었습니다.",
+      "continue": "계속",
+      "stopAutoResume": "자동 재개 중지",
+      "resumeAutoResume": "자동 재개 다시 시작"
     },
     "title": "회원 작업 동기화",
     "loadingDiagnostics": "선적 일원 일 sync 진단.",

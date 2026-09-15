@@ -468,6 +468,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
           syntheticRequest,
           launchIdentity,
           allEffectiveMemberSpecs: syntheticRequest.members,
+          configuredMemberSpecs: syntheticRequest.members,
           run,
           runId: 'run-1',
           provisioningEnv: { env: {} },

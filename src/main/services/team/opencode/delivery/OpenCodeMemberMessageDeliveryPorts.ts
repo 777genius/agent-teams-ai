@@ -4,7 +4,10 @@ import type {
   TeamLaunchRuntimeAdapter,
 } from '../../runtime';
 import type { OpenCodeCommittedBootstrapSessionRecord } from '../store/OpenCodeRuntimeManifestEvidenceReader';
-import type { OpenCodePromptDeliveryFollowUpPolicy } from './OpenCodePromptDeliveryFollowUpPolicy';
+import type {
+  OpenCodePromptDeliveryFollowUpPolicy,
+  UndeliverableOpenCodePrimaryLaneBootstrapDeps,
+} from './OpenCodePromptDeliveryFollowUpPolicy';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
@@ -13,6 +16,7 @@ import type {
 import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
+import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type {
   AgentActionMode,
@@ -62,6 +66,8 @@ export interface OpenCodeMemberMessageDeliveryInput {
   actionMode?: AgentActionMode;
   messageKind?: InboxMessage['messageKind'];
   workSyncIntent?: InboxMessage['workSyncIntent'];
+  workSyncRuntimeTicketId?: InboxMessage['workSyncRuntimeTicketId'];
+  workSyncControlRevision?: InboxMessage['workSyncControlRevision'];
   workSyncReviewRequestEventIds?: string[];
   taskRefs?: TaskRef[];
   attachments?: AttachmentPayload[];
@@ -298,6 +304,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     visibleReply: OpenCodeVisibleReplyProof | null;
   }>;
   notifyOpenCodeLeadTurnActivity?: (notification: OpenCodeLeadTurnActivityNotification) => void;
-  readOpenCodeMemberContextUsage?: (input: Record<string, unknown>) => Promise<unknown>;
+  readOpenCodeMemberContextUsage?: OpenCodeMemberContextUsageProbe;
+  requestOpenCodePrimaryLaneRebootstrap?: UndeliverableOpenCodePrimaryLaneBootstrapDeps['requestOpenCodePrimaryLaneRebootstrap'];
   openCodeStalePendingPolicyConfig?: OpenCodeStalePendingPolicyConfig;
 }

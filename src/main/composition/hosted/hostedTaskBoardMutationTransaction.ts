@@ -5,7 +5,11 @@ import {
   type HostedTaskMutationCommand,
   type HostedTaskMutationCommittedReceipt,
 } from '@features/team-task-board/main/hosted';
-import { atomicCreateAsync } from '@main/utils/atomicWrite';
+import {
+  atomicCreateAsync,
+  type AtomicCreatePublicationResult,
+  type AtomicCreateResult,
+} from '@main/utils/atomicWrite';
 import { atomicReplaceFileIfUnchangedAsync } from '@main/utils/durablePathOperations';
 
 import {
@@ -18,6 +22,7 @@ import {
   revalidateHostedTaskBoardDirectories,
   revalidateHostedTaskBoardDirectoryMembership,
   revalidateHostedTaskBoardSnapshots,
+  syncHostedTaskBoardDirectory,
 } from './hostedTaskBoardDescriptorFs';
 import {
   type HostedTaskBoardExistingFilePublicationCheckpoint,
@@ -199,12 +204,13 @@ async function stagedTaskNames(
 
 function sameCreateIdentity(
   snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>,
-  created: { readonly dev: number; readonly ino: number; readonly birthtimeMs: number }
+  created: AtomicCreateResult & Partial<Pick<AtomicCreatePublicationResult, 'birthtimeMs'>>
 ): boolean {
   return (
     snapshot.stamp.durableIdentity.dev === created.dev &&
     snapshot.stamp.durableIdentity.ino === created.ino &&
-    snapshot.stamp.durableIdentity.birthtimeMs === created.birthtimeMs
+    (created.birthtimeMs === undefined ||
+      snapshot.stamp.durableIdentity.birthtimeMs === created.birthtimeMs)
   );
 }
 
@@ -401,7 +407,7 @@ export async function createHostedTaskBoardMutationWalHandle(input: {
   }
   const serialized = serializeHostedTaskBoardMutationWal(input.wal);
   await input.fence.renew(input.assertStillActive);
-  let created: { readonly dev: number; readonly ino: number; readonly birthtimeMs: number };
+  let created: AtomicCreateResult & Partial<Pick<AtomicCreatePublicationResult, 'birthtimeMs'>>;
   if (input.previousTerminal !== null && input.previousTerminal !== undefined) {
     if (input.previousTerminal.wal.phase !== 'terminal') {
       throw transactionError('hosted-task-board-mutation-wal-terminal-replace-invalid');
@@ -596,15 +602,6 @@ async function publishTarget(input: {
   }
 }
 
-async function ensurePublicationDurable(
-  parent: HostedTaskBoardDirectoryDescriptor,
-  assertStillActive?: () => void
-): Promise<void> {
-  await revalidateHostedTaskBoardDirectories([parent], assertStillActive);
-  await parent.handle.sync();
-  await revalidateHostedTaskBoardDirectories([parent], assertStillActive);
-}
-
 async function applyPreparedWal(input: {
   readonly handle: HostedTaskBoardMutationWalHandle;
   readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
@@ -657,7 +654,7 @@ async function applyPreparedWal(input: {
           assertStillActive: input.assertStillActive,
         });
       }
-      await ensurePublicationDurable(parent, input.assertStillActive);
+      await syncHostedTaskBoardDirectory(parent, input.assertStillActive);
       continue;
     }
     if (!targetMatchesPreimage(target, current)) {
@@ -679,7 +676,7 @@ async function applyPreparedWal(input: {
         if (!targetMatchesPostimage(target, recovered)) {
           throw transactionError('hosted-task-board-mutation-wal-publish-invalid');
         }
-        await ensurePublicationDurable(parent, input.assertStillActive);
+        await syncHostedTaskBoardDirectory(parent, input.assertStillActive);
         continue;
       }
       throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
@@ -706,7 +703,9 @@ async function applyPreparedWal(input: {
       current: beforePublish,
       parent,
       assertStillActive: input.assertStillActive,
-      beforePublish: () => input.beforePublish?.(target.kind),
+      beforePublish: async () => {
+        await input.beforePublish?.(target.kind);
+      },
       onExistingTargetPublicationCheckpoint: input.onExistingTargetPublicationCheckpoint,
       beforeTargetDetach: () => input.fence.assertCurrent(input.assertStillActive),
       beforeTargetLink: () => input.fence.assertCurrent(input.assertStillActive),
@@ -726,7 +725,7 @@ async function applyPreparedWal(input: {
         await input.fence.assertCurrent(input.assertStillActive);
       },
     });
-    await ensurePublicationDurable(parent, input.assertStillActive);
+    await syncHostedTaskBoardDirectory(parent, input.assertStillActive);
     await input.fence.assertCurrent(input.assertStillActive);
     const publishedTargets = await inspectWalTargets(wal, directories, input.assertStillActive);
     await assertTransactionFence({

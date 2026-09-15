@@ -5,9 +5,11 @@ import * as path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamKanbanManager } from '../../../../src/main/services/team/TeamKanbanManager';
@@ -19,6 +21,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -226,6 +229,7 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     const configReader = new TeamConfigReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader,
       taskReader: new TeamTaskReader(),

@@ -2444,7 +2444,11 @@
       "yes": "sì",
       "no": "no",
       "moreActionableItems": "{{count}} altri elementi su cui agire",
-      "diagnostics": "Diagnostica: {{diagnostics}}"
+      "diagnostics": "Diagnostica: {{diagnostics}}",
+      "autoResumeStopped": "La continuazione automatica è interrotta.",
+      "continue": "Continua",
+      "stopAutoResume": "Interrompi ripresa automatica",
+      "resumeAutoResume": "Riprendi ripresa automatica"
     },
     "title": "Sincronizzazione del lavoro del membro",
     "loadingDiagnostics": "Caricamento della diagnostica di sincronizzazione del lavoro del membro.",

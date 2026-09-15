@@ -357,6 +357,7 @@ function harness(
   }
   if (operationFailures.captureFastifyError) {
     app.setErrorHandler((error, _request, reply) => {
+      if (!(error instanceof Error)) throw error;
       operationFailures.captureFastifyError?.(error);
       return reply.code(500).send({ error: 'synthetic_error' });
     });
@@ -1931,14 +1932,14 @@ describe('HostedAuthHttpController authorization boundary', () => {
           return hijack();
         }) as typeof reply.hijack;
         const header = reply.header.bind(reply);
-        reply.header = ((name: string, value: unknown) => {
+        reply.header = ((...args: Parameters<typeof header>) => {
           responseContinuations += 1;
-          return header(name, value);
+          return header(...args);
         }) as typeof reply.header;
         const headers = reply.headers.bind(reply);
-        reply.headers = ((values: Record<string, unknown>) => {
+        reply.headers = ((...args: Parameters<typeof headers>) => {
           responseContinuations += 1;
-          return headers(values);
+          return headers(...args);
         }) as typeof reply.headers;
         const redirect = reply.redirect.bind(reply);
         reply.redirect = ((url: string, code?: number) => {
@@ -1958,7 +1959,12 @@ describe('HostedAuthHttpController authorization boundary', () => {
       };
 
       let app: FastifyInstance;
-      let request: Parameters<FastifyInstance['inject']>[0];
+      let request: {
+        method: 'GET' | 'POST';
+        url: string;
+        headers?: Record<string, string>;
+        payload?: object;
+      };
       if (route === 'pair' || route === 'forget-device') {
         app = personalStorageFailureHarness({
           ...(route === 'pair'

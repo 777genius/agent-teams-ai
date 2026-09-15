@@ -86,7 +86,16 @@ export interface MemberWorkSyncReport {
 
 export type MemberWorkSyncReportIntentStatus = 'pending' | 'accepted' | 'rejected' | 'superseded';
 
+export interface MemberWorkSyncReportJournalMetadata {
+  incarnation: string;
+  requestDigest: string;
+  firstRecordedAt: string;
+  origin: 'online' | 'fallback';
+  receipt?: MemberWorkSyncReportReceipt;
+}
+
 export interface MemberWorkSyncReportIntent {
+  journal?: MemberWorkSyncReportJournalMetadata;
   id: string;
   teamName: string;
   memberName: string;
@@ -120,18 +129,143 @@ export interface MemberWorkSyncShadowDiagnostics {
   };
 }
 
+export interface MemberWorkSyncStatusRevision {
+  incarnation: string;
+  lineageId: string;
+  sequence: number;
+  nonce: string;
+}
+
+export interface MemberWorkSyncReportReceiptDraft {
+  intentId: string;
+  incarnation: string;
+  requestDigest: string;
+  acceptedAt: string;
+  originalExpiresAt?: string;
+}
+
+export interface MemberWorkSyncReportReceipt extends MemberWorkSyncReportReceiptDraft {
+  appliedStatusRevision: MemberWorkSyncStatusRevision;
+}
+
+export type MemberWorkSyncRecoveryPhase =
+  | 'observing'
+  | 'continuation_pending'
+  | 'awaiting_outcome'
+  | 'attention'
+  | 'expected_wait';
+
+export interface MemberWorkSyncRecoveryEpisode {
+  episodeId: string;
+  workKey: string;
+  taskId: string;
+  firstObservedAt: string;
+  lastProgressAt?: string;
+  lastEvidenceId?: string;
+  dueAt: string;
+  phase: MemberWorkSyncRecoveryPhase;
+  reason: string;
+}
+
+export type MemberWorkSyncRecoveryTerminalOutcome =
+  | 'retryable_refusal'
+  | 'terminal_refusal'
+  | 'settled'
+  | 'unknown';
+
+export interface MemberWorkSyncRecoveryReservation {
+  intentId: string;
+  episodeId: string;
+  trigger: 'automatic' | 'manual';
+  reservedAt: string;
+  state: 'reserved' | 'awaiting_outcome' | 'resolved' | 'cancelled' | 'uncertain';
+  payloadHash: string;
+  controlRevision: number;
+  boundTurnId?: string;
+  deliveredAt?: string;
+  terminalOutcome?: MemberWorkSyncRecoveryTerminalOutcome;
+  terminalReceiptId?: string;
+  pendingAck?: boolean;
+  ackIdentity?: string;
+  compactWitness?: boolean;
+}
+
+export interface MemberWorkSyncAutoResumeStopLatch {
+  stoppedAt: string;
+  reason: string;
+  controlRevision: number;
+}
+
+export interface MemberWorkSyncDurableStopReceipt {
+  teamName: string;
+  memberName: string;
+  incarnation: string;
+  runtimeInstanceId: string;
+  localStopId: string;
+  appliedAt: string;
+  controlRevision: number;
+}
+
+export interface MemberWorkSyncPendingRuntimeControl {
+  teamName: string;
+  memberName: string;
+  incarnation: string;
+  runtimeInstanceId: string;
+  requestId: string;
+  localStopId?: string;
+  controlRevision: number;
+  stopped: boolean;
+  issuedAt: string;
+  reason: string;
+  previousStopLatch?: MemberWorkSyncAutoResumeStopLatch;
+}
+
+/**
+ * Fixed-size, monotonic replay fence for receipts retired from the response cache.
+ * False positives intentionally fail closed; bits are never cleared within an incarnation.
+ */
+export interface MemberWorkSyncRetiredStopFilter {
+  algorithm: 'fnv1a-2048-v1';
+  bits: string;
+  retiredCount: number;
+}
+
+export interface MemberWorkSyncRecoveryHealth {
+  schemaVersion: 1;
+  episodes: MemberWorkSyncRecoveryEpisode[];
+  unresolvedIntentId?: string;
+  attentionAt?: string;
+  attentionAcknowledgedAt?: string;
+  autoResumeStopLatch?: MemberWorkSyncAutoResumeStopLatch;
+  durableStopReceipts?: MemberWorkSyncDurableStopReceipt[];
+  pendingRuntimeControl?: MemberWorkSyncPendingRuntimeControl;
+  retiredStopFilter?: MemberWorkSyncRetiredStopFilter;
+  controlRevision?: number;
+  reservations?: MemberWorkSyncRecoveryReservation[];
+}
+
 export interface MemberWorkSyncStatus {
   teamName: string;
   memberName: string;
   state: MemberWorkSyncStatusState;
   agenda: MemberWorkSyncAgenda;
+  /** Assigned only by the authority storage adapter, never by report input. */
+  statusRevision?: MemberWorkSyncStatusRevision;
+  pendingReportReceipt?: MemberWorkSyncReportReceipt;
   report?: MemberWorkSyncReport;
+  /** Accepted lease authority, separate from the latest rejected diagnostic report. */
+  lastAcceptedReport?: MemberWorkSyncReport;
   reportToken?: string;
   reportTokenExpiresAt?: string;
   shadow?: MemberWorkSyncShadowDiagnostics;
   evaluatedAt: string;
   diagnostics: string[];
   providerId?: MemberWorkSyncProviderId;
+  recoveryHealth?: MemberWorkSyncRecoveryHealth;
+  runtimeAdmission?: {
+    state: 'applied' | 'pending' | 'unknown' | 'superseded';
+    controlRevision?: number;
+  };
 }
 
 export type MemberWorkSyncMetricEventKind =
@@ -169,6 +303,45 @@ export interface MemberWorkSyncTeamMetrics {
   reportRejectedCount: number;
   recentEvents: MemberWorkSyncMetricEvent[];
   deliveryReadiness: MemberWorkSyncDeliveryReadinessAssessment;
+  phase2Readiness: MemberWorkSyncPhase2ReadinessAssessment;
+}
+
+export type MemberWorkSyncPhase2ReadinessState =
+  | 'collecting_shadow_data'
+  | 'shadow_ready'
+  | 'blocked';
+
+export type MemberWorkSyncPhase2ReadinessReason =
+  | 'insufficient_members'
+  | 'insufficient_status_events'
+  | 'insufficient_observation_window'
+  | 'would_nudge_rate_high'
+  | 'fingerprint_churn_high'
+  | 'report_rejection_rate_high';
+
+export interface MemberWorkSyncPhase2ReadinessThresholds {
+  minObservedMembers: number;
+  minStatusEvents: number;
+  minObservationHours: number;
+  maxWouldNudgesPerMemberHour: number;
+  maxFingerprintChangesPerMemberHour: number;
+  maxReportRejectionRate: number;
+}
+
+export interface MemberWorkSyncPhase2ReadinessRates {
+  observationHours: number;
+  statusEventCount: number;
+  wouldNudgesPerMemberHour: number;
+  fingerprintChangesPerMemberHour: number;
+  reportRejectionRate: number;
+}
+
+export interface MemberWorkSyncPhase2ReadinessAssessment {
+  state: MemberWorkSyncPhase2ReadinessState;
+  reasons: MemberWorkSyncPhase2ReadinessReason[];
+  thresholds: MemberWorkSyncPhase2ReadinessThresholds;
+  rates: MemberWorkSyncPhase2ReadinessRates;
+  diagnostics: string[];
 }
 
 export type MemberWorkSyncDeliveryReadinessState =
@@ -227,6 +400,7 @@ export interface MemberWorkSyncReportResult {
   code: string;
   message: string;
   status: MemberWorkSyncStatus;
+  projectionDegraded?: boolean;
 }
 
 export interface MemberWorkSyncStatusRequest {
@@ -237,6 +411,20 @@ export interface MemberWorkSyncStatusRequest {
 
 export interface MemberWorkSyncMetricsRequest {
   teamName: string;
+}
+
+export interface MemberWorkSyncElectronApi {
+  getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
+  refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
+  getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
+  report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
+  stopAutoResume(
+    request: MemberWorkSyncStatusRequest & { reason?: string }
+  ): Promise<MemberWorkSyncStatus>;
+  resumeAutoResume(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
+  continueManually(
+    request: MemberWorkSyncStatusRequest & { idempotencyKey?: string }
+  ): Promise<MemberWorkSyncStatus>;
 }
 
 export type MemberWorkSyncOutboxStatus =
@@ -256,6 +444,12 @@ export interface MemberWorkSyncNudgePayload {
   workSyncIntent: MemberWorkSyncNudgeIntent;
   workSyncIntentKey?: string;
   workSyncReviewRequestEventIds?: string[];
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
+  workSyncRuntimeInstanceId?: string;
+  workSyncAdmissionPayloadHash?: string;
+  workSyncTeamIncarnation?: string;
+  workSyncControlRevision?: number;
   text: string;
   taskRefs: {
     taskId: string;
@@ -344,6 +538,11 @@ export interface MemberWorkSyncOutboxCountRecentDeliveredInput {
   memberName: string;
   sinceIso: string;
   workSyncIntentKeyPrefix?: string;
+}
+
+export interface MemberWorkSyncOutboxRecentDeliveredSummary {
+  count: number;
+  oldestUpdatedAt?: string;
 }
 
 export interface MemberWorkSyncOutboxCountDeliveredForAgendaInput {

@@ -46,6 +46,7 @@ describe('TeamTaskAgendaSource', () => {
     expect(membersMetaStore.getMembers).toHaveBeenCalledTimes(1);
     expect(taskReader.getTasks).toHaveBeenCalledTimes(1);
     expect(kanbanManager.getState).toHaveBeenCalledTimes(1);
+    expect(kanbanManager.getState).toHaveBeenCalledWith('forge-labs', { strict: true });
   });
 
   it('reuses recent roster snapshots for sequential active-member loads', async () => {

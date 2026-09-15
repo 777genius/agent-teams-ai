@@ -5,7 +5,6 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import {
@@ -17,9 +16,13 @@ import {
   type WorkspaceTrustLaunchArgTargetSurface,
 } from '../../../../src/features/workspace-trust/main';
 import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
+import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   assertExecutable,
@@ -273,6 +276,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader: new TeamTaskReader(),
@@ -533,6 +537,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader: new TeamTaskReader(),
@@ -752,6 +757,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const taskReader = new TeamTaskReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader,
@@ -1195,6 +1201,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const teamDataService = new TeamDataService();
     const taskReader = new TeamTaskReader();
     feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
       taskReader,

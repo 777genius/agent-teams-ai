@@ -312,6 +312,17 @@ describe('IPC/HTTP team lifecycle read conformance', () => {
         retryable: true,
       });
       expect(JSON.stringify(contained)).not.toContain('private network diagnostic');
+
+      const rejected = await client.listTeamLifecycle({
+        ...request(),
+        actorId: 'actor_attacker',
+      } as unknown as ListTeamLifecycleRequest);
+      expect(rejected).toMatchObject({
+        kind: 'failure',
+        error: { code: 'invalid_request', reason: 'request_invalid' },
+        retryable: false,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       vi.unstubAllGlobals();
     }

@@ -10,6 +10,7 @@
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
+export type { MemberWorkSyncElectronApi } from '@features/member-work-sync/contracts';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
 import type {
@@ -129,14 +130,7 @@ import type {
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
-import type {
-  MemberWorkSyncMetricsRequest,
-  MemberWorkSyncReportRequest,
-  MemberWorkSyncReportResult,
-  MemberWorkSyncStatus,
-  MemberWorkSyncStatusRequest,
-  MemberWorkSyncTeamMetrics,
-} from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncElectronApi } from '@features/member-work-sync/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
@@ -630,13 +624,6 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
     callback: (event: unknown, data: TeamProvisioningProgress) => void
   ) => () => void;
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
-}
-
-export interface MemberWorkSyncElectronApi {
-  getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
-  report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
 }
 
 // =============================================================================

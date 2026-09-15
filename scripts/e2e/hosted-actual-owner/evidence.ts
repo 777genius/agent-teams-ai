@@ -275,14 +275,204 @@ export function assertNativeSemanticCrossJoin(
   parsedShards: readonly ParsedNativeCapture[],
   raw: Readonly<Record<RawOrigin, Buffer>>,
   controllerNonce: string,
-  expected: ProducerCaptureFileEvidence
+  expected: { readonly shards: readonly Pick<ProducerCaptureFileEvidence['shards'][number], 'producerStartToken'>[] },
+  peerOpenCodeShards: readonly ParsedNativeCapture[] = []
 ): void {
-  if (
-    name === 'openCodeTimelinePath' ||
-    name === 'protectedEffectLedgerPath' ||
-    name === 'ownerWalTimelinePath'
-  ) {
+  if (name === 'ownerWalTimelinePath') {
     throw new Error(`p3c_runtime_capture_semantic_mapping_unavailable:${name}`);
+  }
+  if (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') {
+    const timeline = name === 'openCodeTimelinePath' ? parsedShards : peerOpenCodeShards;
+    const effects = name === 'protectedEffectLedgerPath' ? parsedShards : peerOpenCodeShards;
+    const fail = (label: string): never => {
+      throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
+    };
+    if (timeline.length !== 1 || effects.length !== 1) fail('stream_isolation');
+    const facts = [
+      ...timeline[0]!.records.slice(1, -1),
+      ...effects[0]!.records.slice(1, -1),
+    ];
+    if (
+      timeline[0]!.records.some((record) => record.stream !== 'openCodeTimeline') ||
+      effects[0]!.records.some((record) => record.stream !== 'protectedEffectLedger')
+    )
+      fail('stream_isolation');
+    const capability = facts.filter((record) => record.recordType === 'hosted-capability');
+    if (capability.length !== 1 || timeline[0]!.records[1] !== capability[0]) fail('capability');
+
+    const candidates = parseRawOrigin(raw.opencode, 'opencode', controllerNonce)
+      .filter(isLegacyRecord)
+      .filter((record) =>
+        expected.shards.some(({ producerStartToken }) =>
+          producerStartToken === record.processStartToken
+        )
+      )
+      .sort((left, right) => {
+        const leftNs = BigInt(left.monotonicNs);
+        const rightNs = BigInt(right.monotonicNs);
+        return leftNs === rightNs ? 0 : leftNs < rightNs ? -1 : 1;
+      });
+    const mappedFacts = facts.filter((record) => record.recordType !== 'hosted-capability');
+    const used = new Set<NativeCaptureRecord>();
+    const identityFields = [
+      'runtimeInstanceId', 'configGeneration', 'sessionId', 'requestId',
+      'sessionIncarnation', 'requestIncarnation',
+    ] as const;
+    const operationBySemanticIdentity = new Map<string, string>();
+    const semanticIdentityByOperation = new Map<string, string>();
+    const nativeByRawRecord = new Map<LocatedLegacyRawRecord, NativeCaptureRecord>();
+    let timelineSequence = 0;
+    let effectSequence = 0;
+    for (const rawRecord of candidates) {
+      const transport = rawRecord.nativeRecord.transport as Record<string, unknown>;
+      const direction = transport.direction;
+      const recordType = direction === 'request'
+        ? 'hosted-reply-raw'
+        : direction === 'response'
+          ? 'hosted-reply'
+          : direction === 'effect'
+            ? 'conditional-reply-effect'
+            : direction === 'observation'
+              ? 'hosted-observe'
+              : fail('direction');
+      const request = validateRedactedStructure(transport.request, 'opencode_request');
+      const response = validateRedactedStructure(transport.response, 'opencode_response');
+      const decision = rawRecord.semanticIdentity.decision;
+      if (decision === 'none' && recordType !== 'hosted-observe') fail('decision');
+      const expectedDecision = decision === 'allow'
+        ? recordType === 'conditional-reply-effect' ? 'once' : 'allow_once'
+        : decision === 'deny' ? 'reject' : null;
+      const matches = mappedFacts.filter((record) => {
+        if (used.has(record) || record.recordType !== recordType) return false;
+        const boundOperation = operationBySemanticIdentity.get(
+          canonicalJson(rawRecord.semanticIdentity)
+        );
+        if (boundOperation !== undefined && record.operationNonce !== boundOperation) return false;
+        const native = record.native;
+        if (recordType === 'hosted-reply-raw')
+          return native.requestBodySha256 === request.sha256 && native.responseSha256 === response.sha256;
+        if (recordType === 'hosted-reply')
+          return native.responseSha256 === response.sha256 && native.decision === expectedDecision;
+        if (recordType === 'conditional-reply-effect') return native.decision === expectedDecision;
+        return native.responseSha256 === response.sha256;
+      });
+      if (matches.length !== 1) fail(matches.length === 0 ? 'unmatched_native' : 'duplicate');
+      const selected = matches[0]!;
+      const semanticIdentity = canonicalJson(rawRecord.semanticIdentity);
+      const boundOperation = operationBySemanticIdentity.get(semanticIdentity);
+      const operationNonce = selected.operationNonce;
+      if (operationNonce === null) {
+        throw new Error(`p3c_runtime_capture_semantic_identity:${name}`);
+      }
+      if (boundOperation !== undefined && boundOperation !== operationNonce) fail('identity');
+      const boundSemanticIdentity = semanticIdentityByOperation.get(operationNonce);
+      if (boundSemanticIdentity !== undefined && boundSemanticIdentity !== semanticIdentity)
+        fail('identity');
+      operationBySemanticIdentity.set(semanticIdentity, operationNonce);
+      semanticIdentityByOperation.set(operationNonce, semanticIdentity);
+      nativeByRawRecord.set(rawRecord, selected);
+      used.add(selected);
+      if (selected.stream === 'openCodeTimeline') {
+        if (selected.sequence <= timelineSequence) fail('order');
+        timelineSequence = selected.sequence;
+      } else {
+        if (selected.sequence <= effectSequence) fail('order');
+        effectSequence = selected.sequence;
+      }
+    }
+    if (used.size !== candidates.length || used.size !== mappedFacts.length) fail('consumption');
+    const byOperation = new Map<string, NativeCaptureRecord[]>();
+    for (const record of mappedFacts) {
+      const operationNonce = record.operationNonce;
+      if (operationNonce === null) {
+        throw new Error(`p3c_runtime_capture_semantic_identity:${name}`);
+      }
+      const group = byOperation.get(operationNonce) ?? [];
+      group.push(record);
+      byOperation.set(operationNonce, group);
+    }
+    const semanticSessionKey = (identity: SemanticIdentity): string => canonicalJson({
+      lane: identity.lane,
+      controllerNonce: identity.controllerNonce,
+      harnessRunId: identity.harnessRunId,
+      authenticatedActorTeamId: identity.authenticatedActorTeamId,
+      targetTeamRunId: identity.targetTeamRunId,
+      targetTeamId: identity.targetTeamId,
+      approvalId: identity.approvalId,
+      generationId: identity.generationId,
+      idempotencyKey: identity.idempotencyKey,
+      previewRef: identity.previewRef,
+    });
+    const replySessionBySemanticIdentity = new Map<string, string>();
+    const capabilityNative = capability[0]!.native;
+    const runtimeInstanceId = capabilityNative.runtimeInstanceId;
+    const configGeneration = capabilityNative.configGeneration;
+    if (
+      typeof runtimeInstanceId !== 'string' ||
+      typeof configGeneration !== 'string'
+    ) fail('capability_identity');
+    const admittedRuntimeConfig = canonicalJson([
+      runtimeInstanceId,
+      configGeneration,
+    ]);
+    for (const [operationNonce, group] of byOperation) {
+      const replyFacts = group.filter((record) =>
+        ['hosted-reply-raw', 'hosted-reply', 'conditional-reply-effect'].includes(record.recordType)
+      );
+      if (replyFacts.length > 0) {
+        const first = replyFacts[0]!.native;
+        if (replyFacts.some(({ native }) => identityFields.some((field) =>
+          typeof native[field] !== 'string' || native[field] !== first[field]
+        ))) fail('identity');
+        const permissionDigests = new Set(replyFacts.flatMap(({ native }) =>
+          typeof native.permissionDigest === 'string' ? [native.permissionDigest] : []
+        ));
+        if (permissionDigests.size > 1) fail('identity');
+        if (
+          canonicalJson([first.runtimeInstanceId, first.configGeneration]) !== admittedRuntimeConfig
+        )
+          fail('capability_identity');
+        if (replyFacts.some((record) => record.recordType === 'hosted-reply')) {
+          const operationIdentity = semanticIdentityByOperation.get(operationNonce);
+          if (operationIdentity === undefined) {
+            throw new Error(`p3c_runtime_capture_semantic_identity:${name}`);
+          }
+          const semanticKey = semanticSessionKey(
+            JSON.parse(operationIdentity) as SemanticIdentity
+          );
+          const sessionBinding = canonicalJson([
+            first.runtimeInstanceId,
+            first.configGeneration,
+            first.sessionId,
+          ]);
+          const previousBinding = replySessionBySemanticIdentity.get(semanticKey);
+          if (previousBinding !== undefined && previousBinding !== sessionBinding)
+            fail('identity');
+          replySessionBySemanticIdentity.set(semanticKey, sessionBinding);
+        }
+      }
+    }
+    for (const rawObservation of candidates.filter(
+      (record) => nativeByRawRecord.get(record)?.recordType === 'hosted-observe'
+    )) {
+      const observation = nativeByRawRecord.get(rawObservation)!;
+      const appropriateReplySession = replySessionBySemanticIdentity.get(
+        semanticSessionKey(rawObservation.semanticIdentity)
+      );
+      const observationSession = canonicalJson([
+        observation.native.runtimeInstanceId,
+        observation.native.configGeneration,
+        observation.native.sessionId,
+      ]);
+      if (
+        typeof observation.native.runtimeInstanceId !== 'string' ||
+        typeof observation.native.configGeneration !== 'string' ||
+        typeof observation.native.sessionId !== 'string' ||
+        appropriateReplySession === undefined ||
+        appropriateReplySession !== observationSession
+      ) fail('observe_identity');
+    }
+    return;
   }
   const origins: readonly RawOrigin[] =
     name === 'negativeResultsPath'
@@ -2077,7 +2267,12 @@ export function prepareEvidence(input: EvidencePreparationInput) {
       native.shards[name].map(({ parsed }) => parsed),
       raw,
       controllerNonce,
-      outcome.captureFiles[name]
+      outcome.captureFiles[name],
+      name === 'openCodeTimelinePath'
+        ? native.shards.protectedEffectLedgerPath.map(({ parsed }) => parsed)
+        : name === 'protectedEffectLedgerPath'
+          ? native.shards.openCodeTimelinePath.map(({ parsed }) => parsed)
+          : []
     );
   }
   let assembled: EvidenceDocument | undefined;

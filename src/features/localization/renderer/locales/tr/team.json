@@ -2444,7 +2444,11 @@
       "yes": "evet",
       "no": "hayır",
       "moreActionableItems": "{{count}} eyleme geçirilebilir öğe daha",
-      "diagnostics": "Tanılamalar: {{diagnostics}}"
+      "diagnostics": "Tanılamalar: {{diagnostics}}",
+      "autoResumeStopped": "Otomatik devam durduruldu.",
+      "continue": "Devam et",
+      "stopAutoResume": "Otomatik devamı durdur",
+      "resumeAutoResume": "Otomatik devamı sürdür"
     },
     "title": "Üye iş senkronizasyonu",
     "loadingDiagnostics": "Üye iş senkronizasyonu tanılamaları yükleniyor.",

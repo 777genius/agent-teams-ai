@@ -2444,7 +2444,11 @@
       "yes": "Ja.",
       "no": "Nein",
       "moreActionableItems": "{{count}} mehr actionable item(s)",
-      "diagnostics": "Diagnostik: {{diagnostics}}"
+      "diagnostics": "Diagnostik: {{diagnostics}}",
+      "autoResumeStopped": "Die automatische Fortsetzung ist gestoppt.",
+      "continue": "Fortsetzen",
+      "stopAutoResume": "Auto-Fortsetzung stoppen",
+      "resumeAutoResume": "Auto-Fortsetzung fortsetzen"
     },
     "title": "Synchronisierung der Mitgliedsarbeit",
     "loadingDiagnostics": "Das Ladeglied arbeitet synchrone Diagnosen.",

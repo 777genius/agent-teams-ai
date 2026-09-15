@@ -2,6 +2,8 @@ import { Worker } from 'node:worker_threads';
 
 import { createLogger } from '@shared/utils/logger';
 
+import { InternalStorageOperationInterruptedError } from '../../core/application/InternalStorageOperationInterruptedError';
+
 import {
   isProcessOwnershipStorageCallAdmitted,
   type ProcessOwnershipStorageCallContext,
@@ -81,6 +83,12 @@ export class InternalStorageWorkerTransport {
   private activeCallId: string | null = null;
   private activeTimeout: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
+  private closePromise: Promise<void> | null = null;
+  private retirement: {
+    worker: Worker;
+    settled: Promise<void>;
+    finish(): void;
+  } | null = null;
 
   constructor(
     private readonly options: {
@@ -98,10 +106,21 @@ export class InternalStorageWorkerTransport {
     return getInternalStorageWorkerPathCandidates();
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise;
     this.closed = true;
+    this.closePromise = this.closeAndDrain();
+    return this.closePromise;
+  }
+
+  async waitForSettling(): Promise<void> {
+    while (this.retirement) await this.retirement.settled;
+  }
+
+  private async closeAndDrain(): Promise<void> {
     const worker = this.worker;
     if (!worker) {
+      await this.waitForSettling();
       return;
     }
     try {
@@ -113,13 +132,28 @@ export class InternalStorageWorkerTransport {
         }`
       );
     }
-    this.worker = null;
-    await worker.terminate().catch(() => undefined);
+    this.failWorker(worker, new Error('internal-storage client is closed'));
+    await this.waitForSettling();
   }
 
-  private failWorker(worker: Worker, error: Error): void {
-    if (this.worker !== worker) return;
+  private finishRetirement(worker: Worker): void {
+    const retirement = this.retirement;
+    if (retirement?.worker !== worker) return;
+    this.retirement = null;
+    retirement.finish();
+  }
 
+  private failWorker(worker: Worker, error: Error, exited = false): void {
+    if (this.worker !== worker) {
+      if (exited) this.finishRetirement(worker);
+      return;
+    }
+
+    let finish!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    this.retirement = { worker, settled, finish };
     this.worker = null;
     this.clearActiveCall();
     const pendingEntries = Array.from(this.pending.values());
@@ -128,15 +162,37 @@ export class InternalStorageWorkerTransport {
     this.queue = [];
 
     for (const entry of pendingEntries) {
-      entry.reject(error);
+      entry.reject(
+        new InternalStorageOperationInterruptedError(error.message, 'unknown', settled, error)
+      );
     }
     for (const entry of queuedEntries) {
       entry.detachAbortListener?.();
-      entry.reject(error);
+      entry.reject(
+        new InternalStorageOperationInterruptedError(error.message, 'not_started', settled, error)
+      );
+    }
+    if (exited) {
+      this.finishRetirement(worker);
+    } else {
+      void Promise.resolve()
+        .then(() => worker.terminate())
+        .then(
+          () => this.finishRetirement(worker),
+          (terminationError: unknown) =>
+            logger.error('internal-storage worker termination unconfirmed', terminationError)
+        );
     }
   }
 
   private ensureWorker(): Worker {
+    if (this.retirement) {
+      throw new InternalStorageOperationInterruptedError(
+        'internal-storage previous worker has not exited',
+        'not_started',
+        this.retirement.settled
+      );
+    }
     const workerPath = this.getWorkerPath();
     if (!workerPath) {
       throw new Error('internal-storage worker is not available in this environment');
@@ -157,7 +213,6 @@ export class InternalStorageWorkerTransport {
         msg = parseInternalStorageWorkerResponseForPending(value, (id) => this.pending.get(id)?.op);
       } catch (error) {
         this.failWorker(worker, error instanceof Error ? error : new Error(String(error)));
-        void worker.terminate().catch(() => undefined);
         return;
       }
       const entry = this.pending.get(msg.id);
@@ -179,7 +234,7 @@ export class InternalStorageWorkerTransport {
       if (code !== 0 && !this.closed && this.worker === worker) {
         logger.warn(`internal-storage worker exited with code ${code}`);
       }
-      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`));
+      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`), true);
     });
     return worker;
   }
@@ -245,7 +300,6 @@ export class InternalStorageWorkerTransport {
         `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} pendingNow=${this.pending.size} queued=${this.queue.length}`
       );
       this.failWorker(worker, timeoutError);
-      void worker.terminate().catch(() => undefined);
     }, timeoutMs);
 
     try {

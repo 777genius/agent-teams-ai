@@ -3,8 +3,16 @@ import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
 } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import {
+  createJsonPreparedStatusBackend,
+  createSqlitePreparedStatusBackend,
+} from '@features/member-work-sync/main/infrastructure/memberWorkSyncPreparedStatusBackend';
 import { MemberWorkSyncSqliteImporter } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncSqliteImporter';
-import { snapshotToRecords } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
+import {
+  snapshotToRecords,
+  statusToRecord,
+} from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
+import { MemberWorkSyncStatusAuthority } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStatusAuthority';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
 import Database from 'better-sqlite3-node';
@@ -208,9 +216,151 @@ describe('SqliteMemberWorkSyncStore', () => {
     }
   });
 
+  it('keeps canonical read bytes exact and CAS returns the actual conflict row', async () => {
+    const { store, gateway } = await makeHarness('sqlite');
+    if (!(store instanceof SqliteMemberWorkSyncStore) || !gateway)
+      throw new Error('SQLite harness required');
+    await store.prepareCanonicalStatus('team-a');
+    const original = statusToRecord(makeStatus());
+    original.statusJson = JSON.stringify(makeStatus(), null, 2) + '\n';
+    await gateway.statusWrite(original, []);
+    const input = { teamName: 'team-a', memberName: ' BOB ' };
+    expect(await store.readCanonicalStatusRecord(input)).toEqual(original);
+    const stale = await store.compareAndWriteCanonicalStatus({
+      expectedRaw: JSON.stringify(makeStatus()),
+      nextStatus: makeStatus({ evaluatedAt: T1 }),
+    });
+    expect(stale).toEqual({ committed: false, current: original });
+    const next = makeStatus({ evaluatedAt: T2 });
+    const committed = await store.compareAndWriteCanonicalStatus({
+      expectedRaw: original.statusJson,
+      nextStatus: next,
+    });
+    expect(committed).toMatchObject({
+      committed: true,
+      record: { statusJson: JSON.stringify(next) },
+    });
+    expect(await store.readCanonicalStatusRecord(input)).toEqual(statusToRecord(next));
+  });
+
+  it('does not hide an implicit legacy import inside canonical read or CAS', async () => {
+    const { store, jsonStore } = await makeHarness('sqlite');
+    if (!(store instanceof SqliteMemberWorkSyncStore)) throw new Error('SQLite harness required');
+    await jsonStore.write(makeStatus());
+    const input = { teamName: 'team-a', memberName: 'bob' };
+    expect(await store.readCanonicalStatusRecord(input)).toBeNull();
+    await store.prepareCanonicalStatus('team-a');
+    const imported = await store.readCanonicalStatusRecord(input);
+    expect(imported?.statusJson).toBe(JSON.stringify(makeStatus()));
+    expect(
+      await store.compareAndWriteCanonicalStatus({
+        expectedRaw: null,
+        nextStatus: makeStatus({ evaluatedAt: T1 }),
+      })
+    ).toEqual({ committed: false, current: imported });
+  });
+
+  it('keeps raw CAS separate from preparation even when legacy JSON exists', async () => {
+    const { store, jsonStore, root } = await makeHarness('sqlite');
+    if (!(store instanceof SqliteMemberWorkSyncStore)) throw new Error('SQLite harness required');
+    await jsonStore.write(makeStatus());
+    const next = makeStatus({ evaluatedAt: T1 });
+    const committed = await store.compareAndWriteCanonicalStatus({
+      expectedRaw: null,
+      nextStatus: next,
+    });
+    expect(committed).toMatchObject({
+      committed: true,
+      record: { statusJson: JSON.stringify(next) },
+    });
+    const legacyPath = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+    expect(JSON.parse(await readFile(legacyPath, 'utf8')).status.evaluatedAt).toBe(T0);
+  });
+
+  it('does not reuse an empty prepared cache for a recreated team', async () => {
+    const { store, jsonStore } = await makeHarness('sqlite');
+    if (!(store instanceof SqliteMemberWorkSyncStore)) throw new Error('SQLite harness required');
+    await store.prepareCanonicalStatus('team-a', 'inc-1');
+    await jsonStore.write(makeStatus());
+    await store.prepareCanonicalStatus('team-a', 'inc-1');
+    expect(
+      await store.readCanonicalStatusRecord({ teamName: 'team-a', memberName: 'bob' })
+    ).toBeNull();
+    await store.prepareCanonicalStatus('team-a', 'inc-2');
+    expect(
+      await store.readCanonicalStatusRecord({ teamName: 'team-a', memberName: 'bob' })
+    ).not.toBeNull();
+  });
+
+  it('does not inherit an old incarnation import failure cooldown', async () => {
+    const { store, jsonStore, root } = await makeHarness('sqlite');
+    if (!(store instanceof SqliteMemberWorkSyncStore)) throw new Error('SQLite harness required');
+    await jsonStore.write(makeStatus());
+    const file = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+    const valid = await readFile(file, 'utf8');
+    await writeFile(file, '{bad json');
+    await expect(store.prepareCanonicalStatus('team-a', 'inc-1')).rejects.toThrow();
+    await writeFile(file, valid);
+    await expect(store.prepareCanonicalStatus('team-a', 'inc-1')).rejects.toThrow();
+    await expect(store.prepareCanonicalStatus('team-a', 'inc-2')).resolves.toBeUndefined();
+  });
+
   // The same behavioral scenarios run against both backends — the sqlite
   // store must be indistinguishable from the JSON store for the use cases.
   describe.each<StoreKind>(['json', 'sqlite'])('behavior parity (%s)', (kind) => {
+    it.each([false, true])(
+      'uses canonical authority routing and revision minting (existing=%s)',
+      async (existing) => {
+        const { store, root, gateway } = await makeHarness(kind);
+        if (existing) await store.write(makeStatus());
+        const authority = new MemberWorkSyncStatusAuthority({
+          identity: {
+            readCurrent: async () => ({ status: 'identified', identityId: 'inc-1' }),
+            adoptLegacy: async () => ({ status: 'identified', identityId: 'inc-1' }),
+            withCurrent: async (_team, _identity, operation) => ({
+              current: true,
+              value: await operation(),
+            }),
+          },
+          withPreparedBackend: async (_identity, operation) => {
+            if (store instanceof SqliteMemberWorkSyncStore) {
+              await store.prepareCanonicalStatus('team-a');
+              return operation(createSqlitePreparedStatusBackend('team-a', store));
+            }
+            return operation(createJsonPreparedStatusBackend('team-a', store));
+          },
+        });
+        const read = authority.startRead({ teamName: 'team-a', memberName: 'bob' });
+        const before = await read.result;
+        await read.settled;
+        if (!before.ok) throw new Error(before.reason);
+        const input = {
+          teamName: 'team-a',
+          memberName: 'bob',
+          incarnation: 'inc-1',
+          expectedToken: before.snapshot.token,
+          mutationId: 'mutation-1',
+          nextStatus: makeStatus({ teamName: ' TEAM-A ', evaluatedAt: T1 }),
+        };
+        const call = authority.startCompareAndWrite(input);
+        const committed = await call.result;
+        await call.settled;
+        expect(committed).toMatchObject({
+          committed: true,
+          snapshot: { status: { statusRevision: { incarnation: 'inc-1', sequence: 1 } } },
+        });
+        const stale = authority.startCompareAndWrite(input);
+        await expect(stale.result).resolves.toMatchObject({ committed: false, reason: 'conflict' });
+        await stale.settled;
+        expect(
+          (await store.read({ teamName: 'team-a', memberName: 'bob' }))?.statusRevision?.sequence
+        ).toBe(1);
+        expect(await readdir(root)).not.toContain(' TEAM-A ');
+        if (gateway) expect(await gateway.statusRead(' TEAM-A ', 'bob')).toBeNull();
+        expect(input.nextStatus.teamName).toBe(' TEAM-A ');
+      }
+    );
+
     it('runs the ensure -> claim -> deliver lifecycle with generation guards', async () => {
       const { store } = await makeHarness(kind);
       const ensured = await store.ensurePending({
@@ -268,7 +418,7 @@ describe('SqliteMemberWorkSyncStore', () => {
       expect(after).toHaveLength(0);
       expect(
         await store.countRecentDelivered({ teamName: 'team-a', memberName: 'bob', sinceIso: T0 })
-      ).toBe(1);
+      ).toEqual({ count: 1, oldestUpdatedAt: STALE });
     });
 
     it('resets a pending item when the payload hash changes and conflicts on delivered', async () => {
@@ -495,7 +645,7 @@ describe('SqliteMemberWorkSyncStore', () => {
           sinceIso: T1,
           workSyncIntentKeyPrefix: 'intent:',
         })
-      ).toBe(1);
+      ).toEqual({ count: 1, oldestUpdatedAt: T1 });
 
       const recovery = await store.findRecentRecoveryByIntent?.({
         teamName: 'team-a',

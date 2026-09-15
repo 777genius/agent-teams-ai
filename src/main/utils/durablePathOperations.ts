@@ -686,35 +686,46 @@ export async function removePathWithIdentityFenceAsync(
     }
   };
 
+  const recoverDetachedWithProof = async (): Promise<AtomicPathRemovalResult> => {
+    const proofHooks = options.proofHooks;
+    if (!proofHooks) return 'missing';
+
+    let stats: fs.Stats;
+    try {
+      stats = await fs.promises.lstat(detachedPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+      throw error;
+    }
+
+    const identity = getDurablePathIdentity(stats);
+    if (
+      options.validateDetached &&
+      !(await options.validateDetached(detachedPath, identity))
+    ) {
+      return 'changed';
+    }
+
+    await proofHooks.onDetachedValidated(detachedPath, identity);
+    await fs.promises.rm(detachedPath, removalOptions);
+    await syncDirectory(dir, options.durability === 'strict');
+    await proofHooks.onRemovalDurable(detachedPath, identity);
+    return 'deleted';
+  };
+
   try {
     if (options.proofHooks) {
-      let resumedStats: fs.Stats | null = null;
-      try {
-        resumedStats = await fs.promises.lstat(detachedPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      if (resumedStats) {
-        const resumedIdentity = getDurablePathIdentity(resumedStats);
-        if (
-          options.validateDetached &&
-          !(await options.validateDetached(detachedPath, resumedIdentity))
-        ) {
-          return 'changed';
-        }
-        await options.proofHooks.onDetachedValidated(detachedPath, resumedIdentity);
-        await fs.promises.rm(detachedPath, removalOptions);
-        await syncDirectory(dir, options.durability === 'strict');
-        await options.proofHooks.onRemovalDurable(detachedPath, resumedIdentity);
-        return 'deleted';
-      }
+      const recovered = await recoverDetachedWithProof();
+      if (recovered !== 'missing') return recovered;
     }
 
     try {
       await renameWithTransientRetry(targetPath, detachedPath);
       detached = true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return options.proofHooks ? recoverDetachedWithProof() : 'missing';
+      }
       throw error;
     }
 

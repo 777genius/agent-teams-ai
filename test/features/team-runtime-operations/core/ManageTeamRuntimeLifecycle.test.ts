@@ -1,6 +1,7 @@
 import { ManageTeamRuntimeLifecycle } from '@features/team-runtime-operations/core/application/use-cases/ManageTeamRuntimeLifecycle';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { TeamForceStopResult } from '@features/team-runtime-operations/contracts';
 import type {
   TeamRuntimeEffectsPort,
   TeamRuntimeFeedPort,
@@ -24,7 +25,7 @@ function dependencies() {
   };
   const runtime: TeamRuntimeStopPort = {
     stopTeam: vi.fn(() => Promise.resolve()),
-    forceStopTeam: vi.fn(() =>
+    forceStopTeam: vi.fn((): Promise<TeamForceStopResult> =>
       Promise.resolve({
         stopOutcome: 'stopped',
         cleanupOutcome: 'completed',

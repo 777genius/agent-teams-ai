@@ -145,7 +145,7 @@ function createDeps(
     pauseActiveIntervalsForTeam: vi.fn(),
     persistentRuntimeCleanup: {
       stopPersistentTeamMembers: vi.fn(),
-      cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(),
+      cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(async () => undefined),
     },
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
     isCancellableRuntimeAdapterProgress: vi.fn(() => false),
@@ -254,6 +254,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       teamsBasePath: ports.teamsBasePath,
       teamName: 'team-a',
       laneId: 'primary',
+      expectedRunId: 'runtime-run',
     });
     ports.clearOpenCodeRuntimeToolApprovals('team-a', { emitDismiss: true });
     ports.deleteAliveRunId('team-a');
@@ -262,6 +263,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       teamsBasePath: '/teams',
       teamName: 'team-a',
       laneId: 'primary',
+      expectedRunId: 'runtime-run',
     });
     expect(deps.clearOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith('team-a', {
       emitDismiss: true,
@@ -282,6 +284,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       teamsBasePath: ports.teamsBasePath,
       teamName: 'team-a',
       laneId: 'primary',
+      expectedRunId: 'runtime-run',
     });
     ports.clearOpenCodeRuntimeToolApprovals('team-a', {
       runId: 'run-1',
@@ -294,6 +297,7 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       teamsBasePath: '/teams',
       teamName: 'team-a',
       laneId: 'primary',
+      expectedRunId: 'runtime-run',
     });
     expect(deps.clearOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith('team-a', {
       runId: 'run-1',

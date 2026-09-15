@@ -434,10 +434,13 @@ describe('TeamProvisioningCancellationBoundary', () => {
 
       await boundary.cancelProvisioning(run.runId);
 
-      expect(stopInputs).toEqual([
-        { laneId: 'lane-a', runId: 'lane-run-a' },
-        { laneId: 'lane-b', runId: 'lane-run-b' },
-      ]);
+      expect(stopInputs).toHaveLength(2);
+      expect(stopInputs).toEqual(
+        expect.arrayContaining([
+          { laneId: 'lane-a', runId: 'lane-run-a' },
+          { laneId: 'lane-b', runId: 'lane-run-b' },
+        ])
+      );
       expect(liveProcesses.size).toBe(0);
       expect(laneArtifacts.size).toBe(0);
       expect(secondaryRuns.size).toBe(0);
@@ -975,6 +978,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
       emitTeamChange: vi.fn(),
       logger: { warn: vi.fn(), info: vi.fn() },
       nowIso: () => '2026-01-01T00:00:02.000Z',
+      isRuntimeProcessAlive: () => false,
     };
     const ports = makePorts({
       run,

@@ -567,7 +567,6 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
       opencodeAppManagedBootstrapContractVersion:
         OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
       expectedBehaviorFingerprintSchemaVersion:

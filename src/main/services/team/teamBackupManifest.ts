@@ -21,6 +21,7 @@ export interface BackupManifest {
   firstBackupAt: string;
   lastBackupAt: string;
   fileStats: Record<string, { mtime: number; size: number }>;
+  workSyncRestorePending?: { identityId: string; generation: string };
 }
 
 export interface BackupManifestWriteOptions {
@@ -68,11 +69,6 @@ export function writeBackupManifestSync(backupDir: string, manifest: BackupManif
     const manifestPath = getBackupManifestPath(backupDir);
     atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
   } catch (error) {
-    // Reported here with the team it belongs to, then propagated: the file
-    // copies are already on disk and the registry entry is written after this
-    // call, so swallowing the failure would index a backup whose manifest
-    // still holds the previous ownership and file stats. The shutdown loop
-    // catches it per team and goes on to the next one.
     logger.warn(
       `[Backup] Failed to save manifest for ${manifest.teamName}: ${
         error instanceof Error ? error.message : String(error)
@@ -80,4 +76,107 @@ export function writeBackupManifestSync(backupDir: string, manifest: BackupManif
     );
     throw error;
   }
+}
+
+/** Safety callers must distinguish a missing manifest from unreadable ownership. */
+export async function readBackupManifestStrict(
+  manifestPath: string,
+  expectedTeamName: string
+): Promise<BackupManifest | null> {
+  let raw: string;
+  try {
+    raw = await fs.promises.readFile(manifestPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+  return decodeBackupManifest(raw, expectedTeamName);
+}
+
+export function readBackupManifestStrictSync(
+  manifestPath: string,
+  expectedTeamName: string
+): BackupManifest | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(manifestPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+  return decodeBackupManifest(raw, expectedTeamName);
+}
+
+function decodeBackupManifest(raw: string, expectedTeamName: string): BackupManifest {
+  const value: unknown = JSON.parse(raw);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid backup manifest');
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    record.teamName !== expectedTeamName ||
+    typeof record.identityId !== 'string' ||
+    !record.identityId.trim() ||
+    (record.status !== 'active' && record.status !== 'deleted_by_user') ||
+    typeof record.firstBackupAt !== 'string' ||
+    typeof record.lastBackupAt !== 'string' ||
+    !record.fileStats ||
+    typeof record.fileStats !== 'object' ||
+    Array.isArray(record.fileStats)
+  ) {
+    throw new Error('Invalid backup manifest ownership or shape');
+  }
+  for (const field of ['projectPath', 'displayName', 'deletedByUserAt']) {
+    if (record[field] !== undefined && typeof record[field] !== 'string') {
+      throw new Error('Invalid backup manifest optional metadata');
+    }
+  }
+  if (Object.hasOwn(record, 'workSyncRestorePending')) {
+    const pending = record.workSyncRestorePending;
+    if (!pending || typeof pending !== 'object' || Array.isArray(pending)) {
+      throw new Error('Invalid backup restore pending');
+    }
+    const fields = pending as Record<string, unknown>;
+    if (
+      fields.identityId !== record.identityId ||
+      typeof fields.generation !== 'string' ||
+      !fields.generation.trim()
+    ) {
+      throw new Error('Invalid backup restore pending identity or generation');
+    }
+  }
+  for (const stat of Object.values(record.fileStats) as unknown[]) {
+    if (
+      !stat ||
+      typeof stat !== 'object' ||
+      Array.isArray(stat) ||
+      !Number.isFinite((stat as Record<string, unknown>).mtime) ||
+      typeof (stat as Record<string, unknown>).size !== 'number' ||
+      !Number.isFinite((stat as Record<string, unknown>).size) ||
+      ((stat as Record<string, unknown>).size as number) < 0
+    ) {
+      throw new Error('Invalid backup manifest file statistics');
+    }
+  }
+  return value as BackupManifest;
+}
+
+export async function writeBackupManifestStrictAware(
+  manifestPath: string,
+  manifest: BackupManifest,
+  options: { strict: boolean; isShuttingDown(): boolean; beforeCommit?: () => Promise<void> }
+): Promise<void> {
+  const { strict, isShuttingDown, beforeCommit } = options;
+  const validatePublication = async (): Promise<void> => {
+    await beforeCommit?.();
+    if (strict && isShuttingDown()) {
+      throw new Error('Strict backup manifest publication interrupted by shutdown');
+    }
+  };
+  if (isShuttingDown() && !strict) return;
+  await validatePublication();
+  await atomicWriteAsync(manifestPath, JSON.stringify(manifest, null, 2), {
+    ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
+    beforeCommit: validatePublication,
+  });
 }

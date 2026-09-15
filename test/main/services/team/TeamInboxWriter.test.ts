@@ -31,24 +31,31 @@ const hoisted = vi.hoisted(() => {
     return data;
   });
 
-  const atomicWrite = vi.fn(async (filePath: string, data: string) => {
-    if (failWrites > 0) {
-      failWrites -= 1;
-      const error = new Error('EIO') as NodeJS.ErrnoException;
-      error.code = 'EIO';
-      throw error;
+  const atomicWrite = vi.fn(
+    async (
+      filePath: string,
+      data: string,
+      options?: { beforeCommit?: () => Promise<void> }
+    ) => {
+      await options?.beforeCommit?.();
+      if (failWrites > 0) {
+        failWrites -= 1;
+        const error = new Error('EIO') as NodeJS.ErrnoException;
+        error.code = 'EIO';
+        throw error;
+      }
+      if (dropWrites > 0) {
+        dropWrites -= 1;
+        files.set(norm(filePath), '[]');
+        return;
+      }
+      files.set(norm(filePath), data);
+      if (failReadAfterWrite > 0) {
+        failReadAfterWrite -= 1;
+        pendingReadFailures += 1;
+      }
     }
-    if (dropWrites > 0) {
-      dropWrites -= 1;
-      files.set(norm(filePath), '[]');
-      return;
-    }
-    files.set(norm(filePath), data);
-    if (failReadAfterWrite > 0) {
-      failReadAfterWrite -= 1;
-      pendingReadFailures += 1;
-    }
-  });
+  );
 
   const withFileLock = async <T>(filePath: string, fn: () => Promise<T>): Promise<T> => {
     const key = norm(filePath);
@@ -933,4 +940,47 @@ describe('TeamInboxWriter', () => {
       );
     }
   );
+
+  it('rechecks shouldStillWrite immediately before the atomic inbox append', async () => {
+    let stillCurrent = true;
+    hoisted.readFile.mockImplementationOnce(async () => {
+      stillCurrent = false;
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    });
+
+    const result = await writer.sendMessage(
+      'my-team',
+      { member: 'alice', text: 'late stop' },
+      { shouldStillWrite: () => stillCurrent }
+    );
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result.deliveredToInbox).toBe(false);
+    expect(persisted).toEqual([]);
+  });
+
+  it('rechecks shouldStillWrite at the atomic publish fence', async () => {
+    let stillCurrent = true;
+    hoisted.atomicWrite.mockImplementationOnce(
+      async (
+        filePath: string,
+        data: string,
+        options?: { beforeCommit?: () => Promise<void> }
+      ) => {
+        stillCurrent = false;
+        await options?.beforeCommit?.();
+        hoisted.files.set(filePath.replace(/\\/g, '/'), data);
+      }
+    );
+
+    const result = await writer.sendMessage(
+      'my-team',
+      { member: 'alice', text: 'late stop' },
+      { shouldStillWrite: () => stillCurrent }
+    );
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result.deliveredToInbox).toBe(false);
+    expect(persisted).toEqual([]);
+  });
 });

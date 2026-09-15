@@ -1,4 +1,6 @@
-import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -13,6 +15,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import type { MemberWorkSyncNudgeDeliveryWakePort } from '@features/member-work-sync/core/application/ports';
 import type { InboxMessage, TaskRef } from '@shared/types/team';
@@ -313,6 +317,7 @@ function createFeature(input: {
 }) {
   const providerId = input.providerId ?? 'opencode';
   return createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: input.teamsBasePath,
     configReader: {
       getConfig: vi.fn(async () => ({

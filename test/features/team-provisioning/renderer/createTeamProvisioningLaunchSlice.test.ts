@@ -9,9 +9,11 @@ import {
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamProvisioningProgress } from '@shared/types';
+import type { TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';
 
 type MessageEntry = TeamProvisioningLaunchMessageEntry;
+type TeamLaunchParamsFixture = TeamLaunchParams &
+  Pick<TeamLaunchRequest, keyof TeamLaunchParams>;
 interface AnalyticsContext {
   source: 'create' | 'launch';
 }
@@ -292,14 +294,14 @@ describe('createTeamProvisioningLaunchSlice', () => {
       model: 'sonnet',
       limitContext: false,
     };
-    const newerParams: TeamLaunchParams = {
+    const newerParams = {
       providerId: 'codex',
       providerBackendId: 'codex-native',
       model: 'gpt-5.6',
       effort: 'high',
       fastMode: undefined,
       limitContext: true,
-    };
+    } satisfies TeamLaunchParamsFixture;
     const harness = createHarness(
       createState({
         launchParamsByTeam: { 'sandbox-team': previousParams },

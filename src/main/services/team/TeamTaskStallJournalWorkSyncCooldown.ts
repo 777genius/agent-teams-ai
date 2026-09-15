@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-import type { MemberWorkSyncWatchdogCooldownPort } from '../../../core/application';
+import type { MemberWorkSyncWatchdogCooldownPort } from '@features/member-work-sync/main';
 
 const DEFAULT_WATCHDOG_COOLDOWN_MS = 10 * 60_000;
 

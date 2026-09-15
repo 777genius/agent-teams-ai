@@ -71,7 +71,8 @@ const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
   OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE,
   OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
   OPENCODE_RUNTIME_PROMPT_DELIVERY_LEDGER_FILE,
-  // The ledger owns this lock independently; unlinking a live owner admits a stale writer.
+  // Store owners release these locks after cleanup leaves their durable contents in place.
+  `${OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE}.lock`, `${OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE}.lock`,
   `${OPENCODE_RUNTIME_PROMPT_DELIVERY_LEDGER_FILE}.lock`,
 ]);
 const OPENCODE_ACTIVE_EMPTY_LANE_STALE_MS = 150_000;
@@ -783,7 +784,6 @@ async function clearIdentityStableLaneStorage(
   );
   return laneAccess.state === 'opened' ? laneAccess.value : runCleanup(null);
 }
-
 async function clearIdentityStableLaneStorageWithPromptLedgerLock(
   indexPath: string,
   laneDirectory: string | null,
@@ -792,52 +792,52 @@ async function clearIdentityStableLaneStorageWithPromptLedgerLock(
   laneEntry: OpenCodeRuntimeLaneIndexEntry | undefined
 ): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
   let ownershipDecision: ClearOpenCodeRuntimeLaneStorageResult | null = null;
-  const cleanupResult = laneDirectory
-    ? await removeDirectoryEntriesExceptAsync(
-        laneDirectory,
-        OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS,
-        {
-          displayPath: getOpenCodeTeamRuntimeLaneDirectory(
-            params.teamsBasePath,
-            params.teamName,
-            params.laneId
-          ),
-          validateDirectory: async (stableDirectory, entries) => {
-            const manifestPath = path.join(stableDirectory, OPENCODE_RUNTIME_MANIFEST_FILE);
-            const readManifest = () =>
-              readJsonDataEnvelopeNoFollowAsync(manifestPath).then(validateRuntimeStoreManifest);
-            const manifestExists = entries.some(
-              (entry) => entry.name === OPENCODE_RUNTIME_MANIFEST_FILE
-            );
-            if (
-              params.expectedSessionIdentityHash !== undefined &&
-              (await readOpenCodeStopSessionIdentity(manifestPath)) !==
-                params.expectedSessionIdentityHash
-            ) {
-              ownershipDecision = 'owner_changed';
-              return false;
-            }
-            if (params.expectedRunId !== undefined && laneEntry === undefined && !manifestExists) {
-              ownershipDecision = entries.every((entry) =>
-                OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry.name)
-              )
-                ? null
-                : 'owner_changed';
-              return ownershipDecision === null;
-            }
-            ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
-              expectedRunId: params.expectedRunId,
-              laneEntryExists: laneEntry !== undefined,
-              laneEntryRunId: laneEntry?.runId,
-              manifestExists,
-              laneDirectoryExists: async () => true,
-              readManifestActiveRunId: async () => (await readManifest()).activeRunId,
-            });
-            return ownershipDecision === null;
-          },
-        }
-      )
-    : 'missing';
+  let cleanupResult: Awaited<ReturnType<typeof removeDirectoryEntriesExceptAsync>> = 'missing';
+  if (laneDirectory) {
+    const checkOwnership = async (stableDirectory: string, entries: ReadonlyArray<{ name: string }>): Promise<boolean> => {
+      const manifestPath = path.join(stableDirectory, OPENCODE_RUNTIME_MANIFEST_FILE);
+      const readManifest = () =>
+        readJsonDataEnvelopeNoFollowAsync(manifestPath).then(validateRuntimeStoreManifest);
+      const manifestExists = entries.some((entry) => entry.name === OPENCODE_RUNTIME_MANIFEST_FILE);
+      if (params.expectedSessionIdentityHash !== undefined && (await readOpenCodeStopSessionIdentity(manifestPath)) !== params.expectedSessionIdentityHash) {
+        ownershipDecision = 'owner_changed';
+        return false;
+      }
+      if (params.expectedRunId !== undefined && laneEntry === undefined && !manifestExists) {
+        ownershipDecision = entries.every((entry) => OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry.name)) ? null : 'owner_changed';
+        return ownershipDecision === null;
+      }
+      ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
+        expectedRunId: params.expectedRunId,
+        laneEntryExists: laneEntry !== undefined,
+        laneEntryRunId: laneEntry?.runId,
+        manifestExists,
+        laneDirectoryExists: async () => true,
+        readManifestActiveRunId: async () => (await readManifest()).activeRunId,
+      });
+      return ownershipDecision === null;
+    };
+    const initialEntries = await readdir(laneDirectory, { withFileTypes: true }).catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      return null;
+    });
+    if (initialEntries) {
+      if (!(await checkOwnership(laneDirectory, initialEntries))) {
+        return ownershipDecision ?? 'owner_changed';
+      }
+      const deliveryJournalPath = path.join(laneDirectory, OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE);
+      const runTombstonesPath = path.join(laneDirectory, OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE);
+      cleanupResult = await withFileLock(
+        deliveryJournalPath, () => withFileLock(runTombstonesPath, () =>
+          removeDirectoryEntriesExceptAsync(laneDirectory, OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS, {
+            displayPath: getOpenCodeTeamRuntimeLaneDirectory(params.teamsBasePath, params.teamName, params.laneId),
+            // Re-run the run/session CAS immediately before destructive removal.
+            validateDirectory: checkOwnership,
+          }), OPENCODE_LANE_INDEX_LOCK_OPTIONS),
+        OPENCODE_LANE_INDEX_LOCK_OPTIONS
+      );
+    }
+  }
   if (cleanupResult === 'missing') {
     ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
       expectedRunId: params.expectedRunId,

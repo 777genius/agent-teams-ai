@@ -484,6 +484,15 @@ export async function revalidateHostedTaskBoardDirectories(
   }
 }
 
+export async function syncHostedTaskBoardDirectory(
+  directory: HostedTaskBoardDirectoryDescriptor,
+  assertStillActive?: () => void
+): Promise<void> {
+  await revalidateHostedTaskBoardDirectories([directory], assertStillActive);
+  await directory.handle.sync();
+  await revalidateHostedTaskBoardDirectories([directory], assertStillActive);
+}
+
 export async function revalidateHostedTaskBoardSnapshots(
   directories: readonly HostedTaskBoardDirectoryDescriptor[],
   files: readonly HostedTaskBoardFileSnapshot[],

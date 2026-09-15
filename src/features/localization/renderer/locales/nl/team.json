@@ -2444,7 +2444,11 @@
       "yes": "ja",
       "no": "nee",
       "moreActionableItems": "{{count}} extra actiepunt(en)",
-      "diagnostics": "Diagnostiek: {{diagnostics}}"
+      "diagnostics": "Diagnostiek: {{diagnostics}}",
+      "autoResumeStopped": "Automatische voortzetting is gestopt.",
+      "continue": "Doorgaan",
+      "stopAutoResume": "Automatisch hervatten stoppen",
+      "resumeAutoResume": "Automatisch hervatten"
     },
     "title": "Werksynchronisatie lid",
     "loadingDiagnostics": "Diagnostiek werksynchronisatie lid laden.",
