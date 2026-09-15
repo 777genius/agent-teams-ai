@@ -499,6 +499,58 @@ describe('useTeamChangesSummaries', () => {
     }
   });
 
+  it('queues a restore scan behind a full request started before the renderer was hidden', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    hoisted.getTeamTaskChangeSummaries
+      .mockReturnValueOnce(first.promise)
+      .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, { tasks: [task()], onSnapshot: () => undefined })
+        );
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(1);
+
+      const firstRequests = hoisted.getTeamTaskChangeSummaries.mock
+        .calls[0][1] as TeamTaskChangeSummaryRequest[];
+      await act(async () => {
+        first.resolve(responseForRequests(firstRequests));
+        await first.promise;
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
   it('refreshes a collapsed Changes counter once after visibility restoration', async () => {
     const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
     let visibilityState: DocumentVisibilityState = 'visible';

@@ -284,6 +284,7 @@ export function useTeamChangesSummaries({
   const requestSeqRef = useRef(0);
   const activeRequestSeqRef = useRef<number | null>(null);
   const activeRequestOptionsRef = useRef<TeamChangesLoadOptions | null>(null);
+  const activeRequestVisibleEpochRef = useRef(0);
   const queuedRefreshOptionsRef = useRef<TeamChangesLoadOptions | null>(null);
   const autoRefreshBlockedUntilRef = useRef(0);
   const unknownScanCursorRef = useRef(0);
@@ -437,6 +438,7 @@ export function useTeamChangesSummaries({
         satisfiedTaskIds,
         stagedRefreshPlan,
       };
+      activeRequestVisibleEpochRef.current = visibleEpoch;
 
       try {
         const response = await withTeamChangesLoadTimeout(
@@ -629,6 +631,7 @@ export function useTeamChangesSummaries({
       setSelectedTeamTaskChangePresences,
       tasks,
       teamName,
+      visibleEpoch,
     ]
   );
 
@@ -734,6 +737,8 @@ export function useTeamChangesSummaries({
     ].some(
       (options) =>
         options !== null &&
+        (options !== activeRequestOptionsRef.current ||
+          activeRequestVisibleEpochRef.current === visibleEpoch) &&
         options.maxRequests === undefined &&
         options.unknownScanLimit === undefined &&
         options.satisfiedTaskIds === undefined &&
