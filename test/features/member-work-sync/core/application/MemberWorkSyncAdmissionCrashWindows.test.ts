@@ -122,7 +122,7 @@ class CrashOutboxHarness {
   throwOnEnsure = false;
   conflictOnEnsure = false;
 
-  async ensurePending(input: MemberWorkSyncOutboxEnsureInput) {
+  ensurePending(input: MemberWorkSyncOutboxEnsureInput) {
     if (this.throwOnEnsure) {
       throw new Error('outbox write interrupted');
     }
@@ -149,11 +149,11 @@ class CrashOutboxHarness {
       updatedAt: input.nowIso,
     };
     this.items.set(input.id, created);
-    return { ok: true as const, outcome: 'created' as const, item: created };
+    return Promise.resolve({ ok: true as const, outcome: 'created' as const, item: created });
   }
 
-  async findDeliveredReviewPickupRequestEventIds(): Promise<string[]> {
-    return [];
+  findDeliveredReviewPickupRequestEventIds(): Promise<string[]> {
+    return Promise.resolve([]);
   }
 }
 
@@ -175,7 +175,7 @@ function admittingTicket(
         admissionPayloadHash: input.admissionPayloadHash,
       },
     }),
-    cancel: async () => undefined,
+    cancel: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -230,8 +230,9 @@ describe('work-sync admission crash windows', () => {
     const { deps } = createDeps({
       outbox,
       ticket: admittingTicket({
-        cancel: async (ticket) => {
+        cancel: (ticket) => {
           cancelled.push(ticket);
+          return Promise.resolve();
         },
       }),
     });
@@ -252,8 +253,9 @@ describe('work-sync admission crash windows', () => {
     const { deps } = createDeps({
       outbox,
       ticket: admittingTicket({
-        cancel: async (ticket) => {
+        cancel: (ticket) => {
           cancelled.push(ticket);
+          return Promise.resolve();
         },
       }),
     });
@@ -275,13 +277,15 @@ describe('work-sync admission crash windows', () => {
     );
     expect(planned.planned).toBe(true);
     const item = [...outbox.items.values()][0];
-    expect(item?.payload.workSyncIntentKey?.startsWith(`${EARLY_CONTINUATION_INTENT_PREFIX}:`)).toBe(
+    expect(item).toBeDefined();
+    if (!item) {
+      return;
+    }
+    expect(item.payload.workSyncIntentKey?.startsWith(`${EARLY_CONTINUATION_INTENT_PREFIX}:`)).toBe(
       true
     );
-    const cloned = JSON.parse(JSON.stringify(item)) as MemberWorkSyncOutboxItem;
-    expect(readMemberWorkSyncRuntimeTicket(cloned)).toEqual(
-      readMemberWorkSyncRuntimeTicket(item as MemberWorkSyncOutboxItem)
-    );
+    const cloned: MemberWorkSyncOutboxItem = JSON.parse(JSON.stringify(item));
+    expect(readMemberWorkSyncRuntimeTicket(cloned)).toEqual(readMemberWorkSyncRuntimeTicket(item));
     expect(readMemberWorkSyncRuntimeTicket(cloned)).toMatchObject({
       ticketId: 'ticket-1',
       runtimeInstanceId: 'runtime-1',

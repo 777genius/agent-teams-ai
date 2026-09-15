@@ -320,7 +320,7 @@ describe('protocol-2 early continuation', () => {
   });
 
   it('handshakes control with the same lifecycle incarnation used for admit', async () => {
-    const handshakes: Array<{ teamIncarnation?: string }> = [];
+    const handshakes: { teamIncarnation?: string }[] = [];
     const current = remainingWorkStatus({
       statusRevision: {
         incarnation: 'inc-live',
@@ -592,5 +592,77 @@ describe('protocol-2 early continuation', () => {
       })
     ).resolves.toEqual({ status: 'conflict' });
     expect(cancelled).toEqual([expect.objectContaining({ ticketId: 'ticket-1', expectedGeneration: 1 })]);
+  });
+
+  it('does not admit when runtime control handshake is unknown', async () => {
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket({
+        syncControl: async () => ({ ok: false, code: 'unknown' }),
+      }),
+    });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
+      remainingWorkStatus(),
+      settlement
+    );
+    expect(planned).toEqual({ planned: false, code: 'early_continuation_rejected' });
+    expect(outbox.items.size).toBe(0);
+  });
+
+  it('does not admit when runtime control is closed', async () => {
+    const { deps, outbox } = createDeps({
+      ticket: admittingTicket({
+        syncControl: async () => ({ ok: true, code: 'closed', controlRevision: 4 }),
+      }),
+    });
+    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).planEarlyContinuation(
+      remainingWorkStatus(),
+      settlement
+    );
+    expect(planned).toEqual({ planned: false, code: 'member_stopped' });
+    expect(outbox.items.size).toBe(0);
+  });
+
+  it('does not insert inbox when the persisted runtime ticket is no longer reserved', async () => {
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 1,
+          workSyncRuntimeInstanceId: 'runtime-1',
+          workSyncAdmissionPayloadHash: 'hash-1',
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(
+      insertMemberWorkSyncInboxAfterRuntimeTicket({
+        admission: admittingTicket({
+          confirmReserved: async () => ({ ok: false, code: 'stale' }),
+        }),
+        inbox: {
+          insertIfAbsent: async () => {
+            throw new Error('inbox insert must not run for a stale ticket');
+          },
+        },
+        item,
+        nowIso: '2026-05-06T00:05:00.000Z',
+        shouldAbort: () => false,
+      })
+    ).resolves.toEqual({ status: 'busy' });
   });
 });

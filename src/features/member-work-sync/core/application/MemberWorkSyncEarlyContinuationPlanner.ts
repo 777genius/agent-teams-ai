@@ -188,6 +188,13 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
     await cancelAdmittedTicketIfPresent(input.admission, input.item);
     return { status: 'aborted' };
   }
+  const ticket = readMemberWorkSyncRuntimeTicket(input.item);
+  if (ticket && input.admission?.confirmReserved) {
+    const confirmed = await input.admission.confirmReserved(ticket);
+    if (!confirmed.ok) {
+      return { status: 'busy' };
+    }
+  }
   const inserted = await input.inbox.insertIfAbsent({
     teamName: input.item.teamName,
     memberName: input.item.memberName,
@@ -280,10 +287,18 @@ export async function planMemberWorkSyncEarlyContinuation(
       controlRevision: status.recoveryHealth?.controlRevision ?? 1,
       stopped: false,
     });
-    if (!handshake.ok && handshake.code !== 'unknown') {
+    if (!handshake.ok || handshake.code !== 'open') {
       return {
         planned: false,
-        code: refusalCode(handshake.code === 'conflict' ? 'conflict' : 'instance_mismatch'),
+        code: refusalCode(
+          handshake.ok
+            ? 'stopped'
+            : handshake.code === 'conflict'
+              ? 'conflict'
+              : handshake.code === 'unknown'
+                ? 'unknown'
+                : 'instance_mismatch'
+        ),
       };
     }
   }

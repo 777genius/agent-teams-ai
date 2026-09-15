@@ -84,5 +84,19 @@ export function createMemberWorkSyncRuntimeTicketAdmissionRouter(input: {
     async readLiveControl(request) {
       return (await codex.readLiveControl(request)) ?? (await anthropic.readLiveControl(request));
     },
+    async confirmReserved(ticket) {
+      const codexResult = await codex.confirmReserved(ticket);
+      if (codexResult.ok) {
+        return codexResult;
+      }
+      const anthropicResult = await anthropic.confirmReserved(ticket);
+      if (anthropicResult.ok) {
+        return anthropicResult;
+      }
+      if (input.opencodeAdmission?.confirmReserved) {
+        return input.opencodeAdmission.confirmReserved(ticket);
+      }
+      return { ok: false as const, code: 'unknown' as const };
+    },
   };
 }

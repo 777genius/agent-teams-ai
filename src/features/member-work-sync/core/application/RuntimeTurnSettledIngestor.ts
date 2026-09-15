@@ -32,6 +32,7 @@ export interface RuntimeTurnSettledDrainSummary {
   failed: number;
 }
 
+const TERMINAL_SUCCESS_OPENCODE_OUTCOMES = new Set(['success']);
 const NON_TERMINAL_OPENCODE_OUTCOMES = new Set([
   'timeout',
   'stream_unavailable',
@@ -50,6 +51,15 @@ function getIgnoredReason(event: RuntimeTurnSettledEvent): string | null {
   }
   if (!event.threadId?.trim() && !event.turnId?.trim()) {
     return 'opencode_missing_prompt_identity';
+  }
+  if (!event.threadId?.trim()) {
+    return 'opencode_missing_prompt_identity';
+  }
+  if (!outcome) {
+    return 'opencode_missing_terminal_outcome';
+  }
+  if (!TERMINAL_SUCCESS_OPENCODE_OUTCOMES.has(outcome)) {
+    return `opencode_non_success_outcome:${outcome}`;
   }
   return null;
 }

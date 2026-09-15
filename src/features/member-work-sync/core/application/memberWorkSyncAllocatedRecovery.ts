@@ -3,10 +3,10 @@ import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAll
 import type { MemberWorkSyncOutboxEnsureInput, MemberWorkSyncStatus } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
-type BlockedRecoveryPlan = {
+interface BlockedRecoveryPlan {
   planned: false;
   code: 'recovery_allocation_disabled' | 'member_stopped' | 'slot_occupied';
-};
+}
 
 export async function skipMemberWorkSyncRecoveryAllocation(input: {
   status: MemberWorkSyncStatus;

@@ -75,8 +75,6 @@ const remainingWorkIt =
     ? it
     : it.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI =
-  '/Users/belief/dev/projects/claude/_worktrees/agent_teams_orchestrator-d1/cli-source';
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_EFFORT = 'low' as const;
 const TEAMMATE_NAME = 'bob';
@@ -87,6 +85,26 @@ const LIVE_CODEX_WORKSPACE_TRUST_TARGET_SURFACES: WorkspaceTrustLaunchArgTargetS
   'provider_facts_probe',
   'default_model_probe',
 ];
+
+function envOrDefaultTimeout(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  return value ? value : fallback;
+}
+
+function formatCodexLiveProgress(progress: {
+  state: string;
+  message?: string;
+  error?: string;
+}): string {
+  const parts = [`[codex-live] ${progress.state}`];
+  if (progress.message) {
+    parts.push(progress.message);
+  }
+  if (progress.error) {
+    parts.push(progress.error);
+  }
+  return parts.join(' | ');
+}
 
 async function resolveLiveCodexCliPath(connectedHome: string): Promise<string> {
   const configured = process.env.CODEX_CLI_PATH?.trim();
@@ -243,17 +261,26 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       ownsCodexHomeDir = true;
     }
 
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH =
-      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
+    const configuredCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
+    if (!configuredCli) {
+      throw new Error('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH is required for Codex live recovery');
+    }
+    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = configuredCli;
     process.env.CLAUDE_TEAM_CLI_FLAVOR = 'agent_teams_orchestrator';
     process.env.CODEX_HOME = codexHomeDir;
     process.env.CLAUDE_CODE_CODEX_NATIVE_IGNORE_USER_CONFIG = 'true';
-    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS =
-      process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS?.trim() || '480000';
-    process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS =
-      process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS?.trim() || '480000';
-    process.env.CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS =
-      process.env.CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS?.trim() || '480000';
+    process.env.CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_DETERMINISTIC_BOOTSTRAP_TIMEOUT_MS',
+      '480000'
+    );
+    process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS',
+      '480000'
+    );
+    process.env.CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS = envOrDefaultTimeout(
+      'CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS',
+      '480000'
+    );
     feature = null;
     controlServer = null;
     svc = null;
@@ -454,9 +481,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         (progress) => {
           progressEvents.push(progress);
           console.info(
-            `[codex-live] ${progress.state}${progress.message ? ` | ${progress.message}` : ''}${
-              progress.error ? ` | ${progress.error}` : ''
-            }`
+            formatCodexLiveProgress(progress)
           );
         }
       );
@@ -767,9 +792,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         (progress) => {
           progressEvents.push(progress);
           console.info(
-            `[codex-live] ${progress.state}${progress.message ? ` | ${progress.message}` : ''}${
-              progress.error ? ` | ${progress.error}` : ''
-            }`
+            formatCodexLiveProgress(progress)
           );
         }
       );
@@ -1130,9 +1153,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       (progress) => {
         progressEvents.push(progress);
         console.info(
-          `[codex-live] ${progress.state}${progress.message ? ` | ${progress.message}` : ''}${
-            progress.error ? ` | ${progress.error}` : ''
-          }`
+          formatCodexLiveProgress(progress)
         );
       }
     );
@@ -1331,9 +1352,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         (progress) => {
           progressEvents.push(progress);
           console.info(
-            `[codex-live] ${progress.state}${progress.message ? ` | ${progress.message}` : ''}${
-              progress.error ? ` | ${progress.error}` : ''
-            }`
+            formatCodexLiveProgress(progress)
           );
         }
       );

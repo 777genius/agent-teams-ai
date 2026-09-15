@@ -9,9 +9,13 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
+export { readNativeWorkSyncCurrentRuntimeInstanceId } from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
 export {
   consumeOpenCodeWorkSyncLane,
   hasOpenCodeWorkSyncLaneReservation,
+  hydrateOpenCodeWorkSyncLaneReservation,
+  peekOpenCodeWorkSyncLane,
+  restoreOpenCodeWorkSyncLane,
 } from './adapters/output/OpenCodeWorkSyncLaneReservationStore';
 export type { MemberWorkSyncFeatureFacade } from './composition/createMemberWorkSyncFeature';
 export {

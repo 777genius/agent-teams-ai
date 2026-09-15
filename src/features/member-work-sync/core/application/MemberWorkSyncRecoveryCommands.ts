@@ -17,10 +17,10 @@ import {
 import type { MemberWorkSyncStatus } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
-export type MemberWorkSyncRuntimeAdmissionOutcome = {
+export interface MemberWorkSyncRuntimeAdmissionOutcome {
   state: 'applied' | 'pending' | 'unknown' | 'superseded';
   controlRevision?: number;
-};
+}
 
 export type MemberWorkSyncRecoveryCommandResult =
   | {

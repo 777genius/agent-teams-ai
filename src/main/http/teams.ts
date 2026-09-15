@@ -1,3 +1,4 @@
+import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -34,6 +35,7 @@ import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
 
+const RUNTIME_STOP_REPLAY_LIMIT = 64;
 const runtimeStopReplay = new Map<
   string,
   { ok: true; status: unknown; runtimeAdmission: { state: string } }
@@ -44,6 +46,12 @@ function rememberMemberWorkSyncRuntimeStop(
   value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
 ) {
   if (value) {
+    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
+      const oldest = runtimeStopReplay.keys().next().value;
+      if (oldest) {
+        runtimeStopReplay.delete(oldest);
+      }
+    }
     runtimeStopReplay.set(localStopId, value);
     return value;
   }
@@ -617,10 +625,25 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (!localStopId) {
         return reply.status(400).send({ error: 'localStopId is required' });
       }
+      const runtimeInstanceId =
+        typeof request.body?.runtimeInstanceId === 'string'
+          ? request.body.runtimeInstanceId.trim()
+          : '';
+      if (!runtimeInstanceId) {
+        return reply.status(400).send({ error: 'runtimeInstanceId is required' });
+      }
       const reason =
         typeof request.body?.reason === 'string' && request.body.reason.trim()
           ? request.body.reason.trim()
           : 'runtime_local_stop';
+      const currentRuntimeInstanceId = await readNativeWorkSyncCurrentRuntimeInstanceId({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: validatedTeamName.value!,
+        memberName: assertValidMemberName(memberName),
+      });
+      if (currentRuntimeInstanceId && currentRuntimeInstanceId !== runtimeInstanceId) {
+        return reply.status(409).send({ error: 'stale_runtime_instance' });
+      }
       const cached = rememberMemberWorkSyncRuntimeStop(localStopId);
       if (cached) {
         return reply.send(cached);

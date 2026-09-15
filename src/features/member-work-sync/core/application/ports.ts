@@ -418,6 +418,9 @@ export interface MemberWorkSyncRuntimeTicketAdmissionPort {
     stopped: boolean;
     handshakeCompleted: boolean;
   } | null>;
+  confirmReserved?(
+    ticket: MemberWorkSyncRuntimeTicket
+  ): Promise<{ ok: true } | { ok: false; code: 'stale' | 'unknown' }>;
 }
 
 export interface LatestAcceptedReportLookup {

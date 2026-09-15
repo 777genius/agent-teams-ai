@@ -8,7 +8,7 @@ import type {
   MemberWorkSyncRuntimeTicket,
 } from '../../../core/application';
 
-type NativeAdmissionSnapshot = {
+interface NativeAdmissionSnapshot {
   runtimeInstanceId?: string;
   status?: 'idle' | 'dispatching' | 'running';
   generation?: number;
@@ -18,7 +18,7 @@ type NativeAdmissionSnapshot = {
     intentId?: string;
     expectedGeneration?: number;
   } | null;
-};
+}
 
 function matchesExactTicket(
   snapshot: NativeAdmissionSnapshot,

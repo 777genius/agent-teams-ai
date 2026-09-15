@@ -40,7 +40,7 @@ describe('OpenCodeTurnSettledPayloadNormalizer', () => {
         agentId: 'lane-jack',
         cwd: '/tmp/project',
         outcome: 'success',
-        runtimeInstanceId: 'opencode:lane-jack',
+        runtimeInstanceId: 'opencode:lane-jack:ses-opencode-1',
         recordedAt: '2026-04-29T12:00:00.000Z',
       }),
     });

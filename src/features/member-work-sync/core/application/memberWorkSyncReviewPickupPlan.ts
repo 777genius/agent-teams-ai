@@ -5,13 +5,13 @@ import { filterReviewPickupStatusByRequestIds } from './MemberWorkSyncNudgeOutbo
 import type { MemberWorkSyncOutboxEnsureInput, MemberWorkSyncStatus } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
-type ReviewPickupPlanContinue = {
+interface ReviewPickupPlanContinue {
   kind: 'continue';
   input: MemberWorkSyncOutboxEnsureInput;
   planStatus: MemberWorkSyncStatus;
-};
+}
 
-type ReviewPickupPlanStop = {
+interface ReviewPickupPlanStop {
   kind: 'stop';
   result: {
     planned: false;
@@ -20,7 +20,7 @@ type ReviewPickupPlanStop = {
       | 'review_pickup_already_delivered_still_stuck'
       | 'status_not_nudgeable';
   };
-};
+}
 
 export async function prepareMemberWorkSyncReviewPickupPlan(input: {
   deps: MemberWorkSyncUseCaseDeps;

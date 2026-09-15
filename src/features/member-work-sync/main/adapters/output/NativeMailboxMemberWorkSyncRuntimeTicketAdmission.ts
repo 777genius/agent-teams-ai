@@ -73,7 +73,7 @@ type NativeCommand =
       issuedAt: string;
     };
 
-type NativeAck = {
+interface NativeAck {
   schemaVersion: 1;
   requestId: string;
   op: NativeCommand['op'];
@@ -85,7 +85,72 @@ type NativeAck = {
   generation: number;
   controlRevision: number;
   localAdmissionClosed: boolean;
-};
+}
+
+function isNativeAckOp(value: unknown): value is NativeCommand['op'] {
+  return value === 'reserve' || value === 'cancel' || value === 'sync_control';
+}
+
+function parseNativeAck(raw: string): NativeAck | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+  const ack = parsed as Record<string, unknown>;
+  if (ack.schemaVersion !== 1 || !isNativeAckOp(ack.op) || typeof ack.requestId !== 'string') {
+    return null;
+  }
+  if (typeof ack.ok !== 'boolean' || typeof ack.runtimeInstanceId !== 'string') {
+    return null;
+  }
+  if (typeof ack.generation !== 'number' || typeof ack.controlRevision !== 'number') {
+    return null;
+  }
+  if (typeof ack.localAdmissionClosed !== 'boolean') {
+    return null;
+  }
+  return {
+    schemaVersion: 1,
+    requestId: ack.requestId,
+    op: ack.op,
+    ok: ack.ok,
+    ...(typeof ack.code === 'string' ? { code: ack.code } : {}),
+    ...(typeof ack.intentId === 'string' ? { intentId: ack.intentId } : {}),
+    ...(typeof ack.reservationNonce === 'string' ? { reservationNonce: ack.reservationNonce } : {}),
+    runtimeInstanceId: ack.runtimeInstanceId,
+    generation: ack.generation,
+    controlRevision: ack.controlRevision,
+    localAdmissionClosed: ack.localAdmissionClosed,
+  };
+}
+
+function ackMatchesCommand(ack: NativeAck, command: NativeCommand): boolean {
+  if (ack.requestId !== command.requestId || ack.op !== command.op) {
+    return false;
+  }
+  if (ack.runtimeInstanceId !== command.scope.runtimeInstanceId) {
+    return false;
+  }
+  if (command.op === 'reserve') {
+    if (ack.ok && ack.code === 'reserved') {
+      return ack.intentId === command.intentId && ack.reservationNonce === command.reservationNonce;
+    }
+    return true;
+  }
+  if (command.op === 'cancel' && ack.ok) {
+    return (
+      !ack.intentId ||
+      (ack.intentId === command.intentId &&
+        (!ack.reservationNonce || ack.reservationNonce === command.reservationNonce))
+    );
+  }
+  return true;
+}
 
 export function buildNativeWorkSyncAdmissionRoot(input: {
   teamsBasePath: string;
@@ -100,6 +165,35 @@ export function buildNativeWorkSyncAdmissionRoot(input: {
     '.member-work-sync',
     'runtime-admission'
   );
+}
+
+export async function readNativeWorkSyncCurrentRuntimeInstanceId(input: {
+  teamsBasePath: string;
+  teamName: string;
+  memberName: string;
+}): Promise<string | null> {
+  const root = buildNativeWorkSyncAdmissionRoot(input);
+  try {
+    const live = JSON.parse(await readFile(join(root, 'control.json'), 'utf8')) as {
+      runtimeInstanceId?: string;
+    };
+    if (typeof live.runtimeInstanceId === 'string' && live.runtimeInstanceId.trim()) {
+      return live.runtimeInstanceId.trim();
+    }
+  } catch {
+    // fall through to capability
+  }
+  try {
+    const capability = JSON.parse(await readFile(join(root, 'capability.json'), 'utf8')) as {
+      runtimeInstanceId?: string;
+    };
+    if (typeof capability.runtimeInstanceId === 'string' && capability.runtimeInstanceId.trim()) {
+      return capability.runtimeInstanceId.trim();
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 async function publishNoReplace(
@@ -131,7 +225,10 @@ async function waitForAck(
     }
     try {
       const raw = await readFile(path, 'utf8');
-      return JSON.parse(raw) as NativeAck;
+      const parsed = parseNativeAck(raw);
+      if (parsed) {
+        return parsed;
+      }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code !== 'ENOENT') {
@@ -335,7 +432,7 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
         ) {
           return {
             ok: false as const,
-            code: ack.code as 'superseded' | 'conflict' | 'instance_mismatch',
+            code: ack.code,
           };
         }
         return { ok: false as const, code: 'unknown' as const };
@@ -384,6 +481,44 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
     }
   }
 
+  async confirmReserved(
+    ticket: MemberWorkSyncRuntimeTicket
+  ): Promise<{ ok: true } | { ok: false; code: 'stale' | 'unknown' }> {
+    const root = buildNativeWorkSyncAdmissionRoot({
+      teamsBasePath: this.deps.teamsBasePath,
+      teamName: ticket.teamName,
+      memberName: ticket.memberName,
+    });
+    try {
+      const parsed = JSON.parse(await readFile(join(root, 'snapshot.json'), 'utf8')) as {
+        runtimeInstanceId?: string;
+        status?: string;
+        continuation?: {
+          runtimeInstanceId?: string;
+          reservationNonce?: string;
+          intentId?: string;
+          expectedGeneration?: number;
+        } | null;
+      };
+      const continuation = parsed.continuation;
+      if (
+        parsed.runtimeInstanceId !== ticket.runtimeInstanceId ||
+        parsed.status !== 'dispatching' ||
+        !continuation ||
+        continuation.reservationNonce !== ticket.ticketId ||
+        continuation.intentId !== ticket.intentId ||
+        continuation.runtimeInstanceId !== ticket.runtimeInstanceId ||
+        (continuation.expectedGeneration != null &&
+          continuation.expectedGeneration !== ticket.expectedGeneration)
+      ) {
+        return { ok: false, code: 'stale' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, code: 'unknown' };
+    }
+  }
+
   private async exchange(
     identity: { teamName: string; memberName: string },
     runtimeInstanceId: string,
@@ -401,6 +536,10 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
     if (published === 'conflict') {
       throw Object.assign(new Error('command conflict'), { code: 'conflict' });
     }
-    return waitForAck(ackPath, Date.now() + timeoutMs);
+    const ack = await waitForAck(ackPath, Date.now() + timeoutMs);
+    if (!ackMatchesCommand(ack, command)) {
+      throw Object.assign(new Error('ack identity mismatch'), { code: 'unknown' });
+    }
+    return ack;
   }
 }

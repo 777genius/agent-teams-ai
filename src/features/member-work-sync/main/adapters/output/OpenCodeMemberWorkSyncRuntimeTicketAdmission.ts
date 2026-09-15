@@ -16,17 +16,33 @@ export function createOpenCodeMemberWorkSyncRuntimeTicketAdmission(input: {
     teamName: string;
     memberName: string;
   }) => Promise<boolean> | boolean;
+  readCurrentRuntimeInstanceId?: (input: {
+    teamName: string;
+    memberName: string;
+  }) => Promise<string | null> | string | null;
+  confirmReserved?: MemberWorkSyncRuntimeTicketAdmissionPort['confirmReserved'];
 }): MemberWorkSyncRuntimeTicketAdmissionPort {
   return {
     async admit(request) {
       if (request.providerId !== 'opencode') {
         return { admitted: false, code: 'not_early' };
       }
+      const currentRuntimeInstanceId = await input.readCurrentRuntimeInstanceId?.({
+        teamName: request.teamName,
+        memberName: request.memberName,
+      });
+      if (
+        currentRuntimeInstanceId &&
+        request.runtimeInstanceId &&
+        currentRuntimeInstanceId !== request.runtimeInstanceId
+      ) {
+        return { admitted: false, code: 'instance_mismatch' };
+      }
       const ticket: MemberWorkSyncRuntimeTicket = {
         teamName: request.teamName,
         teamIncarnation: request.teamIncarnation,
         memberName: request.memberName,
-        runtimeInstanceId: request.runtimeInstanceId ?? 'opencode-lane',
+        runtimeInstanceId: request.runtimeInstanceId ?? currentRuntimeInstanceId ?? 'opencode-lane',
         expectedGeneration: request.expectedGeneration,
         ticketId: `${request.intentId}:${request.expectedGeneration}`,
         intentId: request.intentId,
@@ -48,5 +64,6 @@ export function createOpenCodeMemberWorkSyncRuntimeTicketAdmission(input: {
       return { admitted: true, ticket };
     },
     cancel: (ticket) => input.cancel(ticket),
+    ...(input.confirmReserved ? { confirmReserved: input.confirmReserved } : {}),
   };
 }

@@ -105,7 +105,11 @@ export class OpenCodeTurnSettledPayloadNormalizer implements RuntimeTurnSettledP
     const laneId = getString(payload, 'laneId', 'lane_id', 'agentId', 'agent_id');
     const runtimeInstanceId =
       getString(payload, 'runtimeInstanceId', 'runtime_instance_id') ??
-      (laneId ? `opencode:${laneId}` : `opencode:${sessionId}`);
+      (laneId && sessionId
+        ? `opencode:${laneId}:${sessionId}`
+        : laneId
+          ? `opencode:${laneId}`
+          : `opencode:${sessionId}`);
     const completedGenerationRaw = payload.completedGeneration ?? payload.completed_generation;
     const completedGeneration =
       typeof completedGenerationRaw === 'number' && Number.isInteger(completedGenerationRaw)

@@ -294,7 +294,7 @@ describe('RuntimeTurnSettledIngestor', () => {
     'prompt_rejected',
     'idle_without_assistant_activity',
     'unknown',
-  ])('enqueues prompt-owned OpenCode outcome %s for recovery reconcile', async (outcome) => {
+  ])('ignores prompt-owned OpenCode non-terminal outcome %s', async (outcome) => {
     const payload = makeOpenCodePayload(
       JSON.stringify({
         schemaVersion: 1,
@@ -334,32 +334,16 @@ describe('RuntimeTurnSettledIngestor', () => {
 
     await expect(ingestor.drainPending()).resolves.toMatchObject({
       claimed: 1,
-      enqueued: 1,
+      enqueued: 0,
       unresolved: 0,
-      ignored: 0,
+      ignored: 1,
       invalid: 0,
     });
-    expect(resolver.resolve).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: 'opencode',
-        turnId: 'msg_123',
-        threadId: 'msg_123',
-        outcome,
-      })
-    );
-    expect(enqueueRuntimeTurnSettled).toHaveBeenCalledWith({
-      teamName: 'team-a',
-      memberName: 'jack',
-      event: expect.objectContaining({
-        provider: 'opencode',
-        turnId: 'msg_123',
-        outcome,
-      }),
-    });
+    expect(resolver.resolve).not.toHaveBeenCalled();
+    expect(enqueueRuntimeTurnSettled).not.toHaveBeenCalled();
     expect(processed[0]).toMatchObject({
-      outcome: 'enqueued',
-      teamName: 'team-a',
-      memberName: 'jack',
+      outcome: 'ignored',
+      reason: `opencode_non_terminal_outcome:${outcome}`,
     });
   });
 

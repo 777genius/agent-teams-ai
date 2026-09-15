@@ -6,6 +6,9 @@ import {
 import {
   consumeOpenCodeWorkSyncLane,
   hasOpenCodeWorkSyncLaneReservation,
+  hydrateOpenCodeWorkSyncLaneReservation,
+  peekOpenCodeWorkSyncLane,
+  restoreOpenCodeWorkSyncLane,
 } from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -191,12 +194,25 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
     const { config } = directory;
+    await hydrateOpenCodeWorkSyncLaneReservation({
+      teamName,
+      memberName: input.memberName,
+    });
+    const reservedTicket = peekOpenCodeWorkSyncLane({
+      teamName,
+      memberName: input.memberName,
+    });
     const consumedLane = consumeOpenCodeWorkSyncLane({
       teamName,
       memberName: input.memberName,
       messageId: input.messageId,
       foreground: input.source === 'ui-send' || input.source === 'manual',
     });
+    const restoreConsumedLane = () => {
+      if (consumedLane === 'consumed' && reservedTicket) {
+        restoreOpenCodeWorkSyncLane(reservedTicket);
+      }
+    };
     if (
       input.messageKind === 'member_work_sync_nudge' &&
       consumedLane === 'absent' &&
@@ -215,6 +231,7 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneOwnerProviderId === 'opencode' &&
       this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
     ) {
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
     const cwd =
@@ -226,6 +243,7 @@ export class OpenCodeMemberMessageDeliveryService {
           memberRuntimeCwd ||
           this.deps.readPersistedTeamProjectPath(teamName);
     if (!cwd) {
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_project_path_unavailable' };
     }
 
@@ -249,6 +267,7 @@ export class OpenCodeMemberMessageDeliveryService {
       trackedSecondaryLanePresent = liveLane != null;
       liveSecondaryLaneRunId = liveLane?.runId?.trim() || null;
       if (!liveLane && trackedSecondaryLaneSnapshotKnown) {
+        restoreConsumedLane();
         return { delivered: false, reason: 'opencode_runtime_not_active' };
       }
     }
@@ -272,6 +291,7 @@ export class OpenCodeMemberMessageDeliveryService {
         !trackedSecondaryLanePresent &&
         trackedSecondaryLaneSnapshotKnown
       ) {
+        restoreConsumedLane();
         return { delivered: false, reason: 'opencode_runtime_not_active' };
       }
       runtimeActive = await this.deps.isOpenCodeRuntimeLaneIndexActive(
@@ -371,6 +391,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     if (!runtimeActive) {
       this.deps.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
+      restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
 
