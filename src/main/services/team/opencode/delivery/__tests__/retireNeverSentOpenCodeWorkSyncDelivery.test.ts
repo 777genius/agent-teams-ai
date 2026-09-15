@@ -23,6 +23,26 @@ describe('retireNeverSentOpenCodeWorkSyncDelivery', () => {
     });
   });
 
+  it('terminals a pending never-sent record whose ticket was consumed before send', async () => {
+    const markFailedTerminal = vi.fn(async (input: { id: string }) => input);
+    await retireNeverSentOpenCodeWorkSyncDelivery({
+      ledger: { markFailedTerminal } as never,
+      record: {
+        id: 'ledger-c1',
+        status: 'pending',
+        acceptedAt: null,
+        attempts: 0,
+      } as never,
+      reason: 'work_sync_ticket_consumed',
+      nowIso: '2026-05-09T12:00:00.000Z',
+    });
+    expect(markFailedTerminal).toHaveBeenCalledWith({
+      id: 'ledger-c1',
+      reason: 'work_sync_ticket_consumed',
+      failedAt: '2026-05-09T12:00:00.000Z',
+    });
+  });
+
   it('leaves observe of an accepted prompt and lane-reserved waits alone', async () => {
     const markFailedTerminal = vi.fn(async (input: { id: string }) => input);
     await retireNeverSentOpenCodeWorkSyncDelivery({

@@ -22,7 +22,7 @@ function isAutomaticWorkSyncNudge(input: { messageKind?: string; foreground?: bo
   return input.messageKind === 'member_work_sync_nudge' && input.foreground !== true;
 }
 
-export type OpenCodeWorkSyncLaneDeliveryGateInput = {
+export interface OpenCodeWorkSyncLaneDeliveryGateInput {
   teamName: string;
   memberName: string;
   messageId?: string;
@@ -31,7 +31,7 @@ export type OpenCodeWorkSyncLaneDeliveryGateInput = {
   workSyncControlRevision?: number;
   foreground?: boolean;
   source?: string;
-};
+}
 
 export function buildOpenCodeWorkSyncLaneDeliveryGateInput(input: {
   teamName: string;

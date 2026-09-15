@@ -7,6 +7,7 @@ import type { OpenCodeWorkSyncLaneDeliveryReason } from '@features/member-work-s
 const RETIRE_REASONS: ReadonlySet<OpenCodeWorkSyncLaneDeliveryReason> = new Set([
   'work_sync_admission_stopped',
   'work_sync_ticket_stale',
+  'work_sync_ticket_consumed',
 ]);
 
 export function isNeverSentOpenCodeWorkSyncDelivery(

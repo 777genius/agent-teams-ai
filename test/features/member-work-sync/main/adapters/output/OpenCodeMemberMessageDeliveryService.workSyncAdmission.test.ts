@@ -63,10 +63,11 @@ function okSend(): OpenCodeTeamRuntimeMessageResult {
 
 function createHarness(input: {
   ledgerDir: string;
-  serialize: (
+  serialize?: (
     send: () => Promise<OpenCodeTeamRuntimeMessageResult>
   ) => Promise<OpenCodeTeamRuntimeMessageResult>;
   send?: () => Promise<OpenCodeTeamRuntimeMessageResult>;
+  beforeGate?: () => Promise<void>;
 }): {
   service: OpenCodeMemberMessageDeliveryService;
   ledger: OpenCodePromptDeliveryLedgerStore;
@@ -87,11 +88,14 @@ function createHarness(input: {
   }));
   const deps: OpenCodeMemberMessageDeliveryServiceDependencies = {
     getOpenCodeRuntimeMessageAdapter: vi.fn(() => ({ sendMessageToMember: send }) as never),
-    readOpenCodeMemberDirectory: vi.fn(async () => ({
-      config: { name: TEAM, projectPath: input.ledgerDir, members: [] } as never,
-      teamMeta: null,
-      metaMembers: [{ name: MEMBER, providerId: 'opencode' as const }],
-    })),
+    readOpenCodeMemberDirectory: vi.fn(async () => {
+      await input.beforeGate?.();
+      return {
+        config: { name: TEAM, projectPath: input.ledgerDir, members: [] } as never,
+        teamMeta: null,
+        metaMembers: [{ name: MEMBER, providerId: 'opencode' as const }],
+      };
+    }),
     resolveOpenCodeMemberIdentityFromDirectory: vi.fn(() => ({
       ok: true as const,
       canonicalMemberName: MEMBER,
@@ -118,7 +122,7 @@ function createHarness(input: {
     stampOpenCodeAppMcpTransportEvidenceIfMissing: vi.fn(async () => undefined),
     resolveControlApiBaseUrl: vi.fn(async () => null),
     sendOpenCodeMemberMessageToRuntimeSerialized: vi.fn(async ({ send: run }) =>
-      input.serialize(run)
+      input.serialize ? input.serialize(run) : run()
     ),
     rememberOpenCodeRuntimePidFromBridge: vi.fn(async () => undefined),
     maybeSyncOpenCodeRuntimePermissionsAfterDelivery: vi.fn(async () => undefined),
@@ -226,6 +230,65 @@ describe('OpenCodeMemberMessageDeliveryService work-sync admission', () => {
       inboxMessageId: 'c1-nudge',
       status: 'failed_terminal',
       lastReason: 'work_sync_admission_stopped',
+    });
+
+    const delivery = await harness.service.deliver(TEAM, {
+      memberName: MEMBER,
+      text: 'Please ship the fix.',
+      messageId: 'user-dm',
+      source: 'ui-send',
+    });
+    expect(harness.send).toHaveBeenCalledTimes(1);
+    expect(delivery).toMatchObject({
+      delivered: true,
+      accepted: true,
+    });
+    expect(delivery.queuedBehindMessageId).toBeUndefined();
+  });
+
+  it('terminals a never-sent C1 when Stop cancels the ticket before gate', async () => {
+    expect(reserveOpenCodeWorkSyncLane(ticket)).toEqual({ ok: true });
+    const entered = deferred();
+    const hold = deferred();
+    const harness = createHarness({
+      ledgerDir,
+      beforeGate: async () => {
+        entered.resolve();
+        await hold.promise;
+      },
+      send: async () => okSend(),
+    });
+
+    const blocked = harness.service.deliver(TEAM, {
+      memberName: MEMBER,
+      text: 'Continue assigned work.',
+      messageId: 'c1-nudge',
+      messageKind: 'member_work_sync_nudge',
+      workSyncRuntimeTicketId: 'ticket-1',
+      workSyncControlRevision: 1,
+      source: 'watcher',
+    });
+    await entered.promise;
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: TEAM,
+        memberName: MEMBER,
+        runtimeInstanceId: ticket.runtimeInstanceId,
+        controlRevision: 11,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    hold.resolve();
+    await expect(blocked).resolves.toMatchObject({
+      delivered: false,
+      reason: 'work_sync_ticket_consumed',
+    });
+    expect(harness.send).not.toHaveBeenCalled();
+    const [retired] = await harness.ledger.list();
+    expect(retired).toMatchObject({
+      inboxMessageId: 'c1-nudge',
+      status: 'failed_terminal',
+      lastReason: 'work_sync_ticket_consumed',
     });
 
     const delivery = await harness.service.deliver(TEAM, {
