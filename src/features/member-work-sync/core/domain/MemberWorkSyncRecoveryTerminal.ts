@@ -95,17 +95,24 @@ export function applyMemberWorkSyncAcceptedReportRetirement(input: {
 }): MemberWorkSyncRecoveryHealth | undefined {
   const intentId = input.health?.unresolvedIntentId;
   const reservation = input.health?.reservations?.find((entry) => entry.intentId === intentId);
+  if (!intentId || !input.reportedAt || !reservation) {
+    return input.health;
+  }
   if (
-    !intentId ||
-    reservation?.state !== 'awaiting_outcome' ||
-    !input.reportedAt ||
-    !reservation.deliveredAt
+    reservation.state !== 'awaiting_outcome' &&
+    reservation.state !== 'uncertain' &&
+    reservation.state !== 'reserved'
   ) {
     return input.health;
   }
+  const startedAtIso =
+    reservation.state === 'awaiting_outcome' ? reservation.deliveredAt : reservation.reservedAt;
+  if (!startedAtIso) {
+    return input.health;
+  }
   const reportedAt = Date.parse(input.reportedAt);
-  const deliveredAt = Date.parse(reservation.deliveredAt);
-  if (!Number.isFinite(reportedAt) || !Number.isFinite(deliveredAt) || reportedAt < deliveredAt) {
+  const startedAt = Date.parse(startedAtIso);
+  if (!Number.isFinite(reportedAt) || !Number.isFinite(startedAt) || reportedAt < startedAt) {
     return input.health;
   }
   return (

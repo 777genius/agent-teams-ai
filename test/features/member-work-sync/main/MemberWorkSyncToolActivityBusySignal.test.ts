@@ -70,6 +70,42 @@ describe('MemberWorkSyncToolActivityBusySignal', () => {
     ).resolves.toEqual({ busy: false });
   });
 
+  it('does not treat leftover active tools as busy for an exact D1 continuation ticket', async () => {
+    const signal = new MemberWorkSyncToolActivityBusySignal({ busyGraceMs: 90_000 });
+    signal.noteTeamChange(
+      toolEvent('team-a', {
+        action: 'start',
+        activity: {
+          memberName: 'bob',
+          toolUseId: 'tool-1',
+          toolName: 'member_work_sync_report',
+          startedAt: '2026-04-29T00:00:00.000Z',
+          source: 'runtime',
+        },
+      })
+    );
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:00:15.000Z',
+        exactRuntimeTicket: { ticketId: 'ticket-1' },
+      })
+    ).resolves.toEqual({ busy: false });
+
+    await expect(
+      signal.isBusy({
+        teamName: 'team-a',
+        memberName: 'bob',
+        nowIso: '2026-04-29T00:00:15.000Z',
+      })
+    ).resolves.toMatchObject({
+      busy: true,
+      reason: 'active_tool_activity',
+    });
+  });
+
   it('does not treat the recent-tool quiet window as busy for an exact D1 continuation ticket', async () => {
     const signal = new MemberWorkSyncToolActivityBusySignal({ busyGraceMs: 90_000 });
     signal.noteTeamChange(

@@ -6,6 +6,12 @@ import {
 } from '../../core/application';
 
 import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
+import {
+  buildMemberWorkSyncTurnSettledSettlement,
+  dropMemberWorkSyncLastSettlementsForTeam,
+  rememberMemberWorkSyncLastSettlement,
+  resetMemberWorkSyncLastSettlements,
+} from './memberWorkSyncLastSettlementStore';
 
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
 
@@ -210,6 +216,11 @@ export class MemberWorkSyncEventQueue {
 
     const key = keyOf(teamName, memberName);
     const now = this.now();
+    const settlement = rememberMemberWorkSyncLastSettlement({
+      teamName,
+      memberName,
+      settlement: input.settlement,
+    });
     const timing = this.resolveTimingPolicy(input.triggerReason, input.runAfterMs);
     const runAt = now + timing.runAfterMs;
     const running = this.running.get(key);
@@ -219,10 +230,7 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         running.recovery = input.recovery;
       }
-      running.settlement = preferLaterMemberWorkSyncSettlement(
-        running.settlement,
-        input.settlement
-      );
+      running.settlement = preferLaterMemberWorkSyncSettlement(running.settlement, settlement);
       this.counters.coalesced += 1;
       this.appendAudit({
         teamName,
@@ -240,10 +248,7 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         existing.recovery = input.recovery;
       }
-      existing.settlement = preferLaterMemberWorkSyncSettlement(
-        existing.settlement,
-        input.settlement
-      );
+      existing.settlement = preferLaterMemberWorkSyncSettlement(existing.settlement, settlement);
       existing.lastQueuedAt = now;
       existing.maxRunAt = Math.max(
         existing.maxRunAt,
@@ -282,7 +287,7 @@ export class MemberWorkSyncEventQueue {
       triggerReasonCounts: new Map([[input.triggerReason, 1]]),
       retryCount: 0,
       ...(input.recovery ? { recovery: input.recovery } : {}),
-      ...(input.settlement ? { settlement: input.settlement } : {}),
+      ...(settlement ? { settlement } : {}),
     });
     this.counters.enqueued += 1;
     this.appendAudit({
@@ -299,33 +304,13 @@ export class MemberWorkSyncEventQueue {
   enqueueTurnSettled(input: {
     teamName: string;
     memberName: string;
-    event: {
-      sourceId: string;
-      recordedAt: string;
-      turnId?: string;
-      threadId?: string;
-      runtimeInstanceId?: string;
-      completedGeneration?: number;
-      outcome?: string;
-    };
+    event: Parameters<typeof buildMemberWorkSyncTurnSettledSettlement>[0];
   }): boolean {
     return this.enqueue({
       teamName: input.teamName,
       memberName: input.memberName,
       triggerReason: 'turn_settled',
-      settlement: {
-        sourceId: input.event.sourceId,
-        recordedAt: input.event.recordedAt,
-        ...(input.event.turnId ? { turnId: input.event.turnId } : {}),
-        ...(input.event.threadId ? { threadId: input.event.threadId } : {}),
-        ...(input.event.runtimeInstanceId
-          ? { runtimeInstanceId: input.event.runtimeInstanceId }
-          : {}),
-        ...(typeof input.event.completedGeneration === 'number'
-          ? { completedGeneration: input.event.completedGeneration }
-          : {}),
-        ...(input.event.outcome ? { outcome: input.event.outcome } : {}),
-      },
+      settlement: buildMemberWorkSyncTurnSettledSettlement(input.event),
     });
   }
 
@@ -336,6 +321,7 @@ export class MemberWorkSyncEventQueue {
         this.counters.dropped += 1;
       }
     }
+    dropMemberWorkSyncLastSettlementsForTeam(teamName);
     this.schedule();
   }
 
@@ -424,6 +410,7 @@ export class MemberWorkSyncEventQueue {
     this.items.clear();
     this.running.clear();
     this.activeKeys.clear();
+    resetMemberWorkSyncLastSettlements();
     while (this.inFlight.size > 0 || this.settling.size > 0) {
       await Promise.allSettled([...this.inFlight, ...this.settling]);
     }

@@ -768,6 +768,47 @@ describe('TeamInboxReader', () => {
     });
   });
 
+  it('preserves member-work-sync runtime ticket fields for OpenCode lane delivery', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'system',
+          to: 'alice',
+          text: 'Early continuation: continue remaining assigned work.',
+          timestamp: '2026-01-01T02:31:00.000Z',
+          read: false,
+          messageId: 'member-work-sync:my-team:alice:early',
+          source: 'system_notification',
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: 'early-continuation:inc:agenda:runtime:1',
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 7,
+          workSyncRuntimeInstanceId: 'opencode:lane-jack',
+          workSyncAdmissionPayloadHash: 'sha256:admission',
+          workSyncTeamIncarnation: 'inc-1',
+          workSyncControlRevision: 1,
+          workSyncPayloadHash: 'sha256:work-sync',
+        },
+      ])
+    );
+
+    const messages = await reader.getMessagesFor('my-team', 'alice');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      messageId: 'member-work-sync:my-team:alice:early',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntentKey: 'early-continuation:inc:agenda:runtime:1',
+      workSyncRuntimeTicketId: 'ticket-1',
+      workSyncRuntimeGeneration: 7,
+      workSyncRuntimeInstanceId: 'opencode:lane-jack',
+      workSyncAdmissionPayloadHash: 'sha256:admission',
+      workSyncTeamIncarnation: 'inc-1',
+      workSyncControlRevision: 1,
+    });
+  });
+
   it('preserves member-work-sync payload hash without changing visible message fields', async () => {
     hoisted.files.set(
       '/mock/teams/my-team/inboxes/alice.json',

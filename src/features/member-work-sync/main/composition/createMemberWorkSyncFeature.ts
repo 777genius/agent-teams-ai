@@ -61,7 +61,7 @@ import {
   uniqueMemberWorkSyncTeamNames,
 } from './memberWorkSyncFeatureStatusRefresh';
 import { MemberWorkSyncTeamDeletionCoordinator } from './MemberWorkSyncTeamDeletionCoordinator';
-
+import { refreshMemberWorkSyncStatus } from './refreshMemberWorkSyncStatus';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   type MemberWorkSyncFeatureFacade,
@@ -719,11 +719,13 @@ export function createMemberWorkSyncFeature(deps: {
         readStatusWithStaleRefresh(request, bindDeps(request.teamName, admission))
       ),
     refreshStatus: (request) =>
-      operationGate.run(request.teamName, (admission) =>
-        new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(request, {
-          reconciledBy: 'request',
-        })
-      ),
+      refreshMemberWorkSyncStatus({
+        request,
+        teamsBasePath: deps.teamsBasePath,
+        nowIso: clock.now().toISOString(),
+        run: (teamName, work) => operationGate.run(teamName, work),
+        bindDeps,
+      }),
     getMetrics: (request) =>
       operationGate.run(request.teamName, (admission) =>
         new MemberWorkSyncMetricsReader(bindDeps(request.teamName, admission)).execute(request)

@@ -190,4 +190,18 @@ describe('member work sync recovery terminal protocol', () => {
     expect(next?.reservations?.[0]?.state).toBe('awaiting_outcome');
     expect(next?.reservations?.[0]?.deliveredAt).toBeUndefined();
   });
+
+  it('retires an uncertain reservation after a later accepted report', () => {
+    const uncertain = applyMemberWorkSyncRetryableDispatch({ health, intentId: 'intent-1' });
+    const retired = applyMemberWorkSyncAcceptedReportRetirement({
+      health: uncertain,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(retired?.unresolvedIntentId).toBeUndefined();
+    expect(retired?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalOutcome: 'settled',
+      terminalReceiptId: 'report-accepted:intent-1',
+    });
+  });
 });

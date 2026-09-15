@@ -99,6 +99,48 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('replays the latest turn-settled identity on a later manual refresh', async () => {
+    const reconciles: Array<{ triggerReasons?: string[]; settlement?: { sourceId?: string } }> =
+      [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcile: async (_request, context) => {
+        reconciles.push({
+          triggerReasons: context.triggerReasons,
+          settlement: context.settlement,
+        });
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueueTurnSettled({
+      teamName: 'team-a',
+      memberName: 'bob',
+      event: {
+        sourceId: 'settle-1',
+        recordedAt: '2026-09-15T12:00:00.000Z',
+        runtimeInstanceId: 'opencode:lane:ses',
+        completedGeneration: 7,
+        outcome: 'success',
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconciles).toEqual([
+      {
+        triggerReasons: ['turn_settled'],
+        settlement: expect.objectContaining({ sourceId: 'settle-1', completedGeneration: 7 }),
+      },
+    ]);
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'manual_refresh' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconciles[1]).toEqual({
+      triggerReasons: ['manual_refresh'],
+      settlement: expect.objectContaining({ sourceId: 'settle-1', completedGeneration: 7 }),
+    });
+    await queue.stop();
+  });
+
   it('bounds coalescing so noisy event streams cannot starve reconcile forever', async () => {
     const reconciles: unknown[] = [];
     const queue = new MemberWorkSyncEventQueue({

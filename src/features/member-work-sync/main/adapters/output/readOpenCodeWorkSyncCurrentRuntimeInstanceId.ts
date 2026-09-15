@@ -23,6 +23,31 @@ function readSessionIdentity(value: unknown): { laneId: string; sessionId: strin
   return { laneId, sessionId };
 }
 
+/**
+ * Orchestrator Stop events stamp `opencode:${laneId}`. Desktop lane evidence
+ * also records the session as `opencode:${laneId}:${sessionId}`. Treat those
+ * as the same live instance so early continuation can handshake.
+ */
+export function sameOpenCodeWorkSyncRuntimeInstanceId(
+  left?: string | null,
+  right?: string | null
+): boolean {
+  const first = left?.trim() ?? '';
+  const second = right?.trim() ?? '';
+  if (!first || !second) {
+    return false;
+  }
+  if (first === second) {
+    return true;
+  }
+  const prefix = 'opencode:';
+  if (!first.startsWith(prefix) || !second.startsWith(prefix)) {
+    return false;
+  }
+  const [shorter, longer] = first.length <= second.length ? [first, second] : [second, first];
+  return longer.startsWith(`${shorter}:`);
+}
+
 export async function readOpenCodeWorkSyncCurrentRuntimeInstanceId(input: {
   teamsBasePath: string;
   teamName: string;

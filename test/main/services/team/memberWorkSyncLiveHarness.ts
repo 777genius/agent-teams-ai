@@ -132,6 +132,58 @@ export async function assertExecutable(filePath: string): Promise<void> {
   await fs.access(filePath, fsConstants.X_OK);
 }
 
+export const MEMBER_WORK_SYNC_LIVE_FIRST_NUDGE_TIMEOUT_MS = 240_000;
+
+export function isRetryableMemberWorkSyncContinueError(message: string): boolean {
+  return /member_busy|status_not_nudgeable|status_missing|payload_conflict|mutation conflict|outbox_unavailable|slot_occupied/.test(
+    message
+  );
+}
+
+export function isRetryableOpenCodeLaunchDump(dump: string): boolean {
+  return /temporarily unavailable|provider_error|bridge command failed|mcp_unavailable|opencode_bridge_contract_violation|Team already exists/i.test(
+    dump
+  );
+}
+
+export async function createOpenCodeTeamUntilReady(input: {
+  createTeam: (onProgress: (progress: TeamProvisioningProgress) => void) => Promise<void>;
+  stopTeam?: () => Promise<void>;
+  attempts?: number;
+  timeoutMs?: number;
+}): Promise<TeamProvisioningProgress[]> {
+  const attempts = input.attempts ?? 3;
+  const timeoutMs = input.timeoutMs ?? 240_000;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const progressEvents: TeamProvisioningProgress[] = [];
+    try {
+      await input.createTeam((progress) => {
+        progressEvents.push(progress);
+      });
+      await waitUntil(async () => {
+        const last = progressEvents.at(-1);
+        if (last?.state === 'failed') {
+          throw new FatalWaitError(formatProgressDump(progressEvents));
+        }
+        return progressEvents.some((progress) =>
+          progress.message.includes('OpenCode team launch is ready')
+        );
+      }, timeoutMs);
+      return progressEvents;
+    } catch (error) {
+      lastError = error;
+      const dump = error instanceof Error ? error.message : String(error);
+      if (!isRetryableOpenCodeLaunchDump(dump) || attempt === attempts - 1) {
+        throw error;
+      }
+      await input.stopTeam?.().catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 5_000 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export async function waitUntil(
   predicate: () => Promise<boolean>,
   timeoutMs: number,
@@ -204,6 +256,17 @@ export async function formatMemberWorkSyncDiagnostics(input: {
           kind: item.kind,
         })),
         report: status.report,
+        recoveryHealth: status.recoveryHealth
+          ? {
+              unresolvedIntentId: status.recoveryHealth.unresolvedIntentId,
+              controlRevision: status.recoveryHealth.controlRevision,
+              reservations: status.recoveryHealth.reservations?.map((reservation) => ({
+                intentId: reservation.intentId,
+                state: reservation.state,
+                trigger: reservation.trigger,
+              })),
+            }
+          : undefined,
         shadow: status.shadow,
         queue: input.feature.getQueueDiagnostics(),
         comments: task?.comments?.map((comment) => ({
