@@ -21,6 +21,7 @@ export {
   peekOpenCodeWorkSyncLane,
   restoreOpenCodeWorkSyncLane,
 } from './adapters/output/OpenCodeWorkSyncLaneReservationStore';
+export { sendOpenCodeWorkSyncAdmittedMessage } from './adapters/output/sendOpenCodeWorkSyncAdmittedMessage';
 export type { MemberWorkSyncFeatureFacade } from './composition/createMemberWorkSyncFeature';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,

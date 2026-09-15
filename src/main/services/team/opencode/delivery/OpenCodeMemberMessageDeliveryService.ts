@@ -4,8 +4,8 @@ import {
   type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
 import {
-  consumeOpenCodeWorkSyncLaneForSend,
   gateOpenCodeWorkSyncLaneDelivery,
+  sendOpenCodeWorkSyncAdmittedMessage,
 } from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -83,7 +83,6 @@ function nowIso(): string {
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
 
-  /** Apply a stale-pending ledger resolution; returns null when unchanged. */
   private async applyStalePendingResolution(input: {
     checkpoint: () => Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -138,8 +137,6 @@ export class OpenCodeMemberMessageDeliveryService {
       input.notifyActivity('idle');
       return failed;
     }
-    // 'none' and 'keep_observing' fall through to the regular follow-up
-    // scheduling, which already logs each observe cycle.
     return null;
   }
 
@@ -551,8 +548,6 @@ export class OpenCodeMemberMessageDeliveryService {
 
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
-      // Settling the blocker updates the ledger, which need not emit an inbox event.
-      // Keep the waiting row scheduled too; its normal ledger guards prevent redispatch.
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
         teamName,
         memberName: canonicalMemberName,
@@ -577,9 +572,6 @@ export class OpenCodeMemberMessageDeliveryService {
         laneId: laneIdentity.laneId,
         queuedBehindMessageId: active.inboxMessageId,
         reason: 'opencode_delivery_response_pending',
-        // How long, and how many messages deep. The bare "queued behind <id>"
-        // line could not tell a lane that had been busy for two seconds from one
-        // wedged for a quarter of an hour with a dozen messages waiting.
         diagnostics: [
           noteOpenCodeHeadOfLineBlockDiagnostic({
             teamName,
@@ -1153,21 +1145,22 @@ export class OpenCodeMemberMessageDeliveryService {
     });
     const { controlUrl, deliveryText } = dispatch;
     forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
-    const sendReason = consumeOpenCodeWorkSyncLaneForSend(lane, input).reason;
-    if (sendReason) {
-      restoreConsumedLane();
-      return { delivered: false, reason: sendReason };
-    }
-    await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
-      result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
-        teamName,
-        laneId: laneIdentity.laneId,
-        memberName: canonicalMemberName,
-        send: async () => {
-          await checkpoint();
-          return await adapter.sendMessageToMember({
+      const admitted = await sendOpenCodeWorkSyncAdmittedMessage({
+        lane,
+        message: input,
+        restore: restoreConsumedLane,
+        checkpoint,
+        serialize: (send) =>
+          this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
+            teamName,
+            laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName,
+            send,
+          }),
+        sendMessage: () =>
+          adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),
             teamName,
             laneId: laneIdentity.laneId,
@@ -1185,9 +1178,12 @@ export class OpenCodeMemberMessageDeliveryService {
             controlUrl: controlUrl ?? undefined,
             taskRefs: input.taskRefs,
             forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
-          });
-        },
+          }),
       });
+      if (!admitted.ok) {
+        return { delivered: false, reason: admitted.reason };
+      }
+      result = admitted.result;
     } catch (error) {
       await checkpoint();
       const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;

@@ -78,7 +78,9 @@ describe('gateOpenCodeWorkSyncLaneDelivery', () => {
         messageKind: 'member_work_sync_nudge',
       })
     ).resolves.toMatchObject({ reason: 'work_sync_lane_reserved' });
-    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
+    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
+      true
+    );
   });
 
   it('does not consume the reservation until send, then rejects a second send', async () => {
@@ -91,10 +93,14 @@ describe('gateOpenCodeWorkSyncLaneDelivery', () => {
         workSyncRuntimeTicketId: 'ticket-other',
       })
     ).resolves.toMatchObject({ reason: 'work_sync_ticket_stale' });
-    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
+    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
+      true
+    );
     const inspect = await gateOpenCodeWorkSyncLaneDelivery(ticketedInput);
     expect(inspect.reason).toBeUndefined();
-    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
+    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
+      true
+    );
     expect(consumeOpenCodeWorkSyncLaneForSend(inspect, ticketedInput)).toEqual({});
     expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
       false
@@ -123,7 +129,83 @@ describe('gateOpenCodeWorkSyncLaneDelivery', () => {
       false
     );
     await expect(gateOpenCodeWorkSyncLaneDelivery(ticketedInput)).resolves.toMatchObject({
-      reason: 'work_sync_admission_stopped',
+      reason: 'work_sync_ticket_consumed',
+    });
+  });
+
+  it('rejects an unticketed D0 send after Stop even if inspect already passed', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
+    bindOpenCodeWorkSyncLaneReservationRoot(root);
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 10,
+        stopped: false,
+      })
+    ).toEqual({ ok: true, code: 'open', controlRevision: 10 });
+    const inspect = await gateOpenCodeWorkSyncLaneDelivery({
+      teamName: 'team-a',
+      memberName: 'bob',
+      messageId: 'd0-nudge',
+      messageKind: 'member_work_sync_nudge',
+    });
+    expect(inspect.reason).toBeUndefined();
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 11,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    expect(
+      consumeOpenCodeWorkSyncLaneForSend(inspect, {
+        messageKind: 'member_work_sync_nudge',
+      })
+    ).toEqual({ reason: 'work_sync_admission_stopped' });
+  });
+
+  it('still delivers a user DM after Stop of automatic continuation', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
+    bindOpenCodeWorkSyncLaneReservationRoot(root);
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 11,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    const userDm = await gateOpenCodeWorkSyncLaneDelivery({
+      teamName: 'team-a',
+      memberName: 'bob',
+      messageId: 'user-dm',
+      foreground: true,
+    });
+    expect(userDm.reason).toBeUndefined();
+  });
+
+  it('keeps observe of an accepted ticket after Stop', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
+    bindOpenCodeWorkSyncLaneReservationRoot(root);
+    expect(reserveOpenCodeWorkSyncLane(ticket)).toEqual({ ok: true });
+    const inspect = await gateOpenCodeWorkSyncLaneDelivery(ticketedInput);
+    expect(consumeOpenCodeWorkSyncLaneForSend(inspect, ticketedInput)).toEqual({});
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 11,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    await expect(gateOpenCodeWorkSyncLaneDelivery(ticketedInput)).resolves.toMatchObject({
+      reason: 'work_sync_ticket_consumed',
     });
   });
 });

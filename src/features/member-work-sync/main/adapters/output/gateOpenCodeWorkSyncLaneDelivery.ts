@@ -1,6 +1,5 @@
 import {
   consumeOpenCodeWorkSyncLane,
-  hasOpenCodeWorkSyncLaneReservation,
   hydrateOpenCodeWorkSyncLaneReservation,
   peekOpenCodeWorkSyncLane,
   readOpenCodeWorkSyncLaneControl,
@@ -19,6 +18,10 @@ export interface OpenCodeWorkSyncLaneDeliveryGate {
   consumeForSend?: () => { reason?: OpenCodeWorkSyncLaneDeliveryReason };
 }
 
+function isAutomaticWorkSyncNudge(input: { messageKind?: string; foreground?: boolean }): boolean {
+  return input.messageKind === 'member_work_sync_nudge' && input.foreground !== true;
+}
+
 export async function gateOpenCodeWorkSyncLaneDelivery(input: {
   teamName: string;
   memberName: string;
@@ -29,12 +32,16 @@ export async function gateOpenCodeWorkSyncLaneDelivery(input: {
 }): Promise<OpenCodeWorkSyncLaneDeliveryGate> {
   await hydrateOpenCodeWorkSyncLaneReservation(input);
   const control = readOpenCodeWorkSyncLaneControl(input);
-  if (control?.stopped) {
-    return { restore: () => undefined, reason: 'work_sync_admission_stopped' };
-  }
   const reservedTicket = peekOpenCodeWorkSyncLane(input);
   const ticketId = input.workSyncRuntimeTicketId?.trim();
   const isNudge = input.messageKind === 'member_work_sync_nudge';
+  const automaticNudge = isAutomaticWorkSyncNudge(input);
+  if (control?.stopped && automaticNudge) {
+    if (ticketId && !reservedTicket) {
+      return { restore: () => undefined, reason: 'work_sync_ticket_consumed' };
+    }
+    return { restore: () => undefined, reason: 'work_sync_admission_stopped' };
+  }
   if (isNudge && ticketId) {
     if (reservedTicket && reservedTicket.ticketId !== ticketId) {
       return { restore: () => undefined, reason: 'work_sync_ticket_stale' };
@@ -71,6 +78,24 @@ export async function gateOpenCodeWorkSyncLaneDelivery(input: {
       },
     };
   }
+  if (automaticNudge) {
+    if (reservedTicket) {
+      return { restore: () => undefined, reason: 'work_sync_lane_reserved' };
+    }
+    return {
+      restore: () => undefined,
+      consumeForSend: () => {
+        const live = readOpenCodeWorkSyncLaneControl(input);
+        if (live?.stopped) {
+          return { reason: 'work_sync_admission_stopped' };
+        }
+        if (peekOpenCodeWorkSyncLane(input)) {
+          return { reason: 'work_sync_lane_reserved' };
+        }
+        return {};
+      },
+    };
+  }
   const consumedLane = consumeOpenCodeWorkSyncLane({
     teamName: input.teamName,
     memberName: input.memberName,
@@ -82,12 +107,6 @@ export async function gateOpenCodeWorkSyncLaneDelivery(input: {
       restoreOpenCodeWorkSyncLane(reservedTicket);
     }
   };
-  if (!isNudge) {
-    return { restore };
-  }
-  if (consumedLane === 'absent' && hasOpenCodeWorkSyncLaneReservation(input)) {
-    return { restore, reason: 'work_sync_lane_reserved' };
-  }
   return { restore };
 }
 
@@ -95,11 +114,18 @@ export function consumeOpenCodeWorkSyncLaneForSend(
   lane: OpenCodeWorkSyncLaneDeliveryGate,
   input: { messageKind?: string; workSyncRuntimeTicketId?: string }
 ): { reason?: OpenCodeWorkSyncLaneDeliveryReason } {
-  if (input.messageKind !== 'member_work_sync_nudge' || !input.workSyncRuntimeTicketId?.trim()) {
+  if (input.messageKind !== 'member_work_sync_nudge') {
     return {};
   }
   if (lane.reason === 'work_sync_ticket_consumed') {
     return { reason: 'work_sync_ticket_consumed' };
+  }
+  if (
+    lane.reason === 'work_sync_admission_stopped' ||
+    lane.reason === 'work_sync_lane_reserved' ||
+    lane.reason === 'work_sync_ticket_stale'
+  ) {
+    return { reason: lane.reason };
   }
   if (!lane.consumeForSend) {
     return { reason: 'work_sync_ticket_stale' };

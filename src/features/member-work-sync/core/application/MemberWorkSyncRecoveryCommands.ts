@@ -66,17 +66,19 @@ export class MemberWorkSyncRecoveryCommands {
         status,
         revoked.messageIds
       );
+      const controlRevision = nextStatus.recoveryHealth?.controlRevision ?? 1;
       const runtimeAdmission = await this.syncRuntimeControl({
         teamName: input.teamName,
         memberName: input.memberName,
         teamIncarnation: nextStatus.statusRevision?.incarnation ?? 'legacy',
         stopped: true,
-        controlRevision: nextStatus.recoveryHealth?.controlRevision ?? 1,
+        controlRevision,
       });
-      const persisted = await this.mutate(input, undefined, (status) => ({
-        ...status,
-        runtimeAdmission,
-      }));
+      const persisted = await this.persistRuntimeAdmission(
+        input,
+        controlRevision,
+        runtimeAdmission
+      );
       return {
         ok: true as const,
         status: persisted,
@@ -98,17 +100,19 @@ export class MemberWorkSyncRecoveryCommands {
       }))
     ).then(async (status) => {
       await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
+      const controlRevision = status.recoveryHealth?.controlRevision ?? 1;
       const runtimeAdmission = await this.syncRuntimeControl({
         teamName: input.teamName,
         memberName: input.memberName,
         teamIncarnation: status.statusRevision?.incarnation ?? 'legacy',
         stopped: false,
-        controlRevision: status.recoveryHealth?.controlRevision ?? 1,
+        controlRevision,
       });
-      const persisted = await this.mutate(input, undefined, (next) => ({
-        ...next,
-        runtimeAdmission,
-      }));
+      const persisted = await this.persistRuntimeAdmission(
+        input,
+        controlRevision,
+        runtimeAdmission
+      );
       return {
         ok: true as const,
         status: persisted,
@@ -365,6 +369,25 @@ export class MemberWorkSyncRecoveryCommands {
       mutationId
     );
     return committed.status;
+  }
+
+  private async persistRuntimeAdmission(
+    input: { teamName: string; memberName: string },
+    expectedControlRevision: number,
+    runtimeAdmission: MemberWorkSyncRuntimeAdmissionOutcome
+  ): Promise<MemberWorkSyncStatus> {
+    return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
+      this.mutate(input, mutationId, (status) => {
+        const currentRevision =
+          status.recoveryHealth?.controlRevision ??
+          status.recoveryHealth?.autoResumeStopLatch?.controlRevision ??
+          1;
+        if (currentRevision !== expectedControlRevision) {
+          return status;
+        }
+        return { ...status, runtimeAdmission };
+      })
+    );
   }
 
   private async syncRuntimeControl(input: {
