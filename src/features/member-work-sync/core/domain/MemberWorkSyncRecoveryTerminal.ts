@@ -89,41 +89,60 @@ export function applyMemberWorkSyncDeliveredDispatch(input: {
   }));
 }
 
-export function applyMemberWorkSyncAcceptedReportRetirement(input: {
-  health?: MemberWorkSyncRecoveryHealth;
-  reportedAt?: string;
-}): MemberWorkSyncRecoveryHealth | undefined {
-  const intentId = input.health?.unresolvedIntentId;
-  const reservation = input.health?.reservations?.find((entry) => entry.intentId === intentId);
-  if (!intentId || !input.reportedAt || !reservation) {
-    return input.health;
-  }
+function isRetirableAcceptedReportReservation(
+  reservation: MemberWorkSyncRecoveryReservation | undefined,
+  reportedAtIso: string
+): reservation is MemberWorkSyncRecoveryReservation {
   if (
-    reservation.state !== 'awaiting_outcome' &&
-    reservation.state !== 'uncertain' &&
-    reservation.state !== 'reserved'
+    !reservation ||
+    (reservation.state !== 'awaiting_outcome' &&
+      reservation.state !== 'uncertain' &&
+      reservation.state !== 'reserved')
   ) {
-    return input.health;
+    return false;
   }
   const startedAtIso =
     reservation.state === 'awaiting_outcome' ? reservation.deliveredAt : reservation.reservedAt;
   if (!startedAtIso) {
-    return input.health;
+    return false;
   }
-  const reportedAt = Date.parse(input.reportedAt);
+  const reportedAt = Date.parse(reportedAtIso);
   const startedAt = Date.parse(startedAtIso);
-  if (!Number.isFinite(reportedAt) || !Number.isFinite(startedAt) || reportedAt < startedAt) {
+  return Number.isFinite(reportedAt) && Number.isFinite(startedAt) && reportedAt >= startedAt;
+}
+
+export function applyMemberWorkSyncAcceptedReportRetirement(input: {
+  health?: MemberWorkSyncRecoveryHealth;
+  reportedAt?: string;
+}): MemberWorkSyncRecoveryHealth | undefined {
+  if (!input.health || !input.reportedAt) {
     return input.health;
   }
-  return (
-    applyMemberWorkSyncTerminalRetirement({
-      health: input.health,
-      intentId,
-      receiptId: `report-accepted:${intentId}`,
-      outcome: 'settled',
-      pendingAck: false,
-    }) ?? input.health
-  );
+  const intentIds = [
+    ...(input.health.unresolvedIntentId ? [input.health.unresolvedIntentId] : []),
+    ...(input.health.reservations ?? []).map((reservation) => reservation.intentId),
+  ];
+  let health = input.health;
+  const seen = new Set<string>();
+  for (const intentId of intentIds) {
+    if (seen.has(intentId)) {
+      continue;
+    }
+    seen.add(intentId);
+    const reservation = health.reservations?.find((entry) => entry.intentId === intentId);
+    if (!isRetirableAcceptedReportReservation(reservation, input.reportedAt)) {
+      continue;
+    }
+    health =
+      applyMemberWorkSyncTerminalRetirement({
+        health,
+        intentId,
+        receiptId: `report-accepted:${intentId}`,
+        outcome: 'settled',
+        pendingAck: false,
+      }) ?? health;
+  }
+  return health;
 }
 
 export function applyMemberWorkSyncTerminalRetirement(input: {

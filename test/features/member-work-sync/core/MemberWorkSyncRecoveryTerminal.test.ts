@@ -204,4 +204,22 @@ describe('member work sync recovery terminal protocol', () => {
       terminalReceiptId: 'report-accepted:intent-1',
     });
   });
+
+  it('retires a stale uncertain slot even after the unresolved pointer was dropped', () => {
+    const uncertain = applyMemberWorkSyncRetryableDispatch({ health, intentId: 'intent-1' });
+    const orphaned = {
+      ...uncertain!,
+      unresolvedIntentId: undefined,
+    };
+    const retired = applyMemberWorkSyncAcceptedReportRetirement({
+      health: orphaned,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(retired?.unresolvedIntentId).toBeUndefined();
+    expect(retired?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalOutcome: 'settled',
+      terminalReceiptId: 'report-accepted:intent-1',
+    });
+  });
 });
