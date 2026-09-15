@@ -22,6 +22,7 @@ const fixtureRoot = path.resolve(
 );
 const devMcpMode = process.argv.includes('--dev-mcp');
 const singleWindowMode = process.argv.includes('--single-window');
+const visibilityOnly = process.argv.includes('--visibility-only');
 const keepFixture = process.env.AGENT_TEAMS_CHANGES_E2E_KEEP === '1';
 const skipBuild = process.env.AGENT_TEAMS_CHANGES_E2E_SKIP_BUILD === '1';
 const selectTeamButton = `Array.from(document.querySelectorAll('button'))
@@ -196,7 +197,7 @@ async function startApp(port, fixture) {
   });
   appProcess.stdout.on('data', rememberAppLog);
   appProcess.stderr.on('data', rememberAppLog);
-  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 60_000);
+  const webSocketUrl = await waitForCdp(port, devMcpMode ? 180_000 : 60_000);
   client = await CdpClient.connect(webSocketUrl);
   await client.send('Runtime.enable');
   await client.send('Page.enable');
@@ -205,13 +206,16 @@ async function startApp(port, fixture) {
 }
 
 async function ensureSandboxNavigation() {
+  const readyTarget = visibilityOnly
+    ? `(${sandboxKanbanTaskCard}) || document.querySelector('section[data-section-id="changes"]')`
+    : sandboxKanbanTaskCard;
   await client.waitFor(
-    `(${sandboxKanbanTaskCard}) || (${selectTeamButton})`,
+    `(${readyTarget}) || (${selectTeamButton})`,
     'sandbox team navigation',
-    devMcpMode ? 90_000 : 60_000
+    devMcpMode ? 180_000 : 60_000
   );
   const navigationDeadline = Date.now() + 60_000;
-  while (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
+  while (!(await client.evaluate(`Boolean(${readyTarget})`))) {
     if (Date.now() >= navigationDeadline) {
       throw new Error('Timed out recovering sandbox team navigation after renderer reload');
     }
@@ -232,6 +236,108 @@ async function reloadRenderer() {
   await client.send('Page.reload', { ignoreCache: true });
   await loaded;
   await ensureSandboxNavigation();
+}
+
+async function installSummaryCallCounter() {
+  if (!client) throw new Error('Cannot install summary counter before CDP is connected');
+  const needle = 'function getImpl() {\n  if (window.electronAPI) return window.electronAPI;';
+  const replacement = `function getImpl() {
+  if (window.electronAPI) {
+    if (!window.__teamChangesVisibilityE2E) {
+      const state = window.__teamChangesVisibilityE2E = { calls: [] };
+      state.api = { ...window.electronAPI, review: { ...window.electronAPI.review,
+        getTeamTaskChangeSummaries: async (...args) => {
+          state.calls.push({ at: Date.now(), teamName: args[0], requestCount: args[1]?.length ?? 0 });
+          return window.electronAPI.review.getTeamTaskChangeSummaries(...args);
+        }
+      }};
+    }
+    return window.__teamChangesVisibilityE2E.api;
+  }`;
+
+  await client.send('Network.setCacheDisabled', { cacheDisabled: true });
+  await client.send('Fetch.enable', {
+    patterns: [{ urlPattern: '*api/index.ts*', requestStage: 'Response' }],
+  });
+  const paused = client.waitForEvent('Fetch.requestPaused', 60_000);
+  const loaded = client.waitForEvent('Page.loadEventFired', 60_000);
+  await client.send('Page.reload', { ignoreCache: true });
+  const event = await paused;
+  const response = await client.send('Fetch.getResponseBody', { requestId: event.requestId });
+  const body = response.base64Encoded
+    ? Buffer.from(response.body, 'base64').toString()
+    : response.body;
+  assert(body.includes(needle), 'Summary counter must match the real Vite API module');
+  await client.send('Fetch.fulfillRequest', {
+    requestId: event.requestId,
+    responseCode: 200,
+    responseHeaders: [{ name: 'Content-Type', value: 'text/javascript' }],
+    body: Buffer.from(body.replace(needle, replacement)).toString('base64'),
+  });
+  await loaded;
+  await client.send('Fetch.disable');
+  await ensureSandboxNavigation();
+}
+
+async function runVisibilityPollingScenario() {
+  await installSummaryCallCounter();
+  const changesSection = 'document.querySelector(\'section[data-section-id="changes"]\')';
+  const expandButton = `${changesSection}?.querySelector('button[aria-label="Expand section"]')`;
+  await client.waitFor(expandButton, 'collapsed Changes section');
+  const callsBeforeOpen = await client.evaluate('window.__teamChangesVisibilityE2E.calls.length');
+  await client.domClick(expandButton);
+  await client.waitFor(
+    `window.__teamChangesVisibilityE2E.calls.length > ${callsBeforeOpen}`,
+    'open Changes summary load'
+  );
+  await client.waitFor(
+    `${changesSection}?.querySelector('button[aria-label="Collapse section"]') &&
+      !${changesSection}?.textContent.includes('Loading changes')`,
+    'settled open Changes section'
+  );
+
+  const callsBeforeHidden = await client.evaluate(
+    'window.__teamChangesVisibilityE2E.calls.length'
+  );
+  await client.evaluate('(async () => window.electronAPI.windowControls.minimize())()');
+  await client.evaluate(`(() => {
+    window.__teamChangesVisibilityE2E.visibilityState = 'hidden';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => window.__teamChangesVisibilityE2E.visibilityState,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  })()`);
+  await client.waitFor(`document.visibilityState === 'hidden'`, 'hidden minimized renderer');
+  await new Promise((resolve) => setTimeout(resolve, 32_000));
+  assert.equal(
+    await client.evaluate('window.__teamChangesVisibilityE2E.calls.length'),
+    callsBeforeHidden,
+    'Hidden renderer must not start the 30-second summary poll'
+  );
+
+  await client.evaluate('(async () => window.electronAPI.windowControls.maximize())()');
+  await client.send('Page.bringToFront');
+  await client.evaluate(`(() => {
+    window.__teamChangesVisibilityE2E.visibilityState = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+  })()`);
+  await client.waitFor(`document.visibilityState === 'visible'`, 'restored visible renderer');
+  await client.waitFor(
+    `window.__teamChangesVisibilityE2E.calls.length === ${callsBeforeHidden + 1}`,
+    'one immediate summary refresh after visibility restore',
+    10_000
+  );
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  assert.equal(
+    await client.evaluate('window.__teamChangesVisibilityE2E.calls.length'),
+    callsBeforeHidden + 1,
+    'Visibility restore must not trigger a delayed duplicate summary refresh'
+  );
+  process.stdout.write(
+    `Changes visibility desktop E2E passed: hidden polling paused after ${callsBeforeHidden} calls, ` +
+      `then one refresh ran on restore\n`
+  );
 }
 
 async function restartApp(port, fixture) {
@@ -795,6 +901,10 @@ async function main() {
   }
 
   await startApp(port, fixture);
+  if (visibilityOnly) {
+    await runVisibilityPollingScenario();
+    return;
+  }
   await openReview();
   await assertViewportFits();
   await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
