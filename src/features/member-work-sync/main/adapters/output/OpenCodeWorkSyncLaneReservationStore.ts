@@ -191,6 +191,53 @@ function controlPath(teamName: string, memberName: string): string | null {
   );
 }
 
+export function applyOpenCodeWorkSyncLaneControl(input: {
+  teamName: string;
+  memberName: string;
+  runtimeInstanceId: string;
+  controlRevision: number;
+  stopped: boolean;
+}):
+  | { ok: true; code: 'closed' | 'open'; controlRevision: number }
+  | { ok: false; code: 'superseded' | 'conflict' } {
+  const existing = readOpenCodeWorkSyncLaneControl({
+    teamName: input.teamName,
+    memberName: input.memberName,
+  });
+  if (existing && existing.runtimeInstanceId === input.runtimeInstanceId) {
+    if (input.controlRevision < existing.controlRevision) {
+      return { ok: false, code: 'superseded' };
+    }
+    if (input.controlRevision === existing.controlRevision && input.stopped !== existing.stopped) {
+      return { ok: false, code: 'conflict' };
+    }
+  }
+  writeOpenCodeWorkSyncLaneControl({
+    teamName: input.teamName,
+    memberName: input.memberName,
+    control: {
+      runtimeInstanceId: input.runtimeInstanceId,
+      controlRevision: input.controlRevision,
+      stopped: input.stopped,
+      handshakeCompleted: true,
+    },
+  });
+  if (input.stopped) {
+    const reserved = peekOpenCodeWorkSyncLane({
+      teamName: input.teamName,
+      memberName: input.memberName,
+    });
+    if (reserved) {
+      cancelOpenCodeWorkSyncLane(reserved);
+    }
+  }
+  return {
+    ok: true,
+    code: input.stopped ? 'closed' : 'open',
+    controlRevision: input.controlRevision,
+  };
+}
+
 export function writeOpenCodeWorkSyncLaneControl(input: {
   teamName: string;
   memberName: string;

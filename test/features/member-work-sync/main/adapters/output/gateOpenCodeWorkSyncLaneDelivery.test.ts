@@ -1,5 +1,9 @@
-import { gateOpenCodeWorkSyncLaneDelivery } from '@features/member-work-sync/main/adapters/output/gateOpenCodeWorkSyncLaneDelivery';
 import {
+  consumeOpenCodeWorkSyncLaneForSend,
+  gateOpenCodeWorkSyncLaneDelivery,
+} from '@features/member-work-sync/main/adapters/output/gateOpenCodeWorkSyncLaneDelivery';
+import {
+  applyOpenCodeWorkSyncLaneControl,
   bindOpenCodeWorkSyncLaneReservationRoot,
   hasOpenCodeWorkSyncLaneReservation,
   reserveOpenCodeWorkSyncLane,
@@ -22,23 +26,25 @@ const ticket = {
   admissionPayloadHash: 'hash-a',
 };
 
+const ticketedInput = {
+  teamName: 'team-a',
+  memberName: 'bob',
+  messageId: 'intent-c1',
+  messageKind: 'member_work_sync_nudge',
+  workSyncRuntimeTicketId: 'ticket-1',
+};
+
 describe('gateOpenCodeWorkSyncLaneDelivery', () => {
   afterEach(() => {
     resetOpenCodeWorkSyncLaneReservationsForTests();
   });
 
-  it('rejects a ticketed nudge when the reservation is gone', async () => {
+  it('marks a ticketed nudge as consumed when the reservation is gone', async () => {
     const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
     bindOpenCodeWorkSyncLaneReservationRoot(root);
-    await expect(
-      gateOpenCodeWorkSyncLaneDelivery({
-        teamName: 'team-a',
-        memberName: 'bob',
-        messageId: 'intent-c1',
-        messageKind: 'member_work_sync_nudge',
-        workSyncRuntimeTicketId: 'ticket-1',
-      })
-    ).resolves.toMatchObject({ reason: 'work_sync_ticket_stale' });
+    await expect(gateOpenCodeWorkSyncLaneDelivery(ticketedInput)).resolves.toMatchObject({
+      reason: 'work_sync_ticket_consumed',
+    });
   });
 
   it('rejects a ticketed nudge after cancel or user-wins', async () => {
@@ -55,15 +61,9 @@ describe('gateOpenCodeWorkSyncLaneDelivery', () => {
     expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
       false
     );
-    await expect(
-      gateOpenCodeWorkSyncLaneDelivery({
-        teamName: 'team-a',
-        memberName: 'bob',
-        messageId: 'intent-c1',
-        messageKind: 'member_work_sync_nudge',
-        workSyncRuntimeTicketId: 'ticket-1',
-      })
-    ).resolves.toMatchObject({ reason: 'work_sync_ticket_stale' });
+    await expect(gateOpenCodeWorkSyncLaneDelivery(ticketedInput)).resolves.toMatchObject({
+      reason: 'work_sync_ticket_consumed',
+    });
   });
 
   it('rejects an unticketed D0 nudge while a reservation exists', async () => {
@@ -81,30 +81,49 @@ describe('gateOpenCodeWorkSyncLaneDelivery', () => {
     expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
   });
 
-  it('consumes only the exact reserved ticket', async () => {
+  it('does not consume the reservation until send, then rejects a second send', async () => {
     const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
     bindOpenCodeWorkSyncLaneReservationRoot(root);
     expect(reserveOpenCodeWorkSyncLane(ticket)).toEqual({ ok: true });
     await expect(
       gateOpenCodeWorkSyncLaneDelivery({
-        teamName: 'team-a',
-        memberName: 'bob',
-        messageId: 'intent-c1',
-        messageKind: 'member_work_sync_nudge',
+        ...ticketedInput,
         workSyncRuntimeTicketId: 'ticket-other',
       })
     ).resolves.toMatchObject({ reason: 'work_sync_ticket_stale' });
     expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
-    const consumed = await gateOpenCodeWorkSyncLaneDelivery({
-      teamName: 'team-a',
-      memberName: 'bob',
-      messageId: 'intent-c1',
-      messageKind: 'member_work_sync_nudge',
-      workSyncRuntimeTicketId: 'ticket-1',
-    });
-    expect(consumed.reason).toBeUndefined();
+    const inspect = await gateOpenCodeWorkSyncLaneDelivery(ticketedInput);
+    expect(inspect.reason).toBeUndefined();
+    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(true);
+    expect(consumeOpenCodeWorkSyncLaneForSend(inspect, ticketedInput)).toEqual({});
     expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
       false
     );
+    const observe = await gateOpenCodeWorkSyncLaneDelivery(ticketedInput);
+    expect(observe.reason).toBe('work_sync_ticket_consumed');
+    expect(consumeOpenCodeWorkSyncLaneForSend(observe, ticketedInput)).toEqual({
+      reason: 'work_sync_ticket_consumed',
+    });
+  });
+
+  it('rejects ticketed send after Stop even if a reservation still exists', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-gate-'));
+    bindOpenCodeWorkSyncLaneReservationRoot(root);
+    expect(reserveOpenCodeWorkSyncLane(ticket)).toEqual({ ok: true });
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 11,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    expect(hasOpenCodeWorkSyncLaneReservation({ teamName: 'team-a', memberName: 'bob' })).toBe(
+      false
+    );
+    await expect(gateOpenCodeWorkSyncLaneDelivery(ticketedInput)).resolves.toMatchObject({
+      reason: 'work_sync_admission_stopped',
+    });
   });
 });

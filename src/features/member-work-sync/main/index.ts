@@ -9,7 +9,10 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
-export { gateOpenCodeWorkSyncLaneDelivery } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
+export {
+  consumeOpenCodeWorkSyncLaneForSend,
+  gateOpenCodeWorkSyncLaneDelivery,
+} from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
 export { readNativeWorkSyncCurrentRuntimeInstanceId } from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
 export {
   consumeOpenCodeWorkSyncLane,

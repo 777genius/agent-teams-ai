@@ -104,7 +104,7 @@ describe('recovery Stop runtime admission', () => {
   });
 
   it('reports pending when the runtime ACK is delayed', async () => {
-    const { commands } = createCommands(async () => ({ ok: false, code: 'unknown' }));
+    const { commands, stored } = createCommands(async () => ({ ok: false, code: 'unknown' }));
     const stopped = await commands.stop({
       teamName: 'team-a',
       memberName: 'bob',
@@ -117,6 +117,7 @@ describe('recovery Stop runtime admission', () => {
     expect(stopped.status.recoveryHealth?.autoResumeStopLatch).toBeDefined();
     expect(stopped.runtimeAdmission).toEqual({ state: 'pending' });
     expect(stopped.status.runtimeAdmission).toEqual({ state: 'pending' });
+    expect(stored.get('team-a:bob')?.runtimeAdmission).toEqual({ state: 'pending' });
   });
 
   it('reports unknown when runtime control CAS conflicts', async () => {

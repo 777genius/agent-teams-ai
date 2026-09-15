@@ -227,10 +227,20 @@ describe('OpenCode work-sync lane reservation', () => {
         memberName: 'bob',
         teamIncarnation: 'inc-1',
         runtimeInstanceId: 'opencode:lane-jack:ses-new',
-        controlRevision: 2,
+        controlRevision: 11,
         stopped: true,
       })
-    ).resolves.toEqual({ ok: true, code: 'closed', controlRevision: 2 });
+    ).resolves.toEqual({ ok: true, code: 'closed', controlRevision: 11 });
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:lane-jack:ses-new',
+        controlRevision: 10,
+        stopped: false,
+      })
+    ).resolves.toEqual({ ok: false, code: 'superseded' });
   });
 
   it('does not fake an OpenCode handshake without live session evidence', async () => {

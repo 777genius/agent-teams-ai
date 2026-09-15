@@ -56,6 +56,7 @@ type NativeCommand =
       intentId: string;
       reservationNonce: string;
       expectedGeneration: number;
+      admissionPayloadHash?: string;
       issuedAt: string;
     }
   | {
@@ -413,6 +414,7 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
         intentId: ticket.intentId,
         reservationNonce: ticket.ticketId,
         expectedGeneration: ticket.expectedGeneration,
+        admissionPayloadHash: ticket.admissionPayloadHash,
         issuedAt: now.toISOString(),
       },
       this.deps.ackTimeoutMs ?? 5_000

@@ -73,12 +73,13 @@ export class MemberWorkSyncRecoveryCommands {
         stopped: true,
         controlRevision: nextStatus.recoveryHealth?.controlRevision ?? 1,
       });
+      const persisted = await this.mutate(input, undefined, (status) => ({
+        ...status,
+        runtimeAdmission,
+      }));
       return {
         ok: true as const,
-        status: {
-          ...nextStatus,
-          runtimeAdmission,
-        },
+        status: persisted,
         code: 'stopped' as const,
         runtimeAdmission,
       };
@@ -104,9 +105,13 @@ export class MemberWorkSyncRecoveryCommands {
         stopped: false,
         controlRevision: status.recoveryHealth?.controlRevision ?? 1,
       });
+      const persisted = await this.mutate(input, undefined, (next) => ({
+        ...next,
+        runtimeAdmission,
+      }));
       return {
         ok: true as const,
-        status: { ...status, runtimeAdmission },
+        status: persisted,
         code: 'resumed' as const,
         runtimeAdmission,
       };

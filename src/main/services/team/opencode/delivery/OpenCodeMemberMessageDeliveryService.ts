@@ -3,7 +3,10 @@ import {
   buildOpenCodeAttachmentDeliveryParts,
   type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
-import { gateOpenCodeWorkSyncLaneDelivery } from '@features/member-work-sync/main';
+import {
+  consumeOpenCodeWorkSyncLaneForSend,
+  gateOpenCodeWorkSyncLaneDelivery,
+} from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -77,15 +80,10 @@ const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
 
-  /**
-   * Apply a stale-pending resolution to the ledger. `settle_plain_text` marks
-   * the record responded (plain-text turn end); `fail_terminal` closes it so it
-   * stops blocking the lane. Returns null when nothing was changed.
-   */
+  /** Apply a stale-pending ledger resolution; returns null when unchanged. */
   private async applyStalePendingResolution(input: {
     checkpoint: () => Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -197,7 +195,7 @@ export class OpenCodeMemberMessageDeliveryService {
       foreground: input.source === 'ui-send' || input.source === 'manual',
     });
     const restoreConsumedLane = lane.restore;
-    if (lane.reason) {
+    if (lane.reason && lane.reason !== 'work_sync_ticket_consumed') {
       return { delivered: false, reason: lane.reason };
     }
     const { canonicalMemberName, laneIdentity, configMember, metaMember, memberRuntimeCwd } =
@@ -1155,6 +1153,11 @@ export class OpenCodeMemberMessageDeliveryService {
     });
     const { controlUrl, deliveryText } = dispatch;
     forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
+    const sendReason = consumeOpenCodeWorkSyncLaneForSend(lane, input).reason;
+    if (sendReason) {
+      restoreConsumedLane();
+      return { delivered: false, reason: sendReason };
+    }
     await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {

@@ -1,12 +1,12 @@
 import { createOpenCodeMemberWorkSyncRuntimeTicketAdmission } from '../adapters/output/OpenCodeMemberWorkSyncRuntimeTicketAdmission';
 import {
+  applyOpenCodeWorkSyncLaneControl,
   bindOpenCodeWorkSyncLaneReservationRoot,
   cancelOpenCodeWorkSyncLane,
   hydrateOpenCodeWorkSyncLaneReservation,
   peekOpenCodeWorkSyncLane,
   readOpenCodeWorkSyncLaneControl,
   reserveOpenCodeWorkSyncLane,
-  writeOpenCodeWorkSyncLaneControl,
 } from '../adapters/output/OpenCodeWorkSyncLaneReservationStore';
 import { readOpenCodeWorkSyncCurrentRuntimeInstanceId } from '../adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
 
@@ -56,21 +56,13 @@ export function createDefaultMemberWorkSyncRuntimeTicketAdmission(
         if (request.runtimeInstanceId && request.runtimeInstanceId !== currentRuntimeInstanceId) {
           return { ok: false as const, code: 'instance_mismatch' as const };
         }
-        writeOpenCodeWorkSyncLaneControl({
+        return applyOpenCodeWorkSyncLaneControl({
           teamName: request.teamName,
           memberName: request.memberName,
-          control: {
-            runtimeInstanceId: currentRuntimeInstanceId,
-            controlRevision: request.controlRevision,
-            stopped: request.stopped,
-            handshakeCompleted: true,
-          },
-        });
-        return {
-          ok: true as const,
-          code: request.stopped ? ('closed' as const) : ('open' as const),
+          runtimeInstanceId: currentRuntimeInstanceId,
           controlRevision: request.controlRevision,
-        };
+          stopped: request.stopped,
+        });
       },
       readLiveControl: async ({ teamName, memberName }) => {
         const control = readOpenCodeWorkSyncLaneControl({ teamName, memberName });

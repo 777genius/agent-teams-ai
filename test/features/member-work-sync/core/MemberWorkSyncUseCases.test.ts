@@ -3895,13 +3895,28 @@ describe('MemberWorkSync use cases', () => {
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
     );
-    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(firstStatus, {
-      sourceId: 'settled-1',
-      recordedAt: firstStatus.evaluatedAt,
-      runtimeInstanceId: 'runtime-1',
-      completedGeneration: 1,
-      outcome: 'success',
-    });
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(
+      {
+        ...firstStatus,
+        lastAcceptedReport: {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: firstStatus.agenda.fingerprint,
+          reportedAt: firstStatus.evaluatedAt,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+          accepted: true,
+          source: 'mcp',
+        },
+      },
+      {
+        sourceId: 'settled-1',
+        recordedAt: firstStatus.evaluatedAt,
+        runtimeInstanceId: 'runtime-1',
+        completedGeneration: 1,
+        outcome: 'success',
+      }
+    );
     const early = [...outbox.items.values()].find((item) =>
       item.payload.workSyncIntentKey?.startsWith('early-continuation:')
     );

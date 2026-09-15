@@ -246,6 +246,7 @@ export class MemberWorkSyncReconciler {
       agenda,
       ...(previous?.report ? { report: previous.report } : {}),
       recoveryHealth,
+      ...(previous?.runtimeAdmission ? { runtimeAdmission: previous.runtimeAdmission } : {}),
       shadow: {
         reconciledBy: context.reconciledBy ?? 'request',
         wouldNudge: decision.state === 'needs_sync' && agenda.items.length > 0,
