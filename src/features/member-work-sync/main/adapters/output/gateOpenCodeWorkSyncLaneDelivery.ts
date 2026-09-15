@@ -22,14 +22,50 @@ function isAutomaticWorkSyncNudge(input: { messageKind?: string; foreground?: bo
   return input.messageKind === 'member_work_sync_nudge' && input.foreground !== true;
 }
 
-export async function gateOpenCodeWorkSyncLaneDelivery(input: {
+export type OpenCodeWorkSyncLaneDeliveryGateInput = {
   teamName: string;
   memberName: string;
   messageId?: string;
   messageKind?: string;
   workSyncRuntimeTicketId?: string;
+  workSyncControlRevision?: number;
   foreground?: boolean;
-}): Promise<OpenCodeWorkSyncLaneDeliveryGate> {
+  source?: string;
+};
+
+export function buildOpenCodeWorkSyncLaneDeliveryGateInput(input: {
+  teamName: string;
+  memberName: string;
+  messageId?: string;
+  messageKind?: string;
+  workSyncRuntimeTicketId?: string;
+  workSyncControlRevision?: number;
+  source?: string;
+}): OpenCodeWorkSyncLaneDeliveryGateInput {
+  return {
+    teamName: input.teamName,
+    memberName: input.memberName,
+    messageId: input.messageId,
+    messageKind: input.messageKind,
+    workSyncRuntimeTicketId: input.workSyncRuntimeTicketId,
+    workSyncControlRevision: input.workSyncControlRevision,
+    foreground: input.source === 'ui-send' || input.source === 'manual',
+  };
+}
+
+function isStaleOpenCodeWorkSyncEnvelopeRevision(
+  envelopeRevision: number | undefined,
+  live: { controlRevision: number } | null | undefined
+): boolean {
+  if (!live) {
+    return false;
+  }
+  return envelopeRevision == null || envelopeRevision < live.controlRevision;
+}
+
+export async function gateOpenCodeWorkSyncLaneDelivery(
+  input: OpenCodeWorkSyncLaneDeliveryGateInput
+): Promise<OpenCodeWorkSyncLaneDeliveryGate> {
   await hydrateOpenCodeWorkSyncLaneReservation(input);
   const control = readOpenCodeWorkSyncLaneControl(input);
   const reservedTicket = peekOpenCodeWorkSyncLane(input);
@@ -82,12 +118,18 @@ export async function gateOpenCodeWorkSyncLaneDelivery(input: {
     if (reservedTicket) {
       return { restore: () => undefined, reason: 'work_sync_lane_reserved' };
     }
+    if (isStaleOpenCodeWorkSyncEnvelopeRevision(input.workSyncControlRevision, control)) {
+      return { restore: () => undefined, reason: 'work_sync_ticket_stale' };
+    }
     return {
       restore: () => undefined,
       consumeForSend: () => {
         const live = readOpenCodeWorkSyncLaneControl(input);
         if (live?.stopped) {
           return { reason: 'work_sync_admission_stopped' };
+        }
+        if (isStaleOpenCodeWorkSyncEnvelopeRevision(input.workSyncControlRevision, live)) {
+          return { reason: 'work_sync_ticket_stale' };
         }
         if (peekOpenCodeWorkSyncLane(input)) {
           return { reason: 'work_sync_lane_reserved' };

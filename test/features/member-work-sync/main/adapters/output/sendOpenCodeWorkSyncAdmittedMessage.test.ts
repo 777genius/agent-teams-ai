@@ -22,6 +22,15 @@ function deferred() {
   return { promise, resolve };
 }
 
+function okResult(memberName: string): OpenCodeTeamRuntimeMessageResult {
+  return {
+    ok: true,
+    providerId: 'opencode',
+    memberName,
+    diagnostics: [],
+  };
+}
+
 describe('sendOpenCodeWorkSyncAdmittedMessage', () => {
   afterEach(() => {
     resetOpenCodeWorkSyncLaneReservationsForTests();
@@ -56,14 +65,6 @@ describe('sendOpenCodeWorkSyncAdmittedMessage', () => {
     const inFlight = new Map<string, Promise<OpenCodeTeamRuntimeMessageResult>>();
     const serializer = new OpenCodeMemberSendSerializer({
       inFlightByLane: inFlight,
-    });
-    const okResult = (
-      memberName: string
-    ): OpenCodeTeamRuntimeMessageResult => ({
-      ok: true,
-      providerId: 'opencode',
-      memberName,
-      diagnostics: [],
     });
     const first = serializer.sendSerialized({
       teamName: 'team-a',
@@ -115,5 +116,100 @@ describe('sendOpenCodeWorkSyncAdmittedMessage', () => {
       reason: 'work_sync_admission_stopped',
     });
     expect(sends).toBe(0);
+  });
+
+  it('does not send an old D0 after Stop then Resume while the lane serializer is waiting', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-send-admit-'));
+    bindOpenCodeWorkSyncLaneReservationRoot(root);
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 16,
+        stopped: false,
+      })
+    ).toEqual({ ok: true, code: 'open', controlRevision: 16 });
+    const serializer = new OpenCodeMemberSendSerializer({ inFlightByLane: new Map() });
+    const hold = deferred();
+    const first = serializer.sendSerialized({
+      teamName: 'team-a',
+      laneId: 'lane-jack',
+      send: async () => {
+        await hold.promise;
+        return okResult('hold');
+      },
+    });
+    const d0 = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      messageId: 'd0-nudge',
+      messageKind: 'member_work_sync_nudge',
+      workSyncControlRevision: 16,
+    };
+    const lane = await gateOpenCodeWorkSyncLaneDelivery(d0);
+    let sends = 0;
+    const pending = sendOpenCodeWorkSyncAdmittedMessage({
+      lane,
+      message: d0,
+      restore: lane.restore,
+      checkpoint: async () => undefined,
+      serialize: (send) =>
+        serializer.sendSerialized({
+          teamName: 'team-a',
+          laneId: 'lane-jack',
+          send,
+        }),
+      sendMessage: async () => {
+        sends += 1;
+        return okResult('bob');
+      },
+    });
+    await Promise.resolve();
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 17,
+        stopped: true,
+      })
+    ).toEqual({ ok: true, code: 'closed', controlRevision: 17 });
+    expect(
+      applyOpenCodeWorkSyncLaneControl({
+        teamName: 'team-a',
+        memberName: 'bob',
+        runtimeInstanceId: 'opencode:lane-jack:ses-1',
+        controlRevision: 18,
+        stopped: false,
+      })
+    ).toEqual({ ok: true, code: 'open', controlRevision: 18 });
+    hold.resolve();
+    await first;
+    await expect(pending).resolves.toEqual({
+      ok: false,
+      reason: 'work_sync_ticket_stale',
+    });
+    expect(sends).toBe(0);
+
+    const continueNow = await gateOpenCodeWorkSyncLaneDelivery({
+      ...d0,
+      messageId: 'd0-continue',
+      workSyncControlRevision: 18,
+    });
+    await expect(
+      sendOpenCodeWorkSyncAdmittedMessage({
+        lane: continueNow,
+        message: { messageKind: 'member_work_sync_nudge' },
+        restore: continueNow.restore,
+        checkpoint: async () => undefined,
+        serialize: (send) => send(),
+        sendMessage: async () => {
+          sends += 1;
+          return okResult('bob');
+        },
+      })
+    ).resolves.toEqual({ ok: true, result: okResult('bob') });
+    expect(sends).toBe(1);
   });
 });

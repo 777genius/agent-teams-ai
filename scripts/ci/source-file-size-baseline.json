@@ -51,7 +51,7 @@
     "src/main/services/team/ChangeExtractorService.ts": 1739,
     "src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract.ts": 1182,
     "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts": 898,
-    "src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService.ts": 1577,
+    "src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService.ts": 1574,
     "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger.ts": 1286,
     "src/main/services/team/opencode/delivery/RuntimeDeliveryJournal.ts": 1442,
     "src/main/services/team/opencode/delivery/RuntimeDeliveryService.ts": 807,

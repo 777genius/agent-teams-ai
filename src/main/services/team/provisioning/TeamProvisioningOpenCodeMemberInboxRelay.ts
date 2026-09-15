@@ -695,6 +695,9 @@ async function runOpenCodeMemberInboxRelayWork(
       messageKind: message.messageKind,
       workSyncIntent: message.workSyncIntent,
       workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
+      ...(typeof message.workSyncControlRevision === 'number'
+        ? { workSyncControlRevision: message.workSyncControlRevision }
+        : {}),
       workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
       taskRefs: deliveryDecision.taskRefs,
       attachments: attachmentPayloads.attachments,

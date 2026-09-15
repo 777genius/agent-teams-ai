@@ -9,7 +9,9 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
+export type { OpenCodeWorkSyncLaneDeliveryReason } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
 export {
+  buildOpenCodeWorkSyncLaneDeliveryGateInput,
   consumeOpenCodeWorkSyncLaneForSend,
   gateOpenCodeWorkSyncLaneDelivery,
 } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
