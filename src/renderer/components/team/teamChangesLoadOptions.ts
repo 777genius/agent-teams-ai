@@ -20,3 +20,16 @@ export function isSilentCounterLoad(options: TeamChangesLoadOptions | null): boo
     options.showSpinner !== true
   );
 }
+
+export function coversVisibilityRestore(
+  options: TeamChangesLoadOptions | null,
+  sectionOpen: boolean
+): options is TeamChangesLoadOptions {
+  return Boolean(
+    options &&
+    options.maxRequests === undefined &&
+    options.unknownScanLimit === undefined &&
+    options.satisfiedTaskIds === undefined &&
+    (!sectionOpen || options.storeSummaries !== false)
+  );
+}

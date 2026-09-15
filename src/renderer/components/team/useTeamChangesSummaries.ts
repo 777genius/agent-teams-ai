@@ -6,7 +6,11 @@ import { resolveTaskChangePresenceFromResult } from '@renderer/utils/taskChangeP
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { getTaskChangeStateBucket } from '@shared/utils/taskChangeState';
 
-import { isSilentCounterLoad, type TeamChangesLoadOptions } from './teamChangesLoadOptions';
+import {
+  coversVisibilityRestore,
+  isSilentCounterLoad,
+  type TeamChangesLoadOptions,
+} from './teamChangesLoadOptions';
 import { withTeamChangesLoadTimeout } from './teamChangesLoadTimeout';
 import {
   buildTeamChangeRequestPlan,
@@ -721,20 +725,17 @@ export function useTeamChangesSummaries({
     }
     if (handledVisibleEpochRef.current === visibleEpoch) return;
     handledVisibleEpochRef.current = visibleEpoch;
-    const pendingRefreshCoversRestore = [
-      activeRequestOptionsRef.current,
-      queuedRefreshOptionsRef.current,
-    ].some(
-      (options) =>
-        options !== null &&
-        (options !== activeRequestOptionsRef.current ||
-          activeRequestVisibleEpochRef.current === visibleEpoch) &&
-        options.maxRequests === undefined &&
-        options.unknownScanLimit === undefined &&
-        options.satisfiedTaskIds === undefined &&
-        (!sectionOpen || options.storeSummaries !== false)
-    );
-    if (pendingRefreshCoversRestore) return;
+    const queuedOptions = queuedRefreshOptionsRef.current;
+    if (coversVisibilityRestore(queuedOptions, sectionOpen)) {
+      queuedRefreshOptionsRef.current = { ...queuedOptions, afterVisibilityRestore: true };
+      return;
+    }
+    if (
+      activeRequestVisibleEpochRef.current === visibleEpoch &&
+      coversVisibilityRestore(activeRequestOptionsRef.current, sectionOpen)
+    ) {
+      return;
+    }
     void loadSummaries({
       afterVisibilityRestore: true,
       showSpinner: false,

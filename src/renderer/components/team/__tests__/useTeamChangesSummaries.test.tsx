@@ -629,6 +629,61 @@ describe('useTeamChangesSummaries', () => {
     }
   );
 
+  it('preserves a full refresh queued before restore when the active request fails', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    const first = createDeferred<TeamTaskChangeSummariesResponse>();
+    hoisted.getTeamTaskChangeSummaries
+      .mockReturnValueOnce(first.promise)
+      .mockImplementation((_teamName: string, requests: TeamTaskChangeSummaryRequest[]) =>
+        Promise.resolve(responseForRequests(requests))
+      );
+
+    try {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+      const onSnapshot = (): undefined => undefined;
+
+      await act(async () => {
+        root?.render(React.createElement(HookHarness, { tasks: [task()], onSnapshot }));
+      });
+      await act(async () => {
+        root?.render(
+          React.createElement(HookHarness, {
+            tasks: [task({ updatedAt: '2026-05-10T10:00:02.000Z' })],
+            onSnapshot,
+          })
+        );
+      });
+
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      visibilityState = 'visible';
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        first.reject(new Error('boom'));
+        await first.promise.catch(() => undefined);
+        await Promise.resolve();
+      });
+      expect(hoisted.getTeamTaskChangeSummaries).toHaveBeenCalledTimes(2);
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        delete (document as unknown as Record<string, unknown>).visibilityState;
+      }
+    }
+  });
+
   it('refreshes a collapsed Changes counter once after visibility restoration', async () => {
     const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
     let visibilityState: DocumentVisibilityState = 'visible';
