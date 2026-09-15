@@ -66,21 +66,23 @@ Any rights not expressly licensed under this section are reserved by You.
 
 You confirm that:
 
-(a) You have the legal authority to enter into this Agreement. If You are signing for a legal entity, You are authorized to bind that entity, and the signature table must name the entity.
+(a) You have the legal authority to enter into this Agreement. If You are signing for a legal entity, You are authorized to bind that entity, the signature table must name the entity, and this same document is the entity CLA. There is no separate entity form.
 
 (b) You own the Copyright and patent claims covering the Contribution which are required to grant the rights under Section 2, or You have permission from the owner.
 
-(c) The grant of rights under Section 2 does not violate any grant of rights You have made to third parties, including Your employer. If You are an employee and Your employer owns the work, You have received permission to Submit it, Your employer has waived those rights, or Your employer has accepted an entity agreement with Us.
+(c) The grant of rights under Section 2 does not violate any grant of rights You have made to third parties, including Your employer. If You are an employee and Your employer owns the work, You have received permission to Submit it, Your employer has waived those rights, or an authorized person has accepted this Agreement for that employer by listing the entity in the CLA v2 signatures table.
 
 (d) You have disclosed, in the pull request or a notice with the Contribution, any third-party license or other restriction of which You are personally aware and which is associated with any part of Your Contribution.
 
-(e) If You are under eighteen years old, a parent or guardian must accept this Agreement.
+(e) If You are under eighteen years old, do not Submit a Contribution. We do not have a parent-signature process.
 
 ## 4. Disclaimer
 
 EXCEPT FOR THE EXPRESS STATEMENTS IN SECTION 3, THE CONTRIBUTION IS PROVIDED "AS IS". ALL EXPRESS OR IMPLIED WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT, ARE DISCLAIMED TO THE MAXIMUM EXTENT PERMITTED BY LAW.
 
 You are not required to provide support for Your Contributions except to the extent You choose to.
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL YOU BE LIABLE TO US FOR ANY LOSS OF PROFITS, LOSS OF DATA, OR INDIRECT, SPECIAL, INCIDENTAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES ARISING OUT OF THIS AGREEMENT.
 
 ## 5. Past and future Contributions
 
@@ -101,6 +103,8 @@ Each row must include:
 
 The Project Owner does not sign this CLA as a contributor. Automated dependency bots (for example Dependabot) do not sign.
 
+This Agreement does not grant any trademark rights in "Agent Teams" or related names or logos.
+
 ## 7. Miscellaneous
 
 This Agreement sets out the entire inbound agreement between You and Us for Your Contributions and overrides prior inbound terms between You and Us for those Contributions, except that CLA v1 remains in force until You accept v2.
@@ -113,9 +117,10 @@ If any provision of this Agreement is found unenforceable, it will be replaced t
 
 ## What this does *not* change
 
-- The public GitHub project remains AGPL-3.0 unless We later add or change outbound terms under Section 2.3.
+- The public GitHub project stays available under AGPL-3.0 for Contributions Submitted while that is the outbound license. Section 2.3 lets Us *add* other outbound terms (Apache-2.0, commercial). It does not let Us drop the AGPL-3.0 grant that applied on the Submission Date.
 - Other people's Contributions are not covered by Your signature.
 - This CLA does not transfer copyright to Us.
+- This CLA does not grant trademark rights.
 - Existing releases, tags, and forks already received under AGPL-3.0 keep those rights.
 
 ---
