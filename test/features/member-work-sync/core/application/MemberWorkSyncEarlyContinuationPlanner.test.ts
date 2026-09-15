@@ -674,14 +674,63 @@ describe('protocol-2 early continuation', () => {
       },
       'pending'
     );
+    const cancelled: string[] = [];
     await expect(
       insertMemberWorkSyncInboxAfterRuntimeTicket({
         admission: admittingTicket({
           confirmReserved: async () => ({ ok: false, code: 'stale' }),
+          cancel: async (ticket) => {
+            cancelled.push(ticket.ticketId);
+          },
         }),
         inbox: {
           insertIfAbsent: async () => {
             throw new Error('inbox insert must not run for a stale ticket');
+          },
+        },
+        item,
+        nowIso: '2026-05-06T00:05:00.000Z',
+        shouldAbort: () => false,
+      })
+    ).resolves.toEqual({ status: 'stale' });
+    expect(cancelled).toEqual(['ticket-1']);
+  });
+
+  it('keeps a confirmReserved unknown ticket retryable', async () => {
+    const item = itemFromInput(
+      {
+        id: 'member-work-sync:team-a:bob:early-continuation:agenda:v1:test',
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'hash-1',
+        nowIso: '2026-05-06T00:05:00.000Z',
+        payload: {
+          from: 'system',
+          to: 'bob',
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: `${EARLY_CONTINUATION_INTENT_PREFIX}:agenda:v1:test`,
+          workSyncRuntimeTicketId: 'ticket-1',
+          workSyncRuntimeGeneration: 1,
+          workSyncRuntimeInstanceId: 'runtime-1',
+          workSyncAdmissionPayloadHash: 'hash-1',
+          text: 'continue',
+          taskRefs: [],
+        },
+      },
+      'pending'
+    );
+    await expect(
+      insertMemberWorkSyncInboxAfterRuntimeTicket({
+        admission: admittingTicket({
+          confirmReserved: async () => ({ ok: false, code: 'unknown' }),
+        }),
+        inbox: {
+          insertIfAbsent: async () => {
+            throw new Error('inbox insert must not run for an unknown ticket');
           },
         },
         item,

@@ -263,10 +263,14 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
     }
   ) {}
 
-  async readCapability(input: {
+  async inspectCapability(input: {
     teamName: string;
     memberName: string;
-  }): Promise<NativeWorkSyncAdmissionCapability | null> {
+  }): Promise<
+    | { status: 'ready'; capability: NativeWorkSyncAdmissionCapability }
+    | { status: 'missing' }
+    | { status: 'unknown' }
+  > {
     const path = join(
       buildNativeWorkSyncAdmissionRoot({
         teamsBasePath: this.deps.teamsBasePath,
@@ -275,20 +279,43 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
       }),
       'capability.json'
     );
+    let raw: string;
     try {
-      const parsed = JSON.parse(await readFile(path, 'utf8')) as NativeWorkSyncAdmissionCapability;
-      if (
-        parsed?.schemaVersion !== 1 ||
-        parsed.recoveryProtocolVersion !== 2 ||
-        parsed.providerId !== this.deps.expectedProviderId ||
-        parsed.processorReady !== true
-      ) {
-        return null;
-      }
-      return parsed;
-    } catch {
-      return null;
+      raw = await readFile(path, 'utf8');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      return code === 'ENOENT' ? { status: 'missing' } : { status: 'unknown' };
     }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { status: 'unknown' };
+    }
+    const capability = parsed as NativeWorkSyncAdmissionCapability;
+    if (
+      capability?.schemaVersion !== 1 ||
+      capability.recoveryProtocolVersion !== 2 ||
+      typeof capability.providerId !== 'string' ||
+      typeof capability.runtimeInstanceId !== 'string'
+    ) {
+      return { status: 'unknown' };
+    }
+    if (
+      capability.providerId !== this.deps.expectedProviderId ||
+      capability.processorReady !== true
+    ) {
+      return { status: 'missing' };
+    }
+    return { status: 'ready', capability };
+  }
+
+  async readCapability(input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<NativeWorkSyncAdmissionCapability | null> {
+    const inspected = await this.inspectCapability(input);
+    return inspected.status === 'ready' ? inspected.capability : null;
   }
 
   async admit(input: {
@@ -301,10 +328,14 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
     runtimeInstanceId?: string;
     controlRevision: number;
   }) {
-    const capability = await this.readCapability(input);
-    if (!capability) {
+    const inspected = await this.inspectCapability(input);
+    if (inspected.status === 'unknown') {
+      return { admitted: false as const, code: 'unknown' as const };
+    }
+    if (inspected.status === 'missing') {
       return { admitted: false as const, code: 'not_early' as const };
     }
+    const capability = inspected.capability;
     const runtimeInstanceId = input.runtimeInstanceId ?? capability.runtimeInstanceId;
     if (runtimeInstanceId !== capability.runtimeInstanceId) {
       return { admitted: false as const, code: 'instance_mismatch' as const };

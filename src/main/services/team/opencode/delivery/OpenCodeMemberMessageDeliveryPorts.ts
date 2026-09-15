@@ -55,6 +55,7 @@ export interface OpenCodeMemberMessageDeliveryInput {
   actionMode?: AgentActionMode;
   messageKind?: InboxMessage['messageKind'];
   workSyncIntent?: InboxMessage['workSyncIntent'];
+  workSyncRuntimeTicketId?: InboxMessage['workSyncRuntimeTicketId'];
   workSyncReviewRequestEventIds?: string[];
   taskRefs?: TaskRef[];
   attachments?: AttachmentPayload[];

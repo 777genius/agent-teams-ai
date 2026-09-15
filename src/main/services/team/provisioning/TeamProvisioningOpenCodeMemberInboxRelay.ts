@@ -694,6 +694,7 @@ async function runOpenCodeMemberInboxRelayWork(
       actionMode: deliveryDecision.actionMode ?? undefined,
       messageKind: message.messageKind,
       workSyncIntent: message.workSyncIntent,
+      workSyncRuntimeTicketId: message.workSyncRuntimeTicketId,
       workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
       taskRefs: deliveryDecision.taskRefs,
       attachments: attachmentPayloads.attachments,

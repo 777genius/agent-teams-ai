@@ -3,13 +3,7 @@ import {
   buildOpenCodeAttachmentDeliveryParts,
   type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
-import {
-  consumeOpenCodeWorkSyncLane,
-  hasOpenCodeWorkSyncLaneReservation,
-  hydrateOpenCodeWorkSyncLaneReservation,
-  peekOpenCodeWorkSyncLane,
-  restoreOpenCodeWorkSyncLane,
-} from '@features/member-work-sync/main';
+import { gateOpenCodeWorkSyncLaneDelivery } from '@features/member-work-sync/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -194,34 +188,17 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
     const { config } = directory;
-    await hydrateOpenCodeWorkSyncLaneReservation({
-      teamName,
-      memberName: input.memberName,
-    });
-    const reservedTicket = peekOpenCodeWorkSyncLane({
-      teamName,
-      memberName: input.memberName,
-    });
-    const consumedLane = consumeOpenCodeWorkSyncLane({
+    const lane = await gateOpenCodeWorkSyncLaneDelivery({
       teamName,
       memberName: input.memberName,
       messageId: input.messageId,
+      messageKind: input.messageKind,
+      workSyncRuntimeTicketId: input.workSyncRuntimeTicketId,
       foreground: input.source === 'ui-send' || input.source === 'manual',
     });
-    const restoreConsumedLane = () => {
-      if (consumedLane === 'consumed' && reservedTicket) {
-        restoreOpenCodeWorkSyncLane(reservedTicket);
-      }
-    };
-    if (
-      input.messageKind === 'member_work_sync_nudge' &&
-      consumedLane === 'absent' &&
-      hasOpenCodeWorkSyncLaneReservation({
-        teamName,
-        memberName: input.memberName,
-      })
-    ) {
-      return { delivered: false, reason: 'work_sync_lane_reserved' };
+    const restoreConsumedLane = lane.restore;
+    if (lane.reason) {
+      return { delivered: false, reason: lane.reason };
     }
     const { canonicalMemberName, laneIdentity, configMember, metaMember, memberRuntimeCwd } =
       identity;

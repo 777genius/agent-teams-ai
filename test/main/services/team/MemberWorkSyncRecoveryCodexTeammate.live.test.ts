@@ -963,17 +963,17 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       console.info(
         `[codex-live] stop runtimeAdmission=${JSON.stringify(stopped.runtimeAdmission)}`
       );
+      const snapshotPath = path.join(
+        getTeamsBasePath(),
+        teamName!,
+        'members',
+        TEAMMATE_NAME,
+        '.member-work-sync',
+        'runtime-admission',
+        'snapshot.json'
+      );
       await waitUntil(
         async () => {
-          const snapshotPath = path.join(
-            getTeamsBasePath(),
-            teamName!,
-            'members',
-            TEAMMATE_NAME,
-            '.member-work-sync',
-            'runtime-admission',
-            'snapshot.json'
-          );
           const raw = await fs.readFile(snapshotPath, 'utf8').catch(() => '');
           try {
             return (JSON.parse(raw) as { stopped?: boolean }).stopped === true;
@@ -984,6 +984,14 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         30_000,
         500
       );
+      const snapshotAtStop = JSON.parse(await fs.readFile(snapshotPath, 'utf8')) as {
+        generation?: number;
+        status?: string;
+        stopped?: boolean;
+      };
+      expect(snapshotAtStop.stopped).toBe(true);
+      expect(typeof snapshotAtStop.generation).toBe('number');
+      const generationAtStop = snapshotAtStop.generation;
       await fs.unlink(holdPath).catch(() => undefined);
       delete process.env.CLAUDE_WORK_SYNC_TEST_HOLD_CONSUME_PATH;
 
@@ -1002,11 +1010,18 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
+      const snapshotAfterStop = JSON.parse(await fs.readFile(snapshotPath, 'utf8')) as {
+        generation?: number;
+        status?: string;
+      };
+      expect(snapshotAfterStop.generation).toBe(generationAtStop);
+      expect(snapshotAfterStop.status).not.toBe('running');
       const afterStop = await feature.getStatus({
         teamName,
         memberName: TEAMMATE_NAME,
       });
       expect(afterStop.recoveryHealth?.autoResumeStopLatch).toBeDefined();
+      expect(afterStop.runtimeAdmission).toBeDefined();
 
       const evidence = {
         scenario: 'stop-before-consume-and-desktop-restart',
@@ -1022,6 +1037,9 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
         intentKey: ticketBefore?.workSyncIntentKey,
         settledAt: new Date(startedAt).toISOString(),
         canary: (await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim(),
+        generationAtStop,
+        generationAfterStop: snapshotAfterStop.generation,
+        snapshotStatusAfterStop: snapshotAfterStop.status,
         runtimeAdmission: afterStop.runtimeAdmission,
         stopLatch: afterStop.recoveryHealth?.autoResumeStopLatch,
       };

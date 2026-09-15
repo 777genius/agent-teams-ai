@@ -10,12 +10,17 @@ import {
   resetOpenCodeWorkSyncLaneReservationsForTests,
 } from '@features/member-work-sync/main/adapters/output/OpenCodeWorkSyncLaneReservationStore';
 import { readOpenCodeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main/adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
+import { createDefaultMemberWorkSyncRuntimeTicketAdmission } from '@features/member-work-sync/main/composition/createDefaultMemberWorkSyncRuntimeTicketAdmission';
 import { mkdir, mkdtemp, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 describe('OpenCode work-sync lane reservation', () => {
+  afterEach(() => {
+    resetOpenCodeWorkSyncLaneReservationsForTests();
+  });
+
   it('reserves once and lets a matching inbox delivery consume without a second send token', async () => {
     resetOpenCodeWorkSyncLaneReservationsForTests();
     const admission = createOpenCodeMemberWorkSyncRuntimeTicketAdmission({
@@ -177,5 +182,69 @@ describe('OpenCode work-sync lane reservation', () => {
         memberName: 'bob',
       })
     ).resolves.toBe('opencode:lane-jack:ses-new');
+  });
+
+  it('handshakes OpenCode control from live lane evidence through the production factory', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-factory-'));
+    const laneDir = join(root, 'team-a', '.opencode-runtime', 'lanes', 'lane-jack');
+    await mkdir(laneDir, { recursive: true });
+    await writeFile(
+      join(laneDir, 'opencode-sessions.json'),
+      `${JSON.stringify({
+        updatedAt: '2026-09-15T00:00:00.000Z',
+        sessions: [
+          {
+            id: 'ses-new',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'lane-jack',
+          },
+        ],
+      })}\n`
+    );
+    const admission = createDefaultMemberWorkSyncRuntimeTicketAdmission(root);
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:lane-jack:ses-new',
+        controlRevision: 1,
+        stopped: false,
+      })
+    ).resolves.toEqual({ ok: true, code: 'open', controlRevision: 1 });
+    await expect(
+      admission.readLiveControl?.({ teamName: 'team-a', memberName: 'bob' })
+    ).resolves.toMatchObject({
+      runtimeInstanceId: 'opencode:lane-jack:ses-new',
+      controlRevision: 1,
+      stopped: false,
+      handshakeCompleted: true,
+    });
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:lane-jack:ses-new',
+        controlRevision: 2,
+        stopped: true,
+      })
+    ).resolves.toEqual({ ok: true, code: 'closed', controlRevision: 2 });
+  });
+
+  it('does not fake an OpenCode handshake without live session evidence', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-factory-missing-'));
+    const admission = createDefaultMemberWorkSyncRuntimeTicketAdmission(root);
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:lane-jack:ses-new',
+        controlRevision: 1,
+        stopped: false,
+      })
+    ).resolves.toEqual({ ok: false, code: 'unknown' });
   });
 });

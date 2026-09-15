@@ -162,10 +162,68 @@ export async function hydrateOpenCodeWorkSyncLaneReservation(input: {
   teamName: string;
   memberName: string;
 }): Promise<boolean> {
-  return Boolean(await hydrateReservation(input.teamName, input.memberName));
+  return Boolean(hydrateReservation(input.teamName, input.memberName));
 }
 
 export function resetOpenCodeWorkSyncLaneReservationsForTests(): void {
   reservations.clear();
   reservationRoot = null;
+}
+
+export interface OpenCodeWorkSyncLaneControl {
+  runtimeInstanceId: string;
+  controlRevision: number;
+  stopped: boolean;
+  handshakeCompleted: boolean;
+}
+
+function controlPath(teamName: string, memberName: string): string | null {
+  if (!reservationRoot) {
+    return null;
+  }
+  return join(
+    reservationRoot,
+    teamName,
+    'members',
+    encodeTeamMemberStorageKey(memberName),
+    '.member-work-sync',
+    'opencode-lane-control.json'
+  );
+}
+
+export function writeOpenCodeWorkSyncLaneControl(input: {
+  teamName: string;
+  memberName: string;
+  control: OpenCodeWorkSyncLaneControl;
+}): void {
+  const path = controlPath(input.teamName, input.memberName);
+  if (!path) {
+    return;
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(input.control)}\n`, 'utf8');
+}
+
+export function readOpenCodeWorkSyncLaneControl(input: {
+  teamName: string;
+  memberName: string;
+}): OpenCodeWorkSyncLaneControl | null {
+  const path = controlPath(input.teamName, input.memberName);
+  if (!path) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as OpenCodeWorkSyncLaneControl;
+    if (
+      typeof parsed?.runtimeInstanceId !== 'string' ||
+      typeof parsed.controlRevision !== 'number' ||
+      typeof parsed.stopped !== 'boolean' ||
+      parsed.handshakeCompleted !== true
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
 }

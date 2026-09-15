@@ -192,6 +192,10 @@ export async function insertMemberWorkSyncInboxAfterRuntimeTicket(input: {
   if (ticket && input.admission?.confirmReserved) {
     const confirmed = await input.admission.confirmReserved(ticket);
     if (!confirmed.ok) {
+      if (confirmed.code === 'stale') {
+        await cancelAdmittedTicketIfPresent(input.admission, input.item);
+        return { status: 'stale' };
+      }
       return { status: 'busy' };
     }
   }

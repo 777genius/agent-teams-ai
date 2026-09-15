@@ -68,13 +68,19 @@ export function createMemberWorkSyncRuntimeTicketAdmissionRouter(input: {
       ]);
     },
     async syncControl(request) {
-      const capability =
-        (await codex.readCapability(request)) ?? (await anthropic.readCapability(request));
-      if (capability?.providerId === 'anthropic') {
-        return anthropic.syncControl(request);
+      const codexCapability = await codex.inspectCapability(request);
+      if (codexCapability.status === 'unknown') {
+        return { ok: false, code: 'unknown' as const };
       }
-      if (capability?.providerId === 'codex') {
+      if (codexCapability.status === 'ready') {
         return codex.syncControl(request);
+      }
+      const anthropicCapability = await anthropic.inspectCapability(request);
+      if (anthropicCapability.status === 'unknown') {
+        return { ok: false, code: 'unknown' as const };
+      }
+      if (anthropicCapability.status === 'ready') {
+        return anthropic.syncControl(request);
       }
       if (input.opencodeAdmission?.syncControl) {
         return input.opencodeAdmission.syncControl(request);
@@ -82,15 +88,21 @@ export function createMemberWorkSyncRuntimeTicketAdmissionRouter(input: {
       return { ok: false, code: 'unknown' as const };
     },
     async readLiveControl(request) {
-      return (await codex.readLiveControl(request)) ?? (await anthropic.readLiveControl(request));
+      return (
+        (await codex.readLiveControl(request)) ??
+        (await anthropic.readLiveControl(request)) ??
+        (input.opencodeAdmission?.readLiveControl
+          ? await input.opencodeAdmission.readLiveControl(request)
+          : null)
+      );
     },
     async confirmReserved(ticket) {
       const codexResult = await codex.confirmReserved(ticket);
-      if (codexResult.ok) {
+      if (codexResult.ok || codexResult.code === 'stale') {
         return codexResult;
       }
       const anthropicResult = await anthropic.confirmReserved(ticket);
-      if (anthropicResult.ok) {
+      if (anthropicResult.ok || anthropicResult.code === 'stale') {
         return anthropicResult;
       }
       if (input.opencodeAdmission?.confirmReserved) {

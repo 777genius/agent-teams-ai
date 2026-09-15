@@ -1,10 +1,9 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises';
+import { NativeMailboxMemberWorkSyncRuntimeTicketAdmission } from '@features/member-work-sync/main/adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
+import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
-
-import { NativeMailboxMemberWorkSyncRuntimeTicketAdmission } from '@features/member-work-sync/main/adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
-import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 
 describe('NativeMailboxMemberWorkSyncRuntimeTicketAdmission', () => {
   let root = '';
@@ -33,6 +32,69 @@ describe('NativeMailboxMemberWorkSyncRuntimeTicketAdmission', () => {
         controlRevision: 1,
       })
     ).resolves.toEqual({ admitted: false, code: 'not_early' });
+  });
+
+  it('returns unknown when capability JSON is corrupt', async () => {
+    root = await mkdtemp(join(tmpdir(), 'work-sync-native-'));
+    const memberRoot = join(
+      root,
+      'team-a',
+      'members',
+      encodeTeamMemberStorageKey('bob'),
+      '.member-work-sync',
+      'runtime-admission'
+    );
+    await mkdir(memberRoot, { recursive: true });
+    await writeFile(join(memberRoot, 'capability.json'), '{not-json\n');
+    const admission = new NativeMailboxMemberWorkSyncRuntimeTicketAdmission({
+      teamsBasePath: root,
+      expectedProviderId: 'codex',
+      ackTimeoutMs: 50,
+    });
+    await expect(
+      admission.admit({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        intentId: 'intent-c1',
+        admissionPayloadHash: 'hash-a',
+        expectedGeneration: 1,
+        controlRevision: 1,
+      })
+    ).resolves.toEqual({ admitted: false, code: 'unknown' });
+  });
+
+  it('returns unknown when a capability file has an invalid schema', async () => {
+    root = await mkdtemp(join(tmpdir(), 'work-sync-native-'));
+    const memberRoot = join(
+      root,
+      'team-a',
+      'members',
+      encodeTeamMemberStorageKey('bob'),
+      '.member-work-sync',
+      'runtime-admission'
+    );
+    await mkdir(memberRoot, { recursive: true });
+    await writeFile(
+      join(memberRoot, 'capability.json'),
+      `${JSON.stringify({ schemaVersion: 1, recoveryProtocolVersion: 2 })}\n`
+    );
+    const admission = new NativeMailboxMemberWorkSyncRuntimeTicketAdmission({
+      teamsBasePath: root,
+      expectedProviderId: 'codex',
+      ackTimeoutMs: 50,
+    });
+    await expect(
+      admission.admit({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        intentId: 'intent-c1',
+        admissionPayloadHash: 'hash-a',
+        expectedGeneration: 1,
+        controlRevision: 1,
+      })
+    ).resolves.toEqual({ admitted: false, code: 'unknown' });
   });
 
   it('admits after a reserved ACK and cancels with the same nonce', async () => {

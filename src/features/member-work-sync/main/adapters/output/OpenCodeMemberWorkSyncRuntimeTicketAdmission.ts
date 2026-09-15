@@ -21,6 +21,8 @@ export function createOpenCodeMemberWorkSyncRuntimeTicketAdmission(input: {
     memberName: string;
   }) => Promise<string | null> | string | null;
   confirmReserved?: MemberWorkSyncRuntimeTicketAdmissionPort['confirmReserved'];
+  syncControl?: MemberWorkSyncRuntimeTicketAdmissionPort['syncControl'];
+  readLiveControl?: MemberWorkSyncRuntimeTicketAdmissionPort['readLiveControl'];
 }): MemberWorkSyncRuntimeTicketAdmissionPort {
   return {
     async admit(request) {
@@ -65,5 +67,7 @@ export function createOpenCodeMemberWorkSyncRuntimeTicketAdmission(input: {
     },
     cancel: (ticket) => input.cancel(ticket),
     ...(input.confirmReserved ? { confirmReserved: input.confirmReserved } : {}),
+    ...(input.syncControl ? { syncControl: input.syncControl } : {}),
+    ...(input.readLiveControl ? { readLiveControl: input.readLiveControl } : {}),
   };
 }
