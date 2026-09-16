@@ -67,9 +67,7 @@ import {
 } from './composition/hosted/hostedTeamMessageComposition';
 import { HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
-import {
-  createHostedWorkspaceRegistryComposition,
-} from './composition/hosted/hostedWorkspaceRegistryComposition';
+import { createHostedWorkspaceRegistryComposition } from './composition/hosted/hostedWorkspaceRegistryComposition';
 import {
   createOptionalTeamLifecycleCommandComposition,
   type TeamLifecycleCommandComposition,
@@ -178,7 +176,6 @@ function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteRe
       !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true,
   });
 }
-
 function admitHostedReadRoot(reference: string): string {
   if (
     !isAbsolute(reference) ||
@@ -189,7 +186,6 @@ function admitHostedReadRoot(reference: string): string {
   }
   return reference;
 }
-
 export function resolveStandaloneAuthDataDirectory(
   environment: Readonly<Record<string, string | undefined>>,
   hostedMode: boolean
@@ -217,9 +213,9 @@ function createTeamLifecycleReadQueryContext(
   });
 }
 let teamLifecycleReadRequestSequence = 0;
-
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
+  logger.error('Hosted readiness diagnostic stage=startup_before_http outcome=started code=none');
   const hostedBootstrapEnvironment = Object.freeze({ ...process.env });
   const serializedHostedBootstrap = readTeamLifecycleReadBootstrapEnvironment(
     hostedBootstrapEnvironment
@@ -292,8 +288,6 @@ async function start(): Promise<void> {
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
-        // Retained-writer reads preserve connection custody on every snapshot, including live WAL.
-        // The legacy frozen-file admission keeps its separate query-only live worker path.
         hostedTeamIdentityReadBackend = hostedDraftPublication
           ? null
           : createHostedTeamIdentityReadBackend(appDataRoot);
@@ -408,48 +402,61 @@ async function start(): Promise<void> {
           hostedDiagnosticsRuntimeInstance,
           hostedBootstrapEnvironment
         );
-  hostedLifecycleCommands =
-    hostedDiagnosticsRuntimeInstance === null ||
-    productionOwnerAdmission === null ||
-    lifecycleTrustAnchor === null
-      ? null
-      : await createOptionalTeamLifecycleCommandComposition({
-          authentication: hostedAccessFeature.http,
-          runtimeInstance: hostedDiagnosticsRuntimeInstance,
-          expectedDeploymentId: hostedAccessFeature.deploymentId,
-          ...(hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET === undefined
-            ? {}
-            : {
-                orchestratorSocketPath:
-                  hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET,
-              }),
-          ...(hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT === undefined
-            ? {}
-            : {
-                orchestratorOwnerHighWaterPath:
-                  hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT,
-              }),
-          orchestratorTrustAnchor: lifecycleTrustAnchor,
-          orchestratorExpectedOwnerBinding: productionOwnerAdmission.expectedOwnerBinding,
-          orchestratorBootstrapBinding: productionOwnerAdmission.bootstrapBinding,
-          orchestratorExpectedUid: process.getuid?.(),
-          orchestratorExpectedGid: process.getgid?.(),
-          orchestratorExpectedMode: 0o600,
-          onFatalOwnerLoss: (error, ownerBinding) => {
-            if (orderlyOwnerLossGuard.isExpectedOwnerLoss(ownerBinding)) {
-              logger.info('Hosted lifecycle owner closed during authenticated orderly shutdown');
-              return;
-            }
-            requestStandaloneFatalFailStop?.('Hosted lifecycle orchestrator owner lost', error);
-          },
-          registerReadinessCleanup: (cleanup) => {
-            hostedLifecycleReadinessCleanup = cleanup;
-            if (fatalFailStop) cleanup?.();
-          },
-          restoreGeneration: hostedAccessFeature.restoreGeneration,
-          mountGeneration: hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
-          routeAdmissionBinding: hostedRouteAdmissionBinding,
-        });
+  logger.error('Hosted readiness diagnostic stage=lifecycle_composition outcome=started code=none');
+  try {
+    hostedLifecycleCommands =
+      hostedDiagnosticsRuntimeInstance === null ||
+      productionOwnerAdmission === null ||
+      lifecycleTrustAnchor === null
+        ? null
+        : await createOptionalTeamLifecycleCommandComposition({
+            authentication: hostedAccessFeature.http,
+            runtimeInstance: hostedDiagnosticsRuntimeInstance,
+            expectedDeploymentId: hostedAccessFeature.deploymentId,
+            ...(hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET === undefined
+              ? {}
+              : {
+                  orchestratorSocketPath:
+                    hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET,
+                }),
+            ...(hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT ===
+            undefined
+              ? {}
+              : {
+                  orchestratorOwnerHighWaterPath:
+                    hostedBootstrapEnvironment.HOSTED_LIFECYCLE_ORCHESTRATOR_HIGH_WATER_ROOT,
+                }),
+            orchestratorTrustAnchor: lifecycleTrustAnchor,
+            orchestratorExpectedOwnerBinding: productionOwnerAdmission.expectedOwnerBinding,
+            orchestratorBootstrapBinding: productionOwnerAdmission.bootstrapBinding,
+            orchestratorExpectedUid: process.getuid?.(),
+            orchestratorExpectedGid: process.getgid?.(),
+            orchestratorExpectedMode: 0o600,
+            onFatalOwnerLoss: (error, ownerBinding) => {
+              if (orderlyOwnerLossGuard.isExpectedOwnerLoss(ownerBinding)) {
+                logger.info('Hosted lifecycle owner closed during authenticated orderly shutdown');
+                return;
+              }
+              requestStandaloneFatalFailStop?.('Hosted lifecycle orchestrator owner lost', error);
+            },
+            registerReadinessCleanup: (cleanup) => {
+              hostedLifecycleReadinessCleanup = cleanup;
+              if (fatalFailStop) cleanup?.();
+            },
+            restoreGeneration: hostedAccessFeature.restoreGeneration,
+            mountGeneration:
+              hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
+            routeAdmissionBinding: hostedRouteAdmissionBinding,
+          });
+  } catch (error) {
+    logger.error(
+      'Hosted readiness diagnostic stage=lifecycle_composition outcome=failed code=unavailable'
+    );
+    throw error;
+  }
+  logger.error(
+    `Hosted readiness diagnostic stage=lifecycle_composition outcome=${hostedLifecycleCommands === null ? 'skipped' : 'succeeded'} code=${hostedLifecycleCommands === null ? 'unavailable' : 'composition_created'}`
+  );
   hostedOperatorProduction = await createHostedApprovalProductionCompositionFromEnvironment(
     hostedBootstrapEnvironment,
     {
@@ -483,8 +490,6 @@ async function start(): Promise<void> {
                 fatalFailStop,
                 runtimeIdentityAvailable: hostedDiagnosticsRuntimeInstance !== null,
                 diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
-                // This catalog owns only approvals. A new approval generation must not
-                // revive the retired lifecycle/task/message lease or its readiness.
                 lifecycleOwnerAvailable: isReady(),
               }),
           },
@@ -655,7 +660,6 @@ async function start(): Promise<void> {
   logger.info(`Standalone server running at http://${HOST}:${port}`);
   logger.info('Open in your browser to view Claude Code sessions');
 }
-
 function closeHostedMutationAdmissions(): void {
   fatalFailStop = true;
   hostedOperatorProduction?.close();
@@ -668,7 +672,6 @@ function closeHostedMutationAdmissions(): void {
   hostedLifecycleCommands = null;
   hostedTeamConfiguration = null;
 }
-
 async function shutdown(requestedExitCode = 0): Promise<void> {
   standaloneRequestedExitCode = Math.max(
     standaloneRequestedExitCode,
@@ -676,7 +679,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
   );
   if (standaloneRequestedExitCode !== 0) process.exitCode = 1;
   if (shutdownPromise) return shutdownPromise;
-
   shutdownPromise = runStandaloneShutdownLifecycle(
     {
       stopHttpServer: async () => {
@@ -754,7 +756,6 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
     },
     standaloneRequestedExitCode
   );
-
   return shutdownPromise;
 }
 

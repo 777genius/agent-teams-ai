@@ -484,6 +484,113 @@ describe('HostedLifecycleOrchestratorReadiness', () => {
     readiness.close();
   });
 
+  it('emits each allowlisted readiness transition once across retries and owner loss', async () => {
+    const owner = fakeOwner();
+    const diagnostics: unknown[] = [];
+    owner.recoverOnAttempt(3);
+    const readiness = await HostedLifecycleOrchestratorReadiness.connect({
+      ...options(owner),
+      retryBackoffMs: [1],
+      diagnosticObserver: (diagnostic) => diagnostics.push(diagnostic),
+    });
+    await vi.waitFor(() => expect(readiness.isReady()).toBe(true));
+    owner.lose();
+    await vi.waitFor(() => expect(readiness.isReady()).toBe(false));
+
+    expect(diagnostics).toEqual([
+      { stage: 'socket_inspection', outcome: 'started' },
+      { stage: 'signed_handshake', outcome: 'started' },
+      { stage: 'owner_acquisition', outcome: 'failed', failure: 'acquisition_rejected' },
+      { stage: 'signed_handshake', outcome: 'succeeded' },
+      { stage: 'high_water_admission', outcome: 'started' },
+      { stage: 'high_water_admission', outcome: 'succeeded' },
+      { stage: 'owner_acquisition', outcome: 'succeeded' },
+      { stage: 'owner_loss', outcome: 'failed', failure: 'owner_connection_lost' },
+    ]);
+    expect(owner.requests).toHaveLength(3);
+    readiness.close();
+  });
+
+  it('deduplicates the exact allowlisted reason for persistent owner acquisition failure', async () => {
+    vi.useFakeTimers();
+    const inspectSocketIdentity = vi.fn(async () => {
+      throw Object.assign(new Error('private socket path must not escape'), { code: 'ENOENT' });
+    });
+    const diagnostics: unknown[] = [];
+    const readiness = await HostedLifecycleOrchestratorReadiness.connect({
+      ...options(fakeOwner()),
+      inspectSocketIdentity,
+      retryBackoffMs: [10],
+      diagnosticObserver: (diagnostic) => diagnostics.push(diagnostic),
+    });
+    await vi.advanceTimersByTimeAsync(30);
+
+    expect(readiness.isReady()).toBe(false);
+    expect(inspectSocketIdentity).toHaveBeenCalledTimes(4);
+    expect(diagnostics).toEqual([
+      { stage: 'socket_inspection', outcome: 'started' },
+      { stage: 'owner_acquisition', outcome: 'failed', failure: 'socket_not_found' },
+    ]);
+    expect(JSON.stringify(diagnostics)).not.toContain('private socket path');
+    readiness.close();
+  });
+
+  it('preserves and deduplicates connection refused across bounded acquisition retries', async () => {
+    vi.useFakeTimers();
+    const secret = 'private socket path and credential must stay redacted';
+    const connect = vi.fn(() => {
+      const socket = new EventEmitter() as EventEmitter & {
+        destroyed: boolean;
+        destroy: () => typeof socket;
+      };
+      socket.destroyed = false;
+      socket.destroy = () => {
+        socket.destroyed = true;
+        return socket;
+      };
+      queueMicrotask(() =>
+        socket.emit('error', Object.assign(new Error(secret), { code: 'ECONNREFUSED' }))
+      );
+      return socket as unknown as Socket;
+    });
+    const diagnostics: unknown[] = [];
+    const readiness = await HostedLifecycleOrchestratorReadiness.connect({
+      ...options(fakeOwner()),
+      connect,
+      retryBackoffMs: [10],
+      diagnosticObserver: (diagnostic) => diagnostics.push(diagnostic),
+    });
+    await vi.advanceTimersByTimeAsync(30);
+
+    expect(readiness.isReady()).toBe(false);
+    expect(connect).toHaveBeenCalledTimes(4);
+    expect(diagnostics).toContainEqual({
+      stage: 'owner_acquisition',
+      outcome: 'failed',
+      failure: 'connection_refused',
+    });
+    expect(
+      diagnostics.filter(
+        (diagnostic) =>
+          (diagnostic as { failure?: unknown }).failure === 'connection_refused'
+      )
+    ).toHaveLength(1);
+    expect(JSON.stringify(diagnostics)).not.toContain(secret);
+    readiness.close();
+  });
+
+  it('does not let a diagnostic observer change admission behavior', async () => {
+    const owner = fakeOwner();
+    const readiness = await HostedLifecycleOrchestratorReadiness.connect({
+      ...options(owner),
+      diagnosticObserver: () => {
+        throw new Error('diagnostic sink unavailable');
+      },
+    });
+    expect(readiness.isReady()).toBe(true);
+    readiness.close();
+  });
+
   it('never attempts an in-process session replacement after authenticated owner loss', async () => {
     const owner = fakeOwner();
     const onOwnerLoss = vi.fn();

@@ -2,17 +2,15 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import { lstat } from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { isAbsolute, normalize, resolve } from 'node:path';
-
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only hosted lifecycle wire parser.
 import { parseStrictOrchestratorSignedJsonFrame } from '@features/team-lifecycle/main/hosted';
-
+import { createLogger } from '@shared/utils/logger';
 import {
   advanceHostedLifecycleOwnerHighWater,
   HostedLifecycleOwnerBindingConsumedError,
   type HostedLifecycleOwnerHighWaterTestHooks,
 } from './hostedLifecycleOwnerHighWater';
 import { HOSTED_LIFECYCLE_OWNER_GENERATION_LIMIT } from './hostedLifecycleOwnerHighWaterBinding';
-
 const HANDSHAKE_SCHEMA_VERSION = 2;
 const HANDSHAKE_CAPABILITY = 'hosted-lifecycle-command';
 const MAXIMUM_HANDSHAKE_BYTES = 4_096;
@@ -23,23 +21,63 @@ const OWNER_AUTHORITY_PATTERN = /^owner-authority_[A-Za-z0-9][A-Za-z0-9._-]{7,12
 const OWNER_SESSION_PATTERN = /^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
 const OWNER_PROOF_KEY_PATTERN = /^[0-9a-f]{64}$/;
 const OWNER_PROOF_DOMAIN = 'agent-teams.hosted-lifecycle.owner-proof/v1';
-
-/**
- * A consumed or replayed classification means this exact authenticated binding
- * can never complete an admission again (its markers are durably committed),
- * so retrying it only livelocks; the launcher must issue a fresh binding.
- */
+const readinessLogger = createLogger('HostedLifecycleReadiness');
+type ReadinessDiagnosticStage =
+  | 'socket_inspection'
+  | 'signed_handshake'
+  | 'high_water_admission'
+  | 'owner_acquisition'
+  | 'owner_loss';
+export type HostedLifecycleReadinessFailure =
+  | 'socket_not_found'
+  | 'socket_access_denied'
+  | 'connection_refused'
+  | 'handshake_timeout'
+  | 'acquisition_rejected'
+  | 'high_water_rejected'
+  | 'owner_connection_lost';
+export type HostedLifecycleReadinessDiagnostic = Readonly<{
+  stage: ReadinessDiagnosticStage;
+  outcome: 'started' | 'succeeded' | 'failed';
+  failure?: HostedLifecycleReadinessFailure;
+}>;
+function createDiagnosticObserver(observer?: (value: HostedLifecycleReadinessDiagnostic) => void) {
+  const seen = new Set<string>();
+  return (value: HostedLifecycleReadinessDiagnostic): void => {
+    if (observer === undefined && process.env.VITEST) return;
+    const key = `${value.stage}:${value.outcome}:${value.failure ?? 'none'}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    try {
+      (
+        observer ??
+        ((entry) =>
+          readinessLogger.error(
+            `Hosted readiness diagnostic stage=${entry.stage} outcome=${entry.outcome} code=${entry.failure ?? 'none'}`
+          ))
+      )(value);
+    } catch {
+      return;
+    }
+  };
+}
+function classifyAcquisitionFailure(error: unknown): HostedLifecycleReadinessFailure {
+  const code = isRecord(error) ? error.code : undefined;
+  if (code === 'ENOENT') return 'socket_not_found';
+  if (code === 'EACCES' || code === 'EPERM') return 'socket_access_denied';
+  if (code === 'ECONNREFUSED') return 'connection_refused';
+  const message = error instanceof Error ? error.message : '';
+  return message.endsWith('handshake-timeout') ? 'handshake_timeout' : 'acquisition_rejected';
+}
 function isSpentOwnerBindingError(error: unknown): boolean {
   return (
     error instanceof HostedLifecycleOwnerBindingConsumedError ||
     (error instanceof Error && error.message === 'hosted-lifecycle-orchestrator-session-replayed')
   );
 }
-
 export type OrchestratorLifecycleOwnerProofKey = string & {
   readonly __brand: 'OrchestratorLifecycleOwnerProofKey';
 };
-
 export interface OrchestratorSocketIdentity {
   readonly device: string;
   readonly inode: string;
@@ -47,14 +85,12 @@ export interface OrchestratorSocketIdentity {
   readonly gid: number;
   readonly mode: number;
 }
-
 export interface OrchestratorLifecycleOwnerBinding {
   readonly ownerAuthority: string;
   readonly ownerGeneration: number;
   readonly ownerSessionId: string;
   readonly socketIdentity: OrchestratorSocketIdentity;
 }
-
 export interface OrchestratorLifecycleBootstrapBinding {
   readonly deploymentId: string;
   readonly bootId: string;
@@ -64,11 +100,9 @@ export interface OrchestratorLifecycleBootstrapBinding {
   readonly ownerArtifactDigest: string;
   readonly proofKeyId: string;
 }
-
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
-
 function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string[]): boolean {
   const actual = Reflect.ownKeys(value);
   return (
@@ -77,7 +111,6 @@ function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string
     keys.every((key) => Object.hasOwn(value, key))
   );
 }
-
 function parseSocketIdentity(value: unknown): OrchestratorSocketIdentity {
   if (
     !isRecord(value) ||
@@ -104,7 +137,6 @@ function parseSocketIdentity(value: unknown): OrchestratorSocketIdentity {
     mode: value.mode as number,
   });
 }
-
 export function parseOrchestratorLifecycleOwnerBinding(
   value: unknown
 ): OrchestratorLifecycleOwnerBinding {
@@ -133,7 +165,6 @@ export function parseOrchestratorLifecycleOwnerBinding(
     socketIdentity: parseSocketIdentity(value.socketIdentity),
   });
 }
-
 export function parseOrchestratorLifecycleOwnerProofKey(
   value: unknown
 ): OrchestratorLifecycleOwnerProofKey {
@@ -142,7 +173,6 @@ export function parseOrchestratorLifecycleOwnerProofKey(
   }
   return value as OrchestratorLifecycleOwnerProofKey;
 }
-
 export async function inspectOrchestratorLifecycleSocketIdentity(
   path: string
 ): Promise<OrchestratorSocketIdentity> {
@@ -158,7 +188,6 @@ export async function inspectOrchestratorLifecycleSocketIdentity(
     mode: Number(stat.mode & 0o777n),
   });
 }
-
 function createOrchestratorLifecycleReadinessProof(
   key: OrchestratorLifecycleOwnerProofKey,
   envelope: Readonly<Record<string, unknown>> | string
@@ -168,7 +197,6 @@ function createOrchestratorLifecycleReadinessProof(
     .update(`${OWNER_PROOF_DOMAIN}\u0000readiness\u0000${serializedEnvelope}`)
     .digest('hex');
 }
-
 export function createOrchestratorLifecycleReadinessRequestProof(
   key: OrchestratorLifecycleOwnerProofKey,
   envelope: Readonly<Record<string, unknown>> | string
@@ -178,7 +206,6 @@ export function createOrchestratorLifecycleReadinessRequestProof(
     .update(`${OWNER_PROOF_DOMAIN}\u0000readiness-request\u0000${serializedEnvelope}`)
     .digest('hex');
 }
-
 function ownerProofMatches(expected: string, actual: unknown): boolean {
   return (
     typeof actual === 'string' &&
@@ -186,7 +213,6 @@ function ownerProofMatches(expected: string, actual: unknown): boolean {
     timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(actual, 'hex'))
   );
 }
-
 export function sameOrchestratorLifecycleOwnerBinding(
   left: OrchestratorLifecycleOwnerBinding,
   right: OrchestratorLifecycleOwnerBinding
@@ -202,7 +228,6 @@ export function sameOrchestratorLifecycleOwnerBinding(
     left.socketIdentity.mode === right.socketIdentity.mode
   );
 }
-
 export function sameOrchestratorSocketIdentity(
   left: OrchestratorSocketIdentity,
   right: OrchestratorSocketIdentity
@@ -215,7 +240,6 @@ export function sameOrchestratorSocketIdentity(
     left.mode === right.mode
   );
 }
-
 export interface HostedLifecycleOrchestratorReadinessOptions {
   readonly socketPath: string;
   readonly expectedUid: number;
@@ -236,13 +260,11 @@ export interface HostedLifecycleOrchestratorReadinessOptions {
   readonly expectedOwnerBinding: OrchestratorLifecycleOwnerBinding;
   readonly bootstrapBinding: OrchestratorLifecycleBootstrapBinding;
   readonly onOwnerAcquired?: (binding: OrchestratorLifecycleOwnerBinding) => void;
-  /** Test seam only; production verifies uid/gid/mode and descriptor identity with lstat. */
   readonly inspectSocketIdentity?: (path: string) => Promise<OrchestratorSocketIdentity>;
-  /** Test seam only; production connects to the configured Unix socket. */
   readonly connect?: (options: { readonly path: string }) => Socket;
   readonly generateChallenge?: () => string;
+  readonly diagnosticObserver?: (diagnostic: HostedLifecycleReadinessDiagnostic) => void;
 }
-
 interface ValidatedReadinessOptions {
   readonly socketPath: string;
   readonly expectedUid: number;
@@ -261,22 +283,20 @@ interface ValidatedReadinessOptions {
   readonly inspectSocketIdentity: (path: string) => Promise<OrchestratorSocketIdentity>;
   readonly connect: (options: { readonly path: string }) => Socket;
   readonly generateChallenge: () => string;
+  readonly diagnosticObserver: (diagnostic: HostedLifecycleReadinessDiagnostic) => void;
 }
-
 function validateIdentityPart(value: number, name: string): number {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new TypeError(`hosted-lifecycle-orchestrator-${name}-invalid`);
   }
   return value;
 }
-
 function validateMode(value: number): number {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0o777) {
     throw new TypeError('hosted-lifecycle-orchestrator-mode-invalid');
   }
   return value;
 }
-
 function validateSocketPath(value: string): string {
   if (
     value.length === 0 ||
@@ -289,14 +309,12 @@ function validateSocketPath(value: string): string {
   }
   return value;
 }
-
 function validateBound(value: number, name: string): number {
   if (!Number.isSafeInteger(value) || value < 1 || value > 60_000) {
     throw new TypeError(`hosted-lifecycle-orchestrator-${name}-invalid`);
   }
   return value;
 }
-
 function validateOptions(
   options: HostedLifecycleOrchestratorReadinessOptions
 ): ValidatedReadinessOptions {
@@ -343,6 +361,7 @@ function validateOptions(
       ((socketPath: string) => inspectTrustedSocket(socketPath, options)),
     connect: options.connect ?? createConnection,
     generateChallenge: options.generateChallenge ?? (() => randomBytes(32).toString('hex')),
+    diagnosticObserver: createDiagnosticObserver(options.diagnosticObserver),
     ...(options.onOwnerAcquired === undefined ? {} : { onOwnerAcquired: options.onOwnerAcquired }),
   } satisfies Omit<ValidatedReadinessOptions, 'advanceOwnerHighWater'>;
   return Object.freeze({
@@ -363,7 +382,6 @@ function validateOptions(
         )),
   });
 }
-
 function parseBootstrapBinding(
   value: OrchestratorLifecycleBootstrapBinding,
   trustAnchor: OrchestratorLifecycleOwnerProofKey
@@ -394,7 +412,6 @@ function parseBootstrapBinding(
   }
   return Object.freeze({ ...value }) as OrchestratorLifecycleBootstrapBinding;
 }
-
 function validateHighWaterPath(value: string): string {
   if (
     typeof value !== 'string' ||
@@ -407,7 +424,6 @@ function validateHighWaterPath(value: string): string {
   }
   return resolve(value);
 }
-
 async function inspectTrustedSocket(
   socketPath: string,
   options: Pick<ValidatedReadinessOptions, 'expectedUid' | 'expectedGid' | 'expectedMode'>
@@ -430,7 +446,6 @@ async function inspectTrustedSocket(
     mode: Number(stat.mode & 0o777n),
   });
 }
-
 function parseReadyResponse(
   value: unknown,
   serializedUnsignedEnvelope: string,
@@ -477,7 +492,6 @@ function parseReadyResponse(
   }
   return binding;
 }
-
 async function connectOnce(options: ValidatedReadinessOptions): Promise<
   Readonly<{
     socket: Socket;
@@ -486,6 +500,7 @@ async function connectOnce(options: ValidatedReadinessOptions): Promise<
     dispose: () => void;
   }>
 > {
+  options.diagnosticObserver({ stage: 'socket_inspection', outcome: 'started' });
   const socketIdentity = await options.inspectSocketIdentity(options.socketPath);
   if (
     !sameOrchestratorSocketIdentity(socketIdentity, options.expectedOwnerBinding.socketIdentity)
@@ -497,6 +512,7 @@ async function connectOnce(options: ValidatedReadinessOptions): Promise<
     throw new Error('hosted-lifecycle-orchestrator-challenge-invalid');
   }
   const socket = options.connect({ path: options.socketPath });
+  options.diagnosticObserver({ stage: 'signed_handshake', outcome: 'started' });
   let invalidated = false;
   let handshakeAccepted = false;
   let onLeaseLoss: (() => void) | null = null;
@@ -534,8 +550,13 @@ async function connectOnce(options: ValidatedReadinessOptions): Promise<
         socket.destroy();
         notify?.();
       };
-      const onError = (): void =>
+      const onError = (error: Error): void => {
+        if (!handshakeAccepted) {
+          finish(error);
+          return;
+        }
         invalidateTransport('hosted-lifecycle-orchestrator-handshake-unavailable');
+      };
       const onClose = (): void =>
         invalidateTransport('hosted-lifecycle-orchestrator-handshake-incomplete');
       const onEnd = (): void =>
@@ -602,6 +623,7 @@ async function connectOnce(options: ValidatedReadinessOptions): Promise<
         );
       });
     });
+    options.diagnosticObserver({ stage: 'signed_handshake', outcome: 'succeeded' });
     const currentIdentity = await options.inspectSocketIdentity(options.socketPath);
     if (!sameOrchestratorSocketIdentity(currentIdentity, lease.socketIdentity)) {
       throw new Error('hosted-lifecycle-orchestrator-socket-identity-changed');
@@ -645,9 +667,7 @@ export class HostedLifecycleOrchestratorReadiness {
   private retryAttempt = 0;
   private closed = false;
   private admissionConsumed = false;
-
   private constructor(private readonly options: ValidatedReadinessOptions) {}
-
   static async connect(
     options: HostedLifecycleOrchestratorReadinessOptions,
     onCreated?: (readiness: HostedLifecycleOrchestratorReadiness) => void
@@ -670,19 +690,15 @@ export class HostedLifecycleOrchestratorReadiness {
     }
     return readiness;
   }
-
   isReady(): boolean {
     return !this.closed && this.binding !== null && this.socket?.destroyed === false;
   }
-
   currentBinding(): OrchestratorLifecycleOwnerBinding | null {
     return this.isReady() ? this.binding : null;
   }
-
   invalidate(): void {
     this.loseOwner();
   }
-
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -692,27 +708,41 @@ export class HostedLifecycleOrchestratorReadiness {
     this.socket?.destroy();
     this.socket = null;
   }
-
   private async acquire(): Promise<void> {
     if (this.admissionConsumed) {
       throw new Error('hosted-lifecycle-orchestrator-fresh-bootstrap-required');
     }
-    const acquired = await connectOnce(this.options);
+    let acquired: Awaited<ReturnType<typeof connectOnce>>;
+    try {
+      acquired = await connectOnce(this.options);
+    } catch (error) {
+      this.options.diagnosticObserver({
+        stage: 'owner_acquisition',
+        outcome: 'failed',
+        failure: classifyAcquisitionFailure(error),
+      });
+      throw error;
+    }
     if (this.closed) {
       acquired.dispose();
       acquired.socket.destroy();
       return;
     }
     try {
+      this.options.diagnosticObserver({ stage: 'high_water_admission', outcome: 'started' });
       await this.options.advanceOwnerHighWater(acquired.binding);
+      this.options.diagnosticObserver({ stage: 'high_water_admission', outcome: 'succeeded' });
     } catch (error) {
+      this.options.diagnosticObserver({
+        stage: 'high_water_admission',
+        outcome: 'failed',
+        failure: 'high_water_rejected',
+      });
       acquired.dispose();
       acquired.socket.destroy();
       throw error;
     }
-    // Cleanup can run while the durable high-water write is awaiting fsync. The transport is not
-    // published on `this` until that write completes, so close() cannot see it; recheck here and
-    // dispose the locally held lease before any binding can escape a closed readiness instance.
+    // Recheck after the durable write because close() cannot see this unpublished transport.
     if (this.closed) {
       acquired.dispose();
       acquired.socket.destroy();
@@ -727,20 +757,24 @@ export class HostedLifecycleOrchestratorReadiness {
       this.loseOwner();
       throw new Error('hosted-lifecycle-orchestrator-handshake-unavailable');
     }
+    this.options.diagnosticObserver({ stage: 'owner_acquisition', outcome: 'succeeded' });
     this.options.onOwnerAcquired?.(acquired.binding);
   }
-
   private loseOwner(): void {
     if (this.closed || this.binding === null) return;
     this.closed = true;
     this.binding = null;
     this.socket?.destroy();
     this.socket = null;
+    this.options.diagnosticObserver({
+      stage: 'owner_loss',
+      outcome: 'failed',
+      failure: 'owner_connection_lost',
+    });
     this.options.onOwnerLoss();
     // A live owner loss consumes the process-local authenticated handoff. Reacquisition requires a
     // complete controller restart with a fresh launcher transaction and durable successor binding.
   }
-
   private scheduleRetry(): void {
     if (this.closed || this.admissionConsumed || this.retryTimer !== null) return;
     const index = Math.min(this.retryAttempt, this.options.retryBackoffMs.length - 1);
@@ -758,7 +792,6 @@ export class HostedLifecycleOrchestratorReadiness {
     }, delay);
     this.retryTimer.unref?.();
   }
-
   private failStop(): void {
     if (this.closed) return;
     this.close();

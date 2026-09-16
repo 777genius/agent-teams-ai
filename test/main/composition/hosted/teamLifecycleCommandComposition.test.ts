@@ -650,6 +650,11 @@ describe('team lifecycle command hosted composition', () => {
     expect(optionalRuntimeGate).not.toContain('readHostedLifecycleOrchestratorTrustAnchor');
     expect(source).toContain('readHostedLifecycleOrchestratorTrustAnchor(');
     expect(source).toContain('hostedBootstrapEnvironment');
+    expect(source).toContain('stage=startup_before_http outcome=started code=none');
+    expect(source).toContain('stage=lifecycle_composition outcome=started code=none');
+    expect(source).toContain('stage=lifecycle_composition outcome=failed code=unavailable');
+    expect(source).toContain("'composition_created'");
+    expect(source).not.toContain("'ready'}`");
     expect(compositionCall).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(compositionCall).toContain('restoreGeneration: hostedAccessFeature.restoreGeneration');
     expect(compositionCall).toContain('orchestratorTrustAnchor: lifecycleTrustAnchor');

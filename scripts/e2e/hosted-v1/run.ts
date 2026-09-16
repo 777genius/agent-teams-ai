@@ -130,6 +130,113 @@ export interface HostedV1ProbeDeadlineBudget {
   readonly clipRetryDelayMs: (requestedDelayMs: number) => number;
 }
 
+export interface HostedV1FailedRunHttpProbe {
+  readonly schemaVersion: 1;
+  readonly reachable: boolean;
+  readonly errorCode:
+    | 'ECONNREFUSED'
+    | 'ETIMEDOUT'
+    | 'EHOSTUNREACH'
+    | 'ENETUNREACH'
+    | 'ABORT_ERR'
+    | 'probe_failed'
+    | null;
+  readonly httpStatus: number | null;
+  readonly readinessHeader: 'ready' | 'starting' | '[REDACTED]' | null;
+}
+
+function hostedV1HttpProbeErrorCode(
+  error: unknown
+): Exclude<HostedV1FailedRunHttpProbe['errorCode'], null> {
+  let candidate: unknown = error;
+  for (
+    let depth = 0;
+    depth < 4 && typeof candidate === 'object' && candidate !== null;
+    depth += 1
+  ) {
+    const code = Reflect.get(candidate, 'code');
+    if (
+      ['ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'ABORT_ERR'].includes(
+        String(code)
+      )
+    ) {
+      return code as Exclude<HostedV1FailedRunHttpProbe['errorCode'], 'probe_failed' | null>;
+    }
+    if (Reflect.get(candidate, 'name') === 'AbortError') return 'ABORT_ERR';
+    candidate = Reflect.get(candidate, 'cause');
+  }
+  return 'probe_failed';
+}
+
+/** Captures only allowlisted health metadata; response bodies and error messages are discarded. */
+export async function captureHostedV1FailedRunHttpProbe(input: {
+  readonly origin: string;
+  readonly timeoutMs?: number;
+  readonly fetch?: typeof globalThis.fetch;
+}): Promise<HostedV1FailedRunHttpProbe> {
+  const timeoutMs = input.timeoutMs ?? 1_500;
+  const origin = new URL(input.origin);
+  if (
+    origin.protocol !== 'http:' ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== '/' ||
+    origin.search ||
+    origin.hash ||
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > 5_000
+  ) {
+    throw new Error('hosted_e2e_failed_http_probe_input_invalid');
+  }
+  const controller = new AbortController();
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const response = await Promise.race([
+      (input.fetch ?? globalThis.fetch)(new URL('/api/auth/status', origin), {
+        credentials: 'omit',
+        method: 'GET',
+        redirect: 'error',
+        signal: controller.signal,
+      }),
+      new Promise<never>((_resolve, reject) => {
+        deadline = setTimeout(() => {
+          reject(Object.assign(new Error('probe deadline'), { code: 'ETIMEDOUT' }));
+          controller.abort();
+        }, timeoutMs);
+      }),
+    ]);
+    const rawHeader = response.headers.get('x-agent-teams-lifecycle-owner-readiness');
+    void response.body?.cancel().catch(() => undefined);
+    return Object.freeze({
+      schemaVersion: 1,
+      reachable: true,
+      errorCode: null,
+      httpStatus:
+        Number.isSafeInteger(response.status) && response.status >= 100 && response.status <= 599
+          ? response.status
+          : null,
+      readinessHeader:
+        rawHeader === 'ready' || rawHeader === 'starting'
+          ? rawHeader
+          : rawHeader === null
+            ? null
+            : '[REDACTED]',
+    });
+  } catch (error) {
+    return Object.freeze({
+      schemaVersion: 1,
+      reachable: false,
+      errorCode: hostedV1HttpProbeErrorCode(error),
+      httpStatus: null,
+      readinessHeader: null,
+    });
+  } finally {
+    if (deadline !== undefined) clearTimeout(deadline);
+    controller.abort();
+  }
+}
+
 function assertHostedV1ProbeDuration(value: number, name: string, allowZero: boolean): void {
   if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
     throw new Error(`hosted_e2e_probe_${name}_invalid`);
@@ -1383,6 +1490,35 @@ async function captureFailureEvidence(input: {
       2
     )
   );
+  try {
+    const appIp = input.composeEnv.E2E_APP_IP;
+    if (typeof appIp !== 'string' || appIp.length === 0) {
+      throw new Error('hosted_e2e_failed_http_probe_address_missing');
+    }
+    await writeEvidence(
+      join(scenarioDirectory, 'controller-http-probe.json'),
+      JSON.stringify(
+        await captureHostedV1FailedRunHttpProbe({ origin: `http://${appIp}:3456` }),
+        null,
+        2
+      )
+    );
+  } catch {
+    await writeEvidence(
+      join(scenarioDirectory, 'controller-http-probe.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          reachable: false,
+          errorCode: 'probe_failed',
+          httpStatus: null,
+          readinessHeader: null,
+        },
+        null,
+        2
+      )
+    );
+  }
   await writeEvidence(
     join(scenarioDirectory, 'project-scanner.json'),
     JSON.stringify(input.scannerEvidence, null, 2)
