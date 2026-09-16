@@ -8,14 +8,17 @@ interface SchemaObject {
   readonly sql?: unknown;
 }
 
-/** Validate the one explicit v29 identity change (retained in v30) before the frozen v1 digest.
+/** Validate the one explicit v29 identity change (retained in v30 and v31) before the frozen v1 digest.
  * This only normalizes an in-memory schema projection; it never executes SQL or repairs storage.
  * The caller must still check the complete object count/digest and identity graph.
  */
 export function normalizeCurrentTeamIdentitySchema(
   objects: readonly SchemaObject[], version: unknown
 ): readonly SchemaObject[] {
-  if (version !== 29 && version !== 30) return objects;
+  if (typeof version === 'number' && version > 31) {
+    throw new Error('canonical-team-identity-schema-version-unsupported');
+  }
+  if (version !== 29 && version !== 30 && version !== 31) return objects;
   const name = 'trg_team_identity_transition';
   const current = objects.filter((object) => object.name === name);
   if (current.length !== 1 || current[0]?.type !== 'trigger' ||
