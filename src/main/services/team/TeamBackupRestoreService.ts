@@ -88,6 +88,47 @@ export class TeamBackupRestoreService {
     return this.restore(teamName, true);
   }
 
+  /**
+   * Fill missing generic team files from manifest.fileStats without walking the
+   * backup tree or reading existing live files. Caller holds the identity fence
+   * and team mutex. Work-sync paths stay on the pending / missing-config restore
+   * path. Launch publication uses the same stop fence as restoreGenericPartial.
+   * Corrupt JSON is repaired only by the non-quiet partial restore.
+   */
+  async restoreMissingGenericFromManifest(teamName: string): Promise<boolean> {
+    const manifest = await this.ports.loadManifest(teamName);
+    if (!manifest || manifest.status !== 'active' || manifest.workSyncRestorePending) return false;
+    const sourceConfigResult = await this.readSourceConfig(
+      path.join(getTeamsBasePath(), teamName, 'config.json')
+    );
+    if (sourceConfigResult.status !== 'valid') return false;
+    if (this.checkIdentityFromConfig(sourceConfigResult.parsed, manifest) !== 'match') return false;
+    try {
+      await fs.promises.lstat(this.getDraftDeletionIdentityPath(teamName));
+      return false;
+    } catch (error) {
+      if (!isEnoent(error)) throw error;
+    }
+    const genericFiles: string[] = [];
+    for (const relPath of Object.keys(manifest.fileStats)) {
+      try {
+        if (isMemberWorkSyncBackupPath(relPath)) continue;
+      } catch {
+        continue;
+      }
+      genericFiles.push(relPath);
+    }
+    return (
+      (await this.restoreGenericPartial(
+        teamName,
+        manifest,
+        sourceConfigResult,
+        genericFiles,
+        true
+      )) > 0
+    );
+  }
+
   private async restore(teamName: string, genericOnly: boolean): Promise<boolean> {
     const manifest = await this.ports.loadManifest(teamName);
     if (!manifest) return false;
@@ -262,7 +303,8 @@ export class TeamBackupRestoreService {
     teamName: string,
     manifest: BackupManifest,
     sourceConfig: Extract<SourceConfigObservation, { status: 'valid' }>,
-    genericFiles?: readonly string[]
+    genericFiles?: readonly string[],
+    quiet = false
   ): Promise<number> {
     const backupDir = this.ports.getBackupDir(teamName);
     const backupFiles = genericFiles ?? (await this.ports.enumerateBackupFiles(teamName));
@@ -291,32 +333,46 @@ export class TeamBackupRestoreService {
               mtimeMs: number;
             };
         try {
-          destinationObservation = await this.readOptionalFileObservation(dest);
-          if (dest.endsWith('.json')) {
-            if (
-              destinationObservation.status === 'missing' ||
-              !isValidJson(destinationObservation.content.toString('utf8'))
-            ) {
-              needsRestore = true; // corrupted JSON
-            } else {
-              skipReason = 'valid existing file';
+          if (quiet) {
+            try {
+              await fs.promises.lstat(dest);
+              continue;
+            } catch (error) {
+              if (!isEnoent(error)) continue;
+              destinationObservation = { status: 'missing' };
+              needsRestore = true;
             }
           } else {
-            // Binary file — just check existence
-            needsRestore = destinationObservation.status === 'missing';
-            if (!needsRestore) skipReason = 'existing binary file';
+            destinationObservation = await this.readOptionalFileObservation(dest);
+            if (dest.endsWith('.json')) {
+              if (
+                destinationObservation.status === 'missing' ||
+                !isValidJson(destinationObservation.content.toString('utf8'))
+              ) {
+                needsRestore = true; // corrupted JSON
+              } else {
+                skipReason = 'valid existing file';
+              }
+            } else {
+              // Binary file — just check existence
+              needsRestore = destinationObservation.status === 'missing';
+              if (!needsRestore) skipReason = 'existing binary file';
+            }
           }
         } catch {
           continue;
         }
 
         if (!needsRestore) {
-          logger.info(`[Backup] Skip restore ${teamName}/${relPath}: ${skipReason}`);
+          if (!quiet) {
+            logger.info(`[Backup] Skip restore ${teamName}/${relPath}: ${skipReason}`);
+          }
           continue;
         }
 
         const src = path.join(backupDir, relPath);
         const content = await fs.promises.readFile(src);
+        await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         if (
           await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, content, () =>
             this.commitRestoredFile(
@@ -330,7 +386,7 @@ export class TeamBackupRestoreService {
           )
         ) {
           count++;
-          logger.info(`[Backup] Partial restored ${teamName}/${relPath}`);
+          if (!quiet) logger.info(`[Backup] Partial restored ${teamName}/${relPath}`);
         }
       } catch {
         // skip individual file errors

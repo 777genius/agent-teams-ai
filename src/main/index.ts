@@ -2849,10 +2849,19 @@ async function initializeServices(): Promise<void> {
     },
     logger: memberWorkSyncLogger,
   });
+  publishStartupStatus({
+    phase: 'team-backups',
+    message: 'Checking team backups...',
+  });
   memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
     backup: initializedBackupOwner,
     prepared: preparedMemberWorkSyncFeature,
     stallObservation: memberWorkSyncStallObservation,
+    onRestoreProgress: ({ current, total }) => {
+      publishStartupStatus({
+        message: `Checking team backups (${current} of ${total})...`,
+      });
+    },
   });
   bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
   scheduleStartupTask(() => {

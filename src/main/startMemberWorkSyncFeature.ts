@@ -210,9 +210,10 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   backup: TeamBackupService;
   prepared: MemberWorkSyncFeatureFacade;
   stallObservation: { attach(feature: MemberWorkSyncFeatureFacade): void };
+  onRestoreProgress?: (progress: { current: number; total: number }) => void;
 }): Promise<MemberWorkSyncFeatureFacade | null> {
   try {
-    await input.backup.initialize();
+    await input.backup.initialize(input.onRestoreProgress);
   } catch (error) {
     startupLogger.warn(`[Init] Team backup initialization failed: ${String(error)}`);
     await input.prepared.dispose();

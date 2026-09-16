@@ -20,6 +20,32 @@ interface RegistryEntry {
   status: 'active' | 'deleted_by_user';
 }
 
+type LiveConfigState = 'ready' | 'needs_restore' | 'foreign';
+export interface TeamBackupRestoreProgress {
+  current: number;
+  total: number;
+}
+const RESTORE_CONCURRENCY = 8;
+
+async function runBounded<T>(
+  items: readonly T[],
+  concurrency: number,
+  run: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return;
+  let next = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (next < items.length) {
+        const index = next;
+        next += 1;
+        await run(items[index]);
+      }
+    })
+  );
+}
+
 interface RestorePorts {
   registry(): Record<string, RegistryEntry>;
   getBackupDir(teamName: string): string;
@@ -30,6 +56,7 @@ interface RestorePorts {
   withTeamMutex(teamName: string, operation: () => Promise<void>): Promise<void>;
   restoreLegacy(teamName: string): Promise<boolean>;
   restoreGeneric(teamName: string): Promise<boolean>;
+  restoreGenericHoles(teamName: string): Promise<boolean>;
 }
 
 /** Backup-owner orchestration; no feature facade or admission re-entry under locks. */
@@ -81,12 +108,36 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     }
   }
 
-  async restoreIfNeeded(): Promise<string[]> {
+  async restoreIfNeeded(
+    onProgress?: (progress: TeamBackupRestoreProgress) => void
+  ): Promise<string[]> {
     const restored: string[] = [];
-    for (const [teamName, entry] of Object.entries(this.ports.registry())) {
-      if (entry.status !== 'active') continue;
+    const active = Object.entries(this.ports.registry()).filter(
+      ([, entry]) => entry.status === 'active'
+    );
+    let completed = 0;
+    const noteProgress = (): void => {
+      completed += 1;
+      try {
+        onProgress?.({ current: completed, total: active.length });
+      } catch (error) {
+        logger.warn(`[Backup] restore progress callback failed: ${String(error)}`);
+      }
+    };
+    await runBounded(active, RESTORE_CONCURRENCY, async ([teamName, entry]) => {
       try {
         if (this.binding) {
+          if (await this.isFenced(teamName, entry.identityId)) return;
+          let skipped = false;
+          await this.ports.withIdentityFence(teamName, () =>
+            this.ports.withTeamMutex(teamName, async () => {
+              if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
+                await this.ports.restoreGenericHoles(teamName);
+                skipped = true;
+              }
+            })
+          );
+          if (skipped) return;
           if (await this.restoreConfigured(teamName, entry.identityId, this.binding))
             restored.push(teamName);
         } else {
@@ -94,7 +145,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
             path.join(this.ports.getBackupDir(teamName), 'manifest.json'),
             teamName
           );
-          if (await this.isFenced(teamName, manifest?.identityId ?? entry.identityId)) continue;
+          if (await this.isFenced(teamName, manifest?.identityId ?? entry.identityId)) return;
           if (
             await this.ports.withIdentityFence(teamName, () => this.ports.restoreLegacy(teamName))
           ) {
@@ -103,9 +154,26 @@ export class TeamBackupWorkSyncRestoreCoordinator {
         }
       } catch (error) {
         logger.warn(`[Backup] restore failed for ${teamName}: ${String(error)}`);
+      } finally {
+        noteProgress();
       }
-    }
+    });
     return restored;
+  }
+
+  private async canSkipConfiguredRestore(teamName: string, identityId: string): Promise<boolean> {
+    let live: LiveConfigState;
+    try {
+      live = await this.inspectLiveConfig(teamName, identityId);
+    } catch {
+      return false;
+    }
+    if (live !== 'ready') return false;
+    const manifest = await readBackupManifestStrict(
+      path.join(this.ports.getBackupDir(teamName), 'manifest.json'),
+      teamName
+    );
+    return !manifest?.workSyncRestorePending;
   }
 
   private async isFenced(teamName: string, identityId: string): Promise<boolean> {
@@ -170,14 +238,15 @@ export class TeamBackupWorkSyncRestoreCoordinator {
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
           }
-          const identityMatches = await this.verifyConfigIdentity(
-            teamName,
-            expectedIdentity,
-            false
-          );
-          if (!identityMatches) {
+          const live = await this.inspectLiveConfig(teamName, expectedIdentity);
+          if (live === 'foreign') {
             if (manifest.workSyncRestorePending)
               throw new Error('Stale backup has protected work-sync restore pending');
+            applicable = false;
+            return { outcome: 'not_applicable' as const };
+          }
+          if (live === 'ready' && !manifest.workSyncRestorePending) {
+            await this.ports.restoreGenericHoles(teamName);
             applicable = false;
             return { outcome: 'not_applicable' as const };
           }
@@ -191,7 +260,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
             restoreGeneric: async () => {
               await this.ports.restoreGeneric(teamName);
               // False can mean no generic files needed restoration, or refused publication.
-              await this.verifyConfigIdentity(teamName, expectedIdentity, true);
+              await this.verifyPublishedConfig(teamName, expectedIdentity);
             },
             importAndVerify: () => participant.importAndVerify(),
             invalidate: async () => {
@@ -211,33 +280,35 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     return applicable;
   }
 
-  private async verifyConfigIdentity(
-    teamName: string,
-    identityId: string,
-    required: boolean
-  ): Promise<boolean> {
+  private async inspectLiveConfig(teamName: string, identityId: string): Promise<LiveConfigState> {
     let raw: string;
     try {
       raw = await fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');
     } catch (error) {
-      if (!required && (error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'needs_restore';
       throw error;
     }
+    if (!isValidConfig(raw)) return 'needs_restore';
+    const config = JSON.parse(raw) as Record<string, unknown>;
+    if (config._backupIdentityId === identityId) return 'ready';
+    if (
+      typeof config._backupIdentityId === 'string' &&
+      config._backupIdentityId.length > 0 &&
+      config._backupIdentityId === config._backupIdentityId.trim()
+    ) {
+      return 'foreign';
+    }
+    throw new Error('Work-sync restore source config identity mismatch');
+  }
+
+  private async verifyPublishedConfig(teamName: string, identityId: string): Promise<void> {
+    const raw = await fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');
     if (!isValidConfig(raw)) {
-      if (!required) return true; // Generic restore may repair a corrupt config.
       throw new Error('Work-sync restore config publication was not verified');
     }
     const config = JSON.parse(raw) as Record<string, unknown>;
     if (config._backupIdentityId !== identityId) {
-      if (
-        !required &&
-        typeof config._backupIdentityId === 'string' &&
-        config._backupIdentityId.length > 0 &&
-        config._backupIdentityId === config._backupIdentityId.trim()
-      )
-        return false;
       throw new Error('Work-sync restore source config identity mismatch');
     }
-    return true;
   }
 }
