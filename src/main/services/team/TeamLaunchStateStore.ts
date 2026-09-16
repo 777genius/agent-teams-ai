@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { getDurablePathIdentity, isSameDurablePathIdentity } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -9,6 +8,16 @@ import * as path from 'path';
 import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
 import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
+import {
+  isSupportedLaunchStateDocument,
+  isSupportedLaunchSummaryDocument,
+  type JsonRecord,
+  LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS,
+  MAX_LAUNCH_STATE_BYTES,
+  mergeLaunchState,
+  readVersionedDocumentForMutation,
+  replaceKnownFields,
+} from './TeamLaunchStateDocumentPersistence';
 import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
@@ -23,9 +32,26 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
-const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
+
+/**
+ * Launch publication still has to fence directory replacement on filesystems
+ * that report no usable inode (notably some Windows filesystems). Keep this
+ * compatibility fallback local: other durable path operations require a
+ * positive inode to prove identity.
+ */
+function isSameLaunchDirectoryIdentity(
+  left: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>,
+  right: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
+): boolean {
+  return (
+    left.dev === right.dev &&
+    (left.ino > 0 && right.ino > 0
+      ? left.ino === right.ino
+      : left.birthtimeMs === right.birthtimeMs)
+  );
+}
 
 /** Capture before any caller queue/await; a later Stop revokes this request. */
 export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
@@ -292,11 +318,7 @@ export class TeamLaunchStateStore {
     const directoryIsCurrent = async (): Promise<boolean> => {
       const current = await fs.promises.stat(directory).catch(() => null);
       return (
-        current !== null &&
-        isSameDurablePathIdentity(
-          getDurablePathIdentity(current),
-          getDurablePathIdentity(directoryIdentity)
-        )
+        current !== null && isSameLaunchDirectoryIdentity(current, directoryIdentity)
       );
     };
     const beforeCommit = async (): Promise<void> => {
@@ -335,14 +357,37 @@ export class TeamLaunchStateStore {
     };
     if (options.isAuthorized?.() === false) return false;
     try {
+      const [existingState, existingSummary] = await Promise.all([
+        readVersionedDocumentForMutation(statePath, 2, teamName),
+        readVersionedDocumentForMutation(summaryPath, 1),
+      ]);
+      if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
+        throw new Error('Refusing to replace malformed launch state');
+      }
+      if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
+        throw new Error('Refusing to replace malformed launch summary');
+      }
+      const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
       await atomicWriteAsync(
         statePath,
-        `${JSON.stringify({ ...snapshot, publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(
+          { ...mergeLaunchState(existingState, snapshot), publicationRunId: options.runId },
+          null,
+          2
+        )}\n`,
         { beforeCommit }
       );
       await atomicWriteAsync(
         summaryPath,
-        `${JSON.stringify({ ...createPersistedLaunchSummaryProjection(snapshot), publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(
+          replaceKnownFields(
+            existingSummary,
+            { ...launchSummary, publicationRunId: options.runId } as unknown as JsonRecord,
+            LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
+          ),
+          null,
+          2
+        )}\n`,
         { beforeCommit }
       );
       if (beginsLaunch) {

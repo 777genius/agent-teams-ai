@@ -1,4 +1,7 @@
-import { assessMemberWorkSyncPhase2Readiness } from '../../core/domain';
+import {
+  assessMemberWorkSyncDeliveryReadiness,
+  assessMemberWorkSyncPhase2Readiness,
+} from '../../core/domain';
 
 import type { MemberWorkSyncStatusState, MemberWorkSyncTeamMetrics } from '../../contracts';
 import type { MetricsIndexFile } from './JsonMemberWorkSyncStore';
@@ -40,6 +43,10 @@ export function toMetrics(teamName: string, file: MetricsIndexFile): MemberWorkS
   };
   return {
     ...metrics,
+    deliveryReadiness: assessMemberWorkSyncDeliveryReadiness({
+      memberCount: metrics.memberCount,
+      recentEvents: metrics.recentEvents,
+    }),
     phase2Readiness: assessMemberWorkSyncPhase2Readiness({
       memberCount: metrics.memberCount,
       recentEvents: metrics.recentEvents,

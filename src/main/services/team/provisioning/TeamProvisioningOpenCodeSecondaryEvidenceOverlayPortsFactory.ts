@@ -1,4 +1,5 @@
 import {
+  getOpenCodeRuntimeLaneLifecycleLockTargetPath,
   getOpenCodeRuntimeRunTombstonesPath,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
@@ -32,8 +33,6 @@ export function createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts(
     readCommittedOpenCodeBootstrapSessionEvidence;
   const getRuntimeRunTombstonesPathDependency =
     dependencies.getRuntimeRunTombstonesPath ?? getOpenCodeRuntimeRunTombstonesPath;
-  const createRuntimeRunTombstoneStoreDependency =
-    dependencies.createRuntimeRunTombstoneStore ?? createRuntimeRunTombstoneStore;
 
   return {
     readLaneIndex: (teamName) => readLaneIndexDependency(dependencies.getTeamsBasePath(), teamName),
@@ -44,13 +43,20 @@ export function createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts(
         laneId,
       }),
     hasBootstrapCheckinTombstone: async ({ teamName, laneId, runId }) => {
-      const tombstoneStore: RuntimeRunTombstoneStore = createRuntimeRunTombstoneStoreDependency({
-        filePath: getRuntimeRunTombstonesPathDependency(
-          dependencies.getTeamsBasePath(),
-          teamName,
-          laneId
-        ),
-      });
+      const teamsBasePath = dependencies.getTeamsBasePath();
+      const storePathOptions = {
+        filePath: getRuntimeRunTombstonesPathDependency(teamsBasePath, teamName, laneId),
+      };
+      const tombstoneStore: RuntimeRunTombstoneStore =
+        dependencies.createRuntimeRunTombstoneStore?.(storePathOptions) ??
+        createRuntimeRunTombstoneStore({
+          ...storePathOptions,
+          accessLockTargetPath: getOpenCodeRuntimeLaneLifecycleLockTargetPath(
+            teamsBasePath,
+            teamName,
+            laneId
+          ),
+        });
       const tombstone = await tombstoneStore
         .find({
           teamName,

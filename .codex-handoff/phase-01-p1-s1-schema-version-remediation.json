@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-s1-schema-version-remediation",
+  "packetRevision": "phase-01-s1-schema-version-remediation-r1",
+  "supersedesWorkerStartRevision": "phase-01-s1-foundations-r1",
+  "parentPlanCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "baseSha": "da9625e78c0c96699162793a7ebba0657140d937",
+  "planBundleCommit": "de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+  "phaseStartSha": "de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+  "resultCommitSha": null,
+  "status": "characterized",
+  "independentReview": {
+    "quote": "Independent integration review formally REJECTED P1.S1 commit da9625e78 only for incomplete P1.NEG.SCHEMA_VERSION.",
+    "provenance": "authoritative operator-provided independent integration review finding",
+    "rejectedEvidenceId": "P1.NEG.SCHEMA_VERSION"
+  },
+  "toolVersions": {
+    "node": "24.16.0",
+    "pnpm": "10.33.4",
+    "vitest": "3.2.6",
+    "eslint": "9.39.4",
+    "typescript": "7.0.2",
+    "prettier": "3.8.1",
+    "git": "2.43.0"
+  },
+  "evidence": [
+    {
+      "id": "P1.1A.VERSION.REMEDIATION",
+      "path": "src/shared/contracts/hosted/revision.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.NEG.SCHEMA_VERSION",
+      "path": "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json",
+    "src/shared/contracts/hosted/revision.ts",
+    "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+    "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+    "test/architecture/hosted-web/phase-1/contracts/revision.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "inherited Phase 0 test-tree diagnostics; no owned-path diagnostic",
+      "unchangedBaselineFingerprint": "sha256:c81e31b39c985bcfc2c528ba6040aca11b37b2272dd211d812f8481f814e70cc"
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-s1-schema-version-remediation.json src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0
+    }
+  ],
+  "scopeChecks": [
+    {
+      "command": "git merge-base --is-ancestor da9625e78c0c96699162793a7ebba0657140d937 de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --exit-code da9625e78c0c96699162793a7ebba0657140d937..de1b995ed3ffe0d5884d4a0b0869827abacef53e -- src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --name-only de1b995ed3ffe0d5884d4a0b0869827abacef53e && git ls-files --others --exclude-standard",
+      "exitCode": 0,
+      "result": "exactly the five changedPaths"
+    },
+    {
+      "command": "git diff --name-only da9625e78c0c96699162793a7ebba0657140d937..de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+      "exitCode": 0,
+      "result": "only the six bounded router/controller/lane documentation paths"
+    },
+    {
+      "command": "git diff --exit-code de1b995ed3ffe0d5884d4a0b0869827abacef53e -- . ':(exclude).codex-handoff/phase-01-p1-s1-schema-version-remediation.json' ':(exclude)src/shared/contracts/hosted/revision.ts' ':(exclude)test/architecture/hosted-web/phase-1/contracts/revision.test.ts' ':(exclude)test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json' ':(exclude)test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json'",
+      "exitCode": 0,
+      "result": "all non-owned paths match phaseStartSha"
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key[[:space:]]*[:=]|access[_-]?token[[:space:]]*[:=]|refresh[_-]?token[[:space:]]*[:=]|password[[:space:]]*[:=]|bearer[[:space:]]+[A-Za-z0-9]|-----BEGIN [A-Z ]*PRIVATE KEY-----|/[U]sers/|/[h]ome/|/[r]oot/|claude[-]runtime|auth[_-]?payload|provider[_-]?payload|raw[_-]?(command|runtime)[_-]?body)' .codex-handoff/phase-01-p1-s1-schema-version-remediation.json src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+      "exitCode": 1,
+      "result": "zero matches"
+    }
+  ],
+  "negativeResultMatrix": [
+    {
+      "case": "malformed schema version",
+      "values": [null, "1", 0, 1.1],
+      "result": "rejected",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    },
+    {
+      "case": "missing schema version",
+      "result": "rejected",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    },
+    {
+      "case": "non-object revision contract",
+      "values": [null, "array", "string"],
+      "result": "rejected",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    },
+    {
+      "case": "future schema version",
+      "values": [2],
+      "result": "rejected",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    },
+    {
+      "case": "same-version response with missing or invalid revision",
+      "result": "rejected-before-additive-discard",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    },
+    {
+      "case": "same-version response with additive fields",
+      "result": "accepted-as-fresh-known-field-projection-with-additive-fields-discarded"
+    },
+    {
+      "case": "same-version input with unknown string or symbol own field",
+      "result": "rejected",
+      "diagnostic": "phase1-schema-version-invalid-or-unsupported"
+    }
+  ],
+  "deliberateNegativeResult": {
+    "id": "P1.NEG.SCHEMA_VERSION",
+    "diagnostic": "phase1-schema-version-invalid-or-unsupported",
+    "result": "passed"
+  },
+  "patchManifest": {
+    "phaseStartSha": "de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+    "command": "git diff --binary --full-index de1b995ed3ffe0d5884d4a0b0869827abacef53e",
+    "computedBeforeHandoffCreation": true,
+    "sha256": "ccdc4a1e2c03657838a741ea51d4a152982d235d5b0645718590017bc7344828",
+    "changedPathSha256": {
+      "src/shared/contracts/hosted/revision.ts": "3ae55b8d8ae9e92789313cd6c611ffbdaee4554a195e989de8d2e51bd6f958e6",
+      "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json": "f5799f7437434d51346647f8e1c7525f79d154b7e84d1b2e27124de1d6c1169f",
+      "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json": "b48ecb344888c0c85d3d35c33ec5bffe94922405a61323bf49f4515e658fc29f",
+      "test/architecture/hosted-web/phase-1/contracts/revision.test.ts": "608fd717e7eece76c6ea0f3fcc37af26d6047ff94da7e60a34eb4c5deb061e42"
+    }
+  },
+  "scopeProof": {
+    "ownedPathsMatchedBaseBeforeWork": true,
+    "nonOwnedPathsMatchPhaseStartSha": true,
+    "phaseStartDiffFromBaseIsRouterDocumentationOnly": true,
+    "changedAndUntrackedSecretScan": "zero matches",
+    "p1s2Status": "blocked"
+  },
+  "unverifiedClaims": [
+    "independent integration review acceptance",
+    "controller integration",
+    "complete Phase 1",
+    "P1.S2 authorization",
+    "production hosted behavior",
+    "production identity mapping"
+  ],
+  "blockers": [
+    "base_failure: pnpm typecheck reports only the unchanged inherited Phase 0 test-tree diagnostics fingerprinted in checks"
+  ],
+  "adrRecommendations": [],
+  "estimateBuckets": [],
+  "nextAction": "Independently review this remediation candidate against the quoted finding and, only if accepted, integrate it on top of the router packet commit while keeping P1.S2 blocked."
+}

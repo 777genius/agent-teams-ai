@@ -1,9 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api, isElectronMode } from '@renderer/api';
+import { isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -162,7 +163,6 @@ const dateCategoryLabels: Record<string, string> = {
   'Previous 7 Days': 'Last 7 Days',
   Older: 'Earlier',
 };
-
 type ProjectTaskGroupData = ReturnType<typeof groupTasksByProject>[number];
 const EMPTY_TASKS: GlobalTask[] = [];
 const EMPTY_PROJECT_GROUPS: ProjectTaskGroupData[] = [];
@@ -173,7 +173,7 @@ const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
   Older: [],
 };
 const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
-
+const teamAliveListReadPort = createTeamAliveListReadPort();
 function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
   if (!query.trim()) return tasks;
   const q = query.toLowerCase();
@@ -1081,9 +1081,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   );
 
   const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
-    if (!electronMode || !api.teams?.aliveList) return null;
+    if (!electronMode) return null;
     try {
-      return await api.teams.aliveList();
+      return await teamAliveListReadPort.listAliveTeams();
     } catch {
       return null;
     }

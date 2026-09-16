@@ -38,6 +38,7 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - `pnpm dev` - Desktop Electron app with hot reload
 - `pnpm build` - Production build
 - `pnpm typecheck` - Canonical type check using the project's pinned native TypeScript 7 compiler (do not additionally run global `tsc7`)
+- `pnpm guard:feature-architecture` - Reject new Clean Architecture dependency violations while preserving exact legacy edges
 - `pnpm guard:source-file-size` - Reject new production files above 800 lines and prevent frozen legacy files from growing
 - `pnpm guard:team-provisioning-architecture` - Prevent new facade inheritance and implicit whole-service coupling in Team Provisioning
 - `pnpm lint:fix` - Lint and auto-fix

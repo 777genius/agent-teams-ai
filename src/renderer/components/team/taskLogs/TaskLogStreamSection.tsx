@@ -5,7 +5,7 @@ import {
   ExecutionLogStreamView,
   normalizeExecutionLogStream,
 } from '@features/member-log-stream/renderer';
-import { api } from '@renderer/api';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
@@ -20,6 +20,7 @@ interface TaskLogStreamSectionProps {
 }
 
 const LIVE_RELOAD_DEBOUNCE_MS = 350;
+const taskLogObservabilityTransport = createTaskLogObservabilityRendererTransport();
 
 function describeStreamSource(stream: BoardTaskLogStreamResponse | null): string {
   if (stream?.source === 'opencode_runtime_attribution') {
@@ -80,7 +81,7 @@ export const TaskLogStreamSection = ({
 
       try {
         const response = normalizeExecutionLogStream(
-          await api.teams.getTaskLogStream(teamName, taskId)
+          await taskLogObservabilityTransport.getTaskLogStream(teamName, taskId)
         );
         if (requestSeqRef.current !== requestSeq) return;
 
@@ -149,7 +150,7 @@ export const TaskLogStreamSection = ({
       }, LIVE_RELOAD_DEBOUNCE_MS);
     };
 
-    const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
+    const unsubscribe = taskLogObservabilityTransport.subscribeToTeamChanges((event) => {
       if (event.teamName !== teamName) return;
       const shouldReload =
         event.type === 'log-source-change' ||

@@ -11,35 +11,17 @@ import {
   createMemberSettingsFingerprint,
   normalizeEditableMemberSettings,
 } from '../../core/domain/memberSettingsPolicy';
-import { LegacyMemberSettingsLifecycleAdapter } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
-import { LegacyMemberSettingsMutationGateAdapter } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
-import { LegacyMemberSettingsRepositoryAdapter } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
-import { createNodeLegacyMemberSettingsRepositoryDependencies } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
+
+import { LegacyMemberSettingsLifecycleAdapter } from './LegacyMemberSettingsLifecycle';
+import { LegacyMemberSettingsMutationGateAdapter } from './LegacyMemberSettingsMutationGate';
 
 import type {
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../contracts/memberSettings';
 import type { MemberSettingsRepositoryPort } from '../../core/application/ports/UpdateMemberSettingsPorts';
-import type { LegacyMemberSettingsLifecycleSource } from '../adapters/output/LegacyMemberSettingsLifecycleAdapter';
-import type { LegacyLiveRosterMutationSource } from '../adapters/output/LegacyMemberSettingsMutationGateAdapter';
-import type { LegacyMemberSettingsRepositoryDependencies } from '../adapters/output/LegacyMemberSettingsRepositoryAdapter';
-
-interface NodeMemberSettingsRuntimeSource {
-  isTeamAlive(teamName: string): boolean;
-  assessLeadRuntimeRestart: NonNullable<
-    LegacyMemberSettingsLifecycleSource['assessLeadRuntimeRestart']
-  >;
-  restartLeadRuntime: NonNullable<LegacyMemberSettingsLifecycleSource['restartLeadRuntime']>;
-  persistLeadRuntimeSettings: NonNullable<
-    LegacyMemberSettingsLifecycleSource['persistLeadRuntimeSettings']
-  >;
-}
-
-interface NodeMemberSettingsCacheSource {
-  invalidateTeamConfig(teamName: string): void;
-  invalidateMemberRuntimeAdvisory(teamName: string): void;
-}
+import type { LegacyMemberSettingsLifecycleSource } from './LegacyMemberSettingsLifecycle';
+import type { LegacyLiveRosterMutationSource } from './LegacyMemberSettingsMutationGate';
 
 const COMMAND_NAMESPACE = 'team-member-settings';
 const COMMAND_OPERATION = 'update_member_settings';
@@ -52,17 +34,8 @@ export interface TeamMemberSettingsFeatureApi {
 export interface TeamMemberSettingsFeatureDependencies {
   mutationSource: LegacyLiveRosterMutationSource;
   lifecycleSource: LegacyMemberSettingsLifecycleSource;
-  repositoryDependencies?: LegacyMemberSettingsRepositoryDependencies;
-  repository?: MemberSettingsRepositoryPort;
+  repository: MemberSettingsRepositoryPort;
   commandRunner?: ApplicationCommandRunner | null;
-}
-
-export interface NodeTeamMemberSettingsFeatureDependencies {
-  commandRunner?: ApplicationCommandRunner | null;
-  memberLifecycle: LegacyLiveRosterMutationSource &
-    Pick<LegacyMemberSettingsLifecycleSource, 'attachLiveRosterMember'>;
-  runtime: NodeMemberSettingsRuntimeSource;
-  getWorkerCache(): NodeMemberSettingsCacheSource;
 }
 
 interface InProcessCommandEntry {
@@ -205,14 +178,7 @@ class InProcessMemberSettingsCommandRunner {
 export function createTeamMemberSettingsFeature(
   dependencies: TeamMemberSettingsFeatureDependencies
 ): TeamMemberSettingsFeatureApi {
-  const repository =
-    dependencies.repository ??
-    (dependencies.repositoryDependencies
-      ? new LegacyMemberSettingsRepositoryAdapter(dependencies.repositoryDependencies)
-      : null);
-  if (!repository) {
-    throw new Error('Team member settings feature requires a repository');
-  }
+  const repository = dependencies.repository;
 
   const useCase = new UpdateMemberSettingsUseCase({
     mutationGate: new LegacyMemberSettingsMutationGateAdapter(dependencies.mutationSource),
@@ -300,40 +266,4 @@ export function createTeamMemberSettingsFeature(
       );
     },
   };
-}
-
-/** Keeps legacy main-process wiring out of the application shell. */
-export function createNodeTeamMemberSettingsFeature(
-  dependencies: NodeTeamMemberSettingsFeatureDependencies
-): TeamMemberSettingsFeatureApi {
-  const isTeamAlive = (teamName: string) => dependencies.runtime.isTeamAlive(teamName);
-  return createTeamMemberSettingsFeature({
-    commandRunner: dependencies.commandRunner,
-    mutationSource: dependencies.memberLifecycle,
-    lifecycleSource: {
-      attachLiveRosterMember: (teamName, memberName, options) =>
-        dependencies.memberLifecycle.attachLiveRosterMember(teamName, memberName, options),
-      assessLeadRuntimeRestart: (input) => dependencies.runtime.assessLeadRuntimeRestart(input),
-      restartLeadRuntime: async (input) => {
-        await dependencies.runtime.restartLeadRuntime(input);
-        try {
-          const cache = dependencies.getWorkerCache();
-          cache.invalidateTeamConfig(input.teamName);
-          cache.invalidateMemberRuntimeAdvisory(input.teamName);
-        } catch {
-          // Metadata is committed; the filesystem watcher remains the fallback refresh path.
-        }
-      },
-      persistLeadRuntimeSettings: (input) => dependencies.runtime.persistLeadRuntimeSettings(input),
-      isTeamAlive,
-    },
-    repositoryDependencies: createNodeLegacyMemberSettingsRepositoryDependencies({
-      isTeamAlive,
-      invalidateWorkerCache: (teamName) => {
-        const cache = dependencies.getWorkerCache();
-        cache.invalidateTeamConfig(teamName);
-        cache.invalidateMemberRuntimeAdvisory(teamName);
-      },
-    }),
-  });
 }

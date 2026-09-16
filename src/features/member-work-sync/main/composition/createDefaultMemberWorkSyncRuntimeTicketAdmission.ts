@@ -62,6 +62,7 @@ export function createDefaultMemberWorkSyncRuntimeTicketAdmission(
           runtimeInstanceId: currentRuntimeInstanceId,
           controlRevision: request.controlRevision,
           stopped: request.stopped,
+          ...(request.requestId ? { requestId: request.requestId } : {}),
         });
       },
       readLiveControl: async ({ teamName, memberName }) => {
@@ -74,6 +75,7 @@ export function createDefaultMemberWorkSyncRuntimeTicketAdmission(
           controlRevision: control.controlRevision,
           stopped: control.stopped,
           handshakeCompleted: true,
+          ...(control.requestId ? { requestId: control.requestId } : {}),
         };
       },
     }),

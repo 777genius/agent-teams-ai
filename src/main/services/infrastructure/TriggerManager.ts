@@ -71,11 +71,9 @@ export const DEFAULT_TRIGGERS: NotificationTrigger[] = [
 
 export class TriggerManager {
   private triggers: NotificationTrigger[];
-  private readonly onSave: () => void;
 
-  constructor(triggers: NotificationTrigger[], onSave: () => void) {
+  constructor(triggers: NotificationTrigger[]) {
     this.triggers = triggers;
-    this.onSave = onSave;
   }
 
   // ===========================================================================
@@ -120,8 +118,7 @@ export class TriggerManager {
       throw new Error(`Invalid trigger: ${validation.errors.join(', ')}`);
     }
 
-    this.triggers = [...this.triggers, trigger];
-    this.onSave();
+    this.triggers = [...this.triggers, this.deepClone(trigger)];
     return this.getAll();
   }
 
@@ -155,7 +152,6 @@ export class TriggerManager {
     }
 
     this.triggers = this.triggers.map((t, i) => (i === index ? updated : t));
-    this.onSave();
     return this.getAll();
   }
 
@@ -188,7 +184,6 @@ export class TriggerManager {
     }
 
     this.triggers = this.triggers.filter((t) => t.id !== triggerId);
-    this.onSave();
     return this.getAll();
   }
 

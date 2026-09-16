@@ -244,7 +244,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   private notifyLeadTurnIdle(record: OpenCodePromptDeliveryLedgerRecord): void {
     // The consumer validates canonical lead identity and current run ownership.
     // Primary also contains same-model teammates, so lane alone is not proof.
-    if (record.laneId !== 'primary' || !this.ports.notifyLeadTurnActivity) {
+    if (record.laneId !== 'primary' || !record.runId || !this.ports.notifyLeadTurnActivity) {
       return;
     }
     try {
@@ -254,6 +254,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
         laneId: record.laneId,
         runId: record.runId,
         state: 'idle',
+        observedAt: this.ports.nowIso(),
       });
     } catch (error) {
       this.ports.warn(

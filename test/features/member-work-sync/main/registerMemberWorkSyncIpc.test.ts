@@ -97,6 +97,26 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
       reportAcceptedCount: 0,
       reportRejectedCount: 0,
       recentEvents: [],
+      deliveryReadiness: {
+        state: 'collecting_shadow_data' as const,
+        reasons: ['insufficient_members' as const],
+        thresholds: {
+          maxFingerprintChangesPerMemberHour: 4,
+          maxReportRejectionRate: 0.2,
+          maxWouldNudgesPerMemberHour: 2,
+          minObservationHours: 24,
+          minObservedMembers: 3,
+          minStatusEvents: 20,
+        },
+        rates: {
+          fingerprintChangesPerMemberHour: 0,
+          observationHours: 0,
+          reportRejectionRate: 0,
+          statusEventCount: 0,
+          wouldNudgesPerMemberHour: 0,
+        },
+        diagnostics: [],
+      },
       phase2Readiness: {
         state: 'collecting_shadow_data' as const,
         reasons: ['insufficient_members' as const],

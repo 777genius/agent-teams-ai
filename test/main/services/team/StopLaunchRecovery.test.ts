@@ -256,13 +256,13 @@ test('actual lane cleanup rejects successor run and same-run session replacement
       expectedRunId: 'old-run',
       expectedSessionIdentityHash: identity,
     }),
-    false
+    'owner_changed'
   );
   assert.match(await fs.readFile(sessionPath, 'utf8'), /successor-session/);
   await setOpenCodeRuntimeActiveRunManifest({ ...scope, runId: 'new-run' });
   assert.equal(
     await clearOpenCodeRuntimeLaneStorage({ ...scope, expectedRunId: 'old-run' }),
-    false
+    'owner_changed'
   );
   await fs.access(manifestPath);
   assert.equal(await fs.readFile(otherManifestPath, 'utf8'), otherManifest);
@@ -465,14 +465,13 @@ test('aged cleanup owner keeps the lifecycle lock after CAS until successor publ
     entered.resolve();
     return realKill(...args);
   }) as typeof process.kill);
-  let cleanup: Promise<boolean> | undefined;
+  const cleanup = clearOpenCodeRuntimeLaneStorage({
+    ...scope,
+    expectedRunId: 'old-run',
+    expectedSessionIdentityHash: identity,
+  });
   let successor: Promise<void> | undefined;
   try {
-    cleanup = clearOpenCodeRuntimeLaneStorage({
-      ...scope,
-      expectedRunId: 'old-run',
-      expectedSessionIdentityHash: identity,
-    });
     await Promise.race([
       entered.promise,
       cleanup.then(() => {
@@ -484,18 +483,22 @@ test('aged cleanup owner keeps the lifecycle lock after CAS until successor publ
     await fs.writeFile(lockPath, aged);
     killSpy.mockClear();
     successor = setOpenCodeRuntimeActiveRunManifest({ ...scope, runId: 'successor-run' });
-    // The successor's first acquisition attempt runs synchronously before its wait.
-    assert.ok(killSpy.mock.calls.length > 0);
+    // Publication setup is asynchronous; wait until the successor actually probes the held lock.
+    await vi.waitFor(() => {
+      assert.ok(killSpy.mock.calls.length > 0);
+    });
     assert.equal(await fs.readFile(lockPath, 'utf8'), aged);
     release.resolve();
     await journalOwner;
-    assert.equal(await cleanup, true);
+    assert.equal(await cleanup, 'cleared');
     await successor;
     const envelope = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
     assert.equal((envelope.data ?? envelope).activeRunId, 'successor-run');
   } finally {
     release.resolve();
-    await Promise.allSettled([journalOwner, cleanup, successor].filter(Boolean));
+    await Promise.allSettled(
+      successor ? [journalOwner, cleanup, successor] : [journalOwner, cleanup]
+    );
     killSpy.mockRestore();
   }
 });

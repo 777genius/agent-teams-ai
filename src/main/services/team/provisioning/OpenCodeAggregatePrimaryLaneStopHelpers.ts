@@ -4,6 +4,8 @@ import {
   assertAggregatePrimaryStopConfirmed,
   getCancelledAggregateLaunchError,
 } from './OpenCodeAggregatePrimaryRestartPolicy';
+import { type PendingOpenCodePrimaryCleanup } from './TeamProvisioningLaunchStateStoreBoundary';
+import { OpenCodeAggregateRuntimeStopError } from './TeamProvisioningOpenCodeAggregateLaunchPersistence';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComposition';
@@ -27,6 +29,7 @@ export interface OpenCodeAggregatePrimaryLaneStopPorts {
   getRuntimeOwner(teamName: string): RuntimeAdapterRunByTeamEntry | undefined;
   setRuntimeOwner(teamName: string, owner: RuntimeAdapterRunByTeamEntry): void;
   deleteRuntimeOwner(teamName: string): void;
+  appendPendingCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<void>;
   getOpenCodeRuntimeLaunchCwd(baseCwd: string, members: TeamCreateRequest['members']): string;
   publishPending(message: string): void;
   publishFailed(message: string, error: unknown): void;
@@ -55,49 +58,64 @@ export async function stopUnretainableOpenCodePrimaryLane(
     input.previousEffectiveMembers
   );
   const currentOwner = ports.getRuntimeOwner(teamName);
-  if (
-    currentOwner &&
-    (currentOwner.providerId !== 'opencode' || currentOwner.runId !== input.run.runId)
-  ) {
-    throw getCancelledAggregateLaunchError(teamName);
-  }
   if (!currentOwner && confirmedCleanup.get(input.run) === input.run.runId) return;
-  const exactStopOwner = currentOwner ?? {
-    runId: input.run.runId,
-    providerId: 'opencode' as const,
-    cwd,
-    ...(input.run.request.allowExperimentalLocalModels === true
-      ? { allowExperimentalLocalModels: true }
-      : {}),
-  };
+  const exactStopOwner =
+    currentOwner?.providerId === 'opencode' && currentOwner.runId === input.run.runId
+      ? currentOwner
+      : {
+          runId: input.run.runId,
+          providerId: 'opencode' as const,
+          cwd,
+          ...(input.run.request.allowExperimentalLocalModels === true
+            ? { allowExperimentalLocalModels: true }
+            : {}),
+        };
   if (!currentOwner) {
     ports.setRuntimeOwner(teamName, exactStopOwner);
   }
   ports.publishPending('Stopping unretainable OpenCode primary lane');
+  const stopCwd = exactStopOwner.cwd ?? cwd;
   try {
     const stopResult = await input.adapter.stop({
       runId: input.run.runId,
       laneId: 'primary',
       teamName,
-      cwd: exactStopOwner.cwd ?? cwd,
+      cwd: stopCwd,
       providerId: 'opencode',
       reason: 'cleanup',
       previousLaunchState: input.previousLaunchState,
       force: true,
     });
     assertAggregatePrimaryStopConfirmed(stopResult);
-    if (ports.getRuntimeOwner(teamName) !== exactStopOwner) {
+    if (!currentOwner && ports.getRuntimeOwner(teamName) !== exactStopOwner) {
       throw getCancelledAggregateLaunchError(teamName);
     }
-    ports.deleteRuntimeOwner(teamName);
+    if (ports.getRuntimeOwner(teamName) === exactStopOwner) {
+      ports.deleteRuntimeOwner(teamName);
+    }
   } catch (error) {
+    const cleanup = {
+      teamId: teamName,
+      runId: input.run.runId,
+      providerId: 'opencode' as const,
+      cwd: stopCwd,
+      previousLaunchState: input.previousLaunchState,
+    } satisfies PendingOpenCodePrimaryCleanup;
+    let outboxError: unknown;
+    try {
+      await ports.appendPendingCleanup(cleanup);
+    } catch (caughtOutboxError) {
+      outboxError = caughtOutboxError;
+    }
     if (ports.getRuntimeOwner(teamName) === exactStopOwner) {
       ports.publishFailed('Unretainable OpenCode primary lane cleanup failed', error);
     }
     ports.logWarn(
       `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
     );
-    throw error;
+    throw new OpenCodeAggregateRuntimeStopError(
+      outboxError === undefined ? [error] : [error, outboxError]
+    );
   }
 }
 
@@ -153,9 +171,24 @@ export async function stopFailedOpenCodeAggregatePrimaryRelaunchCandidate(
     }
     ports.deleteRuntimeOwner(teamName);
   } catch (error) {
+    const cleanup = {
+      teamId: teamName,
+      runId: input.run.runId,
+      providerId: 'opencode' as const,
+      cwd,
+      previousLaunchState: input.previousLaunchState,
+    } satisfies PendingOpenCodePrimaryCleanup;
+    let outboxError: unknown;
+    try {
+      await ports.appendPendingCleanup(cleanup);
+    } catch (caughtOutboxError) {
+      outboxError = caughtOutboxError;
+    }
     if (ports.getRuntimeOwner(teamName) === expectedOwner) {
       ports.publishFailed('Failed OpenCode primary relaunch candidate cleanup failed', error);
     }
-    throw error;
+    throw new OpenCodeAggregateRuntimeStopError(
+      outboxError === undefined ? [error] : [error, outboxError]
+    );
   }
 }

@@ -1,16 +1,56 @@
+import {
+  INTERNAL_STORAGE_APPLICATION_ID,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '../../application/internalStorageBackupContract';
+
+import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externalWriterObservationConsumeReceiptMigration';
+import { EXTERNAL_WRITER_OBSERVATION_MIGRATION } from './externalWriterObservationMigration';
+import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
+import { runHostedPromotionMigrationAdmission } from './hostedPromotionMigrationAdmission';
+import { HOSTED_PROMOTION_STORAGE_MIGRATION } from './hostedPromotionStorageMigration';
+import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
+import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
+import { runHostedTeamApprovalMigrationRepair } from './hostedTeamApprovalMigrationRepair';
+import { HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS } from './hostedWorkspaceGrantRevisionStorageMigration';
+import {
+  ensureHostedAuthResetColumns,
+  migrateHostedWorkspaceAccess,
+} from './internalStorageBackupTables';
+import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
+import {
+  backfillCoordinationEventJournal,
+  backfillMemberWorkSyncTeamKeys,
+  ensureCommandCoordinationAttribution,
+  ensureMemberWorkSyncTeamKeyIndexes,
+} from './internalStorageMigrationBackfills';
+import { assertNoActiveBackupFenceForMigration } from './internalStorageMigrationGuards';
+import { PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS } from './processOwnershipStorageOps';
+import { TEAM_DRAFT_PUBLICATION_MIGRATION } from './teamDraftPublicationMigration';
+import { runTeamDraftPublicationMigrationAdmission } from './teamDraftPublicationMigrationAdmission';
+import {
+  TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS,
+  TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS,
+} from './teamIdentityStorageSchema';
+import {
+  TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
+  verifyTeamRosterStorageMigration,
+} from './teamRosterStorageSchema';
+
 import type DatabaseConstructor from 'better-sqlite3';
-
+export {
+  INTERNAL_STORAGE_APPLICATION_ID,
+  INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+} from '../../application/internalStorageBackupContract';
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
-
 interface InternalStorageMigration {
   version: number;
-  statements: string[];
+  statements: readonly string[];
 }
-
 /**
- * Versioned via PRAGMA user_version. Statements must stay append-only and
- * idempotent (IF NOT EXISTS) — released versions are never edited, new schema
- * changes get a new version entry. Keep in sync with internalStorageSchema.ts.
+ * Versioned via PRAGMA user_version. Released versions are append-only and never edited.
+ * CREATE statements stay idempotent where recovery replays them; ALTER statements require the
+ * historical source schema selected by user_version. Keep the latest result in sync with internalStorageSchema.ts.
  */
 const MIGRATIONS: InternalStorageMigration[] = [
   {
@@ -167,29 +207,591 @@ const MIGRATIONS: InternalStorageMigration[] = [
   },
   {
     version: 5,
-    statements: ['ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json TEXT'],
+    statements: [...TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS],
+  },
+  {
+    version: 6,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS durable_application_commands (
+        command_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        stable_actor_id TEXT NOT NULL,
+        command_kind TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL,
+        descriptor_id TEXT NOT NULL,
+        descriptor_version INTEGER NOT NULL,
+        input_schema_version INTEGER NOT NULL,
+        fingerprint_version TEXT NOT NULL,
+        effect_plan_version INTEGER NOT NULL,
+        fingerprint_key_version TEXT NOT NULL,
+        fingerprint_digest TEXT NOT NULL,
+        attempt_generation INTEGER NOT NULL,
+        attempt_id TEXT NOT NULL,
+        attempt_owner_id TEXT NOT NULL,
+        attempt_lease_token TEXT NOT NULL,
+        attempt_claimed_at TEXT NOT NULL,
+        attempt_lease_expires_at TEXT NOT NULL,
+        state TEXT NOT NULL,
+        retention_class TEXT NOT NULL,
+        audit_session_id TEXT,
+        outcome_json TEXT,
+        error_code TEXT,
+        error_json TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        committed_at TEXT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_claim
+        ON durable_application_commands (
+          deployment_id, stable_actor_id, command_kind, idempotency_key
+        )`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_state
+        ON durable_application_commands (deployment_id, state, updated_at)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_effects (
+        command_id TEXT NOT NULL,
+        ordinal INTEGER NOT NULL,
+        effect_id TEXT NOT NULL,
+        effect_version INTEGER NOT NULL,
+        recovery_class TEXT NOT NULL,
+        evidence_schema_version INTEGER NOT NULL,
+        state TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (command_id, ordinal),
+        FOREIGN KEY (command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_effect_id
+        ON durable_application_command_effects (command_id, effect_id)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_effect_evidence (
+        command_id TEXT NOT NULL,
+        ordinal INTEGER NOT NULL,
+        sequence INTEGER NOT NULL,
+        outcome TEXT NOT NULL,
+        evidence_schema_version INTEGER NOT NULL,
+        evidence_json TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (command_id, ordinal, sequence),
+        FOREIGN KEY (command_id, ordinal)
+          REFERENCES durable_application_command_effects(command_id, ordinal)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_evidence_order
+        ON durable_application_command_effect_evidence (command_id, ordinal, sequence)`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_outbox (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT NOT NULL,
+        command_id TEXT NOT NULL,
+        deployment_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        scope_kind TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        schema_version INTEGER NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        -- Version 6 used publication terminology for delivery bookkeeping.
+        -- Version 7 renames these physical columns without changing behavior.
+        publication_generation INTEGER NOT NULL,
+        publication_publisher_id TEXT,
+        publication_lease_token TEXT,
+        publication_claimed_at TEXT,
+        publication_lease_expires_at TEXT,
+        published_at TEXT,
+        FOREIGN KEY (command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_event
+        ON durable_application_command_outbox (event_id)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_command
+        ON durable_application_command_outbox (command_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_durable_app_cmd_outbox_sequence
+        ON durable_application_command_outbox (sequence)`,
+    ],
+  },
+  {
+    version: 7,
+    statements: [
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_generation TO delivery_generation`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_publisher_id TO delivery_owner_id`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_lease_token TO delivery_lease_token`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_claimed_at TO delivery_claimed_at`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN publication_lease_expires_at TO delivery_lease_expires_at`,
+      `ALTER TABLE durable_application_command_outbox
+        RENAME COLUMN published_at TO delivery_acknowledged_at`,
+      // Version 6 events had no typed revision. Start with a valid value so
+      // ALTER TABLE remains legal for populated databases, then deterministically
+      // rank every legacy projection's events in durable replay order. The
+      // projection key is (deployment_id, scope_kind, scope_id); sequence is
+      // canonical replay order and event_id is its deterministic tie-breaker.
+      `ALTER TABLE durable_application_command_outbox
+        ADD COLUMN semantic_revision INTEGER NOT NULL DEFAULT 1`,
+      `WITH ranked_legacy_events AS (
+        SELECT
+          sequence,
+          event_id,
+          ROW_NUMBER() OVER (
+            PARTITION BY deployment_id, scope_kind, scope_id
+            ORDER BY sequence ASC, event_id ASC
+          ) AS semantic_revision
+        FROM durable_application_command_outbox
+      )
+      UPDATE durable_application_command_outbox
+      SET semantic_revision = (
+        SELECT ranked_legacy_events.semantic_revision
+        FROM ranked_legacy_events
+        WHERE ranked_legacy_events.sequence = durable_application_command_outbox.sequence
+          AND ranked_legacy_events.event_id = durable_application_command_outbox.event_id
+      )`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_consumer_applications (
+        consumer_id TEXT NOT NULL,
+        event_id TEXT NOT NULL,
+        semantic_revision INTEGER NOT NULL,
+        projection_key TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        applied_at TEXT NOT NULL,
+        PRIMARY KEY (consumer_id, event_id),
+        FOREIGN KEY (event_id) REFERENCES durable_application_command_outbox(event_id)
+          ON DELETE RESTRICT
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_durable_app_cmd_consumer_revision
+        ON durable_application_command_consumer_applications (
+          consumer_id, projection_key, semantic_revision
+        )`,
+      `CREATE TABLE IF NOT EXISTS durable_application_command_consumer_projections (
+        consumer_id TEXT NOT NULL,
+        projection_key TEXT NOT NULL,
+        semantic_revision INTEGER NOT NULL,
+        last_event_id TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        application_count INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (consumer_id, projection_key),
+        FOREIGN KEY (consumer_id, last_event_id)
+          REFERENCES durable_application_command_consumer_applications(consumer_id, event_id)
+          ON DELETE RESTRICT
+      )`,
+    ],
+  },
+  {
+    version: 8,
+    statements: [
+      `PRAGMA application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`,
+      `CREATE TABLE IF NOT EXISTS coordination_event_journal_metadata (
+        deployment_id TEXT PRIMARY KEY,
+        event_epoch TEXT NOT NULL,
+        retention_floor_sequence INTEGER NOT NULL DEFAULT 0
+          CHECK (retention_floor_sequence >= 0),
+        high_watermark_sequence INTEGER NOT NULL DEFAULT 0
+          CHECK (high_watermark_sequence >= retention_floor_sequence),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (deployment_id, event_epoch)
+      )`,
+      `CREATE TABLE IF NOT EXISTS coordination_event_journal (
+        deployment_id TEXT NOT NULL,
+        event_epoch TEXT NOT NULL,
+        event_sequence INTEGER NOT NULL CHECK (event_sequence > 0),
+        event_id TEXT NOT NULL UNIQUE,
+        body_json TEXT NOT NULL CHECK (json_valid(body_json)),
+        emitted_at TEXT NOT NULL,
+        origin_command_id TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (deployment_id, event_epoch, event_sequence),
+        FOREIGN KEY (deployment_id, event_epoch)
+          REFERENCES coordination_event_journal_metadata(deployment_id, event_epoch)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        FOREIGN KEY (origin_command_id)
+          REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_coordination_event_journal_replay
+        ON coordination_event_journal (deployment_id, event_epoch, event_sequence)`,
+      `CREATE TABLE IF NOT EXISTS snapshot_retention_leases (
+        lease_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        event_epoch TEXT NOT NULL,
+        scope_kind TEXT NOT NULL,
+        scope_id TEXT NOT NULL,
+        retention_floor_sequence INTEGER NOT NULL CHECK (retention_floor_sequence >= 0),
+        high_watermark_sequence INTEGER NOT NULL
+          CHECK (high_watermark_sequence >= retention_floor_sequence),
+        expires_at_ms INTEGER NOT NULL CHECK (expires_at_ms > 0),
+        use_token TEXT,
+        use_deadline_at_ms INTEGER,
+        release_requested INTEGER NOT NULL DEFAULT 0 CHECK (release_requested IN (0, 1)),
+        created_at_ms INTEGER NOT NULL CHECK (created_at_ms > 0),
+        FOREIGN KEY (deployment_id, event_epoch)
+          REFERENCES coordination_event_journal_metadata(deployment_id, event_epoch)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        CHECK ((use_token IS NULL AND use_deadline_at_ms IS NULL)
+          OR (use_token IS NOT NULL AND use_deadline_at_ms IS NOT NULL))
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_snapshot_retention_lease_floor
+        ON snapshot_retention_leases (
+          deployment_id, event_epoch, release_requested, expires_at_ms, high_watermark_sequence
+        )`,
+      `CREATE TABLE IF NOT EXISTS coordination_backup_runs (
+        backup_run_id TEXT PRIMARY KEY,
+        deployment_id TEXT NOT NULL,
+        state TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        fence_completion_status TEXT,
+        record_json TEXT NOT NULL CHECK (json_valid(record_json)),
+        requested_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_coordination_backup_runs_recoverable
+        ON coordination_backup_runs (state, fence_completion_status, updated_at)`,
+      `CREATE TABLE IF NOT EXISTS coordination_backup_writer_fences (
+        deployment_id TEXT PRIMARY KEY,
+        generation INTEGER NOT NULL CHECK (generation > 0),
+        admitted_run_id TEXT NOT NULL,
+        lease_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL CHECK (status IN ('active', 'released', 'operator_required')),
+        disposition TEXT CHECK (disposition IN ('committed', 'aborted', 'operator_required')),
+        acquired_at TEXT NOT NULL,
+        completed_at TEXT,
+        FOREIGN KEY (admitted_run_id) REFERENCES coordination_backup_runs(backup_run_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT,
+        CHECK ((status = 'active' AND disposition IS NULL AND completed_at IS NULL)
+          OR (status <> 'active' AND disposition IS NOT NULL AND completed_at IS NOT NULL))
+      )`,
+    ],
+  },
+  {
+    version: 9,
+    statements: [
+      `ALTER TABLE member_work_sync_status
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_report_intents
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_outbox
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE member_work_sync_metric_events
+        ADD COLUMN team_key TEXT NOT NULL DEFAULT ''`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_status_team_key
+        ON member_work_sync_status (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_report_intents_team_key
+        ON member_work_sync_report_intents (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_outbox_team_key
+        ON member_work_sync_outbox (team_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_mws_metric_events_team_key
+        ON member_work_sync_metric_events (team_key)`,
+    ],
+  },
+  {
+    version: 10,
+    statements: [...TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS],
+  },
+  { version: 11, statements: [...PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS] },
+  {
+    version: 12,
+    statements: ['DROP TABLE IF EXISTS snapshot_retention_leases'],
+  },
+  {
+    version: 13,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_auth_configuration (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        auth_mode TEXT NOT NULL CHECK (auth_mode IN ('personal', 'oidc')),
+        configured_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS hosted_access_authority (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        state_json TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        rollback_fence_revision INTEGER NOT NULL CHECK (rollback_fence_revision >= revision)
+      )`,
+      `CREATE TABLE IF NOT EXISTS users (
+        user_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS external_identities (
+        issuer TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_authenticated_at INTEGER NOT NULL,
+        PRIMARY KEY (issuer, subject),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_external_identities_user
+        ON external_identities (user_id)`,
+      `CREATE TABLE IF NOT EXISTS personal_owners (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        operator_id TEXT NOT NULL UNIQUE,
+        user_id TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS operator_sessions (
+        session_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        secret_hash TEXT NOT NULL UNIQUE,
+        authentication_method TEXT NOT NULL CHECK (authentication_method = 'oidc'),
+        provider_id TEXT NOT NULL,
+        provider_issuer TEXT NOT NULL,
+        provider_subject TEXT NOT NULL,
+        provider_session_id TEXT,
+        issued_at INTEGER NOT NULL,
+        last_used_at INTEGER NOT NULL,
+        idle_expires_at INTEGER NOT NULL,
+        absolute_expires_at INTEGER NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
+        revoked_at INTEGER,
+        revocation_reason TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_operator_sessions_provider
+        ON operator_sessions (provider_id, provider_issuer, provider_subject, provider_session_id)`,
+      `CREATE TABLE IF NOT EXISTS role_snapshots (
+        session_id TEXT PRIMARY KEY,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+        source TEXT NOT NULL CHECK (source IN ('personal-owner', 'oidc-claim', 'local-cli')),
+        captured_at INTEGER NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES operator_sessions(session_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS oidc_login_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        provider_id TEXT NOT NULL,
+        state_hash TEXT NOT NULL UNIQUE,
+        nonce TEXT NOT NULL,
+        pkce_verifier_ciphertext TEXT NOT NULL,
+        return_to TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_oidc_login_attempts_expiry
+        ON oidc_login_attempts (expires_at, consumed_at)`,
+      `CREATE TABLE IF NOT EXISTS oidc_logout_replay (
+        provider_id TEXT NOT NULL,
+        issuer TEXT NOT NULL,
+        jti TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER NOT NULL,
+        PRIMARY KEY (provider_id, issuer, jti)
+      )`,
+      `CREATE TABLE IF NOT EXISTS hosted_workspaces (
+        workspace_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+        registered_at INTEGER NOT NULL,
+        registered_by TEXT,
+        FOREIGN KEY (registered_by) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE TABLE IF NOT EXISTS auth_audit_events (
+        event_id TEXT PRIMARY KEY,
+        occurred_at INTEGER NOT NULL,
+        user_id TEXT,
+        session_id TEXT,
+        action TEXT NOT NULL,
+        outcome TEXT NOT NULL CHECK (outcome IN ('success', 'denied', 'failure')),
+        source_ip_hash TEXT,
+        details_json TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_auth_audit_occurred
+        ON auth_audit_events (occurred_at, event_id)`,
+    ],
+  },
+  {
+    version: 14,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS local_role_assignments (
+        user_id TEXT PRIMARY KEY,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+        assigned_at INTEGER NOT NULL,
+        assigned_by TEXT NOT NULL CHECK (assigned_by = 'local-cli'),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+      )`,
+    ],
+  },
+  {
+    version: 15,
+    // Recovery tolerates user_version restored behind already-durable additive columns.
+    statements: [],
+  },
+  {
+    version: 16,
+    // Recovery may restore current table shapes with a historical user_version.
+    statements: [],
+  },
+  {
+    version: 17,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_authority_projections (
+        deployment_id TEXT NOT NULL,
+        projection_kind TEXT NOT NULL,
+        projection_key TEXT NOT NULL,
+        generation INTEGER NOT NULL CHECK (generation > 0),
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        state_json TEXT NOT NULL CHECK (json_valid(state_json)),
+        last_command_id TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (deployment_id, projection_kind, projection_key),
+        FOREIGN KEY (last_command_id) REFERENCES durable_application_commands(command_id)
+          ON DELETE RESTRICT ON UPDATE RESTRICT
+      )`,
+    ],
+  },
+  {
+    version: 18,
+    statements: [...HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS],
+  },
+  {
+    version: 19,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS hosted_team_configuration_drafts (workspace_id TEXT NOT NULL, team_id TEXT NOT NULL, state TEXT NOT NULL CHECK (state IN ('active', 'deleted')), revision_ordinal INTEGER NOT NULL CHECK (revision_ordinal > 0), revision_token TEXT NOT NULL, metadata_json TEXT NOT NULL CHECK (json_valid(metadata_json)), members_json TEXT NOT NULL CHECK (json_valid(members_json)), created_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL, PRIMARY KEY (workspace_id, team_id))`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_hosted_team_configuration_team_id
+        ON hosted_team_configuration_drafts (team_id)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_hosted_team_configuration_revision_token ON hosted_team_configuration_drafts (revision_token)`,
+      `CREATE TABLE IF NOT EXISTS hosted_team_configuration_create_keys (workspace_id TEXT NOT NULL, idempotency_key TEXT NOT NULL, payload_hash TEXT NOT NULL, team_id TEXT NOT NULL, initial_revision TEXT NOT NULL, created_at_ms INTEGER NOT NULL, PRIMARY KEY (workspace_id, idempotency_key), FOREIGN KEY (workspace_id, team_id) REFERENCES hosted_team_configuration_drafts(workspace_id, team_id) ON DELETE RESTRICT ON UPDATE RESTRICT)`,
+    ],
+  },
+  {
+    version: 20,
+    statements: [...HOSTED_WORKSPACE_GRANT_REVISION_STORAGE_MIGRATION_STATEMENTS],
+  },
+  ...HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS,
+  EXTERNAL_WRITER_OBSERVATION_MIGRATION,
+  EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION,
+  EXTERNAL_WRITER_RECONCILIATION_MIGRATION,
+  // Format admission only: configured members_json envelopes; never rewrite legacy arrays.
+  { version: 28, statements: [] },
+  TEAM_DRAFT_PUBLICATION_MIGRATION,
+  HOSTED_PROMOTION_STORAGE_MIGRATION,
+  {
+    version: 31,
+    // Both parents released schema version 5 independently. Main's v5 already
+    // has this column; Product's v5 begins the durable Hosted identity lineage.
+    // Admission below accepts the exact main-v5 column or adds it after the
+    // Hosted migrations, preserving both histories without relabeling either.
+    statements: [],
   },
 ];
-
-export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
-
+function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
+  const columns = db.pragma('table_info(member_work_sync_report_intents)') as Array<{
+    name: string;
+    type: string;
+    notnull: number;
+    dflt_value: unknown;
+    pk: number;
+  }>;
+  const column = columns.find(({ name }) => name === 'journal_json');
+  if (!column) {
+    db.exec('ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json TEXT');
+    return;
+  }
+  if (
+    column.type.toUpperCase() !== 'TEXT' ||
+    column.notnull !== 0 ||
+    column.dflt_value !== null ||
+    column.pk !== 0
+  ) {
+    throw new Error('internal-storage-v31-report-journal-schema-incompatible');
+  }
+}
+function admitHistoricV5IdentitySchema(db: SqliteDatabase): void {
+  const error = 'internal-storage-v31-team-identity-schema-incompatible';
+  const tables = [...new Set(TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.map(({ tableName }) => tableName))];
+  const placeholders = tables.map(() => '?').join(', ');
+  const read = (schema: 'main' | 'temp') => db.prepare(
+    `SELECT type, name, tbl_name AS tableName, sql FROM ${schema}.sqlite_schema
+      WHERE tbl_name IN (${placeholders})`
+  ).all(...tables) as typeof TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS;
+  if (read('temp').length !== 0) throw new Error(error);
+  let objects = read('main');
+  if (objects.length === 0) {
+    for (const statement of TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS) db.exec(statement);
+    objects = read('main');
+  }
+  if (objects.length !== TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.length ||
+      !TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.every((expected) => objects.some((object) =>
+        object.type === expected.type && object.name === expected.name &&
+        object.tableName === expected.tableName && object.sql === expected.sql))) throw new Error(error);
+  const metadata = db.prepare(
+    'SELECT component, schema_version FROM main.team_identity_storage_metadata'
+  ).all() as { component: unknown; schema_version: unknown }[];
+  if (metadata.length !== 1 || metadata[0]?.component !== 'team-identity' ||
+      metadata[0]?.schema_version !== 1) throw new Error(error);
+  if ((db.pragma('main.foreign_key_check') as unknown[]).length !== 0) throw new Error(error);
+}
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
   return typeof value === 'number' ? value : 0;
 }
-
 export function runInternalStorageMigrations(db: SqliteDatabase): void {
+  if (MIGRATIONS.at(-1)?.version !== INTERNAL_STORAGE_SCHEMA_VERSION) {
+    throw new Error('internal-storage-schema-contract-mismatch');
+  }
   const current = readSchemaVersion(db);
+  // The two released v5s keep their original marker. Admit Product's exact
+  // identity component (or create it when main's independent v5 is observed)
+  // before later Hosted migrations require it.
+  if (current === 5) db.transaction(() => admitHistoricV5IdentitySchema(db))();
   for (const migration of MIGRATIONS) {
     if (migration.version <= current) {
       continue;
     }
     const apply = db.transaction(() => {
-      for (const statement of migration.statements) {
-        db.exec(statement);
+      if (migration.version >= 11 && migration.version <= INTERNAL_STORAGE_SCHEMA_VERSION) {
+        assertNoActiveBackupFenceForMigration(db, migration.version);
       }
+      if (migration.version === 7) ensureHistoricalV6DurabilityTables(db, v6Statements());
+      if (migration.version === 8) {
+        ensureHistoricalV6DurabilityTables(db, v6Statements());
+        ensureCommandCoordinationAttribution(db);
+      }
+      if (migration.version === 15) ensureHostedAuthResetColumns(db);
+      if (migration.version === 16) migrateHostedWorkspaceAccess(db);
+      const approvalMigrationHandled = runHostedTeamApprovalMigrationRepair(db, migration.version);
+      if (migration.version === 29) runTeamDraftPublicationMigrationAdmission(db);
+      if (migration.version === 30) {
+        runTeamDraftPublicationMigrationAdmission(db, true);
+        runHostedPromotionMigrationAdmission(db);
+      }
+      if (migration.version === 31) {
+        ensureMemberWorkSyncReportJournalColumn(db);
+        runTeamDraftPublicationMigrationAdmission(db, true);
+      }
+      if (
+        !approvalMigrationHandled &&
+        migration.version !== 29 &&
+        migration.version !== 30 &&
+        migration.version !== 31
+      ) {
+        for (const statement of migration.statements) {
+          db.exec(statement);
+        }
+      }
+      if (migration.version === 8) backfillCoordinationEventJournal(db);
+      if (migration.version === 9) backfillMemberWorkSyncTeamKeys(db);
+      if (migration.version === 10) verifyTeamRosterStorageMigration(db);
       db.pragma(`user_version = ${migration.version}`);
     });
     apply();
   }
+  if (current >= 9) {
+    db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
+  }
+  if (current >= INTERNAL_STORAGE_SCHEMA_VERSION) {
+    db.transaction(() => {
+      ensureMemberWorkSyncReportJournalColumn(db);
+      runTeamDraftPublicationMigrationAdmission(db, true);
+    })();
+  }
+}
+function v6Statements(): readonly string[] {
+  const migration = MIGRATIONS.find((candidate) => candidate.version === 6);
+  if (!migration) throw new Error('internal-storage-v6-migration-missing');
+  return migration.statements;
 }

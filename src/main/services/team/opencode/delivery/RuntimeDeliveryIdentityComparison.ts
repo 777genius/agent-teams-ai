@@ -8,6 +8,8 @@ import {
   type RuntimeDeliveryLocation,
 } from './RuntimeDeliveryJournal';
 
+const CROSS_TEAM_IDEMPOTENCY_CONFLICT = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
+
 export interface RuntimeDeliveryRecoveryEvidence {
   fromMemberName: string;
   runtimeSessionId: string;
@@ -209,4 +211,27 @@ export function hasSameRuntimeDeliveryLocationScope(
     left.fromTeamName === right.fromTeamName &&
     left.toTeamName === right.toTeamName
   );
+}
+
+export function classifyRuntimeDeliveryIdempotencyConflict(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+  const structuredError = error as {
+    code?: unknown;
+    name?: unknown;
+    message?: unknown;
+    existingMessage?: unknown;
+    runtimeDeliveryReceiptStatus?: unknown;
+  };
+  if (structuredError.code === 'idempotency_conflict') return 'idempotency_conflict';
+  if (
+    ![structuredError.code, structuredError.name, structuredError.message].some(
+      (value) => value === CROSS_TEAM_IDEMPOTENCY_CONFLICT
+    )
+  ) {
+    return null;
+  }
+  return structuredError.existingMessage !== undefined &&
+    structuredError.runtimeDeliveryReceiptStatus !== undefined
+    ? 'idempotency_conflict'
+    : CROSS_TEAM_IDEMPOTENCY_CONFLICT;
 }

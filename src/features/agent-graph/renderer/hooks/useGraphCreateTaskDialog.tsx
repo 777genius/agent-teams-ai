@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import { api } from '@renderer/api';
 import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
 import { useStore } from '@renderer/store';
 import {
@@ -10,6 +9,7 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
 import type { CreateTaskRequest } from '@shared/types';
 
 interface CreateTaskDialogState {
@@ -22,7 +22,10 @@ interface UseGraphCreateTaskDialogResult {
   openCreateTaskDialog: (owner?: string) => void;
 }
 
-export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDialogResult {
+export function useGraphCreateTaskDialog(
+  teamName: string,
+  taskNotificationPort: TeamGraphTaskNotificationPort
+): UseGraphCreateTaskDialogResult {
   const [dialogState, setDialogState] = useState<CreateTaskDialogState>({
     open: false,
     defaultOwner: '',
@@ -70,7 +73,7 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
         ) {
           const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
           try {
-            await api.teams.processSend(teamName, msg);
+            await taskNotificationPort.notifyTeam(teamName, msg);
           } catch {
             // best-effort only
           }
@@ -83,7 +86,14 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
         setSubmitting(false);
       }
     },
-    [closeCreateTaskDialog, createTeamTask, isTeamProvisioning, teamData?.isAlive, teamName]
+    [
+      closeCreateTaskDialog,
+      createTeamTask,
+      isTeamProvisioning,
+      taskNotificationPort,
+      teamData?.isAlive,
+      teamName,
+    ]
   );
 
   return {

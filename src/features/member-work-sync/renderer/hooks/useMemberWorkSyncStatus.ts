@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, isElectronMode } from '@renderer/api';
 
 import { normalizeMemberName } from '../../core/domain/memberName';
+import { MEMBER_WORK_SYNC_STATUS_POLL_MS } from '../memberWorkSyncRendererConstants';
 import {
   type MemberWorkSyncStatusViewModel,
   toMemberWorkSyncStatusViewModel,
@@ -10,7 +11,7 @@ import {
 
 import type { MemberWorkSyncStatus } from '../../contracts';
 
-export const MEMBER_WORK_SYNC_STATUS_POLL_MS = 15_000;
+export { MEMBER_WORK_SYNC_STATUS_POLL_MS } from '../memberWorkSyncRendererConstants';
 
 export interface UseMemberWorkSyncStatusOptions {
   teamName?: string | null;

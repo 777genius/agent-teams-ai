@@ -1,4 +1,4 @@
-import { TeamTaskStallJournalWorkSyncCooldown } from '@features/member-work-sync/main/adapters/output/TeamTaskStallJournalWorkSyncCooldown';
+import { TeamTaskStallJournalWorkSyncCooldown } from '@main/services/team/TeamTaskStallJournalWorkSyncCooldown';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';

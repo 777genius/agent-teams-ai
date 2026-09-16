@@ -1167,4 +1167,49 @@ describe('TeamConfigReader', () => {
     expect((await reader.getConfigSnapshot(teamName))?.name).toBe('Bravo');
     expect(readFileSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('characterizes config updates as preserving unknown root and nested CLI fields', async () => {
+    const teamName = 'round-trip-config-team';
+    const teamDir = path.join(tempDir, teamName);
+    const configPath = path.join(teamDir, 'config.json');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        name: 'Before',
+        description: 'before description',
+        color: 'remove-me',
+        futureRoot: { retained: true },
+        members: [
+          {
+            name: 'team-lead',
+            agentType: 'team-lead',
+            futureMember: { retained: true },
+          },
+        ],
+      }),
+      'utf8'
+    );
+
+    await new TeamConfigReader().updateConfig(teamName, {
+      name: 'After',
+      description: 'after description',
+      color: '   ',
+    });
+
+    const persisted = JSON.parse(await fs.readFile(configPath, 'utf8')) as {
+      name?: string;
+      description?: string;
+      color?: string;
+      futureRoot?: unknown;
+      members?: Array<Record<string, unknown>>;
+    };
+    expect(persisted).toMatchObject({
+      name: 'After',
+      description: 'after description',
+      futureRoot: { retained: true },
+      members: [{ futureMember: { retained: true } }],
+    });
+    expect(persisted.color).toBeUndefined();
+  });
 });

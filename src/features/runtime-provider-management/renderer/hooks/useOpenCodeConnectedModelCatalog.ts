@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, isElectronMode } from '@renderer/api';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
@@ -13,6 +12,7 @@ import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
+import type { OpenCodeConnectedCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type { CliProviderStatus } from '@shared/types';
 
 const CONCURRENT_SOURCE_LOADS = 1;
@@ -59,13 +59,16 @@ interface CatalogState {
 }
 
 /** Dashboard display only: connected sources, never a full model inventory or launch proof. */
-export function useOpenCodeConnectedModelCatalog(input: {
-  enabled: boolean;
-  statusChecking?: boolean;
-  projectPath: string | null;
-  passiveProviderStatus: CliProviderStatus | null;
-  refreshRevision?: number;
-}) {
+export function useOpenCodeConnectedModelCatalog(
+  input: {
+    enabled: boolean;
+    statusChecking?: boolean;
+    projectPath: string | null;
+    passiveProviderStatus: CliProviderStatus | null;
+    refreshRevision?: number;
+  },
+  dependencies: OpenCodeConnectedCatalogDependencies
+) {
   const [revision, setRevision] = useState(0);
   const lastRefresh = useRef({ revision, external: input.refreshRevision });
   const scope = JSON.stringify([input.projectPath]);
@@ -126,7 +129,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
       let total: number | null = null;
       for (let page = 0; page < 20; page += 1) {
         if (!(await waitForStatus())) return;
-        const response = await api.runtimeProviderManagement.loadProviderDirectory({
+        const response = await dependencies.transport.loadProviderDirectory({
           runtimeId: 'opencode',
           projectPath: input.projectPath,
           summary: true,
@@ -178,7 +181,8 @@ export function useOpenCodeConnectedModelCatalog(input: {
               input.projectPath,
               sourceRequestGroup,
               current,
-              refreshRequested
+              refreshRequested,
+              dependencies
             );
             if (!current()) return;
             loadedModels.push(...catalog.models);
@@ -233,14 +237,14 @@ export function useOpenCodeConnectedModelCatalog(input: {
       cancelled = true;
       statusWaiter.current?.();
       statusWaiter.current = null;
-      if (isElectronMode()) {
+      if (dependencies.isElectronCapable()) {
         for (const group of activeGroups)
-          void api.runtimeProviderManagement
+          void dependencies.transport
             .cancelModelLoad?.({ requestGroupId: group })
             .catch(() => undefined);
       }
     };
-  }, [input.enabled, input.projectPath, input.refreshRevision, revision, scope]);
+  }, [dependencies, input.enabled, input.projectPath, input.refreshRevision, revision, scope]);
 
   const providerStatus = useMemo(() => {
     const passive = input.passiveProviderStatus;

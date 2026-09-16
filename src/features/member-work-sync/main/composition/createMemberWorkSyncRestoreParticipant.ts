@@ -7,6 +7,7 @@ import { restoreMemberWorkSyncJsonBackup } from '../infrastructure/restoreMember
 import type { HmacMemberWorkSyncReportTokenAdapter } from '../infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import type { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
 import type { TokenSecretIdentity } from '../infrastructure/memberWorkSyncTokenSecret';
+import type { MemberWorkSyncRestoreParticipant } from './memberWorkSyncPublicContracts';
 
 type RestoreStore = BackendSelectingMemberWorkSyncStore | JsonMemberWorkSyncStore;
 
@@ -77,7 +78,7 @@ export function createMemberWorkSyncRestoreParticipant(
   store: RestoreStore,
   tokens: HmacMemberWorkSyncReportTokenAdapter,
   paths: MemberWorkSyncStorePaths
-) {
+): MemberWorkSyncRestoreParticipant {
   return {
     /** Caller owns lifecycle fence and team mutex, and has drained admissions. */
     async prepare(input: { backupTeamsRoot: string; teamName: string; incarnation: string }) {
@@ -101,7 +102,3 @@ export function createMemberWorkSyncRestoreParticipant(
     },
   };
 }
-
-export type MemberWorkSyncRestoreParticipant = ReturnType<
-  typeof createMemberWorkSyncRestoreParticipant
->;

@@ -18,19 +18,21 @@ import type {
   MemberWorkSyncAgendaSourceResult,
   MemberWorkSyncHashPort,
 } from '../../../core/application';
-import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
-import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
+import type {
+  MemberWorkSyncConfigReaderPort,
+  MemberWorkSyncKanbanReaderPort,
+  MemberWorkSyncMembersReaderPort,
+  MemberWorkSyncTaskReaderPort,
+} from '../../composition/memberWorkSyncPublicContracts';
 import type { TeamMember, TeamProviderId } from '@shared/types';
 
 const ROSTER_CACHE_MAX_AGE_MS = 5_000;
 
 export interface TeamTaskAgendaSourceDeps {
-  configReader: Pick<TeamConfigReader, 'getConfig'>;
-  taskReader: TeamTaskReader;
-  kanbanManager: TeamKanbanManager;
-  membersMetaStore: TeamMembersMetaStore;
+  configReader: Pick<MemberWorkSyncConfigReaderPort, 'getConfig'>;
+  taskReader: MemberWorkSyncTaskReaderPort;
+  kanbanManager: MemberWorkSyncKanbanReaderPort;
+  membersMetaStore: MemberWorkSyncMembersReaderPort;
   hash: MemberWorkSyncHashPort;
   clock: { now(): Date };
   readTimeoutMs?: number;

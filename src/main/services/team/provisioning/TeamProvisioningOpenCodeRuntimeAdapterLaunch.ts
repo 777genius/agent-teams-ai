@@ -4,6 +4,7 @@ import * as path from 'path';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
 import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
+import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
@@ -650,6 +651,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
     const failed = result.teamLaunchState === 'partial_failure';
+    const retainRuntime = shouldRetainOpenCodeRuntimeLaunch(result);
     const finalProgress = ports.setRuntimeAdapterProgress(
       buildOpenCodeRuntimeAdapterFinalProgress({
         launching,
@@ -675,6 +677,8 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       if (!hasLaunchAuthority(runId)) {
         return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
       }
+    }
+    if (failed && !retainRuntime) {
       await clearOpenCodeLaunchLaneStorageBestEffort(ports, teamName, runId);
       if (!hasLaunchAuthority(runId)) {
         return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);

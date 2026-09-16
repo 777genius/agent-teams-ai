@@ -1,0 +1,62 @@
+import type {
+  ExecuteHostedTaskMutationResult,
+  GetHostedTaskBoardPageResult,
+  HostedTaskBoardCoreV1MutationCommand,
+  HostedTaskBoardPageRequest,
+} from '../../contracts/hosted';
+import type { TeamId } from '@shared/contracts/hosted';
+
+export interface HostedTaskBoardHttpRequestInit {
+  readonly method: 'POST';
+  readonly credentials: 'include';
+  readonly cache: 'no-store';
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface HostedTaskBoardHttpResponse {
+  readonly status: number;
+  json(): Promise<unknown>;
+}
+
+export type HostedTaskBoardFetchPort = (
+  input: string,
+  init: HostedTaskBoardHttpRequestInit
+) => Promise<HostedTaskBoardHttpResponse>;
+
+export interface HostedTaskBoardTransportDependencies {
+  readonly fetch: HostedTaskBoardFetchPort;
+  /** Returns only the current in-memory token. The transport never persists or returns it. */
+  readonly getCsrfToken: () => string | null;
+  /** Supplied only by a composition that has advertised the matching mutation route. */
+  readonly mutationsEnabled?: boolean;
+}
+
+export interface HostedTaskBoardTransportOptions {
+  readonly signal?: AbortSignal;
+}
+
+/** A trusted composition publishes this when the selected team's task snapshot is invalidated. */
+export interface HostedTaskBoardInvalidation {
+  readonly teamId: TeamId;
+}
+
+export type HostedTaskBoardInvalidationListener = (event: HostedTaskBoardInvalidation) => void;
+
+export interface HostedTaskBoardTransport {
+  getPage(
+    request: HostedTaskBoardPageRequest,
+    options?: HostedTaskBoardTransportOptions
+  ): Promise<GetHostedTaskBoardPageResult>;
+  /** Omitted by read-only hosted compositions; the page keeps that capability unadvertised. */
+  executeMutation?(
+    command: HostedTaskBoardCoreV1MutationCommand,
+    options?: HostedTaskBoardTransportOptions
+  ): Promise<ExecuteHostedTaskMutationResult>;
+  /** Optional because an HTTP-only composition has no external invalidation source. */
+  subscribeToInvalidations?(
+    teamId: TeamId,
+    listener: HostedTaskBoardInvalidationListener
+  ): () => void;
+}

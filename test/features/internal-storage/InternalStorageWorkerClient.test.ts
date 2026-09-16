@@ -1,173 +1,300 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { InternalStorageOperationInterruptedError } from '../../../src/features/internal-storage/core/application/InternalStorageOperationInterruptedError';
-import { InternalStorageWorkerClient } from '../../../src/features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
-
-const fixture = vi.hoisted(() => {
-  type Request = { id: string; op: string; payload: unknown };
-  class TestWorker {
-    messages: Request[] = [];
-    handlers = new Map<string, (value: never) => void>();
-    finishTermination!: (code: number) => void;
-    rejectTermination!: (error: Error) => void;
-    termination = new Promise<number>((resolve, reject) => {
-      this.finishTermination = resolve;
-      this.rejectTermination = reject;
-    });
-    terminate = vi.fn(() => this.termination);
-    postMessage = vi.fn((message: Request) => {
-      this.messages.push(message);
-    });
-    on(event: string, handler: (value: never) => void) {
-      this.handlers.set(event, handler);
-    }
-    emit(event: string, value: unknown) {
-      this.handlers.get(event)?.(value as never);
-    }
-    reply(index: number, result: unknown = null) {
-      this.emit('message', { id: this.messages[index].id, ok: true, result });
-    }
+const hoisted = vi.hoisted(() => {
+  interface MockWorker {
+    messages: Array<{ id: string; op: string; payload: unknown }>;
+    handlers: Map<string, (value: unknown) => void>;
+    postMessage: (message: unknown) => void;
+    on: (event: string, handler: (value: unknown) => void) => void;
+    terminate: ReturnType<typeof vi.fn>;
   }
-  const workers: TestWorker[] = [];
-  const construct = vi.fn(function () {
-    const worker = new TestWorker();
+
+  const workers: MockWorker[] = [];
+  const createMockWorker = vi.fn().mockImplementation(() => {
+    const worker: MockWorker = {
+      messages: [],
+      handlers: new Map(),
+      postMessage(message: unknown) {
+        worker.messages.push(message as MockWorker['messages'][number]);
+      },
+      on(event: string, handler: (value: unknown) => void) {
+        worker.handlers.set(event, handler);
+      },
+      terminate: vi.fn(async () => undefined),
+    };
     workers.push(worker);
     return worker;
   });
-  return { workers, construct };
+
+  return { createMockWorker, workers };
+});
+
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+  return {
+    ...actual,
+    existsSync: vi.fn(() => true),
+  };
 });
 
 vi.mock('node:worker_threads', () => ({
-  Worker: fixture.construct,
-  default: { Worker: fixture.construct },
-}));
-vi.mock('node:fs', async () => ({
-  ...(await vi.importActual<typeof import('node:fs')>('node:fs')),
-  existsSync: () => true,
+  Worker: hoisted.createMockWorker,
+  default: { Worker: hoisted.createMockWorker },
 }));
 
-describe('InternalStorageWorkerClient physical retirement', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+function respond(worker: (typeof hoisted.workers)[number], index: number, result: unknown): void {
+  worker.handlers.get('message')?.({
+    id: worker.messages[index].id,
+    ok: true,
+    result,
   });
+}
+
+describe('InternalStorageWorkerClient', () => {
   afterEach(() => {
-    fixture.workers.length = 0;
-    vi.clearAllMocks();
     vi.useRealTimers();
+    vi.clearAllMocks();
+    vi.resetModules();
+    hoisted.workers.length = 0;
   });
 
-  it('blocks replacement and negative proof until a timed-out writer exits', async () => {
-    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const write = client.replaceStallJournalEntries('sandbox', []).catch((error: unknown) => error);
-    const queued = client.statusRead('sandbox', 'alice').catch((error: unknown) => error);
-    const first = fixture.workers[0];
-    await vi.advanceTimersByTimeAsync(20_000);
-    const failure = await write;
-    expect(failure).toBeInstanceOf(InternalStorageOperationInterruptedError);
-    expect(failure).toMatchObject({ execution: 'unknown' });
-    expect(await queued).toMatchObject({ execution: 'not_started' });
-    expect(first.messages).toHaveLength(1);
-    expect(first.terminate).toHaveBeenCalledTimes(1);
-
-    let drained = false;
-    const drain = client.waitForSettling().then(() => {
-      drained = true;
+  it('propagates query-only identity mode to the worker', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({
+      databasePath: '/tmp/identity.db',
+      mode: 'team-identity-read-only',
     });
-    await expect(client.statusRead('sandbox', 'alice')).rejects.toMatchObject({
-      execution: 'not_started',
+
+    const identities = client.listTeamIdentities();
+    expect(hoisted.createMockWorker).toHaveBeenCalledWith(expect.anything(), {
+      workerData: {
+        databasePath: '/tmp/identity.db',
+        mode: 'team-identity-read-only',
+      },
     });
-    expect(fixture.workers).toHaveLength(1);
-    expect(drained).toBe(false);
-
-    // The late reply is not allowed to reopen admission: only physical exit is.
-    first.reply(0);
-    await expect(client.ping()).rejects.toMatchObject({ execution: 'not_started' });
-    expect(drained).toBe(false);
-    first.finishTermination(1);
-    await drain;
-    expect(drained).toBe(true);
-    await expect(
-      (failure as InternalStorageOperationInterruptedError).settled
-    ).resolves.toBeUndefined();
-
-    const read = client.statusRead('sandbox', 'alice');
-    expect(fixture.workers).toHaveLength(2);
-    const second = fixture.workers[1];
-    first.emit('exit', 1);
-    first.emit('error', new Error('late old error'));
-    first.reply(0);
-    second.reply(0, null);
-    await expect(read).resolves.toBeNull();
-    expect(second.terminate).not.toHaveBeenCalled();
+    respond(hoisted.workers[0], 0, []);
+    await expect(identities).resolves.toEqual([]);
   });
 
-  it('keeps the fence after failed terminate until an independent exit event', async () => {
-    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const pending = client.ping().catch((error: unknown) => error);
-    const worker = fixture.workers[0];
-    worker.emit('error', new Error('worker failure'));
-    await pending;
-    await vi.advanceTimersByTimeAsync(0);
-    worker.rejectTermination(new Error('termination unavailable'));
-    await vi.advanceTimersByTimeAsync(0);
-    await expect(client.ping()).rejects.toMatchObject({ execution: 'not_started' });
-    expect(fixture.workers).toHaveLength(1);
-    worker.emit('exit', 1);
-    await client.waitForSettling();
-    const retry = client.ping();
-    fixture.workers[1].reply(0, { backend: 'sqlite' });
-    await expect(retry).resolves.toEqual({ backend: 'sqlite' });
-  });
+  it('gives a default-timeout request its full budget after a long queued wait', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
 
-  it('close waits for an already retiring writer and stays idempotent', async () => {
-    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const pending = client.ping().catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(20_000);
-    await pending;
-    const close = client.close();
-    expect(client.close()).toBe(close);
-    let closed = false;
-    void close.then(() => {
-      closed = true;
+    const onlineBackup = client.coordinationBackupSqliteOnline({
+      backupRunId: 'backup-1',
+      deadlineAtMs: Date.now() + 30_000,
+      busyRetryMs: 10,
+      pagesPerStep: 64,
     });
-    await vi.advanceTimersByTimeAsync(0);
-    expect(closed).toBe(false);
-    await expect(client.ping()).rejects.toThrow('client is closed');
-    fixture.workers[0].finishTermination(1);
-    await close;
-    expect(closed).toBe(true);
-    expect(fixture.workers[0].terminate).toHaveBeenCalledTimes(1);
-  });
+    const queuedPing = client.ping();
+    const queuedPingError = queuedPing.catch((error: unknown) => error as Error);
+    const worker = hoisted.workers[0];
 
-  it('confirmed exit permits replacement without waiting for terminate', async () => {
-    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const pending = client.ping().catch((error: unknown) => error);
-    const worker = fixture.workers[0];
-    worker.emit('exit', 1);
-    expect(await pending).toMatchObject({ execution: 'unknown' });
+    expect(worker.messages.map(({ op }) => op)).toEqual(['coordinationBackup.sqlite.online']);
+
+    await vi.advanceTimersByTimeAsync(19_999);
+    respond(worker, 0, { status: 'completed' });
+    await expect(onlineBackup).resolves.toEqual({ status: 'completed' });
+    expect(worker.messages.map(({ op }) => op)).toEqual([
+      'coordinationBackup.sqlite.online',
+      'ping',
+    ]);
+
+    await vi.advanceTimersByTimeAsync(19_999);
     expect(worker.terminate).not.toHaveBeenCalled();
-    const next = client.ping();
-    fixture.workers[1].reply(0, { backend: 'sqlite' });
-    await expect(next).resolves.toEqual({ backend: 'sqlite' });
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(queuedPingError).resolves.toMatchObject({
+      message: 'internal-storage worker call timeout after 39999ms (ping)',
+    });
+    expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it('preserves normal serialized requests and graceful close', async () => {
-    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const first = client.ping();
-    const second = client.statusRead('sandbox', 'alice');
-    const worker = fixture.workers[0];
-    expect(worker.messages).toHaveLength(1);
-    worker.reply(0, { backend: 'sqlite' });
-    await first;
-    expect(worker.messages).toHaveLength(2);
-    worker.reply(1);
-    await second;
-    const closing = client.close();
-    expect(worker.messages[2].op).toBe('close');
-    worker.reply(2);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
-    worker.finishTermination(0);
-    await closing;
+  it('keeps a queued online-backup timeout anchored to deadlineAtMs plus two seconds', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+    const activePing = client.ping();
+    const deadlineAtMs = Date.now() + 5_000;
+
+    const onlineBackup = client.coordinationBackupSqliteOnline({
+      backupRunId: 'backup-2',
+      deadlineAtMs,
+      busyRetryMs: 10,
+      pagesPerStep: 64,
+    });
+    const onlineBackupError = onlineBackup.catch((error: unknown) => error as Error);
+    const worker = hoisted.workers[0];
+
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+
+    await vi.advanceTimersByTimeAsync(6_000);
+    respond(worker, 0, { backend: 'sqlite' });
+    await expect(activePing).resolves.toEqual({ backend: 'sqlite' });
+    expect(worker.messages.map(({ op }) => op)).toEqual([
+      'ping',
+      'coordinationBackup.sqlite.online',
+    ]);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(worker.terminate).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(onlineBackupError).resolves.toMatchObject({
+      message:
+        'internal-storage worker call timeout after 7000ms (coordinationBackup.sqlite.online)',
+    });
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it('serializes dispatch and rejects active and queued requests on worker failure', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+
+    const active = client.ping();
+    const queued = client.loadStallJournalEntries('team-a');
+    const activeError = active.catch((error: unknown) => error as Error);
+    const queuedError = queued.catch((error: unknown) => error as Error);
+    const worker = hoisted.workers[0];
+
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+
+    const failure = new Error('test worker failure');
+    worker.handlers.get('error')?.(failure);
+
+    await expect(activeError).resolves.toBe(failure);
+    await expect(queuedError).resolves.toBe(failure);
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+    consoleError.mockRestore();
+  });
+
+  it('never dispatches a hosted configuration mutation queued past its deadline', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+    const activePing = client.ping();
+    const worker = hoisted.workers[0];
+    const controller = new AbortController();
+    const request = {
+      workspaceId: parseWorkspaceId(`workspace_${'1'.repeat(32)}`),
+      idempotencyKey: 'idempotency_queued-deadline-0001',
+      payloadHash: 'a'.repeat(64),
+      metadata: { name: 'Queued' },
+      members: [{ name: 'lead' }],
+      deadlineAtMs: Date.now() + 100,
+    } as const;
+    const expired = client
+      .createHostedTeamConfiguration(request, { signal: controller.signal })
+      .catch((error: unknown) => error as Error);
+
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+    await vi.advanceTimersByTimeAsync(100);
+    respond(worker, 0, { backend: 'sqlite' });
+    await expect(activePing).resolves.toEqual({ backend: 'sqlite' });
+    await expect(expired).resolves.toMatchObject({
+      message: 'process-ownership-storage-call-admission-expired',
+    });
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
+
+    const retry = client.createHostedTeamConfiguration(
+      { ...request, deadlineAtMs: Date.now() + 100 },
+      { signal: controller.signal }
+    );
+    expect(worker.messages.map(({ op }) => op)).toEqual(['ping', 'hostedTeamConfiguration.create']);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    respond(worker, 1, {
+      kind: 'created',
+      teamId: `team_${'2'.repeat(32)}`,
+      revision: 'revision_initial',
+      outcome: 'created',
+    });
+    await expect(retry).resolves.toMatchObject({ kind: 'created', outcome: 'created' });
+  });
+
+  it('round-trips TeamRoster operations through the typed worker protocol', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: '/tmp/internal-storage.db' });
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const roster = {
+      schemaVersion: 1 as const,
+      teamId,
+      rosterGeneration: 1,
+      adoptionFingerprint: `sha256:${'b'.repeat(64)}`,
+      adoptedAt: '2026-07-23T10:00:00.000Z',
+      members: [
+        {
+          ordinal: 0,
+          memberId: parseMemberId(`member_${'c'.repeat(32)}`),
+          legacyMemberKey: 'builder',
+          memberRevision: 1,
+          state: 'active' as const,
+          providerId: 'codex' as const,
+          model: null,
+          role: null,
+          workflow: null,
+          isolation: null,
+        },
+      ],
+    };
+
+    const get = client.getTeamRoster(teamId);
+    const worker = hoisted.workers[0];
+    expect(worker.messages[0]).toMatchObject({
+      op: 'teamRoster.get',
+      payload: { teamId },
+    });
+    respond(worker, 0, roster);
+    await expect(get).resolves.toEqual(roster);
+
+    const adopt = client.adoptTeamRoster(roster);
+    expect(worker.messages[1]).toMatchObject({
+      op: 'teamRoster.adopt',
+      payload: { roster },
+    });
+    respond(worker, 1, { outcome: 'created', roster });
+    await expect(adopt).resolves.toEqual({ outcome: 'created', roster });
+  });
+
+  it('delegates hosted approval reads through the same typed worker transport', async () => {
+    const { InternalStorageWorkerClient } =
+      await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
+    const client = new InternalStorageWorkerClient({ databasePath: 'internal-storage.db' });
+    const request = {
+      scope: {
+        principalId: 'actor_alice',
+        workspaceId: `workspace_${'d'.repeat(32)}`,
+        teamId: `team_${'e'.repeat(32)}`,
+        authorityGeneration: 'generation_authority-v1',
+        restoreGeneration: 1,
+      },
+      expectedRunId: `run_${'f'.repeat(32)}`,
+      afterApprovalId: null,
+      afterApprovalGenerationHash: null,
+      limit: 10,
+      deadlineAtMs: Date.now() + 60_000,
+    } as const;
+
+    const read = client.hostedTeamApprovalReadPending(request);
+    const worker = hoisted.workers[0];
+    expect(worker.messages[0]).toEqual({
+      id: expect.any(String),
+      op: 'hostedTeamApprovalAuthority.readPending',
+      payload: request,
+    });
+    respond(worker, 0, { records: [], hasMore: false });
+    await expect(read).resolves.toEqual({ records: [], hasMore: false });
   });
 });

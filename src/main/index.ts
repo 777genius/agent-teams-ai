@@ -41,15 +41,15 @@ import {
   type CodexModelCatalogFeatureFacade,
   createCodexModelCatalogFeature,
 } from '@features/codex-model-catalog/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
 import {
   createMemberLogStreamFeature,
   registerMemberLogStreamIpc,
   removeMemberLogStreamIpc,
-} from '@features/member-log-stream/main';
+} from '@features/member-log-stream/main/composition';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
-  createMemberWorkSyncFeature,
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
@@ -60,16 +60,18 @@ import {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
+import { createNodeMemberWorkSyncFeature } from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   createInternalStorageFeature,
   type InternalStorageFeature,
 } from '@features/internal-storage/main';
 import {
-  createOrganizationsFeature,
   type OrganizationsFeatureFacade,
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
+import { createOrganizationsFeature } from '@features/organizations/main/composition';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -106,11 +108,6 @@ import {
 } from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
 import {
-  createApplicationCommandLedgerFeature,
-  NodeApplicationCommandHasher,
-} from '@features/application-command-ledger/main';
-import { TaskBoardCommandFacade } from '@features/task-board-commands';
-import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
   removeTokenUsageIpc,
@@ -118,7 +115,8 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import * as workspaceTrustFeature from '@features/workspace-trust/main';
+import { createTaskBoardCommandComposition } from '@main/composition/applicationCommandLedgerComposition';
+import { createDesktopTeamMemberSettingsFeature } from '@main/composition/team/createDesktopTeamMemberSettingsFeature';
 import {
   applyAgentTeamsMcpAppContext,
   ensureAgentTeamsMcpLocalLaunchEnv,
@@ -220,7 +218,8 @@ import {
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
+import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
+import * as workspaceTrustComposition from './composition/workspaceTrust';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -371,6 +370,14 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
+
+export {
+  reportDesktopShutdownFailure,
+  runDesktopQuitLifecycle,
+  runDesktopUpdateInstallLifecycle,
+  runDesktopWindowCloseLifecycle,
+  shouldQuitAfterDesktopWindowClose,
+} from './desktopLifecycle';
 
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
@@ -1010,9 +1017,8 @@ const authorizedWindowCloses = new WeakSet<BrowserWindow>();
 const windowCloseReadinessInFlight = new WeakSet<BrowserWindow>();
 let appQuitFlow: Promise<boolean> | null = null;
 
-// Service registry and global services
 let contextRegistry: ServiceContextRegistry;
-let workspaceTrustStatus: workspaceTrustFeature.WorkspaceTrustStatusFeatureFacade;
+let workspaceTrustStatus: workspaceTrustComposition.NodeWorkspaceTrustFeatures['status'];
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
@@ -2013,34 +2019,27 @@ async function initializeServices(): Promise<void> {
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
-    const applicationCommandHasher = new NodeApplicationCommandHasher();
-    const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
-      storageGateway: applicationCommandLedgerBackend.gateway,
-    });
-    applicationCommandRunner = applicationCommandLedgerFeature.runner;
-    teamDataService.setTaskBoardCommandFacade(
-      new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
-        isDurableStorageAvailable: () =>
-          applicationCommandLedgerBackend.selector.select(true, false),
-        hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
-      })
-    );
+    const taskBoardCommands = createTaskBoardCommandComposition(applicationCommandLedgerBackend);
+    applicationCommandRunner = taskBoardCommands.runner;
+    teamDataService.setTaskBoardCommandFacade(taskBoardCommands.facade);
   }
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
+  const teamProduct = createProductTeamProvisioning();
+  teamProvisioningService = teamProduct.service;
+  const teamFeatureCapabilitySources = teamProduct.capabilities;
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
-  const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
-  const teamMessagingApi = teamIpcHandlerApis.messaging;
-  const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
+  const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
+  const teamMessagingApi = teamFeatureCapabilitySources.messaging;
+  const teamMemberSettingsFeature = createDesktopTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
-    memberLifecycle: teamIpcHandlerApis.memberLifecycle,
+    memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
     /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
-  const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
+  const workspaceTrust = workspaceTrustComposition.createNodeWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
     getHomeDir,
@@ -2049,7 +2048,7 @@ async function initializeServices(): Promise<void> {
   });
   workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
-  workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  workspaceTrustComposition.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -2073,9 +2072,9 @@ async function initializeServices(): Promise<void> {
     addNotification: (payload) => notificationManager.addTeamNotification(payload),
     logger: createLogger('Feature:TeamRuntimeRecovery'),
   });
-  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
-    teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
-  );
+  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
+  });
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
@@ -2367,7 +2366,7 @@ async function initializeServices(): Promise<void> {
     memberWorkSyncFeature?.resumeTeam(teamName);
   });
   organizationsFeature = createOrganizationsFeature({
-    teamDataService,
+    teamData: teamDataService,
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
@@ -2644,7 +2643,7 @@ async function initializeServices(): Promise<void> {
     );
     return activeTeamNames;
   };
-  const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+  const preparedMemberWorkSyncFeature = createNodeMemberWorkSyncFeature({
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,
@@ -2893,14 +2892,12 @@ async function initializeServices(): Promise<void> {
       await requestGuardedAppQuit('relaunch');
     },
   });
-
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
     sshConnectionManager,
     teamDataService,
-    teamIpcHandlerApis,
+    teamFeatureCapabilitySources,
     teamMemberLogsFinder,
     memberStatsComputer,
     boardTaskActivityService,
@@ -3186,7 +3183,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
-      workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
+      workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);

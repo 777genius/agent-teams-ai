@@ -67,4 +67,58 @@ describe('member update notifications', () => {
       },
     ]);
   });
+
+  it('uses the shared lead policy when excluding roster owners from the diff', () => {
+    const diff = buildReplaceMembersDiff(
+      [
+        { name: 'lead', role: 'Coordinator', providerId: 'codex' },
+        {
+          name: 'captain',
+          agentType: 'orchestrator',
+          role: 'Coordinator',
+          providerId: 'codex',
+        },
+        { name: 'captain-role', role: 'team-lead', providerId: 'codex' },
+      ],
+      []
+    );
+
+    expect(diff).toEqual({ added: [], removed: [], updated: [] });
+  });
+
+  it('keeps ordinary teammates with lead-specialist roles in the diff', () => {
+    const diff = buildReplaceMembersDiff(
+      [
+        { name: 'alice', role: 'Tech Lead', providerId: 'codex' },
+        { name: 'bob', role: 'Lead builder', providerId: 'codex' },
+      ],
+      []
+    );
+
+    expect(diff.removed).toEqual(['alice', 'bob']);
+  });
+
+  it('normalizes semantically equivalent MCP policies before comparing members', () => {
+    const diff = buildReplaceMembersDiff(
+      [{ name: 'alice', providerId: 'codex', mcpPolicy: { mode: 'inheritLead' } }],
+      [{ name: 'alice', providerId: 'codex' }]
+    );
+
+    expect(diff.updated).toEqual([]);
+  });
+
+  it('normalizes unknown legacy provider ids before comparing persisted members', () => {
+    const diff = buildReplaceMembersDiff(
+      [
+        {
+          name: 'alice',
+          providerId: 'legacy-provider' as never,
+          providerBackendId: 'codex-native',
+        },
+      ],
+      [{ name: 'alice' }]
+    );
+
+    expect(diff).toEqual({ added: [], removed: [], updated: [] });
+  });
 });

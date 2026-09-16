@@ -55,7 +55,8 @@ export function presentSetupForm(
     title: replaceProviderNameInText(form.title, form.displayName, displayName) ?? form.title,
     description: replaceProviderNameInText(form.description, form.displayName, displayName),
     submitLabel:
-      replaceProviderNameInText(form.submitLabel, form.displayName, displayName) ?? form.submitLabel,
+      replaceProviderNameInText(form.submitLabel, form.displayName, displayName) ??
+      form.submitLabel,
   };
 }
 

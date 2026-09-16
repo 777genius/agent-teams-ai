@@ -27,7 +27,6 @@ import {
   RuntimeProviderErrorAlert,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
-  useOpenCodeConnectedModelCatalog,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -68,6 +67,7 @@ import {
   getProviderTerminalLogoutCommand,
 } from '@renderer/components/runtime/providerTerminalCommands';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
+import { useOpenCodeConnectedModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 import {
   loadDashboardCliStatusBannerCollapsed,
   saveDashboardCliStatusBannerCollapsed,

@@ -1,22 +1,18 @@
 import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useGraphMemberLogPreviews } from '@features/agent-graph/renderer/hooks/useGraphMemberLogPreviews';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberLogPreviewResponse } from '@features/member-log-stream/contracts';
 
-const apiMock = vi.hoisted(() => ({
-  memberLogStream: {
-    getMemberLogPreviews: vi.fn(),
-  },
-  teams: {
-    onTeamChange: vi.fn(),
-  },
+const memberLogObservationPortsMock = vi.hoisted(() => ({
+  readMemberLogPreviews: vi.fn(),
+  subscribeToChanges: vi.fn(),
 }));
 
-vi.mock('@renderer/api', () => ({
-  api: apiMock,
+vi.mock('@features/member-log-stream/renderer', () => ({
+  memberLogObservationPorts: memberLogObservationPortsMock,
 }));
 
 function createDeferred<T>(): {
@@ -153,9 +149,9 @@ describe('useGraphMemberLogPreviews', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    apiMock.memberLogStream.getMemberLogPreviews.mockReset();
-    apiMock.teams.onTeamChange.mockReset();
-    apiMock.teams.onTeamChange.mockReturnValue(() => undefined);
+    memberLogObservationPortsMock.readMemberLogPreviews.mockReset();
+    memberLogObservationPortsMock.subscribeToChanges.mockReset();
+    memberLogObservationPortsMock.subscribeToChanges.mockReturnValue(() => undefined);
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
       value: 'visible',
@@ -169,7 +165,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('debounces visible member batch requests and passes safe lane ids', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -191,14 +187,14 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).not.toHaveBeenCalled();
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).not.toHaveBeenCalled();
 
     await act(async () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({
@@ -216,7 +212,7 @@ describe('useGraphMemberLogPreviews', () => {
 
   it('shows loading while the first visible preview request is still debounced', async () => {
     const firstLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews.mockReturnValueOnce(firstLoad.promise);
+    memberLogObservationPortsMock.readMemberLogPreviews.mockReturnValueOnce(firstLoad.promise);
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -234,14 +230,14 @@ describe('useGraphMemberLogPreviews', () => {
     });
 
     expect(latestState()?.loading).toBe(true);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).not.toHaveBeenCalled();
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).not.toHaveBeenCalled();
 
     await act(async () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
@@ -260,7 +256,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('does not duplicate the initial debounced request in React StrictMode', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
 
@@ -281,7 +277,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     act(() => {
       root.unmount();
@@ -289,7 +285,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('clears a scheduled preview request when unmounted before the debounce fires', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
 
@@ -311,13 +307,13 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).not.toHaveBeenCalled();
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).not.toHaveBeenCalled();
   });
 
   it('keeps completed previews cached after the visible member set changes', async () => {
     const aliceLoad = createDeferred<MemberLogPreviewResponse>();
     const bobLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockReturnValueOnce(aliceLoad.promise)
       .mockReturnValueOnce(bobLoad.promise);
 
@@ -339,7 +335,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(<HookProbe teamName="alpha-team" memberNames={['bob']} onState={onState} />);
@@ -349,7 +345,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       aliceLoad.resolve(response('alice', '2026-04-03T00:00:00.000Z'));
@@ -370,7 +366,7 @@ describe('useGraphMemberLogPreviews', () => {
 
   it('keeps cached previews while pan or zoom changes the visible member batch', async () => {
     const bobLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockResolvedValueOnce(response('alice', '2026-04-03T00:00:00.000Z'))
       .mockReturnValueOnce(bobLoad.promise);
 
@@ -423,7 +419,7 @@ describe('useGraphMemberLogPreviews', () => {
 
   it('does not show stale previews as loaded after switching teams with the same visible member', async () => {
     const betaLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockResolvedValueOnce(response('alice', '2026-04-03T00:00:00.000Z'))
       .mockReturnValueOnce(betaLoad.promise);
 
@@ -456,14 +452,14 @@ describe('useGraphMemberLogPreviews', () => {
     });
     expect(latestState()?.loading).toBe(true);
     expect(latestState()?.previewsByMember.get('alice')).toBeUndefined();
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'beta-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
@@ -485,7 +481,7 @@ describe('useGraphMemberLogPreviews', () => {
 
   it('does not duplicate preview requests when the same visible members are reordered', async () => {
     const firstLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews.mockReturnValueOnce(firstLoad.promise);
+    memberLogObservationPortsMock.readMemberLogPreviews.mockReturnValueOnce(firstLoad.promise);
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -501,8 +497,8 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice', 'bob'],
       expect.any(Object)
@@ -518,7 +514,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       firstLoad.resolve(batchResponse(['alice', 'bob'], '2026-04-03T00:00:00.000Z'));
@@ -535,7 +531,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     act(() => {
       root.unmount();
@@ -545,7 +541,7 @@ describe('useGraphMemberLogPreviews', () => {
   it('ignores stale responses when the same member receives a newer lane request', async () => {
     const oldLaneLoad = createDeferred<MemberLogPreviewResponse>();
     const newLaneLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockReturnValueOnce(oldLaneLoad.promise)
       .mockReturnValueOnce(newLaneLoad.promise);
 
@@ -574,7 +570,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(
@@ -591,7 +587,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       newLaneLoad.resolve(response('alice', '2026-04-03T00:01:00.000Z'));
@@ -615,7 +611,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('does not reload when only a non-visible member lane changes', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -640,7 +636,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(
@@ -661,7 +657,7 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     act(() => {
       root.unmount();
@@ -669,7 +665,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('falls back to normalized lane ids when an exact member key is blank', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('Alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -695,8 +691,8 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['Alice'],
       expect.objectContaining({
@@ -713,14 +709,12 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('preserves a pending forced reload when lane metadata rerenders before debounce fires', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -742,10 +736,10 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       root.render(
         <HookProbe
           teamName="alpha-team"
@@ -761,8 +755,8 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({
@@ -777,7 +771,7 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('force refreshes visible previews after returning from a hidden document', async () => {
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -794,7 +788,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -804,7 +798,7 @@ describe('useGraphMemberLogPreviews', () => {
       document.dispatchEvent(new Event('visibilitychange'));
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -816,8 +810,8 @@ describe('useGraphMemberLogPreviews', () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
@@ -829,15 +823,13 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('marks empty cached previews as loading while a forced event refresh is pending', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
     const refreshLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockResolvedValueOnce(emptyResponse('alice', '2026-04-03T00:00:00.000Z'))
       .mockReturnValueOnce(refreshLoad.promise);
 
@@ -859,24 +851,24 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
     expect(latestState()?.loading).toBe(false);
     expect(latestState()?.previewsByMember.get('alice')?.items).toHaveLength(0);
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       await Promise.resolve();
     });
 
     expect(latestState()?.loading).toBe(true);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
@@ -895,16 +887,14 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('keeps loading when an empty visible response arrives before a pending forced refresh starts', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
     const initialLoad = createDeferred<MemberLogPreviewResponse>();
     const refreshLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockReturnValueOnce(initialLoad.promise)
       .mockReturnValueOnce(refreshLoad.promise);
 
@@ -926,11 +916,11 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
     expect(latestState()?.loading).toBe(true);
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       await Promise.resolve();
     });
     expect(latestState()?.loading).toBe(true);
@@ -946,7 +936,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       refreshLoad.resolve(response('alice', '2026-04-03T00:01:00.000Z'));
@@ -962,7 +952,7 @@ describe('useGraphMemberLogPreviews', () => {
 
   it('marks empty cached previews as loading during a direct forced reload', async () => {
     const refreshLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockResolvedValueOnce(emptyResponse('alice', '2026-04-03T00:00:00.000Z'))
       .mockReturnValueOnce(refreshLoad.promise);
 
@@ -1003,8 +993,8 @@ describe('useGraphMemberLogPreviews', () => {
     });
 
     expect(latestState()?.loading).toBe(true);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
@@ -1022,16 +1012,14 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('keeps loading and ignores stale errors while a newer empty-preview refresh is in flight', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
     const staleRefresh = createDeferred<MemberLogPreviewResponse>();
     const latestRefresh = createDeferred<MemberLogPreviewResponse>();
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockResolvedValueOnce(emptyResponse('alice', '2026-04-03T00:00:00.000Z'))
       .mockReturnValueOnce(staleRefresh.promise)
       .mockReturnValueOnce(latestRefresh.promise);
@@ -1061,16 +1049,16 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
     expect(latestState()?.loading).toBe(false);
     expect(latestState()?.previewsByMember.get('alice')?.items).toHaveLength(0);
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
     expect(latestState()?.loading).toBe(true);
 
     await act(async () => {
@@ -1088,7 +1076,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(3);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(3);
 
     await act(async () => {
       staleRefresh.reject(new Error('stale lane failed'));
@@ -1114,7 +1102,7 @@ describe('useGraphMemberLogPreviews', () => {
   it('ignores hidden member request loading and errors after the visible member changes', async () => {
     const hiddenAliceLoad = createDeferred<MemberLogPreviewResponse>();
     const visibleBobLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockReturnValueOnce(hiddenAliceLoad.promise)
       .mockReturnValueOnce(visibleBobLoad.promise);
 
@@ -1136,7 +1124,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
     expect(latestState()?.loading).toBe(true);
 
     await act(async () => {
@@ -1154,7 +1142,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       visibleBobLoad.resolve(emptyResponse('bob', '2026-04-03T00:01:00.000Z'));
@@ -1170,16 +1158,14 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('ignores old same-key responses after switching away from and back to a team', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
     const oldAlphaLoad = createDeferred<MemberLogPreviewResponse>();
     const currentAlphaLoad = createDeferred<MemberLogPreviewResponse>();
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews
+    memberLogObservationPortsMock.readMemberLogPreviews
       .mockReturnValueOnce(oldAlphaLoad.promise)
       .mockReturnValueOnce(currentAlphaLoad.promise);
 
@@ -1201,7 +1187,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.render(<HookProbe teamName="beta-team" memberNames={[]} onState={onState} />);
@@ -1217,7 +1203,7 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       oldAlphaLoad.resolve(response('alice', '2026-04-03T00:00:00.000Z'));
@@ -1227,11 +1213,11 @@ describe('useGraphMemberLogPreviews', () => {
     expect(latestState()?.previewsByMember.get('alice')).toBeUndefined();
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
 
     await act(async () => {
       currentAlphaLoad.resolve(response('alice', '2026-04-03T00:01:00.000Z'));
@@ -1248,14 +1234,12 @@ describe('useGraphMemberLogPreviews', () => {
   });
 
   it('reloads visible members on log change events with force refresh', async () => {
-    let teamChangeListener:
-      | ((event: unknown, data: { teamName: string; type: string }) => void)
-      | null = null;
-    apiMock.teams.onTeamChange.mockImplementation((callback) => {
+    let teamChangeListener: ((data: { teamName: string; type: string }) => void) | null = null;
+    memberLogObservationPortsMock.subscribeToChanges.mockImplementation((callback) => {
       teamChangeListener = callback as typeof teamChangeListener;
       return () => undefined;
     });
-    apiMock.memberLogStream.getMemberLogPreviews.mockResolvedValue(
+    memberLogObservationPortsMock.readMemberLogPreviews.mockResolvedValue(
       response('alice', '2026-04-03T00:00:00.000Z')
     );
     const host = document.createElement('div');
@@ -1272,42 +1256,42 @@ describe('useGraphMemberLogPreviews', () => {
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(1);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'log-source-change' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'log-source-change' });
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(2);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(2);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
     );
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'tool-activity' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'tool-activity' });
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(3);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(3);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })
     );
 
     await act(async () => {
-      teamChangeListener?.(null, { teamName: 'alpha-team', type: 'task-log-change' });
+      teamChangeListener?.({ teamName: 'alpha-team', type: 'task-log-change' });
       vi.advanceTimersByTime(700);
       await Promise.resolve();
     });
 
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenCalledTimes(4);
-    expect(apiMock.memberLogStream.getMemberLogPreviews).toHaveBeenLastCalledWith(
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenCalledTimes(4);
+    expect(memberLogObservationPortsMock.readMemberLogPreviews).toHaveBeenLastCalledWith(
       'alpha-team',
       ['alice'],
       expect.objectContaining({ forceRefresh: true })

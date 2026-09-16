@@ -67,17 +67,21 @@ interface PolicyHarness {
 function createPolicy(): PolicyHarness {
   const markNextAttemptDeferred = vi.fn<
     OpenCodePromptDeliveryLedgerStore['markNextAttemptDeferred']
-  >(async (input) => ({
+  >(async (input: Parameters<OpenCodePromptDeliveryLedgerStore['markNextAttemptDeferred']>[0]) => ({
     ...spentLedgerRecord(),
     nextAttemptAt: input.nextAttemptAt,
   }));
   const markFailedTerminal = vi.fn<
     OpenCodePromptDeliveryFollowUpDependencies['markFailedTerminal']
-  >(async (input) => ({
-    ...spentLedgerRecord(),
-    status: 'failed_terminal' as const,
-    diagnostics: input.diagnostics ?? [],
-  }));
+  >(
+    async (
+      input: Parameters<OpenCodePromptDeliveryFollowUpDependencies['markFailedTerminal']>[0]
+    ) => ({
+      ...spentLedgerRecord(),
+      status: 'failed_terminal' as const,
+      diagnostics: input.diagnostics ?? [],
+    })
+  );
   const scheduleWatchdog = vi.fn<OpenCodePromptDeliveryFollowUpDependencies['scheduleWatchdog']>();
   const logEvent = vi.fn<OpenCodePromptDeliveryFollowUpDependencies['logEvent']>();
   const policy = new OpenCodePromptDeliveryFollowUpPolicy({

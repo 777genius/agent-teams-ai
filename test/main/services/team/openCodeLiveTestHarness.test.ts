@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildLiveTeamControlApiServices } from './openCodeLiveTestHarness';
 
+import type { TeamRuntimeControlCompatibilityApi } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 
 function createServiceDouble(): TeamProvisioningService {
@@ -41,7 +42,7 @@ function createServiceDouble(): TeamProvisioningService {
 }
 
 describe('openCodeLiveTestHarness', () => {
-  it('wires runtime-control callbacks into the live team control API services', () => {
+  it('wires runtime control callbacks into the live team control API services', () => {
     const svc = createServiceDouble();
 
     const services = buildLiveTeamControlApiServices(svc);
@@ -54,7 +55,9 @@ describe('openCodeLiveTestHarness', () => {
 
   it('keeps explicit harness service overrides available for tests', () => {
     const svc = createServiceDouble();
-    const override = { service: 'runtime-control-override' } as unknown as TeamProvisioningService;
+    const override = {
+      service: 'runtime-control-override',
+    } as unknown as TeamRuntimeControlCompatibilityApi;
     const defaultTeamApis = buildLiveTeamControlApiServices(svc).teamApis!;
 
     const services = buildLiveTeamControlApiServices(svc, {

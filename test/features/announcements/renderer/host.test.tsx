@@ -13,7 +13,6 @@ import type {
   AnnouncementsSnapshot,
 } from '../../../../src/features/announcements/contracts';
 
-vi.mock('@renderer/api', () => ({ api: { openExternal: vi.fn() } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key, resolvedLanguage: 'en' }),
 }));
@@ -39,6 +38,7 @@ let listener: (value: AnnouncementsSnapshot) => void;
 let client: AnnouncementsApi;
 let root: Root;
 let mount: HTMLDivElement;
+const openExternal = vi.fn();
 function Blocker({ open }: { open: boolean }) {
   useOverlayOccupancy(open);
   return null;
@@ -47,7 +47,7 @@ async function render(ready = true, blocked = false) {
   await act(async () => {
     root.render(
       <>
-        <AnnouncementHost ready={ready} client={client} />
+        <AnnouncementHost ready={ready} client={client} openExternal={openExternal} />
         <Blocker open={blocked} />
       </>
     );
@@ -287,7 +287,7 @@ describe('announcement host', () => {
     await act(async () =>
       root.render(
         <React.StrictMode>
-          <AnnouncementHost ready client={client} />
+          <AnnouncementHost ready client={client} openExternal={openExternal} />
         </React.StrictMode>
       )
     );

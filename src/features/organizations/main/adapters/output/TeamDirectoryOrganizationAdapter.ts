@@ -1,6 +1,6 @@
 import type { OrganizationsTeamDirectoryPort } from '../../../core/application';
 import type { OrgTaskCandidate, OrgTeamCandidate } from '../../../core/domain';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
+import type { OrganizationsTeamDataPort } from '../../application/OrganizationsTeamDataPort';
 import type { GlobalTask, TeamSummary, TeamSummaryMember } from '@shared/types';
 
 function toTaskCandidate(task: GlobalTask): OrgTaskCandidate {
@@ -33,13 +33,13 @@ function ensureLeadMember(team: TeamSummary, members: TeamSummaryMember[]): Team
 }
 
 export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirectoryPort {
-  constructor(private readonly teamDataService: TeamDataService) {}
+  constructor(private readonly teamData: OrganizationsTeamDataPort) {}
 
   async listTeams(input: { includeDeletedTeams: boolean }): Promise<OrgTeamCandidate[]> {
     const [teams, globalTasks, aliveTeams] = await Promise.all([
-      this.teamDataService.listTeams(),
-      this.teamDataService.getAllTasks(),
-      this.teamDataService.listAliveProcessTeams(),
+      this.teamData.listTeams(),
+      this.teamData.getAllTasks(),
+      this.teamData.listAliveProcessTeams(),
     ]);
     const aliveSet = new Set(aliveTeams);
     const tasksByTeam = new Map<string, OrgTaskCandidate[]>();

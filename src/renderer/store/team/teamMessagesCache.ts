@@ -1,25 +1,13 @@
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
+export type {
+  RefreshTeamMessagesHeadResult,
+  TeamMessagesCacheEntry,
+} from '@features/team-view-read-model/renderer';
+
+import type { TeamMessagesCacheEntry } from '@features/team-view-read-model/renderer';
 import type { InboxMessage } from '@shared/types';
-
-export interface TeamMessagesCacheEntry {
-  canonicalMessages: InboxMessage[];
-  optimisticMessages: InboxMessage[];
-  feedRevision: string | null;
-  nextCursor: string | null;
-  hasMore: boolean;
-  lastFetchedAt: number | null;
-  loadingHead: boolean;
-  loadingOlder: boolean;
-  headHydrated: boolean;
-}
-
-export interface RefreshTeamMessagesHeadResult {
-  feedChanged: boolean;
-  headChanged: boolean;
-  feedRevision: string | null;
-}
 
 export interface TeamMessagesCacheState {
   teamMessagesByName: Record<string, TeamMessagesCacheEntry>;

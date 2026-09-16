@@ -28,8 +28,8 @@ vi.mock('@renderer/api', () => ({
 import {
   type OpenCodeProviderModelCatalogResult,
   resolveOpenCodeCatalogSourceProviderId,
-  useOpenCodeProviderModelCatalog,
 } from '@features/runtime-provider-management/renderer';
+import { useOpenCodeProviderModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 
 interface Deferred<T> {
   promise: Promise<T>;

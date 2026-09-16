@@ -1,4 +1,3 @@
-export { registerAnnouncementsIpc } from './adapters/input/registerAnnouncementsIpc';
 export {
   type AnnouncementsFeature,
   type AnnouncementWindowContext,

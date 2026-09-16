@@ -1,4 +1,7 @@
-import type { MemberWorkSyncPhase2ReadinessAssessment } from '../../contracts';
+import type {
+  MemberWorkSyncDeliveryReadinessAssessment,
+  MemberWorkSyncPhase2ReadinessAssessment,
+} from '../../contracts';
 import type {
   MemberWorkSyncAuditEvent,
   MemberWorkSyncAuditEventName,
@@ -29,6 +32,30 @@ export async function appendMemberWorkSyncAudit(
       error: String(error),
     });
   }
+}
+
+export function buildMemberWorkSyncDeliveryReadinessAuditFields(
+  deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
+): Pick<MemberWorkSyncAuditEvent, 'diagnostics' | 'metadata'> {
+  if (!deliveryReadiness) {
+    return {};
+  }
+  return {
+    diagnostics: deliveryReadiness.diagnostics,
+    metadata: {
+      deliveryReadinessState: deliveryReadiness.state,
+      deliveryReadinessReasons: deliveryReadiness.reasons.join(','),
+      observationHours: deliveryReadiness.rates.observationHours,
+      statusEventCount: deliveryReadiness.rates.statusEventCount,
+      wouldNudgesPerMemberHour: deliveryReadiness.rates.wouldNudgesPerMemberHour,
+      maxWouldNudgesPerMemberHour: deliveryReadiness.thresholds.maxWouldNudgesPerMemberHour,
+      fingerprintChangesPerMemberHour: deliveryReadiness.rates.fingerprintChangesPerMemberHour,
+      maxFingerprintChangesPerMemberHour:
+        deliveryReadiness.thresholds.maxFingerprintChangesPerMemberHour,
+      reportRejectionRate: deliveryReadiness.rates.reportRejectionRate,
+      maxReportRejectionRate: deliveryReadiness.thresholds.maxReportRejectionRate,
+    },
+  };
 }
 
 export function buildMemberWorkSyncPhase2ReadinessAuditFields(

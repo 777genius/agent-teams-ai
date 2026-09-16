@@ -1,4 +1,5 @@
 import {
+  MEMBER_WORK_SYNC_DURABLE_STOP_RECEIPT_LIMIT,
   MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS,
   observeMemberWorkSyncRecoveryHealth,
   readMemberWorkSyncRecoveryHealth,
@@ -143,7 +144,9 @@ describe('member work sync recovery health observation', () => {
       previous: stillQueued,
       nowIso: new Date(becameRunnableAt).toISOString(),
       nowMs: becameRunnableAt,
-      items: [{ ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' }],
+      items: [
+        { ...work, taskId: 'task-b', evidenceStatus: 'pending', reason: 'owned_pending_task' },
+      ],
       expectedWaiting: false,
       memberBusy: false,
       instrumentationKnown: true,
@@ -238,7 +241,9 @@ describe('member work sync recovery health observation', () => {
     });
     expect(nextCycle?.episodes[0]?.workKey).not.toBe(overdue?.episodes[0]?.workKey);
     expect(nextCycle?.episodes[0]?.phase).toBe('observing');
-    expect(nextCycle?.episodes[0]?.firstObservedAt).toBe(new Date(overdueMs + 60_000).toISOString());
+    expect(nextCycle?.episodes[0]?.firstObservedAt).toBe(
+      new Date(overdueMs + 60_000).toISOString()
+    );
   });
 
   it('does not restart the deadline when a watchdog stall marks an in-progress task', () => {
@@ -370,5 +375,92 @@ describe('member work sync recovery health observation', () => {
       expectedWaiting: false,
     });
     expect(attention?.episodes[0]?.phase).toBe('attention');
+  });
+});
+
+describe('member work sync durable stop receipt decoding', () => {
+  const receipt = {
+    teamName: 'team-a',
+    memberName: 'alice',
+    incarnation: 'inc-1',
+    runtimeInstanceId: 'runtime-1',
+    localStopId: 'stop-1',
+    appliedAt: '2026-09-11T00:00:00.000Z',
+    controlRevision: 2,
+  };
+
+  it('round trips a validated receipt', () => {
+    expect(
+      readMemberWorkSyncRecoveryHealth({
+        schemaVersion: 1,
+        episodes: [],
+        durableStopReceipts: [receipt],
+      })
+    ).toMatchObject({ durableStopReceipts: [receipt] });
+  });
+
+  it('rejects an unbounded receipt ledger', () => {
+    expect(() =>
+      readMemberWorkSyncRecoveryHealth({
+        schemaVersion: 1,
+        episodes: [],
+        durableStopReceipts: Array.from(
+          { length: MEMBER_WORK_SYNC_DURABLE_STOP_RECEIPT_LIMIT + 1 },
+          (_, index) => ({ ...receipt, localStopId: `stop-${index}` })
+        ),
+      })
+    ).toThrow('Invalid member work sync recovery health');
+  });
+
+  it('round trips a pending control checkpoint and rejects malformed replay state', () => {
+    const health = {
+      schemaVersion: 1 as const,
+      episodes: [],
+      controlRevision: 3,
+      pendingRuntimeControl: {
+        teamName: 'team-a',
+        memberName: 'alice',
+        incarnation: 'inc-1',
+        runtimeInstanceId: 'runtime-1',
+        requestId: 'stop-1',
+        localStopId: 'stop-1',
+        controlRevision: 3,
+        stopped: true,
+        issuedAt: '2026-09-11T00:00:00.000Z',
+        reason: 'runtime_local_stop',
+      },
+      retiredStopFilter: {
+        algorithm: 'fnv1a-2048-v1' as const,
+        bits: '0'.repeat(512),
+        retiredCount: 0,
+      },
+    };
+    expect(readMemberWorkSyncRecoveryHealth(health)).toEqual(health);
+    expect(() =>
+      readMemberWorkSyncRecoveryHealth({
+        ...health,
+        retiredStopFilter: { ...health.retiredStopFilter, bits: 'not-a-bitmap' },
+      })
+    ).toThrow('Invalid member work sync recovery health');
+    expect(() =>
+      readMemberWorkSyncRecoveryHealth({
+        ...health,
+        pendingRuntimeControl: { ...health.pendingRuntimeControl, stopped: false },
+      })
+    ).toThrow('Invalid member work sync recovery health');
+    expect(() =>
+      readMemberWorkSyncRecoveryHealth({
+        ...health,
+        pendingRuntimeControl: { ...health.pendingRuntimeControl, requestId: ' stop-1 ' },
+      })
+    ).toThrow('Invalid member work sync recovery health');
+    for (const reason of [`${'r'.repeat(256)} `, ' '.repeat(257)]) {
+      expect(() =>
+        readMemberWorkSyncRecoveryHealth({
+          ...health,
+          pendingRuntimeControl: { ...health.pendingRuntimeControl, reason },
+        })
+      ).toThrow('Invalid member work sync recovery health');
+    }
   });
 });

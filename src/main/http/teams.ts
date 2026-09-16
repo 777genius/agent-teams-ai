@@ -1,13 +1,22 @@
-import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete Node wiring belongs to the architecture-approved composition facet.
+import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
+import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
@@ -34,29 +43,6 @@ import type {
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
-
-const RUNTIME_STOP_REPLAY_LIMIT = 64;
-const runtimeStopReplay = new Map<
-  string,
-  { ok: true; status: unknown; runtimeAdmission: { state: string } }
->();
-
-function rememberMemberWorkSyncRuntimeStop(
-  localStopId: string,
-  value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
-) {
-  if (value) {
-    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
-      const oldest = runtimeStopReplay.keys().next().value;
-      if (oldest) {
-        runtimeStopReplay.delete(oldest);
-      }
-    }
-    runtimeStopReplay.set(localStopId, value);
-    return value;
-  }
-  return runtimeStopReplay.get(localStopId);
-}
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
@@ -251,6 +237,60 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  const teamLifecycleReadHost = services.teamLifecycleReadHost;
+  if (teamLifecycleReadHost) {
+    app.post<{ Body: unknown }>(TEAM_LIFECYCLE_LIST_ROUTE, async (request, reply) => {
+      const requestController = new AbortController();
+      const abortRequest = () => requestController.abort();
+      const rawRequest = request.raw;
+      const requestSocket = rawRequest.socket;
+      const rawResponse = reply.raw;
+      rawRequest.once('aborted', abortRequest);
+      requestSocket.once('close', abortRequest);
+      rawResponse.once('close', abortRequest);
+      if (rawRequest.aborted || requestSocket.destroyed || rawResponse.destroyed) {
+        abortRequest();
+      }
+      try {
+        const result = await teamLifecycleReadHost.listTeamLifecycle(
+          request.body,
+          requestController.signal
+        );
+        if (!services.hostedAuth || result.kind !== 'success') return reply.send(result);
+        const workspaceIds = await Promise.all(
+          result.items.map((item) =>
+            services.hostedAuth!.projectWorkspaceId(request, item.workspaceId)
+          )
+        );
+        const filtered: CanonicalListTeamLifecycleResult = Object.freeze({
+          ...result,
+          items: Object.freeze(
+            result.items.flatMap((item, index) => {
+              const workspaceId = workspaceIds[index];
+              return workspaceId === null
+                ? []
+                : [{ ...item, workspaceId: parseWorkspaceId(workspaceId) }];
+            })
+          ),
+        });
+        return reply.send(filtered);
+      } catch {
+        const error = createSafeAppError({ code: 'unavailable', reason: 'transport_unavailable' });
+        const failure: TeamLifecycleReadFailure = Object.freeze({
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          kind: 'failure',
+          error: error as TeamLifecycleReadFailure['error'],
+          retryable: true,
+        });
+        return reply.send(failure);
+      } finally {
+        rawRequest.removeListener('aborted', abortRequest);
+        requestSocket.removeListener('close', abortRequest);
+        rawResponse.removeListener('close', abortRequest);
+      }
+    });
+  }
+
   registerTeamMemberDiagnosticsRoute(app, services, {
     logger,
     shouldLogError,
@@ -602,73 +642,15 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   );
 
-  app.post<{
-    Params: { teamName: string; memberName: string };
-    Body: {
-      incarnation?: unknown;
-      runtimeInstanceId?: unknown;
-      localStopId?: unknown;
-      reason?: unknown;
-    };
-  }>('/api/teams/:teamName/member-work-sync/:memberName/runtime-stop', async (request, reply) => {
-    try {
-      const validatedTeamName = validateTeamName(request.params.teamName);
-      if (!validatedTeamName.valid) {
-        return reply.status(400).send({ error: validatedTeamName.error });
-      }
-      const memberName = request.params.memberName?.trim();
-      if (!memberName) {
-        return reply.status(400).send({ error: 'memberName is required' });
-      }
-      const localStopId =
-        typeof request.body?.localStopId === 'string' ? request.body.localStopId.trim() : '';
-      if (!localStopId) {
-        return reply.status(400).send({ error: 'localStopId is required' });
-      }
-      const runtimeInstanceId =
-        typeof request.body?.runtimeInstanceId === 'string'
-          ? request.body.runtimeInstanceId.trim()
-          : '';
-      if (!runtimeInstanceId) {
-        return reply.status(400).send({ error: 'runtimeInstanceId is required' });
-      }
-      const reason =
-        typeof request.body?.reason === 'string' && request.body.reason.trim()
-          ? request.body.reason.trim()
-          : 'runtime_local_stop';
-      const currentRuntimeInstanceId = await readNativeWorkSyncCurrentRuntimeInstanceId({
-        teamsBasePath: getTeamsBasePath(),
-        teamName: validatedTeamName.value!,
-        memberName: assertValidMemberName(memberName),
-      });
-      if (currentRuntimeInstanceId && currentRuntimeInstanceId !== runtimeInstanceId) {
-        return reply.status(409).send({ error: 'stale_runtime_instance' });
-      }
-      const cached = rememberMemberWorkSyncRuntimeStop(localStopId);
-      if (cached) {
-        return reply.send(cached);
-      }
-      const status = await getMemberWorkSyncFeature(services).stopAutoResume({
-        teamName: validatedTeamName.value!,
-        memberName: assertValidMemberName(memberName),
-        reason,
-      });
-      const response = {
-        ok: true as const,
-        status,
-        runtimeAdmission: status.runtimeAdmission ?? { state: 'unknown' as const },
-      };
-      rememberMemberWorkSyncRuntimeStop(localStopId, response);
-      return reply.send(response);
-    } catch (error) {
-      if (shouldLogError(error)) {
-        logger.error(
-          `Error in POST /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}/runtime-stop:`,
-          getErrorMessage(error)
-        );
-      }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-    }
+  registerMemberWorkSyncRuntimeStopRoute(app, {
+    getFeature: () => getMemberWorkSyncFeature(services),
+    getTeamsBasePath,
+    readCurrentNativeRuntimeInstanceId: (input) =>
+      memberWorkSyncRuntimeDelivery.readCurrentNativeRuntimeInstanceId(input),
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
   });
 
   app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(

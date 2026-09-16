@@ -61,6 +61,26 @@ function metrics(overrides: Partial<MemberWorkSyncTeamMetrics> = {}): MemberWork
     reportAcceptedCount: 0,
     reportRejectedCount: 0,
     recentEvents: [],
+    deliveryReadiness: {
+      state: 'collecting_shadow_data',
+      reasons: ['insufficient_status_events'],
+      thresholds: {
+        minObservedMembers: 1,
+        minStatusEvents: 20,
+        minObservationHours: 1,
+        maxWouldNudgesPerMemberHour: 2,
+        maxFingerprintChangesPerMemberHour: 1,
+        maxReportRejectionRate: 0.2,
+      },
+      rates: {
+        observationHours: 0,
+        statusEventCount: 1,
+        wouldNudgesPerMemberHour: 1,
+        fingerprintChangesPerMemberHour: 0,
+        reportRejectionRate: 0,
+      },
+      diagnostics: ['delivery_readiness:insufficient_status_events'],
+    },
     phase2Readiness: {
       state: 'collecting_shadow_data',
       reasons: ['insufficient_status_events'],
@@ -119,8 +139,8 @@ function staleMetrics(
 ): MemberWorkSyncTeamMetrics {
   return metrics({
     generatedAt: '2026-05-06T00:06:00.000Z',
-    phase2Readiness: {
-      ...metrics().phase2Readiness,
+    deliveryReadiness: {
+      ...metrics().deliveryReadiness,
       state: 'blocked',
       reasons: ['would_nudge_rate_high', 'fingerprint_churn_high', 'report_rejection_rate_high'],
     },
@@ -234,16 +254,16 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     }
   });
 
-  it('keeps unknown-provider teammates behind phase2 readiness while collecting', () => {
+  it('keeps unknown-provider teammates behind delivery readiness while collecting', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: undefined }),
         metrics: metrics(),
       })
-    ).toEqual({ active: false, reason: 'phase2_not_ready' });
+    ).toEqual({ active: false, reason: 'delivery_not_ready' });
   });
 
-  it('allows strict review pickup nudges through phase2 collection before delivery capability is checked', () => {
+  it('allows strict review pickup nudges through delivery readiness collection before delivery capability is checked', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: status({
@@ -267,7 +287,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
                   reviewCycleId: 'evt-review-request',
                   reviewRequestEventId: 'evt-review-request',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: true,
+                  canBypassDeliveryReadiness: true,
                   historyEventIds: ['evt-review-request'],
                 },
               },
@@ -279,7 +299,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'review_pickup_required' });
   });
 
-  it('does not bypass phase2 for review pickup when shadow would not nudge', () => {
+  it('does not bypass delivery readiness for review pickup when shadow would not nudge', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: status({
@@ -308,7 +328,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
                   reviewCycleId: 'evt-review-request',
                   reviewRequestEventId: 'evt-review-request',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: true,
+                  canBypassDeliveryReadiness: true,
                   historyEventIds: ['evt-review-request'],
                 },
               },
@@ -317,10 +337,10 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
         }),
         metrics: metrics(),
       })
-    ).toEqual({ active: false, reason: 'phase2_not_ready' });
+    ).toEqual({ active: false, reason: 'delivery_not_ready' });
   });
 
-  it('does not bypass phase2 for ambiguous review pickup evidence', () => {
+  it('does not bypass delivery readiness for ambiguous review pickup evidence', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: status({
@@ -342,7 +362,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
                   reviewState: 'review',
                   reviewCycleId: 'kanban:alice',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: false,
+                  canBypassDeliveryReadiness: false,
                   reviewDiagnostics: ['review_request_event_id_missing'],
                 },
               },
@@ -371,7 +391,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
         reviewCycleId: 'evt-review-request-a',
         reviewRequestEventId: 'evt-review-request-a',
         reviewObligation: 'review_pickup_required' as const,
-        canBypassPhase2: true,
+        canBypassDeliveryReadiness: true,
         historyEventIds: ['evt-review-request-a'],
       },
     };
@@ -424,7 +444,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
                   reviewCycleId: 'evt-review-request',
                   reviewRequestEventId: 'evt-review-request',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: true,
+                  canBypassDeliveryReadiness: true,
                   historyEventIds: ['evt-review-request'],
                 },
               },
@@ -432,8 +452,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
           },
         }),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             state: 'collecting_shadow_data',
             reasons: ['insufficient_status_events', 'would_nudge_rate_high'],
           },
@@ -447,8 +467,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       decideMemberWorkSyncNudgeActivation({
         status: status(),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             state: 'blocked',
             reasons: ['would_nudge_rate_high', 'fingerprint_churn_high'],
           },
@@ -462,8 +482,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: 'codex', memberName: 'team-lead' }),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             state: 'blocked',
             reasons: ['would_nudge_rate_high', 'fingerprint_churn_high'],
           },
@@ -477,8 +497,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: 'codex' }),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             reasons: [
               'insufficient_status_events',
               'would_nudge_rate_high',
@@ -495,8 +515,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: 'codex' }),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             state: 'blocked',
             reasons: [
               'would_nudge_rate_high',
@@ -1013,7 +1033,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
                   reviewCycleId: 'evt-review-request',
                   reviewRequestEventId: 'evt-review-request',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: true,
+                  canBypassDeliveryReadiness: true,
                   historyEventIds: ['evt-review-request'],
                 },
               },
@@ -1048,7 +1068,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
           reviewCycleId: 'evt-review-request',
           reviewRequestEventId: 'evt-review-request',
           reviewObligation: 'review_pickup_required' as const,
-          canBypassPhase2: true,
+          canBypassDeliveryReadiness: true,
           historyEventIds: ['evt-review-request'],
         },
       },
@@ -1096,8 +1116,8 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: 'codex' }),
         metrics: metrics({
-          phase2Readiness: {
-            ...metrics().phase2Readiness,
+          deliveryReadiness: {
+            ...metrics().deliveryReadiness,
             state: 'shadow_ready',
             reasons: [],
           },

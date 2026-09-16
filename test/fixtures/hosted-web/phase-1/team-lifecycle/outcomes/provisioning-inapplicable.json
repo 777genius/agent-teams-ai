@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "provisioning-inapplicable",
+  "auditedState": "provisioning",
+  "oracles": [
+    {
+      "kind": "rejected",
+      "code": "unsupported",
+      "reason": "unknown_lifecycle_provisioning"
+    }
+  ]
+}

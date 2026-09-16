@@ -1,11 +1,11 @@
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { useWorkspaceTrustStatus } from '@features/workspace-trust/renderer';
 import {
   getWorkspaceTrustDisplayStatus,
   shouldShowWorkspaceTrustLaunchNotice,
 } from '@features/workspace-trust/renderer/view-models/workspaceTrustLaunchNotice';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({
@@ -62,10 +62,14 @@ describe('provider-aware trust request lifecycle', () => {
   let root: ReturnType<typeof createRoot>;
   let providerIds: string[];
   let enabled: boolean;
-  let status: ReturnType<typeof useWorkspaceTrustStatus>;
+  let status: ReturnType<typeof useWorkspaceTrustShellStatus>;
   let requests: { resolve: (result: unknown) => void; reject: (error: Error) => void }[];
   function Probe() {
-    status = useWorkspaceTrustStatus({ enabled, projectPath: '/tmp/trust-sandbox', providerIds });
+    status = useWorkspaceTrustShellStatus({
+      enabled,
+      projectPath: '/tmp/trust-sandbox',
+      providerIds,
+    });
     return null;
   }
   const render = () => act(async () => root.render(createElement(Probe)));

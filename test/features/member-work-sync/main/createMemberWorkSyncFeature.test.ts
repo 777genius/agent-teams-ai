@@ -5,10 +5,11 @@ import {
 import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
-  createMemberWorkSyncFeature,
+  type MemberWorkSyncFeatureDeps,
 } from '@features/member-work-sync/main';
 import { MemberWorkSyncTeamChangeRouter } from '@features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter';
 import { TeamInboxMemberWorkSyncNudgeSink } from '@features/member-work-sync/main/adapters/output/TeamInboxMemberWorkSyncNudgeSink';
+import { createMemberWorkSyncFeature as createPublicMemberWorkSyncFeature } from '@features/member-work-sync/main/composition/createMemberWorkSyncFeature';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
@@ -19,6 +20,7 @@ import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/
 import { QuiescingMemberWorkSyncAuditJournal } from '@features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import { TeamTaskStallJournalWorkSyncCooldown } from '@main/services/team/TeamTaskStallJournalWorkSyncCooldown';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';
@@ -28,6 +30,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
 
 const tempRoots: string[] = [];
+
+const noRecentWatchdogNudge = {
+  hasRecentNudge: async () => false,
+};
+
+function createMemberWorkSyncFeature(
+  deps: Omit<MemberWorkSyncFeatureDeps, 'watchdogCooldown'> &
+    Partial<Pick<MemberWorkSyncFeatureDeps, 'watchdogCooldown'>>
+) {
+  return createPublicMemberWorkSyncFeature({
+    watchdogCooldown: noRecentWatchdogNudge,
+    ...deps,
+  });
+}
 
 function createDeferred(): {
   promise: Promise<void>;
@@ -1166,7 +1182,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         shadow: { wouldNudge: true },
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: { state: 'shadow_ready' },
+        deliveryReadiness: { state: 'shadow_ready' },
       });
 
       const outboxInput = buildMemberWorkSyncOutboxEnsureInput({
@@ -2878,7 +2894,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           delayMs: 500,
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: { state: 'collecting_shadow_data' },
+          deliveryReadiness: { state: 'collecting_shadow_data' },
         });
         await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
           state: 'needs_sync',
@@ -2907,7 +2923,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         'utf8'
       );
       expect(journal).toContain('"event":"nudge_delivered"');
-      expect(journal).not.toContain('"reason":"phase2_not_ready"');
+      expect(journal).not.toContain('"reason":"delivery_not_ready"');
     } finally {
       await feature.dispose();
     }
@@ -2986,7 +3002,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           }),
         ]);
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: { state: 'collecting_shadow_data' },
+          deliveryReadiness: { state: 'collecting_shadow_data' },
         });
         await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
           state: 'needs_sync',
@@ -3007,7 +3023,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         'utf8'
       );
       expect(journal).toContain('"event":"nudge_delivered"');
-      expect(journal).not.toContain('"reason":"phase2_not_ready"');
+      expect(journal).not.toContain('"reason":"delivery_not_ready"');
     } finally {
       await feature.dispose();
     }
@@ -3229,7 +3245,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           delayMs: 500,
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             reasons: expect.arrayContaining(['would_nudge_rate_high']),
           },
         });
@@ -3471,7 +3487,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         expect(nudges[0]?.text).toContain('11111111');
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             reasons: expect.arrayContaining(['would_nudge_rate_high']),
           },
         });
@@ -3599,7 +3615,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('delivers targeted OpenCode nudges even when global phase2 metrics are noisy', async () => {
+  it('delivers targeted OpenCode nudges even when global delivery readiness metrics are noisy', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -3669,7 +3685,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           delayMs: 500,
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
@@ -3694,7 +3710,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('delivers targeted lead nudges even when global phase2 metrics are noisy', async () => {
+  it('delivers targeted lead nudges even when global delivery readiness metrics are noisy', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -3764,7 +3780,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           delayMs: 500,
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
@@ -3850,7 +3866,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         expect(nudges).toHaveLength(1);
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
@@ -4085,7 +4101,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -4095,7 +4111,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
         const metrics = await feature.getMetrics({ teamName });
-        expect(metrics.phase2Readiness).toMatchObject({
+        expect(metrics.deliveryReadiness).toMatchObject({
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         });
@@ -4130,7 +4146,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       }
       const stormMetrics = await feature.getMetrics({ teamName });
       expect(stormMetrics.wouldNudgeCount).toBeGreaterThan(wouldNudgeCountBeforeStorm);
-      expect(stormMetrics.phase2Readiness).toMatchObject({
+      expect(stormMetrics.deliveryReadiness).toMatchObject({
         state: 'blocked',
         reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
       });
@@ -4218,7 +4234,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining([
               'would_nudge_rate_high',
@@ -4260,13 +4276,13 @@ describe('createMemberWorkSyncFeature composition', () => {
       expect(plannerBlock).toMatchObject({
         event: 'nudge_skipped',
         diagnostics: expect.arrayContaining([
-          'phase2_readiness:would_nudge_rate_high',
-          'phase2_readiness:fingerprint_churn_high',
-          'phase2_readiness:report_rejection_rate_high',
+          'delivery_readiness:would_nudge_rate_high',
+          'delivery_readiness:fingerprint_churn_high',
+          'delivery_readiness:report_rejection_rate_high',
         ]),
         metadata: expect.objectContaining({
-          phase2ReadinessState: 'blocked',
-          phase2ReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
+          deliveryReadinessState: 'blocked',
+          deliveryReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
           reportRejectionRate: 1,
           maxReportRejectionRate: 0.2,
         }),
@@ -4360,7 +4376,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         terminal: 0,
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining([
             'would_nudge_rate_high',
@@ -4429,7 +4445,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         terminal: 0,
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'shadow_ready',
           reasons: [],
         },
@@ -4552,7 +4568,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining([
             'would_nudge_rate_high',
@@ -4597,7 +4613,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -4759,7 +4775,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       expect(repairedMetricsFile.recentEvents?.length).toBeGreaterThan(0);
       feature = createFeature();
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'collecting_shadow_data',
           reasons: expect.arrayContaining([
             'insufficient_status_events',
@@ -5714,7 +5730,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -5913,7 +5929,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -6039,7 +6055,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -6204,7 +6220,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(2);
         await expect(feature.getMetrics({ teamName: safetyTeamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining([
               'would_nudge_rate_high',
@@ -6214,7 +6230,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           },
         });
         await expect(feature.getMetrics({ teamName: diagnosticTeamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
@@ -6308,7 +6324,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -6450,7 +6466,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -6519,7 +6535,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           previousFingerprint: firstFingerprint,
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: {
+          deliveryReadiness: {
             state: 'blocked',
             reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
@@ -6823,7 +6839,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -7052,7 +7068,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -7303,7 +7319,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-        phase2Readiness: {
+        deliveryReadiness: {
           state: 'blocked',
           reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         },
@@ -7614,15 +7630,18 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('respects watchdog cooldown and delivers after the retry window is due', async () => {
+  it('uses the injected watchdog cooldown and delivers after the retry window is due', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
     const teamName = 'team-a';
     const memberName = 'bob';
+    const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(teamsBasePath);
+    const getRecentNudgeCooldown = vi.spyOn(watchdogCooldown, 'getRecentNudgeCooldown');
     const feature = createMemberWorkSyncFeature({
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      watchdogCooldown,
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -7690,6 +7709,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
       });
       await waitForQueueIdle(feature);
+      expect(getRecentNudgeCooldown).toHaveBeenCalled();
 
       await fs.promises.writeFile(
         stallJournalPath,
@@ -7749,6 +7769,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const feature = createMemberWorkSyncFeature({
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      watchdogCooldown: new TeamTaskStallJournalWorkSyncCooldown(teamsBasePath),
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,

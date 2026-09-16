@@ -14,6 +14,9 @@ import { useThemeController } from './hooks/useTheme';
 import { api } from './api';
 import { useStore } from './store';
 
+const openExternal = (url: string): Promise<{ success: boolean; error?: string }> =>
+  api.openExternal(url);
+
 declare global {
   interface Window {
     __claudeTeamsSplashEnhancedStartedAt?: number;
@@ -116,7 +119,11 @@ export const App = (): React.JSX.Element => {
           <TabbedLayout />
           <ConfirmDialog />
           <ToolApprovalSheet />
-          <AnnouncementHost ready={newsReady} />
+          <AnnouncementHost
+            client={api.announcements}
+            openExternal={openExternal}
+            ready={newsReady}
+          />
         </TooltipProvider>
       </ErrorBoundary>
     </LocalizationProvider>

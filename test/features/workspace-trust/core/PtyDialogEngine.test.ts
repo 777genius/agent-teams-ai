@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { PTY_KEY_ACTIONS, runPtyDialogEngine } from '@features/workspace-trust/core/application';
+import { describe, expect, it } from 'vitest';
 
 import type {
   PtyKeyAction,

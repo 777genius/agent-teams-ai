@@ -3,7 +3,7 @@ import { Loader2, Play } from 'lucide-react';
 
 import { WorkspaceTrustLaunchNotice } from './WorkspaceTrustLaunchNotice';
 
-import type { WorkspaceTrustDisplayStatus } from '../hooks/useWorkspaceTrustStatus';
+import type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
 
 export const WorkspaceTrustLaunchControl = (props: {
   status: WorkspaceTrustDisplayStatus;

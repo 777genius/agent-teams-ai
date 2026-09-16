@@ -1,11 +1,25 @@
 import {
+  type MemberWorkSyncPendingRuntimeControl,
+  type MemberWorkSyncStatus,
+  normalizeMemberWorkSyncRuntimeControlReason,
+} from '../../contracts';
+import {
+  abandonMemberWorkSyncPendingStop,
   applyMemberWorkSyncStopLatch,
+  assertValidMemberWorkSyncRuntimeControlReason,
   attachMemberWorkSyncRecoveryReservation,
   buildMemberWorkSyncNudgePayloadHash,
   buildMemberWorkSyncOutboxEnsureInput,
   clearMemberWorkSyncStopLatch,
+  nextMemberWorkSyncControlRevision,
 } from '../domain';
 
+import {
+  MemberWorkSyncExactRuntimeStop,
+  type MemberWorkSyncRuntimeAdmissionOutcome,
+  MemberWorkSyncRuntimeControlUnavailableError,
+  MemberWorkSyncStaleIncarnationError,
+} from './MemberWorkSyncExactRuntimeStop';
 import { isMemberWorkSyncRecoveryAllocationEnabled } from './MemberWorkSyncNudgeOutboxPlanHelpers';
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 import {
@@ -14,13 +28,14 @@ import {
   runMemberWorkSyncStatusMutation,
 } from './MemberWorkSyncStatusMutation';
 
-import type { MemberWorkSyncStatus } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
-export interface MemberWorkSyncRuntimeAdmissionOutcome {
-  state: 'applied' | 'pending' | 'unknown' | 'superseded';
-  controlRevision?: number;
-}
+export type { MemberWorkSyncRuntimeAdmissionOutcome } from './MemberWorkSyncExactRuntimeStop';
+export {
+  MemberWorkSyncRuntimeControlUnavailableError,
+  MemberWorkSyncStaleIncarnationError,
+  MemberWorkSyncStaleRuntimeInstanceError,
+} from './MemberWorkSyncExactRuntimeStop';
 
 export type MemberWorkSyncRecoveryCommandResult =
   | {
@@ -48,14 +63,35 @@ export class MemberWorkSyncRecoveryCommands {
     teamName: string;
     memberName: string;
     reason?: string;
+    expectedIncarnation?: string;
+    expectedRuntimeInstanceId?: string;
+    localStopId?: string;
   }): Promise<MemberWorkSyncRecoveryCommandResult> {
+    const expectedRuntimeInstanceId = input.expectedRuntimeInstanceId?.trim();
+    const localStopId = input.localStopId?.trim();
+    const reason = normalizeMemberWorkSyncRuntimeControlReason(
+      input.reason,
+      expectedRuntimeInstanceId || localStopId ? 'runtime_local_stop' : 'user_stop'
+    );
+    assertValidMemberWorkSyncRuntimeControlReason(reason);
+    if (expectedRuntimeInstanceId || localStopId) {
+      if (
+        !expectedRuntimeInstanceId ||
+        !localStopId ||
+        expectedRuntimeInstanceId.length > 256 ||
+        localStopId.length > 256
+      ) {
+        throw new MemberWorkSyncRuntimeControlUnavailableError();
+      }
+      return this.stopExactRuntime({ ...input, reason, expectedRuntimeInstanceId, localStopId });
+    }
     return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
       this.mutate(input, mutationId, (status, nowIso) => ({
         ...status,
         recoveryHealth: applyMemberWorkSyncStopLatch({
           previous: status.recoveryHealth,
           nowIso,
-          reason: input.reason?.trim() || 'user_stop',
+          reason,
         }),
         evaluatedAt: nowIso,
       }))
@@ -88,31 +124,99 @@ export class MemberWorkSyncRecoveryCommands {
     });
   }
 
+  private async stopExactRuntime(input: {
+    teamName: string;
+    memberName: string;
+    reason?: string;
+    expectedIncarnation?: string;
+    expectedRuntimeInstanceId: string;
+    localStopId: string;
+  }): Promise<MemberWorkSyncRecoveryCommandResult> {
+    const exact = await new MemberWorkSyncExactRuntimeStop(this.deps).execute(input);
+    const status = exact.status;
+    const revoked = await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
+    const nextStatus = await retireRevokedDeliveredRecovery(this.deps, status, revoked.messageIds);
+    return {
+      ok: true,
+      status: nextStatus,
+      code: 'stopped',
+      runtimeAdmission: exact.runtimeAdmission,
+    };
+  }
+
   async resume(input: {
     teamName: string;
     memberName: string;
   }): Promise<MemberWorkSyncRecoveryCommandResult> {
     return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
-      this.mutate(input, mutationId, (status, nowIso) => ({
-        ...status,
-        recoveryHealth: clearMemberWorkSyncStopLatch({ previous: status.recoveryHealth }),
-        evaluatedAt: nowIso,
-      }))
+      this.mutate(input, mutationId, (status, nowIso) => {
+        const existing = status.recoveryHealth?.pendingRuntimeControl;
+        if (existing && !existing.stopped) return status;
+        if (!existing?.stopped) {
+          return {
+            ...status,
+            recoveryHealth: clearMemberWorkSyncStopLatch({ previous: status.recoveryHealth }),
+            evaluatedAt: nowIso,
+          };
+        }
+        const abandoned = abandonMemberWorkSyncPendingStop({
+          previous: status.recoveryHealth!,
+          checkpoint: existing,
+          retire: true,
+        });
+        const controlRevision = nextMemberWorkSyncControlRevision(status.recoveryHealth);
+        const requestId = `resume-${controlRevision}-${this.deps.hash.sha256Hex(
+          JSON.stringify([
+            existing.incarnation,
+            existing.runtimeInstanceId,
+            controlRevision,
+            existing.requestId,
+          ])
+        )}`;
+        return {
+          ...status,
+          recoveryHealth: {
+            ...abandoned,
+            controlRevision,
+            // Admission stays closed until this higher ordered Resume is ACKed and finalized.
+            autoResumeStopLatch: status.recoveryHealth!.autoResumeStopLatch!,
+            pendingRuntimeControl: {
+              teamName: input.teamName,
+              memberName: input.memberName,
+              incarnation: existing.incarnation,
+              runtimeInstanceId: existing.runtimeInstanceId,
+              requestId,
+              controlRevision,
+              stopped: false,
+              issuedAt: nowIso,
+              reason: 'user_resume',
+            },
+          },
+          evaluatedAt: nowIso,
+        };
+      })
     ).then(async (status) => {
       await invalidateStaleMemberWorkSyncInboxNudges(this.deps, status);
       const controlRevision = status.recoveryHealth?.controlRevision ?? 1;
+      const pendingResume = status.recoveryHealth?.pendingRuntimeControl;
       const runtimeAdmission = await this.syncRuntimeControl({
         teamName: input.teamName,
         memberName: input.memberName,
         teamIncarnation: status.statusRevision?.incarnation ?? 'legacy',
         stopped: false,
         controlRevision,
+        ...(pendingResume && !pendingResume.stopped
+          ? {
+              runtimeInstanceId: pendingResume.runtimeInstanceId,
+              requestId: pendingResume.requestId,
+              issuedAt: pendingResume.issuedAt,
+            }
+          : {}),
       });
-      const persisted = await this.persistRuntimeAdmission(
-        input,
-        controlRevision,
-        runtimeAdmission
-      );
+      const persisted =
+        pendingResume && !pendingResume.stopped
+          ? await this.finalizePendingResume(input, pendingResume, runtimeAdmission)
+          : await this.persistRuntimeAdmission(input, controlRevision, runtimeAdmission);
       return {
         ok: true as const,
         status: persisted,
@@ -343,6 +447,15 @@ export class MemberWorkSyncRecoveryCommands {
             ...(status.recoveryHealth?.reservations
               ? { reservations: status.recoveryHealth.reservations }
               : {}),
+            ...(status.recoveryHealth?.durableStopReceipts
+              ? { durableStopReceipts: status.recoveryHealth.durableStopReceipts }
+              : {}),
+            ...(status.recoveryHealth?.pendingRuntimeControl
+              ? { pendingRuntimeControl: status.recoveryHealth.pendingRuntimeControl }
+              : {}),
+            ...(status.recoveryHealth?.retiredStopFilter
+              ? { retiredStopFilter: status.recoveryHealth.retiredStopFilter }
+              : {}),
           },
           evaluatedAt: nowIso,
         };
@@ -351,7 +464,7 @@ export class MemberWorkSyncRecoveryCommands {
   }
 
   private async mutate(
-    input: { teamName: string; memberName: string },
+    input: { teamName: string; memberName: string; expectedIncarnation?: string },
     mutationId: string | undefined,
     next: (status: MemberWorkSyncStatus, nowIso: string) => MemberWorkSyncStatus
   ): Promise<MemberWorkSyncStatus> {
@@ -360,6 +473,14 @@ export class MemberWorkSyncRecoveryCommands {
       const error = new Error('status_missing');
       error.name = 'MemberWorkSyncStatusMissingError';
       throw error;
+    }
+    const expectedIncarnation = input.expectedIncarnation?.trim();
+    if (
+      expectedIncarnation &&
+      (read.status.statusRevision?.incarnation !== expectedIncarnation ||
+        (read.snapshot && read.snapshot.incarnation !== expectedIncarnation))
+    ) {
+      throw new MemberWorkSyncStaleIncarnationError();
     }
     const nowIso = this.deps.clock.now().toISOString();
     const committed = await commitMemberWorkSyncStatus(
@@ -397,6 +518,8 @@ export class MemberWorkSyncRecoveryCommands {
     stopped: boolean;
     controlRevision: number;
     runtimeInstanceId?: string;
+    requestId?: string;
+    issuedAt?: string;
   }): Promise<MemberWorkSyncRuntimeAdmissionOutcome> {
     if (!this.deps.runtimeTicketAdmission?.syncControl) {
       return { state: 'unknown' };
@@ -408,6 +531,8 @@ export class MemberWorkSyncRecoveryCommands {
       runtimeInstanceId: input.runtimeInstanceId ?? '',
       controlRevision: input.controlRevision,
       stopped: input.stopped,
+      ...(input.requestId ? { requestId: input.requestId } : {}),
+      ...(input.issuedAt ? { issuedAt: input.issuedAt } : {}),
     });
     if (result.ok) {
       return { state: 'applied', controlRevision: result.controlRevision };
@@ -416,6 +541,47 @@ export class MemberWorkSyncRecoveryCommands {
       return { state: 'superseded', controlRevision: input.controlRevision };
     }
     return { state: result.code === 'conflict' ? 'unknown' : 'pending' };
+  }
+
+  private finalizePendingResume(
+    input: { teamName: string; memberName: string },
+    checkpoint: MemberWorkSyncPendingRuntimeControl,
+    runtimeAdmission: MemberWorkSyncRuntimeAdmissionOutcome
+  ): Promise<MemberWorkSyncStatus> {
+    return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
+      this.mutate(input, mutationId, (status) => {
+        const pending = status.recoveryHealth?.pendingRuntimeControl;
+        if (
+          pending?.requestId !== checkpoint.requestId ||
+          pending.teamName !== checkpoint.teamName ||
+          pending.memberName !== checkpoint.memberName ||
+          pending.controlRevision !== checkpoint.controlRevision ||
+          pending.runtimeInstanceId !== checkpoint.runtimeInstanceId ||
+          pending.incarnation !== checkpoint.incarnation ||
+          pending.issuedAt !== checkpoint.issuedAt ||
+          pending.reason !== checkpoint.reason ||
+          pending.localStopId !== checkpoint.localStopId ||
+          pending.stopped ||
+          checkpoint.stopped ||
+          status.recoveryHealth?.controlRevision !== checkpoint.controlRevision
+        ) {
+          return status;
+        }
+        if (runtimeAdmission.state !== 'applied') {
+          return { ...status, runtimeAdmission };
+        }
+        const {
+          pendingRuntimeControl: _pending,
+          autoResumeStopLatch: _latch,
+          ...health
+        } = status.recoveryHealth;
+        return {
+          ...status,
+          recoveryHealth: health,
+          runtimeAdmission,
+        };
+      })
+    );
   }
 }
 

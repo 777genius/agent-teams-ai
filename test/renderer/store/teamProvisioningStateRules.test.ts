@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   isActiveProvisioningState,
   isTerminalProvisioningState,
   shouldIgnoreProvisioningProgressRegression,
-} from '../../../src/renderer/store/team/teamProvisioningStateRules';
+} from '@features/team-provisioning';
+import { describe, expect, it } from 'vitest';
 
 import type { TeamProvisioningProgress } from '../../../src/shared/types';
 

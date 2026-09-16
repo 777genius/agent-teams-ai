@@ -27,6 +27,26 @@ function createAlert(overrides: Partial<TaskStallAlert> = {}): TaskStallAlert {
 }
 
 describe('TeamTaskStallNotifier', () => {
+  it('sends lead alerts through the feature-owned persistence port', async () => {
+    const messagePersistence = {
+      sendSystemNotificationToLead: vi.fn(async () => ({
+        deliveredToInbox: true,
+        messageId: 'lead-alert',
+      })),
+    };
+    const alert = createAlert();
+    const notifier = new TeamTaskStallNotifier(messagePersistence as never);
+
+    await notifier.notifyLead('demo', [alert]);
+
+    expect(messagePersistence.sendSystemNotificationToLead).toHaveBeenCalledWith({
+      teamName: 'demo',
+      summary: 'Potential stalled tasks detected',
+      text: expect.stringContaining('Task A'),
+      taskRefs: [alert.taskRef],
+    });
+  });
+
   it('records stall observations into member-work-sync instead of sending owner commands', async () => {
     const record = vi.fn(async () => undefined);
     const inboxWriter = { sendMessage: vi.fn() };

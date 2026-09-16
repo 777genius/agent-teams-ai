@@ -13,14 +13,12 @@ import {
   MemberWorkSyncTeamOperationGate,
   MemberWorkSyncTeamQuiescedError,
   RuntimeTurnSettledIngestor,
-  type RuntimeTurnSettledTargetResolverPort,
 } from '../../core/application';
 import { MemberWorkSyncTaskImpactResolver } from '../adapters/input/MemberWorkSyncTaskImpactResolver';
 import { MemberWorkSyncTeamChangeRouter } from '../adapters/input/MemberWorkSyncTeamChangeRouter';
 import { TeamInboxMemberWorkSyncNudgeSink } from '../adapters/output/TeamInboxMemberWorkSyncNudgeSink';
 import { TeamRuntimeTurnSettledTargetResolver } from '../adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import { TeamTaskAgendaSource } from '../adapters/output/TeamTaskAgendaSource';
-import { TeamTaskStallJournalWorkSyncCooldown } from '../adapters/output/TeamTaskStallJournalWorkSyncCooldown';
 import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
 import { ClaudeStopHookPayloadNormalizer } from '../infrastructure/ClaudeStopHookPayloadNormalizer';
 import { CodexNativeTurnSettledPayloadNormalizer } from '../infrastructure/CodexNativeTurnSettledPayloadNormalizer';
@@ -47,10 +45,7 @@ import { bindMemberWorkSyncUseCaseDeps } from './bindMemberWorkSyncUseCaseDeps';
 import { createDefaultMemberWorkSyncRuntimeTicketAdmission } from './createDefaultMemberWorkSyncRuntimeTicketAdmission';
 import { createMemberWorkSyncBusySignal } from './createMemberWorkSyncBusySignal';
 import { createMemberWorkSyncPersistence } from './createMemberWorkSyncPersistence';
-import {
-  createMemberWorkSyncRestoreParticipant,
-  type MemberWorkSyncRestoreParticipant,
-} from './createMemberWorkSyncRestoreParticipant';
+import { createMemberWorkSyncRestoreParticipant } from './createMemberWorkSyncRestoreParticipant';
 import {
   buildProofMissingRecoveryIntentKey,
   normalizeRecoveryTaskRefs,
@@ -62,21 +57,17 @@ import {
 } from './memberWorkSyncFeatureStatusRefresh';
 import { MemberWorkSyncTeamDeletionCoordinator } from './MemberWorkSyncTeamDeletionCoordinator';
 
+import type { MemberWorkSyncFeatureDeps } from './memberWorkSyncPublicContracts';
+
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   type MemberWorkSyncFeatureFacade,
   type MemberWorkSyncProofMissingRecoveryScheduleRequest,
   type MemberWorkSyncProofMissingRecoveryScheduleResult,
 } from './memberWorkSyncFeatureContracts';
+
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
 import type {
-  MemberWorkSyncBusySignalPort,
-  MemberWorkSyncLoggerPort,
-  MemberWorkSyncNudgeDeliveryWakePort,
-  MemberWorkSyncProofMissingRecoveryGuardPort,
-  MemberWorkSyncReviewPickupDeliveryPort,
-  MemberWorkSyncReviewPickupEscalationPort,
-  MemberWorkSyncRuntimeTicketAdmissionPort,
   MemberWorkSyncTeamOperationAdmission,
   MemberWorkSyncUseCaseDeps,
 } from '../../core/application';
@@ -85,49 +76,11 @@ import type {
   MemberWorkSyncProofMissingRecoveryScheduleRequest,
   MemberWorkSyncProofMissingRecoveryScheduleResult,
 } from './memberWorkSyncFeatureContracts';
-import type { InternalStorageMemberWorkSyncBackend } from '@features/internal-storage/main';
-import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
-import type { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
-export function createMemberWorkSyncFeature(deps: {
-  teamsBasePath: string;
-  lifecycleIdentity: ConstructorParameters<typeof HmacMemberWorkSyncReportTokenAdapter>[1];
-  operationGate?: MemberWorkSyncTeamOperationGate;
-  startBackground?: boolean;
-  bindRestoreParticipant?: (participant: MemberWorkSyncRestoreParticipant) => void;
-  configFileAccess?: (configPath: string) => Promise<void>;
-  configReader: TeamConfigReader;
-  taskReader: TeamTaskReader;
-  kanbanManager: TeamKanbanManager;
-  membersMetaStore: TeamMembersMetaStore;
-  isTeamActive?: (teamName: string) => Promise<boolean> | boolean;
-  isMemberActive?: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean;
-  canDispatchNudges?: (teamName: string) => Promise<boolean> | boolean;
-  listLifecycleActiveTeamNames?: () => Promise<string[]>;
-  queueQuietWindowMs?: number;
-  runtimeTurnSettledTargetResolver?: RuntimeTurnSettledTargetResolverPort;
-  priorityBusySignals?: MemberWorkSyncBusySignalPort[];
-  extraBusySignals?: MemberWorkSyncBusySignalPort[];
-  proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
-  nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
-  resolveControlUrl?: () => Promise<string | null> | string | null;
-  reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
-  reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
-  /** Qualified D0 protocol-1 recovery allocation. Desktop wiring turns this on. */
-  recoveryAllocation?: { enabled: boolean };
-  recoveryProtocol?: { version: number };
-  runtimeTicketAdmission?: MemberWorkSyncRuntimeTicketAdmissionPort;
-  /**
-   * SQLite backend handle from the internal-storage feature. When present,
-   * persistence routes through SQLite (with the JSON store as the session
-   * fallback and one-time legacy import); when absent, JSON stays primary.
-   */
-  internalStorageBackend?: InternalStorageMemberWorkSyncBackend | null;
-  logger?: MemberWorkSyncLoggerPort;
-}): MemberWorkSyncFeatureFacade {
+export function createMemberWorkSyncFeature(
+  deps: MemberWorkSyncFeatureDeps
+): MemberWorkSyncFeatureFacade {
   const clock = new SystemClockAdapter();
   const hash = new NodeHashAdapter();
   const operationGate = deps.operationGate ?? new MemberWorkSyncTeamOperationGate();
@@ -179,7 +132,6 @@ export function createMemberWorkSyncFeature(deps: {
   deps.bindRestoreParticipant?.(
     createMemberWorkSyncRestoreParticipant(store, reportToken, storePaths)
   );
-  const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(deps.teamsBasePath);
   const { busySignal, noteTeamChange } = createMemberWorkSyncBusySignal({
     teamsBasePath: deps.teamsBasePath,
     recoveryProtocolVersion: deps.recoveryProtocol?.version,
@@ -201,7 +153,7 @@ export function createMemberWorkSyncFeature(deps: {
     reportJournal,
     outboxStore: store,
     inboxNudge,
-    watchdogCooldown,
+    watchdogCooldown: deps.watchdogCooldown,
     busySignal,
     ...(deps.proofMissingRecoveryGuard
       ? { proofMissingRecoveryGuard: deps.proofMissingRecoveryGuard }

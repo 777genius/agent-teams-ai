@@ -5,9 +5,9 @@ import {
   type MemberLogPreviewRequestOptions,
   normalizeMemberLogPreviewResponse,
 } from '@features/member-log-stream/contracts';
-import { api } from '@renderer/api';
+import { memberLogObservationPorts } from '@features/member-log-stream/renderer';
 
-import type { ResolvedTeamMember, TeamChangeEvent } from '@shared/types/team';
+import type { ResolvedTeamMember } from '@shared/types/team';
 
 const LIVE_RELOAD_DEBOUNCE_MS = 650;
 const PREVIEW_CACHE_TTL_MS = 3_500;
@@ -416,8 +416,8 @@ export function useGraphMemberLogPreviews(input: {
               : {}),
             ...(options?.forceRefresh ? { forceRefresh: true } : {}),
           };
-          request = api.memberLogStream
-            .getMemberLogPreviews(input.teamName, membersToRequest, requestOptions)
+          request = memberLogObservationPorts
+            .readMemberLogPreviews(input.teamName, membersToRequest, requestOptions)
             .then((response) => {
               const normalized = normalizeMemberLogPreviewResponse(response);
               const members = memberMapFromResponse(normalized.members);
@@ -569,7 +569,7 @@ export function useGraphMemberLogPreviews(input: {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = api.teams.onTeamChange?.((_event: unknown, event: TeamChangeEvent) => {
+    const unsubscribe = memberLogObservationPorts.subscribeToChanges((event) => {
       if (event.teamName !== input.teamName) return;
       if (event.type === 'log-source-change') {
         scheduleReload({ background: true, forceRefresh: true });

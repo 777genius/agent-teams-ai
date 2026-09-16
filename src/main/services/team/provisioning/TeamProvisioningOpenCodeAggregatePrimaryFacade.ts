@@ -20,11 +20,17 @@ import {
   waitForAggregateMemberLifecycleOperations,
   waitForAggregatePrimaryRestart,
 } from './OpenCodeAggregatePrimaryRestartPolicy';
+import { OpenCodeAggregateRuntimeLiveness } from './OpenCodeAggregateRuntimeLiveness';
 import { type TeamProvisioningMemberLifecycleController } from './TeamProvisioningMemberLifecycle';
 import {
   type LiveRosterAttachReason,
   type ProvisioningRun as MemberLifecycleProvisioningRun,
 } from './TeamProvisioningMemberLifecycleTypes';
+import { OpenCodeAggregateRuntimeStopError } from './TeamProvisioningOpenCodeAggregateLaunchPersistence';
+import {
+  retryPendingOpenCodePrimaryCleanup as retryPendingOpenCodePrimaryCleanupWithPorts,
+  type TeamProvisioningOpenCodeAggregatePrimaryCleanupRetryPorts,
+} from './TeamProvisioningOpenCodeAggregatePrimaryCleanup';
 import {
   createOpenCodeAggregatePrimaryLaneStopPorts,
   createOpenCodePrimaryLaneRebootstrapPorts,
@@ -53,7 +59,6 @@ import type {
 import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
-
 /** Owns serialized lifecycle and aggregate-primary restart orchestration. */
 export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends TeamProvisioningServiceMemberLifecycleFacade {
   private readonly aggregatePrimaryLaneHost: OpenCodeAggregatePrimaryLaneWiringHost &
@@ -74,6 +79,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     deleteRuntimeOwner: (teamName) => {
       this.runtimeAdapterRunByTeam.delete(teamName);
     },
+    appendPendingCleanup: (cleanup) => this.appendPendingOpenCodePrimaryCleanup(cleanup),
     getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
       this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
     logWarn: (message) => logger.warn(message),
@@ -112,6 +118,25 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   private readonly aggregatePrimaryProgress = new OpenCodeAggregatePrimaryProgressPublisher(
     this.aggregatePrimaryLaneHost
   );
+  private readonly aggregateRuntimeLiveness = new OpenCodeAggregateRuntimeLiveness({
+    getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+    hasPrimaryRuntime: (teamName, runId) =>
+      this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId,
+    hasSecondaryRuntime: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
+    getRuntimeProgressState: (runId) => this.runtimeAdapterProgressByRunId.get(runId)?.state,
+    getRun: (runId) => this.runs.get(runId),
+  });
+  private readonly aggregatePrimaryCleanupRetryPorts: TeamProvisioningOpenCodeAggregatePrimaryCleanupRetryPorts = {
+    getRuntimeOwner: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
+    setRuntimeOwner: (teamName, owner) => this.runtimeAdapterRunByTeam.set(teamName, owner),
+    readPendingCleanups: (teamName) => this.readPendingOpenCodePrimaryCleanups(teamName),
+    consumePendingCleanup: async (cleanup) => {
+      await this.consumePendingOpenCodePrimaryCleanup(cleanup);
+    },
+    clearPrimaryLaneIfOwned: (teamName, runId) =>
+      this.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId),
+    getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
+  };
 
   private runAfterInFlightTeamOperation<T>(
     teamName: string,
@@ -410,19 +435,14 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       run.detectedSessionId = primaryRelaunchResult?.leadSessionId?.trim() || null;
     } catch (restartError) {
       if (restartNoLongerCurrent()) {
-        const abortedByOwnershipGuard = getErrorMessage(restartError).includes(
-          'owning run is no longer active'
-        );
-        if (!abortedByOwnershipGuard) {
-          await this.stopUnretainableOpenCodePrimaryLane({
-            adapter,
-            run,
-            previousEffectiveMembers,
-            previousLaunchState,
-          });
-        }
+        await this.stopUnretainableOpenCodePrimaryLane({
+          adapter,
+          run,
+          previousEffectiveMembers,
+          previousLaunchState,
+        });
         await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
-        throw abortedByOwnershipGuard ? restartError : getCancelledAggregateLaunchError(teamName);
+        throw getCancelledAggregateLaunchError(teamName);
       }
       try {
         await this.stopFailedOpenCodeAggregatePrimaryRelaunchCandidate({
@@ -577,6 +597,13 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     );
   }
 
+  protected retryPendingOpenCodePrimaryCleanup(teamName: string): Promise<void> {
+    return retryPendingOpenCodePrimaryCleanupWithPorts(
+      teamName,
+      this.aggregatePrimaryCleanupRetryPorts
+    );
+  }
+
   override async attachLiveRosterMember(
     teamName: string,
     memberName: string,
@@ -586,7 +613,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
     );
   }
-
   override async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, () =>
       this.memberLifecycleController.detachLiveRosterMember(teamName, memberName)
@@ -599,6 +625,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     expectedSecondary?: boolean
   ): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, async () => {
+      await this.retryPendingOpenCodePrimaryCleanup(teamName);
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
         teamName.trim().toLowerCase()
       );
@@ -619,7 +646,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           expectedSecondary
         );
       }
-
       const restart = this.beginOpenCodeAggregatePrimaryRestart(
         teamName,
         memberName,
@@ -650,6 +676,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       } catch (error) {
         if (restart.lease.cancelRequested) {
           await this.clearCancelledOpenCodeAggregateRestartState(teamName, restart.lease.runId);
+          if (error instanceof OpenCodeAggregateRuntimeStopError) {
+            throw error;
+          }
           if (getErrorMessage(error).includes('owning run is no longer active')) {
             throw error;
           }
@@ -662,6 +691,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     });
   }
 
+  protected override async reconcilePersistedLaunchState(teamName: string) {
+    await this.retryPendingOpenCodePrimaryCleanup(teamName);
+    return super.reconcilePersistedLaunchState(teamName);
+  }
+
   override async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
@@ -669,7 +703,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
     );
   }
-
   override async reattachOpenCodeOwnedMemberLane(
     teamName: string,
     memberName: string,
@@ -679,7 +712,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
     );
   }
-
   override async detachOpenCodeOwnedMemberLane(
     teamName: string,
     memberName: string
@@ -702,7 +734,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       await primaryStopInFlight;
     }
   }
-
   protected override stopOpenCodeRuntimeAdapterTeam(
     teamName: string,
     runId: string
@@ -715,7 +746,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       }
       return existingStop.promise.then(() => this.stopOpenCodeRuntimeAdapterTeam(teamName, runId));
     }
-
     const cancelledRestartAtStop = this.openCodeAggregatePrimaryRestartByTeam.get(teamKey);
     const promise = super
       .stopOpenCodeRuntimeAdapterTeam(teamName, runId)
@@ -737,36 +767,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     return promise;
   }
 
-  override isTeamAlive(teamName: string): boolean {
-    const runId = this.runTracking.getAliveRunId(teamName);
-    if (!runId) {
-      return false;
-    }
-    const hasPrimaryRuntime = this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId;
-    const hasSecondaryRuntime = this.hasSecondaryRuntimeRuns(teamName);
-    const runtimeProgressState = this.runtimeAdapterProgressByRunId.get(runId)?.state;
-    if (
-      !hasSecondaryRuntime &&
-      (runtimeProgressState === 'disconnected' ||
-        runtimeProgressState === 'failed' ||
-        runtimeProgressState === 'cancelled')
-    ) {
-      return false;
-    }
-    const run = this.runs.get(runId);
-    if (!run) {
-      return hasPrimaryRuntime || hasSecondaryRuntime;
-    }
-    if (hasPrimaryRuntime || hasSecondaryRuntime) {
-      return !run.processKilled && !run.cancelRequested;
-    }
-    return run.child != null && !run.processKilled && !run.cancelRequested;
-  }
-
-  override getAliveTeams(): string[] {
-    return super.getAliveTeams().filter((teamName) => this.isTeamAlive(teamName));
-  }
-
+  override isTeamAlive(teamName: string): boolean { return this.aggregateRuntimeLiveness.isTeamAlive(teamName); }
+  override getAliveTeams(): string[] { return super.getAliveTeams().filter((teamName) => this.isTeamAlive(teamName)); }
   protected override async sendOpenCodeMemberMessageToRuntimeSerialized(input: {
     teamName: string;
     laneId: string;

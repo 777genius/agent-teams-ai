@@ -27,6 +27,11 @@ export enum ApplicationCommandConflictReason {
   IdempotencyKeyReused = 'idempotency_key_reused',
   OperationMismatch = 'operation_mismatch',
   PayloadHashMismatch = 'payload_hash_mismatch',
+  MutationFenceExpired = 'mutation_fence_expired',
+  MutationFenceStale = 'mutation_fence_stale',
+  MutationOperationRebound = 'mutation_operation_rebound',
+  MutationTokenRebound = 'mutation_token_rebound',
+  MutationSuccessorBlocked = 'mutation_successor_blocked',
 }
 
 export enum ApplicationCommandRunOutcome {
@@ -81,6 +86,23 @@ export interface ApplicationCommandLedgerBeginRequest<
   nowIso: string;
   /** A matching started attempt older than this is fenced as unknown before reconciliation. */
   startedStaleAfterMs: number;
+  /**
+   * Optional durable authority for an external mutation. The storage adapter
+   * claims this fence in the same transaction that starts the command.
+   */
+  mutationFence?: ApplicationCommandMutationFenceClaim;
+}
+
+export interface ApplicationCommandMutationFenceClaim {
+  laneId: string;
+  backend: string;
+  effectKind: string;
+  operationId: string;
+  leaseToken: string;
+  leaseOwnerId: string;
+  leaseFence: number;
+  claimedAtIso: string;
+  expiresAtIso: string;
 }
 
 export type ApplicationCommandLedgerBeginResult<TOperation extends string = string> =
@@ -151,3 +173,5 @@ export interface ApplicationCommandErrorClassification {
   failureKind: ApplicationCommandFailureKind;
   message?: string;
 }
+
+export * from './durableCommandProtocol';

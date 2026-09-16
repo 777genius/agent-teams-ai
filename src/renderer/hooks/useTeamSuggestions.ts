@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -28,6 +28,7 @@ interface UseTeamSuggestionsOptions {
 
 const EMPTY_TEAMS: TeamSummary[] = [];
 const EMPTY_TEAM_SUGGESTIONS: MentionSuggestion[] = [];
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
 /**
  * Returns team MentionSuggestion[] sorted by online status (online first).
@@ -46,7 +47,7 @@ export function useTeamSuggestions(
   const fetchAlive = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await api.teams.aliveList();
+      const list = await teamAliveListReadPort.listAliveTeams();
       setAliveTeams(new Set(list));
     } catch {
       // best-effort — treat all as offline on error

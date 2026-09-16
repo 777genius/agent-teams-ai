@@ -27,6 +27,8 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
+export type OpenCodeRuntimeLaneStorageClearResult = boolean | 'cleared' | 'owner_changed';
+
 export interface CreateOpenCodeAggregateProvisioningRunParams {
   runId: string;
   startedAt: string;
@@ -209,6 +211,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     assertStillCurrentAfterPersistence?: () => void;
+    onUntrackedPrimaryStopConfirmed?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null>;
   launchSingleMixedSecondaryLane(
     run: OpenCodeAggregateProvisioningRun,
@@ -254,7 +257,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts
     teamName: string;
     laneId: string;
     expectedRunId: string;
-  }): Promise<boolean>;
+  }): Promise<OpenCodeRuntimeLaneStorageClearResult>;
   setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];

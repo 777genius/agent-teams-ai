@@ -150,6 +150,7 @@ vi.mock('lucide-react', () => {
   return {
     Archive: Icon,
     ArrowUpDown: Icon,
+    Blocks: Icon,
     Check: Icon,
     ChevronDown: Icon,
     ChevronRight: Icon,
@@ -540,6 +541,33 @@ describe('GlobalTaskList project grouping', () => {
     expect(
       host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
     ).toBe('true');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not read or initialize alive teams when electronMode is false', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    storeState.globalTasks = [makeTask(1)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('false');
 
     await act(async () => {
       root.unmount();

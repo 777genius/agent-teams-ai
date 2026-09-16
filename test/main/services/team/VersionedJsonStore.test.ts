@@ -1,9 +1,9 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withFileLock } from '../../../../src/main/services/team/fileLock';
 import {
   VersionedJsonStore,
   VersionedJsonStoreError,
@@ -116,6 +116,59 @@ describe('VersionedJsonStore', () => {
     expect(JSON.parse(await fs.readFile(filePath, 'utf8'))).toMatchObject({
       schemaVersion: 2,
       data: ['future'],
+    });
+  });
+
+  it('holds reads and writes behind an external access lock', async () => {
+    const filePath = path.join(tempDir, 'store.json');
+    const accessLockTargetPath = path.join(tempDir, '.lane-lifecycle');
+    const store = new VersionedJsonStore<string[]>({
+      filePath,
+      schemaVersion: 1,
+      defaultData: () => [],
+      validate: validateStringArray,
+      clock: () => now,
+      accessLockTargetPath,
+    });
+    await store.updateLocked(() => ['preserved']);
+
+    let releaseAccessLock!: () => void;
+    let signalAccessLockHeld!: () => void;
+    const accessLockHeld = new Promise<void>((resolve) => {
+      signalAccessLockHeld = resolve;
+    });
+    const releaseAccessLockPromise = new Promise<void>((resolve) => {
+      releaseAccessLock = resolve;
+    });
+    const lock = withFileLock(accessLockTargetPath, async () => {
+      signalAccessLockHeld();
+      await releaseAccessLockPromise;
+    });
+    await accessLockHeld;
+
+    let readSettled = false;
+    let writeSettled = false;
+    const read = store.read().finally(() => {
+      readSettled = true;
+    });
+    const write = store
+      .updateLocked((current) => [...current, 'written-after-release'])
+      .finally(() => {
+        writeSettled = true;
+      });
+
+    expect(readSettled).toBe(false);
+    expect(writeSettled).toBe(false);
+
+    releaseAccessLock();
+    await lock;
+    await expect(read).resolves.toMatchObject({
+      ok: true,
+      data: expect.arrayContaining(['preserved']),
+    });
+    await expect(write).resolves.toMatchObject({
+      changed: true,
+      data: ['preserved', 'written-after-release'],
     });
   });
 });

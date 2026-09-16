@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, isElectronMode } from '@renderer/api';
-import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
-
 import {
   parseStrictQualifiedModelRef,
   qualifyModelId,
 } from '../../core/domain/openCodeModelIdentity';
+import { normalizeOpenCodeCatalogSourceProviderId } from '../view-models/openCodeCatalogSelection';
 
 import { loadOpenCodeScopedCatalog, MODEL_CATALOG_FRESHNESS_MS } from './loadOpenCodeScopedCatalog';
 import {
@@ -16,6 +14,7 @@ import {
 } from './openCodePassiveCatalogNormalization';
 
 import type { RuntimeProviderModelDto } from '../../contracts';
+import type { OpenCodeCatalogDependencies } from '../ports/OpenCodeCatalogTransportPort';
 import type {
   CliProviderModelAvailability,
   CliProviderModelCatalog,
@@ -50,76 +49,6 @@ export interface OpenCodeProviderModelCatalogResult {
   freshModelCount: number | null;
   error: string | null;
   refresh: () => void;
-}
-
-export function resolveOpenCodeSelectionScopeDecision(input: {
-  value: string;
-  runtimeNormalizedValue: string;
-  selectionScopeKey: string | null;
-  catalogScopeKey: string | null;
-  catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
-  catalogState: 'fresh' | 'stale' | null;
-}): { normalizedValue: string; preserve: boolean } {
-  if (!input.catalogScopeKey) {
-    return { normalizedValue: input.runtimeNormalizedValue, preserve: false };
-  }
-
-  const sameScope = input.selectionScopeKey === input.catalogScopeKey;
-  const freshAuthority = input.catalogStatus === 'ready' && input.catalogState === 'fresh';
-  return {
-    normalizedValue:
-      sameScope || freshAuthority || !input.value.trim() ? input.runtimeNormalizedValue : '',
-    preserve: sameScope && !freshAuthority,
-  };
-}
-
-function normalizeSourceProviderId(sourceProviderId: string | null | undefined): string | null {
-  const normalized = sourceProviderId?.trim().toLowerCase() ?? '';
-  if (!normalized || isOpenCodeLocalProviderId(normalized)) {
-    return null;
-  }
-  return normalized;
-}
-
-export function resolveOpenCodeCatalogSourceProviderId(input: {
-  selectedSourceIds: ReadonlySet<string>;
-  selectedModel: string | null | undefined;
-  localModelsSelected?: boolean;
-  knownLocalSourceIds: ReadonlySet<string>;
-  localProviderLookupReady: boolean;
-}): string | null {
-  const resolveCandidate = (candidate: string | null | undefined): string | null => {
-    const normalized = candidate?.trim().toLowerCase() ?? '';
-    if (
-      !normalized ||
-      isOpenCodeLocalProviderId(normalized) ||
-      Array.from(input.knownLocalSourceIds).some(
-        (sourceId) => sourceId.trim().toLowerCase() === normalized
-      )
-    ) {
-      return null;
-    }
-    return normalized;
-  };
-
-  if (input.localModelsSelected) {
-    return null;
-  }
-  if (input.selectedSourceIds.size === 1) {
-    // An explicit built-in/free or local tab is still an explicit selection. Do not
-    // fall back to the previously selected qualified model and fetch that provider.
-    for (const selectedSource of input.selectedSourceIds) {
-      return resolveCandidate(selectedSource);
-    }
-  }
-  if (input.selectedSourceIds.size > 1) {
-    return null;
-  }
-
-  if (!input.localProviderLookupReady) {
-    return null;
-  }
-  return resolveCandidate(parseStrictQualifiedModelRef(input.selectedModel)?.sourceId ?? null);
 }
 
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
@@ -226,7 +155,9 @@ export function mapCatalogModel(
   };
 }
 function sourceIdForModelId(modelId: string): string | null {
-  return normalizeSourceProviderId(parseStrictQualifiedModelRef(modelId)?.sourceId);
+  return normalizeOpenCodeCatalogSourceProviderId(
+    parseStrictQualifiedModelRef(modelId)?.sourceId
+  );
 }
 
 function filterPassiveProviderToSource(
@@ -378,14 +309,17 @@ function errorMessage(error: unknown): string {
     : 'The provider-model catalog request failed.';
 }
 
-export function useOpenCodeProviderModelCatalog(input: {
-  enabled: boolean;
-  sourceProviderId: string | null;
-  projectPath?: string | null;
-  refreshRevision?: number;
-  passiveProviderStatus: CliProviderStatus | null | undefined;
-}): OpenCodeProviderModelCatalogResult {
-  const sourceProviderId = normalizeSourceProviderId(input.sourceProviderId);
+export function useOpenCodeProviderModelCatalog(
+  input: {
+    enabled: boolean;
+    sourceProviderId: string | null;
+    projectPath?: string | null;
+    refreshRevision?: number;
+    passiveProviderStatus: CliProviderStatus | null | undefined;
+  },
+  dependencies: OpenCodeCatalogDependencies
+): OpenCodeProviderModelCatalogResult {
+  const sourceProviderId = normalizeOpenCodeCatalogSourceProviderId(input.sourceProviderId);
   const projectPath = input.projectPath?.trim() || null;
   const scopeKey = sourceProviderId ? JSON.stringify([projectPath, sourceProviderId]) : null;
   const requestSequenceRef = useRef(0);
@@ -422,8 +356,8 @@ export function useOpenCodeProviderModelCatalog(input: {
       });
       return;
     }
-    const cancelModelLoad = isElectronMode()
-      ? api.runtimeProviderManagement?.cancelModelLoad?.bind(api.runtimeProviderManagement)
+    const cancelModelLoad = dependencies.isElectronCapable()
+      ? dependencies.transport.cancelModelLoad?.bind(dependencies.transport)
       : undefined;
 
     setState((current) =>
@@ -449,7 +383,9 @@ export function useOpenCodeProviderModelCatalog(input: {
         sourceProviderId,
         projectPath,
         requestGroupId,
-        isCurrentRequest
+        isCurrentRequest,
+        true,
+        dependencies
       );
       if (!isCurrentRequest()) return;
       setState({
@@ -485,6 +421,7 @@ export function useOpenCodeProviderModelCatalog(input: {
     refreshSequence,
     scopeKey,
     sourceProviderId,
+    dependencies,
   ]);
 
   useEffect(() => {

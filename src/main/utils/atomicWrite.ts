@@ -1,7 +1,26 @@
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {
+  type AtomicWriteDirectorySyncOutcome,
+  closeDirectorySync,
+  type DirectorySyncPreparation,
+  finishDirectorySyncAfterPublish,
+  prepareDirectorySync,
+} from './atomicWriteDirectorySync';
+// Keep recovery primitives together so every transaction path uses the same
+// no-clobber publication and inode-identity checks.
+import {
+  assertRegularTextArtifact,
+  assertReviewTransactionId,
+  getReviewTransactionTargetKey,
+  hashReviewTransactionPart,
+  isSameFileIdentity,
+  lstatOrNull,
+  publishHardlinkNoClobber,
+  restoreDetachedPathNoClobber,
+} from './atomicWriteRecovery';
 import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
 export * from './durablePathOperations';
@@ -17,11 +36,29 @@ export interface AtomicWriteOptions {
    * partially-written target.
    */
   beforeCommit?: () => Promise<void>;
+  /** Observes the final directory-durability result after publication. */
+  onDirectorySyncOutcome?: (outcome: AtomicWriteDirectorySyncOutcome) => void | Promise<void>;
 }
 
+/** Identity returned by legacy replace operations in durablePathOperations. */
 export interface AtomicCreateResult {
   dev: number;
   ino: number;
+}
+
+export interface AtomicCreatePublicationResult extends AtomicCreateResult {
+  birthtimeMs: number;
+  size: number;
+  /** Transaction-owned hardlink that pins the published inode until it is released. */
+  pinPath?: string;
+}
+
+export interface AtomicCreateOptions {
+  mode?: number;
+  /** Keep the complete temporary hardlink as an inode-generation pin. */
+  retainPin?: boolean;
+  /** Refuse publication when the platform did not provide a usable inode identity. */
+  requireTrustworthyIdentity?: boolean;
 }
 
 export interface ExpectedTextFileIdentity {
@@ -60,18 +97,6 @@ interface ReviewFileTransactionManifest {
   phase: 'prepared' | 'detached' | 'published';
 }
 
-function hashReviewTransactionPart(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function getReviewTransactionTargetKey(targetPath: string): string {
-  return hashReviewTransactionPart(path.resolve(targetPath)).slice(0, 16);
-}
-
-function assertReviewTransactionId(id: string): void {
-  if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error('Invalid review file transaction id');
-}
-
 function getReviewFileTransactionPaths(targetPath: string, id: string): ReviewFileTransactionPaths {
   assertReviewTransactionId(id);
   const directoryPath = path.join(
@@ -85,80 +110,6 @@ function getReviewFileTransactionPaths(targetPath: string, id: string): ReviewFi
     detachedPath: path.join(directoryPath, 'detached'),
     afterPath: path.join(directoryPath, 'after.tmp'),
   };
-}
-
-async function lstatOrNull(filePath: string): Promise<fs.Stats | null> {
-  try {
-    return await fs.promises.lstat(filePath);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT' || code === 'ENOTDIR') return null;
-    throw error;
-  }
-}
-
-function isSameFileIdentity(
-  left: Pick<fs.Stats, 'dev' | 'ino'>,
-  right: Pick<fs.Stats, 'dev' | 'ino'>
-): boolean {
-  return left.dev === right.dev && left.ino !== 0 && left.ino === right.ino;
-}
-
-async function assertRegularTextArtifact(
-  artifactPath: string,
-  expectedContent: string,
-  expectedIdentity?: Pick<ExpectedTextFileIdentity, 'dev' | 'ino'>
-): Promise<fs.Stats> {
-  const handle = await fs.promises.open(artifactPath, 'r');
-  try {
-    const stats = await handle.stat();
-    if (!stats.isFile()) {
-      throw new Error('Review file transaction artifact is not a regular file');
-    }
-    if (expectedIdentity && !isSameFileIdentity(stats, expectedIdentity)) {
-      throw new Error('File changed during review update; refusing to mutate it');
-    }
-    const content = await handle.readFile('utf8');
-    if (content !== expectedContent) {
-      throw new Error('File changed during review update; refusing to mutate it');
-    }
-    return stats;
-  } finally {
-    await handle.close();
-  }
-}
-
-async function restoreDetachedPathNoClobber(
-  detachedPath: string,
-  targetPath: string
-): Promise<boolean> {
-  try {
-    await fs.promises.link(detachedPath, targetPath);
-    await fs.promises.unlink(detachedPath);
-    await syncDirectoryBestEffort(path.dirname(targetPath));
-    return true;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'EEXIST') throw error;
-    // Preserve both the externally-created target and the detached file. The
-    // caller reports a conflict, and no version is destroyed.
-    return false;
-  }
-}
-
-async function publishHardlinkNoClobber(sourcePath: string, targetPath: string): Promise<void> {
-  try {
-    await fs.promises.link(sourcePath, targetPath);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'EEXIST') throw error;
-    const [source, target] = await Promise.all([
-      fs.promises.lstat(sourcePath),
-      fs.promises.lstat(targetPath),
-    ]);
-    if (!isSameFileIdentity(source, target)) throw error;
-  }
-  await syncDirectoryBestEffort(path.dirname(targetPath));
 }
 
 function sleep(ms: number): Promise<void> {
@@ -262,6 +213,8 @@ export async function atomicWriteAsync(
 ): Promise<void> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.tmp.${randomUUID()}`);
+  let directorySync: DirectorySyncPreparation | null = null;
+  let published = false;
 
   try {
     await fs.promises.mkdir(dir, { recursive: true });
@@ -272,12 +225,27 @@ export async function atomicWriteAsync(
     });
 
     await syncFile(tmpPath, options.durability === 'strict');
-    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
     if (options.syncDirectory) {
-      await syncDirectory(dir, options.durability === 'strict');
+      directorySync = await prepareDirectorySync(dir, options.durability === 'strict');
+    }
+    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
+    published = true;
+
+    const directorySyncOutcome = await finishDirectorySyncAfterPublish(directorySync);
+    directorySync = null;
+    if (directorySyncOutcome && options.onDirectorySyncOutcome) {
+      try {
+        await options.onDirectorySyncOutcome(directorySyncOutcome);
+      } catch {
+        // Publication is already terminal. An observer must not turn it into a
+        // reported write failure or cause cleanup to touch a newly reused name.
+      }
     }
   } catch (error) {
-    await fs.promises.unlink(tmpPath).catch(() => undefined);
+    await closeDirectorySync(directorySync);
+    if (!published) {
+      await fs.promises.unlink(tmpPath).catch(() => undefined);
+    }
     throw error;
   }
 }
@@ -290,10 +258,12 @@ export async function atomicWriteAsync(
 export async function atomicCreateAsync(
   targetPath: string,
   data: string | Buffer,
-  options: { mode?: number } = {}
-): Promise<AtomicCreateResult> {
+  options: AtomicCreateOptions = {}
+): Promise<AtomicCreatePublicationResult> {
   const dir = path.dirname(targetPath);
   const tmpPath = path.join(dir, `.review-create.${randomUUID()}.tmp`);
+  let directorySync: DirectorySyncPreparation | null = null;
+  let published = false;
 
   try {
     await fs.promises.mkdir(dir, { recursive: true });
@@ -311,19 +281,41 @@ export async function atomicCreateAsync(
     }
 
     await syncFile(tmpPath, true);
-    const identity = await fs.promises.lstat(tmpPath);
-    await fs.promises.link(tmpPath, targetPath);
-    try {
-      await fs.promises.unlink(tmpPath);
-    } catch {
-      // The target is already a fully synced, atomically published hardlink. Report
-      // terminal success instead of deleting it or making a lost IPC response
-      // ambiguous. A later authorization pass removes this reserved sibling link.
+    const stats = await fs.promises.lstat(tmpPath);
+    const identity: AtomicCreatePublicationResult = {
+      dev: stats.dev,
+      ino: stats.ino,
+      birthtimeMs: stats.birthtimeMs,
+      size: stats.size,
+      ...(options.retainPin ? { pinPath: tmpPath } : {}),
+    };
+    if (
+      options.requireTrustworthyIdentity &&
+      (!Number.isSafeInteger(identity.ino) || identity.ino <= 0)
+    ) {
+      throw new Error('Atomic create identity is not trustworthy enough for publication');
     }
-    await syncDirectory(dir, true);
-    return { dev: identity.dev, ino: identity.ino };
+
+    directorySync = await prepareDirectorySync(dir, true);
+    await fs.promises.link(tmpPath, targetPath);
+    published = true;
+    if (!options.retainPin) {
+      try {
+        await fs.promises.unlink(tmpPath);
+      } catch {
+        // The target is already a fully synced, atomically published hardlink. Report
+        // terminal success instead of deleting it or making a lost IPC response
+        // ambiguous. A later authorization pass removes this reserved sibling link.
+      }
+    }
+    await finishDirectorySyncAfterPublish(directorySync);
+    directorySync = null;
+    return identity;
   } catch (error) {
-    await fs.promises.unlink(tmpPath).catch(() => undefined);
+    await closeDirectorySync(directorySync);
+    if (!published) {
+      await fs.promises.unlink(tmpPath).catch(() => undefined);
+    }
     throw error;
   }
 }
@@ -571,7 +563,11 @@ async function inspectOrDetachReviewTransactionSource(
   }
   if (!detached || !isSameFileIdentity(detached, before)) {
     if (detached) {
-      await restoreDetachedPathNoClobber(paths.detachedPath, transaction.sourcePath);
+      await restoreDetachedPathNoClobber(
+        paths.detachedPath,
+        transaction.sourcePath,
+        syncDirectoryBestEffort
+      );
     }
     throw new Error('File changed during review update; refusing to mutate it');
   }
@@ -609,7 +605,11 @@ export async function executeReviewFileTransaction(
     throw new Error('Review mutation target appeared during publish; refusing overwrite');
   }
   if (!target) {
-    await publishHardlinkNoClobber(paths.afterPath, transaction.targetPath);
+    await publishHardlinkNoClobber(
+      paths.afterPath,
+      transaction.targetPath,
+      syncDirectoryBestEffort
+    );
   }
   const published = await fs.promises.lstat(transaction.targetPath);
   if (!isSameFileIdentity(published, after)) {

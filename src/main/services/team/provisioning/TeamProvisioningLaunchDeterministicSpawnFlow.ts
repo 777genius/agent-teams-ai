@@ -33,6 +33,7 @@ import {
   type MaterializeDeterministicLaunchBootstrapFilesPorts,
   type TeamProvisioningLaunchBootstrapRun,
 } from './TeamProvisioningLaunchTeamFlow';
+import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -147,10 +148,9 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
   membersMetaStore: {
-    getMembers(teamName: string): Promise<TeamMember[]>;
-    writeMembers(
+    updateMembers(
       teamName: string,
-      members: TeamMember[],
+      update: (members: readonly TeamMember[]) => TeamMember[],
       options?: { providerBackendId?: string | null }
     ): Promise<void>;
   };
@@ -238,28 +238,29 @@ export async function persistDeterministicLaunchMetadata<
       nowMs: ports.nowMs(),
     })
   );
-  const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
-  // Runtime materialization supplies workspaces, but never configured model authority.
-  const configuredByName = new Map(
-    configuredMemberSpecs.map((member) => [member.name.trim().toLowerCase(), member])
-  );
-  const membersForPersistence = allEffectiveMemberSpecs.map((member) => {
-    const configured = configuredByName.get(member.name.trim().toLowerCase());
-    return {
-      ...member,
-      providerId: configured?.providerId,
-      providerBackendId: configured?.providerBackendId,
-      model: configured?.model,
-      effort: configured?.effort,
-      fastMode: configured?.fastMode,
-    };
-  });
-  await ports.membersMetaStore.writeMembers(
+  await ports.membersMetaStore.updateMembers(
     request.teamName,
-    mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(membersForPersistence)),
-      existingMembers
-    ),
+    (existingMembers) => {
+      // Runtime materialization supplies workspaces, but never configured model authority.
+      const configuredByName = new Map(
+        configuredMemberSpecs.map((member) => [member.name.trim().toLowerCase(), member])
+      );
+      const membersForPersistence = allEffectiveMemberSpecs.map((member) => {
+        const configured = configuredByName.get(member.name.trim().toLowerCase());
+        return {
+          ...member,
+          providerId: configured?.providerId,
+          providerBackendId: configured?.providerBackendId,
+          model: configured?.model,
+          effort: configured?.effort,
+          fastMode: configured?.fastMode,
+        };
+      });
+      return mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(membersForPersistence)),
+        existingMembers
+      );
+    },
     {
       providerBackendId: syntheticRequest.providerBackendId,
     }
@@ -380,6 +381,40 @@ export async function cleanupDeterministicLaunchSpawnFailure<
   await ports.restorePrelaunchConfig(input.request.teamName);
 }
 
+export async function persistDeterministicLaunchMetadataOrCleanup<
+  TRun extends DeterministicLaunchSpawnFlowRun,
+>(
+  input: {
+    request: TeamLaunchRequest;
+    syntheticRequest: TeamCreateRequest;
+    launchIdentity: ProviderModelLaunchIdentity | null;
+    allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    configuredMemberSpecs: TeamCreateRequest['members'];
+    run: TRun;
+    runId: string;
+    provisioningEnv: DeterministicLaunchSpawnEnvResolution;
+  },
+  ports: Pick<
+    RunDeterministicLaunchSpawnFlowPorts<TRun>,
+    | 'teamMetaStore'
+    | 'membersMetaStore'
+    | 'nowMs'
+    | 'cleanupAnthropicApiKeyHelperMaterial'
+    | 'deleteRun'
+    | 'deleteProvisioningRunByTeam'
+    | 'mcpConfigBuilder'
+    | 'removeRunMemberMcpConfigFiles'
+    | 'restorePrelaunchConfig'
+  >
+): Promise<void> {
+  try {
+    await persistDeterministicLaunchMetadata(input, ports);
+  } catch (error) {
+    await cleanupDeterministicLaunchMaterializationFailure(input, ports);
+    throw error;
+  }
+}
+
 export function registerDeterministicLaunchChildHandlers<
   TRun extends DeterministicLaunchSpawnFlowRun,
 >(
@@ -396,7 +431,7 @@ export function registerDeterministicLaunchChildHandlers<
     | 'cleanupAnthropicApiKeyHelperMaterial'
     | 'cleanupRun'
     | 'handleProcessExit'
-  >
+  > & { logger?: RuntimeLaunchLogger }
 ): void {
   const { run, child } = input;
   scheduleProvisioningRunTimeout(
@@ -487,7 +522,14 @@ export function registerDeterministicLaunchChildHandlers<
   });
 
   child.once('close', (code: number | null) => {
-    void ports.handleProcessExit(run, code);
+    observeTeamProvisioningProcessClose(run, code, {
+      handleProcessExit: async (closedRun, closedCode) => {
+        await ports.handleProcessExit(closedRun, closedCode);
+      },
+      updateProgress: ports.updateProgress,
+      extractCliLogsFromRun,
+      logger: ports.logger ?? {},
+    });
   });
 }
 
@@ -631,18 +673,19 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   );
 
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-  try {
-    await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs },
-      ports
-    );
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
+  await persistDeterministicLaunchMetadataOrCleanup(
+    {
+      request,
+      syntheticRequest,
+      launchIdentity,
+      allEffectiveMemberSpecs,
+      configuredMemberSpecs,
+      run,
+      runId,
+      provisioningEnv,
+    },
+    ports
+  );
 
   let child: ChildProcess;
   try {
