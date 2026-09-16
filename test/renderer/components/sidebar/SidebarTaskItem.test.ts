@@ -157,8 +157,8 @@ describe('SidebarTaskItem unread styling', () => {
     });
 
     const button = host.querySelector('button');
-    expect(button?.className).toContain('bg-blue-500/[0.05]');
-    expect(button?.className).not.toContain('bg-blue-500/[0.08]');
+    expect(button?.className).toContain('bg-blue-500/[0.025]');
+    expect(button?.className).not.toContain('bg-blue-500/[0.05]');
 
     await act(async () => {
       root.unmount();
@@ -303,9 +303,10 @@ describe('SidebarTaskItem unread styling', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('5 min. ago');
-    expect(host.textContent).toContain('3 hr. ago');
-    expect(host.textContent).toContain('4 days ago');
+    expect(host.textContent).toContain('5 min');
+    expect(host.textContent).not.toContain('ago');
+    expect(host.textContent).toContain('3 hr');
+    expect(host.textContent).toContain('4 days');
     expect(host.textContent).not.toContain('upd');
     const relativeLabels = host.querySelectorAll<HTMLElement>(
       '[data-testid="sidebar-task-relative-time"]'
@@ -399,7 +400,8 @@ describe('SidebarTaskItem unread styling', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('1 min. ago');
+    expect(host.textContent).toContain('1 min');
+    expect(host.textContent).not.toContain('ago');
 
     await act(async () => {
       root.unmount();
