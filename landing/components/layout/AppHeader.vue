@@ -391,6 +391,7 @@ const navItems = computed(() => [
   min-width: 0 !important;
   padding-inline: clamp(4px, 0.8cqw, 12px) !important;
   border-radius: 0;
+  background: transparent;
   color: rgba(244, 247, 255, 0.88) !important;
   font-family: var(--at-font-mono);
   font-size: clamp(12px, 1.45cqw, 17px) !important;
