@@ -115,20 +115,26 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     let completed = 0;
     const noteProgress = (): void => {
       completed += 1;
-      onProgress?.({ current: completed, total: active.length });
+      try {
+        onProgress?.({ current: completed, total: active.length });
+      } catch (error) {
+        logger.warn(`[Backup] restore progress callback failed: ${String(error)}`);
+      }
     };
     await runBounded(active, RESTORE_CONCURRENCY, async ([teamName, entry]) => {
       try {
         if (this.binding) {
           if (await this.isFenced(teamName, entry.identityId)) return;
-          if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
-            await this.ports.withIdentityFence(teamName, () =>
-              this.ports.withTeamMutex(teamName, async () => {
+          let skipped = false;
+          await this.ports.withIdentityFence(teamName, () =>
+            this.ports.withTeamMutex(teamName, async () => {
+              if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
                 await this.ports.restoreGenericHoles(teamName);
-              })
-            );
-            return;
-          }
+                skipped = true;
+              }
+            })
+          );
+          if (skipped) return;
           if (await this.restoreConfigured(teamName, entry.identityId, this.binding))
             restored.push(teamName);
         } else {
@@ -232,6 +238,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
             return { outcome: 'not_applicable' as const };
           }
           if (live === 'ready' && !manifest.workSyncRestorePending) {
+            await this.ports.restoreGenericHoles(teamName);
             applicable = false;
             return { outcome: 'not_applicable' as const };
           }
@@ -245,7 +252,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
             restoreGeneric: async () => {
               await this.ports.restoreGeneric(teamName);
               // False can mean no generic files needed restoration, or refused publication.
-              await this.verifyConfigIdentity(teamName, expectedIdentity, true);
+              await this.verifyPublishedConfig(teamName, expectedIdentity);
             },
             importAndVerify: () => participant.importAndVerify(),
             invalidate: async () => {
@@ -265,10 +272,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     return applicable;
   }
 
-  private async inspectLiveConfig(
-    teamName: string,
-    identityId: string
-  ): Promise<LiveConfigState> {
+  private async inspectLiveConfig(teamName: string, identityId: string): Promise<LiveConfigState> {
     let raw: string;
     try {
       raw = await fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');
@@ -289,33 +293,14 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     throw new Error('Work-sync restore source config identity mismatch');
   }
 
-  private async verifyConfigIdentity(
-    teamName: string,
-    identityId: string,
-    required: boolean
-  ): Promise<boolean> {
-    let raw: string;
-    try {
-      raw = await fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');
-    } catch (error) {
-      if (!required && (error as NodeJS.ErrnoException).code === 'ENOENT') return true;
-      throw error;
-    }
+  private async verifyPublishedConfig(teamName: string, identityId: string): Promise<void> {
+    const raw = await fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8');
     if (!isValidConfig(raw)) {
-      if (!required) return true; // Generic restore may repair a corrupt config.
       throw new Error('Work-sync restore config publication was not verified');
     }
     const config = JSON.parse(raw) as Record<string, unknown>;
     if (config._backupIdentityId !== identityId) {
-      if (
-        !required &&
-        typeof config._backupIdentityId === 'string' &&
-        config._backupIdentityId.length > 0 &&
-        config._backupIdentityId === config._backupIdentityId.trim()
-      )
-        return false;
       throw new Error('Work-sync restore source config identity mismatch');
     }
-    return true;
   }
 }

@@ -288,6 +288,37 @@ it('skips restore for a healthy live config without pending', async () => {
   }
 });
 
+it('continues restore when the progress callback throws', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-progress-throw-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.copyFile(
+    path.join(backups, 'sandbox', 'config.json'),
+    path.join(env.teams, 'sandbox', 'config.json')
+  );
+  const owner = createSkipCoordinator(backups, async () => true);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), {
+    prepare: async () => ({
+      importAndVerify: async () => {
+        throw new Error('work-sync import must not run');
+      },
+    }),
+  });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    await expect(
+      owner.restoreIfNeeded(() => {
+        throw new Error('progress');
+      })
+    ).resolves.toEqual([]);
+  } finally {
+    warning.mockRestore();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 it('does not hole-fill a fenced deletion target', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-fenced-skip-'));
   env.teams = path.join(root, 'teams');

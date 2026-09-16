@@ -2859,10 +2859,7 @@ async function initializeServices(): Promise<void> {
     stallObservation: memberWorkSyncStallObservation,
     onRestoreProgress: ({ current, total }) => {
       publishStartupStatus({
-        message:
-          total === 0
-            ? 'Checking team backups...'
-            : `Checking team backups (${current} of ${total})...`,
+        message: `Checking team backups (${current} of ${total})...`,
       });
     },
   });

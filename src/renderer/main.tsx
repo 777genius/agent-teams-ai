@@ -89,7 +89,7 @@ function getSlowStepHint(step: AppStartupStep | null, elapsedMs: number): string
   if (phase.includes('doctor')) {
     return 'Using diagnostics fallback to locate the runtime.';
   }
-  if (phase.includes('team-backups') || phase.includes('backup')) {
+  if (phase.includes('team-backups')) {
     return 'Still checking saved team backups. A large local history or a slow disk can make this take longer.';
   }
   if (phase.includes('settings')) {

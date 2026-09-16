@@ -213,7 +213,7 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   onRestoreProgress?: (progress: { current: number; total: number }) => void;
 }): Promise<MemberWorkSyncFeatureFacade | null> {
   try {
-    await input.backup.initialize({ onRestoreProgress: input.onRestoreProgress });
+    await input.backup.initialize(input.onRestoreProgress);
   } catch (error) {
     startupLogger.warn(`[Init] Team backup initialization failed: ${String(error)}`);
     await input.prepared.dispose();
