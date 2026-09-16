@@ -21,6 +21,11 @@ export function useDownloadAssetPresentation() {
         : asset.arch
   );
 
+  const requiresArchitectureSelection = (asset: Pick<DownloadAsset, "os">) => (
+    (asset.os === "windows" && downloadStore.windowsArch === "unknown")
+    || (asset.os === "macos" && downloadStore.macArch === "unknown")
+  );
+
   const getDownloadArchLabel = (asset: DownloadAssetLike) => {
     if (asset.os === "macos") {
       if (downloadStore.macArch === "arm64") return "Apple Silicon";
@@ -90,6 +95,7 @@ export function useDownloadAssetPresentation() {
     getDownloadArch,
     getDownloadArchLabel,
     presentDownloadAsset,
+    requiresArchitectureSelection,
     selectedDownloadAsset,
     visibleDownloadAssets,
   };
