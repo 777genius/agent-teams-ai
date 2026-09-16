@@ -862,14 +862,14 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
         expect(snapshot.memory).toBe(true);
         expect(snapshot.pragma('quick_check')).toEqual([{ quick_check: 'ok' }]);
         const objects = snapshot
-          .prepare(
+          .prepare<[], Parameters<typeof normalizeCurrentTeamIdentitySchema>[0][number]>(
             `SELECT type, name, tbl_name, sql FROM sqlite_schema
           WHERE tbl_name IN ('legacy_team_key_reservations', 'team_adoption_intents',
             'team_identity_records', 'team_identity_storage_metadata') ORDER BY type, name, tbl_name`
           )
           .all();
         const projection = normalizeCurrentTeamIdentitySchema(
-          objects as Parameters<typeof normalizeCurrentTeamIdentitySchema>[0],
+          objects,
           snapshot.pragma('user_version', { simple: true })
         );
         expect(projection).toHaveLength(23);
