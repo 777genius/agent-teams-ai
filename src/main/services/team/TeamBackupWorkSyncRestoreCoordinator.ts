@@ -21,7 +21,10 @@ interface RegistryEntry {
 }
 
 type LiveConfigState = 'ready' | 'needs_restore' | 'foreign';
-export type TeamBackupRestoreProgress = { current: number; total: number };
+export interface TeamBackupRestoreProgress {
+  current: number;
+  total: number;
+}
 const RESTORE_CONCURRENCY = 8;
 
 async function runBounded<T>(
