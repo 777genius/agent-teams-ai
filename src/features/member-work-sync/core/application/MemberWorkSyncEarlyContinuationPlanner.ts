@@ -9,6 +9,7 @@ import {
 import {
   EARLY_CONTINUATION_INTENT_PREFIX,
   isOutboxItemAwaitingDelivery,
+  isOutboxItemRetryableEarlyContinuation,
 } from './MemberWorkSyncNudgeOutboxPlanHelpers';
 import { hasActiveAcceptedWorkLease } from './MemberWorkSyncNudgeRecoveryPolicy';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
@@ -21,6 +22,7 @@ import {
 import type {
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxItem,
+  MemberWorkSyncRecoveryReservation,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncSettlementTrigger } from './MemberWorkSyncReconciler';
@@ -252,6 +254,16 @@ export function hasMemberWorkSyncEarlyContinuationIdentity(
   );
 }
 
+function isOpenEarlyContinuationAttempt(input: {
+  reservation?: MemberWorkSyncRecoveryReservation;
+  item?: MemberWorkSyncOutboxItem | null;
+}): boolean {
+  if (input.item) {
+    return isOutboxItemRetryableEarlyContinuation(input.item);
+  }
+  return input.reservation?.state === 'reserved' || input.reservation?.state === 'uncertain';
+}
+
 /** Protocol-2 early continuation. No-ops unless version >= 2 and a ticket port exists. */
 export async function planMemberWorkSyncEarlyContinuation(
   deps: MemberWorkSyncUseCaseDeps,
@@ -292,6 +304,26 @@ export async function planMemberWorkSyncEarlyContinuation(
     teamIncarnation: resolveTeamIncarnation(status),
   });
   if (consumedIntentId && consumedIntentId !== recoveryInput.id) {
+    return { planned: false, code: 'early_continuation_rejected' };
+  }
+  const existingReservation = status.recoveryHealth?.reservations?.find(
+    (reservation) => reservation.intentId === recoveryInput.id
+  );
+  const existingItem =
+    (await deps.outboxStore.readItem?.({
+      teamName: status.teamName,
+      memberName: status.memberName,
+      id: recoveryInput.id,
+    })) ?? null;
+  const hasPriorAttempt =
+    consumedIntentId === recoveryInput.id || Boolean(existingReservation) || Boolean(existingItem);
+  if (
+    hasPriorAttempt &&
+    !isOpenEarlyContinuationAttempt({
+      reservation: existingReservation,
+      item: existingItem,
+    })
+  ) {
     return { planned: false, code: 'early_continuation_rejected' };
   }
   const admission = deps.runtimeTicketAdmission!;
@@ -391,6 +423,17 @@ export async function planMemberWorkSyncEarlyContinuation(
         receiptId: `payload-conflict:${ticketedInput.id}`,
       });
       return { planned: false, code: 'payload_conflict' };
+    }
+    if (!isOutboxItemRetryableEarlyContinuation(ensured.item)) {
+      await cancelAdmittedTicket(admission, ticket.ticket);
+      await retireMemberWorkSyncRecoveryIntent({
+        deps,
+        teamName: status.teamName,
+        memberName: status.memberName,
+        intentId: ticketedInput.id,
+        receiptId: `completed-replay:${ticketedInput.id}`,
+      });
+      return { planned: false, code: 'early_continuation_rejected' };
     }
     bindMemberWorkSyncLastSettlementIntent({
       teamName: status.teamName,
