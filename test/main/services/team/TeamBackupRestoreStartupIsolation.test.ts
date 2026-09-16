@@ -92,6 +92,7 @@ it.each(['resolve', 'reject'] as const)(
         );
         return true;
       },
+      restoreGenericHoles: async () => false,
     });
     const imports: string[] = [];
     owner.configure(gate, {
@@ -118,7 +119,7 @@ it.each(['resolve', 'reject'] as const)(
       });
       await Promise.resolve();
       expect(retryFinished).toBe(false);
-      expect(imports).toEqual(['a', 'b']);
+      expect(imports.sort()).toEqual(['a', 'b']);
       if (settlement === 'resolve') resolveTail();
       else rejectTail(new Error('late physical failure'));
       await retry;
@@ -180,6 +181,7 @@ it('rejects dirty JSON backup before the production coordinator publishes config
     withTeamMutex: async (_name, operation) => operation(),
     restoreLegacy: generic,
     restoreGeneric: generic,
+    restoreGenericHoles: generic,
   });
   owner.configure(
     gate,
@@ -200,6 +202,176 @@ it('rejects dirty JSON backup before the production coordinator publishes config
     await expect(gate.run(team, async () => undefined)).rejects.toThrow();
   } finally {
     warning.mockRestore();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+async function seedBackupTeam(
+  backups: string,
+  team: string,
+  options: { pending?: boolean } = {}
+): Promise<void> {
+  await fs.mkdir(path.join(backups, team), { recursive: true });
+  await fs.writeFile(
+    path.join(backups, team, 'manifest.json'),
+    JSON.stringify({
+      teamName: team,
+      identityId: team,
+      status: 'active',
+      firstBackupAt: 'now',
+      lastBackupAt: 'now',
+      fileStats: {},
+      ...(options.pending
+        ? { workSyncRestorePending: { identityId: team, generation: 'g1' } }
+        : {}),
+    })
+  );
+  await fs.writeFile(
+    path.join(backups, team, 'config.json'),
+    JSON.stringify({ name: team, members: [], _backupIdentityId: team })
+  );
+}
+
+function createSkipCoordinator(
+  backups: string,
+  generic: (team: string) => Promise<boolean>,
+  holes: (team: string) => Promise<boolean> = async () => false
+) {
+  const registry = { sandbox: { identityId: 'sandbox', status: 'active' as const } };
+  return new TeamBackupWorkSyncRestoreCoordinator({
+    registry: () => registry,
+    getBackupDir: (team) => path.join(backups, team),
+    isShuttingDown: () => false,
+    isReplacementForPendingDeletion: () => false,
+    isPermanentDeletionFenced: async () => false,
+    withIdentityFence: async (_name, operation) => operation(),
+    withTeamMutex: async (_name, operation) => operation(),
+    restoreLegacy: async () => {
+      throw new Error('legacy must not run');
+    },
+    restoreGeneric: generic,
+    restoreGenericHoles: holes,
+  });
+}
+
+it('skips restore for a healthy live config without pending', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-healthy-skip-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.copyFile(
+    path.join(backups, 'sandbox', 'config.json'),
+    path.join(env.teams, 'sandbox', 'config.json')
+  );
+  const generic = vi.fn(async () => true);
+  const holes = vi.fn(async () => false);
+  const prepare = vi.fn(async () => ({
+    importAndVerify: async () => {
+      throw new Error('work-sync import must not run');
+    },
+  }));
+  const owner = createSkipCoordinator(backups, generic, holes);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), { prepare });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual([]);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(generic).not.toHaveBeenCalled();
+    expect(holes).toHaveBeenCalledWith('sandbox');
+    expect(
+      JSON.parse(await fs.readFile(path.join(backups, 'sandbox', 'manifest.json'), 'utf8'))
+        .workSyncRestorePending
+    ).toBeUndefined();
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+it('does not hole-fill a foreign live identity', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-foreign-skip-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.writeFile(
+    path.join(env.teams, 'sandbox', 'config.json'),
+    JSON.stringify({ name: 'sandbox', members: [], _backupIdentityId: 'other' })
+  );
+  const generic = vi.fn(async () => true);
+  const holes = vi.fn(async () => false);
+  const prepare = vi.fn(async () => ({
+    importAndVerify: async () => {
+      throw new Error('work-sync import must not run');
+    },
+  }));
+  const owner = createSkipCoordinator(backups, generic, holes);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), { prepare });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual([]);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(generic).not.toHaveBeenCalled();
+    expect(holes).not.toHaveBeenCalled();
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+it('imports work-sync when the backup manifest still has pending', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-pending-import-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox', { pending: true });
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.copyFile(
+    path.join(backups, 'sandbox', 'config.json'),
+    path.join(env.teams, 'sandbox', 'config.json')
+  );
+  const generic = vi.fn(async () => true);
+  const imports: string[] = [];
+  const owner = createSkipCoordinator(backups, generic);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), {
+    prepare: async ({ teamName }) => ({
+      importAndVerify: async () => {
+        imports.push(teamName);
+      },
+    }),
+  });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual(['sandbox']);
+    expect(imports).toEqual(['sandbox']);
+    expect(generic).toHaveBeenCalledWith('sandbox');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+it('imports work-sync when live config is missing', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-missing-live-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  const generic = vi.fn(async (team: string) => {
+    await fs.mkdir(path.join(env.teams, team), { recursive: true });
+    await fs.copyFile(
+      path.join(backups, team, 'config.json'),
+      path.join(env.teams, team, 'config.json')
+    );
+    return true;
+  });
+  const imports: string[] = [];
+  const owner = createSkipCoordinator(backups, generic);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), {
+    prepare: async ({ teamName }) => ({
+      importAndVerify: async () => {
+        imports.push(teamName);
+      },
+    }),
+  });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual(['sandbox']);
+    expect(imports).toEqual(['sandbox']);
+    expect(generic).toHaveBeenCalledWith('sandbox');
+  } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
 });

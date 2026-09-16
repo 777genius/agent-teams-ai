@@ -136,6 +136,7 @@ export class TeamBackupService {
     withTeamMutex: (name, operation) => this.withTeamMutex(name, operation),
     restoreLegacy: (name) => this.restoreTeam(name),
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
+    restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
 
   configureWorkSyncRestore(
@@ -150,12 +151,16 @@ export class TeamBackupService {
 
   // ── Public API ───────────────────────────────────────────────────────
 
-  initialize(): Promise<void> {
-    this.initializationPromise ??= this.initializeOnce();
+  initialize(options?: {
+    onRestoreProgress?: (progress: { current: number; total: number }) => void;
+  }): Promise<void> {
+    this.initializationPromise ??= this.initializeOnce(options?.onRestoreProgress);
     return this.initializationPromise;
   }
 
-  private async initializeOnce(): Promise<void> {
+  private async initializeOnce(
+    onRestoreProgress?: (progress: { current: number; total: number }) => void
+  ): Promise<void> {
     await this.permanentDeletion.withSharedLock('backup-registry', async () => {
       const registry = await loadTeamBackupStartupRegistry(getBackupsBasePath());
       await atomicWriteAsync(this.getRegistryPath(), JSON.stringify(registry, null, 2), {
@@ -169,7 +174,7 @@ export class TeamBackupService {
     });
     await this.permanentDeletion.initialize();
     await this.reconcileResurrectedTeams();
-    await this.restoreIfNeeded();
+    await this.workSyncRestore.restoreIfNeeded(onRestoreProgress);
     if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)

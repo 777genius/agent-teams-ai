@@ -43,6 +43,7 @@ function createCoordinator(gate: MemberWorkSyncTeamOperationGate) {
     withTeamMutex: async (_team, operation) => operation(),
     restoreLegacy: async () => false,
     restoreGeneric: async () => false,
+    restoreGenericHoles: async () => false,
   });
   owner.configure(gate, {
     prepare: async () => ({ importAndVerify: async () => undefined }),
@@ -92,6 +93,7 @@ describe('TeamBackupWorkSyncRestoreCoordinator.runWhileQuiesced', () => {
       withTeamMutex: async (_team, operation) => operation(),
       restoreLegacy: async () => false,
       restoreGeneric: async () => false,
+      restoreGenericHoles: async () => false,
     });
     await expect(owner.runWhileQuiesced('team-a', async () => 'copied')).resolves.toBe('copied');
   });

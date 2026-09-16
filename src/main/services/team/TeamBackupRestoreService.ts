@@ -88,6 +88,74 @@ export class TeamBackupRestoreService {
     return this.restore(teamName, true);
   }
 
+  /**
+   * Fill missing generic team files from manifest.fileStats without walking the backup tree.
+   * Caller holds the identity fence and team mutex. Work-sync paths, launch-state publication,
+   * and in-place corrupt JSON stay on the pending / missing-config restore path.
+   */
+  async restoreMissingGenericFromManifest(teamName: string): Promise<boolean> {
+    const manifest = await this.ports.loadManifest(teamName);
+    if (!manifest || manifest.status !== 'active' || manifest.workSyncRestorePending) return false;
+    const sourceConfigPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const sourceConfigResult = await this.readSourceConfig(sourceConfigPath);
+    if (sourceConfigResult.status !== 'valid') return false;
+    if (this.checkIdentityFromConfig(sourceConfigResult.parsed, manifest) !== 'match') return false;
+    try {
+      await fs.promises.lstat(this.getDraftDeletionIdentityPath(teamName));
+      return false;
+    } catch (error) {
+      if (!isEnoent(error)) throw error;
+    }
+    const backupDir = this.ports.getBackupDir(teamName);
+    let count = 0;
+    for (const relPath of Object.keys(manifest.fileStats)) {
+      if (
+        relPath === 'manifest.json' ||
+        relPath === 'config.json' ||
+        relPath === TEAM_LAUNCH_FRESHNESS_FILE ||
+        relPath === TEAM_LAUNCH_STOPPED_MARKER_FILE ||
+        LAUNCH_STATE_PUBLICATION_FILES.has(relPath)
+      ) {
+        continue;
+      }
+      let workSync = false;
+      try {
+        workSync = isMemberWorkSyncBackupPath(relPath);
+      } catch {
+        continue;
+      }
+      if (workSync) continue;
+      const dest = this.ports.getSourcePathForRelPath(teamName, relPath);
+      try {
+        await fs.promises.access(dest);
+        continue;
+      } catch (error) {
+        if (!isEnoent(error)) continue;
+      }
+      let content: Buffer;
+      try {
+        content = await fs.promises.readFile(path.join(backupDir, relPath));
+      } catch {
+        continue;
+      }
+      await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+      if (
+        await this.commitRestoredFile(
+          dest,
+          content,
+          { status: 'missing' },
+          sourceConfigPath,
+          sourceConfigResult.identity,
+          Buffer.from(sourceConfigResult.raw)
+        )
+      ) {
+        count += 1;
+        logger.info(`[Backup] Partial restored ${teamName}/${relPath}`);
+      }
+    }
+    return count > 0;
+  }
+
   private async restore(teamName: string, genericOnly: boolean): Promise<boolean> {
     const manifest = await this.ports.loadManifest(teamName);
     if (!manifest) return false;
