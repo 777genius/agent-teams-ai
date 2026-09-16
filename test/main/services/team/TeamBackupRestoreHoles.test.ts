@@ -8,6 +8,27 @@ import { expect, it, vi } from 'vitest';
 const env = vi.hoisted(() => ({ teams: '' }));
 vi.mock('@main/utils/pathDecoder', () => ({ getTeamsBasePath: () => env.teams }));
 
+function holesService(
+  backupDir: string,
+  liveDir: string,
+  fileStats: Record<string, { mtime: number; size: number }>
+) {
+  return new TeamBackupRestoreService({
+    loadManifest: () =>
+      Promise.resolve({
+        teamName: 'sandbox',
+        identityId: 'id',
+        status: 'active' as const,
+        firstBackupAt: 'now',
+        lastBackupAt: 'now',
+        fileStats,
+      }),
+    getBackupDir: () => backupDir,
+    getSourcePathForRelPath: (_name, relPath) => path.join(liveDir, relPath),
+    enumerateBackupFiles: () => Promise.reject(new Error('must not walk the backup tree')),
+  });
+}
+
 it('restores missing generic files from fileStats without copying work-sync paths', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'backup-restore-holes-'));
   env.teams = path.join(root, 'teams');
@@ -28,24 +49,10 @@ it('restores missing generic files from fileStats without copying work-sync path
     path.join(backupDir, 'members', 'alice', '.member-work-sync', 'journal.jsonl'),
     'secret'
   );
-  const service = new TeamBackupRestoreService({
-    loadManifest: async () => ({
-      teamName: team,
-      identityId: 'id',
-      status: 'active',
-      firstBackupAt: 'now',
-      lastBackupAt: 'now',
-      fileStats: {
-        'config.json': { mtime: 1, size: 1 },
-        'team.meta.json': { mtime: 1, size: 1 },
-        'members/alice/.member-work-sync/journal.jsonl': { mtime: 1, size: 1 },
-      },
-    }),
-    getBackupDir: () => backupDir,
-    getSourcePathForRelPath: (_name, relPath) => path.join(liveDir, relPath),
-    enumerateBackupFiles: async () => {
-      throw new Error('must not walk the backup tree');
-    },
+  const service = holesService(backupDir, liveDir, {
+    'config.json': { mtime: 1, size: 1 },
+    'team.meta.json': { mtime: 1, size: 1 },
+    'members/alice/.member-work-sync/journal.jsonl': { mtime: 1, size: 1 },
   });
   try {
     expect(await service.restoreMissingGenericFromManifest(team)).toBe(true);
@@ -74,22 +81,8 @@ it('does not rewrite generic files that already exist', async () => {
   await fs.writeFile(path.join(liveDir, 'config.json'), config);
   await fs.writeFile(path.join(backupDir, 'team.meta.json'), '{"from":"backup"}');
   await fs.writeFile(path.join(liveDir, 'team.meta.json'), '{"from":"live"}');
-  const service = new TeamBackupRestoreService({
-    loadManifest: async () => ({
-      teamName: team,
-      identityId: 'id',
-      status: 'active',
-      firstBackupAt: 'now',
-      lastBackupAt: 'now',
-      fileStats: {
-        'team.meta.json': { mtime: 1, size: 1 },
-      },
-    }),
-    getBackupDir: () => backupDir,
-    getSourcePathForRelPath: (_name, relPath) => path.join(liveDir, relPath),
-    enumerateBackupFiles: async () => {
-      throw new Error('must not walk the backup tree');
-    },
+  const service = holesService(backupDir, liveDir, {
+    'team.meta.json': { mtime: 1, size: 1 },
   });
   try {
     expect(await service.restoreMissingGenericFromManifest(team)).toBe(false);
@@ -115,22 +108,8 @@ it('rewrites existing generic JSON that is corrupt', async () => {
   await fs.writeFile(path.join(liveDir, 'config.json'), config);
   await fs.writeFile(path.join(backupDir, 'team.meta.json'), '{"ok":true}');
   await fs.writeFile(path.join(liveDir, 'team.meta.json'), '{');
-  const service = new TeamBackupRestoreService({
-    loadManifest: async () => ({
-      teamName: team,
-      identityId: 'id',
-      status: 'active',
-      firstBackupAt: 'now',
-      lastBackupAt: 'now',
-      fileStats: {
-        'team.meta.json': { mtime: 1, size: 1 },
-      },
-    }),
-    getBackupDir: () => backupDir,
-    getSourcePathForRelPath: (_name, relPath) => path.join(liveDir, relPath),
-    enumerateBackupFiles: async () => {
-      throw new Error('must not walk the backup tree');
-    },
+  const service = holesService(backupDir, liveDir, {
+    'team.meta.json': { mtime: 1, size: 1 },
   });
   try {
     expect(await service.restoreMissingGenericFromManifest(team)).toBe(true);
@@ -158,25 +137,11 @@ it('restores a missing stop marker without republishing launch-state files', asy
   await fs.writeFile(path.join(backupDir, 'launch-summary.json'), '{"phantom":true}');
   await fs.writeFile(path.join(backupDir, 'launch-freshness.json'), '{"kind":"launch"}');
   await fs.writeFile(path.join(backupDir, 'launch-stopped.json'), '{"stopped":true}');
-  const service = new TeamBackupRestoreService({
-    loadManifest: async () => ({
-      teamName: team,
-      identityId: 'id',
-      status: 'active',
-      firstBackupAt: 'now',
-      lastBackupAt: 'now',
-      fileStats: {
-        'launch-state.json': { mtime: 1, size: 1 },
-        'launch-summary.json': { mtime: 1, size: 1 },
-        'launch-freshness.json': { mtime: 1, size: 1 },
-        'launch-stopped.json': { mtime: 1, size: 1 },
-      },
-    }),
-    getBackupDir: () => backupDir,
-    getSourcePathForRelPath: (_name, relPath) => path.join(liveDir, relPath),
-    enumerateBackupFiles: async () => {
-      throw new Error('must not walk the backup tree');
-    },
+  const service = holesService(backupDir, liveDir, {
+    'launch-state.json': { mtime: 1, size: 1 },
+    'launch-summary.json': { mtime: 1, size: 1 },
+    'launch-freshness.json': { mtime: 1, size: 1 },
+    'launch-stopped.json': { mtime: 1, size: 1 },
   });
   try {
     expect(await service.restoreMissingGenericFromManifest(team)).toBe(true);

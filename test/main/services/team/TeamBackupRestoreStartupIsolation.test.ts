@@ -92,7 +92,7 @@ it.each(['resolve', 'reject'] as const)(
         );
         return true;
       },
-      restoreGenericHoles: async () => false,
+      restoreGenericHoles: () => Promise.resolve(false),
     });
     const imports: string[] = [];
     owner.configure(gate, {
