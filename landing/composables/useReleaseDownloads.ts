@@ -160,8 +160,7 @@ export const useReleaseDownloads = () => {
         if (byArch.url) return { url: byArch.url, version: byArch.version || api.version };
       }
 
-      const any = api.variants.macos.arm64.url ? api.variants.macos.arm64 : api.variants.macos.x64;
-      return any.url ? { url: any.url, version: any.version || api.version } : null;
+      return null;
     }
 
     return null;

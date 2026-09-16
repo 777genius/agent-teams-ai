@@ -94,8 +94,18 @@ const heroSlogan = computed(() => (
 const heroDownloadUrl = computed(() => {
   const asset = selectedDownloadAsset.value;
   if (!asset) return latestReleaseUrl.value;
+  if ((asset.os === "windows" || asset.os === "macos") && asset.resolvedArch === "unknown") {
+    return "#download";
+  }
   return resolve(asset.os, asset.resolvedArch)?.url || releaseDownloadUrl(asset.fileName);
 });
+
+const heroDownloadTarget = computed(() => (
+  (selectedDownloadAsset.value?.os === "windows" || selectedDownloadAsset.value?.os === "macos")
+    && selectedDownloadAsset.value.resolvedArch === "unknown"
+    ? undefined
+    : "_blank"
+));
 
 const docsHref = computed(() => buildDocsHref({
   locale: locale.value,
@@ -253,7 +263,7 @@ onUnmounted(() => {
           <div class="cyber-hero__actions">
             <CyberHeroActionButton
               :href="heroDownloadUrl"
-              target="_blank"
+              :target="heroDownloadTarget"
               tone="primary"
               :icon="mdiDownload"
               :subtitle="downloadActionSubtitle"

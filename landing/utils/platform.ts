@@ -87,10 +87,18 @@ const normalizeArch = (architecture?: string, bitness?: string): PlatformArch =>
 
   if (!arch) return "unknown";
   if (arch.includes("arm") || arch.includes("aarch64")) return "arm64";
-  if (arch.includes("x86") || arch.includes("x64") || arch.includes("amd64")) {
-    return bits === "32" ? "unknown" : "x64";
-  }
+  if (arch.includes("x64") || arch.includes("amd64") || arch.includes("x86_64")) return "x64";
+  if (arch.includes("x86")) return bits === "64" ? "x64" : "unknown";
 
+  return "unknown";
+};
+
+export const detectArch = (input: PlatformDetectionInput): PlatformArch => {
+  const { userAgent } = toInputParts(input);
+  const ua = userAgent.toLowerCase();
+
+  if (/\b(arm64|aarch64)\b/.test(ua)) return "arm64";
+  if (/\b(x86_64|x64|amd64|win64)\b/.test(ua)) return "x64";
   return "unknown";
 };
 
@@ -149,7 +157,10 @@ export const detectArchFromNavigator = async (
   input: PlatformDetectionInput,
 ): Promise<PlatformArch> => {
   const { userAgentData } = toInputParts(input);
-  return detectArchFromClientHints(userAgentData);
+  const hintedArch = await detectArchFromClientHints(userAgentData);
+  if (hintedArch !== "unknown") return hintedArch;
+
+  return detectArch(input);
 };
 
 export const detectMacArchFromNavigator = async (
