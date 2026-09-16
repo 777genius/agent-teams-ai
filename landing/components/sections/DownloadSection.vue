@@ -9,7 +9,7 @@ const downloadStore = useDownloadStore();
 const { data: releaseData, resolve } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { releaseDownloadUrl } = useGithubRepo();
-const { getDownloadArch, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
+const { getDownloadArch, requiresArchitectureSelection, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
 const isMounted = ref(false);
 const showLinuxRobotMessage = ref(false);
 const showFallingLinuxRobot = ref(false);
@@ -242,26 +242,10 @@ const getDownloadUrl = (asset: { os: DownloadOs; arch: DownloadArch; fileName: s
   return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
 };
 
-const requiresArchitectureSelection = (asset: { os: DownloadOs }) => (
-  (asset.os === 'windows' && downloadStore.windowsArch === 'unknown')
-  || (asset.os === 'macos' && downloadStore.macArch === 'unknown')
-);
-
-const handleDownloadClick = (
-  event: MouseEvent,
-  asset: { id: string; os: DownloadOs; arch: DownloadArch; fileName: string },
-) => {
-  if (requiresArchitectureSelection(asset)) {
-    event.preventDefault();
-    return;
-  }
-
-  trackDownloadClick({
-    os: asset.os,
-    arch: getDownloadArch(asset),
-    version: releaseVersion.value,
-    source: 'download_section',
-  });
+const handleDownloadClick = (asset: { id: string; os: DownloadOs; arch: DownloadArch; fileName: string }) => {
+  if (requiresArchitectureSelection(asset)) return;
+  trackDownloadClick({ os: asset.os, arch: getDownloadArch(asset),
+    version: releaseVersion.value, source: 'download_section' });
   downloadStore.setSelected(asset.id);
 };
 
@@ -354,10 +338,10 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           <!-- Download button -->
           <a
             class="download-section__btn"
-            :class="{ 'download-section__btn--requires-architecture': requiresArchitectureSelection(asset) }"
+            :class="{ 'opacity-50': requiresArchitectureSelection(asset) }"
             :href="requiresArchitectureSelection(asset) ? undefined : getDownloadUrl(asset)"
             :aria-disabled="requiresArchitectureSelection(asset)"
-            @click.stop="handleDownloadClick($event, asset)"
+            @click.stop="handleDownloadClick(asset)"
           >
             <v-icon size="18" class="download-section__btn-icon" :icon="mdiDownload" />
             <span>{{ requiresArchitectureSelection(asset) ? asset.archLabel : t('download.title') }}</span>
@@ -812,15 +796,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
 
 .download-section__btn:active {
   transform: translateY(0);
-}
-
-.download-section__btn--requires-architecture,
-.download-section__btn--requires-architecture:hover {
-  cursor: default;
-  filter: grayscale(0.35);
-  opacity: 0.72;
-  transform: none;
-  box-shadow: 0 2px 10px rgba(0, 240, 255, 0.18);
 }
 
 .download-section__btn-icon {
