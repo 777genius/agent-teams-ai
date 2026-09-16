@@ -713,6 +713,13 @@
     "checking": "پڑتال",
     "unavailable": "غیر درج شدہ",
     "checkFailed": "چیک ناکام ہوا",
+    "catalogCheckCredential": "{{provider}} ماڈلز لوڈ نہیں ہو سکے۔ محفوظ کردہ کریڈینشل چیک کریں، پھر ریفریش کریں۔",
+    "catalogDirectoryFailed": "OpenCode فراہم کنندگان کی فہرست لوڈ نہیں کر سکا۔",
+    "catalogLoadFailed": "{{provider}} ماڈلز لوڈ نہیں ہو سکے۔",
+    "catalogSignInExpired": "{{provider}} سائن اِن اب درست نہیں۔ دوبارہ سائن اِن کریں، پھر ریفریش کریں۔",
+    "catalogSignInMaybe": "{{provider}} ماڈلز لوڈ نہیں ہو سکے۔ اگر آپ نے OAuth سے سائن اِن کیا ہے تو شاید دوبارہ سائن اِن کر کے ریفریش کرنا پڑے۔",
+    "catalogStale": "{{provider}} ماڈلز کیش سے ہیں اور پرانے ہو سکتے ہیں۔",
+    "catalogTimedOut": "{{provider}} ماڈلز کا وقت ختم ہو گیا۔ دوبارہ کوشش کے لیے ریفریش کریں۔",
     "free": "مفت",
     "freeTooltip": "OpenCode metadata کی طرف سے رپورٹ کی گئی۔ اِس کی کیا وجہ ہے ؟"
   },

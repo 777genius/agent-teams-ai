@@ -713,6 +713,13 @@
     "checking": "检查",
     "unavailable": "不可用",
     "checkFailed": "检查失败",
+    "catalogCheckCredential": "无法加载 {{provider}} 模型。请检查已保存的凭据，然后刷新。",
+    "catalogDirectoryFailed": "OpenCode 无法加载提供商列表。",
+    "catalogLoadFailed": "无法加载 {{provider}} 模型。",
+    "catalogSignInExpired": "{{provider}} 登录已失效。请重新登录，然后刷新。",
+    "catalogSignInMaybe": "无法加载 {{provider}} 模型。如果您通过 OAuth 登录，可能需要重新登录后再刷新。",
+    "catalogStale": "{{provider}} 模型来自缓存，可能已过期。",
+    "catalogTimedOut": "{{provider}} 模型加载超时。请刷新后重试。",
     "free": "免费",
     "freeTooltip": "由 OpenCode 元数据报告。可用性和限制可能会发生变化。"
   },

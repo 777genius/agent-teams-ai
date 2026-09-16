@@ -258,3 +258,41 @@ it('resets pagination on retry, shrinking failures, and an empty result', async 
       .disabled
   ).toBe(true);
 });
+
+it('explains expired SuperGrok OAuth instead of a generic check failure', async () => {
+  await act(() =>
+    Promise.resolve(
+      root.render(
+        React.createElement(OpenCodeCatalogErrorAlert, {
+          failures: [
+            {
+              operation: 'provider_models',
+              sourceProviderId: 'xai',
+              origin: 'main',
+              message: 'OpenCode catalog request failed.',
+              errorCode: 'runtime-unhealthy',
+              connectedAuthHint: 'oauth',
+              authMethods: ['oauth'],
+              diagnostics: {
+                reportId: 'oc-xai',
+                stage: 'runtime_command',
+                summary: null,
+                likelyCause: null,
+                binaryPath: '/sandbox/runtime',
+                command: 'runtime providers models --runtime opencode --provider xai --json',
+                projectPath: '/sandbox/catalog',
+                exitCode: 1,
+                stderrPreview: null,
+                stdoutPreview: null,
+                hints: [],
+              },
+            },
+          ],
+        })
+      )
+    )
+  );
+  expect(host.textContent).toContain('If you signed in with OAuth, you may need to sign in again');
+  expect(host.textContent).not.toContain('sign-in is no longer valid');
+  expect(host.textContent).not.toContain('Check failed');
+});

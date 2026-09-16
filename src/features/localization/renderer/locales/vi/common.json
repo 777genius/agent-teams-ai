@@ -713,6 +713,13 @@
     "checking": "Đang kiểm tra",
     "unavailable": "Không khả dụng",
     "checkFailed": "Kiểm tra thất bại",
+    "catalogCheckCredential": "Không thể tải mô hình {{provider}}. Kiểm tra thông tin đăng nhập đã lưu, rồi làm mới.",
+    "catalogDirectoryFailed": "OpenCode không thể tải danh sách nhà cung cấp.",
+    "catalogLoadFailed": "Không thể tải mô hình {{provider}}.",
+    "catalogSignInExpired": "Đăng nhập {{provider}} không còn hợp lệ. Đăng nhập lại, rồi làm mới.",
+    "catalogSignInMaybe": "Không thể tải mô hình {{provider}}. Nếu bạn đăng nhập bằng OAuth, bạn có thể cần đăng nhập lại rồi làm mới.",
+    "catalogStale": "Mô hình {{provider}} đang được lưu cache và có thể đã cũ.",
+    "catalogTimedOut": "Mô hình {{provider}} đã hết thời gian chờ. Làm mới để thử lại.",
     "free": "Miễn phí",
     "freeTooltip": "Được báo cáo bởi metadata của OpenCode. Khả dụng và giới hạn có thể thay đổi."
   },

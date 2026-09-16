@@ -501,6 +501,13 @@ export default interface Resources {
       title: 'Notifications';
     };
     providerModelBadges: {
+      catalogCheckCredential: "Couldn't load {{provider}} models. Check the saved credential, then refresh.";
+      catalogDirectoryFailed: 'OpenCode could not load the provider list.';
+      catalogLoadFailed: "Couldn't load {{provider}} models.";
+      catalogSignInExpired: '{{provider}} sign-in is no longer valid. Sign in again, then refresh.';
+      catalogSignInMaybe: '{{provider}} models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.';
+      catalogStale: '{{provider}} models are cached and may be out of date.';
+      catalogTimedOut: '{{provider}} models timed out. Refresh to try again.';
       checkFailed: 'Check failed';
       checking: 'Checking';
       free: 'Free';

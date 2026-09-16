@@ -713,6 +713,13 @@
     "checking": "Controleren",
     "unavailable": "Niet beschikbaar",
     "checkFailed": "Controle mislukt",
+    "catalogCheckCredential": "{{provider}}-modellen konden niet worden geladen. Controleer de opgeslagen inloggegevens en vernieuw.",
+    "catalogDirectoryFailed": "OpenCode kon de providerlijst niet laden.",
+    "catalogLoadFailed": "{{provider}}-modellen konden niet worden geladen.",
+    "catalogSignInExpired": "De aanmelding bij {{provider}} is niet meer geldig. Meld je opnieuw aan en vernieuw.",
+    "catalogSignInMaybe": "{{provider}}-modellen konden niet worden geladen. Als je via OAuth bent aangemeld, moet je mogelijk opnieuw aanmelden en vernieuwen.",
+    "catalogStale": "{{provider}}-modellen komen uit de cache en kunnen verouderd zijn.",
+    "catalogTimedOut": "{{provider}}-modellen zijn timed-out. Vernieuw om opnieuw te proberen.",
     "free": "Gratis",
     "freeTooltip": "Gerapporteerd door OpenCode-metadata. Beschikbaarheid en limieten kunnen veranderen."
   },

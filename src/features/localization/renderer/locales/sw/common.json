@@ -713,6 +713,13 @@
     "checking": "Inakagua",
     "unavailable": "Haipatikani",
     "checkFailed": "Ukaguzi umeshindwa",
+    "catalogCheckCredential": "Haikuweza kupakia modeli za {{provider}}. Angalia kitambulisho kilichohifadhiwa, kisha onyesha upya.",
+    "catalogDirectoryFailed": "OpenCode haikuweza kupakia orodha ya watoa huduma.",
+    "catalogLoadFailed": "Haikuweza kupakia modeli za {{provider}}.",
+    "catalogSignInExpired": "Kuingia {{provider}} si sahihi tena. Ingia tena, kisha onyesha upya.",
+    "catalogSignInMaybe": "Haikuweza kupakia modeli za {{provider}}. Ikiwa uliingia kwa OAuth, huenda ukahitaji kuingia tena, kisha onyesha upya.",
+    "catalogStale": "Modeli za {{provider}} zinatoka kwenye cache na zinaweza kuwa za zamani.",
+    "catalogTimedOut": "Modeli za {{provider}} zimeisha muda. Onyesha upya ili kujaribu tena.",
     "free": "Bure",
     "freeTooltip": "Imeripotiwa na metadata ya OpenCode. Upatikanaji na vikomo vinaweza kubadilika."
   },
