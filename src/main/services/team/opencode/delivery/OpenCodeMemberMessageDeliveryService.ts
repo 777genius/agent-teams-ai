@@ -71,7 +71,6 @@ import type {
 } from './OpenCodeMemberMessageDeliveryPorts';
 
 export type { OpenCodeMemberInboxDelivery } from './OpenCodeMemberMessageDeliveryPorts';
-
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 
 function nowIso(): string {
