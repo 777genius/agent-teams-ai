@@ -514,7 +514,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       const task = await teamDataService.createTask(teamName, {
         subject: `Write CANARY.txt ${marker}`,
         owner: TEAMMATE_NAME,
-        startImmediately: false,
+        startImmediately: true,
         prompt: [
           `This is a live teammate recovery canary. Marker: ${marker}.`,
           'Do not edit files and do not complete this task in the first still_working turn.',
@@ -523,6 +523,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
           `Call mcp__agent-teams__member_work_sync_status with teamName "${teamName}", memberName "${TEAMMATE_NAME}", and controlUrl "${controlServer.baseUrl}".`,
           `Then call mcp__agent-teams__member_work_sync_report with teamName "${teamName}", memberName "${TEAMMATE_NAME}", controlUrl "${controlServer.baseUrl}", state "still_working", the exact agendaFingerprint and reportToken, and this task id.`,
           'Do not write CANARY.txt in this first turn.',
+          'Do not report caught_up and do not complete this task until CANARY.txt exists.',
           'Only after a later member_work_sync_nudge for remaining work, write CANARY.txt in the project root with exactly: done',
           'After the first report is accepted, stop and wait.',
         ].join('\n'),
@@ -545,25 +546,11 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
       await waitUntil(
         async () => {
-          try {
-            await feature!.refreshStatus({
-              teamName: teamName!,
-              memberName: TEAMMATE_NAME,
-            });
-            await feature!.continueManually({
-              teamName: teamName!,
-              memberName: TEAMMATE_NAME,
-              idempotencyKey: 'live-first-sync',
-            });
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (isRetryableMemberWorkSyncContinueError(message)) {
-              return false;
-            }
-            throw error;
-          }
+          await feature!.refreshStatus({
+            teamName: teamName!,
+            memberName: TEAMMATE_NAME,
+          });
           await feature!.dispatchDueNudges([teamName!]);
-          await activeService.relayInboxFileToLiveRecipient(teamName!, TEAMMATE_NAME);
           return (await readInboxMessages(teamName!, TEAMMATE_NAME)).some(
             (message) => message.messageKind === 'member_work_sync_nudge'
           );
@@ -578,19 +565,24 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
             taskId: task.id,
           })
       );
+      await activeService.relayInboxFileToLiveRecipient(teamName!, TEAMMATE_NAME);
 
       await waitUntil(
         async () => {
-          await pumpCodexTeammate({
-            feature: feature!,
-            svc: activeService,
-            teamName: teamName!,
-            memberName: TEAMMATE_NAME,
+          await throwIfTranscriptApiError({
             projectPath,
             tempClaudeRoot,
             startedAt,
             context: 'Codex teammate remaining-work first still_working report',
           });
+          await feature!
+            .refreshStatus({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+            })
+            .catch(() => undefined);
+          await feature!.replayPendingReports([teamName!]);
+          await feature!.drainRuntimeTurnSettledEvents();
           const teammateStatus = await feature!.getStatus({
             teamName: teamName!,
             memberName: TEAMMATE_NAME,
@@ -613,18 +605,24 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
 
       expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
+      // Do not relay inbox while waiting for D1. Extra wakes keep the teammate in
+      // the first turn until the task is gone, so early-continuation never plans.
       await waitUntil(
         async () => {
-          await pumpCodexTeammate({
-            feature: feature!,
-            svc: activeService,
-            teamName: teamName!,
-            memberName: TEAMMATE_NAME,
+          await throwIfTranscriptApiError({
             projectPath,
             tempClaudeRoot,
             startedAt,
             context: 'Codex teammate D1 early continuation after settled',
           });
+          await feature!
+            .refreshStatus({
+              teamName: teamName!,
+              memberName: TEAMMATE_NAME,
+            })
+            .catch(() => undefined);
+          await feature!.drainRuntimeTurnSettledEvents();
+          await feature!.dispatchDueNudges([teamName!]);
           const inbox = await readInboxMessages(teamName!, TEAMMATE_NAME);
           return inbox.some(
             (message) =>

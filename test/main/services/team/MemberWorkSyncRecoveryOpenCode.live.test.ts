@@ -489,6 +489,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
           'If you receive a member_work_sync_nudge, call member_work_sync_status first.',
           'Then call member_work_sync_report with state "still_working", the returned agendaFingerprint/reportToken, and taskIds from the nudge.',
           'Do not write CANARY.txt in that first report turn.',
+          'Do not report caught_up and do not complete this task until CANARY.txt exists.',
           'Only after a later member_work_sync_nudge for remaining work, write CANARY.txt in the project root with exactly: done',
         ].join('\n'),
       });
@@ -510,20 +511,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
 
       await waitUntil(
         async () => {
-          try {
-            await feature!.refreshStatus({ teamName: teamName!, memberName });
-            await feature!.continueManually({
-              teamName: teamName!,
-              memberName,
-              idempotencyKey: 'live-first-sync',
-            });
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (isRetryableMemberWorkSyncContinueError(message)) {
-              return false;
-            }
-            throw error;
-          }
+          await feature!.refreshStatus({ teamName: teamName!, memberName });
           await feature!.dispatchDueNudges([teamName!]);
           const inbox = await readInboxMessages(inboxPath);
           return inbox.some(

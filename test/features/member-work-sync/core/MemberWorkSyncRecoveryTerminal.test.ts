@@ -226,4 +226,54 @@ describe('member work sync recovery terminal protocol', () => {
     expect(next?.unresolvedIntentId).toBe('intent-1');
     expect(next?.reservations?.[0]?.state).toBe('reserved');
   });
+
+  it('retires a manual continue slot after a later accepted report', () => {
+    const manual: MemberWorkSyncRecoveryHealth = {
+      ...health,
+      reservations: [
+        {
+          ...health.reservations[0]!,
+          trigger: 'manual',
+          state: 'uncertain',
+          terminalOutcome: 'retryable_refusal',
+        },
+      ],
+    };
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
+      health: manual,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(next?.unresolvedIntentId).toBeUndefined();
+    expect(next?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalOutcome: 'settled',
+      terminalReceiptId: 'report-accepted:intent-1',
+    });
+  });
+
+  it('retires a same-agenda automatic repair slot after a later accepted report', () => {
+    const fingerprint = 'agenda:v1:same-agenda';
+    const repair: MemberWorkSyncRecoveryHealth = {
+      ...health,
+      unresolvedIntentId: `task-protocol-repair:${fingerprint}:task-1`,
+      reservations: [
+        {
+          ...health.reservations[0]!,
+          intentId: `task-protocol-repair:${fingerprint}:task-1`,
+          state: 'uncertain',
+          terminalOutcome: 'retryable_refusal',
+        },
+      ],
+    };
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
+      health: repair,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+      agendaFingerprint: fingerprint,
+    });
+    expect(next?.unresolvedIntentId).toBeUndefined();
+    expect(next?.reservations?.[0]).toMatchObject({
+      state: 'resolved',
+      terminalOutcome: 'settled',
+    });
+  });
 });
