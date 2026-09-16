@@ -12,15 +12,11 @@ Small fixes, bug reports, and minor improvements are always welcome - just open 
 
 You keep copyright in what you write.
 
-GitHub's Terms of Service already license a pull request under the repository license, which is AGPL-3.0. That is not enough if the project later needs Apache-2.0 or a commercial license that includes your work.
+By opening a pull request (or pushing commits to one) you agree to [CLA.md](CLA.md) v2. You do not add your name to a table. Do not open a PR if you do not agree.
 
-CLA **v2** keeps your copyright and grants the project owner a transferable license to sublicense that work, including commercially, while still keeping the AGPL-3.0 grant that applied when you submitted it. Read [CLA.md](CLA.md).
+GitHub's Terms of Service already license that PR under AGPL-3.0. CLA v2 is the extra grant so the project owner can also sublicense your work (for example commercially or under Apache-2.0) while keeping the AGPL-3.0 grant from the submission date.
 
-Sign v2 before we merge: add your legal name, GitHub login, email, and date to the **CLA v2 signatures** table in the same PR or in a first-time CLA-only PR. Use the GitHub account that will author the commits. Every human listed in `Co-authored-by` trailers must also be on the table. If a company owns the work, the row must name that entity.
-
-CLA v1 signatures (AGPL-only inbound) do not grant those extra rights. Sign v2 for new work. Signing v2 also covers that person's earlier Contributions unless we agree otherwise in writing.
-
-Maintainers: do not merge a human contribution until every human author is on the CLA v2 table. Bots such as Dependabot do not sign.
+If the work belongs to your employer, say so in the PR. Do not include someone else's commits unless they agree to the CLA. Bots such as Dependabot do not need to agree.
 
 ## Prerequisites
 - Node.js 24.16.0 LTS
