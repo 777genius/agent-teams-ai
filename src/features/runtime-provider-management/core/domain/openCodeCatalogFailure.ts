@@ -101,13 +101,16 @@ function looksLikeApiKeyProvider(input: OpenCodeCatalogFailureClassificationInpu
   return Boolean(input.authMethods?.includes('api') && !input.authMethods.includes('oauth'));
 }
 
-function hasHttpAuthStatus(lower: string, status: '401' | '403'): boolean {
-  const statusWord = status === '401' ? 'unauthorized|unauthorised' : 'forbidden';
+function hasHttpAuthStatus(lower: string): boolean {
   return (
-    new RegExp(
-      String.raw`\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?)["']?\s*(?::|=|is|of)?\s*["']?${status}\b`
-    ).test(lower) || new RegExp(String.raw`\b${status}\s+(?:${statusWord})\b`).test(lower)
+    /\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?)["']?\s*(?::|=|is|of)?\s*["']?401\b/.test(
+      lower
+    ) || /\b401\s+(?:unauthorized|unauthorised)\b/.test(lower)
   );
+}
+
+function looksLikeUnauthorizedToken(lower: string): boolean {
+  return /\bunauthorized\b/.test(lower) || /unauthorizederror/.test(lower);
 }
 
 function looksLikeAuthFailureMessage(message: string): boolean {
@@ -120,8 +123,8 @@ function looksLikeAuthFailureMessage(message: string): boolean {
     lower.includes('authentication failed') ||
     lower.includes('authentication required') ||
     lower.includes('not logged in') ||
-    /\bunauthorized\b/.test(lower) ||
-    hasHttpAuthStatus(lower, '401')
+    looksLikeUnauthorizedToken(lower) ||
+    hasHttpAuthStatus(lower)
   );
 }
 

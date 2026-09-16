@@ -136,6 +136,23 @@ describe('openCodeCatalogFailure', () => {
     });
   });
 
+  it('treats UnauthorizedError as expired sign-in without matching unauthorized_user', () => {
+    expect(
+      describeOpenCodeCatalogFailure({
+        operation: 'provider_models',
+        sourceProviderId: 'github-copilot',
+        origin: 'main',
+        message: 'UnauthorizedError: bad credentials',
+        errorCode: 'runtime-unhealthy',
+        displayName: 'GitHub Copilot',
+      })
+    ).toEqual({
+      kind: 'auth_reconnect',
+      key: 'catalogSignInExpired',
+      provider: 'GitHub Copilot',
+    });
+  });
+
   it('does not treat coincidental 401/403 numbers or forbidden identifiers as auth', () => {
     for (const message of [
       'exited with code 1 after writing 403 bytes',
