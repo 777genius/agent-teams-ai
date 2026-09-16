@@ -34,28 +34,29 @@ Target branch: `main`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.96`.
+- Agent Teams runtime: `v0.0.97`.
 - Terminal Platform runtime: `v0.3.3`.
 
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.15.0 -->
-Recover stalled teammate work from the team page, keep local OpenCode models such as Ollama visible, and stop leftover tasks from resuming after you stop a team.
+Recover stalled teammate work from the team page, keep local OpenCode models such as Ollama visible, and show why SuperGrok models failed to load.
 
 ### What's New
 
 - Continue stalled agent work from the team page instead of leaving it hanging.
 - Test local Ollama models from Provider Settings for a selected project.
 - See full model names in teammate tooltips.
+- Pin a project folder in the sidebar from its context menu.
 
 ### Fixes
 
 - Keep Ollama, LM Studio, and llama.cpp models visible after a catalog refresh.
+- Show why SuperGrok or other OpenCode models failed to load.
 - Stop leftover remaining work from resuming after you stop a team.
-- Keep app update notices in the header without covering tabs.
+- Start without restoring backups for teams that are already healthy.
 - Stop recovered task comments from replaying as toasts.
 - Block dependent tasks until they are approved, and notify when review is needed.
-- Keep command palette search from showing stale results.
 
 ### Downloads
 
