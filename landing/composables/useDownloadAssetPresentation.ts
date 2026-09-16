@@ -29,7 +29,9 @@ export function useDownloadAssetPresentation() {
     }
 
     if (asset.os === "windows") {
-      return downloadStore.windowsArch === "arm64" ? "ARM64" : "64-bit";
+      if (downloadStore.windowsArch === "arm64") return "ARM64";
+      if (downloadStore.windowsArch === "x64") return "64-bit";
+      return asset.archLabel;
     }
 
     return asset.archLabel;
@@ -48,11 +50,19 @@ export function useDownloadAssetPresentation() {
     return `Linux · AppImage ${archLabel}`;
   };
 
+  const getDownloadFileName = (asset: DownloadAsset) => {
+    if (asset.os === "windows" && downloadStore.windowsArch === "arm64") {
+      return "Agent.Teams.AI.Setup-arm64.exe";
+    }
+    if (asset.os === "macos" && downloadStore.macArch === "x64") {
+      return "Agent.Teams.AI-x64.dmg";
+    }
+    return asset.fileName;
+  };
+
   const presentDownloadAsset = (asset: DownloadAsset): PresentedDownloadAsset => ({
     ...asset,
-    fileName: asset.os === "windows" && downloadStore.windowsArch === "arm64"
-      ? "Agent.Teams.AI.Setup-arm64.exe"
-      : asset.fileName,
+    fileName: getDownloadFileName(asset),
     archLabel: getDownloadArchLabel(asset),
     actionSubtitle: getDownloadActionSubtitle(asset),
     resolvedArch: getDownloadArch(asset),

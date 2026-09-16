@@ -32,6 +32,7 @@ describe('landing release downloads', () => {
       url: 'https://example.test/windows-x64.exe',
       version: '2.12.0',
     });
+    expect(resolveWindowsReleaseDownload(variants, '2.12.0', 'unknown')).toBeNull();
   });
 
   it('does not expose an x64 installer as the ARM64 variant when ARM64 is unavailable', () => {

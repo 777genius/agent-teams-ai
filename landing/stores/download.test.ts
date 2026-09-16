@@ -68,6 +68,16 @@ describe("landing download store", () => {
     expect(store.selectedId).toBe("windows");
   });
 
+  it("starts without assuming a Windows architecture", () => {
+    const store = useDownloadStore();
+
+    store.setSelected("windows");
+
+    expect(store.arch).toBe("unknown");
+    expect(store.windowsArch).toBe("unknown");
+    expect(store.selectedId).toBe("windows");
+  });
+
   it("preserves a manual Windows architecture while macOS detection is pending", async () => {
     platformMocks.detectPlatform.mockReturnValue("macos");
     const detection = deferred<"x64">();

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  detectArch,
   detectArchFromClientHints,
+  detectArchFromNavigator,
   detectMacArch,
   detectMacArchFromRenderer,
   detectPlatform,
@@ -86,7 +88,20 @@ describe("landing platform detection", () => {
     await expect(detectArchFromClientHints({
       getHighEntropyValues: async () => ({ architecture: "x86", bitness: "32" }),
     })).resolves.toBe("unknown");
+    await expect(detectArchFromClientHints({
+      getHighEntropyValues: async () => ({ architecture: "x86" }),
+    })).resolves.toBe("unknown");
     expect(detectMacArch(macSafariUserAgent)).toBe("unknown");
+  });
+
+  it("uses explicit architecture tokens only when client hints are unavailable", async () => {
+    expect(detectArch({ userAgent: "Mozilla/5.0 (Windows NT 10.0; ARM64)" })).toBe("arm64");
+    expect(detectArch({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" })).toBe("x64");
+    expect(detectArch({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win32; x86)" })).toBe("unknown");
+
+    await expect(detectArchFromNavigator({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; ARM64)",
+    })).resolves.toBe("arm64");
   });
 
   it("uses WebGL renderer strings only when they carry a clear chip signal", () => {
