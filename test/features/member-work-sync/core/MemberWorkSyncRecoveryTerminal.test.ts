@@ -191,36 +191,31 @@ describe('member work sync recovery terminal protocol', () => {
     expect(next?.reservations?.[0]?.deliveredAt).toBeUndefined();
   });
 
-  it('retires an uncertain reservation after a later accepted report', () => {
+  it('does not retire an uncertain reservation from an uncorrelated accepted report', () => {
     const uncertain = applyMemberWorkSyncRetryableDispatch({ health, intentId: 'intent-1' });
-    const retired = applyMemberWorkSyncAcceptedReportRetirement({
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
       health: uncertain,
       reportedAt: '2026-09-11T12:01:00.000Z',
     });
-    expect(retired?.unresolvedIntentId).toBeUndefined();
-    expect(retired?.reservations?.[0]).toMatchObject({
-      state: 'resolved',
-      terminalOutcome: 'settled',
-      terminalReceiptId: 'report-accepted:intent-1',
+    expect(next?.unresolvedIntentId).toBe('intent-1');
+    expect(next?.reservations?.[0]).toMatchObject({
+      state: 'uncertain',
+      terminalOutcome: 'retryable_refusal',
     });
   });
 
-  it('retires a stale uncertain slot even after the unresolved pointer was dropped', () => {
+  it('does not retire an orphan uncertain slot from an uncorrelated accepted report', () => {
     const uncertain = applyMemberWorkSyncRetryableDispatch({ health, intentId: 'intent-1' });
     const orphaned = {
       ...uncertain!,
       unresolvedIntentId: undefined,
     };
-    const retired = applyMemberWorkSyncAcceptedReportRetirement({
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
       health: orphaned,
       reportedAt: '2026-09-11T12:01:00.000Z',
     });
-    expect(retired?.unresolvedIntentId).toBeUndefined();
-    expect(retired?.reservations?.[0]).toMatchObject({
-      state: 'resolved',
-      terminalOutcome: 'settled',
-      terminalReceiptId: 'report-accepted:intent-1',
-    });
+    expect(next?.unresolvedIntentId).toBeUndefined();
+    expect(next?.reservations?.[0]?.state).toBe('uncertain');
   });
 
   it('does not retire a reserved slot from an uncorrelated accepted report', () => {

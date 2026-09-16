@@ -15,7 +15,7 @@ import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAll
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 import {
   bindMemberWorkSyncLastSettlementIntent,
-  peekMemberWorkSyncLastSettlementBinding,
+  consumedMemberWorkSyncSettlementIntentId,
 } from './memberWorkSyncSettlementReplay';
 
 import type {
@@ -285,15 +285,13 @@ export async function planMemberWorkSyncEarlyContinuation(
     return { planned: false, code: 'status_not_nudgeable' };
   }
   const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash, settlement);
-  const binding = peekMemberWorkSyncLastSettlementBinding({
+  const consumedIntentId = consumedMemberWorkSyncSettlementIntentId({
     teamName: status.teamName,
     memberName: status.memberName,
+    settlement,
+    teamIncarnation: resolveTeamIncarnation(status),
   });
-  if (
-    binding?.boundIntentId &&
-    binding.settlement.sourceId === settlement.sourceId &&
-    binding.boundIntentId !== recoveryInput.id
-  ) {
+  if (consumedIntentId && consumedIntentId !== recoveryInput.id) {
     return { planned: false, code: 'early_continuation_rejected' };
   }
   const admission = deps.runtimeTicketAdmission!;
@@ -399,6 +397,7 @@ export async function planMemberWorkSyncEarlyContinuation(
       memberName: status.memberName,
       intentId: ticketedInput.id,
       settlement,
+      teamIncarnation: resolveTeamIncarnation(status),
     });
     return {
       planned: isOutboxItemAwaitingDelivery(ensured.item),

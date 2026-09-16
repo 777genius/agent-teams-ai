@@ -16,6 +16,7 @@ function preferLaterSettlement(
 interface RememberedMemberWorkSyncSettlement {
   settlement: NonNullable<MemberWorkSyncReconcileContext['settlement']>;
   boundIntentId?: string;
+  consumedGenerations: Map<string, string>;
 }
 
 const lastSettlements = new Map<string, RememberedMemberWorkSyncSettlement>();
@@ -24,12 +25,29 @@ function keyOf(teamName: string, memberName: string): string {
   return `${teamName.trim()}\0${memberName.trim().toLowerCase()}`;
 }
 
-function isSameSettlementAttempt(
+export function memberWorkSyncSettlementGenerationIdentity(
+  settlement: {
+    runtimeInstanceId?: string;
+    completedGeneration?: number;
+  },
+  teamIncarnation = 'legacy'
+): string | undefined {
+  const runtimeInstanceId = settlement.runtimeInstanceId?.trim() ?? '';
+  if (
+    !runtimeInstanceId ||
+    typeof settlement.completedGeneration !== 'number' ||
+    !Number.isInteger(settlement.completedGeneration)
+  ) {
+    return undefined;
+  }
+  return `${teamIncarnation.trim() || 'legacy'}\0${runtimeInstanceId}\0${settlement.completedGeneration}`;
+}
+
+function isSameSettlementGeneration(
   left: RememberedMemberWorkSyncSettlement['settlement'],
   right: RememberedMemberWorkSyncSettlement['settlement']
 ): boolean {
   return (
-    left.sourceId === right.sourceId &&
     left.completedGeneration === right.completedGeneration &&
     left.runtimeInstanceId === right.runtimeInstanceId
   );
@@ -53,9 +71,10 @@ export function rememberMemberWorkSyncLastSettlement(input: {
   if (!settlement) {
     return undefined;
   }
-  const keepBinding = previous && isSameSettlementAttempt(previous.settlement, settlement);
+  const keepBinding = previous && isSameSettlementGeneration(previous.settlement, settlement);
   lastSettlements.set(key, {
     settlement,
+    consumedGenerations: previous?.consumedGenerations ?? new Map(),
     ...(keepBinding && previous.boundIntentId ? { boundIntentId: previous.boundIntentId } : {}),
   });
   return settlement;
@@ -80,6 +99,7 @@ export function bindMemberWorkSyncLastSettlementIntent(input: {
   memberName: string;
   intentId: string;
   settlement?: MemberWorkSyncReconcileContext['settlement'];
+  teamIncarnation?: string;
 }): void {
   const key = keyOf(input.teamName, input.memberName);
   const current = lastSettlements.get(key);
@@ -87,13 +107,44 @@ export function bindMemberWorkSyncLastSettlementIntent(input: {
   if (!settlement) {
     return;
   }
-  if (current && !isSameSettlementAttempt(current.settlement, settlement)) {
-    return;
+  const consumedGenerations = current?.consumedGenerations ?? new Map<string, string>();
+  const identity = memberWorkSyncSettlementGenerationIdentity(
+    settlement,
+    input.teamIncarnation ?? 'legacy'
+  );
+  if (identity) {
+    const existing = consumedGenerations.get(identity);
+    if (existing && existing !== input.intentId) {
+      return;
+    }
+    consumedGenerations.set(identity, input.intentId);
   }
-  if (current?.boundIntentId && current.boundIntentId !== input.intentId) {
-    return;
+  lastSettlements.set(key, {
+    settlement,
+    boundIntentId: input.intentId,
+    consumedGenerations,
+  });
+}
+
+export function consumedMemberWorkSyncSettlementIntentId(input: {
+  teamName: string;
+  memberName: string;
+  settlement?: MemberWorkSyncReconcileContext['settlement'];
+  teamIncarnation?: string;
+}): string | undefined {
+  if (!input.settlement) {
+    return undefined;
   }
-  lastSettlements.set(key, { settlement, boundIntentId: input.intentId });
+  const identity = memberWorkSyncSettlementGenerationIdentity(
+    input.settlement,
+    input.teamIncarnation ?? 'legacy'
+  );
+  if (!identity) {
+    return undefined;
+  }
+  return lastSettlements
+    .get(keyOf(input.teamName, input.memberName))
+    ?.consumedGenerations.get(identity);
 }
 
 export function resolveQueuedMemberWorkSyncSettlement(input: {

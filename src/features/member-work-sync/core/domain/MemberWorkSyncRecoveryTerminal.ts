@@ -93,14 +93,10 @@ function isRetirableAcceptedReportReservation(
   reservation: MemberWorkSyncRecoveryReservation | undefined,
   reportedAtIso: string
 ): reservation is MemberWorkSyncRecoveryReservation {
-  if (
-    !reservation ||
-    (reservation.state !== 'awaiting_outcome' && reservation.state !== 'uncertain')
-  ) {
+  if (!reservation || reservation.state !== 'awaiting_outcome') {
     return false;
   }
-  const startedAtIso =
-    reservation.state === 'awaiting_outcome' ? reservation.deliveredAt : reservation.reservedAt;
+  const startedAtIso = reservation.deliveredAt;
   if (!startedAtIso) {
     return false;
   }
