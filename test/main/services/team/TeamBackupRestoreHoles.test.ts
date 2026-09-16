@@ -94,7 +94,7 @@ it('does not rewrite generic files that already exist', async () => {
   }
 });
 
-it('rewrites existing generic JSON that is corrupt', async () => {
+it('does not rewrite existing generic JSON during hole-fill, even if corrupt', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'backup-restore-holes-corrupt-'));
   env.teams = path.join(root, 'teams');
   const backups = path.join(root, 'backups');
@@ -112,10 +112,8 @@ it('rewrites existing generic JSON that is corrupt', async () => {
     'team.meta.json': { mtime: 1, size: 1 },
   });
   try {
-    expect(await service.restoreMissingGenericFromManifest(team)).toBe(true);
-    expect(JSON.parse(await fs.readFile(path.join(liveDir, 'team.meta.json'), 'utf8'))).toEqual({
-      ok: true,
-    });
+    expect(await service.restoreMissingGenericFromManifest(team)).toBe(false);
+    expect(await fs.readFile(path.join(liveDir, 'team.meta.json'), 'utf8')).toBe('{');
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

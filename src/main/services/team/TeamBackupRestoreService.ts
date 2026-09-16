@@ -89,10 +89,11 @@ export class TeamBackupRestoreService {
   }
 
   /**
-   * Fill missing or corrupt generic team files from manifest.fileStats without
-   * walking the backup tree. Caller holds the identity fence and team mutex.
-   * Work-sync paths stay on the pending / missing-config restore path. Launch
-   * publication uses the same stop fence as restoreGenericPartial.
+   * Fill missing generic team files from manifest.fileStats without walking the
+   * backup tree or reading existing live files. Caller holds the identity fence
+   * and team mutex. Work-sync paths stay on the pending / missing-config restore
+   * path. Launch publication uses the same stop fence as restoreGenericPartial.
+   * Corrupt JSON is repaired only by the non-quiet partial restore.
    */
   async restoreMissingGenericFromManifest(teamName: string): Promise<boolean> {
     const manifest = await this.ports.loadManifest(teamName);
@@ -332,20 +333,31 @@ export class TeamBackupRestoreService {
               mtimeMs: number;
             };
         try {
-          destinationObservation = await this.readOptionalFileObservation(dest);
-          if (dest.endsWith('.json')) {
-            if (
-              destinationObservation.status === 'missing' ||
-              !isValidJson(destinationObservation.content.toString('utf8'))
-            ) {
-              needsRestore = true; // corrupted JSON
-            } else {
-              skipReason = 'valid existing file';
+          if (quiet) {
+            try {
+              await fs.promises.lstat(dest);
+              continue;
+            } catch (error) {
+              if (!isEnoent(error)) continue;
+              destinationObservation = { status: 'missing' };
+              needsRestore = true;
             }
           } else {
-            // Binary file — just check existence
-            needsRestore = destinationObservation.status === 'missing';
-            if (!needsRestore) skipReason = 'existing binary file';
+            destinationObservation = await this.readOptionalFileObservation(dest);
+            if (dest.endsWith('.json')) {
+              if (
+                destinationObservation.status === 'missing' ||
+                !isValidJson(destinationObservation.content.toString('utf8'))
+              ) {
+                needsRestore = true; // corrupted JSON
+              } else {
+                skipReason = 'valid existing file';
+              }
+            } else {
+              // Binary file — just check existence
+              needsRestore = destinationObservation.status === 'missing';
+              if (!needsRestore) skipReason = 'existing binary file';
+            }
           }
         } catch {
           continue;
