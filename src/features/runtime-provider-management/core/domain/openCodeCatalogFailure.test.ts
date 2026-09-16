@@ -151,6 +151,16 @@ describe('openCodeCatalogFailure', () => {
       key: 'catalogSignInExpired',
       provider: 'GitHub Copilot',
     });
+    expect(
+      describeOpenCodeCatalogFailure({
+        operation: 'provider_models',
+        sourceProviderId: 'github-copilot',
+        origin: 'main',
+        message: 'UNAUTHENTICATED: Request had invalid authentication credentials.',
+        errorCode: 'runtime-unhealthy',
+        displayName: 'GitHub Copilot',
+      }).kind
+    ).toBe('auth_reconnect');
   });
 
   it('does not treat coincidental 401/403 numbers or forbidden identifiers as auth', () => {
@@ -158,6 +168,7 @@ describe('openCodeCatalogFailure', () => {
       'exited with code 1 after writing 403 bytes',
       'missing field: forbiddenModels',
       'unauthorized_user lookup failed',
+      'UNAUTHORIZED_USER',
       'build-401/models.json',
     ]) {
       expect(

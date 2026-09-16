@@ -110,7 +110,7 @@ function hasHttpAuthStatus(lower: string): boolean {
 }
 
 function looksLikeUnauthorizedToken(lower: string): boolean {
-  return /\bunauthorized\b/.test(lower) || /unauthorizederror/.test(lower);
+  return /\bunauthori[sz]ed\b/.test(lower) || /unauthori[sz]ed(?:error|exception)s?\b/.test(lower);
 }
 
 function looksLikeAuthFailureMessage(message: string): boolean {
@@ -123,6 +123,8 @@ function looksLikeAuthFailureMessage(message: string): boolean {
     lower.includes('authentication failed') ||
     lower.includes('authentication required') ||
     lower.includes('not logged in') ||
+    lower.includes('invalid authentication credentials') ||
+    /\bunauthenticated\b/.test(lower) ||
     looksLikeUnauthorizedToken(lower) ||
     hasHttpAuthStatus(lower)
   );
