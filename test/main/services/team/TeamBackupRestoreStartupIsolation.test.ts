@@ -411,6 +411,37 @@ it('does not hole-fill a foreign live identity', async () => {
   }
 });
 
+it('does not hole-fill a padded live identity', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-padded-skip-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.writeFile(
+    path.join(env.teams, 'sandbox', 'config.json'),
+    JSON.stringify({ name: 'sandbox', members: [], _backupIdentityId: ' sandbox' })
+  );
+  const generic = vi.fn(async () => true);
+  const holes = vi.fn(() => Promise.resolve(false));
+  const prepare = vi.fn(async () => ({
+    importAndVerify: async () => {
+      throw new Error('work-sync import must not run');
+    },
+  }));
+  const owner = createSkipCoordinator(backups, generic, holes);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), { prepare });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual([]);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(generic).not.toHaveBeenCalled();
+    expect(holes).not.toHaveBeenCalled();
+  } finally {
+    warning.mockRestore();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 it('imports work-sync when the backup manifest still has pending', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-pending-import-'));
   env.teams = path.join(root, 'teams');

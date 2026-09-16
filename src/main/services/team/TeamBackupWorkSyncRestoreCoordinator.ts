@@ -162,7 +162,12 @@ export class TeamBackupWorkSyncRestoreCoordinator {
   }
 
   private async canSkipConfiguredRestore(teamName: string, identityId: string): Promise<boolean> {
-    const live = await this.inspectLiveConfig(teamName, identityId);
+    let live: LiveConfigState;
+    try {
+      live = await this.inspectLiveConfig(teamName, identityId);
+    } catch {
+      return false;
+    }
     if (live !== 'ready') return false;
     const manifest = await readBackupManifestStrict(
       path.join(this.ports.getBackupDir(teamName), 'manifest.json'),
