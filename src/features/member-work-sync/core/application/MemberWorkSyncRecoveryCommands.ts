@@ -1,14 +1,25 @@
 import {
-  applyMemberWorkSyncStopLatch,
-  attachMemberWorkSyncRecoveryReservation,
+  type MemberWorkSyncPendingRuntimeControl,
+  type MemberWorkSyncStatus,
+  normalizeMemberWorkSyncRuntimeControlReason,
+} from '../../contracts';
+import {
   abandonMemberWorkSyncPendingStop,
+  applyMemberWorkSyncStopLatch,
   assertValidMemberWorkSyncRuntimeControlReason,
+  attachMemberWorkSyncRecoveryReservation,
   buildMemberWorkSyncNudgePayloadHash,
   buildMemberWorkSyncOutboxEnsureInput,
   clearMemberWorkSyncStopLatch,
   nextMemberWorkSyncControlRevision,
 } from '../domain';
 
+import {
+  MemberWorkSyncExactRuntimeStop,
+  type MemberWorkSyncRuntimeAdmissionOutcome,
+  MemberWorkSyncRuntimeControlUnavailableError,
+  MemberWorkSyncStaleIncarnationError,
+} from './MemberWorkSyncExactRuntimeStop';
 import { isMemberWorkSyncRecoveryAllocationEnabled } from './MemberWorkSyncNudgeOutboxPlanHelpers';
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
 import {
@@ -17,25 +28,14 @@ import {
   runMemberWorkSyncStatusMutation,
 } from './MemberWorkSyncStatusMutation';
 
-import {
-  normalizeMemberWorkSyncRuntimeControlReason,
-  type MemberWorkSyncPendingRuntimeControl,
-  type MemberWorkSyncStatus,
-} from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
-import {
-  MemberWorkSyncExactRuntimeStop,
-  MemberWorkSyncRuntimeControlUnavailableError,
-  MemberWorkSyncStaleIncarnationError,
-  type MemberWorkSyncRuntimeAdmissionOutcome,
-} from './MemberWorkSyncExactRuntimeStop';
 
+export type { MemberWorkSyncRuntimeAdmissionOutcome } from './MemberWorkSyncExactRuntimeStop';
 export {
   MemberWorkSyncRuntimeControlUnavailableError,
   MemberWorkSyncStaleIncarnationError,
   MemberWorkSyncStaleRuntimeInstanceError,
 } from './MemberWorkSyncExactRuntimeStop';
-export type { MemberWorkSyncRuntimeAdmissionOutcome } from './MemberWorkSyncExactRuntimeStop';
 
 export type MemberWorkSyncRecoveryCommandResult =
   | {
@@ -552,8 +552,7 @@ export class MemberWorkSyncRecoveryCommands {
       this.mutate(input, mutationId, (status) => {
         const pending = status.recoveryHealth?.pendingRuntimeControl;
         if (
-          !pending ||
-          pending.requestId !== checkpoint.requestId ||
+          pending?.requestId !== checkpoint.requestId ||
           pending.teamName !== checkpoint.teamName ||
           pending.memberName !== checkpoint.memberName ||
           pending.controlRevision !== checkpoint.controlRevision ||
@@ -575,7 +574,7 @@ export class MemberWorkSyncRecoveryCommands {
           pendingRuntimeControl: _pending,
           autoResumeStopLatch: _latch,
           ...health
-        } = status.recoveryHealth!;
+        } = status.recoveryHealth;
         return {
           ...status,
           recoveryHealth: health,

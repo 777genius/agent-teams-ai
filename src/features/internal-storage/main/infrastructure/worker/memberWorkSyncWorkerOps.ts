@@ -12,6 +12,14 @@ import {
   memberWorkSyncStatus,
 } from './internalStorageSchema';
 import {
+  mutateMemberWorkSyncReportJournal,
+  readMemberWorkSyncReportJournal,
+} from './memberWorkSyncReportJournalWorkerOps';
+import {
+  compareAndWriteMemberWorkSyncStatus,
+  writeMemberWorkSyncStatus,
+} from './memberWorkSyncStatusWorkerOps';
+import {
   canClaim,
   canRevive,
   chunked,
@@ -23,14 +31,6 @@ import {
   STATUS_RECORD_SELECTION,
   toPersistenceRow,
 } from './memberWorkSyncWorkerState';
-import {
-  mutateMemberWorkSyncReportJournal,
-  readMemberWorkSyncReportJournal,
-} from './memberWorkSyncReportJournalWorkerOps';
-import {
-  compareAndWriteMemberWorkSyncStatus,
-  writeMemberWorkSyncStatus,
-} from './memberWorkSyncStatusWorkerOps';
 
 import type {
   MemberWorkSyncMetricEventRecord,

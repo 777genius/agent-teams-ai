@@ -7,20 +7,20 @@ import { HttpBadRequestError } from '../teamRouteParsers';
 import type { HttpServices } from '../index';
 import type { FastifyInstance } from 'fastify';
 
-type MemberWorkSyncRuntimeStopFeature = Pick<
-  NonNullable<HttpServices['memberWorkSyncFeature']>,
-  'getStatus' | 'stopAutoResume'
->;
+interface MemberWorkSyncRuntimeStopFeature {
+  getStatus: NonNullable<HttpServices['memberWorkSyncFeature']>['getStatus'];
+  stopAutoResume: NonNullable<HttpServices['memberWorkSyncFeature']>['stopAutoResume'];
+}
 
-type RuntimeStopResponse = {
+interface RuntimeStopResponse {
   ok: true;
   status: Awaited<ReturnType<MemberWorkSyncRuntimeStopFeature['getStatus']>>;
   runtimeAdmission: { state: string };
-};
+}
 
-type RuntimeStopReplayEntry = {
+interface RuntimeStopReplayEntry {
   promise: Promise<RuntimeStopResponse>;
-};
+}
 
 function getRuntimeStopStatusCode(
   error: unknown,

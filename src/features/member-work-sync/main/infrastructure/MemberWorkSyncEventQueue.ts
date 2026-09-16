@@ -3,8 +3,8 @@ import {
   type MemberWorkSyncAuditJournalPort,
   type MemberWorkSyncLoggerPort,
   type MemberWorkSyncQueueDiagnostics,
-  type MemberWorkSyncTriggerReason,
   MemberWorkSyncTeamQuiescedError,
+  type MemberWorkSyncTriggerReason,
 } from '../../core/application';
 
 import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';

@@ -1,4 +1,9 @@
 import {
+  type MemberWorkSyncPendingRuntimeControl,
+  type MemberWorkSyncStatus,
+  normalizeMemberWorkSyncRuntimeControlReason,
+} from '../../contracts';
+import {
   abandonMemberWorkSyncPendingStop,
   assertValidMemberWorkSyncRuntimeControlReason,
   completeMemberWorkSyncPendingStop,
@@ -14,11 +19,6 @@ import {
   runMemberWorkSyncStatusMutation,
 } from './MemberWorkSyncStatusMutation';
 
-import {
-  normalizeMemberWorkSyncRuntimeControlReason,
-  type MemberWorkSyncPendingRuntimeControl,
-  type MemberWorkSyncStatus,
-} from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
 export interface MemberWorkSyncRuntimeAdmissionOutcome {
@@ -77,8 +77,7 @@ function isSameRuntimeControlCheckpoint(
   checkpoint: MemberWorkSyncPendingRuntimeControl
 ): boolean {
   return Boolean(
-    current &&
-    current.teamName === checkpoint.teamName &&
+    current?.teamName === checkpoint.teamName &&
     current.memberName === checkpoint.memberName &&
     current.incarnation === checkpoint.incarnation &&
     current.runtimeInstanceId === checkpoint.runtimeInstanceId &&
@@ -320,8 +319,10 @@ export class MemberWorkSyncExactRuntimeStop {
       ) {
         return read.status;
       }
+      const previousRecoveryHealth = read.status.recoveryHealth;
+      if (!previousRecoveryHealth) throw new MemberWorkSyncRuntimeControlUnavailableError();
       const recoveryHealth = abandonMemberWorkSyncPendingStop({
-        previous: read.status.recoveryHealth,
+        previous: previousRecoveryHealth,
         checkpoint,
         retire,
       });

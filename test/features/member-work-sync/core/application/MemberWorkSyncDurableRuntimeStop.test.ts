@@ -59,14 +59,14 @@ function harness() {
   let syncHook:
     | ((
         input: Parameters<
-          NonNullable<MemberWorkSyncUseCaseDeps['runtimeTicketAdmission']>['syncControl']
+          NonNullable<NonNullable<MemberWorkSyncUseCaseDeps['runtimeTicketAdmission']>['syncControl']>
         >[0]
       ) => Promise<void>)
     | undefined;
   let syncAppliedHook:
     | ((
         input: Parameters<
-          NonNullable<MemberWorkSyncUseCaseDeps['runtimeTicketAdmission']>['syncControl']
+          NonNullable<NonNullable<MemberWorkSyncUseCaseDeps['runtimeTicketAdmission']>['syncControl']>
         >[0]
       ) => Promise<void>)
     | undefined;
@@ -105,13 +105,33 @@ function harness() {
   const deps: MemberWorkSyncUseCaseDeps = {
     clock: { now: () => new Date('2026-09-15T00:01:00.000Z'), delay: async () => undefined },
     hash: { sha256Hex: (value) => `hash${value.length}` },
-    agendaSource: { loadAgenda: async () => ({ agenda: stored.agenda }) },
+    agendaSource: {
+      loadAgenda: async () => ({
+        agenda: stored.agenda,
+        activeMemberNames: ['bob'],
+        inactive: false,
+        diagnostics: [],
+      }),
+    },
     statusStore: {
       read: readStatus,
       write: async (next) => {
         stored = next;
       },
-      readTeamMetrics: async () => ({ total: 1, caughtUp: 0, needsSync: 1 }),
+      readTeamMetrics: async (teamName) => ({
+        teamName,
+        generatedAt: '2026-09-15T00:01:00.000Z',
+        memberCount: 1,
+        stateCounts: { caught_up: 0, needs_sync: 1, still_working: 0, blocked: 0, inactive: 0, unknown: 0 },
+        actionableItemCount: 1,
+        wouldNudgeCount: 1,
+        fingerprintChangeCount: 0,
+        reportAcceptedCount: 0,
+        reportRejectedCount: 0,
+        recentEvents: [],
+        deliveryReadiness: { state: 'shadow_ready', reasons: [], thresholds: { minObservedMembers: 1, minStatusEvents: 20, minObservationHours: 1, maxWouldNudgesPerMemberHour: 2, maxFingerprintChangesPerMemberHour: 1, maxReportRejectionRate: 0.2 }, rates: { observationHours: 2, statusEventCount: 24, wouldNudgesPerMemberHour: 0.5, fingerprintChangesPerMemberHour: 0, reportRejectionRate: 0 }, diagnostics: [] },
+        phase2Readiness: { state: 'shadow_ready', reasons: [], thresholds: { minObservedMembers: 1, minStatusEvents: 20, minObservationHours: 1, maxWouldNudgesPerMemberHour: 2, maxFingerprintChangesPerMemberHour: 1, maxReportRejectionRate: 0.2 }, rates: { observationHours: 2, statusEventCount: 24, wouldNudgesPerMemberHour: 0.5, fingerprintChangesPerMemberHour: 0, reportRejectionRate: 0 }, diagnostics: [] },
+      }),
     },
     statusMutations: {
       createMutationId: () => `mutation-${++mutation}`,
@@ -419,6 +439,8 @@ describe('durable exact runtime Stop ordering', () => {
       memberName: 'bob',
       reason: 'newer_user_stop',
     });
+    expect(newerStop.ok).toBe(true);
+    if (!newerStop.ok) throw new Error('newer stop failed');
     expect(newerStop.status.recoveryHealth).toMatchObject({
       controlRevision: 6,
       autoResumeStopLatch: { controlRevision: 6, reason: 'newer_user_stop' },

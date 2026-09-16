@@ -1,5 +1,5 @@
-import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import { withFileLockSync } from '@main/services/team/fileLock';
+import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import { atomicWriteSync } from '@main/utils/atomicWrite';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -92,7 +92,7 @@ export function reserveOpenCodeWorkSyncLane(
 export function cancelOpenCodeWorkSyncLane(ticket: MemberWorkSyncRuntimeTicket): void {
   const key = keyOf(ticket.teamName, ticket.memberName);
   const existing = reservations.get(key);
-  if (existing && existing.ticketId === ticket.ticketId) {
+  if (existing?.ticketId === ticket.ticketId) {
     reservations.delete(key);
     persistReservation(null, ticket.teamName, ticket.memberName);
   }
@@ -212,7 +212,7 @@ export function applyOpenCodeWorkSyncLaneControl(input: {
       const current = readOpenCodeWorkSyncLaneControlState(path);
       if (current.state === 'corrupt') return { ok: false as const, code: 'conflict' as const };
       const existing = current.state === 'present' ? current.control : null;
-      if (existing && existing.runtimeInstanceId === input.runtimeInstanceId) {
+      if (existing?.runtimeInstanceId === input.runtimeInstanceId) {
         if (input.controlRevision < existing.controlRevision) {
           return { ok: false as const, code: 'superseded' as const };
         }
