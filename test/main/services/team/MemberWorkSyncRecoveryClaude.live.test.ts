@@ -20,6 +20,11 @@ import {
 } from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
+  type ClaudeJsonProjectTrustEdit,
+  revertClaudeJsonProjectTrust,
+  upsertTrustedClaudeProjectConfig,
+} from './claudeJsonProjectTrust';
+import {
   assertExecutable,
   FatalWaitError,
   formatMemberWorkSyncDiagnostics,
@@ -58,6 +63,8 @@ const DEFAULT_MODEL = 'sonnet';
 liveDescribe('Member work sync recovery Claude live canary', () => {
   let tempDir: string;
   let tempClaudeRoot: string;
+  let isolatedClaudeRoot: string;
+  let workSyncTeamsBasePath: string;
   let previousCliPath: string | undefined;
   let previousCliFlavor: string | undefined;
   let previousControlUrl: string | undefined;
@@ -66,7 +73,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
   let previousUserProfile: string | undefined;
   let previousDisableAppBootstrap: string | undefined;
   let previousDisableRuntimeBootstrap: string | undefined;
-  let previousClaudeJsonConfig: string | null | undefined;
+  let claudeJsonTrustEdit: ClaudeJsonProjectTrustEdit | undefined;
   let previousTeamControlApiJson: string | null | undefined;
   let usingConnectedClaudeAccount = false;
   let claudeJsonConfigRoot: string;
@@ -111,15 +118,28 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     previousDisableRuntimeBootstrap = process.env.CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP;
     usingConnectedClaudeAccount =
       allowConnectedClaudeAccount && !process.env.ANTHROPIC_API_KEY?.trim();
-    // Keep HOME and the Claude root in the temp sandbox. Connected-account
-    // Keychain OAuth is a different namespace than CLAUDE_CONFIG_DIR=temp; do
-    // not retarget HOME or CLAUDE_CONFIG_DIR at the real ~/.claude spool.
-    const tempHome = path.join(tempDir, 'home');
-    tempClaudeRoot = path.join(tempDir, '.claude');
-    claudeJsonConfigRoot = tempClaudeRoot;
+    // Connected-account Keychain OAuth reads ~/.claude.json under the real HOME.
+    // Isolate HOME only for API-key mode; match StopHook/MixedProvider for
+    // subscription auth so teammate spawn does not fail with "Not logged in".
+    const tempHome = usingConnectedClaudeAccount
+      ? resolveConnectedClaudeHome()
+      : path.join(tempDir, 'home');
+    isolatedClaudeRoot = path.join(tempDir, '.claude');
+    workSyncTeamsBasePath = path.join(isolatedClaudeRoot, 'teams');
+    // OAuth/Keychain stay on the connected HOME. Teams/spool/control for this
+    // canary stay under tempDir so drain cannot claim other user-team events.
+    tempClaudeRoot = usingConnectedClaudeAccount
+      ? path.join(tempHome, '.claude')
+      : isolatedClaudeRoot;
+    claudeJsonConfigRoot = usingConnectedClaudeAccount ? tempHome : isolatedClaudeRoot;
     await fs.mkdir(tempHome, { recursive: true });
     await fs.mkdir(tempClaudeRoot, { recursive: true });
-    setClaudeBasePathOverride(tempClaudeRoot);
+    await fs.mkdir(workSyncTeamsBasePath, { recursive: true });
+    if (usingConnectedClaudeAccount) {
+      setClaudeBasePathOverride(null);
+    } else {
+      setClaudeBasePathOverride(isolatedClaudeRoot);
+    }
     process.env.HOME = tempHome;
     process.env.HISTFILE = '/dev/null';
     process.env.USERPROFILE = tempHome;
@@ -132,7 +152,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     feature = null;
     controlServer = null;
     teamName = null;
-    previousClaudeJsonConfig = undefined;
+    claudeJsonTrustEdit = undefined;
     previousTeamControlApiJson = undefined;
     owned = await createOwnedWorkSyncIdentity();
   });
@@ -156,12 +176,12 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
       await fs.rm(path.join(getTasksBasePath(), teamName), { recursive: true, force: true });
     }
-    if (usingConnectedClaudeAccount && previousClaudeJsonConfig !== undefined) {
-      await restoreClaudeJsonConfig(claudeJsonConfigRoot, previousClaudeJsonConfig);
+    if (usingConnectedClaudeAccount && claudeJsonTrustEdit) {
+      await revertClaudeJsonProjectTrust(claudeJsonTrustEdit);
     }
     if (previousTeamControlApiJson !== undefined) {
       await restoreNamedConfigFile(
-        tempClaudeRoot,
+        isolatedClaudeRoot,
         'team-control-api.json',
         previousTeamControlApiJson
       );
@@ -193,7 +213,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
       console.info(`[MemberWorkSyncRecoveryClaude.live] preserved temp dir: ${tempDir}`);
     } else {
-      await fs.rm(tempDir, { recursive: true, force: true });
+      await removeTempDirBestEffort(tempDir);
     }
   });
 
@@ -211,7 +231,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -239,7 +259,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
-        teamsBasePath: getTeamsBasePath(),
+        teamsBasePath: workSyncTeamsBasePath,
         recoveryAllocation: { enabled: false },
         configReader: new TeamConfigReader(),
         taskReader: new TeamTaskReader(),
@@ -314,7 +334,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const restarted = await feature.getStatus({ teamName, memberName });
     expect(restarted.recoveryHealth?.autoResumeStopLatch?.reason).toBe('user_stop');
     expect(
-      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName)).filter(
+      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName, workSyncTeamsBasePath)).filter(
         (item) => item.payload?.workSyncIntentKey
       )
     ).toEqual([]);
@@ -340,7 +360,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live crash canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -367,7 +387,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const createFeature = () =>
       createMemberWorkSyncFeature({
         lifecycleIdentity,
-        teamsBasePath: getTeamsBasePath(),
+        teamsBasePath: workSyncTeamsBasePath,
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader: new TeamConfigReader(),
         taskReader: new TeamTaskReader(),
@@ -421,7 +441,11 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       config?.members?.find((member) => member.agentType === 'team-lead')?.name?.trim() ||
       config?.members?.[0]?.name?.trim() ||
       'team-lead';
-    await seedClaudeShadowReadyMetrics({ teamName, memberName });
+    await seedClaudeShadowReadyMetrics({
+      teamName,
+      memberName,
+      teamsBasePath: workSyncTeamsBasePath,
+    });
     const task = await new TeamDataService().createTask(teamName, {
       subject: `Recovery Claude live crash canary ${Date.now()}`,
       owner: memberName,
@@ -449,7 +473,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       .sort();
     expect(messageIdsBeforeCrash.length).toBeGreaterThanOrEqual(1);
     const recoveryIdsBeforeCrash = Object.values(
-      await readMemberWorkSyncOutboxItems(teamName, memberName)
+      await readMemberWorkSyncOutboxItems(teamName, memberName, workSyncTeamsBasePath)
     )
       .map((item) => item.payload?.workSyncIntentKey)
       .filter((value): value is string => Boolean(value))
@@ -479,7 +503,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
         .sort()
     ).toEqual(messageIdsBeforeCrash);
     expect(
-      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName))
+      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName, workSyncTeamsBasePath))
         .map((item) => item.payload?.workSyncIntentKey)
         .filter((value): value is string => Boolean(value))
         .sort()
@@ -507,7 +531,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live progress canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -535,7 +559,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const createFeature = (busy = false) =>
       createMemberWorkSyncFeature({
         lifecycleIdentity: owned!.identity,
-        teamsBasePath: getTeamsBasePath(),
+        teamsBasePath: workSyncTeamsBasePath,
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
         configReader,
         taskReader: new TeamTaskReader(),
@@ -594,7 +618,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     controlServer = await startMemberWorkSyncControlServer(feature);
     process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
     activeService.setControlApiBaseUrlResolver(async () => controlServer?.baseUrl ?? null);
-    const teamControlApiPath = path.join(tempClaudeRoot, 'team-control-api.json');
+    const teamControlApiPath = path.join(isolatedClaudeRoot, 'team-control-api.json');
     previousTeamControlApiJson = await fs.readFile(teamControlApiPath, 'utf8').catch(() => null);
     await fs.writeFile(
       teamControlApiPath,
@@ -639,13 +663,17 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     expect(activeService.isTeamAlive(teamName)).toBe(true);
     await waitUntil(async () => {
       await feature!.drainRuntimeTurnSettledEvents();
-      const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+      const metas = await readRuntimeTurnSettledProcessedMetas(workSyncTeamsBasePath);
       return metas.some(({ meta }) => meta.teamName === teamName && meta.memberName === memberName);
     }, 30_000).catch(() => undefined);
 
     const config = await new TeamConfigReader().getConfig(teamName);
     expect(config?.members?.some((member) => member.name === memberName)).toBe(true);
-    await seedClaudeShadowReadyMetrics({ teamName, memberName });
+    await seedClaudeShadowReadyMetrics({
+      teamName,
+      memberName,
+      teamsBasePath: workSyncTeamsBasePath,
+    });
 
     const task = await teamDataService.createTask(teamName, {
       subject: `Write CANARY.txt ${marker}`,
@@ -659,6 +687,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
         'Do not write CANARY.txt in this first turn.',
         'Do not complete this task.',
         'After the report is accepted, stop.',
+        'When a later member_work_sync recovery nudge arrives in your inbox, resume this same task: write CANARY.txt in the project root with exactly: done, then complete the task.',
       ].join('\n'),
     });
     feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
@@ -671,7 +700,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       `task-start inbox empty after relay inbox=${inboxRelay.relayed} lead=${leadRelay}`
     ).toBeGreaterThan(0);
     const processedMetasBeforeValidation =
-      await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+      await readRuntimeTurnSettledProcessedMetas(workSyncTeamsBasePath);
     const processedMetaPathsBeforeValidation = new Set(
       processedMetasBeforeValidation.map(({ filePath }) => filePath)
     );
@@ -739,7 +768,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
           sinceMs: startedAt,
         });
         await feature!.drainRuntimeTurnSettledEvents();
-        const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
+        const metas = await readRuntimeTurnSettledProcessedMetas(workSyncTeamsBasePath);
         return metas.some(({ filePath, meta }) => {
           const event = meta.event as Record<string, unknown> | undefined;
           const recordedAt =
@@ -767,20 +796,28 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     );
     expect((await fs.readFile(canaryPath, 'utf8').catch(() => '')).trim()).not.toMatch(/^done$/i);
 
-    await expireClaudeAcceptedReportLease({ teamName, memberName });
+    await expireClaudeAcceptedReportLease({
+      teamName,
+      memberName,
+      teamsBasePath: workSyncTeamsBasePath,
+    });
     await feature.refreshStatus({ teamName, memberName });
     const recoveryIdsBeforeAttention = Object.values(
-      await readMemberWorkSyncOutboxItems(teamName, memberName)
+      await readMemberWorkSyncOutboxItems(teamName, memberName, workSyncTeamsBasePath)
     )
       .map((item) => item.payload?.workSyncIntentKey)
       .filter((value): value is string => Boolean(value))
       .sort();
-    await backdateClaudeRecoveryEpisode({ teamName, memberName });
+    await backdateClaudeRecoveryEpisode({
+      teamName,
+      memberName,
+      teamsBasePath: workSyncTeamsBasePath,
+    });
     const attention = await feature.refreshStatus({ teamName, memberName });
     expect(attention.recoveryHealth?.episodes[0]?.phase).toBe('attention');
     expect(attention.recoveryHealth?.attentionAt).toBeTruthy();
     expect(
-      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName))
+      Object.values(await readMemberWorkSyncOutboxItems(teamName, memberName, workSyncTeamsBasePath))
         .map((item) => item.payload?.workSyncIntentKey)
         .filter((value): value is string => Boolean(value))
         .sort()
@@ -799,7 +836,11 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           if (/member_busy|status_not_nudgeable/.test(message)) {
-            await expireClaudeAcceptedReportLease({ teamName: teamName!, memberName });
+            await expireClaudeAcceptedReportLease({
+              teamName: teamName!,
+              memberName,
+              teamsBasePath: workSyncTeamsBasePath,
+            });
             await feature!.refreshStatus({ teamName: teamName!, memberName });
             return false;
           }
@@ -826,6 +867,11 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     await feature.dispatchDueNudges([teamName]);
     await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
     await activeService.relayLeadInboxMessages(teamName).catch(() => 0);
+    const inboxAfterRecovery = await readClaudeInboxMessages(teamName, memberName);
+    expect(
+      inboxAfterRecovery.some((message) => message.messageKind === 'member_work_sync_nudge'),
+      'remaining-work recovery must land in the teammate inbox before CANARY is written'
+    ).toBe(true);
 
     await waitUntil(
       async () => {
@@ -854,39 +900,30 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
   }, 1_200_000);
 });
 
-async function upsertTrustedClaudeProjectConfig(
-  configDir: string,
-  projectPath: string
-): Promise<string | null> {
-  const configPath = path.join(configDir, '.claude.json');
-  const previous = await fs.readFile(configPath, 'utf8').catch((error) => {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  });
-  const existing = previous ? (JSON.parse(previous) as Record<string, unknown>) : {};
-  const canonicalProjectPath = await fs.realpath(projectPath).catch(() => projectPath);
-  const normalizedProjectPath = path.normalize(canonicalProjectPath).replace(/\\/g, '/');
-  const projects =
-    existing.projects && typeof existing.projects === 'object' && !Array.isArray(existing.projects)
-      ? { ...(existing.projects as Record<string, unknown>) }
-      : {};
-  const currentProject =
-    projects[normalizedProjectPath] &&
-    typeof projects[normalizedProjectPath] === 'object' &&
-    !Array.isArray(projects[normalizedProjectPath])
-      ? (projects[normalizedProjectPath] as Record<string, unknown>)
-      : {};
-  projects[normalizedProjectPath] = {
-    ...currentProject,
-    hasTrustDialogAccepted: true,
-  };
-  await fs.mkdir(configDir, { recursive: true });
-  await fs.writeFile(configPath, `${JSON.stringify({ ...existing, projects }, null, 2)}\n`, 'utf8');
-  return previous;
+function resolveConnectedClaudeHome(): string {
+  const explicit = process.env.MEMBER_WORK_SYNC_CLAUDE_CONNECTED_HOME?.trim();
+  if (explicit) {
+    return path.resolve(explicit);
+  }
+  return os.userInfo().homedir;
 }
 
-async function restoreClaudeJsonConfig(configDir: string, previous: string | null): Promise<void> {
-  await restoreNamedConfigFile(configDir, '.claude.json', previous);
+async function removeTempDirBestEffort(dir: string): Promise<void> {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await fs.rm(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
+      return;
+    } catch (error) {
+      const code = typeof error === 'object' && error ? (error as { code?: unknown }).code : null;
+      if (code === 'ENOENT') {
+        return;
+      }
+      if (attempt === 3) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
 }
 
 async function restoreNamedConfigFile(
@@ -912,9 +949,13 @@ async function readClaudeInboxMessages(
   return Array.isArray(parsed) ? parsed : [];
 }
 
-function claudeMemberStatusPath(teamName: string, memberName: string): string {
+function claudeMemberStatusPath(
+  teamName: string,
+  memberName: string,
+  teamsBasePath = getTeamsBasePath()
+): string {
   return path.join(
-    getTeamsBasePath(),
+    teamsBasePath,
     teamName,
     'members',
     memberName,
@@ -925,7 +966,8 @@ function claudeMemberStatusPath(teamName: string, memberName: string): string {
 
 async function readClaudeStoredMemberStatus(
   teamName: string,
-  memberName: string
+  memberName: string,
+  teamsBasePath = getTeamsBasePath()
 ): Promise<{
   status?: {
     report?: { expiresAt?: string };
@@ -936,16 +978,20 @@ async function readClaudeStoredMemberStatus(
     };
   };
 }> {
-  const raw = await fs.readFile(claudeMemberStatusPath(teamName, memberName), 'utf8');
+  const raw = await fs.readFile(
+    claudeMemberStatusPath(teamName, memberName, teamsBasePath),
+    'utf8'
+  );
   return JSON.parse(raw) as Awaited<ReturnType<typeof readClaudeStoredMemberStatus>>;
 }
 
 async function seedClaudeShadowReadyMetrics(input: {
   teamName: string;
   memberName: string;
+  teamsBasePath?: string;
 }): Promise<void> {
   const metricsPath = path.join(
-    getTeamsBasePath(),
+    input.teamsBasePath ?? getTeamsBasePath(),
     input.teamName,
     '.member-work-sync',
     'indexes',
@@ -990,8 +1036,14 @@ async function seedClaudeShadowReadyMetrics(input: {
 async function backdateClaudeRecoveryEpisode(input: {
   teamName: string;
   memberName: string;
+  teamsBasePath?: string;
 }): Promise<void> {
-  const stored = await readClaudeStoredMemberStatus(input.teamName, input.memberName);
+  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
+  const stored = await readClaudeStoredMemberStatus(
+    input.teamName,
+    input.memberName,
+    teamsBasePath
+  );
   const health = stored.status?.recoveryHealth;
   const observed = health?.episodes?.[0]?.firstObservedAt;
   if (!observed || !health?.episodes?.[0]) {
@@ -1000,7 +1052,7 @@ async function backdateClaudeRecoveryEpisode(input: {
   health.episodes[0].firstObservedAt = new Date(Date.parse(observed) - 21 * 60_000).toISOString();
   health.episodes[0].dueAt = observed;
   await fs.writeFile(
-    claudeMemberStatusPath(input.teamName, input.memberName),
+    claudeMemberStatusPath(input.teamName, input.memberName, teamsBasePath),
     `${JSON.stringify(stored)}\n`,
     'utf8'
   );
@@ -1009,8 +1061,14 @@ async function backdateClaudeRecoveryEpisode(input: {
 async function expireClaudeAcceptedReportLease(input: {
   teamName: string;
   memberName: string;
+  teamsBasePath?: string;
 }): Promise<void> {
-  const stored = await readClaudeStoredMemberStatus(input.teamName, input.memberName);
+  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
+  const stored = await readClaudeStoredMemberStatus(
+    input.teamName,
+    input.memberName,
+    teamsBasePath
+  );
   const expiredAt = new Date(Date.now() - 60_000).toISOString();
   if (stored.status?.report) {
     stored.status.report.expiresAt = expiredAt;
@@ -1019,7 +1077,7 @@ async function expireClaudeAcceptedReportLease(input: {
     stored.status.lastAcceptedReport.expiresAt = expiredAt;
   }
   await fs.writeFile(
-    claudeMemberStatusPath(input.teamName, input.memberName),
+    claudeMemberStatusPath(input.teamName, input.memberName, teamsBasePath),
     `${JSON.stringify(stored)}\n`,
     'utf8'
   );

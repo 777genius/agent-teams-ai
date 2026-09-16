@@ -52,9 +52,6 @@ function getIgnoredReason(event: RuntimeTurnSettledEvent): string | null {
   if (!event.threadId?.trim() && !event.turnId?.trim()) {
     return 'opencode_missing_prompt_identity';
   }
-  if (!event.threadId?.trim()) {
-    return 'opencode_missing_prompt_identity';
-  }
   if (!outcome) {
     return 'opencode_missing_terminal_outcome';
   }

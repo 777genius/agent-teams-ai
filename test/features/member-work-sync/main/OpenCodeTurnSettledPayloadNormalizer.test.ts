@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
-import { OpenCodeTurnSettledPayloadNormalizer } from '@features/member-work-sync/main/infrastructure/OpenCodeTurnSettledPayloadNormalizer';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
+import { OpenCodeTurnSettledPayloadNormalizer } from '@features/member-work-sync/main/infrastructure/OpenCodeTurnSettledPayloadNormalizer';
+import { describe, expect, it } from 'vitest';
 
 describe('OpenCodeTurnSettledPayloadNormalizer', () => {
   it('normalizes orchestrator-native OpenCode turn-settled payloads', () => {
@@ -83,5 +82,36 @@ describe('OpenCodeTurnSettledPayloadNormalizer', () => {
         recordedAt: '2026-04-29T12:00:01.000Z',
       })
     ).toEqual({ ok: false, reason: 'source_mismatch' });
+  });
+
+  it('expands a lane-only orchestrator runtime id with the event session', () => {
+    const normalizer = new OpenCodeTurnSettledPayloadNormalizer(new NodeHashAdapter());
+
+    const result = normalizer.normalize({
+      provider: 'opencode',
+      raw: JSON.stringify({
+        provider: 'opencode',
+        source: 'agent-teams-orchestrator-opencode',
+        eventName: 'runtime_turn_settled',
+        hookEventName: 'Stop',
+        sessionId: 'ses-old',
+        laneId: 'lane-bob',
+        memberName: 'bob',
+        teamName: 'team-a',
+        runtimeInstanceId: 'opencode:lane-bob',
+        completedGeneration: 7,
+        outcome: 'success',
+      }),
+      recordedAt: '2026-04-29T12:00:01.000Z',
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      event: {
+        sessionId: 'ses-old',
+        runtimeInstanceId: 'opencode:lane-bob:ses-old',
+        completedGeneration: 7,
+      },
+    });
   });
 });

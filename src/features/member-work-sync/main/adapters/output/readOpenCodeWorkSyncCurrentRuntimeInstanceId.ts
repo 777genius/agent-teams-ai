@@ -23,6 +23,60 @@ function readSessionIdentity(value: unknown): { laneId: string; sessionId: strin
   return { laneId, sessionId };
 }
 
+/**
+ * Orchestrator Stop events stamp `opencode:${laneId}`. Bind that stamp to the
+ * originating event session before comparing with desktop
+ * `opencode:${laneId}:${sessionId}` evidence. Never treat a lane-only id as
+ * every session on that lane.
+ */
+export function expandOpenCodeWorkSyncRuntimeInstanceId(
+  runtimeInstanceId: string | null | undefined,
+  sessionId: string | null | undefined
+): string | undefined {
+  const runtime = runtimeInstanceId?.trim() ?? '';
+  const session = sessionId?.trim() ?? '';
+  if (!runtime) {
+    return undefined;
+  }
+  if (!session) {
+    return runtime;
+  }
+  if (runtime.endsWith(`:${session}`)) {
+    return runtime;
+  }
+  const lastSegment = runtime.slice(runtime.lastIndexOf(':') + 1);
+  if (/^ses[-_]/i.test(lastSegment)) {
+    return runtime;
+  }
+  if (!runtime.startsWith('opencode:')) {
+    return runtime;
+  }
+  return `${runtime}:${session}`;
+}
+
+export function sameOpenCodeWorkSyncRuntimeInstanceId(
+  left?: string | null,
+  right?: string | null,
+  eventSessionId?: string | null
+): boolean {
+  const first = left?.trim() ?? '';
+  const second = right?.trim() ?? '';
+  if (!first || !second) {
+    return false;
+  }
+  if (first === second) {
+    return true;
+  }
+  const session = eventSessionId?.trim() ?? '';
+  if (!session) {
+    return false;
+  }
+  return (
+    expandOpenCodeWorkSyncRuntimeInstanceId(first, session) ===
+    expandOpenCodeWorkSyncRuntimeInstanceId(second, session)
+  );
+}
+
 export async function readOpenCodeWorkSyncCurrentRuntimeInstanceId(input: {
   teamsBasePath: string;
   teamName: string;

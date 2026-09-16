@@ -1,3 +1,5 @@
+import { sameOpenCodeWorkSyncRuntimeInstanceId } from './readOpenCodeWorkSyncCurrentRuntimeInstanceId';
+
 import type {
   MemberWorkSyncRuntimeTicket,
   MemberWorkSyncRuntimeTicketAdmissionPort,
@@ -36,7 +38,7 @@ export function createOpenCodeMemberWorkSyncRuntimeTicketAdmission(input: {
       if (
         currentRuntimeInstanceId &&
         request.runtimeInstanceId &&
-        currentRuntimeInstanceId !== request.runtimeInstanceId
+        !sameOpenCodeWorkSyncRuntimeInstanceId(currentRuntimeInstanceId, request.runtimeInstanceId)
       ) {
         return { admitted: false, code: 'instance_mismatch' };
       }
