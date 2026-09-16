@@ -9,24 +9,27 @@ import {
 } from '@features/member-work-sync/core/domain/MemberWorkSyncRecoveryTerminal';
 import { describe, expect, it } from 'vitest';
 
-import type { MemberWorkSyncRecoveryHealth } from '@features/member-work-sync/contracts';
+import type {
+  MemberWorkSyncRecoveryHealth,
+  MemberWorkSyncRecoveryReservation,
+} from '@features/member-work-sync/contracts';
+
+const seedReservation: MemberWorkSyncRecoveryReservation = {
+  intentId: 'intent-1',
+  episodeId: 'episode-1',
+  trigger: 'automatic',
+  reservedAt: '2026-09-11T12:00:00.000Z',
+  state: 'reserved',
+  payloadHash: 'hash-a',
+  controlRevision: 1,
+};
 
 const health: MemberWorkSyncRecoveryHealth = {
   schemaVersion: 1,
   episodes: [],
   unresolvedIntentId: 'intent-1',
   controlRevision: 1,
-  reservations: [
-    {
-      intentId: 'intent-1',
-      episodeId: 'episode-1',
-      trigger: 'automatic',
-      reservedAt: '2026-09-11T12:00:00.000Z',
-      state: 'reserved',
-      payloadHash: 'hash-a',
-      controlRevision: 1,
-    },
-  ],
+  reservations: [seedReservation],
 };
 
 describe('member work sync recovery terminal protocol', () => {
@@ -227,12 +230,12 @@ describe('member work sync recovery terminal protocol', () => {
     expect(next?.reservations?.[0]?.state).toBe('reserved');
   });
 
-  it('retires a manual continue slot after a later accepted report', () => {
+  it('does not retire a manual continue slot from an accepted report before delivery', () => {
     const manual: MemberWorkSyncRecoveryHealth = {
       ...health,
       reservations: [
         {
-          ...health.reservations[0]!,
+          ...seedReservation,
           trigger: 'manual',
           state: 'uncertain',
           terminalOutcome: 'retryable_refusal',
@@ -243,37 +246,37 @@ describe('member work sync recovery terminal protocol', () => {
       health: manual,
       reportedAt: '2026-09-11T12:01:00.000Z',
     });
-    expect(next?.unresolvedIntentId).toBeUndefined();
+    expect(next?.unresolvedIntentId).toBe('intent-1');
     expect(next?.reservations?.[0]).toMatchObject({
-      state: 'resolved',
-      terminalOutcome: 'settled',
-      terminalReceiptId: 'report-accepted:intent-1',
+      state: 'uncertain',
+      terminalOutcome: 'retryable_refusal',
     });
   });
 
-  it('retires a same-agenda automatic repair slot after a later accepted report', () => {
+  it('does not retire a pre-send early-continuation slot from a same-agenda accepted report', () => {
     const fingerprint = 'agenda:v1:same-agenda';
-    const repair: MemberWorkSyncRecoveryHealth = {
+    const intentId = `early-continuation:legacy:${fingerprint}:runtime-1:0`;
+    const occupied: MemberWorkSyncRecoveryHealth = {
       ...health,
-      unresolvedIntentId: `task-protocol-repair:${fingerprint}:task-1`,
+      unresolvedIntentId: intentId,
       reservations: [
         {
-          ...health.reservations[0]!,
-          intentId: `task-protocol-repair:${fingerprint}:task-1`,
+          ...seedReservation,
+          intentId,
           state: 'uncertain',
           terminalOutcome: 'retryable_refusal',
         },
       ],
     };
     const next = applyMemberWorkSyncAcceptedReportRetirement({
-      health: repair,
+      health: occupied,
       reportedAt: '2026-09-11T12:01:00.000Z',
       agendaFingerprint: fingerprint,
     });
-    expect(next?.unresolvedIntentId).toBeUndefined();
+    expect(next?.unresolvedIntentId).toBe(intentId);
     expect(next?.reservations?.[0]).toMatchObject({
-      state: 'resolved',
-      terminalOutcome: 'settled',
+      state: 'uncertain',
+      terminalOutcome: 'retryable_refusal',
     });
   });
 });

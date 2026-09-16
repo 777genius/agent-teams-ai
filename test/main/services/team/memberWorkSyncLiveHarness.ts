@@ -447,10 +447,11 @@ function sendJson(response: http.ServerResponse, statusCode: number, payload: un
 
 export async function readMemberWorkSyncOutboxItems(
   teamName: string,
-  memberName: string
+  memberName: string,
+  teamsBasePath = getTeamsBasePath()
 ): Promise<Record<string, { status?: string; payload?: { workSyncIntentKey?: string } }>> {
   const outboxPath = path.join(
-    getTeamsBasePath(),
+    teamsBasePath,
     teamName,
     'members',
     memberName,

@@ -91,8 +91,7 @@ export function applyMemberWorkSyncDeliveredDispatch(input: {
 
 function isRetirableAcceptedReportReservation(
   reservation: MemberWorkSyncRecoveryReservation | undefined,
-  reportedAtIso: string,
-  agendaFingerprint?: string
+  reportedAtIso: string
 ): reservation is MemberWorkSyncRecoveryReservation {
   if (!reservation) {
     return false;
@@ -101,35 +100,18 @@ function isRetirableAcceptedReportReservation(
   if (!Number.isFinite(reportedAt)) {
     return false;
   }
-  if (reservation.state === 'awaiting_outcome') {
-    const startedAtIso = reservation.deliveredAt;
-    if (!startedAtIso) {
-      return false;
-    }
-    const startedAt = Date.parse(startedAtIso);
-    return Number.isFinite(startedAt) && reportedAt >= startedAt;
+  // Only a delivered slot can be settled by a later accepted report. Reserved
+  // or uncertain pre-send intents keep occupying the lane until delivery or a
+  // real terminal refusal; same-agenda fingerprints must not retire them.
+  if (reservation.state !== 'awaiting_outcome') {
+    return false;
   }
-  // Manual continue reservations often stay reserved/uncertain when inbox
-  // delivery never flips them to awaiting_outcome. An accepted report after
-  // reserve still proves that slot was consumed, so D1 can admit next.
-  if (
-    reservation.trigger === 'manual' &&
-    (reservation.state === 'reserved' || reservation.state === 'uncertain')
-  ) {
-    const reservedAt = Date.parse(reservation.reservedAt);
-    return Number.isFinite(reservedAt) && reportedAt >= reservedAt;
+  const startedAtIso = reservation.deliveredAt;
+  if (!startedAtIso) {
+    return false;
   }
-  // Same-agenda automatic repair/status-only slots also yield to an accepted
-  // still_working report so early continuation can reserve the next settlement.
-  if (
-    agendaFingerprint &&
-    reservation.intentId.includes(agendaFingerprint) &&
-    (reservation.state === 'reserved' || reservation.state === 'uncertain')
-  ) {
-    const reservedAt = Date.parse(reservation.reservedAt);
-    return Number.isFinite(reservedAt) && reportedAt >= reservedAt;
-  }
-  return false;
+  const startedAt = Date.parse(startedAtIso);
+  return Number.isFinite(startedAt) && reportedAt >= startedAt;
 }
 
 export function applyMemberWorkSyncAcceptedReportRetirement(input: {
@@ -152,9 +134,7 @@ export function applyMemberWorkSyncAcceptedReportRetirement(input: {
     }
     seen.add(intentId);
     const reservation = health.reservations?.find((entry) => entry.intentId === intentId);
-    if (
-      !isRetirableAcceptedReportReservation(reservation, input.reportedAt, input.agendaFingerprint)
-    ) {
+    if (!isRetirableAcceptedReportReservation(reservation, input.reportedAt)) {
       continue;
     }
     health =
