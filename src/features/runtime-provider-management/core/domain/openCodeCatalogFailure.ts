@@ -2,6 +2,7 @@ import type { RuntimeProviderAuthMethodDto } from '../../contracts';
 
 export type OpenCodeCatalogFailureKind =
   | 'auth_reconnect'
+  | 'auth_reconnect_maybe'
   | 'auth_api_key'
   | 'timeout'
   | 'runtime_missing'
@@ -11,6 +12,7 @@ export type OpenCodeCatalogFailureKind =
 
 export type OpenCodeCatalogUserCopyKey =
   | 'catalogSignInExpired'
+  | 'catalogSignInMaybe'
   | 'catalogCheckCredential'
   | 'catalogLoadFailed'
   | 'catalogDirectoryFailed'
@@ -99,6 +101,15 @@ function looksLikeApiKeyProvider(input: OpenCodeCatalogFailureClassificationInpu
   return Boolean(input.authMethods?.includes('api') && !input.authMethods.includes('oauth'));
 }
 
+function hasHttpAuthStatus(lower: string, status: '401' | '403'): boolean {
+  const statusWord = status === '401' ? 'unauthorized|unauthorised' : 'forbidden';
+  return (
+    new RegExp(
+      String.raw`\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?)["']?\s*(?::|=|is|of)?\s*["']?${status}\b`
+    ).test(lower) || new RegExp(String.raw`\b${status}\s+(?:${statusWord})\b`).test(lower)
+  );
+}
+
 function looksLikeAuthFailureMessage(message: string): boolean {
   const lower = message.toLowerCase();
   return (
@@ -109,9 +120,8 @@ function looksLikeAuthFailureMessage(message: string): boolean {
     lower.includes('authentication failed') ||
     lower.includes('authentication required') ||
     lower.includes('not logged in') ||
-    lower.includes('unauthorized') ||
-    /\b401\b/.test(lower) ||
-    /\b403\b/.test(lower)
+    /\bunauthorized\b/.test(lower) ||
+    hasHttpAuthStatus(lower, '401')
   );
 }
 
@@ -152,15 +162,13 @@ export function describeOpenCodeCatalogFailure(
     input.errorCode === 'auth-required' ||
     looksLikeAuthFailureMessage(input.message)
   ) {
-    return { kind: 'auth_reconnect', key: 'catalogSignInExpired', provider };
-  }
-  if (isGenericOpenCodeCatalogFailureMessage(input.message)) {
-    if (looksLikeOAuthProvider(input)) {
-      return { kind: 'auth_reconnect', key: 'catalogSignInExpired', provider };
-    }
     if (looksLikeApiKeyProvider(input)) {
       return { kind: 'auth_api_key', key: 'catalogCheckCredential', provider };
     }
+    return { kind: 'auth_reconnect', key: 'catalogSignInExpired', provider };
+  }
+  if (isGenericOpenCodeCatalogFailureMessage(input.message) && looksLikeOAuthProvider(input)) {
+    return { kind: 'auth_reconnect_maybe', key: 'catalogSignInMaybe', provider };
   }
   return { kind: 'generic', key: 'catalogLoadFailed', provider };
 }

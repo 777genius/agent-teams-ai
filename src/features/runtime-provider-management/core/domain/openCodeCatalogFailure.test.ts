@@ -9,6 +9,8 @@ import {
 const KEYS = {
   catalogSignInExpired: (provider: string) =>
     `${provider} sign-in is no longer valid. Sign in again, then refresh.`,
+  catalogSignInMaybe: (provider: string) =>
+    `${provider} models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.`,
   catalogCheckCredential: (provider: string) =>
     `Couldn't load ${provider} models. Check the saved credential, then refresh.`,
   catalogLoadFailed: (provider: string) => `Couldn't load ${provider} models.`,
@@ -25,7 +27,7 @@ describe('openCodeCatalogFailure', () => {
     expect(catalogProviderDisplayName('openrouter', 'OpenRouter')).toBe('OpenRouter');
   });
 
-  it('explains sanitized SuperGrok OAuth catalog failures as a reconnect', () => {
+  it('explains sanitized SuperGrok OAuth catalog failures as a possible reconnect', () => {
     expect(
       describeOpenCodeCatalogFailure({
         operation: 'provider_models',
@@ -37,13 +39,13 @@ describe('openCodeCatalogFailure', () => {
         authMethods: ['oauth'],
       })
     ).toEqual({
-      kind: 'auth_reconnect',
-      key: 'catalogSignInExpired',
+      kind: 'auth_reconnect_maybe',
+      key: 'catalogSignInMaybe',
       provider: 'SuperGrok',
     });
   });
 
-  it('uses auth-failed from a newer runtime without guessing the provider kind', () => {
+  it('keeps assertive reconnect copy for an explicit auth-failed code', () => {
     expect(
       describeOpenCodeCatalogFailure({
         operation: 'provider_models',
@@ -61,7 +63,7 @@ describe('openCodeCatalogFailure', () => {
     });
   });
 
-  it('asks API-key providers to check the saved credential', () => {
+  it('does not blame a saved credential for a generic API-key catalog crash', () => {
     expect(
       describeOpenCodeCatalogFailure({
         operation: 'provider_models',
@@ -74,8 +76,8 @@ describe('openCodeCatalogFailure', () => {
         authMethods: ['api'],
       })
     ).toEqual({
-      kind: 'auth_api_key',
-      key: 'catalogCheckCredential',
+      kind: 'generic',
+      key: 'catalogLoadFailed',
       provider: 'OpenRouter',
     });
   });
@@ -93,8 +95,8 @@ describe('openCodeCatalogFailure', () => {
         authMethods: ['oauth', 'api'],
       })
     ).toEqual({
-      kind: 'auth_api_key',
-      key: 'catalogCheckCredential',
+      kind: 'generic',
+      key: 'catalogLoadFailed',
       provider: 'xAI',
     });
   });
@@ -117,7 +119,48 @@ describe('openCodeCatalogFailure', () => {
     });
   });
 
-  it('formats the dashboard headline for a single SuperGrok failure', () => {
+  it('treats timeout before a coincidental 401 in the same message', () => {
+    expect(
+      describeOpenCodeCatalogFailure({
+        operation: 'provider_models',
+        sourceProviderId: 'xai',
+        origin: 'main',
+        message: 'timed out after 401 ms',
+        errorCode: 'runtime-unhealthy',
+        connectedAuthHint: 'oauth',
+      })
+    ).toEqual({
+      kind: 'timeout',
+      key: 'catalogTimedOut',
+      provider: 'SuperGrok',
+    });
+  });
+
+  it('does not treat coincidental 401/403 numbers or forbidden identifiers as auth', () => {
+    for (const message of [
+      'exited with code 1 after writing 403 bytes',
+      'missing field: forbiddenModels',
+      'unauthorized_user lookup failed',
+      'build-401/models.json',
+    ]) {
+      expect(
+        describeOpenCodeCatalogFailure({
+          operation: 'provider_models',
+          sourceProviderId: 'xai',
+          origin: 'main',
+          message,
+          errorCode: 'runtime-unhealthy',
+          connectedAuthHint: 'oauth',
+        })
+      ).toEqual({
+        kind: 'generic',
+        key: 'catalogLoadFailed',
+        provider: 'SuperGrok',
+      });
+    }
+  });
+
+  it('formats the dashboard headline for a sanitized SuperGrok failure', () => {
     expect(
       formatOpenCodeCatalogAlertMessage(
         [
@@ -131,6 +174,8 @@ describe('openCodeCatalogFailure', () => {
         ],
         (key, provider) => KEYS[key](provider)
       )
-    ).toBe('SuperGrok sign-in is no longer valid. Sign in again, then refresh.');
+    ).toBe(
+      'SuperGrok models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.'
+    );
   });
 });
