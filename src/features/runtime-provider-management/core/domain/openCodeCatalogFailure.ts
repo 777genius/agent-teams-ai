@@ -102,11 +102,16 @@ function looksLikeApiKeyProvider(input: OpenCodeCatalogFailureClassificationInpu
 }
 
 function hasHttpAuthStatus(lower: string): boolean {
-  return (
-    /\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?)["']?\s*(?::|=|is|of)?\s*["']?401\b/.test(
-      lower
-    ) || /\b401\s+(?:unauthorized|unauthorised)\b/.test(lower)
-  );
+  if (/\bhttp(?:\s+status)?[:\s=]+401\b/.test(lower)) {
+    return true;
+  }
+  if (/\bstatus(?:[\s_-]*code)?[:\s=]+401\b/.test(lower)) {
+    return true;
+  }
+  if (/\berror(?:[\s_-]*code)?[:\s=]+401\b/.test(lower)) {
+    return true;
+  }
+  return /\b401\s+unauthori[sz]ed\b/.test(lower);
 }
 
 function looksLikeUnauthorizedToken(lower: string): boolean {
@@ -195,8 +200,12 @@ export function formatOpenCodeCatalogAlertMessage(
   if (lines.length === 0) {
     return translate('catalogDirectoryFailed', 'OpenCode');
   }
-  if (lines.length === 1) {
-    return lines[0]!;
+  const headline = lines[0];
+  if (headline === undefined) {
+    return translate('catalogDirectoryFailed', 'OpenCode');
   }
-  return `${lines[0]} (+${failures.length - 1})`;
+  if (lines.length === 1) {
+    return headline;
+  }
+  return `${headline} (+${failures.length - 1})`;
 }
