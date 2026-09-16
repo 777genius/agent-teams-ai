@@ -1,7 +1,5 @@
-/**
- * Stable compatibility facade for callers that still import the legacy teams IPC module.
- * Compatibility state and wiring live in the outer ACL. Message and attachment policy remains
- * owned by the extracted team-message-delivery feature rather than this shared IPC shell.
+/** Stable compatibility facade for callers that still import the legacy teams IPC module.
+ * Compatibility state and wiring live in the outer ACL; message policy stays in its feature.
  */
 import { TeamPermanentDeletionTransactionCoordinator } from '@features/team-view-read-model/main';
 
@@ -31,7 +29,6 @@ import type { DesktopTeamRuntimeCapability } from './teamFeatureCapabilities';
 import type { TeamPermanentDeletionLifecycle } from './teamLegacyAdapters';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { IpcMain } from 'electron';
-
 export { showTeamNativeNotification } from './teamAuxiliaryIpc';
 export {
   createIdentityFencedProvisioningStart,

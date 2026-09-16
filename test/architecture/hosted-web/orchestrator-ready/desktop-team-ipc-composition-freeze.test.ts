@@ -72,6 +72,10 @@ const EXPECTED_REGISTRATIONS = [
     'registerTeamMessageDeliveryIpc',
     ['createTeamMessageDeliveryIpcMainPort(ipcMain)', 'adapters.messageDelivery'],
   ],
+  [
+    'registerTeamQueuedUserMessagesIpc',
+    ['ipcMain', 'dependencies.teamDataService', 'executeLegacyTeamHandler'],
+  ],
   ['registerLegacyTeamProcessIpc', ['ipcMain', 'adapters.legacyProcess']],
   ['registerTeamRosterMutationIpc', ['ipcMain', 'adapters.rosterMutation']],
   ['registerTeamViewReadModelIpc', ['ipcMain', 'adapters.viewReadModel']],
@@ -88,6 +92,7 @@ const EXPECTED_REMOVALS = [
   'removeTeamProvisioningIpc',
   'removeTeamConfigurationIpc',
   'removeTeamMessageDeliveryIpc',
+  'removeTeamQueuedUserMessagesIpc',
   'removeLegacyTeamProcessIpc',
   'removeTeamRosterMutationIpc',
   'removeTeamViewReadModelIpc',
@@ -327,9 +332,15 @@ function assertCoordinatorSemantics(contents: string): void {
     'TeamPermanentDeletionTransactionCoordinator'
   );
   const cleanup = findMethod(parsed, 'runCleanup', 'TeamPermanentDeletionTransactionCoordinator');
+  const fencedCleanup = findMethod(
+    parsed,
+    'runFencedCleanup',
+    'TeamPermanentDeletionTransactionCoordinator'
+  );
   if (
     !hasModifier(permanentlyDelete, ts.SyntaxKind.AsyncKeyword) ||
-    !hasModifier(cleanup, ts.SyntaxKind.AsyncKeyword)
+    !hasModifier(cleanup, ts.SyntaxKind.AsyncKeyword) ||
+    !hasModifier(fencedCleanup, ts.SyntaxKind.AsyncKeyword)
   ) {
     fail('permanent deletion transaction methods must remain async');
   }
@@ -354,7 +365,26 @@ function assertCoordinatorSemantics(contents: string): void {
 
   const cleanupCalls = semanticCalls(cleanup);
   const cleanupSequence = [
-    'prepareTeamDeletion',
+    'reconcilePermanentDeletionProgress',
+    'isPermanentDeletionTargetCurrent',
+    'prepareTeamDeletionWithTimeout',
+    'isPermanentDeletionTargetCurrent',
+    'runFencedCleanup',
+    'restoreTeamScopedResources',
+  ];
+  assertEqual(
+    cleanupCalls
+      .filter((call) => cleanupSequence.some((suffix) => call.path.endsWith(suffix)))
+      .map((call) => cleanupSequence.find((suffix) => call.path.endsWith(suffix))),
+    cleanupSequence,
+    'permanent-deletion orchestration sequence'
+  );
+  assertAwaitedCall(cleanupCalls, 'backupService.reconcilePermanentDeletionProgress');
+  assertAwaitedCall(cleanupCalls, 'this.runFencedCleanup');
+
+  const fencedCleanupCalls = semanticCalls(fencedCleanup);
+  const destructiveSequence = [
+    'releaseTeamScopedResourcesUnderFence',
     'permanentlyDeleteTeam',
     'invalidateTeamConfig',
     'attachmentStore.deleteTeamAttachments',
@@ -363,13 +393,18 @@ function assertCoordinatorSemantics(contents: string): void {
     'completeTeamDeletion',
   ];
   assertEqual(
-    cleanupCalls
-      .filter((call) => cleanupSequence.some((suffix) => call.path.endsWith(suffix)))
-      .map((call) => cleanupSequence.find((suffix) => call.path.endsWith(suffix))),
-    cleanupSequence,
-    'permanent-deletion cleanup sequence'
+    fencedCleanupCalls
+      .filter((call) => destructiveSequence.some((suffix) => call.path.endsWith(suffix)))
+      .map((call) => destructiveSequence.find((suffix) => call.path.endsWith(suffix))),
+    destructiveSequence,
+    'fenced permanent-deletion cleanup sequence'
   );
-  assertAwaitedCall(cleanupCalls, 'backupService.completePermanentDeletion');
+  assertAwaitedCall(fencedCleanupCalls, 'backupService.withPermanentDeletionTargetFence');
+  assertAwaitedCall(fencedCleanupCalls, 'this.releaseTeamScopedResourcesUnderFence');
+  assertAwaitedCall(fencedCleanupCalls, 'this.ports.dataService().permanentlyDeleteTeam');
+  assertAwaitedCall(fencedCleanupCalls, 'this.ports.attachmentStore.deleteTeamAttachments');
+  assertAwaitedCall(fencedCleanupCalls, 'this.ports.taskAttachmentStore.deleteTeamAttachments');
+  assertAwaitedCall(fencedCleanupCalls, 'backupService.completePermanentDeletion');
 }
 
 function replaceOnce(contents: string, before: string, after: string): string {
@@ -504,6 +539,13 @@ describe('desktop team IPC composition freeze', () => {
         ({ path }) => path === 'createDesktopTeamLegacyAdapters'
       )
     ).toHaveLength(1);
+    expect(compositionSource).toContain(
+      'export interface DesktopTeamFeatureCompositionDependencies\n  extends DesktopTeamLegacyAdapterDependencies {'
+    );
+    expect(compositionSource).toContain(
+      'teamScopedResourceReleaser?: TeamScopedResourceReleaser;'
+    );
+    expect(compositionSource).toContain('dependencies.teamScopedResourceReleaser');
     expect(
       semanticCalls(compositionParsed).some(
         ({ path }) =>
@@ -632,12 +674,28 @@ describe('desktop team IPC composition freeze', () => {
       'await backupService.completePermanentDeletion(intent);',
       'backupService.completePermanentDeletion(intent);'
     );
+    const cleanupWithoutAwait = replaceOnce(
+      permanentDeletionCoordinatorSource,
+      'deletionCompleted = await this.runFencedCleanup(',
+      'deletionCompleted = this.runFencedCleanup('
+    );
+    const fenceWithoutAwait = replaceOnce(
+      permanentDeletionCoordinatorSource,
+      'const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(',
+      'const cleanupCompleted = backupService.withPermanentDeletionTargetFence('
+    );
 
     expect(() => assertCoordinatorSemantics(boundaryWithoutAwait)).toThrow(
       /commitPermanentDeletionBoundary must occur exactly once beneath await/
     );
     expect(() => assertCoordinatorSemantics(completionWithoutAwait)).toThrow(
       /completePermanentDeletion must occur exactly once beneath await/
+    );
+    expect(() => assertCoordinatorSemantics(cleanupWithoutAwait)).toThrow(
+      /runFencedCleanup must occur exactly once beneath await/
+    );
+    expect(() => assertCoordinatorSemantics(fenceWithoutAwait)).toThrow(
+      /withPermanentDeletionTargetFence must occur exactly once beneath await/
     );
   });
 });
