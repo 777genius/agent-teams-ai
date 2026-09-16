@@ -20,6 +20,11 @@ import {
 } from '../../../features/member-work-sync/helpers/createOwnedWorkSyncIdentity';
 
 import {
+  type ClaudeJsonProjectTrustEdit,
+  revertClaudeJsonProjectTrust,
+  upsertTrustedClaudeProjectConfig,
+} from './claudeJsonProjectTrust';
+import {
   assertExecutable,
   FatalWaitError,
   formatMemberWorkSyncDiagnostics,
@@ -68,7 +73,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
   let previousUserProfile: string | undefined;
   let previousDisableAppBootstrap: string | undefined;
   let previousDisableRuntimeBootstrap: string | undefined;
-  let previousClaudeJsonConfig: string | null | undefined;
+  let claudeJsonTrustEdit: ClaudeJsonProjectTrustEdit | undefined;
   let previousTeamControlApiJson: string | null | undefined;
   let usingConnectedClaudeAccount = false;
   let claudeJsonConfigRoot: string;
@@ -147,7 +152,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     feature = null;
     controlServer = null;
     teamName = null;
-    previousClaudeJsonConfig = undefined;
+    claudeJsonTrustEdit = undefined;
     previousTeamControlApiJson = undefined;
     owned = await createOwnedWorkSyncIdentity();
   });
@@ -171,8 +176,8 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
       await fs.rm(path.join(getTasksBasePath(), teamName), { recursive: true, force: true });
     }
-    if (usingConnectedClaudeAccount && previousClaudeJsonConfig !== undefined) {
-      await restoreClaudeJsonConfig(claudeJsonConfigRoot, previousClaudeJsonConfig);
+    if (usingConnectedClaudeAccount && claudeJsonTrustEdit) {
+      await revertClaudeJsonProjectTrust(claudeJsonTrustEdit);
     }
     if (previousTeamControlApiJson !== undefined) {
       await restoreNamedConfigFile(
@@ -226,7 +231,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -355,7 +360,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live crash canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -526,7 +531,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
       '# Member work sync recovery Claude live progress canary\n\nDisposable sandbox only.\n',
       'utf8'
     );
-    previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+    claudeJsonTrustEdit = await upsertTrustedClaudeProjectConfig(
       claudeJsonConfigRoot,
       projectPath
     );
@@ -895,57 +900,6 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
   }, 1_200_000);
 });
 
-async function upsertTrustedClaudeProjectConfig(
-  configDir: string,
-  projectPath: string
-): Promise<string | null> {
-  const canonicalProjectPath = await fs.realpath(projectPath).catch(() => projectPath);
-  const projectKeys = [
-    ...new Set([
-      path.normalize(projectPath).replace(/\\/g, '/'),
-      path.normalize(canonicalProjectPath).replace(/\\/g, '/'),
-    ]),
-  ];
-  const configPaths = [path.join(configDir, '.claude.json')];
-  const homeDir = process.env.HOME?.trim();
-  if (homeDir) {
-    const homeConfigPath = path.join(homeDir, '.claude.json');
-    if (homeConfigPath !== configPaths[0]) {
-      configPaths.push(homeConfigPath);
-    }
-  }
-  let previous: string | null = null;
-  for (const [index, configPath] of configPaths.entries()) {
-    const raw = await fs.readFile(configPath, 'utf8').catch((error) => {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    });
-    if (index === 0) {
-      previous = raw;
-    }
-    const existing = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-    const projects =
-      existing.projects && typeof existing.projects === 'object' && !Array.isArray(existing.projects)
-        ? { ...(existing.projects as Record<string, unknown>) }
-        : {};
-    for (const projectKey of projectKeys) {
-      const currentProject =
-        projects[projectKey] &&
-        typeof projects[projectKey] === 'object' &&
-        !Array.isArray(projects[projectKey])
-          ? (projects[projectKey] as Record<string, unknown>)
-          : {};
-      projects[projectKey] = {
-        ...currentProject,
-        hasTrustDialogAccepted: true,
-      };
-    }
-    await fs.mkdir(path.dirname(configPath), { recursive: true });
-    await fs.writeFile(configPath, `${JSON.stringify({ ...existing, projects }, null, 2)}\n`, 'utf8');
-  }
-  return previous;
-}
-
 function resolveConnectedClaudeHome(): string {
   const explicit = process.env.MEMBER_WORK_SYNC_CLAUDE_CONNECTED_HOME?.trim();
   if (explicit) {
@@ -970,10 +924,6 @@ async function removeTempDirBestEffort(dir: string): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-}
-
-async function restoreClaudeJsonConfig(configDir: string, previous: string | null): Promise<void> {
-  await restoreNamedConfigFile(configDir, '.claude.json', previous);
 }
 
 async function restoreNamedConfigFile(
