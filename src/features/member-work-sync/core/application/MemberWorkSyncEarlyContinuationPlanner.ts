@@ -13,6 +13,10 @@ import {
 import { hasActiveAcceptedWorkLease } from './MemberWorkSyncNudgeRecoveryPolicy';
 import { reserveMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryAllocator';
 import { retireMemberWorkSyncRecoveryIntent } from './MemberWorkSyncRecoveryDispatchOutcome';
+import {
+  bindMemberWorkSyncLastSettlementIntent,
+  peekMemberWorkSyncLastSettlementBinding,
+} from './memberWorkSyncSettlementReplay';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -281,6 +285,17 @@ export async function planMemberWorkSyncEarlyContinuation(
     return { planned: false, code: 'status_not_nudgeable' };
   }
   const recoveryInput = buildEarlyContinuationInput(status, baseInput, deps.hash, settlement);
+  const binding = peekMemberWorkSyncLastSettlementBinding({
+    teamName: status.teamName,
+    memberName: status.memberName,
+  });
+  if (
+    binding?.boundIntentId &&
+    binding.settlement.sourceId === settlement.sourceId &&
+    binding.boundIntentId !== recoveryInput.id
+  ) {
+    return { planned: false, code: 'early_continuation_rejected' };
+  }
   const admission = deps.runtimeTicketAdmission!;
   if (admission.readLiveControl) {
     const live = await admission.readLiveControl({
@@ -379,6 +394,12 @@ export async function planMemberWorkSyncEarlyContinuation(
       });
       return { planned: false, code: 'payload_conflict' };
     }
+    bindMemberWorkSyncLastSettlementIntent({
+      teamName: status.teamName,
+      memberName: status.memberName,
+      intentId: ticketedInput.id,
+      settlement,
+    });
     return {
       planned: isOutboxItemAwaitingDelivery(ensured.item),
       code: ensured.outcome,

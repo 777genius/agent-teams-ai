@@ -222,4 +222,13 @@ describe('member work sync recovery terminal protocol', () => {
       terminalReceiptId: 'report-accepted:intent-1',
     });
   });
+
+  it('does not retire a reserved slot from an uncorrelated accepted report', () => {
+    const next = applyMemberWorkSyncAcceptedReportRetirement({
+      health,
+      reportedAt: '2026-09-11T12:01:00.000Z',
+    });
+    expect(next?.unresolvedIntentId).toBe('intent-1');
+    expect(next?.reservations?.[0]?.state).toBe('reserved');
+  });
 });

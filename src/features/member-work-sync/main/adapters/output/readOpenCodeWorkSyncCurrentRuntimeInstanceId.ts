@@ -24,13 +24,40 @@ function readSessionIdentity(value: unknown): { laneId: string; sessionId: strin
 }
 
 /**
- * Orchestrator Stop events stamp `opencode:${laneId}`. Desktop lane evidence
- * also records the session as `opencode:${laneId}:${sessionId}`. Treat those
- * as the same live instance so early continuation can handshake.
+ * Orchestrator Stop events stamp `opencode:${laneId}`. Bind that stamp to the
+ * originating event session before comparing with desktop
+ * `opencode:${laneId}:${sessionId}` evidence. Never treat a lane-only id as
+ * every session on that lane.
  */
+export function expandOpenCodeWorkSyncRuntimeInstanceId(
+  runtimeInstanceId: string | null | undefined,
+  sessionId: string | null | undefined
+): string | undefined {
+  const runtime = runtimeInstanceId?.trim() ?? '';
+  const session = sessionId?.trim() ?? '';
+  if (!runtime) {
+    return undefined;
+  }
+  if (!session) {
+    return runtime;
+  }
+  if (runtime.endsWith(`:${session}`)) {
+    return runtime;
+  }
+  const lastSegment = runtime.slice(runtime.lastIndexOf(':') + 1);
+  if (/^ses[-_]/i.test(lastSegment)) {
+    return runtime;
+  }
+  if (!runtime.startsWith('opencode:')) {
+    return runtime;
+  }
+  return `${runtime}:${session}`;
+}
+
 export function sameOpenCodeWorkSyncRuntimeInstanceId(
   left?: string | null,
-  right?: string | null
+  right?: string | null,
+  eventSessionId?: string | null
 ): boolean {
   const first = left?.trim() ?? '';
   const second = right?.trim() ?? '';
@@ -40,12 +67,14 @@ export function sameOpenCodeWorkSyncRuntimeInstanceId(
   if (first === second) {
     return true;
   }
-  const prefix = 'opencode:';
-  if (!first.startsWith(prefix) || !second.startsWith(prefix)) {
+  const session = eventSessionId?.trim() ?? '';
+  if (!session) {
     return false;
   }
-  const [shorter, longer] = first.length <= second.length ? [first, second] : [second, first];
-  return longer.startsWith(`${shorter}:`);
+  return (
+    expandOpenCodeWorkSyncRuntimeInstanceId(first, session) ===
+    expandOpenCodeWorkSyncRuntimeInstanceId(second, session)
+  );
 }
 
 export async function readOpenCodeWorkSyncCurrentRuntimeInstanceId(input: {

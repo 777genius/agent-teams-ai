@@ -85,14 +85,29 @@ describe('OpenCode work-sync lane reservation', () => {
     ).toBe('user_wins');
   });
 
-  it('treats orchestrator lane identity as the same instance as desktop session identity', () => {
+  it('does not treat a lane-only id as every session on that lane', () => {
     expect(
       sameOpenCodeWorkSyncRuntimeInstanceId('opencode:lane-jack', 'opencode:lane-jack:ses-new')
+    ).toBe(false);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId(
+        'opencode:lane-jack',
+        'opencode:lane-jack:ses-new',
+        'ses-new'
+      )
     ).toBe(true);
     expect(
       sameOpenCodeWorkSyncRuntimeInstanceId(
+        'opencode:lane-jack',
+        'opencode:lane-jack:ses-new',
+        'ses-old'
+      )
+    ).toBe(false);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId(
         'opencode:secondary:opencode:bob',
-        'opencode:secondary:opencode:bob:ses-1'
+        'opencode:secondary:opencode:bob:ses-1',
+        'ses-1'
       )
     ).toBe(true);
     expect(
@@ -100,28 +115,26 @@ describe('OpenCode work-sync lane reservation', () => {
     ).toBe(false);
   });
 
-  it('admits a lane-only settlement against the current lane session', async () => {
+  it('rejects a lane-only settlement against a different live session', async () => {
     resetOpenCodeWorkSyncLaneReservationsForTests();
     const admission = createOpenCodeMemberWorkSyncRuntimeTicketAdmission({
       reserve: async () => ({ ok: true }),
       cancel: async () => undefined,
       readCurrentRuntimeInstanceId: () => 'opencode:lane-jack:ses-new',
     });
-    const admitted = await admission.admit({
-      teamName: 'team-a',
-      memberName: 'bob',
-      teamIncarnation: 'inc-1',
-      intentId: 'intent-c1',
-      admissionPayloadHash: 'hash-a',
-      expectedGeneration: 3,
-      runtimeInstanceId: 'opencode:lane-jack',
-      controlRevision: 1,
-      providerId: 'opencode',
-    });
-    expect(admitted).toMatchObject({
-      admitted: true,
-      ticket: { runtimeInstanceId: 'opencode:lane-jack' },
-    });
+    await expect(
+      admission.admit({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        intentId: 'intent-c1',
+        admissionPayloadHash: 'hash-a',
+        expectedGeneration: 3,
+        runtimeInstanceId: 'opencode:lane-jack',
+        controlRevision: 1,
+        providerId: 'opencode',
+      })
+    ).resolves.toEqual({ admitted: false, code: 'instance_mismatch' });
   });
 
   it('rejects a settlement identity that does not match the current lane', async () => {
@@ -300,7 +313,7 @@ describe('OpenCode work-sync lane reservation', () => {
     ).resolves.toEqual({ ok: true, code: 'open', controlRevision: 1 });
   });
 
-  it('handshakes OpenCode control when settlement identity is the lane prefix of the live session', async () => {
+  it('rejects a lane-only settlement when live evidence is a different session', async () => {
     const root = await mkdtemp(join(tmpdir(), 'opencode-factory-prefix-'));
     const laneDir = join(root, 'team-a', '.opencode-runtime', 'lanes', 'lane-jack');
     await mkdir(laneDir, { recursive: true });
@@ -328,7 +341,7 @@ describe('OpenCode work-sync lane reservation', () => {
         controlRevision: 1,
         stopped: false,
       })
-    ).resolves.toEqual({ ok: true, code: 'open', controlRevision: 1 });
+    ).resolves.toEqual({ ok: false, code: 'instance_mismatch' });
   });
 
   it('does not fake an OpenCode handshake without a settlement or session identity', async () => {

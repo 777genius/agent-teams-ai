@@ -8,8 +8,9 @@ import {
 import {
   buildMemberWorkSyncTurnSettledSettlement,
   dropMemberWorkSyncLastSettlementsForTeam,
-  rememberMemberWorkSyncLastSettlement,
+  isMemberWorkSyncSettlementReplayTrigger,
   resetMemberWorkSyncLastSettlements,
+  resolveQueuedMemberWorkSyncSettlement,
 } from './memberWorkSyncLastSettlementStore';
 import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
 
@@ -216,10 +217,11 @@ export class MemberWorkSyncEventQueue {
 
     const key = keyOf(teamName, memberName);
     const now = this.now();
-    const settlement = rememberMemberWorkSyncLastSettlement({
+    const settlement = resolveQueuedMemberWorkSyncSettlement({
       teamName,
       memberName,
-      settlement: input.settlement,
+      triggerReason: input.triggerReason,
+      incoming: input.settlement,
     });
     const timing = this.resolveTimingPolicy(input.triggerReason, input.runAfterMs);
     const runAt = now + timing.runAfterMs;
@@ -586,12 +588,14 @@ export class MemberWorkSyncEventQueue {
   private enqueueFollowUp(item: QueueItem, running: RunningItem): void {
     const reasons = [...running.triggerReasons].sort();
     const recovery = running.recovery ?? item.recovery;
-    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     const primaryReason =
       reasons.find((reason) => reason === 'manual_refresh') ??
       reasons.find((reason) => reason === 'turn_settled' || reason === 'tool_finished') ??
       reasons[0] ??
       'manual_refresh';
+    const settlement = isMemberWorkSyncSettlementReplayTrigger(primaryReason)
+      ? preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement)
+      : undefined;
     this.enqueue({
       teamName: item.teamName,
       memberName: item.memberName,

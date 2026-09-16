@@ -1,5 +1,4 @@
 import { MemberWorkSyncReconciler, type MemberWorkSyncUseCaseDeps } from '../../core/application';
-import { readOpenCodeWorkSyncCurrentRuntimeInstanceId } from '../adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
 import { peekMemberWorkSyncLastSettlement } from '../infrastructure/memberWorkSyncLastSettlementStore';
 
 import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
@@ -10,25 +9,7 @@ export async function resolveMemberWorkSyncRefreshSettlement(input: {
   teamsBasePath: string;
   nowIso: string;
 }): Promise<MemberWorkSyncReconcileContext['settlement']> {
-  const remembered = peekMemberWorkSyncLastSettlement(input.request);
-  if (remembered) {
-    return remembered;
-  }
-  const runtimeInstanceId = await readOpenCodeWorkSyncCurrentRuntimeInstanceId({
-    teamsBasePath: input.teamsBasePath,
-    teamName: input.request.teamName,
-    memberName: input.request.memberName,
-  });
-  if (!runtimeInstanceId) {
-    return undefined;
-  }
-  return {
-    sourceId: `manual-refresh:${runtimeInstanceId}`,
-    recordedAt: input.nowIso,
-    runtimeInstanceId,
-    completedGeneration: 1,
-    outcome: 'success',
-  };
+  return peekMemberWorkSyncLastSettlement(input.request);
 }
 
 export async function refreshMemberWorkSyncStatus<TAdmission>(input: {

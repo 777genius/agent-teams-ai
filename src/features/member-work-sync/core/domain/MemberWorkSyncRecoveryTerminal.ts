@@ -95,9 +95,7 @@ function isRetirableAcceptedReportReservation(
 ): reservation is MemberWorkSyncRecoveryReservation {
   if (
     !reservation ||
-    (reservation.state !== 'awaiting_outcome' &&
-      reservation.state !== 'uncertain' &&
-      reservation.state !== 'reserved')
+    (reservation.state !== 'awaiting_outcome' && reservation.state !== 'uncertain')
   ) {
     return false;
   }

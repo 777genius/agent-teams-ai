@@ -2,6 +2,7 @@ import {
   buildRuntimeTurnSettledSourceId,
   type RuntimeTurnSettledProvider,
 } from '../../core/domain';
+import { expandOpenCodeWorkSyncRuntimeInstanceId } from '../adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
 
 import type {
   MemberWorkSyncHashPort,
@@ -103,13 +104,18 @@ export class OpenCodeTurnSettledPayloadNormalizer implements RuntimeTurnSettledP
     const agentId = getString(payload, 'agentId', 'agent_id', 'laneId', 'lane_id');
     const outcome = getString(payload, 'outcome');
     const laneId = getString(payload, 'laneId', 'lane_id', 'agentId', 'agent_id');
-    const runtimeInstanceId =
-      getString(payload, 'runtimeInstanceId', 'runtime_instance_id') ??
-      (laneId && sessionId
+    const stampedRuntimeInstanceId = getString(payload, 'runtimeInstanceId', 'runtime_instance_id');
+    const derivedRuntimeInstanceId =
+      laneId && sessionId
         ? `opencode:${laneId}:${sessionId}`
         : laneId
           ? `opencode:${laneId}`
-          : `opencode:${sessionId}`);
+          : `opencode:${sessionId}`;
+    const runtimeInstanceId =
+      expandOpenCodeWorkSyncRuntimeInstanceId(
+        stampedRuntimeInstanceId ?? derivedRuntimeInstanceId,
+        sessionId
+      ) ?? derivedRuntimeInstanceId;
     const completedGenerationRaw = payload.completedGeneration ?? payload.completed_generation;
     const completedGeneration =
       typeof completedGenerationRaw === 'number' && Number.isInteger(completedGenerationRaw)

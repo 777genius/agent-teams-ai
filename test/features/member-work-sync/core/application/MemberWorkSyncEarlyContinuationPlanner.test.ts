@@ -3,7 +3,8 @@ import {
   MemberWorkSyncNudgeOutboxPlanner,
 } from '@features/member-work-sync/core/application';
 import { EARLY_CONTINUATION_INTENT_PREFIX } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanHelpers';
-import { describe, expect, it } from 'vitest';
+import { resetMemberWorkSyncLastSettlements } from '@features/member-work-sync/core/application/memberWorkSyncSettlementReplay';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -299,6 +300,9 @@ function createDeps(options: {
 }
 
 describe('protocol-2 early continuation', () => {
+  afterEach(() => {
+    resetMemberWorkSyncLastSettlements();
+  });
   it('stays disabled on protocol 1 even when a ticket port exists', async () => {
     const { deps, outbox } = createDeps({
       protocol: 1,
@@ -359,6 +363,32 @@ describe('protocol-2 early continuation', () => {
     expect(item?.payload.workSyncRuntimeTicketId).toBe('ticket-1');
     expect(item?.payload.workSyncRuntimeGeneration).toBe(1);
     expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).toBe(item?.id);
+  });
+
+  it('does not reuse a consumed settlement for a new agenda fingerprint', async () => {
+    const current = remainingWorkStatus();
+    const { deps, outbox, stored } = createDeps({ ticket: admittingTicket(), status: current });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const firstId = [...outbox.items.keys()][0];
+    const changed = remainingWorkStatus({
+      agenda: { ...current.agenda, fingerprint: 'agenda:v2:changed' },
+      lastAcceptedReport: {
+        ...current.lastAcceptedReport!,
+        agendaFingerprint: 'agenda:v2:changed',
+      },
+      recoveryHealth: stored.get('team-a:bob')?.recoveryHealth,
+    });
+    stored.set('team-a:bob', changed);
+    await expect(planner.planEarlyContinuation(changed, settlement)).resolves.toEqual({
+      planned: false,
+      code: 'early_continuation_rejected',
+    });
+    expect(outbox.items.size).toBe(1);
+    expect(outbox.items.has(firstId!)).toBe(true);
   });
 
   it('does not allocate when the ticket says the runtime is busy', async () => {
@@ -468,7 +498,7 @@ describe('protocol-2 early continuation', () => {
       reviewPickupDelivery: true,
     });
     outbox.deliveredReviewRequestEventIds = ['evt-reviewed-once'];
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
     expect(outbox.findDeliveredCalls).toBeGreaterThan(0);
     expect(outbox.items.size).toBe(0);
   });
