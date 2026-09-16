@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { memberWorkSyncMetricEvents, memberWorkSyncStatus } from './internalStorageSchema';
-import { toPersistenceRow } from './memberWorkSyncWorkerState';
+import { STATUS_RECORD_SELECTION, toPersistenceRow } from './memberWorkSyncWorkerState';
 
 import type {
   MemberWorkSyncMetricEventRecord,
@@ -117,7 +117,8 @@ export function compareAndWriteMemberWorkSyncStatus(
     if (!changed) {
       return {
         committed: false,
-        current: orm.select().from(memberWorkSyncStatus).where(key).all()[0] ?? null,
+        current:
+          orm.select(STATUS_RECORD_SELECTION).from(memberWorkSyncStatus).where(key).all()[0] ?? null,
       };
     }
     appendMetrics(orm, record.teamName, events);
