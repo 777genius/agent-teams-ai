@@ -26,6 +26,7 @@ export type RuntimeRecoveryPlan =
       reason:
         | 'disabled'
         | 'not_retryable'
+        | 'user_cancelled'
         | 'attempts_exhausted'
         | 'invalid_time'
         | 'schedule_too_far';
@@ -89,6 +90,9 @@ export function planRuntimeRecovery(input: {
   }
   if (input.classification.disposition === 'retry_transient' && !config.transientErrorsEnabled) {
     return { kind: 'manual', reason: 'disabled' };
+  }
+  if (input.classification.reasonCode === 'user_cancelled') {
+    return { kind: 'manual', reason: 'user_cancelled' };
   }
   if (!isRateLimitRecovery && input.classification.disposition !== 'retry_transient') {
     return { kind: 'manual', reason: 'not_retryable' };

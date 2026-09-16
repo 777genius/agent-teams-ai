@@ -189,6 +189,8 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
       'cancelled by user',
       'canceled by user',
       'apiuseraborterror',
+      'force_stop_requested',
+      'user force stop',
     ])
   ) {
     return result('user_cancelled', 'manual', normalizedDetail, { statusCode });

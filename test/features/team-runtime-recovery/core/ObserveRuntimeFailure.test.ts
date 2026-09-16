@@ -315,4 +315,36 @@ describe('ObserveRuntimeFailure', () => {
       lastError: 'circuit_probe_failed_terminal',
     });
   });
+
+  it('does not notify when a force-stop cancelled pending delivery', async () => {
+    const repository = new MemoryRepository();
+    const notifications = {
+      manual: async () => {
+        notifications.manualCalls += 1;
+      },
+      manualCalls: 0,
+    };
+    const useCase = new ObserveRuntimeFailure({
+      clock: { now: () => new Date('2026-07-16T10:00:00.000Z') },
+      hash: { sha256Hex: (value) => `hash-${value}` },
+      config: {
+        getConfig: () => ({
+          transientErrorsEnabled: true,
+          rateLimitsEnabled: true,
+          initialDelaySeconds: 60,
+          maxAttempts: 2,
+        }),
+      },
+      repository,
+      notifications,
+    });
+
+    await expect(
+      useCase.execute({
+        ...makeSignal('force-stop-1'),
+        detail: 'force_stop_requested: pending delivery cancelled by user force stop',
+      })
+    ).resolves.toMatchObject({ outcome: 'manual', reason: 'user_cancelled' });
+    expect(notifications.manualCalls).toBe(0);
+  });
 });
