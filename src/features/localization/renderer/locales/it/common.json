@@ -713,6 +713,12 @@
     "checking": "Controllo",
     "unavailable": "Non disponibile",
     "checkFailed": "Controllo non riuscito",
+    "catalogCheckCredential": "Couldn't load {{provider}} models. Check the saved credential, then refresh.",
+    "catalogDirectoryFailed": "OpenCode could not load the provider list.",
+    "catalogLoadFailed": "Couldn't load {{provider}} models.",
+    "catalogSignInExpired": "{{provider}} sign-in is no longer valid. Sign in again, then refresh.",
+    "catalogStale": "{{provider}} models are cached and may be out of date.",
+    "catalogTimedOut": "{{provider}} models timed out. Refresh to try again.",
     "free": "Gratuito",
     "freeTooltip": "Segnalato dai metadati di OpenCode. Disponibilità e limiti possono cambiare."
   },

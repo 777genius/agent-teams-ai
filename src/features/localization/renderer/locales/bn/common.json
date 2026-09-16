@@ -713,6 +713,12 @@
     "checking": "পরীক্ষণ",
     "unavailable": "উপলব্ধ নয়",
     "checkFailed": "পরীক্ষা ব্যর্থ হয়েছে",
+    "catalogCheckCredential": "Couldn't load {{provider}} models. Check the saved credential, then refresh.",
+    "catalogDirectoryFailed": "OpenCode could not load the provider list.",
+    "catalogLoadFailed": "Couldn't load {{provider}} models.",
+    "catalogSignInExpired": "{{provider}} sign-in is no longer valid. Sign in again, then refresh.",
+    "catalogStale": "{{provider}} models are cached and may be out of date.",
+    "catalogTimedOut": "{{provider}} models timed out. Refresh to try again.",
     "free": "মুক্ত",
     "freeTooltip": "ওপেনক্লাডে মিটা- ডাটা রিপোর্ট করেছে। ক্ষমতা আর সীমা বদলে যেতে পারে."
   },

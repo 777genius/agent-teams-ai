@@ -713,6 +713,12 @@
     "checking": "Проверка",
     "unavailable": "Недоступно",
     "checkFailed": "Проверка не удалась",
+    "catalogCheckCredential": "Не удалось загрузить модели {{provider}}. Проверьте сохранённые данные входа и обновите каталог.",
+    "catalogDirectoryFailed": "OpenCode не смог загрузить список провайдеров.",
+    "catalogLoadFailed": "Не удалось загрузить модели {{provider}}.",
+    "catalogSignInExpired": "Вход в {{provider}} больше не действует. Войдите снова, затем обновите каталог.",
+    "catalogStale": "Модели {{provider}} из кэша и могут быть устаревшими.",
+    "catalogTimedOut": "Загрузка моделей {{provider}} превысила время ожидания. Обновите каталог.",
     "free": "Бесплатно",
     "freeTooltip": "Передано метаданными OpenCode. Доступность и лимиты могут измениться."
   },

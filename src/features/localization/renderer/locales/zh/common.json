@@ -713,6 +713,12 @@
     "checking": "检查",
     "unavailable": "不可用",
     "checkFailed": "检查失败",
+    "catalogCheckCredential": "Couldn't load {{provider}} models. Check the saved credential, then refresh.",
+    "catalogDirectoryFailed": "OpenCode could not load the provider list.",
+    "catalogLoadFailed": "Couldn't load {{provider}} models.",
+    "catalogSignInExpired": "{{provider}} sign-in is no longer valid. Sign in again, then refresh.",
+    "catalogStale": "{{provider}} models are cached and may be out of date.",
+    "catalogTimedOut": "{{provider}} models timed out. Refresh to try again.",
     "free": "免费",
     "freeTooltip": "由 OpenCode 元数据报告。可用性和限制可能会发生变化。"
   },

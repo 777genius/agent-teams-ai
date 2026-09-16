@@ -1,3 +1,4 @@
+export * from './openCodeCatalogFailure';
 export * from './providerManagementView';
 export * from './runtimeLocalProvider';
 export * from './runtimeProviderConnection';

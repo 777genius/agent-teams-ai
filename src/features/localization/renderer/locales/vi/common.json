@@ -713,6 +713,12 @@
     "checking": "Đang kiểm tra",
     "unavailable": "Không khả dụng",
     "checkFailed": "Kiểm tra thất bại",
+    "catalogCheckCredential": "Couldn't load {{provider}} models. Check the saved credential, then refresh.",
+    "catalogDirectoryFailed": "OpenCode could not load the provider list.",
+    "catalogLoadFailed": "Couldn't load {{provider}} models.",
+    "catalogSignInExpired": "{{provider}} sign-in is no longer valid. Sign in again, then refresh.",
+    "catalogStale": "{{provider}} models are cached and may be out of date.",
+    "catalogTimedOut": "{{provider}} models timed out. Refresh to try again.",
     "free": "Miễn phí",
     "freeTooltip": "Được báo cáo bởi metadata của OpenCode. Khả dụng và giới hạn có thể thay đổi."
   },

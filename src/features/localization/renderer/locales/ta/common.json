@@ -713,6 +713,12 @@
     "checking": "சரிபார்க்கிறது",
     "unavailable": "கிடைக்கவில்லை",
     "checkFailed": "சரிபார்ப்பு தோல்வியடைந்தது",
+    "catalogCheckCredential": "Couldn't load {{provider}} models. Check the saved credential, then refresh.",
+    "catalogDirectoryFailed": "OpenCode could not load the provider list.",
+    "catalogLoadFailed": "Couldn't load {{provider}} models.",
+    "catalogSignInExpired": "{{provider}} sign-in is no longer valid. Sign in again, then refresh.",
+    "catalogStale": "{{provider}} models are cached and may be out of date.",
+    "catalogTimedOut": "{{provider}} models timed out. Refresh to try again.",
     "free": "இலவசம்",
     "freeTooltip": "OpenCode metadata மூலம் புகாரளிக்கப்பட்டது. கிடைக்கும்தன்மை மற்றும் வரம்புகள் மாறலாம்."
   },
