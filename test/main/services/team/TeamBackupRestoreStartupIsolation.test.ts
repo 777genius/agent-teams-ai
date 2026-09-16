@@ -235,7 +235,8 @@ async function seedBackupTeam(
 function createSkipCoordinator(
   backups: string,
   generic: (team: string) => Promise<boolean>,
-  holes: (team: string) => Promise<boolean> = async () => false
+  holes: (team: string) => Promise<boolean> = async () => false,
+  options: { fenced?: boolean } = {}
 ) {
   const registry = { sandbox: { identityId: 'sandbox', status: 'active' as const } };
   return new TeamBackupWorkSyncRestoreCoordinator({
@@ -243,7 +244,7 @@ function createSkipCoordinator(
     getBackupDir: (team) => path.join(backups, team),
     isShuttingDown: () => false,
     isReplacementForPendingDeletion: () => false,
-    isPermanentDeletionFenced: async () => false,
+    isPermanentDeletionFenced: async () => options.fenced === true,
     withIdentityFence: async (_name, operation) => operation(),
     withTeamMutex: async (_name, operation) => operation(),
     restoreLegacy: async () => {
@@ -282,6 +283,69 @@ it('skips restore for a healthy live config without pending', async () => {
       JSON.parse(await fs.readFile(path.join(backups, 'sandbox', 'manifest.json'), 'utf8'))
         .workSyncRestorePending
     ).toBeUndefined();
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+it('does not hole-fill a fenced deletion target', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-fenced-skip-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.copyFile(
+    path.join(backups, 'sandbox', 'config.json'),
+    path.join(env.teams, 'sandbox', 'config.json')
+  );
+  const generic = vi.fn(async () => true);
+  const holes = vi.fn(async () => false);
+  const prepare = vi.fn(async () => ({
+    importAndVerify: async () => {
+      throw new Error('work-sync import must not run');
+    },
+  }));
+  const owner = createSkipCoordinator(backups, generic, holes, { fenced: true });
+  owner.configure(new MemberWorkSyncTeamOperationGate(), { prepare });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual([]);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(generic).not.toHaveBeenCalled();
+    expect(holes).not.toHaveBeenCalled();
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+it('imports work-sync when live config JSON is corrupt', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'restore-corrupt-live-'));
+  env.teams = path.join(root, 'teams');
+  const backups = path.join(root, 'backups');
+  await seedBackupTeam(backups, 'sandbox');
+  await fs.mkdir(path.join(env.teams, 'sandbox'), { recursive: true });
+  await fs.writeFile(path.join(env.teams, 'sandbox', 'config.json'), '{');
+  const generic = vi.fn(async (team: string) => {
+    await fs.copyFile(
+      path.join(backups, team, 'config.json'),
+      path.join(env.teams, team, 'config.json')
+    );
+    return true;
+  });
+  const imports: string[] = [];
+  const holes = vi.fn(async () => false);
+  const owner = createSkipCoordinator(backups, generic, holes);
+  owner.configure(new MemberWorkSyncTeamOperationGate(), {
+    prepare: async ({ teamName }) => ({
+      importAndVerify: async () => {
+        imports.push(teamName);
+      },
+    }),
+  });
+  try {
+    expect(await owner.restoreIfNeeded()).toEqual(['sandbox']);
+    expect(imports).toEqual(['sandbox']);
+    expect(generic).toHaveBeenCalledWith('sandbox');
+    expect(holes).not.toHaveBeenCalled();
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
