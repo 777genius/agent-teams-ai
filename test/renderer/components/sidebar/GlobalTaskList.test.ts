@@ -38,12 +38,15 @@ const toggleCollapsedGroup = vi.fn();
 const sidebarTaskItemRenderSpy = vi.hoisted(() => vi.fn());
 const taskLocalState = {
   pinnedIds: new Set<string>(),
+  pinnedProjectKeys: new Set<string>(),
   archivedIds: new Set<string>(),
   renamedSubjects: new Map<string, string>(),
   isPinned: vi.fn(() => false),
+  isProjectPinned: vi.fn((projectKey: string) => taskLocalState.pinnedProjectKeys.has(projectKey)),
   isArchived: vi.fn(() => false),
   getRenamedSubject: vi.fn(() => undefined),
   togglePin: vi.fn(),
+  toggleProjectPin: vi.fn(),
   toggleArchive: vi.fn(),
   renameTask: vi.fn(),
 };
@@ -95,6 +98,11 @@ vi.mock('../../../../src/renderer/components/team/activity/AnimatedHeightReveal'
 
 vi.mock('../../../../src/renderer/components/sidebar/TaskContextMenu', () => ({
   TaskContextMenu: ({ children }: React.PropsWithChildren) =>
+    React.createElement(React.Fragment, null, children),
+}));
+
+vi.mock('../../../../src/renderer/components/sidebar/ProjectContextMenu', () => ({
+  ProjectContextMenu: ({ children }: React.PropsWithChildren) =>
     React.createElement(React.Fragment, null, children),
 }));
 
@@ -239,12 +247,15 @@ describe('GlobalTaskList project grouping', () => {
     storeState.leadActivityByTeam = {};
     toggleCollapsedGroup.mockReset();
     taskLocalState.pinnedIds.clear();
+    taskLocalState.pinnedProjectKeys.clear();
     taskLocalState.archivedIds.clear();
     taskLocalState.renamedSubjects.clear();
     taskLocalState.isPinned.mockClear();
+    taskLocalState.isProjectPinned.mockClear();
     taskLocalState.isArchived.mockClear();
     taskLocalState.getRenamedSubject.mockClear();
     taskLocalState.togglePin.mockClear();
+    taskLocalState.toggleProjectPin.mockClear();
     taskLocalState.toggleArchive.mockClear();
     taskLocalState.renameTask.mockClear();
     sidebarTaskItemRenderSpy.mockClear();
@@ -716,6 +727,43 @@ describe('GlobalTaskList project grouping', () => {
     });
 
     expect(sidebarTaskItemRenderSpy.mock.calls.map(([taskId]) => taskId)).toEqual(['task-1']);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('renders pinned project folders before unpinned ones', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [
+      makeTask(1, {
+        projectPath: '/workspace/newer',
+        updatedAt: '2026-04-18T12:00:00.000Z',
+      }),
+      makeTask(2, {
+        projectPath: '/workspace/older-pinned',
+        updatedAt: '2026-04-18T09:00:00.000Z',
+      }),
+    ];
+    taskLocalState.pinnedProjectKeys.add('/workspace/older-pinned');
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    const folderLabels = Array.from(host.querySelectorAll('button'))
+      .map((button) => button.textContent ?? '')
+      .filter((text) => text.includes('older-pinned') || text.includes('newer'));
+
+    expect(folderLabels[0]).toContain('older-pinned');
+    expect(folderLabels[1]).toContain('newer');
+    expect(visibleSubjects(host)).toEqual(['Task 2', 'Task 1']);
 
     await act(async () => {
       root.unmount();

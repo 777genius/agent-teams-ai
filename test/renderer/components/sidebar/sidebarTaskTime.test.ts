@@ -14,14 +14,14 @@ describe('sidebar task relative time', () => {
     { elapsedMs: -HOUR_MS, expected: 'now' },
     { elapsedMs: 0, expected: 'now' },
     { elapsedMs: MINUTE_MS - 1, expected: 'now' },
-    { elapsedMs: MINUTE_MS, expected: '1 min. ago' },
-    { elapsedMs: 2 * MINUTE_MS, expected: '2 min. ago' },
-    { elapsedMs: HOUR_MS - 1, expected: '59 min. ago' },
-    { elapsedMs: HOUR_MS, expected: '1 hr. ago' },
-    { elapsedMs: 24 * HOUR_MS - 1, expected: '23 hr. ago' },
-    { elapsedMs: 24 * HOUR_MS, expected: '1 day ago' },
-    { elapsedMs: 48 * HOUR_MS - 1, expected: '1 day ago' },
-    { elapsedMs: 48 * HOUR_MS, expected: '2 days ago' },
+    { elapsedMs: MINUTE_MS, expected: '1 min' },
+    { elapsedMs: 2 * MINUTE_MS, expected: '2 min' },
+    { elapsedMs: HOUR_MS - 1, expected: '59 min' },
+    { elapsedMs: HOUR_MS, expected: '1 hr' },
+    { elapsedMs: 24 * HOUR_MS - 1, expected: '23 hr' },
+    { elapsedMs: 24 * HOUR_MS, expected: '1 day' },
+    { elapsedMs: 48 * HOUR_MS - 1, expected: '1 day' },
+    { elapsedMs: 48 * HOUR_MS, expected: '2 days' },
   ])('formats the $elapsedMs ms boundary as $expected', ({ elapsedMs, expected }) => {
     const updated = new Date(NOW_MS - elapsedMs);
     expect(formatTaskUpdatedRelativeTime(updated, 'en', NOW_MS)).toBe(expected);
@@ -30,7 +30,7 @@ describe('sidebar task relative time', () => {
   it('uses locale-native relative phrases without concatenating an update prefix', () => {
     const updated = new Date(NOW_MS - 5 * MINUTE_MS);
 
-    expect(formatTaskUpdatedRelativeTime(updated, 'ru', NOW_MS)).toBe('5 мин. назад');
+    expect(formatTaskUpdatedRelativeTime(updated, 'ru', NOW_MS)).toBe('5 мин');
     expect(formatTaskUpdatedRelativeTime(updated, 'ja', NOW_MS)).toBe('5 分前');
   });
 

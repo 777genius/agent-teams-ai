@@ -20,6 +20,13 @@ function getRelativeTimeFormatter(
   return formatter;
 }
 
+function stripObviousRelativeTimeWords(label: string): string {
+  return label
+    .replace(/\s+(ago|назад)$/iu, '')
+    .replace(/\.$/u, '')
+    .trim();
+}
+
 export function formatTaskUpdatedRelativeTime(
   updated: Date,
   locale: string | undefined,
@@ -28,10 +35,16 @@ export function formatTaskUpdatedRelativeTime(
   const elapsedMs = Math.max(0, nowMs - updated.getTime());
   const formatter = getRelativeTimeFormatter(locale, elapsedMs < MINUTE_MS ? 'auto' : 'always');
 
-  if (elapsedMs < MINUTE_MS) return formatter.format(0, 'second');
-  if (elapsedMs < HOUR_MS) return formatter.format(-Math.floor(elapsedMs / MINUTE_MS), 'minute');
-  if (elapsedMs < DAY_MS) return formatter.format(-Math.floor(elapsedMs / HOUR_MS), 'hour');
-  return formatter.format(-Math.floor(elapsedMs / DAY_MS), 'day');
+  const formatted =
+    elapsedMs < MINUTE_MS
+      ? formatter.format(0, 'second')
+      : elapsedMs < HOUR_MS
+        ? formatter.format(-Math.floor(elapsedMs / MINUTE_MS), 'minute')
+        : elapsedMs < DAY_MS
+          ? formatter.format(-Math.floor(elapsedMs / HOUR_MS), 'hour')
+          : formatter.format(-Math.floor(elapsedMs / DAY_MS), 'day');
+
+  return stripObviousRelativeTimeWords(formatted);
 }
 
 export function formatExactTaskDateTime(date: Date, locale: string | undefined): string {

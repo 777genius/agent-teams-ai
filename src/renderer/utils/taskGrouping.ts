@@ -168,3 +168,15 @@ export function groupTasksByProject(tasks: GlobalTask[]): ProjectTaskGroup[] {
 
   return groups;
 }
+
+/** Stable sort: pinned project folders first, freshness order preserved within each cohort. */
+export function sortProjectGroupsByPin(
+  groups: readonly ProjectTaskGroup[],
+  pinnedProjectKeys: ReadonlySet<string>
+): ProjectTaskGroup[] {
+  return [...groups].sort((a, b) => {
+    const pinnedA = pinnedProjectKeys.has(a.projectKey) ? 1 : 0;
+    const pinnedB = pinnedProjectKeys.has(b.projectKey) ? 1 : 0;
+    return pinnedB - pinnedA;
+  });
+}
