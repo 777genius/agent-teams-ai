@@ -226,6 +226,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         worktree: 'feature-a',
         extraCliArgs: '--flag value',
         limitContext: true,
+        allowExperimentalLocalModels: true,
       },
       members,
       configRaw: JSON.stringify({ color: ' blue ', name: ' Demo Team ' }),
@@ -244,6 +245,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       worktree: 'feature-a',
       extraCliArgs: '--flag value',
       limitContext: true,
+      allowExperimentalLocalModels: true,
       color: 'blue',
       displayName: 'Demo Team',
     });
