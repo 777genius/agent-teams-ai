@@ -562,7 +562,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
     expect(selectTrigger?.textContent).toContain('Select project context');
     expect(legacyProjectDefault?.disabled).toBe(true);
-    expect(legacyTest?.disabled).toBe(true);
+    expect(legacyTest?.disabled).toBe(false);
     expect(legacyAllProjectsDefault?.disabled).toBe(false);
 
     await act(async () => {
@@ -4400,7 +4400,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     }
   });
 
-  it('lets users pick a project on Providers so local Ollama Test is enabled', async () => {
+  it('lets users test local Ollama models without picking a project', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4441,14 +4441,6 @@ describe('RuntimeProviderManagementPanelView', () => {
       accessReason:
         'OpenCode provider "ollama" for selected model "ollama/qwen3-30b-32k" requires execution verification before launch',
     };
-    const project = {
-      id: 'sandbox',
-      path: '/tmp/agent-teams-ollama-sandbox',
-      name: 'Ollama sandbox',
-      sessions: [],
-      totalSessions: 0,
-      createdAt: 0,
-    };
 
     await act(async () => {
       root.render(
@@ -4467,7 +4459,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: null,
-          projectContextProjects: [project],
+          projectContextProjects: [],
           onProjectContextChange,
         })
       );
@@ -4476,41 +4468,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(
       host.querySelector('[data-testid="runtime-provider-project-context-select"]')
-    ).not.toBeNull();
-    expect(
-      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
-        ?.textContent
-    ).toContain('Select a project context before testing models.');
-    const disabledTest = host.querySelector<HTMLButtonElement>(
-      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
-    );
-    expect(disabledTest?.disabled).toBe(true);
-    expect(actions.testModel).not.toHaveBeenCalled();
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            providers: [ollamaProvider],
-            selectedProviderId: 'ollama',
-            modelPickerProviderId: 'ollama',
-            modelPickerMode: 'use',
-            models: [ollamaModel],
-            view: {
-              ...createState().view!,
-              providers: [ollamaProvider],
-            },
-          }),
-          actions,
-          disabled: false,
-          projectPath: project.path,
-          projectContextProjects: [project],
-          onProjectContextChange,
-        })
-      );
-      await Promise.resolve();
-    });
-
+    ).toBeNull();
     expect(
       host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
     ).toBeNull();
@@ -4524,6 +4482,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
     expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
+    expect(onProjectContextChange).not.toHaveBeenCalled();
   });
 
   it('replaces inventory models unknown with the loaded catalog count', async () => {
