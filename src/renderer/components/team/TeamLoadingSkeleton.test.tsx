@@ -22,6 +22,10 @@ const hoisted = vi.hoisted(() => ({
   state: {
     messagesPanelMode: 'sidebar' as const,
     messagesPanelWidth: 360,
+    teamByName: {} as Record<
+      string,
+      { leadName?: string; memberCount?: number; members?: { name: string }[] }
+    >,
   },
 }));
 
@@ -31,6 +35,8 @@ vi.mock('@renderer/store', () => ({
 
 afterEach(() => {
   document.body.innerHTML = '';
+  hoisted.state.messagesPanelMode = 'sidebar';
+  hoisted.state.teamByName = {};
   setTeamMessagesSidebarUiState('test-team', createDefaultMessagesSidebarUiState());
   resetTeamSidebarPortalManagerForTests();
 });
@@ -112,6 +118,44 @@ describe('TeamLoadingSkeleton Kanban', () => {
       await Promise.resolve();
     });
   });
+
+  it('shows only the known lead plus teammates instead of extra placeholder members', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    hoisted.state.teamByName = {
+      'test-team': {
+        leadName: 'team-lead',
+        memberCount: 3,
+        members: [{ name: 'alice' }, { name: 'cody' }, { name: 'oscar' }],
+      },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <TeamLoadingSkeleton
+          teamName="test-team"
+          messagesPanelMode="inline"
+          headerColorSet={headerColorSet}
+          isLight={false}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host
+        .querySelector('[data-team-loading-member-count]')
+        ?.getAttribute('data-team-loading-member-count')
+    ).toBe('4');
+    expect(host.querySelectorAll('[data-team-loading-member-row]')).toHaveLength(4);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
 
 describe('TeamLoadingSkeleton messages sidebar', () => {
@@ -138,6 +182,46 @@ describe('TeamLoadingSkeleton messages sidebar', () => {
     expect(skeleton?.getAttribute('data-messages-skeleton')).toBe('list');
     expect(skeleton?.getAttribute('data-messages-skeleton-title')).toBe('messages.title');
     expect(host.querySelector('.message-composer-flat-layout')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the known member count for the chat-list placeholder', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    hoisted.state.messagesPanelMode = 'sidebar';
+    hoisted.state.teamByName = {
+      'test-team': {
+        leadName: 'team-lead',
+        memberCount: 3,
+        members: [{ name: 'alice' }, { name: 'cody' }, { name: 'oscar' }],
+      },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <TeamLoadingSkeleton
+          teamName="test-team"
+          messagesPanelMode="sidebar"
+          headerColorSet={headerColorSet}
+          isLight={false}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const skeleton = host.querySelector('[data-messages-skeleton]');
+    expect(skeleton?.getAttribute('data-messages-skeleton-members')).toBe('4');
+    expect(
+      host
+        .querySelector('[data-team-loading-member-count]')
+        ?.getAttribute('data-team-loading-member-count')
+    ).toBe('4');
 
     await act(async () => {
       root.unmount();

@@ -1,6 +1,7 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { getThemedBorder, type TeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
 import {
   CheckCircle2,
   ChevronRight,
@@ -21,12 +22,14 @@ import { MessagesConversationSkeleton } from './messages/MessagesConversationSke
 import { conversationDisplayTitle } from './messages/messagesPanelConversations';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { getTeamMessagesSidebarUiState } from './sidebar/teamSidebarUiState';
+import {
+  getTeamLoadingMemberSkeletonCount,
+  teamLoadingMemberSkeletonAccents,
+} from './teamLoadingMemberSkeleton';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { Ref } from 'react';
-
-const TEAM_LOADING_MEMBER_ACCENTS = ['#46d93b', '#3b82f6', '#facc15', '#14b8a6', '#ef4444'];
 
 const TEAM_LOADING_KANBAN_COLUMNS = [
   {
@@ -108,7 +111,13 @@ const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
   </div>
 );
 
-const TeamLoadingSidebarSkeleton = ({ teamName }: { teamName: string }): React.JSX.Element => {
+const TeamLoadingSidebarSkeleton = ({
+  teamName,
+  memberCount,
+}: {
+  teamName: string;
+  memberCount: number;
+}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const ui = getTeamMessagesSidebarUiState(teamName);
   const surface = ui.conversationSurface ?? 'list';
@@ -149,7 +158,12 @@ const TeamLoadingSidebarSkeleton = ({ teamName }: { teamName: string }): React.J
       </div>
       <div className="bg-[var(--color-text-muted)]/35 h-px shrink-0" />
       <div className="min-h-0 flex-1">
-        <MessagesConversationSkeleton surface={surface} scope={scope} title={title} />
+        <MessagesConversationSkeleton
+          surface={surface}
+          scope={scope}
+          title={title}
+          memberCount={memberCount}
+        />
       </div>
     </aside>
   );
@@ -211,6 +225,7 @@ const TeamLoadingSectionHeader = ({
 
 type TeamContentLoadingSkeletonProps = Readonly<{
   teamName: string;
+  memberCount: number;
   headerColorSet: TeamColorSet;
   isLight: boolean;
   showOfflineBanner?: boolean;
@@ -220,6 +235,7 @@ type TeamContentLoadingSkeletonProps = Readonly<{
 
 const TeamContentLoadingSkeleton = ({
   teamName,
+  memberCount,
   headerColorSet,
   isLight,
   showOfflineBanner = false,
@@ -227,6 +243,7 @@ const TeamContentLoadingSkeleton = ({
   provisioningBannerRef,
 }: TeamContentLoadingSkeletonProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const memberAccents = teamLoadingMemberSkeletonAccents(memberCount);
 
   return (
     <div
@@ -281,9 +298,16 @@ const TeamContentLoadingSkeleton = ({
           badgeWidth="w-8"
           actionWidth="w-20"
         />
-        <div className="mt-3 grid grid-cols-1 gap-1 pb-4">
-          {TEAM_LOADING_MEMBER_ACCENTS.map((accent, index) => (
-            <div key={accent} className="flex min-h-[52px] min-w-0 items-center gap-2.5">
+        <div
+          className="mt-3 grid grid-cols-1 gap-1 pb-4"
+          data-team-loading-member-count={memberCount}
+        >
+          {memberAccents.map((accent, index) => (
+            <div
+              key={`${accent}-${index}`}
+              className="flex min-h-[52px] min-w-0 items-center gap-2.5"
+              data-team-loading-member-row="true"
+            >
               <div className="relative size-[34px] shrink-0">
                 <div
                   className="absolute inset-0 rounded-full border-2 bg-[var(--color-surface-raised)]"
@@ -414,28 +438,35 @@ export const TeamLoadingSkeleton = ({
   isLight,
   contentRef,
   provisioningBannerRef,
-}: TeamLoadingSkeletonProps): React.JSX.Element => (
-  <div className="flex size-full overflow-hidden">
-    {messagesPanelMode === 'sidebar' ? (
-      <TeamSidebarHost
-        teamName={teamName}
-        surface="team"
-        isActive={Boolean(isActive)}
-        isFocused={Boolean(isFocused)}
-        reserveSpaceWithoutSource
-      >
-        <TeamLoadingSidebarSkeleton teamName={teamName} />
-      </TeamSidebarHost>
-    ) : null}
-    <div className="relative min-h-0 min-w-0 flex-1">
-      <TeamContentLoadingSkeleton
-        teamName={teamName}
-        headerColorSet={headerColorSet}
-        isLight={isLight}
-        showOfflineBanner={showOfflineBanner}
-        contentRef={contentRef}
-        provisioningBannerRef={provisioningBannerRef}
-      />
+}: TeamLoadingSkeletonProps): React.JSX.Element => {
+  const memberCount = useStore((state) =>
+    getTeamLoadingMemberSkeletonCount(state.teamByName[teamName])
+  );
+
+  return (
+    <div className="flex size-full overflow-hidden">
+      {messagesPanelMode === 'sidebar' ? (
+        <TeamSidebarHost
+          teamName={teamName}
+          surface="team"
+          isActive={Boolean(isActive)}
+          isFocused={Boolean(isFocused)}
+          reserveSpaceWithoutSource
+        >
+          <TeamLoadingSidebarSkeleton teamName={teamName} memberCount={memberCount} />
+        </TeamSidebarHost>
+      ) : null}
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <TeamContentLoadingSkeleton
+          teamName={teamName}
+          memberCount={memberCount}
+          headerColorSet={headerColorSet}
+          isLight={isLight}
+          showOfflineBanner={showOfflineBanner}
+          contentRef={contentRef}
+          provisioningBannerRef={provisioningBannerRef}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
