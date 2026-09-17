@@ -1,5 +1,9 @@
 import { isBootstrapProofClearableLaunchFailureReason } from './TeamProvisioningBootstrapTranscript';
 import {
+  isMemberSpawnStatusesSnapshotReadCurrent,
+  shouldCacheMemberSpawnStatusesSnapshot,
+} from './TeamProvisioningMemberSpawnSnapshotCurrency';
+import {
   applyExpiredLaunchGraceToPersistedStatuses,
   createInitialMemberSpawnStatusEntry,
   summarizeMemberSpawnStatusRecord,
@@ -22,6 +26,8 @@ import type {
   TeamLaunchAggregateState,
   TeamProvisioningProgress,
 } from '@shared/types';
+
+export { shouldCacheMemberSpawnStatusesSnapshot };
 
 export interface MemberSpawnStatusRun {
   runId: string;
@@ -310,27 +316,6 @@ export function cloneMemberSpawnStatusesSnapshot(
     ...(snapshot.expectedMembers ? { expectedMembers: [...snapshot.expectedMembers] } : {}),
     ...(snapshot.summary ? { summary: { ...snapshot.summary } } : {}),
   };
-}
-
-export function shouldCacheMemberSpawnStatusesSnapshot(run: {
-  isLaunch: boolean;
-  provisioningComplete: boolean;
-}): boolean {
-  return run.isLaunch === true && run.provisioningComplete !== true;
-}
-
-function isMemberSpawnStatusesSnapshotReadCurrent<TRun extends MemberSpawnStatusRun>(params: {
-  teamName: string;
-  runIdAtStart: string | null;
-  generationAtStart: number;
-  ports: MemberSpawnStatusesSnapshotPorts<TRun>;
-}): boolean {
-  const trackedRunId = params.ports.cache.getTrackedRunId(params.teamName);
-  const currentRunId = trackedRunId ? (params.ports.getRun(trackedRunId)?.runId ?? null) : null;
-  return (
-    params.ports.cache.getCacheGeneration(params.teamName) === params.generationAtStart &&
-    currentRunId === params.runIdAtStart
-  );
 }
 
 export function setMemberSpawnStatusForRun<TRun extends MemberSpawnStatusRun>(
