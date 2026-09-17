@@ -202,6 +202,9 @@ export function buildLaunchSyntheticRequest(input: {
     worktree: input.request.worktree,
     extraCliArgs: input.request.extraCliArgs,
     limitContext: input.request.limitContext,
+    ...(input.request.allowExperimentalLocalModels === true
+      ? { allowExperimentalLocalModels: true }
+      : {}),
   };
 
   try {
