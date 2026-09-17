@@ -39,7 +39,15 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
       );
       const confirmed = panesConfirmed && processesConfirmed;
       if (confirmed) {
-        ports.clearPersistedLiveRuntimeHandles?.(teamName);
+        try {
+          ports.clearPersistedLiveRuntimeHandles?.(teamName);
+        } catch (error) {
+          ports.logger.warn(
+            `[${teamName}] Failed to clear persisted live runtime handles: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
       }
       return confirmed;
     },

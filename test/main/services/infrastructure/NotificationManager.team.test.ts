@@ -76,6 +76,7 @@ vi.mock('@main/utils/textFormatting', () => ({
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { Notification as ElectronNotification } from 'electron';
+import { readFile } from 'fs/promises';
 
 function decodeXmlText(value: string): string {
   return value
@@ -497,5 +498,47 @@ describe('NotificationManager viewed team', () => {
 
     expect(stored?.isRead).toBe(false);
     expect(mockNotificationShow).toHaveBeenCalledOnce();
+  });
+});
+
+describe('NotificationManager viewed team initialize race', () => {
+  afterEach(() => {
+    NotificationManager.resetInstance();
+    vi.mocked(readFile).mockRejectedValue({ code: 'ENOENT' });
+  });
+
+  it('marks persisted viewed-team history read after setViewedTeam during load', async () => {
+    let releaseLoad!: () => void;
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve;
+    });
+    vi.mocked(readFile).mockImplementation(async () => {
+      await loadGate;
+      return JSON.stringify([
+        {
+          id: 'persisted-team',
+          title: 'Alice',
+          message: 'Hello',
+          timestamp: '2026-09-17T10:00:00.000Z',
+          type: 'info',
+          sessionId: 'team:test-team',
+          category: 'team',
+          isRead: false,
+          createdAt: Date.parse('2026-09-17T10:00:00.000Z'),
+        },
+      ]);
+    });
+
+    const delayed = new NotificationManager();
+    const initializing = delayed.initialize();
+    delayed.setViewedTeamName('test-team');
+    expect(delayed.getUnreadCountSync()).toBe(0);
+
+    releaseLoad();
+    await initializing;
+
+    expect(delayed.getUnreadCountSync()).toBe(0);
+    const loaded = await delayed.getNotifications({ limit: 10, offset: 0 });
+    expect(loaded.notifications[0]?.isRead).toBe(true);
   });
 });

@@ -69,6 +69,20 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
   });
 
+  it('still confirms Stop when clearing persisted live runtime handles throws', () => {
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => {
+      throw new Error('File lock timeout');
+    });
+    const ports = createPorts({ clearPersistedLiveRuntimeHandles });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      '[team-a] Failed to clear persisted live runtime handles: File lock timeout'
+    );
+  });
+
   it('uses the configured Claude base path for Anthropic helper cleanup', async () => {
     const ports = createPorts();
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);

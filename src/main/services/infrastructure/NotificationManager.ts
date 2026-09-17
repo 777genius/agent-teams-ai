@@ -628,6 +628,9 @@ export class NotificationManager extends EventEmitter {
 
     this.notificationsPath = await migrateLegacyNotificationPath();
     await this.loadNotifications();
+    if (this.viewedTeamName && this.isViewedTeamWindowFocused()) {
+      this.markTeamRead(this.viewedTeamName);
+    }
     this.pruneNotifications();
     this.isInitialized = true;
 
