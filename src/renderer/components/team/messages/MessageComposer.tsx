@@ -980,7 +980,7 @@ export const MessageComposer = ({
                             />
                           ) : null}
                           <span className="min-w-0 truncate text-[var(--color-text-secondary)]">
-                            {t('messageComposer.teamSelector.thisTeam')}
+                            {t('messages.chats.teamFeed')}
                           </span>
                         </>
                       )}
@@ -1009,7 +1009,7 @@ export const MessageComposer = ({
                           />
                         ) : null}
                         <span className="truncate text-[var(--color-text)]">
-                          {t('messageComposer.teamSelector.thisTeam')}
+                          {t('messages.chats.teamFeed')}
                         </span>
                         <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
                           {t('messageComposer.teamSelector.current')}

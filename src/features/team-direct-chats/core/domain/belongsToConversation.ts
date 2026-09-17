@@ -1,5 +1,5 @@
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
-import { isLeadNameAlias } from '@shared/utils/leadDetection';
+import { isConversationLeadAlias } from '@shared/utils/leadDetection';
 
 import { type ConversationScope, normalizeConversationParticipant } from './conversationScope';
 
@@ -11,7 +11,7 @@ export function isLeadConversationParticipant(
   value: string | undefined,
   leadNames: Iterable<string>
 ): boolean {
-  if (isLeadNameAlias(value)) {
+  if (isConversationLeadAlias(value)) {
     return true;
   }
   const normalized = normalizeConversationParticipant(value);

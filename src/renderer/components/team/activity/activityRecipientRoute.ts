@@ -1,4 +1,4 @@
-import { isLeadNameAlias } from '@shared/utils/leadDetection';
+import { isConversationLeadAlias } from '@shared/utils/leadDetection';
 
 function normalizeParticipant(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -28,5 +28,5 @@ export function shouldHideDirectMemberRoute(
   if (normalizedTo === normalizedParticipant) {
     return true;
   }
-  return isLeadNameAlias(normalizedTo) && isLeadNameAlias(normalizedParticipant);
+  return isConversationLeadAlias(normalizedTo);
 }

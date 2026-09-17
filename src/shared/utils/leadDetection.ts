@@ -11,6 +11,9 @@ const LEAD_AGENT_TYPES = new Set(['team-lead', 'lead', 'orchestrator']);
 
 const LEAD_NAME_ALIASES = new Set(['lead', 'team-lead', 'teamlead', 'team-leader', 'orchestrator']);
 
+/** Conversation routing aliases. `orchestrator` is a CLI identity, not a chat participant. */
+const CONVERSATION_LEAD_NAME_ALIASES = new Set(['lead', 'team-lead', 'teamlead', 'team-leader']);
+
 /** Normalize a participant name for lead-alias comparison. */
 export function normalizeLeadNameAlias(value: string): string {
   return value
@@ -19,11 +22,23 @@ export function normalizeLeadNameAlias(value: string): string {
     .replace(/[\s_]+/g, '-');
 }
 
-/** True when the name is a known lead identity alias (not a roster member check). */
-export function isLeadNameAlias(value: string | undefined | null): boolean {
+function matchesLeadAliasSet(
+  value: string | undefined | null,
+  aliases: ReadonlySet<string>
+): boolean {
   if (!value) return false;
   const normalized = normalizeLeadNameAlias(value);
-  return LEAD_NAME_ALIASES.has(normalized) || normalized.replace(/-/g, '') === 'teamlead';
+  return aliases.has(normalized) || normalized.replace(/-/g, '') === 'teamlead';
+}
+
+/** True when the name is a known lead identity alias (not a roster member check). */
+export function isLeadNameAlias(value: string | undefined | null): boolean {
+  return matchesLeadAliasSet(value, LEAD_NAME_ALIASES);
+}
+
+/** True when the name is a conversation lead alias. Does not include `orchestrator`. */
+export function isConversationLeadAlias(value: string | undefined | null): boolean {
+  return matchesLeadAliasSet(value, CONVERSATION_LEAD_NAME_ALIASES);
 }
 
 /** Role labels reserved for the runtime-owned team lead identity. */

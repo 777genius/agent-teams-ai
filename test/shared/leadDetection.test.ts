@@ -1,4 +1,9 @@
-import { isLeadMember, isLeadNameAlias, isReservedLeadRole } from '@shared/utils/leadDetection';
+import {
+  isConversationLeadAlias,
+  isLeadMember,
+  isLeadNameAlias,
+  isReservedLeadRole,
+} from '@shared/utils/leadDetection';
 import { describe, expect, it } from 'vitest';
 
 describe('isLeadMember', () => {
@@ -30,5 +35,16 @@ describe('isLeadNameAlias', () => {
     expect(isLeadNameAlias('team-leader')).toBe(true);
     expect(isLeadNameAlias('orchestrator')).toBe(true);
     expect(isLeadNameAlias('alice')).toBe(false);
+  });
+});
+
+describe('isConversationLeadAlias', () => {
+  it('matches chat lead aliases but not the CLI orchestrator identity', () => {
+    expect(isConversationLeadAlias('lead')).toBe(true);
+    expect(isConversationLeadAlias('team-lead')).toBe(true);
+    expect(isConversationLeadAlias('team_lead')).toBe(true);
+    expect(isConversationLeadAlias('team-leader')).toBe(true);
+    expect(isConversationLeadAlias('orchestrator')).toBe(false);
+    expect(isConversationLeadAlias('oscar')).toBe(false);
   });
 });

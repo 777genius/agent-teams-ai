@@ -4,7 +4,7 @@ import {
 } from '@renderer/utils/bootstrapPromptSanitizer';
 import { shouldKeepIdleMessageInActivityWhenNoiseHidden } from '@renderer/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
-import { isLeadNameAlias } from '@shared/utils/leadDetection';
+import { isConversationLeadAlias } from '@shared/utils/leadDetection';
 import {
   isMemberWorkSyncNudgeMessage,
   isReviewPickupEscalationMessage,
@@ -112,7 +112,7 @@ function getMessageFilterData(message: InboxMessage): CachedMessageFilterData {
 
 function isLeadParticipant(value: string | undefined, leadNames: Set<string>): boolean {
   const normalized = normalizeParticipant(value);
-  return isLeadNameAlias(value) || (normalized.length > 0 && leadNames.has(normalized));
+  return isConversationLeadAlias(value) || (normalized.length > 0 && leadNames.has(normalized));
 }
 
 function isRelayDuplicateOfVisibleMessage(

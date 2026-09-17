@@ -141,4 +141,17 @@ describe('belongsToConversation', () => {
       false
     );
   });
+
+  it('does not treat orchestrator as a conversation lead alias', () => {
+    const bootstrap = msg({ from: 'orchestrator', to: 'alice', text: 'boot' });
+    expect(
+      belongsToConversation(bootstrap, { kind: 'direct', participant: 'alice' }, leadNames)
+    ).toBe(false);
+    expect(
+      belongsToConversation(bootstrap, { kind: 'direct', participant: 'oscar' }, leadNames)
+    ).toBe(false);
+    expect(
+      belongsToConversation(bootstrap, { kind: 'direct', participant: 'orchestrator' }, leadNames)
+    ).toBe(false);
+  });
 });

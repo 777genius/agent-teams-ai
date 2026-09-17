@@ -16,4 +16,13 @@ describe('shouldHideDirectMemberRoute', () => {
     expect(shouldHideDirectMemberRoute('cody', 'oscar', 'oscar')).toBe(false);
     expect(shouldHideDirectMemberRoute('cody', 'lead', 'team-lead')).toBe(false);
   });
+
+  it('hides -> lead when the 1:1 participant is the real lead name', () => {
+    expect(shouldHideDirectMemberRoute('lead', 'atlas', 'oscar')).toBe(true);
+    expect(shouldHideDirectMemberRoute('team-lead', 'atlas', 'oscar')).toBe(true);
+  });
+
+  it('does not treat orchestrator as a conversation lead route', () => {
+    expect(shouldHideDirectMemberRoute('orchestrator', 'atlas', 'oscar')).toBe(false);
+  });
 });

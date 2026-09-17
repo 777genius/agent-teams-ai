@@ -417,7 +417,7 @@ describe('MessageComposer pending send lifecycle', () => {
     const body = layout?.querySelector('.message-composer-flat-body');
     const footer = layout?.querySelector('.message-composer-flat-footer');
     const sendButton = getSendButton(host);
-    const teamSelector = getButtonContainingText(host, 'This team');
+    const teamSelector = getButtonContainingText(host, 'Group chat');
     const recipientSelector = host.querySelector('.message-composer-recipient-selector');
     const targetSelectors = host.querySelector('.message-composer-target-selectors');
 
@@ -434,7 +434,7 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(teamSelector.className).not.toContain('flex-1');
     expect(recipientSelector?.className).not.toContain('flex-1');
     expect(recipientSelector?.className).not.toContain('shrink-0');
-    expect(toolbar?.textContent).toContain('This team');
+    expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent).toContain('alice');
 
     act(() => {
@@ -446,7 +446,7 @@ describe('MessageComposer pending send lifecycle', () => {
     const { host, root } = renderComposer({ isTeamAlive: false });
     const toolbar = host.querySelector('.message-composer-flat-toolbar');
 
-    expect(toolbar?.textContent).toContain('This team');
+    expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent?.toLowerCase()).not.toContain('offline');
     expect(toolbar?.className).toContain('grid-cols-[32px_minmax(0,1fr)]');
 
