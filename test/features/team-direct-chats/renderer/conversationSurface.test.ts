@@ -85,6 +85,67 @@ describe('useTeamConversationSurface', () => {
     });
   });
 
+  it('restores the destination team thread instead of bouncing the previous DM', async () => {
+    setTeamMessagesSidebarUiState('team-a', {
+      ...createDefaultMessagesSidebarUiState(),
+      conversationSurface: 'thread',
+      conversationScope: { kind: 'direct', participant: 'alice' },
+    });
+    setTeamMessagesSidebarUiState('team-b', {
+      ...createDefaultMessagesSidebarUiState(),
+      conversationSurface: 'thread',
+      conversationScope: { kind: 'direct', participant: 'oscar' },
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const latest: { current: TeamConversationSurfaceState | null } = { current: null };
+
+    function Probe({
+      teamName,
+      members,
+    }: {
+      teamName: string;
+      members: readonly { name: string; agentType?: string }[];
+    }): React.JSX.Element {
+      latest.current = useTeamConversationSurface({
+        teamName,
+        members,
+        position: 'sidebar',
+      });
+      return React.createElement('span', null, latest.current.renderSurface);
+    }
+
+    await act(async () => {
+      root.render(
+        React.createElement(Probe, {
+          teamName: 'team-a',
+          members: [{ name: 'alice' }],
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(latest.current?.scope).toEqual({ kind: 'direct', participant: 'alice' });
+
+    await act(async () => {
+      root.render(
+        React.createElement(Probe, {
+          teamName: 'team-b',
+          members: [{ name: 'oscar', agentType: 'team-lead' }],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(latest.current?.renderSurface).toBe('thread');
+    expect(latest.current?.scope).toEqual({ kind: 'direct', participant: 'oscar' });
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps a persisted thread while the roster is still empty', async () => {
     setTeamMessagesSidebarUiState('probe-empty-roster', {
       ...createDefaultMessagesSidebarUiState(),

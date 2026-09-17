@@ -57,6 +57,22 @@ export function conversationDisplayTitle(
   return displayMemberName(resolved);
 }
 
+export function conversationChrome(
+  renderSurface: ConversationSurface,
+  scope: ConversationScope,
+  members: readonly ResolvedTeamMember[],
+  labels: { list: string; teamFeed: string }
+): { lockedRecipient: string | undefined; conversationTitle: string } {
+  const lockedRecipient =
+    renderSurface === 'thread' && scope.kind === 'direct'
+      ? resolveConversationParticipantName(members, scope.participant)
+      : undefined;
+  return {
+    lockedRecipient,
+    conversationTitle: conversationDisplayTitle(renderSurface, scope, labels, members),
+  };
+}
+
 export function filterScopedMessages(
   messages: readonly InboxMessage[],
   scope: ConversationScope,

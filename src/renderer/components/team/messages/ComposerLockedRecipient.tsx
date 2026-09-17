@@ -3,16 +3,16 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import type { JSX } from 'react';
 
 interface ComposerLockedRecipientProps {
-  name: string;
-  color?: string;
-  avatarUrl?: string;
+  readonly name: string;
+  readonly color?: string;
+  readonly avatarUrl?: string;
 }
 
-export function ComposerLockedRecipient({
+export const ComposerLockedRecipient = ({
   name,
   color,
   avatarUrl,
-}: ComposerLockedRecipientProps): JSX.Element {
+}: Readonly<ComposerLockedRecipientProps>): JSX.Element => {
   return (
     <div className="message-composer-target-selectors flex w-fit min-w-0 max-w-full items-center overflow-hidden px-2">
       <MemberBadge
@@ -26,4 +26,4 @@ export function ComposerLockedRecipient({
       />
     </div>
   );
-}
+};

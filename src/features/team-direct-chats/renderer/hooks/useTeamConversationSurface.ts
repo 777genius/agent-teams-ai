@@ -63,26 +63,22 @@ export function useTeamConversationSurface(args: {
   const lastTeamRef = useRef(args.teamName);
 
   useEffect(() => {
-    if (lastTeamRef.current === args.teamName) {
+    if (lastTeamRef.current !== args.teamName) {
+      lastTeamRef.current = args.teamName;
+      const next = getTeamMessagesSidebarUiState(args.teamName);
+      const nextSurface = next.conversationSurface ?? 'list';
+      const nextScope = next.conversationScope ?? { kind: 'team-feed' };
+      const available = nextSurface !== 'thread' || isScopeAvailable(nextScope, args.members);
+      setSurface(available ? nextSurface : 'list');
+      setScope(available ? nextScope : { kind: 'team-feed' });
+      setThreadOpenedAt(available && nextSurface === 'thread' ? Date.now() : 0);
       return;
     }
-    lastTeamRef.current = args.teamName;
-    const next = getTeamMessagesSidebarUiState(args.teamName);
-    const nextSurface = next.conversationSurface ?? 'list';
-    setSurface(nextSurface);
-    setScope(next.conversationScope ?? { kind: 'team-feed' });
-    setThreadOpenedAt(nextSurface === 'thread' ? Date.now() : 0);
-  }, [args.teamName]);
-
-  useEffect(() => {
-    if (surface !== 'thread') {
-      return;
-    }
-    if (!isScopeAvailable(scope, args.members)) {
+    if (surface === 'thread' && !isScopeAvailable(scope, args.members)) {
       setSurface('list');
       setScope({ kind: 'team-feed' });
     }
-  }, [args.members, scope, surface]);
+  }, [args.members, args.teamName, scope, surface]);
 
   const onScopeChangeRef = useRef(args.onScopeChange);
   onScopeChangeRef.current = args.onScopeChange;

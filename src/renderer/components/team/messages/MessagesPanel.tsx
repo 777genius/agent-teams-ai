@@ -70,10 +70,9 @@ import { MessageComposer, type MessageRevisionRequest } from './MessageComposer'
 import { MessagesInlineBackButton } from './MessagesInlineBackButton';
 import { MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
 import {
-  conversationDisplayTitle,
+  conversationChrome,
   conversationScopeKey,
   filterScopedMessages,
-  resolveConversationParticipantName,
   scopedUnreadCounts,
   scopedUnreadKeys,
 } from './messagesPanelConversations';
@@ -858,19 +857,10 @@ export const MessagesPanel = memo(function MessagesPanel({
     messages: threadCanonicalMessages,
     readSet,
   });
-  const lockedRecipient =
-    renderSurface === 'thread' && scope.kind === 'direct'
-      ? resolveConversationParticipantName(members, scope.participant)
-      : undefined;
-  const conversationTitle = conversationDisplayTitle(
-    renderSurface,
-    scope,
-    {
-      list: t('messages.title'),
-      teamFeed: t('messages.chats.teamFeed'),
-    },
-    members
-  );
+  const { lockedRecipient, conversationTitle } = conversationChrome(renderSurface, scope, members, {
+    list: t('messages.title'),
+    teamFeed: t('messages.chats.teamFeed'),
+  });
 
   const handleMarkAllRead = useCallback(() => {
     markAllRead(scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey));
@@ -1549,7 +1539,7 @@ export const MessagesPanel = memo(function MessagesPanel({
           <MessageSquare size={14} />
         )
       }
-      badge={renderSurface === 'list' ? undefined : filteredMessages.length}
+      badge={renderSurface === 'list' ? undefined : threadMessages.length}
       secondaryBadge={
         renderSurface === 'thread' && messagesUnreadCount > 0 ? messagesUnreadCount : undefined
       }

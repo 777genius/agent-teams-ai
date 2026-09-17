@@ -60,7 +60,7 @@ interface MessageRowWithObserverProps {
   showRecipientRoute?: boolean;
 }
 
-function MessageRowWithObserver({
+const MessageRowWithObserver = ({
   message,
   teamName,
   memberRole,
@@ -95,7 +95,7 @@ function MessageRowWithObserver({
   observerRoot,
   timelineCardPosition,
   showRecipientRoute,
-}: MessageRowWithObserverProps): React.JSX.Element {
+}: Readonly<MessageRowWithObserverProps>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
   const messageRef = useRef(message);
@@ -183,7 +183,7 @@ function MessageRowWithObserver({
       />
     </AnimatedHeightReveal>
   );
-}
+};
 
 export const MemoizedMessageRowWithObserver = React.memo(
   MessageRowWithObserver,

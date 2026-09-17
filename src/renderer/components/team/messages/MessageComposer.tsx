@@ -252,9 +252,7 @@ export const MessageComposer = ({
 
   // Members load async with team data; keep recipient stable if valid, otherwise default to lead/first.
   useEffect(() => {
-    if (lockedRecipient) {
-      return;
-    }
+    if (lockedRecipient) return;
     if (recipient && members.some((m) => m.name === recipient)) {
       return;
     }
