@@ -840,9 +840,6 @@ export function useRuntimeProviderManagement(
         }
         const modelPage = response.models;
         const nextModels = modelPage?.models ?? [];
-        if (!append) {
-          setModelResults({});
-        }
         setModels((current) => (append ? mergeModelPages(current, nextModels) : nextModels));
         setModelsTotalCount(
           (current) => modelPage?.totalCount ?? (append ? current : nextModels.length)

@@ -3009,6 +3009,95 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps Test results across a debounced catalog search reload', async () => {
+    const localProvider = createOpenAiLocalProvider();
+    const modelId = 'openai/gpt-5';
+    const catalogPage = {
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      models: {
+        runtimeId: 'opencode' as const,
+        providerId: 'openai',
+        models: [
+          {
+            modelId,
+            providerId: 'openai',
+            displayName: 'GPT-5',
+            sourceLabel: 'OpenCode catalog',
+            free: false,
+            default: false,
+            availability: 'available' as const,
+          },
+        ],
+        defaultModelId: null,
+        diagnostics: [],
+        totalCount: 1,
+        returnedCount: 1,
+        limit: 250,
+        cursor: null,
+        nextCursor: null,
+      },
+    };
+    const loadModels = vi.fn(() => Promise.resolve(catalogPage));
+    const testModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        result: {
+          providerId: 'openai',
+          modelId,
+          ok: true,
+          availability: 'available' as const,
+          message: 'Probe passed',
+          diagnostics: [],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView: vi.fn(() =>
+            Promise.resolve({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              view: createRuntimeView([localProvider]),
+            })
+          ),
+          loadProviderDirectory: vi.fn(() => Promise.resolve(createEmptyDirectoryResponse())),
+          loadModels,
+          testModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+    });
+
+    await act(async () => {
+      await actions?.testModel('openai', modelId);
+    });
+    expect(state?.modelResults[modelId]?.ok).toBe(true);
+
+    loadModels.mockClear();
+    await act(async () => {
+      actions?.setModelQuery('gpt');
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+    });
+    expect(loadModels).toHaveBeenCalledTimes(1);
+    expect(state?.modelResults[modelId]?.ok).toBe(true);
+    expect(state?.modelResults[modelId]?.message).toBe('Probe passed');
+
+    await act(async () => root.unmount());
+  });
+
   it('appends paged provider models without duplicates', async () => {
     const localProvider = createOpenAiLocalProvider();
     const makeModel = (modelId: string) => ({
