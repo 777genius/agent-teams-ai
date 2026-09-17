@@ -110,7 +110,7 @@
     "src/renderer/components/sidebar/DateGroupedSessions.tsx": 1130,
     "src/renderer/components/sidebar/GlobalTaskList.tsx": 1861,
     "src/renderer/components/splash/splashScene.ts": 1015,
-    "src/renderer/components/team/activity/ActivityItem.tsx": 2032,
+    "src/renderer/components/team/activity/ActivityItem.tsx": 1991,
     "src/renderer/components/team/activity/ActivityTimeline.tsx": 1073,
     "src/renderer/components/team/activity/LeadThoughtsGroup.tsx": 1186,
     "src/renderer/components/team/dialogs/CreateTeamDialog.tsx": 3160,

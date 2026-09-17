@@ -38,6 +38,21 @@ vi.mock('@renderer/components/ui/ExpandableContent', () => ({
   ExpandableContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
 }));
+vi.mock('@renderer/components/ui/hover-card', () => ({
+  HoverCard: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  HoverCardTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  HoverCardContent: ({
+    children,
+    className,
+    side,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    side?: string;
+  }) => React.createElement('div', { className, 'data-side': side }, children),
+}));
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
@@ -214,6 +229,48 @@ describe('ActivityItem compact header preview', () => {
     });
 
     expect(host.querySelector('button[aria-label="Edit message"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders message actions in a right-side toolbar instead of overlaying the body', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      text: 'Codex second cycle writes the marker',
+      timestamp: new Date('2026-04-18T16:30:00.000Z').toISOString(),
+      read: true,
+      source: 'inbox',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          onReply: vi.fn(),
+          onCreateTask: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const article = host.querySelector('article');
+    const toolbar = host.querySelector('[data-activity-message-toolbar="true"]');
+    const toolbarHost = toolbar?.closest('[data-side]');
+
+    expect(article).not.toBeNull();
+    expect(toolbar).not.toBeNull();
+    expect(article?.contains(toolbar)).toBe(false);
+    expect(toolbarHost?.getAttribute('data-side')).toBe('right');
+    expect(toolbarHost?.className).toContain('activity-message-toolbar');
+    expect(toolbar?.className).not.toContain('absolute');
 
     await act(async () => {
       root.unmount();

@@ -10,7 +10,7 @@ import { AttachmentDisplay } from '@renderer/components/team/attachments/Attachm
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
@@ -69,16 +69,14 @@ import {
   ChevronRight,
   Clock,
   Command,
-  ListPlus,
   Maximize2,
   MoveRight,
-  Pencil,
   RefreshCw,
-  Reply,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
 import {
   encodeCacheParts,
   extractMarkdownPlainTextCached,
@@ -1506,7 +1504,8 @@ export const ActivityItem = memo(
         renderInlineBoldSummary(rawSummary)
       );
 
-    return (
+    const showHoverToolbar = Boolean(isExpanded && displayText);
+    const card = (
       <article
         className={[
           'activity-timeline-card group relative overflow-hidden',
@@ -1860,73 +1859,9 @@ export const ActivityItem = memo(
               />
             ) : displayText ? (
               <div
-                className={`group/message-body relative${isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : ''}`}
+                className={isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : undefined}
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
-                <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/message-body:opacity-100">
-                  {canRevise && onRevise ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={t('activity.actions.editMessage')}
-                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
-                          style={{ color: CARD_ICON_MUTED }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRevise(message);
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {t('activity.actions.editMessage')}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                  {onReply ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
-                          style={{ color: CARD_ICON_MUTED }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onReply(message);
-                          }}
-                        >
-                          <Reply size={14} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {t('activity.actions.replyToMessage')}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                  {onCreateTask ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
-                          style={{ color: CARD_ICON_MUTED }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCreateTask();
-                          }}
-                        >
-                          <ListPlus size={14} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {t('activity.actions.createTaskFromMessage')}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                  <CopyButton text={displayText} inline />
-                </div>
                 <ExpandableContent onExpand={onExpandContent}>
                   <span
                     onClickCapture={
@@ -1994,6 +1929,30 @@ export const ActivityItem = memo(
           </div>
         ) : null}
       </article>
+    );
+
+    return (
+      <HoverCard openDelay={120} closeDelay={220}>
+        <HoverCardTrigger asChild>{card}</HoverCardTrigger>
+        {showHoverToolbar ? (
+          <HoverCardContent
+            side="right"
+            align="start"
+            sideOffset={0}
+            className="activity-message-toolbar w-auto min-w-0 bg-[var(--color-surface-raised)] p-1 shadow-none data-[side=left]:rounded-r-none data-[side=right]:rounded-l-none data-[side=left]:border-r-0 data-[side=right]:border-l-0"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ActivityMessageHoverToolbar
+              copyText={displayText ?? ''}
+              canRevise={Boolean(canRevise && onRevise)}
+              onRevise={onRevise ? () => onRevise(message) : undefined}
+              onReply={onReply ? () => onReply(message) : undefined}
+              onCreateTask={onCreateTask ? handleCreateTask : undefined}
+            />
+          </HoverCardContent>
+        ) : null}
+      </HoverCard>
     );
   },
   (prev, next) =>
