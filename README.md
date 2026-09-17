@@ -528,7 +528,7 @@ local packaging.
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-By opening a pull request you agree to the [Contributor License Agreement](.github/CLA.md) v2. You keep copyright. You do not add your name to a table.
+By opening a pull request you agree to the [Contributor License Agreement](.github/CLA.md) v2. You keep copyright.
 
 ## Partnerships
 
