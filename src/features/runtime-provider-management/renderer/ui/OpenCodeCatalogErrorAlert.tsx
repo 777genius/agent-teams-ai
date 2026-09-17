@@ -78,7 +78,7 @@ export const OpenCodeCatalogErrorAlert = ({
   if (!failures.length) return null;
   const start = page * MAX_FAILURES;
   return (
-    <div className="w-full min-w-0">
+    <div className="w-full min-w-0 basis-full">
       <RuntimeProviderErrorAlert
         compact
         copyAll={!report.includes('[truncated')}

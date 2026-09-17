@@ -191,11 +191,48 @@ export const RuntimeProviderErrorAlert = ({
     };
   }, [copyText]);
 
+  const headlineNode = (
+    <div className="min-w-0 whitespace-pre-wrap break-words font-medium leading-5">
+      {headline || message}
+      {showWindowsSymlinkPermissionHint ? (
+        <span className="ml-2 inline-flex rounded border border-red-200/30 bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-red-50">
+          {t('runtimeProvider.diagnostics.windowsSymlinkAdminHint')}
+        </span>
+      ) : null}
+    </div>
+  );
+  const copyButton = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className={cn(
+              'h-6 shrink-0 px-2 text-[11px]',
+              !copied && 'member-launch-diagnostics-pulse'
+            )}
+            aria-label={copied ? t('runtimeProvider.diagnostics.copied') : copyLabel}
+            onClick={(event) => {
+              event.stopPropagation();
+              void copyDiagnostics();
+            }}
+          >
+            {copied ? <Check className="mr-1 size-3" /> : <ClipboardList className="mr-1 size-3" />}
+            {copied ? t('runtimeProvider.diagnostics.copiedShort') : copyLabel}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{copyLabel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
   return (
     <div
       data-testid={testId}
       role="alert"
-      className="flex min-w-0 items-start gap-2 rounded-md border px-3 py-2 text-xs"
+      className="flex w-full min-w-0 items-start gap-2 rounded-md border px-3 py-2 text-xs"
       style={{
         borderColor: 'rgba(248, 113, 113, 0.25)',
         backgroundColor: 'rgba(248, 113, 113, 0.06)',
@@ -203,45 +240,15 @@ export const RuntimeProviderErrorAlert = ({
       }}
     >
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0 whitespace-pre-wrap break-words font-medium leading-5">
-            {headline || message}
-            {showWindowsSymlinkPermissionHint ? (
-              <span className="ml-2 inline-flex rounded border border-red-200/30 bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-red-50">
-                {t('runtimeProvider.diagnostics.windowsSymlinkAdminHint')}
-              </span>
-            ) : null}
+      <div className="w-full min-w-0 flex-1">
+        {compact ? (
+          headlineNode
+        ) : (
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+            {headlineNode}
+            {copyButton}
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className={cn(
-                    'h-6 shrink-0 px-2 text-[11px]',
-                    !copied && 'member-launch-diagnostics-pulse'
-                  )}
-                  aria-label={copied ? t('runtimeProvider.diagnostics.copied') : copyLabel}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void copyDiagnostics();
-                  }}
-                >
-                  {copied ? (
-                    <Check className="mr-1 size-3" />
-                  ) : (
-                    <ClipboardList className="mr-1 size-3" />
-                  )}
-                  {copied ? t('runtimeProvider.diagnostics.copiedShort') : copyLabel}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{copyLabel}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        )}
         {copyFailed ? (
           <div role="status">
             {commonT('codexLogin.copyFailed')}
@@ -255,11 +262,22 @@ export const RuntimeProviderErrorAlert = ({
         ) : null}
         <Collapsible open={!compact || expanded} onOpenChange={setExpanded}>
           {compact ? (
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm">
-                {commonT(expanded ? 'tmuxInstaller.details.hide' : 'tmuxInstaller.details.show')}
-              </Button>
-            </CollapsibleTrigger>
+            <div
+              data-testid={`provider-error-actions:${testId}`}
+              className="mt-2 flex flex-nowrap items-center gap-2"
+            >
+              {copyButton}
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 shrink-0 px-2 text-[11px]"
+                >
+                  {commonT(expanded ? 'tmuxInstaller.details.hide' : 'tmuxInstaller.details.show')}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
           ) : null}
           <CollapsibleContent>
             {diagnostics ? (

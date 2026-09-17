@@ -45,6 +45,24 @@ describe('openCodeCatalogFailure', () => {
     });
   });
 
+  it('explains the current sanitized SuperGrok runtime-unhealthy copy as a possible reconnect', () => {
+    expect(
+      describeOpenCodeCatalogFailure({
+        operation: 'provider_models',
+        sourceProviderId: 'xai',
+        origin: 'main',
+        message: "Couldn't load xAI models from OpenCode.",
+        errorCode: 'runtime-unhealthy',
+        connectedAuthHint: 'oauth',
+        authMethods: ['oauth', 'api'],
+      })
+    ).toEqual({
+      kind: 'auth_reconnect_maybe',
+      key: 'catalogSignInMaybe',
+      provider: 'SuperGrok',
+    });
+  });
+
   it('keeps assertive reconnect copy for an explicit auth-failed code', () => {
     expect(
       describeOpenCodeCatalogFailure({
@@ -89,6 +107,22 @@ describe('openCodeCatalogFailure', () => {
         sourceProviderId: 'xai',
         origin: 'main',
         message: 'OpenCode catalog request failed.',
+        errorCode: 'runtime-unhealthy',
+        displayName: 'xAI',
+        connectedAuthHint: 'api',
+        authMethods: ['oauth', 'api'],
+      })
+    ).toEqual({
+      kind: 'generic',
+      key: 'catalogLoadFailed',
+      provider: 'xAI',
+    });
+    expect(
+      describeOpenCodeCatalogFailure({
+        operation: 'provider_models',
+        sourceProviderId: 'xai',
+        origin: 'main',
+        message: "Couldn't load xAI models from OpenCode.",
         errorCode: 'runtime-unhealthy',
         displayName: 'xAI',
         connectedAuthHint: 'api',
