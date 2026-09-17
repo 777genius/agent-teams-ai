@@ -14,12 +14,12 @@ export type Screenshot = {
  */
 export const screenshots: Screenshot[] = [
   {
-    path: 'screenshots/13.jpg',
-    previewPath: 'screenshots/previews/13.webp',
-    alt: 'Connected AI coding providers and subscription limits',
-    ruAlt: 'Подключённые AI-провайдеры и лимиты подписок',
-    width: 2560,
-    height: 1606,
+    path: 'screenshots/1.jpg',
+    previewPath: 'screenshots/previews/1.webp',
+    alt: 'Kanban board with team messages and agent tasks',
+    ruAlt: 'Канбан-доска с сообщениями команды и задачами агентов',
+    width: 1024,
+    height: 582,
   },
   {
     path: 'screenshots/14.png',
@@ -38,12 +38,12 @@ export const screenshots: Screenshot[] = [
     height: 1656,
   },
   {
-    path: 'screenshots/1.jpg',
-    previewPath: 'screenshots/previews/1.webp',
-    alt: 'Kanban board with agent tasks',
-    ruAlt: 'Канбан-доска с задачами агентов',
-    width: 2624,
-    height: 1648,
+    path: 'screenshots/13.jpg',
+    previewPath: 'screenshots/previews/13.webp',
+    alt: 'Connected AI coding providers and subscription limits',
+    ruAlt: 'Подключённые AI-провайдеры и лимиты подписок',
+    width: 2560,
+    height: 1606,
   },
   {
     path: 'screenshots/2.png',
