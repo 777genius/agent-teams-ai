@@ -110,7 +110,7 @@ export const LegacyConfiguredModelsPanel = ({
                   size="sm"
                   variant="outline"
                   aria-label={`${t('runtimeProvider.actions.test')}: ${modelTarget}`}
-                  disabled={disabled || !hasProjectContext || testing}
+                  disabled={disabled || testing}
                   onClick={() => void actions.testModel(model.providerId, model.modelId)}
                 >
                   {testing ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
