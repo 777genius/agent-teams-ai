@@ -69,14 +69,14 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
   });
 
-  it('still confirms Stop when clearing persisted live runtime handles throws', () => {
+  it('still reports unconfirmed Stop when clearing persisted live runtime handles throws', () => {
     const clearPersistedLiveRuntimeHandles = vi.fn(() => {
       throw new Error('File lock timeout');
     });
     const ports = createPorts({ clearPersistedLiveRuntimeHandles });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
-    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
     expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to clear persisted live runtime handles: File lock timeout'

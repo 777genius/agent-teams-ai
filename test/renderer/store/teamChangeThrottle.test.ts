@@ -33,6 +33,7 @@ vi.mock('@renderer/api', () => ({
       onNew: vi.fn(() => () => undefined),
       onUpdated: vi.fn(() => () => undefined),
       onClicked: vi.fn(() => () => undefined),
+      setViewedTeam: vi.fn(async () => true),
       get: vi.fn(async () => ({
         notifications: [],
         total: 0,

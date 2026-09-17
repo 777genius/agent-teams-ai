@@ -58,29 +58,21 @@ describe('viewedTeamNotificationSync', () => {
   });
 
   it('retries viewed-team sync after a failed IPC write', async () => {
-    const setViewedTeamForNotifications = vi
-      .fn(async () => undefined)
-      .mockRejectedValueOnce(new Error('ipc'));
+    const setViewedTeamForNotifications = vi.fn(async () => true).mockResolvedValueOnce(false);
     const makeState = (teamName: string): AppState => ({
       ...createState(teamName),
       setViewedTeamForNotifications,
     });
-    let state = makeState('alpha');
+    const state = makeState('alpha');
     const store = {
       getState: () => state,
-      subscribe(listener: (next: AppState, prev: AppState) => void) {
-        this.listener = listener;
+      subscribe() {
         return () => undefined;
       },
-      listener: undefined as ((next: AppState, prev: AppState) => void) | undefined,
     };
     startViewedTeamNotificationSync(store);
     await Promise.resolve();
     await Promise.resolve();
-
-    const previous = state;
-    state = makeState('alpha');
-    store.listener?.(state, previous);
     expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(2);
   });
 });

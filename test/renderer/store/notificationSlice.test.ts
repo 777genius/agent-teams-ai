@@ -121,6 +121,24 @@ describe('notificationSlice', () => {
 
       expect(mockAPI.notifications.get).toHaveBeenCalled();
     });
+
+    it('returns false when setting the viewed team fails', async () => {
+      mockAPI.notifications.setViewedTeam.mockResolvedValue(false);
+      mockAPI.notifications.get.mockResolvedValue({ notifications: [] });
+
+      await expect(
+        store.getState().setViewedTeamForNotifications('mixed-v2150-20260917')
+      ).resolves.toBe(false);
+    });
+
+    it('returns false when the viewed-team IPC is unavailable', async () => {
+      mockAPI.notifications.setViewedTeam = undefined as never;
+
+      await expect(
+        store.getState().setViewedTeamForNotifications('mixed-v2150-20260917')
+      ).resolves.toBe(false);
+      expect(mockAPI.notifications.get).not.toHaveBeenCalled();
+    });
   });
 
   describe('scoped markAllNotificationsRead', () => {

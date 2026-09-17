@@ -124,7 +124,7 @@ export interface NotificationSlice {
   fetchNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (triggerName?: string) => Promise<void>;
-  setViewedTeamForNotifications: (teamName: string | null) => Promise<void>;
+  setViewedTeamForNotifications: (teamName: string | null) => Promise<boolean>;
   deleteNotification: (id: string) => Promise<void>;
   clearNotifications: (triggerName?: string) => Promise<void>;
   navigateToError: (error: DetectedError) => void;
@@ -235,14 +235,18 @@ export const createNotificationSlice: StateCreator<AppState, [], [], Notificatio
   },
 
   setViewedTeamForNotifications: async (teamName: string | null) => {
+    const setViewedTeam = api.notifications?.setViewedTeam;
+    if (typeof setViewedTeam !== 'function') {
+      return false;
+    }
     try {
-      const success = await api.notifications.setViewedTeam(teamName);
+      const success = await setViewedTeam(teamName);
       if (!success) {
         await get().fetchNotifications();
-        return;
+        return false;
       }
       if (!teamName) {
-        return;
+        return true;
       }
       set((state) => {
         const notifications = state.notifications.map((n) =>
@@ -253,8 +257,10 @@ export const createNotificationSlice: StateCreator<AppState, [], [], Notificatio
           unreadCount: notifications.filter((n) => !n.isRead).length,
         };
       });
+      return true;
     } catch (error) {
       logger.error('Failed to set viewed team for notifications:', error);
+      return false;
     }
   },
 

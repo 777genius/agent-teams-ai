@@ -465,6 +465,22 @@ describe('NotificationManager viewed team', () => {
     expect(await manager.getUnreadCount()).toBe(1);
   });
 
+  it('does not mark existing viewed-team unread while the window is unfocused', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:existing' }));
+    const win = {
+      isDestroyed: () => false,
+      isFocused: () => false,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    expect(await manager.getUnreadCount()).toBe(1);
+
+    manager.setViewedTeamName('test-team');
+
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
   it('marks viewed-team events read when the window is focused again', async () => {
     const listeners = new Map<string, () => void>();
     const win = {

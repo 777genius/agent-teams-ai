@@ -39,6 +39,7 @@ vi.mock('@renderer/api', () => ({
         })
       ),
       getUnreadCount: vi.fn(() => Promise.resolve(0)),
+      setViewedTeam: vi.fn(async () => true),
       onNew: vi.fn(),
       onUpdated: vi.fn(),
       onClicked: vi.fn(),

@@ -29,17 +29,53 @@ export function getFocusedVisibleTeamName(state: AppState): string | null {
 
 export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => void {
   let lastViewedTeamForNotifications: string | null | undefined;
+  let inFlightViewedTeam: string | null | undefined;
+  let retryFor: string | null | undefined;
   const sync = (state: AppState = store.getState()): void => {
     const focused = getFocusedVisibleTeamName(state);
-    if (focused === lastViewedTeamForNotifications) {
+    if (focused === lastViewedTeamForNotifications || focused === inFlightViewedTeam) {
       return;
     }
-    lastViewedTeamForNotifications = focused;
-    void state.setViewedTeamForNotifications(focused).catch(() => {
-      if (lastViewedTeamForNotifications === focused) {
+    inFlightViewedTeam = focused;
+    const requested = focused;
+    void Promise.resolve(state.setViewedTeamForNotifications(focused))
+      .then((ok) => {
+        if (inFlightViewedTeam !== requested) {
+          return;
+        }
+        inFlightViewedTeam = undefined;
+        if (ok === false) {
+          lastViewedTeamForNotifications = undefined;
+          if (retryFor === requested) {
+            return;
+          }
+          retryFor = requested;
+          queueMicrotask(() => {
+            if (getFocusedVisibleTeamName(store.getState()) === requested) {
+              sync(store.getState());
+            }
+          });
+          return;
+        }
+        lastViewedTeamForNotifications = requested;
+        retryFor = undefined;
+      })
+      .catch(() => {
+        if (inFlightViewedTeam !== requested) {
+          return;
+        }
+        inFlightViewedTeam = undefined;
         lastViewedTeamForNotifications = undefined;
-      }
-    });
+        if (retryFor === requested) {
+          return;
+        }
+        retryFor = requested;
+        queueMicrotask(() => {
+          if (getFocusedVisibleTeamName(store.getState()) === requested) {
+            sync(store.getState());
+          }
+        });
+      });
   };
 
   sync();

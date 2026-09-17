@@ -153,13 +153,18 @@ vi.mock('@renderer/components/team/members/CurrentTaskIndicator', () => ({
   CurrentTaskIndicator: ({
     task,
     activityLabel,
+    isTimerRunning,
   }: {
     task: TeamTaskWithKanban;
     activityLabel?: string;
+    isTimerRunning?: boolean;
   }) =>
     React.createElement(
       'span',
-      { 'data-testid': 'hover-current-task' },
+      {
+        'data-testid': 'hover-current-task',
+        'data-timer-running': String(isTimerRunning === true),
+      },
       `${activityLabel ?? 'task'} ${task.id}`
     ),
 }));
@@ -410,6 +415,46 @@ describe('MemberHoverCard spawn-aware presence', () => {
 
     expect(host.querySelector('[data-testid="hover-current-task"]')).toBeNull();
     expect(host.textContent).not.toContain('working on');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not spin the hover task loader unless the team is known alive', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const task: TeamTaskWithKanban = {
+      id: 'task-active',
+      subject: 'Active work',
+      status: 'in_progress',
+    };
+    storeState.selectedTeamData.isAlive = undefined as never;
+    storeState.selectedTeamData.members = [{ ...member, currentTaskId: task.id }];
+    storeState.selectedTeamData.tasks = [task];
+    storeState.memberSpawnStatusesByTeam['northstar-core'].alice = {
+      status: 'online',
+      launchState: 'confirmed_alive',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      runtimeAlive: true,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberHoverCard, {
+          name: 'alice',
+          children: React.createElement('button', { type: 'button' }, 'alice'),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('working on');
+    expect(host.querySelector('[data-timer-running="false"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();

@@ -42,12 +42,13 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
 ): Promise<MemberSpawnStatusesSnapshot> {
   const runId = ports.cache.getTrackedRunId(teamName);
   const run = runId ? ports.getRun(runId) : undefined;
+  const resolvedRunId = run?.runId ?? null;
   const generation = ports.cache.getCacheGeneration(teamName);
   const cached = ports.cache.snapshotCache.get(teamName);
   if (
     cached &&
     cached.expiresAtMs > ports.cache.nowMs() &&
-    cached.runId === (run?.runId ?? runId) &&
+    cached.runId === resolvedRunId &&
     cached.generation === generation
   ) {
     return cloneMemberSpawnStatusesSnapshot(cached.snapshot);
@@ -104,7 +105,7 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
   const summary = summarizeMemberSpawnStatusRecord(expectedMembers, statuses);
   return {
     statuses,
-    runId: run?.runId ?? runId ?? null,
+    runId: resolvedRunId,
     teamLaunchState: ports.live.deriveTeamLaunchAggregateState(summary),
     launchPhase: launchSnapshot?.launchPhase,
     expectedMembers,

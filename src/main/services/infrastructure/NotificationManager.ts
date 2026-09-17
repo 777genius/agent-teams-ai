@@ -1355,7 +1355,7 @@ export class NotificationManager extends EventEmitter {
   setViewedTeamName(teamName: string | null): void {
     const next = teamName?.trim() ? teamName.trim() : null;
     this.viewedTeamName = next;
-    if (next) {
+    if (next && this.isViewedTeamWindowFocused()) {
       this.markTeamRead(next);
     }
   }

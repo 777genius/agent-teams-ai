@@ -325,9 +325,11 @@ function isMemberSpawnStatusesSnapshotReadCurrent<TRun extends MemberSpawnStatus
   generationAtStart: number;
   ports: MemberSpawnStatusesSnapshotPorts<TRun>;
 }): boolean {
+  const trackedRunId = params.ports.cache.getTrackedRunId(params.teamName);
+  const currentRunId = trackedRunId ? (params.ports.getRun(trackedRunId)?.runId ?? null) : null;
   return (
     params.ports.cache.getCacheGeneration(params.teamName) === params.generationAtStart &&
-    params.ports.cache.getTrackedRunId(params.teamName) === params.runIdAtStart
+    currentRunId === params.runIdAtStart
   );
 }
 
@@ -592,7 +594,7 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   }
   const stoppedProjection = await applyStoppedTeamSpawnProjection(
     teamName,
-    resolvedRunId != null,
+    Boolean(resolvedRunId && ports.getRun(resolvedRunId)),
     attachedStatuses,
     (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName)
   );
@@ -744,7 +746,7 @@ export async function getMemberSpawnStatusesSnapshot<TRun extends MemberSpawnSta
   }
   const run = ports.getRun(runId);
   if (!run) {
-    return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: runId, ports });
+    return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: null, ports });
   }
 
   const generationAtStart = ports.cache.getCacheGeneration(teamName);
