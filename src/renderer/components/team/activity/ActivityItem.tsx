@@ -77,6 +77,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
+import { shouldHideDirectMemberRoute } from './activityRecipientRoute';
 import {
   encodeCacheParts,
   extractMarkdownPlainTextCached,
@@ -282,8 +283,8 @@ interface ActivityItemProps {
   /** Called when ExpandableContent is expanded via "Show more". */
   onExpandContent?: () => void;
   timelineCardPosition?: TimelineCardPosition;
-  /** When false, hide the from→to recipient route (1:1 threads). */
-  showRecipientRoute?: boolean;
+  /** 1:1 participant; when set, hide redundant from→to member routes. */
+  directParticipant?: string;
 }
 
 function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
@@ -870,7 +871,7 @@ export const ActivityItem = memo(
     expandItemKey,
     onExpandContent,
     timelineCardPosition = 'single',
-    showRecipientRoute = true,
+    directParticipant,
   }: Readonly<ActivityItemProps>): React.JSX.Element => {
     const { t } = useAppTranslation('team');
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
@@ -1154,7 +1155,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
-          showRecipientRoute={showRecipientRoute}
+          showRecipientRoute={directParticipant == null}
         />
       );
     }
@@ -1170,7 +1171,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
-          showRecipientRoute={showRecipientRoute}
+          showRecipientRoute={directParticipant == null}
         />
       );
     }
@@ -1287,39 +1288,45 @@ export const ActivityItem = memo(
       </span>
     ) : null;
 
-    const recipientBadge = !showRecipientRoute ? null : commentTaskRef && commentTaskDisplayId ? (
-      <>
-        <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-        <TaskRecipientBadge
-          taskId={commentTaskRef.taskId}
-          displayId={commentTaskDisplayId}
-          teamName={commentTaskRef.teamName}
-          onTaskIdClick={onTaskIdClick}
-        />
-      </>
-    ) : message.to && message.to !== message.from ? (
-      <>
-        <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-        {crossTeamTarget ? (
-          <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
-        ) : null}
-        {crossTeamSentMemberName || !crossTeamTarget ? (
-          <MemberBadge
-            name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
-            color={crossTeamTarget ? undefined : recipientColor}
-            teamName={crossTeamTarget ? undefined : teamName}
-            isLight={isLight}
-            variant="text"
-            hideAvatar={
-              compactHeader ||
-              (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
-            }
-            onClick={onMemberNameClick}
-            disableHoverCard={crossTeamTarget != null}
+    const hideMemberRoute = shouldHideDirectMemberRoute(
+      message.to,
+      message.from,
+      directParticipant
+    );
+    const recipientBadge =
+      commentTaskRef && commentTaskDisplayId ? (
+        <>
+          <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+          <TaskRecipientBadge
+            taskId={commentTaskRef.taskId}
+            displayId={commentTaskDisplayId}
+            teamName={commentTaskRef.teamName}
+            onTaskIdClick={onTaskIdClick}
           />
-        ) : null}
-      </>
-    ) : null;
+        </>
+      ) : hideMemberRoute || !(message.to && message.to !== message.from) ? null : (
+        <>
+          <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+          {crossTeamTarget ? (
+            <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
+          ) : null}
+          {crossTeamSentMemberName || !crossTeamTarget ? (
+            <MemberBadge
+              name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
+              color={crossTeamTarget ? undefined : recipientColor}
+              teamName={crossTeamTarget ? undefined : teamName}
+              isLight={isLight}
+              variant="text"
+              hideAvatar={
+                compactHeader ||
+                (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
+              }
+              onClick={onMemberNameClick}
+              disableHoverCard={crossTeamTarget != null}
+            />
+          ) : null}
+        </>
+      );
 
     const summaryContent =
       isSlashCommandResult && message.commandOutput ? (
@@ -1845,7 +1852,7 @@ export const ActivityItem = memo(
     prev.expandItemKey === next.expandItemKey &&
     prev.onExpandContent === next.onExpandContent &&
     prev.timelineCardPosition === next.timelineCardPosition &&
-    prev.showRecipientRoute === next.showRecipientRoute &&
+    prev.directParticipant === next.directParticipant &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );
 

@@ -293,6 +293,7 @@ it('explains expired SuperGrok OAuth instead of a generic check failure', async 
     )
   );
   expect(host.textContent).toContain('If you signed in with OAuth, you may need to sign in again');
+  expect(host.textContent).toContain("Couldn't load xAI models from OpenCode.");
   expect(host.textContent).not.toContain('sign-in is no longer valid');
   expect(host.textContent).not.toContain('Check failed');
 });

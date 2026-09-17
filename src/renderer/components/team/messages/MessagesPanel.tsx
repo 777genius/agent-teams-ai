@@ -840,6 +840,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     emptyPreview: t('messages.chats.emptyPreview'),
     leadNames,
     sortByActivity: sortChatsByActivity,
+    enabled: renderSurface === 'list',
   });
   useDirectThreadAutoOlder({
     renderSurface,
@@ -863,8 +864,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   });
 
   const handleMarkAllRead = useCallback(() => {
-    markAllRead(scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey));
-  }, [markAllRead, readSet, threadCanonicalMessages]);
+    markAllRead(scopedUnreadKeys(threadMessages, readSet, toMessageKey));
+  }, [markAllRead, readSet, threadMessages]);
 
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {
@@ -1213,10 +1214,9 @@ export const MessagesPanel = memo(function MessagesPanel({
       revisionMessageId={revisionMessageId}
       onReviseMessage={handleReviseMessage}
       onMessageVisible={handleMessageVisible}
-      showRecipientRoute={scope.kind !== 'direct'}
+      directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
       unreadSnapshot={unreadSnapshot}
       emptyLabel={t('messages.chats.emptyThread')}
-      emptyHint=""
       onRestartTeam={onRestartTeam}
       onTaskIdClick={onTaskIdClick}
       onExpandItem={handleExpandItem}
@@ -1280,7 +1280,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         {/* Header */}
         <div className="flex shrink-0 items-center gap-2 overflow-visible border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
           <ConversationHeader
-            title={conversationTitle}
+            title={lockedRecipient ?? conversationTitle}
             unreadCount={messagesUnreadCount}
             attentionCount={messagesAttentionCount}
             onBack={renderSurface === 'thread' ? backToList : undefined}
@@ -1425,7 +1425,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               </div>
               <div className="flex h-full items-center gap-1.5">
                 <ConversationHeader
-                  title={conversationTitle}
+                  title={lockedRecipient ?? conversationTitle}
                   unreadCount={messagesUnreadCount}
                   attentionCount={messagesAttentionCount}
                   onBack={renderSurface === 'thread' ? backToList : undefined}

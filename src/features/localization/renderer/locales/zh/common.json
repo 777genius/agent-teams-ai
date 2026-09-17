@@ -716,6 +716,7 @@
     "catalogCheckCredential": "无法加载 {{provider}} 模型。请检查已保存的凭据，然后刷新。",
     "catalogDirectoryFailed": "OpenCode 无法加载提供商列表。",
     "catalogLoadFailed": "无法加载 {{provider}} 模型。",
+    "catalogSourceLoadFailed": "无法从 OpenCode 加载 {{provider}} 模型。",
     "catalogSignInExpired": "{{provider}} 登录已失效。请重新登录，然后刷新。",
     "catalogSignInMaybe": "无法加载 {{provider}} 模型。如果您通过 OAuth 登录，可能需要重新登录后再刷新。",
     "catalogStale": "{{provider}} 模型来自缓存，可能已过期。",

@@ -57,7 +57,7 @@ interface MessageRowWithObserverProps {
   onExpandContent?: () => void;
   observerRoot?: RefObject<HTMLElement | null>;
   timelineCardPosition?: TimelineCardPosition;
-  showRecipientRoute?: boolean;
+  directParticipant?: string;
 }
 
 const MessageRowWithObserver = ({
@@ -94,7 +94,7 @@ const MessageRowWithObserver = ({
   onExpandContent,
   observerRoot,
   timelineCardPosition,
-  showRecipientRoute,
+  directParticipant,
 }: Readonly<MessageRowWithObserverProps>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -179,7 +179,7 @@ const MessageRowWithObserver = ({
         expandItemKey={expandItemKey}
         onExpandContent={onExpandContent}
         timelineCardPosition={timelineCardPosition}
-        showRecipientRoute={showRecipientRoute}
+        directParticipant={directParticipant}
       />
     </AnimatedHeightReveal>
   );
@@ -220,6 +220,6 @@ export const MemoizedMessageRowWithObserver = React.memo(
     prev.onExpandContent === next.onExpandContent &&
     prev.observerRoot === next.observerRoot &&
     prev.timelineCardPosition === next.timelineCardPosition &&
-    prev.showRecipientRoute === next.showRecipientRoute &&
+    prev.directParticipant === next.directParticipant &&
     areInboxMessagesEquivalentForRender(prev.message, next.message)
 );

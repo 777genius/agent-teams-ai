@@ -2,7 +2,10 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { useTeamConversationSurface } from '@features/team-direct-chats/renderer/hooks/useTeamConversationSurface';
-import { useDirectThreadAutoOlder } from '@renderer/components/team/messages/useMessagesPanelChats';
+import {
+  useDirectThreadAutoOlder,
+  useResetScrollOnConversationChange,
+} from '@renderer/components/team/messages/useMessagesPanelChats';
 import {
   createDefaultMessagesSidebarUiState,
   setTeamMessagesSidebarUiState,
@@ -43,7 +46,53 @@ describe('useTeamConversationSurface', () => {
 
     expect(latest.current?.renderSurface).toBe('thread');
     expect(latest.current?.navigationSurface).toBe('list');
+    expect(latest.current?.scope).toEqual({ kind: 'team-feed' });
     expect(host.textContent).toBe('thread');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not keep a stale DM after Back, including in floating composer', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const latest: { current: TeamConversationSurfaceState | null } = { current: null };
+
+    function Probe({ position }: { position: string }): React.JSX.Element {
+      latest.current = useTeamConversationSurface({
+        teamName: 'probe-back',
+        members: [{ name: 'alice' }, { name: 'oscar', agentType: 'team-lead' }],
+        position,
+      });
+      return React.createElement('span', null, latest.current.renderSurface);
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Probe, { position: 'sidebar' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      latest.current?.openChat({ kind: 'direct', participant: 'alice' });
+      await Promise.resolve();
+    });
+    expect(latest.current?.scope).toEqual({ kind: 'direct', participant: 'alice' });
+
+    await act(async () => {
+      latest.current?.backToList();
+      await Promise.resolve();
+    });
+    expect(latest.current?.navigationSurface).toBe('list');
+    expect(latest.current?.scope).toEqual({ kind: 'team-feed' });
+
+    await act(async () => {
+      root.render(React.createElement(Probe, { position: 'floating-composer' }));
+      await Promise.resolve();
+    });
+    expect(latest.current?.renderSurface).toBe('thread');
+    expect(latest.current?.scope).toEqual({ kind: 'team-feed' });
 
     await act(async () => {
       root.unmount();
@@ -269,6 +318,79 @@ describe('useDirectThreadAutoOlder', () => {
       await Promise.resolve();
     });
     expect(loadOlder).toHaveBeenCalledTimes(8);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});
+
+describe('useResetScrollOnConversationChange', () => {
+  it('does not consume the next chat open after a team switch', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const persistScrollTop = vi.fn();
+    const scrollElement = { scrollTop: 48 };
+    const scrollElementRef = { current: scrollElement as HTMLElement };
+
+    function Probe({
+      teamName,
+      scopeKey,
+      navigationSurface,
+    }: {
+      teamName: string;
+      scopeKey: string;
+      navigationSurface: ConversationSurface;
+    }): null {
+      useResetScrollOnConversationChange({
+        teamName,
+        scopeKey,
+        navigationSurface,
+        persistScrollTop,
+        scrollElementRef,
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(
+        React.createElement(Probe, {
+          teamName: 'team-a',
+          scopeKey: 'team-feed',
+          navigationSurface: 'list',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(persistScrollTop).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(Probe, {
+          teamName: 'team-b',
+          scopeKey: 'team-feed',
+          navigationSurface: 'list',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(persistScrollTop).not.toHaveBeenCalled();
+    expect(scrollElement.scrollTop).toBe(48);
+
+    await act(async () => {
+      root.render(
+        React.createElement(Probe, {
+          teamName: 'team-b',
+          scopeKey: 'direct:alice',
+          navigationSurface: 'thread',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(persistScrollTop).toHaveBeenCalledWith(0);
+    expect(scrollElement.scrollTop).toBe(0);
 
     await act(async () => {
       root.unmount();

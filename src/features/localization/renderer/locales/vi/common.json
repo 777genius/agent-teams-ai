@@ -716,6 +716,7 @@
     "catalogCheckCredential": "Không thể tải mô hình {{provider}}. Kiểm tra thông tin đăng nhập đã lưu, rồi làm mới.",
     "catalogDirectoryFailed": "OpenCode không thể tải danh sách nhà cung cấp.",
     "catalogLoadFailed": "Không thể tải mô hình {{provider}}.",
+    "catalogSourceLoadFailed": "Không thể tải mô hình {{provider}} từ OpenCode.",
     "catalogSignInExpired": "Đăng nhập {{provider}} không còn hợp lệ. Đăng nhập lại, rồi làm mới.",
     "catalogSignInMaybe": "Không thể tải mô hình {{provider}}. Nếu bạn đăng nhập bằng OAuth, bạn có thể cần đăng nhập lại rồi làm mới.",
     "catalogStale": "Mô hình {{provider}} đang được lưu cache và có thể đã cũ.",

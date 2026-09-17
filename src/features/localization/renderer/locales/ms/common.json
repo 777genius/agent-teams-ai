@@ -716,6 +716,7 @@
     "catalogCheckCredential": "Tidak dapat memuatkan model {{provider}}. Semak kelayakan tersimpan, kemudian muat semula.",
     "catalogDirectoryFailed": "OpenCode tidak dapat memuatkan senarai penyedia.",
     "catalogLoadFailed": "Tidak dapat memuatkan model {{provider}}.",
+    "catalogSourceLoadFailed": "Tidak dapat memuatkan model {{provider}} dari OpenCode.",
     "catalogSignInExpired": "Log masuk {{provider}} tidak lagi sah. Log masuk semula, kemudian muat semula.",
     "catalogSignInMaybe": "Tidak dapat memuatkan model {{provider}}. Jika anda log masuk dengan OAuth, anda mungkin perlu log masuk semula, kemudian muat semula.",
     "catalogStale": "Model {{provider}} datang daripada cache dan mungkin lapuk.",

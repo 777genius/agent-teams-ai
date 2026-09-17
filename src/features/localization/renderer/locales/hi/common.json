@@ -716,6 +716,7 @@
     "catalogCheckCredential": "{{provider}} मॉडल लोड नहीं हो सके। सहेजा गया क्रेडेंशियल जाँचें, फिर रीफ़्रेश करें.",
     "catalogDirectoryFailed": "OpenCode प्रदाता सूची लोड नहीं कर सका.",
     "catalogLoadFailed": "{{provider}} मॉडल लोड नहीं हो सके.",
+    "catalogSourceLoadFailed": "OpenCode से {{provider}} मॉडल लोड नहीं हो सके।",
     "catalogSignInExpired": "{{provider}} साइन-इन अब मान्य नहीं है. फिर साइन इन करें, फिर रीफ़्रेश करें.",
     "catalogSignInMaybe": "{{provider}} मॉडल लोड नहीं हो सके. यदि आपने OAuth से साइन इन किया है, तो फिर साइन इन करके रीफ़्रेश करना पड़ सकता है.",
     "catalogStale": "{{provider}} मॉडल कैश से हैं और पुराने हो सकते हैं.",

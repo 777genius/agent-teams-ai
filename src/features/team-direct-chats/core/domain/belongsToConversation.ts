@@ -1,24 +1,17 @@
+import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
+import { isLeadNameAlias } from '@shared/utils/leadDetection';
+
 import { type ConversationScope, normalizeConversationParticipant } from './conversationScope';
 
 import type { InboxMessage } from '@shared/types';
 
 const USER_PARTICIPANT = 'user';
 
-function isLeadAlias(value: string | undefined): boolean {
-  const normalized = normalizeConversationParticipant(value).replace(/[\s_]+/g, '-');
-  return (
-    normalized === 'lead' ||
-    normalized === 'team-lead' ||
-    normalized === 'teamlead' ||
-    normalized === 'team-leader'
-  );
-}
-
 export function isLeadConversationParticipant(
   value: string | undefined,
   leadNames: Iterable<string>
 ): boolean {
-  if (isLeadAlias(value)) {
+  if (isLeadNameAlias(value)) {
     return true;
   }
   const normalized = normalizeConversationParticipant(value);
@@ -38,7 +31,7 @@ function isQualifiedParticipant(value: string): boolean {
 }
 
 function isCrossTeamMessage(message: InboxMessage): boolean {
-  if (message.source === 'cross_team' || message.source === 'cross_team_sent') {
+  if (message.source === CROSS_TEAM_SOURCE || message.source === CROSS_TEAM_SENT_SOURCE) {
     return true;
   }
   return isQualifiedParticipant(message.from) || isQualifiedParticipant(message.to ?? '');

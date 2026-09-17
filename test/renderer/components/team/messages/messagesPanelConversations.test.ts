@@ -1,7 +1,9 @@
 import {
   collectThreadUnreadSnapshotKeys,
+  conversationChrome,
   conversationDisplayTitle,
   resolveConversationParticipantName,
+  scopedUnreadKeys,
 } from '@renderer/components/team/messages/messagesPanelConversations';
 import { describe, expect, it } from 'vitest';
 
@@ -59,10 +61,18 @@ describe('collectThreadUnreadSnapshotKeys', () => {
 });
 
 describe('conversationDisplayTitle', () => {
-  it('maps team-lead to lead in a direct thread', () => {
+  it('uses the roster name rather than the display alias for a lead thread title', () => {
     expect(
-      conversationDisplayTitle('thread', { kind: 'direct', participant: 'team-lead' }, labels)
+      conversationDisplayTitle(
+        'thread',
+        { kind: 'direct', participant: 'team-lead' },
+        labels,
+        [member('team-lead', 'team-lead')]
+      )
     ).toBe('lead');
+    expect(
+      resolveConversationParticipantName([member('team-lead', 'team-lead')], 'lead')
+    ).toBe('team-lead');
   });
 
   it('uses the roster lead name when the participant is a lead alias', () => {
@@ -81,6 +91,39 @@ describe('conversationDisplayTitle', () => {
       'Messages'
     );
     expect(conversationDisplayTitle('thread', { kind: 'team-feed' }, labels)).toBe('This team');
+  });
+});
+
+describe('conversationChrome', () => {
+  it('locks MemberBadge to the roster name while the title can stay display-facing', () => {
+    const chrome = conversationChrome(
+      'thread',
+      { kind: 'direct', participant: 'lead' },
+      [member('team-lead', 'team-lead')],
+      labels
+    );
+    expect(chrome.lockedRecipient).toBe('team-lead');
+    expect(chrome.conversationTitle).toBe('lead');
+  });
+
+  it('does not lock a recipient on the chat list', () => {
+    const chrome = conversationChrome(
+      'list',
+      { kind: 'direct', participant: 'alice' },
+      [member('alice')],
+      labels
+    );
+    expect(chrome.lockedRecipient).toBeUndefined();
+    expect(chrome.conversationTitle).toBe('Messages');
+  });
+});
+
+describe('scopedUnreadKeys', () => {
+  it('marks only the visible filtered rows, not hidden matches', () => {
+    const visible = msg({ from: 'alice', to: 'user', text: 'shown', messageId: 'shown' });
+    const hidden = msg({ from: 'alice', to: 'user', text: 'hidden', messageId: 'hidden' });
+    expect(scopedUnreadKeys([visible], new Set(), toTestKey)).toEqual(['shown']);
+    expect(scopedUnreadKeys([visible, hidden], new Set(), toTestKey)).toEqual(['shown', 'hidden']);
   });
 });
 

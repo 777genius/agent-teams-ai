@@ -22,21 +22,25 @@ export function useTeamChatListItems(args: {
   emptyPreview: string;
   leadNames: Iterable<string>;
   sortByActivity?: boolean;
+  enabled?: boolean;
 }): ChatListViewItem[] {
   return useMemo(
     () =>
-      buildChatListView({
-        members: args.members,
-        messages: args.messages,
-        readSet: args.readSet,
-        toKey: toMessageKey,
-        teamFeedLabel: args.teamFeedLabel,
-        emptyPreview: args.emptyPreview,
-        leadNames: args.leadNames,
-        sortByActivity: args.sortByActivity,
-      }),
+      args.enabled === false
+        ? []
+        : buildChatListView({
+            members: args.members,
+            messages: args.messages,
+            readSet: args.readSet,
+            toKey: toMessageKey,
+            teamFeedLabel: args.teamFeedLabel,
+            emptyPreview: args.emptyPreview,
+            leadNames: args.leadNames,
+            sortByActivity: args.sortByActivity,
+          }),
     [
       args.emptyPreview,
+      args.enabled,
       args.leadNames,
       args.members,
       args.messages,
@@ -139,16 +143,20 @@ export function useResetScrollOnConversationChange({
   persistScrollTop: (nextScrollTop: number) => void;
   scrollElementRef: { current: HTMLElement | null };
 }): void {
-  const skipRef = useRef(true);
+  const conversationKey = `${scopeKey}:${navigationSurface}`;
+  const lastTeamRef = useRef(teamName);
+  const lastConversationRef = useRef(conversationKey);
   useEffect(() => {
-    skipRef.current = true;
-  }, [teamName]);
-  useEffect(() => {
-    if (skipRef.current) {
-      skipRef.current = false;
+    if (lastTeamRef.current !== teamName) {
+      lastTeamRef.current = teamName;
+      lastConversationRef.current = conversationKey;
       return;
     }
+    if (lastConversationRef.current === conversationKey) {
+      return;
+    }
+    lastConversationRef.current = conversationKey;
     persistScrollTop(0);
     if (scrollElementRef.current) scrollElementRef.current.scrollTop = 0;
-  }, [navigationSurface, persistScrollTop, scopeKey, scrollElementRef]);
+  }, [conversationKey, persistScrollTop, scrollElementRef, teamName]);
 }

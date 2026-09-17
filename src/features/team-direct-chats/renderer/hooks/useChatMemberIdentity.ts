@@ -15,6 +15,7 @@ import {
   resolveMemberIdentityColor,
   STATUS_DOT_COLORS,
 } from '@renderer/utils/memberHelpers';
+import { isLeadNameAlias } from '@shared/utils/leadDetection';
 import { useShallow } from 'zustand/react/shallow';
 
 export interface ChatMemberIdentity {
@@ -34,15 +35,13 @@ export function rosterAvatarUrl(
   if (exact) return exact;
 
   const normalizedName = memberName.trim().toLowerCase();
-  const aliasName =
-    normalizedName === 'lead'
-      ? 'team-lead'
-      : normalizedName === 'team-lead'
-        ? 'lead'
-        : normalizedName;
+  const queryIsLead = isLeadNameAlias(memberName);
   for (const [candidateName, url] of avatarMap) {
     const normalizedCandidate = candidateName.trim().toLowerCase();
-    if (normalizedCandidate === normalizedName || normalizedCandidate === aliasName) {
+    if (normalizedCandidate === normalizedName) {
+      return url;
+    }
+    if (queryIsLead && isLeadNameAlias(candidateName)) {
       return url;
     }
   }

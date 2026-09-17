@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { belongsToConversation } from '@features/team-direct-chats/core/domain/belongsToConversation';
 import { TEAM_FEED_SCOPE } from '@features/team-direct-chats/core/domain/conversationScope';
+import { describe, expect, it } from 'vitest';
 
 import { msg } from './fixtures';
 
@@ -75,6 +74,18 @@ describe('belongsToConversation', () => {
     );
     expect(belongsToConversation(toAlias, { kind: 'direct', participant: 'oscar' }, leadNames)).toBe(
       true
+    );
+  });
+
+  it('excludes cross-team sent copies from local 1:1', () => {
+    const sent = msg({
+      from: 'user',
+      to: 'oscar',
+      text: 'remote copy',
+      source: 'cross_team_sent',
+    });
+    expect(belongsToConversation(sent, { kind: 'direct', participant: 'oscar' }, leadNames)).toBe(
+      false
     );
   });
 

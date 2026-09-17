@@ -31,6 +31,39 @@ describe('buildChatListView preview attribution', () => {
     expect(rows.find((row) => row.displayName === 'alice')?.previewFrom).toBe('alice');
   });
 
+  it('shows latest activity time even when preview prefers an older to-user message', () => {
+    const rows = buildChatListView({
+      members: [
+        { name: 'oscar', agentType: 'team-lead' },
+        { name: 'alice' },
+      ],
+      messages: [
+        msg({
+          from: 'cody',
+          to: 'oscar',
+          text: 'later a2a',
+          timestamp: '2026-09-17T18:00:00.000Z',
+          messageId: 'a2a',
+        }),
+        msg({
+          from: 'alice',
+          to: 'user',
+          text: 'earlier dm',
+          timestamp: '2026-09-17T12:00:00.000Z',
+          messageId: 'dm',
+        }),
+      ],
+      readSet: new Set(),
+      toKey: toTestKey,
+      teamFeedLabel: 'This team',
+      emptyPreview: 'No messages yet',
+      leadNames: ['oscar'],
+    });
+
+    expect(rows[0]?.previewText).toBe('earlier dm');
+    expect(rows[0]?.previewTimestamp).toBe('2026-09-17T18:00:00.000Z');
+  });
+
   it('reorders DMs by activity when sortByActivity is on', () => {
     const rows = buildChatListView({
       members: [

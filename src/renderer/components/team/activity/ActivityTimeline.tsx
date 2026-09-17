@@ -130,7 +130,7 @@ interface ActivityTimelineProps {
   onExpandContent?: () => void;
   /** True while the initial message page is loading and no cached rows are available yet. */
   loading?: boolean;
-  showRecipientRoute?: boolean;
+  directParticipant?: string;
   unreadSnapshot?: ReadonlySet<string>;
   emptyLabel?: string;
   emptyHint?: string;
@@ -322,7 +322,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onExpandItem,
   onExpandContent,
   loading = false,
-  showRecipientRoute = true,
+  directParticipant,
   unreadSnapshot,
   emptyLabel,
   emptyHint,
@@ -765,7 +765,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             observerRoot={observerRoot}
             onExpandContent={onExpandContent}
             timelineCardPosition={cardPosition}
-            showRecipientRoute={showRecipientRoute}
+            directParticipant={directParticipant}
           />
         );
       }

@@ -20,5 +20,6 @@ describe('rosterAvatarUrl', () => {
 
   it('resolves lead aliases to the reserved lead avatar', () => {
     expect(rosterAvatarUrl('lead', avatarMap)).toBe(LEAD_PARTICIPANT_AVATAR_URL);
+    expect(rosterAvatarUrl('team-leader', avatarMap)).toBe(LEAD_PARTICIPANT_AVATAR_URL);
   });
 });

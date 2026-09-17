@@ -92,12 +92,15 @@ export function useTeamConversationSurface(args: {
 
   const backToList = useCallback(() => {
     setSurface('list');
+    setScope({ kind: 'team-feed' });
   }, []);
+
+  const floatingComposerOnList = args.position === 'floating-composer' && surface === 'list';
 
   return {
     renderSurface: args.position === 'floating-composer' ? 'thread' : surface,
     navigationSurface: surface,
-    scope,
+    scope: floatingComposerOnList ? { kind: 'team-feed' } : scope,
     openChat,
     backToList,
     threadOpenedAt,

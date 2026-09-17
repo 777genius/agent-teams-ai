@@ -829,7 +829,7 @@ describe('ActivityItem bootstrap recipient route', () => {
         React.createElement(ActivityItem, {
           message: bootstrapMessage,
           teamName: 'demo',
-          showRecipientRoute: false,
+          directParticipant: 'alice',
         })
       );
       await Promise.resolve();
@@ -837,6 +837,76 @@ describe('ActivityItem bootstrap recipient route', () => {
 
     expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(0);
     expect(host.textContent).toContain('oscar');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the task chip clickable in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'alice',
+            to: 'user',
+            text: 'please review',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+            messageKind: 'task_comment_notification',
+            taskRefs: [{ taskId: 'task-abc123', displayId: '#42', teamName: 'demo' }],
+          },
+          teamName: 'demo',
+          directParticipant: 'alice',
+          onTaskIdClick,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('#42');
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps lead→teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'lead',
+            to: 'cody',
+            text: 'please take this',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+          },
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('cody');
 
     await act(async () => {
       root.unmount();

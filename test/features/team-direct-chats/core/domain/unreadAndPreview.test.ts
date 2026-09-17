@@ -1,16 +1,15 @@
-import { describe, expect, it } from 'vitest';
-
+import { conversationScopeKey } from '@features/team-direct-chats/core/domain/conversationScope';
 import {
   countUniqueUnread,
   countUnreadByConversation,
 } from '@features/team-direct-chats/core/domain/countUnreadByConversation';
-import { conversationScopeKey } from '@features/team-direct-chats/core/domain/conversationScope';
 import {
   isAddressedToUser,
   isAttentionUnread,
   isUserUnreadMessage,
 } from '@features/team-direct-chats/core/domain/isUserUnreadMessage';
 import { pickPreviewMessage } from '@features/team-direct-chats/core/domain/pickPreviewMessage';
+import { describe, expect, it } from 'vitest';
 
 import { msg, toTestKey } from './fixtures';
 
@@ -30,6 +29,47 @@ describe('unread and attention', () => {
     });
     expect(isUserUnreadMessage(incoming, new Set(), toTestKey)).toBe(true);
     expect(isAddressedToUser(incoming)).toBe(true);
+  });
+
+  it('respects localStorage even when a to-user row is persisted read', () => {
+    const incoming = msg({
+      from: 'alice',
+      to: 'user',
+      text: 'please look',
+      read: true,
+      messageId: 'm1',
+    });
+    expect(isUserUnreadMessage(incoming, new Set(['m1']), toTestKey)).toBe(false);
+  });
+
+  it('does not treat outbound cross-team sent copies as unread', () => {
+    const sent = msg({
+      from: 'user',
+      to: 'other/lead',
+      text: 'ping',
+      source: 'cross_team_sent',
+      messageId: 'xt',
+    });
+    expect(isUserUnreadMessage(sent, new Set(), toTestKey)).toBe(false);
+  });
+
+  it('uses persisted read as a fallback for inbound history that is not to the user', () => {
+    const bootstrap = msg({
+      from: 'lead',
+      to: 'alice',
+      text: 'start',
+      read: true,
+      messageId: 'boot',
+    });
+    const thought = msg({
+      from: 'oscar',
+      text: 'thinking',
+      source: 'lead_process',
+      read: true,
+      messageId: 'th',
+    });
+    expect(isUserUnreadMessage(bootstrap, new Set(), toTestKey)).toBe(false);
+    expect(isUserUnreadMessage(thought, new Set(), toTestKey)).toBe(false);
   });
 
   it('does not count outbound as unread or attention', () => {

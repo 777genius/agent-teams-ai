@@ -37,14 +37,14 @@ export const ChatUnreadBadges = ({
         >
           <Badge
             variant="secondary"
-            className="h-5 min-w-5 px-1.5 text-[10px] font-semibold tabular-nums"
+            className="h-5 min-w-5 justify-center rounded-full px-1 py-0 text-[10px] font-semibold tabular-nums leading-none"
           >
             {unreadCount}
           </Badge>
           {attentionCount > 0 ? (
             <Badge
               variant="default"
-              className="pointer-events-none absolute -right-0.5 -top-0.5 h-4 min-w-4 justify-center px-1 text-[8px] font-bold tabular-nums leading-none"
+              className="pointer-events-none absolute -right-0.5 -top-0.5 h-4 min-w-4 justify-center rounded-full px-1 py-0 text-[8px] font-bold tabular-nums leading-none"
             >
               {attentionCount}
             </Badge>

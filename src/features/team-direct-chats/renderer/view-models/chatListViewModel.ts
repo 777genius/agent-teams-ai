@@ -23,23 +23,22 @@ export interface ChatListViewItem extends Omit<
   previewTimestamp: string | null;
 }
 
-function previewFromMessage(
+function previewCopy(
   message: InboxMessage | null,
   emptyPreview: string
-): Pick<ChatListViewItem, 'previewText' | 'previewFrom' | 'previewTimestamp'> {
+): Pick<ChatListViewItem, 'previewText' | 'previewFrom'> {
   if (!message) {
-    return { previewText: emptyPreview, previewFrom: null, previewTimestamp: null };
+    return { previewText: emptyPreview, previewFrom: null };
   }
   const summary = getSanitizedInboxMessageSummary(message).replace(/\s+/g, ' ').trim();
   const text = (summary || getSanitizedInboxMessageText(message)).replace(/\s+/g, ' ').trim();
   if (!text) {
-    return { previewText: emptyPreview, previewFrom: null, previewTimestamp: null };
+    return { previewText: emptyPreview, previewFrom: null };
   }
   return {
     previewText:
       text.length > PREVIEW_MAX_LENGTH ? `${text.slice(0, PREVIEW_MAX_LENGTH - 1)}…` : text,
     previewFrom: message.from,
-    previewTimestamp: message.timestamp,
   };
 }
 
@@ -53,7 +52,8 @@ export function toChatListViewItems(
     member: item.member,
     unreadCount: item.unreadCount,
     attentionCount: item.attentionCount,
-    ...previewFromMessage(item.previewMessage, emptyPreview),
+    previewTimestamp: item.latestActivityTimestamp,
+    ...previewCopy(item.previewMessage, emptyPreview),
   }));
 }
 

@@ -47,12 +47,14 @@ export function countUnreadByConversation(
   toKey: ConversationMessageKeyFn,
   leadNames: Iterable<string>
 ): Map<string, ConversationUnreadCounts> {
-  const counts = new Map<string, ConversationUnreadCounts>();
-  for (const scope of scopes) {
-    counts.set(conversationScopeKey(scope), emptyUnreadCounts());
+  const scopedList: ConversationScope[] = [...scopes];
+  const teamFeedKey = conversationScopeKey(TEAM_FEED_SCOPE);
+  if (!scopedList.some((scope) => conversationScopeKey(scope) === teamFeedKey)) {
+    scopedList.unshift(TEAM_FEED_SCOPE);
   }
-  if (!counts.has(conversationScopeKey(TEAM_FEED_SCOPE))) {
-    counts.set(conversationScopeKey(TEAM_FEED_SCOPE), emptyUnreadCounts());
+  const counts = new Map<string, ConversationUnreadCounts>();
+  for (const scope of scopedList) {
+    counts.set(conversationScopeKey(scope), emptyUnreadCounts());
   }
 
   const leadNameList = [...leadNames];
@@ -64,12 +66,10 @@ export function countUnreadByConversation(
     }
     const addressed = isAddressedToUser(message);
     const messageKey = toKey(message);
-    for (const [key, scopeCounts] of counts) {
-      const scope: ConversationScope =
-        key === 'team-feed'
-          ? TEAM_FEED_SCOPE
-          : { kind: 'direct', participant: key.slice('direct:'.length) };
-      if (!belongsToConversation(message, scope, leadNameList)) {
+    for (const scope of scopedList) {
+      const key = conversationScopeKey(scope);
+      const scopeCounts = counts.get(key);
+      if (!scopeCounts || !belongsToConversation(message, scope, leadNameList)) {
         continue;
       }
       let seen = seenKeys.get(key);
