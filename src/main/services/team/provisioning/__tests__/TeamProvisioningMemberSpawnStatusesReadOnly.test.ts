@@ -85,6 +85,7 @@ function createHarness(options: {
   allowWrites?: boolean;
   /** Members the live liveness pass has runtime metadata for, and its verdict. */
   runtimeByMember?: Record<string, { alive: boolean }>;
+  freshness?: { version: 1; teamName: string; kind: 'stop'; stopId: string } | null;
 }): Harness {
   const snapshotCache = new Map<string, MemberSpawnStatusesSnapshotCacheEntry>();
   const persistedWrites: string[] = [];
@@ -150,6 +151,7 @@ function createHarness(options: {
         ),
       getOpenCodeSecondaryBootstrapPendingMemberNames: () => new Set<string>(),
       resumeActiveTaskActivityForMembers: forbidden('resumeActiveTaskActivityForMembers') as never,
+      readLaunchFreshness: async () => options.freshness ?? null,
     },
     live: {
       refreshMemberSpawnStatusesFromLeadInbox: (async () => {
@@ -347,6 +349,26 @@ describe('getMemberSpawnStatusesSnapshotReadOnly', () => {
     expect(snapshot.statuses.Worker).toMatchObject({ runtimeAlive: true, status: 'online' });
     expect(snapshot.statuses.Scout).toMatchObject({ runtimeAlive: false });
     expect(snapshot.statuses['team-lead']).toMatchObject({ runtimeAlive: false });
+  });
+
+  it('projects leftover live members offline after a stop even if liveness still sees them', async () => {
+    const withinGrace = new Date(NOW_MS - 30_000).toISOString();
+    const persisted = launchSnapshot({
+      Worker: entry({ status: 'online', firstSpawnAcceptedAt: withinGrace }),
+    });
+    const harness = createHarness({
+      persisted,
+      runtimeByMember: { Worker: { alive: true } },
+      freshness: { version: 1, teamName: TEAM, kind: 'stop', stopId: 'stop-1' },
+    });
+
+    const snapshot = await getMemberSpawnStatusesSnapshotReadOnly(TEAM, harness.ports);
+
+    expect(snapshot.statuses.Worker).toMatchObject({
+      status: 'offline',
+      runtimeAlive: false,
+    });
+    expect(snapshot.statuses.Worker?.livenessSource).toBeUndefined();
   });
 
   it('projects a tracked run with no live launch snapshot from its own member statuses', async () => {

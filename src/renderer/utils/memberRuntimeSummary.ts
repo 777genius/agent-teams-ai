@@ -15,8 +15,12 @@ import type {
 
 function shouldShowRuntimeMemory(
   spawnEntry: MemberSpawnStatusEntry | undefined,
-  runtimeEntry: TeamAgentRuntimeEntry | undefined
+  runtimeEntry: TeamAgentRuntimeEntry | undefined,
+  isTeamAlive?: boolean
 ): boolean {
+  if (isTeamAlive === false) {
+    return false;
+  }
   if (typeof runtimeEntry?.rssBytes !== 'number' || runtimeEntry.rssBytes <= 0) {
     return false;
   }
@@ -71,13 +75,26 @@ function isMemberLaunchPending(spawnEntry: MemberSpawnStatusEntry | undefined): 
   );
 }
 
+function summaryAlreadyIncludesBackendLabel(summary: string, backendLabel: string): boolean {
+  const needle = backendLabel.trim();
+  if (!needle) {
+    return false;
+  }
+  return summary.split(' · ').some((part) => {
+    const trimmed = part.trim();
+    return trimmed === needle || trimmed === `via ${needle}`;
+  });
+}
+
 function appendRuntimeSummarySuffixes(
   summary: string,
   backendLabel: string | undefined,
   memorySuffix: string
 ): string {
-  const summaryParts = new Set(summary.split(' · '));
-  const backendSuffix = backendLabel && !summaryParts.has(backendLabel) ? ` · ${backendLabel}` : '';
+  const backendSuffix =
+    backendLabel && !summaryAlreadyIncludesBackendLabel(summary, backendLabel)
+      ? ` · ${backendLabel}`
+      : '';
   return `${summary}${backendSuffix}${memorySuffix}`;
 }
 
@@ -119,7 +136,8 @@ export function resolveMemberRuntimeSummary(
   member: ResolvedTeamMember,
   launchParams: TeamLaunchParams | undefined,
   spawnEntry: MemberSpawnStatusEntry | undefined,
-  runtimeEntry?: TeamAgentRuntimeEntry
+  runtimeEntry?: TeamAgentRuntimeEntry,
+  isTeamAlive?: boolean
 ): string | undefined {
   const leadLaunchParams = isLeadMember(member) ? launchParams : undefined;
   const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
@@ -182,7 +200,8 @@ export function resolveMemberRuntimeSummary(
     formatTeamProviderBackendLabel(configuredProvider, configuredProviderBackendId)
   );
   const memorySuffix =
-    !runtimeConflictsWithAuthoritativeLaunch && shouldShowRuntimeMemory(spawnEntry, runtimeEntry)
+    !runtimeConflictsWithAuthoritativeLaunch &&
+    shouldShowRuntimeMemory(spawnEntry, runtimeEntry, isTeamAlive)
       ? ` · ${formatBytes(runtimeEntry!.rssBytes!)}`
       : '';
 

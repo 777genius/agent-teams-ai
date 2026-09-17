@@ -7,6 +7,7 @@ import {
   type TeamProvisioningRuntimeStateProjectionPorts,
   type TeamProvisioningRuntimeStateProjectionState,
 } from './TeamProvisioningRuntimeStateProjection';
+import { applyStoppedTeamRuntimeResources } from './TeamProvisioningStoppedTeamRuntimeProjection';
 
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
@@ -111,6 +112,17 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     return this.runtimeStateProjection.isTeamAlive(teamName);
   }
 
+  private resolveRuntimeSnapshot(
+    teamName: string,
+    snapshot: TeamAgentRuntimeSnapshot
+  ): TeamAgentRuntimeSnapshot {
+    return applyStoppedTeamRuntimeResources({
+      snapshot,
+      isTeamAlive: this.isTeamAlive(teamName),
+      hasProvisioningRun: this.hasProvisioningRun(teamName),
+    });
+  }
+
   getAliveTeams(): string[] {
     return this.runtimeStateProjection.getAliveTeams();
   }
@@ -123,7 +135,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     const runId = this.ports.getTrackedRunId(teamName);
     const cached = this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId);
     if (cached) {
-      return cached;
+      return this.resolveRuntimeSnapshot(teamName, cached);
     }
 
     const generationAtStart =
@@ -176,7 +188,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       ? this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId)
       : undefined;
     if (cached) {
-      return cached;
+      return this.resolveRuntimeSnapshot(teamName, cached);
     }
     const generationAtStart =
       this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(teamName);
@@ -249,7 +261,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     const samplingPorts = this.ports.createRuntimeSnapshotResourceSamplingPorts(
       options?.readOnly === true ? { readOnly: true } : undefined
     );
-    return buildSnapshot({
+    const snapshot = await buildSnapshot({
       teamName,
       runId,
       generationAtStart,
@@ -286,5 +298,6 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       },
       logDebug: (message) => this.ports.logDebug(message),
     });
+    return this.resolveRuntimeSnapshot(teamName, snapshot);
   }
 }

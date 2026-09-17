@@ -1131,9 +1131,15 @@ export const MemberList = memo(function MemberList({
       spawnEntry: MemberSpawnStatusEntry | undefined,
       runtimeEntry: TeamAgentRuntimeEntry | undefined
     ): string | undefined => {
-      return resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry);
+      return resolveMemberRuntimeSummary(
+        member,
+        launchParams,
+        spawnEntry,
+        runtimeEntry,
+        isTeamAlive
+      );
     },
-    [launchParams]
+    [isTeamAlive, launchParams]
   );
 
   const expectsTeammates = (expectedTeammateCount ?? 0) > 0;

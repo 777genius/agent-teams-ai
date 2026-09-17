@@ -1,3 +1,4 @@
+import { readTeamLaunchFreshness } from '../TeamLaunchFreshness';
 import {
   deriveTeamLaunchAggregateState,
   snapshotFromRuntimeMemberStatuses,
@@ -147,6 +148,7 @@ export function createTeamProvisioningMemberSpawnStatusesSnapshotPorts<
         deps.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
       resumeActiveTaskActivityForMembers: (teamName, memberNames, observedAt) =>
         deps.persisted.resumeActiveTaskActivityForMembers(teamName, memberNames, observedAt),
+      readLaunchFreshness: (teamName) => deps.persisted.readLaunchFreshness(teamName),
     },
     live: {
       refreshMemberSpawnStatusesFromLeadInbox: (run) =>
@@ -260,6 +262,7 @@ export function createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary<
           memberNames,
           observedAt
         ),
+      readLaunchFreshness: (teamName) => readTeamLaunchFreshness(teamName),
     },
     live: {
       refreshMemberSpawnStatusesFromLeadInbox: (run) =>

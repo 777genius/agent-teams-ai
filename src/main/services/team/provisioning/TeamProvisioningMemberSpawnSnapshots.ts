@@ -9,7 +9,9 @@ import {
   buildMemberSpawnTranscriptConfirmationTransition,
   type PendingMemberSpawnRestart,
 } from './TeamProvisioningMemberSpawnTransitions';
+import { applyStoppedTeamSpawnProjection } from './TeamProvisioningStoppedTeamSpawnProjection';
 
+import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
 import type {
   MemberSpawnLivenessSource,
   MemberSpawnStatus,
@@ -163,6 +165,7 @@ export interface MemberSpawnStatusesPersistedPorts {
     memberNames: readonly string[],
     observedAt: string
   ): void;
+  readLaunchFreshness(teamName: string): Promise<TeamLaunchFreshness | null>;
 }
 
 export interface MemberSpawnStatusesLiveSnapshotPorts<TRun extends MemberSpawnStatusRun> {
@@ -576,7 +579,7 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
-  const nextStatuses = await ports.persisted.attachLiveRuntimeMetadataToStatuses(
+  const attachedStatuses = await ports.persisted.attachLiveRuntimeMetadataToStatuses(
     teamName,
     statuses,
     {
@@ -587,12 +590,21 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
-  applyExpiredLaunchGraceToPersistedStatuses(nextStatuses, ports.cache.nowMs());
+  const stoppedProjection = await applyStoppedTeamSpawnProjection(
+    teamName,
+    false,
+    attachedStatuses,
+    (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName)
+  );
+  const nextStatuses = stoppedProjection.statuses;
+  if (!stoppedProjection.stopped) {
+    applyExpiredLaunchGraceToPersistedStatuses(nextStatuses, ports.cache.nowMs());
+  }
   const runtimeObservedAt = ports.nowIso();
   const aliveMemberNames = Object.entries(nextStatuses)
     .filter(([, entry]) => entry.runtimeAlive === true)
     .map(([memberName]) => memberName);
-  if (aliveMemberNames.length > 0) {
+  if (aliveMemberNames.length > 0 && !stoppedProjection.stopped) {
     ports.persisted.resumeActiveTaskActivityForMembers(
       teamName,
       aliveMemberNames,

@@ -9,6 +9,7 @@ import {
   applyExpiredLaunchGraceToPersistedStatuses,
   summarizeMemberSpawnStatusRecord,
 } from './TeamProvisioningMemberSpawnStatusPolicy';
+import { applyStoppedTeamSpawnProjection } from './TeamProvisioningStoppedTeamSpawnProjection';
 
 import type {
   MemberSpawnStatusEntry,
@@ -76,7 +77,7 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
   const projected = ports.live.snapshotToMemberSpawnStatuses(launchSnapshot);
   const openCodeSecondaryBootstrapPendingMembers =
     ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(launchSnapshot);
-  const statuses = liveSnapshot
+  const attachedStatuses = liveSnapshot
     ? await ports.persisted.attachLiveRuntimeMetadataToStatuses(teamName, projected, {
         openCodeSecondaryBootstrapPendingMembers,
       })
@@ -86,9 +87,19 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
         attach: ports.persisted.attachLiveRuntimeMetadataToStatuses,
         openCodeSecondaryBootstrapPendingMembers,
       });
+  const stoppedProjection = await applyStoppedTeamSpawnProjection(
+    teamName,
+    Boolean(run),
+    attachedStatuses,
+    (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName)
+  );
+  const statuses = stoppedProjection.statuses;
   // Pure in-place transform on a record this projection owns: without it a
-  // member whose process died mid-launch still reads as "waiting".
-  applyExpiredLaunchGraceToPersistedStatuses(statuses, ports.cache.nowMs());
+  // member whose process died mid-launch still reads as "waiting". After a
+  // stop, leftover first-spawn timestamps must not become launch failures.
+  if (!stoppedProjection.stopped) {
+    applyExpiredLaunchGraceToPersistedStatuses(statuses, ports.cache.nowMs());
+  }
   const expectedMembers = ports.live.getPersistedLaunchMemberNames(launchSnapshot);
   const summary = summarizeMemberSpawnStatusRecord(expectedMembers, statuses);
   return {

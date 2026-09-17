@@ -583,4 +583,52 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
     await expect(harness.facade.getRuntimeState(teamName)).resolves.toBe(recovered);
     expect(harness.runtimeState.readBootstrapRuntimeState).toHaveBeenCalledWith(teamName);
   });
+
+  it('strips leftover RSS after stop even if the snapshot still carries process telemetry', async () => {
+    const harness = createFacadeHarness({
+      buildTeamAgentRuntimeSnapshot: async () => ({
+        teamName: 'alpha',
+        updatedAt: '2026-09-17T06:34:00.000Z',
+        runId: null,
+        members: {
+          alice: {
+            memberName: 'alice',
+            alive: false,
+            restartable: false,
+            rssBytes: 283_000_000,
+            updatedAt: '2026-09-17T06:34:00.000Z',
+          },
+        },
+      }),
+    });
+
+    const snapshot = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+    expect(snapshot.members.alice.rssBytes).toBeUndefined();
+  });
+
+  it('keeps live RSS while the team still has an alive run', async () => {
+    const harness = createFacadeHarness({
+      buildTeamAgentRuntimeSnapshot: async () => ({
+        teamName: 'alpha',
+        updatedAt: '2026-09-17T06:34:00.000Z',
+        runId: 'run-1',
+        members: {
+          alice: {
+            memberName: 'alice',
+            alive: true,
+            restartable: true,
+            rssBytes: 283_000_000,
+            updatedAt: '2026-09-17T06:34:00.000Z',
+          },
+        },
+      }),
+    });
+    harness.setRunId('run-1');
+    harness.runtimeState.aliveRunByTeam.set('alpha', 'run-1');
+    harness.runtimeState.runs.set('run-1', runtimeRun('run-1', 'alpha'));
+    harness.runtimeState.provisioningRunByTeam.set('alpha', 'run-1');
+
+    const snapshot = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+    expect(snapshot.members.alice.rssBytes).toBe(283_000_000);
+  });
 });

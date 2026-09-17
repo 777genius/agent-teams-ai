@@ -113,6 +113,24 @@ describe('resolveMemberRuntimeSummary', () => {
     );
   });
 
+  it('does not append Codex again when the model summary already says via Codex', () => {
+    const member = createMember({
+      model: 'gemini-3.8-flash-high-cursor',
+      effort: 'low',
+      providerBackendId: 'codex-native',
+    });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      runtimeModel: 'gemini-3.8-flash-high-cursor',
+    });
+
+    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe(
+      'gemini-3.8-flash-high-cursor · via Codex · Low'
+    );
+  });
+
   it('hides stale runtime memory when the spawn state is explicitly offline', () => {
     const member = createMember({ model: 'gpt-5.4-mini' });
     const spawnEntry = createSpawnEntry({
@@ -135,6 +153,28 @@ describe('resolveMemberRuntimeSummary', () => {
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)).toBe(
       '5.4 Mini · Medium · Codex'
     );
+  });
+
+  it('hides stale runtime memory after the team is stopped even if spawn snapshots lag', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      rssBytes: 482.1 * 1024 * 1024,
+      updatedAt: '2026-09-17T04:50:00.000Z',
+    };
+
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never, false)
+    ).toBe('5.4 Mini · Medium · Codex');
   });
 
   it('keeps the persisted backend lane visible in the runtime summary', () => {

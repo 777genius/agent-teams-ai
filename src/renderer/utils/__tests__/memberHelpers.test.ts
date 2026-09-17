@@ -417,4 +417,49 @@ describe('member runtime presentation', () => {
       })
     ).toBe(true);
   });
+
+  it('hides current-task activity when the member is blocked on quota', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: createMember({
+          runtimeAdvisory: {
+            kind: 'api_error',
+            observedAt: '2026-09-17T04:40:00.000Z',
+            reasonCode: 'quota_exhausted',
+            message: "You've hit your usage limit.",
+          },
+        }),
+        isTeamAlive: true,
+        ...createConfirmedCodexSpawn(),
+        runtimeEntry: createLiveRuntime(),
+      })
+    ).toBe(false);
+  });
+
+  it('hides live runtime advisories after the team is stopped', () => {
+    const presentation = buildMemberLaunchPresentation({
+      member: createMember({
+        runtimeAdvisory: {
+          kind: 'api_error',
+          observedAt: '2026-09-17T04:40:00.000Z',
+          reasonCode: 'quota_exhausted',
+          message: "You've hit your usage limit.",
+        },
+      }),
+      spawnLivenessSource: 'process',
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-09-17T04:40:00.000Z',
+        reasonCode: 'quota_exhausted',
+        message: "You've hit your usage limit.",
+      },
+      isTeamAlive: false,
+      isTeamProvisioning: false,
+      ...createConfirmedCodexSpawn(),
+      runtimeEntry: createLiveRuntime(),
+    });
+
+    expect(presentation.presenceLabel).toBe('offline');
+    expect(presentation.runtimeAdvisoryLabel).toBeNull();
+  });
 });

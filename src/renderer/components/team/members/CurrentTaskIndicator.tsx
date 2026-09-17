@@ -49,7 +49,7 @@ function useActivityTimerLabel(
         timerId: activityTimer.timerId,
         startedAtMs: activityTimer.startedAtMs,
         baseElapsedMs: activityTimer.baseElapsedMs,
-        running: isTimerRunning,
+        running: false,
         runId: activityTimer.runId,
         nowMs: Date.now(),
       });

@@ -13,6 +13,45 @@ export function getTeamLaunchFreshnessPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_FRESHNESS_FILE);
 }
 
+export function parseTeamLaunchFreshness(
+  teamName: string,
+  value: unknown
+): TeamLaunchFreshness | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const record = value as {
+    version?: unknown;
+    teamName?: unknown;
+    kind?: unknown;
+    runId?: unknown;
+    stopId?: unknown;
+    stoppedRunId?: unknown;
+  };
+  if (record.version !== 1 || record.teamName !== teamName) {
+    return null;
+  }
+  if (record.kind === 'launch' && typeof record.runId === 'string' && record.runId) {
+    return { version: 1, teamName, kind: 'launch', runId: record.runId };
+  }
+  if (record.kind === 'stop' && typeof record.stopId === 'string' && record.stopId) {
+    return {
+      version: 1,
+      teamName,
+      kind: 'stop',
+      stopId: record.stopId,
+      ...(typeof record.stoppedRunId === 'string' && record.stoppedRunId
+        ? { stoppedRunId: record.stoppedRunId }
+        : {}),
+    };
+  }
+  return null;
+}
+
+export function isStopLaunchFreshness(value: TeamLaunchFreshness | null | undefined): boolean {
+  return value?.kind === 'stop';
+}
+
 export async function readTeamLaunchFreshness(
   teamName: string
 ): Promise<TeamLaunchFreshness | null> {
@@ -23,18 +62,23 @@ export async function readTeamLaunchFreshness(
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
-  const value = JSON.parse(raw);
-  if (
-    value?.version !== 1 ||
-    value.teamName !== teamName ||
-    !(
-      (value.kind === 'launch' && typeof value.runId === 'string' && value.runId) ||
-      (value.kind === 'stop' && typeof value.stopId === 'string' && value.stopId)
-    )
-  ) {
+  const parsed = parseTeamLaunchFreshness(teamName, JSON.parse(raw));
+  if (!parsed) {
     throw new Error('Invalid launch freshness authority');
   }
-  return value;
+  return parsed;
+}
+
+export async function readTeamLaunchFreshnessFromTeamDir(
+  teamDir: string,
+  teamName: string
+): Promise<TeamLaunchFreshness | null> {
+  try {
+    const raw = await fs.readFile(path.join(teamDir, TEAM_LAUNCH_FRESHNESS_FILE), 'utf8');
+    return parseTeamLaunchFreshness(teamName, JSON.parse(raw));
+  } catch {
+    return null;
+  }
 }
 
 export async function canRestoreTeamStopMarker(
