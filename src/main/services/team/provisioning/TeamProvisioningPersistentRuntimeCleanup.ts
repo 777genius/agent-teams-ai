@@ -14,6 +14,7 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
     baseClaudeDir: string;
   }): Promise<void>;
   getClaudeBasePath(): string;
+  clearPersistedLiveRuntimeHandles?(teamName: string): boolean;
   logger: TeamProvisioningPersistentRuntimeCleanupLogger;
 }
 
@@ -36,6 +37,7 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         teamName,
         ports.getCurrentRunPid(teamName)
       );
+      ports.clearPersistedLiveRuntimeHandles?.(teamName);
       return panesConfirmed && processesConfirmed;
     },
 

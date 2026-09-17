@@ -7,11 +7,19 @@ export interface NotificationTeamIdentity {
   sessionId?: string | null;
   projectId?: string;
   category?: string;
-  target?: { teamName?: string } | null;
+  target?: unknown;
+}
+
+function readTargetTeamName(target: unknown): string | null {
+  if (!target || typeof target !== 'object') {
+    return null;
+  }
+  const teamName = 'teamName' in target ? target.teamName : undefined;
+  return typeof teamName === 'string' && teamName.trim() ? teamName.trim() : null;
 }
 
 export function getNotificationTeamName(notification: NotificationTeamIdentity): string | null {
-  const targetName = notification.target?.teamName?.trim();
+  const targetName = readTargetTeamName(notification.target);
   if (targetName) {
     return targetName;
   }

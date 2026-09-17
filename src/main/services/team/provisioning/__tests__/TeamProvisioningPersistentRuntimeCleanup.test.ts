@@ -35,6 +35,15 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
   });
 
+  it('clears leftover live runtime handles after stopping persisted members', () => {
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
+    const ports = createPorts({ clearPersistedLiveRuntimeHandles });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+  });
+
   it('still cleans orphaned agent processes when no persisted panes exist', () => {
     const ports = createPorts();
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);

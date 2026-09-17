@@ -28,6 +28,16 @@ describe('notificationTeam', () => {
     ).toBeNull();
   });
 
+  it('ignores non-team notification targets', () => {
+    expect(
+      getNotificationTeamName({
+        sessionId: 'abc123',
+        category: 'usage',
+        target: { kind: 'token_usage', focus: 'overview' },
+      })
+    ).toBeNull();
+  });
+
   it('matches only the named team', () => {
     const notification = {
       sessionId: 'team:mixed-v2150-20260917',
