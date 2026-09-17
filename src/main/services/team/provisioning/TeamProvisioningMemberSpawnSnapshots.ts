@@ -13,7 +13,10 @@ import {
   buildMemberSpawnTranscriptConfirmationTransition,
   type PendingMemberSpawnRestart,
 } from './TeamProvisioningMemberSpawnTransitions';
-import { applyStoppedTeamSpawnProjection } from './TeamProvisioningStoppedTeamSpawnProjection';
+import {
+  applyStoppedTeamSpawnProjection,
+  maybeProjectStoppedCachedSpawnSnapshot,
+} from './TeamProvisioningStoppedTeamSpawnProjection';
 
 import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
 import type {
@@ -551,7 +554,15 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
     cached.runId === resolvedRunId &&
     cached.generation === generationAtStart
   ) {
-    return cloneMemberSpawnStatusesSnapshot(cached.snapshot);
+    return maybeProjectStoppedCachedSpawnSnapshot({
+      teamName,
+      hasTrackedRun: Boolean(resolvedRunId && ports.getRun(resolvedRunId)),
+      snapshot: cloneMemberSpawnStatusesSnapshot(cached.snapshot),
+      readLaunchFreshness: (candidateTeamName) =>
+        ports.persisted.readLaunchFreshness(candidateTeamName),
+      summarize: summarizeMemberSpawnStatusRecord,
+      deriveTeamLaunchAggregateState: ports.live.deriveTeamLaunchAggregateState,
+    });
   }
 
   const repairSnapshot = await ports.persisted.readTaskActivityRepairLaunchSnapshot(teamName);
@@ -731,7 +742,7 @@ export async function getMemberSpawnStatusesSnapshot<TRun extends MemberSpawnSta
   }
   const run = ports.getRun(runId);
   if (!run) {
-    return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: null, ports });
+    return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: runId, ports });
   }
 
   const generationAtStart = ports.cache.getCacheGeneration(teamName);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyStoppedTeamSpawnProjection,
+  maybeProjectStoppedCachedSpawnSnapshot,
   projectStoppedTeamSpawnStatuses,
   shouldProjectStoppedTeamSpawn,
 } from '../TeamProvisioningStoppedTeamSpawnProjection';
@@ -99,5 +100,42 @@ describe('TeamProvisioningStoppedTeamSpawnProjection', () => {
     );
 
     expect(result).toEqual({ statuses: live, stopped: false });
+  });
+
+  it('projects a cached live snapshot offline after Stop without a run object', async () => {
+    const snapshot = await maybeProjectStoppedCachedSpawnSnapshot({
+      teamName: 'mixed-v2150-20260917',
+      hasTrackedRun: false,
+      snapshot: {
+        statuses: { alice: entry() },
+        runId: 'run-1',
+        source: 'live',
+        expectedMembers: ['alice'],
+        teamLaunchState: 'clean_success',
+      },
+      readLaunchFreshness: async () => ({
+        version: 1,
+        teamName: 'mixed-v2150-20260917',
+        kind: 'stop',
+        stopId: 'stop-1',
+      }),
+      summarize: () => ({
+        confirmedCount: 0,
+        pendingCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        runtimeAlivePendingCount: 0,
+        shellOnlyPendingCount: 0,
+        runtimeProcessPendingCount: 0,
+        runtimeCandidatePendingCount: 0,
+        noRuntimePendingCount: 0,
+        permissionPendingCount: 0,
+      }),
+      deriveTeamLaunchAggregateState: () => 'partial_pending',
+    });
+
+    expect(snapshot.statuses.alice).toMatchObject({ status: 'offline', runtimeAlive: false });
+    expect(snapshot.teamLaunchState).toBe('partial_pending');
+    expect(snapshot.runId).toBe('run-1');
   });
 });

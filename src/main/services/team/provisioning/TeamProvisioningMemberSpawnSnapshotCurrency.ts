@@ -10,17 +10,14 @@ export function isMemberSpawnStatusesSnapshotReadCurrent(params: {
   runIdAtStart: string | null;
   generationAtStart: number;
   ports: {
-    getRun(runId: string): { runId: string } | undefined | null;
     cache: {
       getCacheGeneration(teamName: string): number;
       getTrackedRunId(teamName: string): string | null;
     };
   };
 }): boolean {
-  const trackedRunId = params.ports.cache.getTrackedRunId(params.teamName);
   return (
     params.ports.cache.getCacheGeneration(params.teamName) === params.generationAtStart &&
-    (trackedRunId ? (params.ports.getRun(trackedRunId)?.runId ?? null) : null) ===
-      params.runIdAtStart
+    params.ports.cache.getTrackedRunId(params.teamName) === params.runIdAtStart
   );
 }

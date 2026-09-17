@@ -465,8 +465,6 @@ describe('getMemberSpawnStatusesSnapshotReadOnly', () => {
     expect(readOnly.statuses.Worker?.status).toBe('offline');
     expect(writing.statuses.Worker?.status).toBe('offline');
     expect(readOnly.statuses).toEqual(writing.statuses);
-    expect(readOnly.runId).toBeNull();
-    expect(writing.runId).toBeNull();
   });
 
   it('does not serve a live spawn cache after Stop once the run object is gone', async () => {
@@ -491,13 +489,14 @@ describe('getMemberSpawnStatusesSnapshotReadOnly', () => {
         statuses: { Worker: entry({ status: 'online', runtimeAlive: true }) },
         runId: RUN_ID,
         source: 'live',
+        expectedMembers: ['Worker'],
       },
     });
 
     const snapshot = await getMemberSpawnStatusesSnapshotReadOnly(TEAM, harness.ports);
 
     expect(snapshot.statuses.Worker?.status).toBe('offline');
-    expect(snapshot.runId).toBeNull();
+    expect(snapshot.statuses.Worker?.runtimeAlive).toBe(false);
   });
 
   /**

@@ -9,7 +9,10 @@ import {
   applyExpiredLaunchGraceToPersistedStatuses,
   summarizeMemberSpawnStatusRecord,
 } from './TeamProvisioningMemberSpawnStatusPolicy';
-import { applyStoppedTeamSpawnProjection } from './TeamProvisioningStoppedTeamSpawnProjection';
+import {
+  applyStoppedTeamSpawnProjection,
+  maybeProjectStoppedCachedSpawnSnapshot,
+} from './TeamProvisioningStoppedTeamSpawnProjection';
 
 import type {
   MemberSpawnStatusEntry,
@@ -42,7 +45,7 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
 ): Promise<MemberSpawnStatusesSnapshot> {
   const runId = ports.cache.getTrackedRunId(teamName);
   const run = runId ? ports.getRun(runId) : undefined;
-  const resolvedRunId = run?.runId ?? null;
+  const resolvedRunId = run?.runId ?? runId ?? null;
   const generation = ports.cache.getCacheGeneration(teamName);
   const cached = ports.cache.snapshotCache.get(teamName);
   if (
@@ -51,7 +54,15 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
     cached.runId === resolvedRunId &&
     cached.generation === generation
   ) {
-    return cloneMemberSpawnStatusesSnapshot(cached.snapshot);
+    return maybeProjectStoppedCachedSpawnSnapshot({
+      teamName,
+      hasTrackedRun: Boolean(run),
+      snapshot: cloneMemberSpawnStatusesSnapshot(cached.snapshot),
+      readLaunchFreshness: (candidateTeamName) =>
+        ports.persisted.readLaunchFreshness(candidateTeamName),
+      summarize: summarizeMemberSpawnStatusRecord,
+      deriveTeamLaunchAggregateState: ports.live.deriveTeamLaunchAggregateState,
+    });
   }
 
   const persisted = await ports.live.readLaunchState(teamName);

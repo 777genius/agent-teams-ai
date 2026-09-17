@@ -28,15 +28,7 @@ describe('TeamProvisioningMemberSpawnSnapshotCurrency', () => {
     ).toBe(false);
   });
 
-  it('treats a dangling tracked run id as no live run', () => {
-    expect(
-      isMemberSpawnStatusesSnapshotReadCurrent({
-        teamName: 'demo',
-        runIdAtStart: null,
-        generationAtStart: 1,
-        ports: ports('run-stale'),
-      })
-    ).toBe(true);
+  it('keeps a dangling tracked run id current for the persist read that used that id', () => {
     expect(
       isMemberSpawnStatusesSnapshotReadCurrent({
         teamName: 'demo',
@@ -44,6 +36,22 @@ describe('TeamProvisioningMemberSpawnSnapshotCurrency', () => {
         generationAtStart: 1,
         ports: ports('run-stale'),
       })
+    ).toBe(true);
+    expect(
+      isMemberSpawnStatusesSnapshotReadCurrent({
+        teamName: 'demo',
+        runIdAtStart: null,
+        generationAtStart: 1,
+        ports: ports('run-stale'),
+      })
     ).toBe(false);
+    expect(
+      isMemberSpawnStatusesSnapshotReadCurrent({
+        teamName: 'demo',
+        runIdAtStart: null,
+        generationAtStart: 1,
+        ports: ports(null),
+      })
+    ).toBe(true);
   });
 });

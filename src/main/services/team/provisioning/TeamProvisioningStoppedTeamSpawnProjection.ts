@@ -1,5 +1,10 @@
 import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
-import type { MemberSpawnStatusEntry } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  PersistedTeamLaunchSummary,
+  TeamLaunchAggregateState,
+} from '@shared/types';
 
 export function shouldProjectStoppedTeamSpawn(input: {
   hasTrackedRun: boolean;
@@ -61,4 +66,35 @@ export async function applyStoppedTeamSpawnProjection(
   }
 
   return { statuses: projectStoppedTeamSpawnStatuses(statuses), stopped: true };
+}
+
+export async function maybeProjectStoppedCachedSpawnSnapshot(params: {
+  teamName: string;
+  hasTrackedRun: boolean;
+  snapshot: MemberSpawnStatusesSnapshot;
+  readLaunchFreshness?: (teamName: string) => Promise<TeamLaunchFreshness | null>;
+  summarize: (
+    expectedMembers: readonly string[],
+    statuses: Record<string, MemberSpawnStatusEntry>
+  ) => PersistedTeamLaunchSummary;
+  deriveTeamLaunchAggregateState: (summary: PersistedTeamLaunchSummary) => TeamLaunchAggregateState;
+}): Promise<MemberSpawnStatusesSnapshot> {
+  const projected = await applyStoppedTeamSpawnProjection(
+    params.teamName,
+    params.hasTrackedRun,
+    params.snapshot.statuses,
+    params.readLaunchFreshness
+  );
+  if (!projected.stopped) {
+    return params.snapshot;
+  }
+  const expectedMembers = params.snapshot.expectedMembers ?? Object.keys(projected.statuses);
+  const summary = params.summarize(expectedMembers, projected.statuses);
+  return {
+    ...params.snapshot,
+    statuses: projected.statuses,
+    expectedMembers,
+    summary,
+    teamLaunchState: params.deriveTeamLaunchAggregateState(summary),
+  };
 }
