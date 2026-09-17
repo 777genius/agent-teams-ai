@@ -12,7 +12,7 @@ import {
   buildMemberColorMap,
   shouldDisplayMemberCurrentTask,
 } from '@renderer/utils/memberHelpers';
-import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
+import { bindMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
@@ -1125,22 +1125,10 @@ export const MemberList = memo(function MemberList({
     teamName,
   ]);
 
-  const buildRuntimeSummary = useCallback(
-    (
-      member: ResolvedTeamMember,
-      spawnEntry: MemberSpawnStatusEntry | undefined,
-      runtimeEntry: TeamAgentRuntimeEntry | undefined
-    ): string | undefined => {
-      return resolveMemberRuntimeSummary(
-        member,
-        launchParams,
-        spawnEntry,
-        runtimeEntry,
-        isTeamAlive
-      );
-    },
-    [isTeamAlive, launchParams]
-  );
+  const buildRuntimeSummary = useCallback(bindMemberRuntimeSummary(launchParams, isTeamAlive), [
+    isTeamAlive,
+    launchParams,
+  ]);
 
   const expectsTeammates = (expectedTeammateCount ?? 0) > 0;
   const canStillHydrateExpectedTeammates =

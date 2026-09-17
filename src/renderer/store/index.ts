@@ -64,6 +64,10 @@ import {
   noteTeamRefreshFanout,
   type TeamRefreshFanoutOperation,
 } from './teamRefreshFanoutDiagnostics';
+import {
+  getFocusedVisibleTeamName as readFocusedVisibleTeamName,
+  startViewedTeamNotificationSync,
+} from './viewedTeamNotificationSync';
 
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
@@ -1032,52 +1036,9 @@ export function initializeNotificationListeners(): () => void {
     teamLastRelevantActivityAt.set(teamName, timestamp);
   };
 
-  const getFocusedVisibleTeamName = (
-    state: ReturnType<typeof useStore.getState> = useStore.getState()
-  ): string | null => {
-    const focusedPane = state.paneLayout.panes.find(
-      (pane) => pane.id === state.paneLayout.focusedPaneId
-    );
-    if (!focusedPane?.activeTabId) {
-      return null;
-    }
-
-    const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-    if ((activeTab?.type !== 'team' && activeTab?.type !== 'graph') || !activeTab.teamName) {
-      return null;
-    }
-
-    if (!selectTeamDataForName(state, activeTab.teamName)) {
-      return null;
-    }
-
-    return activeTab.teamName;
-  };
-
-  let lastViewedTeamForNotifications: string | null | undefined;
-  const syncViewedTeamForNotifications = (
-    state: ReturnType<typeof useStore.getState> = useStore.getState()
-  ): void => {
-    const focused = getFocusedVisibleTeamName(state);
-    if (focused === lastViewedTeamForNotifications) {
-      return;
-    }
-    lastViewedTeamForNotifications = focused;
-    void state.setViewedTeamForNotifications(focused);
-  };
-  syncViewedTeamForNotifications();
-  const unsubscribeViewedTeamForNotifications = useStore.subscribe((state, prevState) => {
-    if (
-      state.paneLayout === prevState.paneLayout &&
-      state.selectedTeamName === prevState.selectedTeamName &&
-      state.selectedTeamData === prevState.selectedTeamData &&
-      state.teamDataCacheByName === prevState.teamDataCacheByName
-    ) {
-      return;
-    }
-    syncViewedTeamForNotifications(state);
-  });
-  cleanupFns.push(unsubscribeViewedTeamForNotifications);
+  const getFocusedVisibleTeamName = (): string | null =>
+    readFocusedVisibleTeamName(useStore.getState());
+  cleanupFns.push(startViewedTeamNotificationSync(useStore));
 
   const buildProcessFanoutDecision = (
     event: TeamChangeEvent,
