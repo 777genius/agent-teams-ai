@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -148,3 +150,5 @@ describe('TeamProvisioningOpenCodeStoppedLaneStopTargets', () => {
     );
   });
 });
+
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */

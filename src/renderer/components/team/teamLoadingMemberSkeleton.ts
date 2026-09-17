@@ -66,6 +66,6 @@ export function teamLoadingMemberSkeletonAccents(count: number): string[] {
   const n = Math.max(0, Math.floor(count));
   return Array.from(
     { length: n },
-    (_, index) => MEMBER_SKELETON_ACCENTS[index % MEMBER_SKELETON_ACCENTS.length]!
+    (_, index) => MEMBER_SKELETON_ACCENTS[index % MEMBER_SKELETON_ACCENTS.length]
   );
 }
