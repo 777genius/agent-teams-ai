@@ -207,4 +207,27 @@ describe('TeamProvisioningRuntimeStateProjection', () => {
     await expect(projection.getRuntimeState(teamName)).resolves.toBe(recovered);
     expect(readBootstrapRuntimeState).toHaveBeenCalledWith(teamName);
   });
+
+  it('keeps a live OpenCode adapter team alive even if leftover bootstrap state is dead', async () => {
+    const teamName = 'adapter-team';
+    const runId = 'run-adapter';
+    const recovered: TeamRuntimeState = {
+      teamName,
+      isAlive: false,
+      runId: 'run-bootstrap',
+      progress: progress('run-bootstrap', teamName, 'failed'),
+    };
+    const { projection, readBootstrapRuntimeState } = createProjection({
+      aliveRunByTeam: new Map([[teamName, runId]]),
+      runtimeAdapterRunByTeam: new Map([[teamName, { runId, providerId: 'opencode' }]]),
+      bootstrapStateByTeam: new Map([[teamName, recovered]]),
+    });
+
+    await expect(projection.getRuntimeState(teamName)).resolves.toMatchObject({
+      teamName,
+      isAlive: true,
+      runId,
+    });
+    expect(readBootstrapRuntimeState).not.toHaveBeenCalled();
+  });
 });
