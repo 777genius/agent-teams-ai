@@ -2,6 +2,7 @@ import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnaps
 import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
 import type {
+  LeadActivityState,
   MemberSpawnStatus,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -95,12 +96,12 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
 }
 
 export function nextRuntimeRunIdByTeamAfterAdoption(
-  current: Record<string, string | undefined>,
+  current: Record<string, string | null>,
   teamName: string,
   snapshotRunId: string | null | undefined,
   adoption: IncomingRuntimeRunAdoption,
   pinWhenUnset: boolean
-): Record<string, string | undefined> {
+): Record<string, string | null> {
   if (
     snapshotRunId &&
     (adoption === 'retarget' || (pinWhenUnset && current[teamName] == null)) &&
@@ -116,10 +117,10 @@ export function nextRuntimeRunIdByTeamAfterAdoption(
 
 export interface IncomingMemberSpawnProjectionState {
   ignoredRuntimeRunIds: Record<string, string>;
-  currentRuntimeRunIdByTeam: Record<string, string | undefined>;
-  leadActivityByTeam: Record<string, string | undefined>;
-  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry> | undefined>;
-  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot | undefined>;
+  currentRuntimeRunIdByTeam: Record<string, string | null>;
+  leadActivityByTeam: Record<string, LeadActivityState>;
+  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
+  memberSpawnSnapshotsByTeam: Record<string, MemberSpawnStatusesSnapshot>;
 }
 
 export function projectIncomingMemberSpawnSnapshot(input: {

@@ -336,9 +336,15 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
         members: {
           Bob: {
             name: 'Bob',
-            providerId: 'opencode',
+            providerId: 'opencode' as const,
             laneId: 'secondary:opencode:bob',
             runtimeRunId: 'run-old',
+            launchState: 'starting' as const,
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-07-03T00:00:00.000Z',
           },
         },
       })),

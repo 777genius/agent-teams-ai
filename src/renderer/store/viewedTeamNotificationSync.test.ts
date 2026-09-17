@@ -78,7 +78,7 @@ describe('viewedTeamNotificationSync', () => {
     expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(1);
 
     const previous = state;
-    state = { ...state, selectedTeamData: { ...state.selectedTeamData } };
+    state = { ...state, teamDataCacheByName: { ...state.teamDataCacheByName } };
     store.listener?.(state, previous);
     await Promise.resolve();
     expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(1);
