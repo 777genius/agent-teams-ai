@@ -7,6 +7,7 @@ import {
   isStoppedTeamOpenCodeLaneOwnershipCurrent,
   selectStoppedTeamOpenCodeRuntimeLaneIds,
   shouldSkipStoppedTeamOpenCodeLaneCleanup,
+  shouldWarnStoppedTeamOpenCodeLaneOwnershipChange,
   stopLeftoverOpenCodeSecondaryLaneRuns,
 } from '../TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
@@ -109,6 +110,31 @@ describe('TeamProvisioningOpenCodeStoppedLaneStopTargets', () => {
         currentRunId: 'manifest-run',
       })
     ).toBe(false);
+    expect(
+      shouldWarnStoppedTeamOpenCodeLaneOwnershipChange({
+        canDeliverToTeamRuntime: false,
+        freshness: { version: 1, teamName: 'team', kind: 'stop', stopId: 'stop-1' },
+        expectedRunId: 'manifest-run',
+        currentRunId: null,
+      })
+    ).toBe(false);
+    expect(
+      shouldWarnStoppedTeamOpenCodeLaneOwnershipChange({
+        canDeliverToTeamRuntime: true,
+        freshness: { version: 1, teamName: 'team', kind: 'launch', runId: 'run-new' },
+        expectedRunId: 'manifest-run',
+        currentRunId: 'run-new',
+      })
+    ).toBe(false);
+    expect(
+      shouldWarnStoppedTeamOpenCodeLaneOwnershipChange({
+        canDeliverToTeamRuntime: false,
+        freshness: { version: 1, teamName: 'team', kind: 'stop', stopId: 'stop-1' },
+        expectedRunId: 'manifest-run',
+        currentRunId: 'run-new',
+        targetedRunIds: ['manifest-run'],
+      })
+    ).toBe(true);
   });
 
   it('force-stops leftover same-lane runs before a successor launch', async () => {

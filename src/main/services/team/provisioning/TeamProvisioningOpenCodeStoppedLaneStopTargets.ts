@@ -74,6 +74,19 @@ export function isStoppedTeamOpenCodeLaneOwnershipCurrent(input: {
   return Boolean(currentRunId && input.targetedRunIds?.includes(currentRunId));
 }
 
+export function shouldWarnStoppedTeamOpenCodeLaneOwnershipChange(
+  input: Parameters<typeof isStoppedTeamOpenCodeLaneOwnershipCurrent>[0]
+): boolean {
+  if (shouldSkipStoppedTeamOpenCodeLaneCleanup(input)) {
+    return false;
+  }
+  const currentRunId = input.currentRunId?.trim() || null;
+  if (!currentRunId) {
+    return false;
+  }
+  return !isStoppedTeamOpenCodeLaneOwnershipCurrent(input);
+}
+
 export async function stopLeftoverOpenCodeSecondaryLaneRuns(input: {
   adapter: Pick<TeamLaunchRuntimeAdapter, 'stop'>;
   teamName: string;

@@ -21,6 +21,7 @@ import {
   isStoppedTeamOpenCodeLaneOwnershipCurrent,
   selectStoppedTeamOpenCodeRuntimeLaneIds,
   shouldSkipStoppedTeamOpenCodeLaneCleanup,
+  shouldWarnStoppedTeamOpenCodeLaneOwnershipChange,
 } from './TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
@@ -336,20 +337,21 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       launchStateRunId,
       attributed,
     });
-    if (
-      !(await stoppedTeamOpenCodeRuntimeLaneOwnershipIsCurrent({
-        teamName,
-        laneId,
-        expectedRunId,
-        targetedRunIds,
-        evidenceReader,
-        ports,
-        teamsBasePath,
-      }))
-    ) {
-      ports.logWarning(
-        `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team adapter cleanup; retaining current runtime ownership.`
-      );
+    const adapterOwnership = await evaluateStoppedTeamOpenCodeLaneOwnership({
+      teamName,
+      laneId,
+      expectedRunId,
+      targetedRunIds,
+      evidenceReader,
+      ports,
+      teamsBasePath,
+    });
+    if (!adapterOwnership.safeToClean) {
+      if (adapterOwnership.warnOwnershipChanged) {
+        ports.logWarning(
+          `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team adapter cleanup; retaining current runtime ownership.`
+        );
+      }
       continue;
     }
     if (adapter && targetedRunIds.length > 0) {
@@ -407,20 +409,21 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       }
     }
 
-    if (
-      !(await stoppedTeamOpenCodeRuntimeLaneOwnershipIsCurrent({
-        teamName,
-        laneId,
-        expectedRunId,
-        targetedRunIds,
-        evidenceReader,
-        ports,
-        teamsBasePath,
-      }))
-    ) {
-      ports.logWarning(
-        `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
-      );
+    const storageOwnership = await evaluateStoppedTeamOpenCodeLaneOwnership({
+      teamName,
+      laneId,
+      expectedRunId,
+      targetedRunIds,
+      evidenceReader,
+      ports,
+      teamsBasePath,
+    });
+    if (!storageOwnership.safeToClean) {
+      if (storageOwnership.warnOwnershipChanged) {
+        ports.logWarning(
+          `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
+        );
+      }
       continue;
     }
     const cleared = await clearOpenCodeRuntimeLaneStorage({
@@ -430,9 +433,20 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       ...(expectedRunId ? { expectedRunId } : {}),
     }).catch(() => false);
     if (!cleared) {
-      ports.logWarning(
-        `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
-      );
+      const afterClear = await evaluateStoppedTeamOpenCodeLaneOwnership({
+        teamName,
+        laneId,
+        expectedRunId,
+        targetedRunIds,
+        evidenceReader,
+        ports,
+        teamsBasePath,
+      });
+      if (afterClear.warnOwnershipChanged) {
+        ports.logWarning(
+          `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
+        );
+      }
       continue;
     }
     cleaned += 1;
@@ -447,7 +461,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
   return stopped;
 }
 
-async function stoppedTeamOpenCodeRuntimeLaneOwnershipIsCurrent(input: {
+async function evaluateStoppedTeamOpenCodeLaneOwnership(input: {
   teamName: string;
   laneId: string;
   expectedRunId: string | null;
@@ -455,17 +469,21 @@ async function stoppedTeamOpenCodeRuntimeLaneOwnershipIsCurrent(input: {
   evidenceReader: OpenCodeRuntimeManifestEvidenceReader;
   ports: StopOpenCodeRuntimeLanesForStoppedTeamPorts;
   teamsBasePath: string;
-}): Promise<boolean> {
+}): Promise<{ safeToClean: boolean; warnOwnershipChanged: boolean }> {
   const freshness = await readTeamLaunchFreshnessFromTeamDir(
     path.join(input.teamsBasePath, input.teamName),
     input.teamName
   );
   const evidence = await input.evidenceReader.read(input.teamName, input.laneId).catch(() => null);
-  return isStoppedTeamOpenCodeLaneOwnershipCurrent({
+  const ownershipInput = {
     canDeliverToTeamRuntime: input.ports.canDeliverToOpenCodeRuntimeForTeam(input.teamName),
     freshness,
     expectedRunId: input.expectedRunId,
     currentRunId: evidence?.activeRunId?.trim() || null,
     targetedRunIds: input.targetedRunIds,
-  });
+  };
+  return {
+    safeToClean: isStoppedTeamOpenCodeLaneOwnershipCurrent(ownershipInput),
+    warnOwnershipChanged: shouldWarnStoppedTeamOpenCodeLaneOwnershipChange(ownershipInput),
+  };
 }
