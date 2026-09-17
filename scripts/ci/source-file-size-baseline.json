@@ -138,7 +138,7 @@
     "src/renderer/components/ui/MentionableTextarea.tsx": 1433,
     "src/renderer/index.css": 1950,
     "src/renderer/index.html": 1441,
-    "src/renderer/store/index.ts": 2596,
+    "src/renderer/store/index.ts": 2595,
     "src/renderer/store/slices/changeReviewSlice.ts": 2417,
     "src/renderer/store/slices/cliInstallerSlice.ts": 1765,
     "src/renderer/store/slices/editorSlice.ts": 1483,

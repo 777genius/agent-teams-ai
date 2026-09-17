@@ -54,6 +54,7 @@ import {
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
+import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
   decideProcessFanoutMode,
@@ -1672,12 +1673,10 @@ export function initializeNotificationListeners(): () => void {
           const baseTeamData =
             prev.teamDataCacheByName[event.teamName] ??
             (prev.selectedTeamName === event.teamName ? prev.selectedTeamData : null);
+          const nextAlive = nextTeamAliveFromLeadActivity(baseTeamData?.isAlive, nextActivity);
           const nextTeamData =
-            baseTeamData && baseTeamData.isAlive !== (nextActivity !== 'offline')
-              ? {
-                  ...baseTeamData,
-                  isAlive: nextActivity !== 'offline',
-                }
+            baseTeamData && baseTeamData.isAlive !== nextAlive
+              ? { ...baseTeamData, isAlive: nextAlive === true }
               : baseTeamData;
 
           if (nextTeamData) {
