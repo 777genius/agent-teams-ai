@@ -7463,6 +7463,100 @@ describe('teamSlice actions', () => {
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
     });
 
+    it('retargets spawn snapshots onto a live successor after the pinned run is stopped', async () => {
+      const store = createSliceStore();
+      store.setState({
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'run-old',
+        },
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'run-old',
+        },
+        leadActivityByTeam: {
+          'my-team': 'offline',
+        },
+        provisioningRuns: {
+          'run-old': {
+            runId: 'run-old',
+            teamName: 'my-team',
+            state: 'ready',
+            message: 'Finishing launch',
+            startedAt: '2026-03-12T10:00:00.000Z',
+            updatedAt: '2026-03-12T10:00:02.000Z',
+          },
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': {
+            alice: createMemberSpawnStatus({
+              status: 'offline',
+              launchState: 'confirmed_alive',
+              runtimeAlive: false,
+              bootstrapConfirmed: true,
+            }),
+          },
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          runId: 'run-new',
+          statuses: {
+            alice: createMemberSpawnStatus({
+              status: 'online',
+              updatedAt: '2026-03-12T10:01:00.000Z',
+            }),
+          },
+        })
+      );
+      hoisted.getProvisioningStatus.mockResolvedValue({
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: 'assembling',
+        message: 'Members joining',
+        startedAt: '2026-03-12T10:01:00.000Z',
+        updatedAt: '2026-03-12T10:01:00.000Z',
+      });
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+      await flushMicrotasks();
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']?.alice?.status).toBe('online');
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().provisioningRuns['run-new']?.state).toBe('assembling');
+    });
+
+    it('does not retarget a different run while the pinned spawn is still live', async () => {
+      const store = createSliceStore();
+      const liveStatuses = {
+        alice: createMemberSpawnStatus(),
+      };
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'run-live',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': liveStatuses,
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          runId: 'run-old',
+          statuses: {
+            alice: createMemberSpawnStatus({
+              status: 'offline',
+              runtimeAlive: false,
+              updatedAt: '2026-03-12T10:00:30.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-live');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(liveStatuses);
+    });
+
     it('preserves current spawn statuses when clearing a non-canonical missing run', () => {
       const store = createSliceStore();
       const spawningStatus = createMemberSpawnStatus({

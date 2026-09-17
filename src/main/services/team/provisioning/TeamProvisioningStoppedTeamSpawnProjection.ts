@@ -1,4 +1,5 @@
-import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
+import { isStopLaunchFreshness, type TeamLaunchFreshness } from '../TeamLaunchFreshness';
+
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -8,9 +9,19 @@ import type {
 
 export function shouldProjectStoppedTeamSpawn(input: {
   hasTrackedRun: boolean;
+  trackedRunId?: string | null;
   freshnessKind?: TeamLaunchFreshness['kind'] | null;
+  stoppedRunId?: string | null;
 }): boolean {
-  return input.hasTrackedRun !== true && input.freshnessKind === 'stop';
+  if (!isStopLaunchFreshness(input.freshnessKind)) {
+    return false;
+  }
+  if (input.hasTrackedRun !== true) {
+    return true;
+  }
+  const trackedRunId = input.trackedRunId?.trim();
+  const stoppedRunId = input.stoppedRunId?.trim();
+  return Boolean(trackedRunId && stoppedRunId && trackedRunId === stoppedRunId);
 }
 
 export function projectStoppedTeamSpawnStatuses(
@@ -43,9 +54,10 @@ export async function applyStoppedTeamSpawnProjection(
   teamName: string,
   hasTrackedRun: boolean,
   statuses: Record<string, MemberSpawnStatusEntry>,
-  readLaunchFreshness?: (teamName: string) => Promise<TeamLaunchFreshness | null>
+  readLaunchFreshness?: (teamName: string) => Promise<TeamLaunchFreshness | null>,
+  trackedRunId?: string | null
 ): Promise<{ statuses: Record<string, MemberSpawnStatusEntry>; stopped: boolean }> {
-  if (hasTrackedRun || !readLaunchFreshness) {
+  if (!readLaunchFreshness) {
     return { statuses, stopped: false };
   }
 
@@ -59,7 +71,9 @@ export async function applyStoppedTeamSpawnProjection(
   if (
     !shouldProjectStoppedTeamSpawn({
       hasTrackedRun,
+      trackedRunId,
       freshnessKind: freshness?.kind ?? null,
+      stoppedRunId: freshness?.kind === 'stop' ? freshness.stoppedRunId : null,
     })
   ) {
     return { statuses, stopped: false };
@@ -83,7 +97,8 @@ export async function maybeProjectStoppedCachedSpawnSnapshot(params: {
     params.teamName,
     params.hasTrackedRun,
     params.snapshot.statuses,
-    params.readLaunchFreshness
+    params.readLaunchFreshness,
+    params.snapshot.runId
   );
   if (!projected.stopped) {
     return params.snapshot;

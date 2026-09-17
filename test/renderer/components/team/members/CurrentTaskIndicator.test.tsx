@@ -67,7 +67,7 @@ describe('CurrentTaskIndicator', () => {
     });
   });
 
-  it('pauses the persisted activity timer on unmount', async () => {
+  it('keeps the persisted activity timer running across unmount', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-07T09:01:05.000Z'));
@@ -115,6 +115,6 @@ describe('CurrentTaskIndicator', () => {
         runId: 'run-1',
         nowMs: Date.parse('2026-05-07T09:17:20.000Z'),
       })
-    ).toBe(65_000);
+    ).toBe(1_040_000);
   });
 });

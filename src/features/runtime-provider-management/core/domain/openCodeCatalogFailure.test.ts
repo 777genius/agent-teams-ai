@@ -258,7 +258,9 @@ describe('openCodeCatalogFailure', () => {
         ],
         (key, provider) => KEYS[key](provider)
       )
-    ).toBe("Couldn't load SuperGrok models. Couldn't load xAI models from OpenCode.");
+    ).toBe(
+      "SuperGrok models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh. Couldn't load xAI models from OpenCode."
+    );
   });
 
   it('does not repeat the OpenCode source name when it already matches the product name', () => {

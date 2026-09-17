@@ -48,8 +48,12 @@ export function parseTeamLaunchFreshness(
   return null;
 }
 
-export function isStopLaunchFreshness(value: TeamLaunchFreshness | null | undefined): boolean {
-  return value?.kind === 'stop';
+export function isStopLaunchFreshness(
+  value: TeamLaunchFreshness | TeamLaunchFreshness['kind'] | null | undefined
+): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value === 'stop';
+  return value.kind === 'stop';
 }
 
 export async function readTeamLaunchFreshness(

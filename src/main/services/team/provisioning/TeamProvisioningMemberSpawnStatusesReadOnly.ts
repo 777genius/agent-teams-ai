@@ -103,7 +103,8 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
     teamName,
     Boolean(run),
     attachedStatuses,
-    (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName)
+    (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName),
+    resolvedRunId
   );
   const statuses = stoppedProjection.statuses;
   // Pure in-place transform on a record this projection owns: without it a

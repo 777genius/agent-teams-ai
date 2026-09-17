@@ -177,13 +177,18 @@ function resolveDirectoryModelCount(
   provider: RuntimeProviderDirectoryEntryDto,
   state: Pick<
     RuntimeProviderManagementState,
-    'modelPickerProviderId' | 'modelsLoading' | 'modelsError' | 'modelsTotalCount' | 'models'
+    | 'modelPickerProviderId'
+    | 'modelQuery'
+    | 'modelsLoading'
+    | 'modelsError'
+    | 'modelsTotalCount'
+    | 'models'
   >
 ): number | null {
   if (state.modelPickerProviderId !== provider.providerId) {
     return provider.modelCount;
   }
-  if (state.modelsLoading || state.modelsError) {
+  if (state.modelsLoading || state.modelsError || state.modelQuery.trim()) {
     return provider.modelCount;
   }
   if (state.modelsTotalCount !== null) {

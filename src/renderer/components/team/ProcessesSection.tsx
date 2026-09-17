@@ -80,9 +80,11 @@ export const ProcessesSection = memo(function ProcessesSection({
           ? t('processes.ago', {
               time: formatCompactRelativeTime(new Date(proc.registeredAt)),
             })
-          : t('processes.stoppedAgo', {
-              time: formatCompactRelativeTime(new Date(proc.stoppedAt ?? proc.registeredAt)),
-            });
+          : proc.stoppedAt
+            ? t('processes.stoppedAgo', {
+                time: formatCompactRelativeTime(new Date(proc.stoppedAt)),
+              })
+            : '';
 
         return (
           <div
@@ -162,7 +164,7 @@ export const ProcessesSection = memo(function ProcessesSection({
                   teamName={teamName}
                 />
               )}
-              <span className="text-[var(--color-text-muted)]">{timeStr}</span>
+              {timeStr ? <span className="text-[var(--color-text-muted)]">{timeStr}</span> : null}
             </span>
           </div>
         );

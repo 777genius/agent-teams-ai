@@ -5,7 +5,7 @@
 import { api } from '@renderer/api';
 import { createErrorNavigationRequest, findTabBySessionAndProject } from '@renderer/types/tabs';
 import { createLogger } from '@shared/utils/logger';
-import { getNotificationTeamName, notificationBelongsToTeam } from '@shared/utils/notificationTeam';
+import { getNotificationTeamName } from '@shared/utils/notificationTeam';
 
 import { getAllTabs } from '../utils/paneHelpers';
 
@@ -241,23 +241,8 @@ export const createNotificationSlice: StateCreator<AppState, [], [], Notificatio
     }
     try {
       const success = await setViewedTeam(teamName);
-      if (!success) {
-        await get().fetchNotifications();
-        return false;
-      }
-      if (!teamName) {
-        return true;
-      }
-      set((state) => {
-        const notifications = state.notifications.map((n) =>
-          notificationBelongsToTeam(n, teamName) ? { ...n, isRead: true } : n
-        );
-        return {
-          notifications,
-          unreadCount: notifications.filter((n) => !n.isRead).length,
-        };
-      });
-      return true;
+      await get().fetchNotifications();
+      return success !== false;
     } catch (error) {
       logger.error('Failed to set viewed team for notifications:', error);
       return false;

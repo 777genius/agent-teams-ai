@@ -222,15 +222,3 @@ export function resolveMemberRuntimeSummary(
   const summary = formatTeamModelSummary(configuredProvider, configuredModel, configuredEffort);
   return appendRuntimeSummarySuffixes(summary, backendLabel, memorySuffix);
 }
-
-export function bindMemberRuntimeSummary(
-  launchParams: TeamLaunchParams | undefined,
-  isTeamAlive?: boolean
-) {
-  return (
-    member: ResolvedTeamMember,
-    spawnEntry: MemberSpawnStatusEntry | undefined,
-    runtimeEntry?: TeamAgentRuntimeEntry
-  ): string | undefined =>
-    resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry, isTeamAlive);
-}

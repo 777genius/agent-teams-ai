@@ -90,7 +90,7 @@ describe('notificationSlice', () => {
       context: { projectName: teamName },
     });
 
-    it('marks only the viewed team unread as read and keeps other teams', async () => {
+    it('refetches notifications after the viewed team is remembered', async () => {
       const viewed = makeTeamNotification('n1', 'mixed-v2150-20260917', false);
       const otherTeam = makeTeamNotification('n2', 'other-team', false);
       const alreadyRead = makeTeamNotification('n3', 'mixed-v2150-20260917', true);
@@ -98,10 +98,15 @@ describe('notificationSlice', () => {
         notifications: [viewed, otherTeam, alreadyRead] as never[],
         unreadCount: 2,
       });
+      mockAPI.notifications.get.mockResolvedValue({
+        notifications: [{ ...viewed, isRead: true }, otherTeam, alreadyRead],
+        unreadCount: 1,
+      });
 
       await store.getState().setViewedTeamForNotifications('mixed-v2150-20260917');
 
       expect(mockAPI.notifications.setViewedTeam).toHaveBeenCalledWith('mixed-v2150-20260917');
+      expect(mockAPI.notifications.get).toHaveBeenCalled();
       const state = store.getState();
       expect(state.notifications.find((n) => n.id === 'n1')!.isRead).toBe(true);
       expect(state.notifications.find((n) => n.id === 'n2')!.isRead).toBe(false);

@@ -45,16 +45,8 @@ export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => v
         }
         inFlightViewedTeam = undefined;
         if (ok === false) {
-          lastViewedTeamForNotifications = undefined;
-          if (retryFor === requested) {
-            return;
-          }
-          retryFor = requested;
-          queueMicrotask(() => {
-            if (getFocusedVisibleTeamName(store.getState()) === requested) {
-              sync(store.getState());
-            }
-          });
+          lastViewedTeamForNotifications = requested;
+          retryFor = undefined;
           return;
         }
         lastViewedTeamForNotifications = requested;
@@ -65,8 +57,8 @@ export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => v
           return;
         }
         inFlightViewedTeam = undefined;
-        lastViewedTeamForNotifications = undefined;
         if (retryFor === requested) {
+          lastViewedTeamForNotifications = requested;
           return;
         }
         retryFor = requested;

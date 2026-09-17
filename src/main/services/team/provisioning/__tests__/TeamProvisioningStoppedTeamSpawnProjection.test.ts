@@ -31,6 +31,22 @@ describe('TeamProvisioningStoppedTeamSpawnProjection', () => {
     expect(shouldProjectStoppedTeamSpawn({ hasTrackedRun: true, freshnessKind: 'stop' })).toBe(
       false
     );
+    expect(
+      shouldProjectStoppedTeamSpawn({
+        hasTrackedRun: true,
+        trackedRunId: 'run-1',
+        freshnessKind: 'stop',
+        stoppedRunId: 'run-1',
+      })
+    ).toBe(true);
+    expect(
+      shouldProjectStoppedTeamSpawn({
+        hasTrackedRun: true,
+        trackedRunId: 'run-2',
+        freshnessKind: 'stop',
+        stoppedRunId: 'run-1',
+      })
+    ).toBe(false);
     expect(shouldProjectStoppedTeamSpawn({ hasTrackedRun: false, freshnessKind: 'launch' })).toBe(
       false
     );
@@ -97,6 +113,44 @@ describe('TeamProvisioningStoppedTeamSpawnProjection', () => {
         kind: 'stop',
         stopId: 'stop-1',
       })
+    );
+
+    expect(result).toEqual({ statuses: live, stopped: false });
+  });
+
+  it('projects leftover live members offline when the tracked run is the stopped run', async () => {
+    const result = await applyStoppedTeamSpawnProjection(
+      'mixed-v2150-20260917',
+      true,
+      { alice: entry() },
+      async () => ({
+        version: 1,
+        teamName: 'mixed-v2150-20260917',
+        kind: 'stop',
+        stopId: 'stop-1',
+        stoppedRunId: 'run-1',
+      }),
+      'run-1'
+    );
+
+    expect(result.stopped).toBe(true);
+    expect(result.statuses.alice).toMatchObject({ status: 'offline', runtimeAlive: false });
+  });
+
+  it('does not project a new live run over a previous stop', async () => {
+    const live = { alice: entry() };
+    const result = await applyStoppedTeamSpawnProjection(
+      'mixed-v2150-20260917',
+      true,
+      live,
+      async () => ({
+        version: 1,
+        teamName: 'mixed-v2150-20260917',
+        kind: 'stop',
+        stopId: 'stop-1',
+        stoppedRunId: 'run-1',
+      }),
+      'run-2'
     );
 
     expect(result).toEqual({ statuses: live, stopped: false });

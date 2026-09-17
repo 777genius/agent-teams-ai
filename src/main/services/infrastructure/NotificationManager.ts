@@ -638,13 +638,13 @@ export class NotificationManager extends EventEmitter {
   }
 
   /**
-   * Viewing a team auto-reads only while the app window is focused.
-   * Headless/tests with no window still treat the team as viewed.
+   * Viewing a team auto-reads only while a live app window is focused.
+   * No window (closed, HTTP-only) must not look focused.
    */
   private isViewedTeamWindowFocused(): boolean {
     const win = this.mainWindow;
     if (!win || win.isDestroyed()) {
-      return true;
+      return false;
     }
     return win.isFocused();
   }
@@ -657,6 +657,7 @@ export class NotificationManager extends EventEmitter {
     this.unbindMainWindowFocus = null;
     this.mainWindow = window;
     if (!window || window.isDestroyed()) {
+      this.viewedTeamName = null;
       return;
     }
     const onFocus = (): void => {

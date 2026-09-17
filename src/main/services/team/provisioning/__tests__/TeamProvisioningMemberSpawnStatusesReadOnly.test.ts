@@ -86,7 +86,13 @@ function createHarness(options: {
   allowWrites?: boolean;
   /** Members the live liveness pass has runtime metadata for, and its verdict. */
   runtimeByMember?: Record<string, { alive: boolean }>;
-  freshness?: { version: 1; teamName: string; kind: 'stop'; stopId: string } | null;
+  freshness?: {
+    version: 1;
+    teamName: string;
+    kind: 'stop';
+    stopId: string;
+    stoppedRunId?: string;
+  } | null;
 }): Harness {
   const snapshotCache = new Map<string, MemberSpawnStatusesSnapshotCacheEntry>();
   const persistedWrites: string[] = [];
@@ -497,6 +503,72 @@ describe('getMemberSpawnStatusesSnapshotReadOnly', () => {
 
     expect(snapshot.statuses.Worker?.status).toBe('offline');
     expect(snapshot.statuses.Worker?.runtimeAlive).toBe(false);
+  });
+
+  it('projects both paths offline after Stop even if the leftover run object remains', async () => {
+    const liveStatuses = {
+      Worker: entry({ status: 'online', runtimeAlive: true, launchState: 'confirmed_alive' }),
+    };
+    const persisted = launchSnapshot(liveStatuses);
+    const freshness = {
+      version: 1 as const,
+      teamName: TEAM,
+      kind: 'stop' as const,
+      stopId: 'stop-1',
+      stoppedRunId: RUN_ID,
+    };
+    const run = createRun(liveStatuses);
+    const readOnly = await getMemberSpawnStatusesSnapshotReadOnly(
+      TEAM,
+      createHarness({ run, persisted, freshness }).ports
+    );
+    const writing = await getMemberSpawnStatusesSnapshot(
+      TEAM,
+      createHarness({
+        run,
+        persisted,
+        freshness,
+        allowWrites: true,
+      }).ports
+    );
+
+    expect(readOnly.statuses.Worker?.status).toBe('offline');
+    expect(writing.statuses.Worker?.status).toBe('offline');
+    expect(readOnly.statuses.Worker?.runtimeAlive).toBe(false);
+    expect(writing.statuses.Worker?.runtimeAlive).toBe(false);
+  });
+
+  it('keeps a new live run online over a previous stop freshness', async () => {
+    const liveStatuses = {
+      Worker: entry({ status: 'online', runtimeAlive: true, launchState: 'confirmed_alive' }),
+    };
+    const persisted = launchSnapshot(liveStatuses);
+    const freshness = {
+      version: 1 as const,
+      teamName: TEAM,
+      kind: 'stop' as const,
+      stopId: 'stop-1',
+      stoppedRunId: 'old-run',
+    };
+    const run = createRun(liveStatuses);
+    const readOnly = await getMemberSpawnStatusesSnapshotReadOnly(
+      TEAM,
+      createHarness({ run, persisted, freshness }).ports
+    );
+    const writing = await getMemberSpawnStatusesSnapshot(
+      TEAM,
+      createHarness({
+        run,
+        persisted,
+        freshness,
+        allowWrites: true,
+      }).ports
+    );
+
+    expect(readOnly.statuses.Worker?.status).toBe('online');
+    expect(writing.statuses.Worker?.status).toBe('online');
+    expect(readOnly.statuses.Worker?.runtimeAlive).toBe(true);
+    expect(writing.statuses.Worker?.runtimeAlive).toBe(true);
   });
 
   /**

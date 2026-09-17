@@ -1,5 +1,4 @@
 import {
-  bindMemberRuntimeSummary,
   getRuntimeMemorySourceLabel,
   resolveMemberRuntimeSummary,
 } from '@renderer/utils/memberRuntimeSummary';
@@ -543,19 +542,22 @@ describe('getRuntimeMemorySourceLabel', () => {
     ).toBe('RSS source: shared OpenCode host');
   });
 
-  it('binds launch params and team liveness for MemberList without growing that frozen file', () => {
-    const summary = bindMemberRuntimeSummary(
+  it('hides leftover runtime memory when the team is not confirmed alive', () => {
+    const summary = resolveMemberRuntimeSummary(
+      createMember({ model: 'gpt-5.6-sol' }),
       { providerId: 'codex', model: 'gpt-5.6-sol', effort: 'low' },
+      undefined,
+      {
+        memberName: 'alice',
+        alive: false,
+        restartable: false,
+        pid: 12052,
+        pidSource: 'agent_process_table',
+        rssBytes: 64 * 1024 * 1024,
+        updatedAt: '2026-04-24T12:00:00.000Z',
+      },
       false
-    )(createMember({ model: 'gpt-5.6-sol' }), undefined, {
-      memberName: 'alice',
-      alive: false,
-      restartable: false,
-      pid: 12052,
-      pidSource: 'agent_process_table',
-      rssBytes: 64 * 1024 * 1024,
-      updatedAt: '2026-04-24T12:00:00.000Z',
-    });
+    );
     expect(summary).toBeDefined();
     expect(summary).not.toContain('MB');
   });

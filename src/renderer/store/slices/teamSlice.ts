@@ -88,7 +88,6 @@ import {
   isMemberActivityMetaStale,
   structurallyShareMemberActivityFacts,
 } from '../team/teamMemberActivityMeta';
-import { areMemberSpawnSnapshotsSemanticallyEqual } from '../team/teamMemberSpawnSnapshotEquality';
 import {
   clearAllMemberSpawnStatusesIpcBackoffs,
   clearMemberSpawnStatusesIpcBackoff,
@@ -139,6 +138,12 @@ import {
   getResolvedMemberSelectorCacheSnapshotForTeam,
   shouldPreserveSelectedTeamSnapshot,
 } from '../team/teamResolvedMembers';
+import {
+  nextRuntimeRunIdByTeamAfterAdoption,
+  projectIncomingMemberSpawnSnapshot,
+  resolveIncomingRuntimeRunAdoption,
+  shouldAdoptSuccessorProvisioningRun,
+} from '../team/teamRuntimeRunAdoption';
 import {
   buildTeamScopedProgressTombstones,
   collectFailedProvisioningAttemptCleanup,
@@ -1901,66 +1906,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
       clearMemberSpawnStatusesIpcBackoff(teamName);
-      set((prev) => {
-        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
-          return {};
-        }
-
-        if (
-          prev.currentRuntimeRunIdByTeam[teamName] == null &&
-          prev.leadActivityByTeam[teamName] === 'offline' &&
-          snapshot.runId != null
-        ) {
-          return {};
-        }
-
-        if (
-          snapshot.runId != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
-        ) {
-          return {};
-        }
-
-        const nextCurrentRuntimeRunIdByTeam =
-          snapshot.runId == null || prev.currentRuntimeRunIdByTeam[teamName] != null
-            ? prev.currentRuntimeRunIdByTeam
-            : {
-                ...prev.currentRuntimeRunIdByTeam,
-                [teamName]: snapshot.runId,
-              };
-        // Keep same-team ignored runtime tombstones intact here.
-        // Member-spawn snapshots do not carry a run start time, so clearing older
-        // ignored ids can reopen stale zombie snapshots during create/launch churn.
-        const previousSnapshot = prev.memberSpawnSnapshotsByTeam[teamName];
-        const snapshotChanged = !areMemberSpawnSnapshotsSemanticallyEqual(
-          previousSnapshot,
-          snapshot
-        );
-
-        if (!snapshotChanged) {
-          maybeLogMemberSpawnUiEqualSuppressed(teamName, snapshot.runId);
-          if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
-            return {};
-          }
-
-          return {
-            currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam,
-          };
-        }
-
-        return {
-          currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam,
-          memberSpawnStatusesByTeam: {
-            ...prev.memberSpawnStatusesByTeam,
-            [teamName]: snapshot.statuses,
-          },
-          memberSpawnSnapshotsByTeam: {
-            ...prev.memberSpawnSnapshotsByTeam,
-            [teamName]: snapshot,
-          },
-        };
-      });
+      const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
+      set((prev) =>
+        projectIncomingMemberSpawnSnapshot({
+          teamName,
+          snapshot,
+          prev,
+          onEqualSuppressed: maybeLogMemberSpawnUiEqualSuppressed,
+        })
+      );
+      const nextRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
+      if (
+        snapshot.runId &&
+        previousRuntimeRunId &&
+        nextRuntimeRunId === snapshot.runId &&
+        previousRuntimeRunId !== snapshot.runId
+      ) {
+        void get().getProvisioningStatus(snapshot.runId);
+      }
     } catch (error) {
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         return;
@@ -1984,16 +1947,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
       set((prev) => {
-        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
+        const adoption = resolveIncomingRuntimeRunAdoption({
+          teamName,
+          snapshotRunId: snapshot.runId,
+          currentRuntimeRunId: prev.currentRuntimeRunIdByTeam[teamName],
+          ignoredRuntimeRunIds: prev.ignoredRuntimeRunIds,
+          leadActivity: prev.leadActivityByTeam[teamName],
+          pinnedSpawnStatuses: prev.memberSpawnStatusesByTeam[teamName],
+        });
+        if (adoption === 'reject') {
           return {};
         }
-        if (
-          snapshot.runId != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] != null &&
-          prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
-        ) {
-          return {};
-        }
+        const nextCurrentRuntimeRunIdByTeam = nextRuntimeRunIdByTeamAfterAdoption(
+          prev.currentRuntimeRunIdByTeam,
+          teamName,
+          snapshot.runId,
+          adoption,
+          false
+        );
         const visibleSnapshot = prev.teamAgentRuntimeByTeam[teamName];
         const previousSnapshot = getTeamAgentRuntimeFreshnessSnapshot(
           teamName,
@@ -2003,9 +1974,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         const stabilizedSnapshot = stabilizeTeamAgentRuntimeSnapshot(previousSnapshot, snapshot);
         rememberTeamAgentRuntimeFreshnessSnapshot(teamName, stabilizedSnapshot);
         if (areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, stabilizedSnapshot)) {
-          return {};
+          if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
+            return {};
+          }
+          return { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
         }
         return {
+          ...(nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam
+            ? {}
+            : { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam }),
           teamAgentRuntimeByTeam: {
             ...prev.teamAgentRuntimeByTeam,
             [teamName]: stabilizedSnapshot,
@@ -4863,11 +4840,28 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         isCanonicalRun = true;
       }
       if (!isCanonicalRun) {
-        if (!(progress.runId in state.provisioningRuns)) {
+        const previousProgress = previousCurrentRunId
+          ? state.provisioningRuns[previousCurrentRunId]
+          : undefined;
+        if (
+          shouldAdoptSuccessorProvisioningRun({
+            teamName: progress.teamName,
+            previousRunId: previousCurrentRunId,
+            previousState: previousProgress?.state,
+            nextRunId: progress.runId,
+            currentRuntimeRunId: state.currentRuntimeRunIdByTeam[progress.teamName],
+            ignoredRuntimeRunIds: state.ignoredRuntimeRunIds,
+            pinnedSpawnStatuses: state.memberSpawnStatusesByTeam[progress.teamName],
+          })
+        ) {
+          nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
+          isCanonicalRun = true;
+        } else if (!(progress.runId in state.provisioningRuns)) {
           return {};
+        } else {
+          delete nextRuns[progress.runId];
+          return { provisioningRuns: nextRuns };
         }
-        delete nextRuns[progress.runId];
-        return { provisioningRuns: nextRuns };
       }
 
       nextRuns[progress.runId] = progress;

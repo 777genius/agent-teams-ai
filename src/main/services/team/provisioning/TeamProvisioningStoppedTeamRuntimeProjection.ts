@@ -1,4 +1,5 @@
-import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
+import { isStopLaunchFreshness, type TeamLaunchFreshness } from '../TeamLaunchFreshness';
+
 import type { TeamAgentRuntimeEntry, TeamAgentRuntimeSnapshot } from '@shared/types';
 
 export function shouldStripStoppedTeamRuntimeResources(input: {
@@ -9,7 +10,7 @@ export function shouldStripStoppedTeamRuntimeResources(input: {
   return (
     input.isTeamAlive !== true &&
     input.hasProvisioningRun !== true &&
-    input.freshnessKind === 'stop'
+    isStopLaunchFreshness(input.freshnessKind)
   );
 }
 

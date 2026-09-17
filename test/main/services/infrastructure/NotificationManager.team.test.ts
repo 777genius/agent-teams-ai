@@ -388,6 +388,16 @@ describe('NotificationManager.addTeamNotification', () => {
   });
 });
 
+
+function focusedWindow() {
+  return {
+    isDestroyed: () => false,
+    isFocused: () => true,
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  };
+}
+
 describe('NotificationManager viewed team', () => {
   let manager: NotificationManager;
 
@@ -424,6 +434,7 @@ describe('NotificationManager viewed team', () => {
     );
 
     expect(await manager.getUnreadCount()).toBe(2);
+    manager.setMainWindow(focusedWindow() as never);
     manager.setViewedTeamName('test-team');
     expect(await manager.getUnreadCount()).toBe(1);
     const remaining = await manager.getNotifications({ limit: 10, offset: 0 });
@@ -433,6 +444,7 @@ describe('NotificationManager viewed team', () => {
   });
 
   it('stores new events for the viewed team as read and skips the OS toast', async () => {
+    manager.setMainWindow(focusedWindow() as never);
     manager.setViewedTeamName('test-team');
     mockNotificationShow.mockClear();
 
@@ -503,7 +515,27 @@ describe('NotificationManager viewed team', () => {
     expect(await manager.getUnreadCount()).toBe(0);
   });
 
+
+  it('does not auto-read when there is no usable window', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:nowin' }));
+    manager.setViewedTeamName('test-team');
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
+  it('clears the viewed team when the main window is closed', async () => {
+    manager.setMainWindow(focusedWindow() as never);
+    manager.setViewedTeamName('test-team');
+    manager.setMainWindow(null);
+    mockNotificationShow.mockClear();
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:after-close' })
+    );
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+  });
+
   it('stores later events as unread after the team tab is left', async () => {
+    manager.setMainWindow(focusedWindow() as never);
     manager.setViewedTeamName('test-team');
     manager.setViewedTeamName(null);
     mockNotificationShow.mockClear();
@@ -546,6 +578,7 @@ describe('NotificationManager viewed team initialize race', () => {
     });
 
     const delayed = new NotificationManager();
+    delayed.setMainWindow(focusedWindow() as never);
     const initializing = delayed.initialize();
     delayed.setViewedTeamName('test-team');
     expect(delayed.getUnreadCountSync()).toBe(0);

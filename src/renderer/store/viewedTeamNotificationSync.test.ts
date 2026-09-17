@@ -57,8 +57,37 @@ describe('viewedTeamNotificationSync', () => {
     expect(state.setViewedTeamForNotifications).toHaveBeenCalledWith('beta');
   });
 
-  it('retries viewed-team sync after a failed IPC write', async () => {
-    const setViewedTeamForNotifications = vi.fn(async () => true).mockResolvedValueOnce(false);
+  it('latches a rejected viewed-team name instead of retrying forever', async () => {
+    const setViewedTeamForNotifications = vi.fn(async () => false);
+    const makeState = (teamName: string): AppState => ({
+      ...createState(teamName),
+      setViewedTeamForNotifications,
+    });
+    let state = makeState('con');
+    const store = {
+      getState: () => state,
+      subscribe(listener: (next: AppState, prev: AppState) => void) {
+        this.listener = listener;
+        return () => undefined;
+      },
+      listener: undefined as ((next: AppState, prev: AppState) => void) | undefined,
+    };
+    startViewedTeamNotificationSync(store);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(1);
+
+    const previous = state;
+    state = { ...state, selectedTeamData: { ...state.selectedTeamData } };
+    store.listener?.(state, previous);
+    await Promise.resolve();
+    expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries viewed-team sync once after a thrown IPC write', async () => {
+    const setViewedTeamForNotifications = vi
+      .fn(async () => true)
+      .mockRejectedValueOnce(new Error('ipc down'));
     const makeState = (teamName: string): AppState => ({
       ...createState(teamName),
       setViewedTeamForNotifications,
@@ -71,6 +100,7 @@ describe('viewedTeamNotificationSync', () => {
       },
     };
     startViewedTeamNotificationSync(store);
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
     expect(setViewedTeamForNotifications).toHaveBeenCalledTimes(2);

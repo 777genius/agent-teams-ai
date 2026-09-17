@@ -120,6 +120,16 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     teamName: string,
     snapshot: TeamAgentRuntimeSnapshot
   ): Promise<TeamAgentRuntimeSnapshot> {
+    const isTeamAlive = this.isTeamAlive(teamName);
+    const hasProvisioningRun = this.hasProvisioningRun(teamName);
+    if (isTeamAlive || hasProvisioningRun) {
+      return applyStoppedTeamRuntimeResources({
+        snapshot,
+        isTeamAlive,
+        hasProvisioningRun,
+        freshnessKind: null,
+      });
+    }
     const readLaunchFreshness = this.ports.readLaunchFreshness ?? readTeamLaunchFreshness;
     let freshnessKind: TeamLaunchFreshness['kind'] | null = null;
     try {
@@ -129,8 +139,8 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     }
     return applyStoppedTeamRuntimeResources({
       snapshot,
-      isTeamAlive: this.isTeamAlive(teamName),
-      hasProvisioningRun: this.hasProvisioningRun(teamName),
+      isTeamAlive,
+      hasProvisioningRun,
       freshnessKind,
     });
   }
