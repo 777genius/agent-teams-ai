@@ -12,7 +12,9 @@ import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSli
 import {
   agentAvatarUrl,
   buildMemberAvatarMap,
+  buildMemberColorMap,
   displayMemberName,
+  resolveMemberIdentityColor,
 } from '@renderer/utils/memberHelpers';
 
 import { MemberHoverCard } from './members/MemberHoverCard';
@@ -158,8 +160,8 @@ const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): Rea
       : EMPTY_TEAM_MEMBERS
   );
   const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
-  const resolvedColor =
-    props.color ?? teamMembers.find((member) => member.name === props.name)?.color;
+  const colorMap = useMemo(() => buildMemberColorMap(teamMembers), [teamMembers]);
+  const resolvedColor = resolveMemberIdentityColor(props.name, colorMap, props.color);
   return (
     <MemberBadgeResolvedContent
       {...props}
