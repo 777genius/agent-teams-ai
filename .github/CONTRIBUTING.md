@@ -12,7 +12,7 @@ Small fixes, bug reports, and minor improvements are always welcome - just open 
 
 You keep copyright in what you write.
 
-By opening a pull request (or pushing commits to one) you agree to [CLA.md](CLA.md) v2. You do not add your name to a table. Do not open a PR if you do not agree.
+By opening a pull request (or pushing commits to one) you agree to [CLA.md](CLA.md) v2. Do not open a PR if you do not agree.
 
 GitHub's Terms of Service already license that PR under AGPL-3.0. CLA v2 is the extra grant so the project owner can also sublicense your work (for example commercially or under Apache-2.0) while keeping the AGPL-3.0 grant from the submission date.
 

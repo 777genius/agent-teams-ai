@@ -10,7 +10,7 @@ This agreement is adapted from the [Harmony Individual Contributor License Agree
 
 This is a legally binding document. Do not Submit a Contribution if you do not agree.
 
-GitHub's Terms of Service license a pull request under AGPL-3.0 (inbound = outbound). That is not enough for Us to also sublicense your work under other terms. CLA v2 is that extra grant. **Opening a pull request or pushing commits to one, after this version is on the default branch, is how you accept CLA v2.** You do not add your name to a table.
+GitHub's Terms of Service license a pull request under AGPL-3.0 (inbound = outbound). That is not enough for Us to also sublicense your work under other terms. CLA v2 is that extra grant. **Opening a pull request or pushing commits to one, after this version is on the default branch, is how you accept CLA v2.**
 
 ## 1. Definitions
 
@@ -94,7 +94,7 @@ Acceptance of **CLA v1** (AGPL-only inbound terms) is not by itself acceptance o
 
 You accept CLA v2 by Submitting a Contribution after this version is published on the default branch. That includes opening a pull request or pushing commits onto a pull request. Do not Submit if you do not agree.
 
-You do not need to add your name to a signatures table. A checklist box in the pull request template is only a reminder.
+A checklist box at the end of the pull request template is only a reminder.
 
 Each person who authors a commit in the pull request accepts this Agreement for their Contribution. Do not include another person's work unless they agree to this CLA.
 
@@ -120,13 +120,3 @@ If any provision of this Agreement is found unenforceable, it will be replaced t
 - This CLA does not grant trademark rights.
 - Existing releases, tags, and forks already received under AGPL-3.0 keep those rights.
 
----
-
-## Historical CLA v1 signatures
-
-The people below accepted the previous inbound terms: Contributions licensed to the Project and recipients **only under AGPL-3.0**. That does **not** by itself grant the v2 rights in Section 2. A new pull request after this version is published is how they accept v2.
-
-| Name | Email | Date | CLA |
-| --- | --- | --- | --- |
-| Илия (777genius) | quantjumppro@gmail.com | 2026-02-22 | v1 |
-| NeatCode Labs | 215990881+NeatCode-Labs@users.noreply.github.com | 2026-08-30 | v1 |
