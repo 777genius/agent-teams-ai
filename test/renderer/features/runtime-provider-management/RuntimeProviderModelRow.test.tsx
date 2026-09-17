@@ -73,10 +73,16 @@ it('shows elapsed time from test start across remounts and clears its timer', as
   expect(
     host.querySelector<HTMLButtonElement>('[data-testid="runtime-provider-model-test-test/model"]')
       ?.disabled
-  ).toBe(true);
+  ).toBe(false);
   expect(
-    host.querySelector('[data-testid="runtime-provider-model-test-hint-test/model"]')?.textContent
-  ).toBeTruthy();
+    host.querySelector('[data-testid="runtime-provider-model-test-hint-test/model"]')
+  ).toBeNull();
+  await act(async () => {
+    host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-test/model"]'
+    )?.click();
+  });
+  expect(testModel).toHaveBeenCalledTimes(2);
   await act(async () => {
     root.render(
       <ModelRow

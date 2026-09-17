@@ -59,7 +59,6 @@ import { ProviderBrandIcon } from './providerBrandIcons';
 import { RuntimeProviderErrorAlert } from './RuntimeProviderErrorAlert';
 import { ModelRow } from './RuntimeProviderModelRow';
 import { resolveRuntimeProviderProjectContext } from './runtimeProviderProjectContext';
-import { RuntimeProviderProjectContextSelect } from './RuntimeProviderProjectContextSelect';
 import {
   RuntimeProviderCopilotAccessSummary,
   RuntimeProviderOAuthAuthorizationLink,
@@ -2339,25 +2338,6 @@ export const RuntimeProviderManagementPanelView = ({
         </TabsContent>
 
         <TabsContent value="providers" className="mt-3 space-y-3">
-          <RuntimeProviderProjectContextSelect
-            projectPath={effectiveProjectPath}
-            projects={projectContextProjects}
-            loading={projectContextLoading}
-            error={projectContextError}
-            disabled={disabled || blockingCredentialWrite}
-            onProjectChange={(nextProjectPath) => {
-              actions.closeModelPicker();
-              onProjectContextChange?.(nextProjectPath);
-            }}
-          />
-          {!hasProjectContext ? (
-            <p
-              className="text-xs text-amber-200"
-              data-testid="runtime-provider-providers-test-project-hint"
-            >
-              {t('runtimeProvider.models.selectProjectBeforeTesting')}
-            </p>
-          ) : null}
           {defaultTarget ? (
             <OpenCodeDefaultTargetBanner
               target={defaultTarget.scope}

@@ -117,7 +117,6 @@ export const ModelRow = ({
             modelId={model.modelId}
             modelTarget={modelTarget}
             disabled={disabled}
-            hasProjectContext={hasProjectContext}
             testing={testing}
             onTest={() => {
               void actions.testModel(provider.providerId, model.modelId);
