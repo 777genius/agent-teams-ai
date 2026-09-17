@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { ActivityItem } from '@renderer/components/team/activity/ActivityItem';
 import {
   buildMessageContext,
@@ -56,7 +57,7 @@ export const MemberMessagesTab = ({
       loadOlderTeamMessages: s.loadOlderTeamMessages,
     }))
   );
-  const { readSet } = useTeamMessagesRead(teamName);
+  const { readSet } = useTeamMessagesRead(teamName, messages);
   const taskMap = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
 
@@ -175,7 +176,7 @@ export const MemberMessagesTab = ({
             const messageKey = toMessageKey(entry.message);
             const renderProps = resolveMessageRenderProps(entry.message, messageContext);
             const timelineItem: TimelineItem = { type: 'message', message: entry.message };
-            const isUnread = !entry.message.read && !readSet.has(messageKey);
+            const isUnread = isUserUnreadMessage(entry.message, readSet, toMessageKey);
 
             return (
               <div

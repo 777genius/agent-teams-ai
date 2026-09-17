@@ -12,7 +12,9 @@ import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSli
 import {
   agentAvatarUrl,
   buildMemberAvatarMap,
+  buildMemberColorMap,
   displayMemberName,
+  resolveMemberIdentityColor,
 } from '@renderer/utils/memberHelpers';
 
 import { MemberHoverCard } from './members/MemberHoverCard';
@@ -158,15 +160,24 @@ const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): Rea
       : EMPTY_TEAM_MEMBERS
   );
   const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
-  return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={avatarMap.get(props.name)} />;
+  const colorMap = useMemo(() => buildMemberColorMap(teamMembers), [teamMembers]);
+  const resolvedColor = props.color
+    ? props.color
+    : resolveMemberIdentityColor(props.name, colorMap);
+  const resolvedAvatarUrl =
+    props.hideAvatar || props.avatarUrl != null ? props.avatarUrl : avatarMap.get(props.name);
+  return (
+    <MemberBadgeResolvedContent
+      {...props}
+      color={resolvedColor}
+      resolvedAvatarUrl={resolvedAvatarUrl}
+    />
+  );
 });
 
 MemberBadgeWithResolvedAvatar.displayName = 'MemberBadgeWithResolvedAvatar';
 
 const MemberBadgeContent = memo((props: MemberBadgeContentProps): React.JSX.Element => {
-  if (props.hideAvatar || props.avatarUrl != null) {
-    return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={props.avatarUrl} />;
-  }
   return <MemberBadgeWithResolvedAvatar {...props} />;
 });
 

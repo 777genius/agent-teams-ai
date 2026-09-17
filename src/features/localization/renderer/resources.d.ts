@@ -506,6 +506,7 @@ export default interface Resources {
       catalogLoadFailed: "Couldn't load {{provider}} models.";
       catalogSignInExpired: '{{provider}} sign-in is no longer valid. Sign in again, then refresh.';
       catalogSignInMaybe: '{{provider}} models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.';
+      catalogSourceLoadFailed: "Couldn't load {{provider}} models from OpenCode.";
       catalogStale: '{{provider}} models are cached and may be out of date.';
       catalogTimedOut: '{{provider}} models timed out. Refresh to try again.';
       checkFailed: 'Check failed';
@@ -4811,6 +4812,24 @@ export default interface Resources {
         moveToSidebar: 'Move to sidebar';
         panelActions: 'Message panel actions';
         searchMessages: 'Search messages';
+      };
+      chats: {
+        activityUnread: '{{count}} unread';
+        attentionUnread: '{{count}} for you';
+        back: 'Back to chats';
+        clearSearch: 'Clear search';
+        emptyList: 'No chats yet';
+        emptyPreview: 'No messages yet';
+        emptyThread: 'No messages in this chat';
+        pin: 'Pin chat';
+        pinned: 'Pinned';
+        previewFrom: '{{name}}: {{text}}';
+        rowAria: '{{name}}, {{unread}} unread, {{attention}} for you';
+        rowAriaCounts: '{{unread}} unread, {{attention}} for you';
+        sortByActivity: 'Sort by new messages';
+        teamFeed: 'Group chat';
+        unpin: 'Unpin chat';
+        you: 'You';
       };
       delivery: {
         copied: 'Copied';

@@ -1723,8 +1723,8 @@ export function getCurrentProvisioningProgressForTeam(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
   teamName: string
 ): TeamProvisioningProgress | null {
-  const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
-  return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
+  const currentRunId = state.currentProvisioningRunIdByTeam?.[teamName];
+  return currentRunId ? (state.provisioningRuns?.[currentRunId] ?? null) : null;
 }
 
 function stringArraysEqual(

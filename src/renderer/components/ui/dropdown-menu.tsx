@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { cn } from '@renderer/lib/utils';
+import { Check } from 'lucide-react';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
@@ -43,6 +44,32 @@ const DropdownMenuItem = React.forwardRef<
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
+const DropdownMenuCheckboxItem = React.forwardRef<
+  React.ComponentRef<typeof DropdownMenuPrimitive.CheckboxItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
+>(({ className, children, checked, ...props }, ref) => (
+  <DropdownMenuPrimitive.CheckboxItem
+    ref={ref}
+    className={cn(
+      'relative flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-[12px] text-[var(--color-text-secondary)] outline-none transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)] focus:bg-[rgba(255,255,255,0.06)] focus:text-[var(--color-text)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className
+    )}
+    checked={checked}
+    {...props}
+  >
+    <span
+      className={cn(
+        'flex size-4 shrink-0 items-center justify-center rounded border border-[var(--color-border-emphasis)]',
+        checked === true && 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+      )}
+    >
+      {checked === true ? <Check className="size-3" /> : null}
+    </span>
+    {children}
+  </DropdownMenuPrimitive.CheckboxItem>
+));
+DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
+
 const DropdownMenuSeparator = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
@@ -57,6 +84,7 @@ DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
 
 export {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,

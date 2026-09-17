@@ -716,6 +716,7 @@
     "catalogCheckCredential": "Não foi possível carregar os modelos de {{provider}}. Verifique a credencial salva e atualize.",
     "catalogDirectoryFailed": "O OpenCode não conseguiu carregar a lista de provedores.",
     "catalogLoadFailed": "Não foi possível carregar os modelos de {{provider}}.",
+    "catalogSourceLoadFailed": "Não foi possível carregar os modelos de {{provider}} do OpenCode.",
     "catalogSignInExpired": "O acesso a {{provider}} não é mais válido. Entre novamente e atualize.",
     "catalogSignInMaybe": "Não foi possível carregar os modelos de {{provider}}. Se você entrou com OAuth, talvez precise entrar novamente e atualizar.",
     "catalogStale": "Os modelos de {{provider}} estão em cache e podem estar desatualizados.",

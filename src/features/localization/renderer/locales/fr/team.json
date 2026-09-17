@@ -788,6 +788,24 @@
       "unread_one": "{{count}} non lus",
       "unread_other": "{{count}} non lus"
     },
+    "chats": {
+      "teamFeed": "Discussion de groupe",
+      "back": "Retour aux discussions",
+      "clearSearch": "Effacer la recherche",
+      "emptyList": "Aucune discussion pour le moment",
+      "emptyThread": "Aucun message dans cette discussion",
+      "emptyPreview": "Aucun message pour le moment",
+      "previewFrom": "{{name}} : {{text}}",
+      "you": "Vous",
+      "rowAria": "{{name}}, {{unread}} non lus, {{attention}} pour vous",
+      "rowAriaCounts": "{{unread}} non lus, {{attention}} pour vous",
+      "activityUnread": "{{count}} non lus",
+      "attentionUnread": "{{count}} pour vous",
+      "sortByActivity": "Trier par nouveaux messages",
+      "pin": "Épingler la discussion",
+      "unpin": "Désépingler la discussion",
+      "pinned": "Épinglé"
+    },
     "filter": {
       "ariaLabel": "Filtrer les messages",
       "tooltip": "Filtrer les messages",

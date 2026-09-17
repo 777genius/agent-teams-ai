@@ -788,6 +788,24 @@
       "unread_one": "{{count}} necitit",
       "unread_other": "{{count}} necitite"
     },
+    "chats": {
+      "teamFeed": "Chat de grup",
+      "back": "Înapoi la conversații",
+      "clearSearch": "Șterge căutarea",
+      "emptyList": "Nu există conversații încă",
+      "emptyThread": "Niciun mesaj în această conversație",
+      "emptyPreview": "Niciun mesaj încă",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Tu",
+      "rowAria": "{{name}}, {{unread}} necitite, {{attention}} pentru tine",
+      "rowAriaCounts": "{{unread}} necitite, {{attention}} pentru tine",
+      "activityUnread": "{{count}} necitite",
+      "attentionUnread": "{{count}} pentru tine",
+      "sortByActivity": "Sortează după mesaje noi",
+      "pin": "Fixează chatul",
+      "unpin": "Anulează fixarea",
+      "pinned": "Fixat"
+    },
     "filter": {
       "ariaLabel": "Filtrează mesajele",
       "tooltip": "Filtrează mesajele",

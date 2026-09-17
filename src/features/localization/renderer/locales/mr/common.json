@@ -716,6 +716,7 @@
     "catalogCheckCredential": "{{provider}} मॉडेल लोड करता आली नाहीत. जतन केलेले क्रेडेन्शियल तपासा, नंतर रिफ्रेश करा.",
     "catalogDirectoryFailed": "OpenCode पुरवठादार यादी लोड करू शकला नाही.",
     "catalogLoadFailed": "{{provider}} मॉडेल लोड करता आली नाहीत.",
+    "catalogSourceLoadFailed": "OpenCode वरून {{provider}} मॉडेल लोड करता आली नाहीत.",
     "catalogSignInExpired": "{{provider}} साइन-इन आता वैध नाही. पुन्हा साइन इन करा, नंतर रिफ्रेश करा.",
     "catalogSignInMaybe": "{{provider}} मॉडेल लोड करता आली नाहीत. OAuth ने साइन इन केले असल्यास पुन्हा साइन इन करून रिफ्रेश करावे लागू शकते.",
     "catalogStale": "{{provider}} मॉडेल कॅशमधली आहेत आणि जुनी असू शकतात.",

@@ -716,6 +716,7 @@
     "catalogCheckCredential": "بارگذاری مدل‌های {{provider}} ممکن نشد. اعتبار ذخیره‌شده را بررسی کنید، سپس تازه‌سازی کنید.",
     "catalogDirectoryFailed": "OpenCode نتوانست فهرست ارائه‌دهندگان را بارگذاری کند.",
     "catalogLoadFailed": "بارگذاری مدل‌های {{provider}} ممکن نشد.",
+    "catalogSourceLoadFailed": "بارگذاری مدل‌های {{provider}} از OpenCode ممکن نشد.",
     "catalogSignInExpired": "ورود به {{provider}} دیگر معتبر نیست. دوباره وارد شوید، سپس تازه‌سازی کنید.",
     "catalogSignInMaybe": "بارگذاری مدل‌های {{provider}} ممکن نشد. اگر با OAuth وارد شده‌اید، شاید لازم باشد دوباره وارد شوید و تازه‌سازی کنید.",
     "catalogStale": "مدل‌های {{provider}} از حافظهٔ پنهان هستند و ممکن است قدیمی باشند.",

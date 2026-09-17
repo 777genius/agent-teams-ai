@@ -716,6 +716,7 @@
     "catalogCheckCredential": "{{provider}}-Modelle konnten nicht geladen werden. Prüfen Sie die gespeicherten Anmeldedaten und aktualisieren Sie den Katalog.",
     "catalogDirectoryFailed": "OpenCode konnte die Anbieterliste nicht laden.",
     "catalogLoadFailed": "{{provider}}-Modelle konnten nicht geladen werden.",
+    "catalogSourceLoadFailed": "{{provider}}-Modelle konnten nicht aus OpenCode geladen werden.",
     "catalogSignInExpired": "Die Anmeldung bei {{provider}} ist nicht mehr gültig. Melden Sie sich erneut an und aktualisieren Sie den Katalog.",
     "catalogSignInMaybe": "{{provider}}-Modelle konnten nicht geladen werden. Falls Sie sich per OAuth angemeldet haben, müssen Sie sich möglicherweise erneut anmelden und den Katalog aktualisieren.",
     "catalogStale": "{{provider}}-Modelle stammen aus dem Cache und können veraltet sein.",

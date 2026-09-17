@@ -12,7 +12,12 @@ import {
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { Badge } from '@renderer/components/ui/badge';
+import {
+  ChatList,
+  ChatUnreadBadges,
+  ConversationHeader,
+  useTeamConversationSurface,
+} from '@features/team-direct-chats/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   DropdownMenu,
@@ -37,18 +42,11 @@ import {
 } from '@shared/utils/teamAutomationMessages';
 import {
   CheckCheck,
-  ChevronsDownUp,
-  ChevronsUpDown,
   Dock,
   MessageSquare,
   MoreHorizontal,
   PanelBottom,
-  PanelBottomClose,
-  PanelBottomOpen,
   PanelLeft,
-  PanelLeftClose,
-  Search,
-  X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -69,7 +67,15 @@ import {
 } from '../sidebar/teamSidebarUiState';
 
 import { MessageComposer, type MessageRevisionRequest } from './MessageComposer';
-import { MessagesFilterPopover } from './MessagesFilterPopover';
+import { MessagesInlineBackButton } from './MessagesInlineBackButton';
+import { MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
+import {
+  conversationChrome,
+  conversationScopeKey,
+  filterScopedMessages,
+  scopedUnreadCounts,
+  scopedUnreadKeys,
+} from './messagesPanelConversations';
 import {
   buildRevisionNoticeText,
   findLatestRevisableUserSentMessage,
@@ -81,7 +87,15 @@ import {
   trimString,
 } from './messagesPanelLogic';
 import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
+import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
+import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems';
 import { StatusBlock } from './StatusBlock';
+import {
+  useDirectThreadAutoOlder,
+  useResetScrollOnConversationChange,
+  useTeamChatListItems,
+  useThreadUnreadSnapshot,
+} from './useMessagesPanelChats';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
@@ -175,63 +189,14 @@ const MessagesTimelineSection = memo(function MessagesTimelineSection({
   expandedItem,
   expandedItemKey,
   onExpandDialogChange,
-  messages,
-  loading,
-  teamName,
-  members,
-  readState,
-  allCollapsed,
-  expandOverrides,
-  onToggleExpandOverride,
-  currentLeadSessionId,
-  isTeamAlive,
-  leadActivity,
-  leadContextUpdatedAt,
-  teamNames,
-  teamColorByName,
-  onTeamClick,
-  onMemberClick,
-  onCreateTaskFromMessage,
-  onReplyToMessage,
-  revisionMessageId,
-  onReviseMessage,
-  onMessageVisible,
-  onRestartTeam,
-  onTaskIdClick,
-  onExpandItem,
-  onExpandContent,
-  viewport,
+  ...timelineProps
 }: MessagesTimelineSectionProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   return (
     <>
       <ActivityTimeline
-        messages={messages}
-        loading={loading}
-        teamName={teamName}
-        members={members}
-        readState={readState}
-        allCollapsed={allCollapsed}
-        expandOverrides={expandOverrides}
-        onToggleExpandOverride={onToggleExpandOverride}
-        currentLeadSessionId={currentLeadSessionId}
-        isTeamAlive={isTeamAlive}
-        leadActivity={leadActivity}
-        leadContextUpdatedAt={leadContextUpdatedAt}
-        teamNames={teamNames}
-        teamColorByName={teamColorByName}
-        onTeamClick={onTeamClick}
-        onMemberClick={onMemberClick}
-        onCreateTaskFromMessage={onCreateTaskFromMessage}
-        onReplyToMessage={onReplyToMessage}
-        revisionMessageId={revisionMessageId}
-        onReviseMessage={onReviseMessage}
-        onMessageVisible={onMessageVisible}
-        onRestartTeam={onRestartTeam}
-        onTaskIdClick={onTaskIdClick}
-        onExpandItem={onExpandItem}
-        onExpandContent={onExpandContent}
-        viewport={viewport}
+        // eslint-disable-next-line react/jsx-props-no-spreading -- forwards ActivityTimeline props from the host panel
+        {...timelineProps}
       />
       {hasMore && (
         <div className="flex justify-center py-2">
@@ -251,18 +216,18 @@ const MessagesTimelineSection = memo(function MessagesTimelineSection({
         expandedItem={expandedItem}
         open={expandedItemKey !== null}
         onOpenChange={onExpandDialogChange}
-        teamName={teamName}
-        members={members}
-        onCreateTaskFromMessage={onCreateTaskFromMessage}
-        onReplyToMessage={onReplyToMessage}
-        revisionMessageId={revisionMessageId}
-        onReviseMessage={onReviseMessage}
-        onMemberClick={onMemberClick}
-        onTaskIdClick={onTaskIdClick}
-        onRestartTeam={onRestartTeam}
-        teamNames={teamNames}
-        teamColorByName={teamColorByName}
-        onTeamClick={onTeamClick}
+        teamName={timelineProps.teamName}
+        members={timelineProps.members}
+        onCreateTaskFromMessage={timelineProps.onCreateTaskFromMessage}
+        onReplyToMessage={timelineProps.onReplyToMessage}
+        revisionMessageId={timelineProps.revisionMessageId}
+        onReviseMessage={timelineProps.onReviseMessage}
+        onMemberClick={timelineProps.onMemberClick}
+        onTaskIdClick={timelineProps.onTaskIdClick}
+        onRestartTeam={timelineProps.onRestartTeam}
+        teamNames={timelineProps.teamNames}
+        teamColorByName={timelineProps.teamColorByName}
+        onTeamClick={timelineProps.onTeamClick}
       />
     </>
   );
@@ -385,10 +350,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
-  // Scroll container inside `Sheet.Content` for the bottom-sheet layout.
-  // react-modal-sheet merges this ref with its own internal scroll ref.
-  // Held here so future viewport consumers (virtualization) can observe the
-  // true scrolling element in bottom-sheet mode.
+  // Bottom-sheet scroller; react-modal-sheet merges this with its internal ref.
   const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Resolve the active scroll owner for the current layout. This is the
@@ -450,6 +412,18 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
     initialSidebarStateRef.current.bottomSheetSnapIndex
   );
+  const [sortChatsByActivity, setSortChatsByActivity] = useState(
+    () => initialSidebarStateRef.current.sortChatsByActivity === true
+  );
+  const conversation = useTeamConversationSurface({
+    teamName,
+    members,
+    position,
+    onScopeChange: () => setMessagesSearchQuery(''),
+  });
+  const { renderSurface, navigationSurface, scope, openChat, backToList, threadOpenedAt } =
+    conversation;
+  const scopeKey = conversationScopeKey(scope);
   const [bottomSheetStickyTopHeight, setBottomSheetStickyTopHeight] = useState(196);
   const [bottomSheetMountHeight, setBottomSheetMountHeight] = useState(0);
 
@@ -465,6 +439,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     messagesScrollPersistTeamRef.current = teamName;
     setMessagesScrollTop(initialSidebarStateRef.current.messagesScrollTop);
     setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
+    setSortChatsByActivity(initialSidebarStateRef.current.sortChatsByActivity === true);
   }, [teamName]);
 
   useEffect(() => {
@@ -528,6 +503,9 @@ export const MessagesPanel = memo(function MessagesPanel({
       expandedItemKey,
       messagesScrollTop,
       bottomSheetSnapIndex,
+      conversationSurface: navigationSurface,
+      conversationScope: scope,
+      sortChatsByActivity,
     });
   }, [
     teamName,
@@ -539,6 +517,9 @@ export const MessagesPanel = memo(function MessagesPanel({
     expandedItemKey,
     messagesScrollTop,
     bottomSheetSnapIndex,
+    navigationSurface,
+    scope,
+    sortChatsByActivity,
   ]);
 
   useEffect(() => {
@@ -583,6 +564,14 @@ export const MessagesPanel = memo(function MessagesPanel({
     el.scrollTop = messagesScrollTop;
   }, [position, messagesScrollTop]);
 
+  useResetScrollOnConversationChange({
+    teamName,
+    scopeKey,
+    navigationSurface,
+    persistScrollTop: persistMessagesScrollTop,
+    scrollElementRef: activeScrollContainerRef ?? sidebarScrollRef,
+  });
+
   useLayoutEffect(() => {
     if (position !== 'bottom-sheet' || typeof ResizeObserver === 'undefined') return;
 
@@ -624,6 +613,15 @@ export const MessagesPanel = memo(function MessagesPanel({
   const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
   const [revisionRequest, setRevisionRequest] = useState<MessageRevisionRequest | null>(null);
 
+  const canonicalMessages = useMemo(() => {
+    return filterTeamMessages(effectiveMessages, {
+      leadNames,
+      timeWindow,
+      filter: { from: new Set(), to: new Set(), showNoise: false },
+      searchQuery: '',
+    });
+  }, [effectiveMessages, leadNames, timeWindow]);
+
   const filteredMessages = useMemo(() => {
     return filterTeamMessages(effectiveMessages, {
       leadNames,
@@ -633,15 +631,33 @@ export const MessagesPanel = memo(function MessagesPanel({
     });
   }, [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]);
 
+  const threadMessages = useMemo(
+    () => filterScopedMessages(filteredMessages, scope, leadNames),
+    [filteredMessages, leadNames, scope]
+  );
+  const threadCanonicalMessages = useMemo(
+    () => filterScopedMessages(canonicalMessages, scope, leadNames),
+    [canonicalMessages, leadNames, scope]
+  );
+
   const activityTimelineMessages = useMemo(() => {
-    return filterTeamMessages(effectiveMessages, {
+    const unscoped = filterTeamMessages(effectiveMessages, {
       includeAutomationEvents: true,
       leadNames,
       timeWindow,
       filter: messagesFilter,
       searchQuery: messagesSearchQuery,
     });
-  }, [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]);
+    return renderSurface === 'thread' ? filterScopedMessages(unscoped, scope, leadNames) : unscoped;
+  }, [
+    effectiveMessages,
+    leadNames,
+    messagesFilter,
+    messagesSearchQuery,
+    renderSurface,
+    scope,
+    timeWindow,
+  ]);
   const firstTimelineMessage = activityTimelineMessages[0];
   const hasVisibleCurrentLeadThought =
     firstTimelineMessage != null &&
@@ -757,15 +773,30 @@ export const MessagesPanel = memo(function MessagesPanel({
     if (!open) setExpandedItemKey(null);
   }, []);
 
-  const { readSet, markAllRead } = useTeamMessagesRead(teamName);
+  const { readSet, markAllRead } = useTeamMessagesRead(teamName, canonicalMessages, !hasMore);
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
   const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
   const visibleReadFlushFrameRef = useRef<number | null>(null);
 
-  const messagesUnreadCount = useMemo(
-    () => filteredMessages.filter((m) => !m.read && !readSet.has(toMessageKey(m))).length,
-    [filteredMessages, readSet]
+  const listUnread = useMemo(
+    () =>
+      scopedUnreadCounts(
+        canonicalMessages,
+        { kind: 'team-feed' },
+        readSet,
+        toMessageKey,
+        leadNames
+      ),
+    [canonicalMessages, leadNames, readSet]
   );
+  const threadUnread = useMemo(
+    () => scopedUnreadCounts(canonicalMessages, scope, readSet, toMessageKey, leadNames),
+    [canonicalMessages, leadNames, readSet, scope]
+  );
+  const messagesUnreadCount =
+    renderSurface === 'list' ? listUnread.unreadCount : threadUnread.unreadCount;
+  const messagesAttentionCount =
+    renderSurface === 'list' ? listUnread.attentionCount : threadUnread.attentionCount;
 
   const flushVisibleReadKeys = useCallback(() => {
     visibleReadFlushFrameRef.current = null;
@@ -798,12 +829,42 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const { teamNames, teamColorByName } = teamMentionMeta;
 
+  const chatListItems = useTeamChatListItems({
+    members,
+    messages: canonicalMessages,
+    readSet,
+    teamFeedLabel: t('messages.chats.teamFeed'),
+    emptyPreview: t('messages.chats.emptyPreview'),
+    leadNames,
+    sortByActivity: sortChatsByActivity,
+    enabled: renderSurface === 'list',
+  });
+  useDirectThreadAutoOlder({
+    renderSurface,
+    scope,
+    threadOpenedAt,
+    scopedCount: threadMessages.length,
+    hasMore,
+    loadingOlder: loadingOlderMessages,
+    loadOlder: loadOlderMessages,
+  });
+  const { snapshot: unreadSnapshot, dismissUnreadKeys } = useThreadUnreadSnapshot({
+    renderSurface,
+    scope,
+    threadOpenedAt,
+    messages: threadCanonicalMessages,
+    readSet,
+  });
+  const { lockedRecipient, conversationTitle } = conversationChrome(renderSurface, scope, members, {
+    list: t('messages.title'),
+    teamFeed: t('messages.chats.teamFeed'),
+  });
+
   const handleMarkAllRead = useCallback(() => {
-    const keys = filteredMessages
-      .filter((m) => !m.read && !readSet.has(toMessageKey(m)))
-      .map((m) => toMessageKey(m));
+    const keys = scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey);
     markAllRead(keys);
-  }, [filteredMessages, readSet, markAllRead]);
+    dismissUnreadKeys(keys);
+  }, [dismissUnreadKeys, markAllRead, readSet, threadCanonicalMessages]);
 
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {
@@ -1012,6 +1073,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       lastResult={lastSendMessageResult}
       revisionRequest={revisionRequest}
       textareaRef={composerTextareaRef}
+      lockedRecipient={lockedRecipient}
       onSend={handleSend}
       onCrossTeamSend={handleCrossTeamSend}
       onRevisionCancel={handleRevisionCancel}
@@ -1038,18 +1100,15 @@ export const MessagesPanel = memo(function MessagesPanel({
           <TooltipContent side="top">{t('messages.panelMode')}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" side="top" className="w-48">
-          <DropdownMenuItem onSelect={moveToInline}>
-            <PanelBottom size={14} className="shrink-0" />
-            <span>{t('messages.actions.moveToInline')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={moveToBottomSheet}>
-            <PanelBottomOpen size={14} className="shrink-0" />
-            <span>{t('messages.actions.moveToBottomSheet')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={moveToSidebar}>
-            <PanelLeft size={14} className="shrink-0" />
-            <span>{t('messages.actions.moveToSidebar')}</span>
-          </DropdownMenuItem>
+          <MessagesLayoutMenuItems
+            variant="floating-composer"
+            sortChatsByActivity={sortChatsByActivity}
+            onSortChatsByActivityChange={setSortChatsByActivity}
+            onMoveToInline={moveToInline}
+            onMoveToBottomSheet={moveToBottomSheet}
+            onMoveToSidebar={moveToSidebar}
+            onMoveToFloatingComposer={moveToFloatingComposer}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -1068,6 +1127,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       lastResult={lastSendMessageResult}
       revisionRequest={revisionRequest}
       textareaRef={composerTextareaRef}
+      lockedRecipient={lockedRecipient}
       onSend={handleSend}
       onCrossTeamSend={handleCrossTeamSend}
       onRevisionCancel={handleRevisionCancel}
@@ -1090,6 +1150,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       cornerActionPrefix={renderFloatingComposerModeControls()}
       revisionRequest={revisionRequest}
       textareaRef={composerTextareaRef}
+      lockedRecipient={lockedRecipient}
       onSend={handleSend}
       onCrossTeamSend={handleCrossTeamSend}
       onRevisionCancel={handleRevisionCancel}
@@ -1152,6 +1213,9 @@ export const MessagesPanel = memo(function MessagesPanel({
       revisionMessageId={revisionMessageId}
       onReviseMessage={handleReviseMessage}
       onMessageVisible={handleMessageVisible}
+      directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
+      unreadSnapshot={unreadSnapshot}
+      emptyLabel={t('messages.chats.emptyThread')}
       onRestartTeam={onRestartTeam}
       onTaskIdClick={onTaskIdClick}
       onExpandItem={handleExpandItem}
@@ -1167,70 +1231,44 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   // ---- Shared content (used in both modes) ----
+  const searchControlProps = {
+    teamName,
+    members,
+    messages: effectiveMessages,
+    searchQuery: messagesSearchQuery,
+    onSearchQueryChange: setMessagesSearchQuery,
+    filter: messagesFilter,
+    filterOpen: messagesFilterOpen,
+    onFilterOpenChange: setMessagesFilterOpen,
+    onFilterApply: setMessagesFilter,
+    searchPlaceholder: t('messages.search.placeholder'),
+  };
+
   const renderSearchAndFilterControls = (): React.JSX.Element => (
-    <div className="flex items-center gap-2">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
-        <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-        <input
-          type="text"
-          placeholder={t('messages.search.placeholder')}
-          value={messagesSearchQuery}
-          onChange={(e) => setMessagesSearchQuery(e.target.value)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-        />
-        {messagesSearchQuery && (
-          <button
-            type="button"
-            className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-            onClick={() => setMessagesSearchQuery('')}
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-      <MessagesFilterPopover
-        teamName={teamName}
-        members={members}
-        filter={messagesFilter}
-        messages={effectiveMessages}
-        open={messagesFilterOpen}
-        onOpenChange={setMessagesFilterOpen}
-        onApply={setMessagesFilter}
-      />
-    </div>
+    <MessagesSearchControls {...searchControlProps} />
   );
 
   const renderSearchAndFilterBar = (): React.JSX.Element => (
-    <div className="flex items-center gap-2">
-      {renderSearchAndFilterControls()}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="pointer-events-auto size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMessagesCollapsed((v) => !v);
-            }}
-          >
-            {messagesCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
-        </TooltipContent>
-      </Tooltip>
-    </div>
+    <MessagesSearchBar
+      {...searchControlProps}
+      collapsed={messagesCollapsed}
+      onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+      expandLabel={t('messages.actions.expandAll')}
+      collapseLabel={t('messages.actions.collapseAll')}
+    />
   );
 
   const renderMessagesContent = (): React.JSX.Element => (
     <div className="pb-14">
-      {renderDefaultComposerSection()}
-      {renderInlineStatusSection()}
-      {renderTimelineSection()}
+      {renderSurface === 'list' ? (
+        <ChatList items={chatListItems} teamName={teamName} onOpen={openChat} />
+      ) : (
+        <>
+          {renderDefaultComposerSection()}
+          {renderInlineStatusSection()}
+          {renderTimelineSection()}
+        </>
+      )}
     </div>
   );
 
@@ -1239,35 +1277,14 @@ export const MessagesPanel = memo(function MessagesPanel({
     return (
       <div className="flex size-full flex-col overflow-hidden bg-[var(--color-surface-sidebar)]">
         {/* Header */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
-          <MessageSquare size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-          <span className="text-sm font-medium text-[var(--color-text)]">
-            {t('messages.title')}
-          </span>
-          {filteredMessages.length > 0 && (
-            <Badge
-              variant="secondary"
-              className="px-1.5 py-0.5 text-[10px] font-normal leading-none"
-            >
-              {filteredMessages.length}
-            </Badge>
-          )}
-          {messagesUnreadCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-normal leading-none text-blue-600 dark:text-blue-400"
-                >
-                  {t('messages.unread.new', { count: messagesUnreadCount })}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {t('messages.unread.unread', { count: messagesUnreadCount })}
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {messagesUnreadCount > 0 && (
+        <div className="flex shrink-0 items-center gap-2 overflow-visible border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
+          <ConversationHeader
+            title={lockedRecipient ?? conversationTitle}
+            unreadCount={messagesUnreadCount}
+            attentionCount={messagesAttentionCount}
+            onBack={renderSurface === 'thread' ? backToList : undefined}
+          />
+          {renderSurface === 'thread' && messagesUnreadCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -1301,48 +1318,30 @@ export const MessagesPanel = memo(function MessagesPanel({
                 </TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end" side="bottom" className="w-48">
-                <DropdownMenuItem onSelect={() => setMessagesCollapsed((v) => !v)}>
-                  {messagesCollapsed ? (
-                    <ChevronsUpDown size={14} className="shrink-0" />
-                  ) : (
-                    <ChevronsDownUp size={14} className="shrink-0" />
-                  )}
-                  <span>
-                    {messagesCollapsed
-                      ? t('messages.actions.expandAll')
-                      : t('messages.actions.collapseAll')}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setMessagesSearchBarVisible((v) => !v)}>
-                  {messagesSearchBarVisible ? (
-                    <X size={14} className="shrink-0" />
-                  ) : (
-                    <Search size={14} className="shrink-0" />
-                  )}
-                  <span>
-                    {messagesSearchBarVisible
-                      ? t('messages.actions.hideSearch')
-                      : t('messages.actions.searchMessages')}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={moveToInline}>
-                  <PanelLeftClose size={14} className="shrink-0" />
-                  <span>{t('messages.actions.moveToInline')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={moveToBottomSheet}>
-                  <PanelBottomOpen size={14} className="shrink-0" />
-                  <span>{t('messages.actions.moveToBottomSheet')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={moveToFloatingComposer}>
-                  <Dock size={14} className="shrink-0" />
-                  <span>{t('messages.actions.floatComposer')}</span>
-                </DropdownMenuItem>
+                {renderSurface === 'thread' ? (
+                  <MessagesThreadUtilityMenuItems
+                    collapsed={messagesCollapsed}
+                    searchVisible={messagesSearchBarVisible}
+                    onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+                    onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+                  />
+                ) : null}
+                <MessagesLayoutMenuItems
+                  variant="sidebar"
+                  showChatSort={renderSurface === 'list'}
+                  sortChatsByActivity={sortChatsByActivity}
+                  onSortChatsByActivityChange={setSortChatsByActivity}
+                  onMoveToInline={moveToInline}
+                  onMoveToBottomSheet={moveToBottomSheet}
+                  onMoveToSidebar={moveToSidebar}
+                  onMoveToFloatingComposer={moveToFloatingComposer}
+                />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
         {/* Search & filter bar (toggleable) */}
-        {messagesSearchBarVisible && (
+        {messagesSearchBarVisible && renderSurface === 'thread' && (
           <div className="shrink-0 border-b border-[var(--color-border)] px-3 py-1.5">
             {renderSearchAndFilterControls()}
           </div>
@@ -1353,11 +1352,17 @@ export const MessagesPanel = memo(function MessagesPanel({
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-14 pr-3 pt-2"
           onScroll={handleSidebarScroll}
         >
-          <div className="pl-3">
-            {renderDefaultComposerSection()}
-            {renderSidebarStatusSection()}
-          </div>
-          {renderTimelineSection()}
+          {renderSurface === 'list' ? (
+            <ChatList items={chatListItems} teamName={teamName} onOpen={openChat} />
+          ) : (
+            <>
+              <div className="pl-3">
+                {renderDefaultComposerSection()}
+                {renderSidebarStatusSection()}
+              </div>
+              {renderTimelineSection()}
+            </>
+          )}
         </div>
       </div>
     );
@@ -1418,33 +1423,12 @@ export const MessagesPanel = memo(function MessagesPanel({
                 />
               </div>
               <div className="flex h-full items-center gap-1.5">
-                <MessageSquare size={13} className="shrink-0 text-[var(--color-text-muted)]" />
-                <span className="text-[13px] font-medium text-[var(--color-text)]">
-                  {t('messages.title')}
-                </span>
-                {filteredMessages.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="px-1 py-0 text-[9px] font-normal leading-none"
-                  >
-                    {filteredMessages.length}
-                  </Badge>
-                )}
-                {messagesUnreadCount > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge
-                        variant="secondary"
-                        className="bg-blue-500/20 px-1 py-0 text-[9px] font-normal leading-none text-blue-600 dark:text-blue-400"
-                      >
-                        {t('messages.unread.new', { count: messagesUnreadCount })}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {t('messages.unread.unread', { count: messagesUnreadCount })}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+                <ConversationHeader
+                  title={lockedRecipient ?? conversationTitle}
+                  unreadCount={messagesUnreadCount}
+                  attentionCount={messagesAttentionCount}
+                  onBack={renderSurface === 'thread' ? backToList : undefined}
+                />
                 <div
                   className="ml-auto flex items-center gap-1"
                   onPointerDown={(e) => e.stopPropagation()}
@@ -1468,7 +1452,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                       </TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end" side="top" className="w-48">
-                      {messagesUnreadCount > 0 && (
+                      {renderSurface === 'thread' && messagesUnreadCount > 0 && (
                         <DropdownMenuItem
                           className="text-blue-400 focus:text-blue-300"
                           onSelect={handleMarkAllRead}
@@ -1477,56 +1461,26 @@ export const MessagesPanel = memo(function MessagesPanel({
                           <span>{t('messages.actions.markAllRead')}</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onSelect={() => setMessagesCollapsed((value) => !value)}>
-                        {messagesCollapsed ? (
-                          <ChevronsUpDown size={14} className="shrink-0" />
-                        ) : (
-                          <ChevronsDownUp size={14} className="shrink-0" />
-                        )}
-                        <span>
-                          {messagesCollapsed
-                            ? t('messages.actions.expandAll')
-                            : t('messages.actions.collapseAll')}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => setMessagesSearchBarVisible((value) => !value)}
-                      >
-                        {messagesSearchBarVisible ? (
-                          <X size={14} className="shrink-0" />
-                        ) : (
-                          <Search size={14} className="shrink-0" />
-                        )}
-                        <span>
-                          {messagesSearchBarVisible
-                            ? t('messages.actions.hideSearch')
-                            : t('messages.actions.searchMessages')}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={toggleBottomSheetExpansion}>
-                        {isBottomSheetCollapsed ? (
-                          <PanelBottomOpen size={14} className="shrink-0" />
-                        ) : (
-                          <PanelBottomClose size={14} className="shrink-0" />
-                        )}
-                        <span>
-                          {isBottomSheetCollapsed
-                            ? t('messages.actions.expandSheet')
-                            : t('messages.actions.collapseSheet')}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={moveToInline}>
-                        <PanelBottom size={14} className="shrink-0" />
-                        <span>{t('messages.actions.moveToInline')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={moveToSidebar}>
-                        <PanelLeft size={14} className="shrink-0" />
-                        <span>{t('messages.actions.moveToSidebar')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={moveToFloatingComposer}>
-                        <Dock size={14} className="shrink-0" />
-                        <span>{t('messages.actions.floatComposer')}</span>
-                      </DropdownMenuItem>
+                      {renderSurface === 'thread' ? (
+                        <MessagesThreadUtilityMenuItems
+                          collapsed={messagesCollapsed}
+                          searchVisible={messagesSearchBarVisible}
+                          onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+                          onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+                        />
+                      ) : null}
+                      <MessagesLayoutMenuItems
+                        variant="bottom-sheet"
+                        showChatSort={renderSurface === 'list'}
+                        sortChatsByActivity={sortChatsByActivity}
+                        onSortChatsByActivityChange={setSortChatsByActivity}
+                        onMoveToInline={moveToInline}
+                        onMoveToBottomSheet={moveToBottomSheet}
+                        onMoveToSidebar={moveToSidebar}
+                        onMoveToFloatingComposer={moveToFloatingComposer}
+                        isBottomSheetCollapsed={isBottomSheetCollapsed}
+                        onToggleBottomSheetExpansion={toggleBottomSheetExpansion}
+                      />
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1547,15 +1501,23 @@ export const MessagesPanel = memo(function MessagesPanel({
                   backgroundColor: 'var(--color-surface-sidebar)',
                 }}
               >
-                {messagesSearchBarVisible && (
+                {messagesSearchBarVisible && renderSurface === 'thread' && (
                   <div className="border-b border-[var(--color-border)] px-3 py-2">
                     {renderSearchAndFilterControls()}
                   </div>
                 )}
-                <div className="p-3">{renderCompactComposerSection()}</div>
+                {renderSurface === 'thread' ? (
+                  <div className="p-3">{renderCompactComposerSection()}</div>
+                ) : null}
               </div>
-              <div className="shrink-0 px-3 pt-2">{renderInlineStatusSection()}</div>
-              <div className="flex-1 px-3 pb-4 pt-2">{renderTimelineSection()}</div>
+              {renderSurface === 'list' ? (
+                <ChatList items={chatListItems} teamName={teamName} onOpen={openChat} />
+              ) : (
+                <>
+                  <div className="shrink-0 px-3 pt-2">{renderInlineStatusSection()}</div>
+                  <div className="flex-1 px-3 pb-4 pt-2">{renderTimelineSection()}</div>
+                </>
+              )}
             </Sheet.Content>
           )}
         </Sheet.Container>
@@ -1568,14 +1530,25 @@ export const MessagesPanel = memo(function MessagesPanel({
     <CollapsibleTeamSection
       sectionId="messages"
       variant={sectionVariant}
-      title={t('messages.title')}
-      icon={<MessageSquare size={14} />}
-      badge={filteredMessages.length}
+      title={conversationTitle}
+      icon={
+        renderSurface === 'thread' ? (
+          <MessagesInlineBackButton label={t('messages.chats.back')} onBack={backToList} />
+        ) : (
+          <MessageSquare size={14} />
+        )
+      }
+      badge={renderSurface === 'list' ? undefined : threadMessages.length}
       secondaryBadge={
-        filteredMessages.length > 0 && messagesUnreadCount > 0 ? messagesUnreadCount : undefined
+        renderSurface === 'thread' && messagesUnreadCount > 0 ? messagesUnreadCount : undefined
       }
       afterBadge={
-        messagesUnreadCount > 0 ? (
+        renderSurface === 'list' ? (
+          <ChatUnreadBadges
+            unreadCount={messagesUnreadCount}
+            attentionCount={messagesAttentionCount}
+          />
+        ) : messagesUnreadCount > 0 ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -1649,7 +1622,11 @@ export const MessagesPanel = memo(function MessagesPanel({
         </div>
       }
       defaultOpen
-      action={<div className="flex items-center gap-2 px-2">{renderSearchAndFilterBar()}</div>}
+      action={
+        renderSurface === 'thread' ? (
+          <div className="flex items-center gap-2 px-2">{renderSearchAndFilterBar()}</div>
+        ) : undefined
+      }
     >
       {renderMessagesContent()}
     </CollapsibleTeamSection>

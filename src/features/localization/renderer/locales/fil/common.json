@@ -716,6 +716,7 @@
     "catalogCheckCredential": "Hindi ma-load ang mga modelong {{provider}}. Tingnan ang naka-save na kredensyal, tapos i-refresh.",
     "catalogDirectoryFailed": "Hindi na-load ng OpenCode ang listahan ng provider.",
     "catalogLoadFailed": "Hindi ma-load ang mga modelong {{provider}}.",
+    "catalogSourceLoadFailed": "Hindi ma-load ang mga modelong {{provider}} mula sa OpenCode.",
     "catalogSignInExpired": "Hindi na valid ang sign-in sa {{provider}}. Mag-sign in ulit, tapos i-refresh.",
     "catalogSignInMaybe": "Hindi ma-load ang mga modelong {{provider}}. Kung nag-sign in ka gamit ang OAuth, maaaring kailanganin mong mag-sign in ulit, tapos i-refresh.",
     "catalogStale": "Naka-cache ang mga modelong {{provider}} at maaaring luma na.",

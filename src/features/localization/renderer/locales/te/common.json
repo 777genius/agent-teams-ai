@@ -716,6 +716,7 @@
     "catalogCheckCredential": "{{provider}} మోడల్స్ లోడ్ కాలేదు. సేవ్ చేసిన క్రెడెన్షియల్ తనిఖీ చేసి రిఫ్రెష్ చేయండి.",
     "catalogDirectoryFailed": "OpenCode ప్రొవైడర్ జాబితాను లోడ్ చేయలేకపోయింది.",
     "catalogLoadFailed": "{{provider}} మోడల్స్ లోడ్ కాలేదు.",
+    "catalogSourceLoadFailed": "OpenCode నుండి {{provider}} మోడల్స్ లోడ్ కాలేదు.",
     "catalogSignInExpired": "{{provider}} సైన్-ఇన్ ఇక చెల్లదు. మళ్లీ సైన్ ఇన్ చేసి రిఫ్రెష్ చేయండి.",
     "catalogSignInMaybe": "{{provider}} మోడల్స్ లోడ్ కాలేదు. OAuthతో సైన్ ఇన్ చేసి ఉంటే మళ్లీ సైన్ ఇన్ చేసి రిఫ్రెష్ చేయాల్సి రావచ్చు.",
     "catalogStale": "{{provider}} మోడల్స్ కాష్ నుండి వచ్చాయి, పాతవి కావచ్చు.",

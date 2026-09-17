@@ -77,8 +77,12 @@ vi.mock('@renderer/hooks/useStableTeamMentionMeta', () => ({
 }));
 
 vi.mock('@renderer/components/team/activity/ActivityItem', () => ({
-  ActivityItem: ({ message }: { message: InboxMessage }) =>
-    React.createElement('div', { 'data-testid': 'activity-item' }, message.summary ?? message.text),
+  ActivityItem: ({ message, isUnread }: { message: InboxMessage; isUnread?: boolean }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'activity-item', 'data-unread': isUnread ? 'true' : 'false' },
+      message.summary ?? message.text
+    ),
 }));
 
 vi.mock('@renderer/components/team/activity/MessageExpandDialog', () => ({
@@ -582,5 +586,89 @@ describe('GraphActivityHud', () => {
       await Promise.resolve();
     });
     vi.useRealTimers();
+  });
+
+  it('treats a persisted-read user DM as unread until localStorage says otherwise', async () => {
+    const userDm: InboxMessage = {
+      from: 'jack',
+      to: 'user',
+      text: 'please look',
+      summary: 'please look',
+      timestamp: '2026-04-13T13:36:00.000Z',
+      read: true,
+      messageId: 'user-dm-1',
+    };
+    buildInlineActivityEntries.mockReturnValue(
+      new Map([
+        [
+          'member:demo-team:jack',
+          [
+            {
+              ownerNodeId: 'member:demo-team:jack',
+              graphItem: {
+                id: 'item-dm',
+                kind: 'inbox_message',
+                timestamp: userDm.timestamp,
+                title: 'please look',
+              },
+              message: userDm,
+            },
+          ],
+        ],
+      ])
+    );
+
+    const node: GraphNode = {
+      id: 'member:demo-team:jack',
+      kind: 'member',
+      label: 'jack',
+      state: 'active',
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'jack' },
+      activityItems: [
+        {
+          id: 'item-dm',
+          kind: 'inbox_message',
+          timestamp: userDm.timestamp,
+          title: 'please look',
+        },
+      ],
+      activityOverflowCount: 0,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphActivityHud, {
+          teamName: 'demo-team',
+          nodes: [node],
+          getActivityWorldRect: () => ({
+            left: 40,
+            top: 80,
+            right: 336,
+            bottom: 372,
+            width: 296,
+            height: 292,
+          }),
+          getCameraZoom: () => 1,
+          worldToScreen: (x: number, y: number) => ({ x, y }),
+          getNodeWorldPosition: () => ({ x: 120, y: 40 }),
+          getViewportSize: () => ({ width: 1200, height: 800 }),
+          focusNodeIds: null,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="activity-item"]')?.getAttribute('data-unread')).toBe(
+      'true'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 });

@@ -4,6 +4,7 @@ import {
 } from '@renderer/utils/bootstrapPromptSanitizer';
 import { shouldKeepIdleMessageInActivityWhenNoiseHidden } from '@renderer/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import { isConversationLeadAlias } from '@shared/utils/leadDetection';
 import {
   isMemberWorkSyncNudgeMessage,
   isReviewPickupEscalationMessage,
@@ -109,19 +110,9 @@ function getMessageFilterData(message: InboxMessage): CachedMessageFilterData {
   return next;
 }
 
-function isLeadAlias(value: string | undefined): boolean {
-  const normalized = normalizeParticipant(value).replace(/[\s_]+/g, '-');
-  return (
-    normalized === 'lead' ||
-    normalized === 'team-lead' ||
-    normalized === 'teamlead' ||
-    normalized === 'team-leader'
-  );
-}
-
 function isLeadParticipant(value: string | undefined, leadNames: Set<string>): boolean {
   const normalized = normalizeParticipant(value);
-  return isLeadAlias(value) || (normalized.length > 0 && leadNames.has(normalized));
+  return isConversationLeadAlias(value) || (normalized.length > 0 && leadNames.has(normalized));
 }
 
 function isRelayDuplicateOfVisibleMessage(
