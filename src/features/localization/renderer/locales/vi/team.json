@@ -789,7 +789,7 @@
       "unread_other": "{{count}} chưa đọc"
     },
     "chats": {
-      "teamFeed": "Nhóm này",
+      "teamFeed": "Trò chuyện nhóm",
       "back": "Quay lại cuộc trò chuyện",
       "clearSearch": "Xóa tìm kiếm",
       "emptyList": "Chưa có cuộc trò chuyện",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} chưa đọc, {{attention}} dành cho bạn",
       "activityUnread": "{{count}} chưa đọc",
       "attentionUnread": "{{count}} dành cho bạn",
-      "sortByActivity": "Sắp xếp theo tin nhắn mới"
+      "sortByActivity": "Sắp xếp theo tin nhắn mới",
+      "pin": "Ghim cuộc trò chuyện",
+      "unpin": "Bỏ ghim cuộc trò chuyện",
+      "pinned": "Đã ghim"
     },
     "filter": {
       "ariaLabel": "Lọc tin nhắn",

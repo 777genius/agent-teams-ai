@@ -789,7 +789,7 @@
       "unread_other": "{{count}} não lido"
     },
     "chats": {
-      "teamFeed": "Esta equipe",
+      "teamFeed": "Chat em grupo",
       "back": "Voltar aos chats",
       "clearSearch": "Limpar pesquisa",
       "emptyList": "Ainda não há chats",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} não lidas, {{attention}} para você",
       "activityUnread": "{{count}} não lidas",
       "attentionUnread": "{{count}} para você",
-      "sortByActivity": "Ordenar por mensagens novas"
+      "sortByActivity": "Ordenar por mensagens novas",
+      "pin": "Fixar chat",
+      "unpin": "Desafixar chat",
+      "pinned": "Fixado"
     },
     "filter": {
       "ariaLabel": "Filtrar mensagens",

@@ -12,6 +12,6 @@ Public entrypoint:
 
 Shape:
 - `core/domain` owns conversation membership (lead chat includes teammate→lead), user-unread, attention, preview, optional activity sort, and chat-list rows
-- `renderer` owns the list/thread surface, badges, and conversation navigation hook
+- `renderer` owns the list/thread surface, badges, conversation navigation, and pinned chat order
 
 This feature does not own inbox transport, IPC, or `getMessagesPage`.

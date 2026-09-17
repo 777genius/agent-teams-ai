@@ -791,7 +791,7 @@
       "unread_other": "Непрочитано: {{count}}"
     },
     "chats": {
-      "teamFeed": "Эта команда",
+      "teamFeed": "Групповой чат",
       "back": "Назад к чатам",
       "clearSearch": "Очистить поиск",
       "emptyList": "Пока нет чатов",
@@ -803,7 +803,10 @@
       "rowAriaCounts": "непрочитано {{unread}}, для вас {{attention}}",
       "activityUnread": "непрочитано {{count}}",
       "attentionUnread": "для вас {{count}}",
-      "sortByActivity": "Сортировать по новым сообщениям"
+      "sortByActivity": "Сортировать по новым сообщениям",
+      "pin": "Закрепить чат",
+      "unpin": "Открепить чат",
+      "pinned": "Закреплено"
     },
     "filter": {
       "ariaLabel": "Фильтровать сообщения",

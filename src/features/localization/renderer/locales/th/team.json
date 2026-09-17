@@ -789,7 +789,7 @@
       "unread_other": "{{count}} ยังไม่อ่าน"
     },
     "chats": {
-      "teamFeed": "ทีมนี้",
+      "teamFeed": "แชทกลุ่ม",
       "back": "กลับไปที่แชท",
       "clearSearch": "ล้างการค้นหา",
       "emptyList": "ยังไม่มีแชท",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "ยังไม่ได้อ่าน {{unread}}, ถึงคุณ {{attention}}",
       "activityUnread": "ยังไม่ได้อ่าน {{count}}",
       "attentionUnread": "ถึงคุณ {{count}}",
-      "sortByActivity": "เรียงตามข้อความใหม่"
+      "sortByActivity": "เรียงตามข้อความใหม่",
+      "pin": "ปักหมุดแชท",
+      "unpin": "ยกเลิกปักหมุดแชท",
+      "pinned": "ปักหมุดแล้ว"
     },
     "filter": {
       "ariaLabel": "กรองข้อความ",

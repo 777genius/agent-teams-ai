@@ -789,7 +789,7 @@
       "unread_other": "{{count}} hindi nabasa"
     },
     "chats": {
-      "teamFeed": "Ang team na ito",
+      "teamFeed": "Group chat",
       "back": "Bumalik sa mga chat",
       "clearSearch": "I-clear ang search",
       "emptyList": "Wala pang chat",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} hindi pa nababasa, {{attention}} para sa iyo",
       "activityUnread": "{{count}} hindi pa nababasa",
       "attentionUnread": "{{count}} para sa iyo",
-      "sortByActivity": "I-sort ayon sa mga bagong mensahe"
+      "sortByActivity": "I-sort ayon sa mga bagong mensahe",
+      "pin": "I-pin ang chat",
+      "unpin": "I-unpin ang chat",
+      "pinned": "Naka-pin"
     },
     "filter": {
       "ariaLabel": "I-filter ang mga mensahe",

@@ -789,7 +789,7 @@
       "unread_other": "{{count}} 未読"
     },
     "chats": {
-      "teamFeed": "このチーム",
+      "teamFeed": "グループチャット",
       "back": "チャット一覧に戻る",
       "clearSearch": "検索をクリア",
       "emptyList": "チャットはまだありません",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "未読 {{unread}}、あなた宛て {{attention}}",
       "activityUnread": "未読 {{count}}",
       "attentionUnread": "あなた宛て {{count}}",
-      "sortByActivity": "新しいメッセージ順"
+      "sortByActivity": "新しいメッセージ順",
+      "pin": "チャットをピン留め",
+      "unpin": "ピン留めを外す",
+      "pinned": "ピン留め済み"
     },
     "filter": {
       "ariaLabel": "フィルターメッセージ",

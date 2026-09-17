@@ -789,7 +789,7 @@
       "unread_other": "{{count}} ongelezen"
     },
     "chats": {
-      "teamFeed": "Dit team",
+      "teamFeed": "Groepschat",
       "back": "Terug naar chats",
       "clearSearch": "Zoekopdracht wissen",
       "emptyList": "Nog geen chats",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} ongelezen, {{attention}} voor jou",
       "activityUnread": "{{count}} ongelezen",
       "attentionUnread": "{{count}} voor jou",
-      "sortByActivity": "Sorteren op nieuwe berichten"
+      "sortByActivity": "Sorteren op nieuwe berichten",
+      "pin": "Chat vastzetten",
+      "unpin": "Chat losmaken",
+      "pinned": "Vastgezet"
     },
     "filter": {
       "ariaLabel": "Berichten filteren",

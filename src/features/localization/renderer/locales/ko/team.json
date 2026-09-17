@@ -789,7 +789,7 @@
       "unread_other": "{{count}} 읽음"
     },
     "chats": {
-      "teamFeed": "이 팀",
+      "teamFeed": "그룹 채팅",
       "back": "채팅 목록으로",
       "clearSearch": "검색 지우기",
       "emptyList": "아직 채팅이 없습니다",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "읽지 않음 {{unread}}, 나에게 {{attention}}",
       "activityUnread": "읽지 않음 {{count}}",
       "attentionUnread": "나에게 {{count}}",
-      "sortByActivity": "새 메시지순으로 정렬"
+      "sortByActivity": "새 메시지순으로 정렬",
+      "pin": "채팅 고정",
+      "unpin": "채팅 고정 해제",
+      "pinned": "고정됨"
     },
     "filter": {
       "ariaLabel": "필터 메시지",

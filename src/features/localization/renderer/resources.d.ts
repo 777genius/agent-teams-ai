@@ -4821,11 +4821,14 @@ export default interface Resources {
         emptyList: 'No chats yet';
         emptyPreview: 'No messages yet';
         emptyThread: 'No messages in this chat';
+        pin: 'Pin chat';
+        pinned: 'Pinned';
         previewFrom: '{{name}}: {{text}}';
         rowAria: '{{name}}, {{unread}} unread, {{attention}} for you';
         rowAriaCounts: '{{unread}} unread, {{attention}} for you';
         sortByActivity: 'Sort by new messages';
-        teamFeed: 'This team';
+        teamFeed: 'Group chat';
+        unpin: 'Unpin chat';
         you: 'You';
       };
       delivery: {

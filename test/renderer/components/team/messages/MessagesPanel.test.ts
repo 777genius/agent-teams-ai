@@ -126,6 +126,22 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement('div', null, children),
 }));
 
+vi.mock('@renderer/components/ui/context-menu', () => ({
+  ContextMenu: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+  ContextMenuItem: ({
+    children,
+    onSelect,
+  }: {
+    children: React.ReactNode;
+    onSelect?: () => void;
+  }) => React.createElement('button', { type: 'button', onClick: onSelect }, children),
+}));
+
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
   MessageComposer: ({
     revisionRequest,
@@ -1856,7 +1872,7 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('This team');
+    expect(host.textContent).toContain('Group chat');
     expect(host.textContent).toContain('alice');
     expect(host.textContent).toContain('need you');
     expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
@@ -1891,7 +1907,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
-    expect(host.textContent).toContain('This team');
+    expect(host.textContent).toContain('Group chat');
 
     await act(async () => {
       root.unmount();

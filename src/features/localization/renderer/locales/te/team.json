@@ -789,7 +789,7 @@
       "unread_other": "{{count}} చదవనివి"
     },
     "chats": {
-      "teamFeed": "ఈ జట్టు",
+      "teamFeed": "గ్రూప్ చాట్",
       "back": "చాట్‌లకు తిరిగి వెళ్లండి",
       "clearSearch": "శోధనను క్లియర్ చేయండి",
       "emptyList": "ఇంకా చాట్‌లు లేవు",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} చదవనివి, మీ కోసం {{attention}}",
       "activityUnread": "{{count}} చదవనివి",
       "attentionUnread": "మీ కోసం {{count}}",
-      "sortByActivity": "కొత్త సందేశాల ప్రకారం క్రమబద్ధీకరించండి"
+      "sortByActivity": "కొత్త సందేశాల ప్రకారం క్రమబద్ధీకరించండి",
+      "pin": "చాట్‌ను పిన్ చేయి",
+      "unpin": "చాట్ అన్‌పిన్ చేయి",
+      "pinned": "పిన్ చేయబడింది"
     },
     "filter": {
       "ariaLabel": "సందేశాలను ఫిల్టర్ చేయి",

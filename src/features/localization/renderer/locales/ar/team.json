@@ -789,7 +789,7 @@
       "unread_other": "{{count}} غير متوقع"
     },
     "chats": {
-      "teamFeed": "هذا الفريق",
+      "teamFeed": "دردشة جماعية",
       "back": "العودة إلى المحادثات",
       "clearSearch": "مسح البحث",
       "emptyList": "لا توجد محادثات بعد",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} غير مقروءة، {{attention}} موجّهة إليك",
       "activityUnread": "{{count}} غير مقروءة",
       "attentionUnread": "{{count}} موجّهة إليك",
-      "sortByActivity": "ترتيب حسب الرسائل الجديدة"
+      "sortByActivity": "ترتيب حسب الرسائل الجديدة",
+      "pin": "تثبيت المحادثة",
+      "unpin": "إلغاء تثبيت المحادثة",
+      "pinned": "مثبّت"
     },
     "filter": {
       "ariaLabel": "رسائل مصورة",

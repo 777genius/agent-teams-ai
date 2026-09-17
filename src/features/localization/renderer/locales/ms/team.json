@@ -789,7 +789,7 @@
       "unread_other": "{{count}} belum dibaca"
     },
     "chats": {
-      "teamFeed": "Pasukan ini",
+      "teamFeed": "Sembang kumpulan",
       "back": "Kembali ke sembang",
       "clearSearch": "Kosongkan carian",
       "emptyList": "Belum ada sembang",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} belum dibaca, {{attention}} untuk anda",
       "activityUnread": "{{count}} belum dibaca",
       "attentionUnread": "{{count}} untuk anda",
-      "sortByActivity": "Isih mengikut mesej baharu"
+      "sortByActivity": "Isih mengikut mesej baharu",
+      "pin": "Pin sembang",
+      "unpin": "Nyahpin sembang",
+      "pinned": "Dipin"
     },
     "filter": {
       "ariaLabel": "Tapis mesej",

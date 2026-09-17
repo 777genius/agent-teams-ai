@@ -37,6 +37,7 @@ export { ChatList } from './ui/ChatList';
 export { ChatListRow } from './ui/ChatListRow';
 export { ChatUnreadBadges } from './ui/ChatUnreadBadges';
 export { ConversationHeader } from './ui/ConversationHeader';
+export { GroupChatAvatar } from './ui/GroupChatAvatar';
 export type { ChatListViewItem } from './view-models/chatListViewModel';
 export { buildChatListView } from './view-models/chatListViewModel';
 

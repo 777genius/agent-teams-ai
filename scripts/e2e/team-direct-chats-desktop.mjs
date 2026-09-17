@@ -377,8 +377,8 @@ async function main() {
     await cdp.evaluate(`window.__agentTeamsDevStore.getState().setMessagesPanelMode('sidebar')`);
     await cdp.waitFor(
       `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
-        (button.getAttribute('aria-label') ?? '').includes('This team')))`,
-      'chat list This team row',
+        (button.getAttribute('aria-label') ?? '').includes('Group chat')))`,
+      'chat list Group chat row',
       60_000
     );
     const listUi = await cdp.evaluate(`(() => {
@@ -389,13 +389,13 @@ async function main() {
       return {
         body: (document.body?.innerText ?? '').slice(0, 1200),
         rows: rows.filter((row) =>
-          row.label.includes('This team') || row.label.includes('alice') || row.label.includes('oscar')
+          row.label.includes('Group chat') || row.label.includes('alice') || row.label.includes('oscar')
         ),
       };
     })()`);
     assert(
-      listUi.rows.some((row) => row.label.includes('This team')),
-      `missing This team row: ${JSON.stringify(listUi.rows)}`
+      listUi.rows.some((row) => row.label.includes('Group chat')),
+      `missing Group chat row: ${JSON.stringify(listUi.rows)}`
     );
     assert(
       listUi.rows.some((row) => row.label.includes('alice')),
@@ -410,9 +410,9 @@ async function main() {
     assert.match(aliceRow.preview, /Need you to review the chat list/);
     const rosterOrder = await cdp.evaluate(`(() => Array.from(document.querySelectorAll('button[aria-label]'))
       .map((button) => button.getAttribute('aria-label') ?? '')
-      .filter((label) => label.includes('This team') || label.includes('alice') || label.includes('oscar'))
+      .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
       .map((label) => label.split(',')[0]))()`);
-    assert.deepEqual(rosterOrder, ['This team', 'oscar', 'alice']);
+    assert.deepEqual(rosterOrder, ['Group chat', 'oscar', 'alice']);
     await clickPoint(
       cdp,
       `Array.from(document.querySelectorAll('button')).find((button) =>
@@ -451,9 +451,9 @@ async function main() {
       `(() => {
         const names = Array.from(document.querySelectorAll('button[aria-label]'))
           .map((button) => button.getAttribute('aria-label') ?? '')
-          .filter((label) => label.includes('This team') || label.includes('alice') || label.includes('oscar'))
+          .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
           .map((label) => label.split(',')[0]);
-        return names[0] === 'This team' && names[1] === 'alice' && names[2] === 'oscar';
+        return names[0] === 'Group chat' && names[1] === 'alice' && names[2] === 'oscar';
       })()`,
       'attention chat raised after sort',
       10_000
@@ -519,7 +519,7 @@ async function main() {
       button.getAttribute('aria-label') === 'Back to chats')?.click()`);
     await cdp.waitFor(
       `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
-        (button.getAttribute('aria-label') ?? '').includes('This team')))`,
+        (button.getAttribute('aria-label') ?? '').includes('Group chat')))`,
       'returned to chat list',
       15_000
     );

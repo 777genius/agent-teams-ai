@@ -789,7 +789,7 @@
       "unread_other": "{{count}} hazijasomwa"
     },
     "chats": {
-      "teamFeed": "Timu hii",
+      "teamFeed": "Gumzo la kikundi",
       "back": "Rudi kwenye gumzo",
       "clearSearch": "Futa utafutaji",
       "emptyList": "Bado hakuna gumzo",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} haijasomwa, {{attention}} kwako",
       "activityUnread": "{{count}} haijasomwa",
       "attentionUnread": "{{count}} kwako",
-      "sortByActivity": "Panga kwa ujumbe mpya"
+      "sortByActivity": "Panga kwa ujumbe mpya",
+      "pin": "Bandika gumzo",
+      "unpin": "Ondoa bandiko la gumzo",
+      "pinned": "Limebandikwa"
     },
     "filter": {
       "ariaLabel": "Chuja ujumbe",

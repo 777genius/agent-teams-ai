@@ -789,7 +789,7 @@
       "unread_other": "{{count}} unreaded"
     },
     "chats": {
-      "teamFeed": "यह टीम",
+      "teamFeed": "ग्रुप चैट",
       "back": "चैट पर वापस जाएँ",
       "clearSearch": "खोज साफ़ करें",
       "emptyList": "अभी कोई चैट नहीं",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} अपठित, आपके लिए {{attention}}",
       "activityUnread": "{{count}} अपठित",
       "attentionUnread": "आपके लिए {{count}}",
-      "sortByActivity": "नए संदेशों के अनुसार क्रमबद्ध करें"
+      "sortByActivity": "नए संदेशों के अनुसार क्रमबद्ध करें",
+      "pin": "चैट पिन करें",
+      "unpin": "चैट अनपिन करें",
+      "pinned": "पिन किया गया"
     },
     "filter": {
       "ariaLabel": "फ़िल्टर संदेश",

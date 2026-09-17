@@ -792,7 +792,7 @@
       "unread_other": "{{count}} unread"
     },
     "chats": {
-      "teamFeed": "This team",
+      "teamFeed": "Group chat",
       "back": "Back to chats",
       "clearSearch": "Clear search",
       "emptyList": "No chats yet",
@@ -804,7 +804,10 @@
       "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
       "activityUnread": "{{count}} unread",
       "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "sortByActivity": "Sort by new messages",
+      "pin": "Pin chat",
+      "unpin": "Unpin chat",
+      "pinned": "Pinned"
     },
     "filter": {
       "ariaLabel": "Filter messages",

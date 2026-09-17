@@ -1,5 +1,6 @@
+import { GroupChatAvatar } from '@features/team-direct-chats/renderer';
 import { cn } from '@renderer/lib/utils';
-import { ArrowLeft, MessageSquare, MoreHorizontal, Paperclip } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Paperclip } from 'lucide-react';
 
 import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 import type { JSX } from 'react';
@@ -29,9 +30,7 @@ const ChatListRowSkeleton = ({
   <div className="flex w-full items-start gap-2.5 overflow-visible rounded-md px-2 py-2">
     <span className="mt-0.5 shrink-0">
       {isTeamFeed ? (
-        <span className="flex size-[34px] items-center justify-center rounded-full bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]">
-          <MessageSquare size={14} />
-        </span>
+        <GroupChatAvatar />
       ) : (
         <span className="relative inline-flex shrink-0">
           <span className="rounded-full border-2 p-px" style={{ borderColor: accent }}>

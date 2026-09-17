@@ -789,7 +789,7 @@
       "unread_other": "{{count}} অপঠিত"
     },
     "chats": {
-      "teamFeed": "এই টিম",
+      "teamFeed": "গ্রুপ চ্যাট",
       "back": "চ্যাটে ফিরে যান",
       "clearSearch": "অনুসন্ধান মুছুন",
       "emptyList": "এখনও কোনো চ্যাট নেই",
@@ -801,7 +801,10 @@
       "rowAriaCounts": "{{unread}} অপঠিত, আপনার জন্য {{attention}}",
       "activityUnread": "{{count}} অপঠিত",
       "attentionUnread": "আপনার জন্য {{count}}",
-      "sortByActivity": "নতুন বার্তা অনুসারে সাজান"
+      "sortByActivity": "নতুন বার্তা অনুসারে সাজান",
+      "pin": "চ্যাট পিন করুন",
+      "unpin": "চ্যাট আনপিন করুন",
+      "pinned": "পিন করা"
     },
     "filter": {
       "ariaLabel": "বার্তা মুছে ফেলো",

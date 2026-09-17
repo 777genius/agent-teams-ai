@@ -7,7 +7,7 @@ import { ConversationHeader } from './ConversationHeader';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
-    t: (key: string) => (key === 'messages.chats.teamFeed' ? 'This team' : key),
+    t: (key: string) => (key === 'messages.chats.teamFeed' ? 'Group chat' : key),
   }),
 }));
 
@@ -73,10 +73,10 @@ describe('ConversationHeader participant identity', () => {
     expect(host.querySelector('button[aria-label="messages.chats.back"]')).not.toBeNull();
   });
 
-  it('keeps the This team label as plain text', async () => {
-    const host = await renderHeader({ title: 'This team', onBack: () => undefined });
+  it('keeps the Group chat label as plain text', async () => {
+    const host = await renderHeader({ title: 'Group chat', onBack: () => undefined });
     expect(host.querySelector('[data-member-badge]')).toBeNull();
-    expect(host.textContent).toContain('This team');
+    expect(host.textContent).toContain('Group chat');
   });
 
   it('keeps the chat-list title as plain text', async () => {

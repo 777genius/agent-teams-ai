@@ -45,7 +45,7 @@ describe('MessagesConversationSkeleton', () => {
     expect(skeleton.getAttribute('data-messages-skeleton-title')).toBe('Messages');
     expect(skeleton.querySelector('.lucide-arrow-left')).toBeNull();
     expect(skeleton.querySelector('.message-composer-flat-layout')).toBeNull();
-    expect(skeleton.querySelectorAll('.lucide-message-square')).toHaveLength(1);
+    expect(skeleton.querySelectorAll('.lucide-users')).toHaveLength(1);
     expect(skeleton.textContent).toContain('Messages');
   });
 
