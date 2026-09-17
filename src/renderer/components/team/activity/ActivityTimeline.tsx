@@ -9,18 +9,13 @@ import React, {
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  areInboxMessagesEquivalentForRender,
-  areStringArraysEqual,
-  areStringMapsEqual,
-} from '@renderer/utils/messageRenderEquality';
+import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Layers, Loader2 } from 'lucide-react';
 
-import { ActivityItem, isNoiseMessage } from './ActivityItem';
+import { isNoiseMessage } from './ActivityItem';
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
-import { AnimatedHeightReveal } from './AnimatedHeightReveal';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
 import {
   getThoughtGroupKey,
@@ -29,6 +24,7 @@ import {
   isLeadThought,
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
+import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
 import { getTimelineCardPosition, type TimelineCardPosition } from './timelineCardStack';
 import { useNewItemKeys } from './useNewItemKeys';
 
@@ -134,6 +130,10 @@ interface ActivityTimelineProps {
   onExpandContent?: () => void;
   /** True while the initial message page is loading and no cached rows are available yet. */
   loading?: boolean;
+  showRecipientRoute?: boolean;
+  unreadSnapshot?: ReadonlySet<string>;
+  emptyLabel?: string;
+  emptyHint?: string;
   /**
    * Optional viewport contract. When provided, IntersectionObserver uses the
    * passed `observerRoot` instead of the document viewport, which is required
@@ -144,7 +144,6 @@ interface ActivityTimelineProps {
   viewport?: TimelineViewport;
 }
 
-const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
 const COMPACT_MESSAGES_WIDTH_PX = 400;
 const EMPTY_TEAM_NAMES: string[] = [];
@@ -152,7 +151,6 @@ const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
 const VIRTUALIZATION_ROW_GAP_PX = 0;
-const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
 
 /**
  * Row count above which virtualization is worth its complexity cost. Below
@@ -198,13 +196,21 @@ const TimelineLoadingState = (): React.JSX.Element => {
   );
 };
 
-const TimelineEmptyState = (): React.JSX.Element => {
+const TimelineEmptyState = ({
+  label,
+  hint,
+}: {
+  label?: string;
+  hint?: string;
+}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
 
   return (
     <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
-      <p>{t('activity.timeline.noMessages')}</p>
-      <p className="mt-1 text-[11px]">{t('activity.timeline.emptyHint')}</p>
+      <p>{label ?? t('activity.timeline.noMessages')}</p>
+      {hint === '' ? null : (
+        <p className="mt-1 text-[11px]">{hint ?? t('activity.timeline.emptyHint')}</p>
+      )}
     </div>
   );
 };
@@ -260,14 +266,6 @@ function getCardPositionForRow(
   );
 }
 
-function getNewMessageHighlightRemainingMs(timestamp: string): number {
-  const timestampMs = Date.parse(timestamp);
-  if (!Number.isFinite(timestampMs)) return NEW_MESSAGE_HIGHLIGHT_MS;
-
-  const ageMs = Math.max(0, Date.now() - timestampMs);
-  return Math.max(0, NEW_MESSAGE_HIGHLIGHT_MS - ageMs);
-}
-
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
@@ -298,204 +296,6 @@ const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.El
   </div>
 );
 
-const MessageRowWithObserver = ({
-  message,
-  teamName,
-  memberRole,
-  memberColor,
-  recipientColor,
-  isUnread,
-  isNew,
-  isNewlyAdded,
-  zebraShade,
-  memberColorMap,
-  localMemberNames,
-  onMemberNameClick,
-  onCreateTask,
-  onReply,
-  revisionMessageId,
-  onRevise,
-  onVisible,
-  onTaskIdClick,
-  onRestartTeam,
-  collapseMode,
-  isCollapsed,
-  canToggleCollapse,
-  collapseToggleKey,
-  onToggleCollapse,
-  compactHeader,
-  teamNames,
-  teamColorByName,
-  onTeamClick,
-  onExpand,
-  expandItemKey,
-  onExpandContent,
-  observerRoot,
-  timelineCardPosition,
-}: {
-  message: InboxMessage;
-  teamName: string;
-  memberRole?: string;
-  memberColor?: string;
-  recipientColor?: string;
-  isUnread?: boolean;
-  isNew?: boolean;
-  isNewlyAdded?: boolean;
-  zebraShade?: boolean;
-  memberColorMap?: Map<string, string>;
-  localMemberNames?: Set<string>;
-  onMemberNameClick?: (name: string) => void;
-  onCreateTask?: (subject: string, description: string) => void;
-  onReply?: (message: InboxMessage) => void;
-  revisionMessageId?: string | null;
-  onRevise?: (message: InboxMessage) => void;
-  onVisible?: (message: InboxMessage) => void;
-  onTaskIdClick?: (taskId: string) => void;
-  onRestartTeam?: () => void;
-  collapseMode: 'default' | 'managed';
-  isCollapsed: boolean;
-  canToggleCollapse: boolean;
-  collapseToggleKey?: string;
-  onToggleCollapse?: (key: string) => void;
-  compactHeader?: boolean;
-  teamNames?: string[];
-  teamColorByName?: ReadonlyMap<string, string>;
-  onTeamClick?: (teamName: string) => void;
-  onExpand?: (key: string) => void;
-  expandItemKey?: string;
-  onExpandContent?: () => void;
-  observerRoot?: RefObject<HTMLElement | null>;
-  timelineCardPosition?: TimelineCardPosition;
-}): React.JSX.Element => {
-  const ref = useRef<HTMLDivElement>(null);
-  const reportedRef = useRef(false);
-  const messageRef = useRef(message);
-  const onVisibleRef = useRef(onVisible);
-  const [isNewMessageHighlighted, setIsNewMessageHighlighted] = useState(() => {
-    if (!isNewlyAdded) return false;
-    return getNewMessageHighlightRemainingMs(message.timestamp) > 0;
-  });
-
-  useEffect(() => {
-    if (!isNewMessageHighlighted) return;
-
-    const remainingMs = getNewMessageHighlightRemainingMs(message.timestamp);
-    if (remainingMs <= 0) {
-      queueMicrotask(() => setIsNewMessageHighlighted(false));
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setIsNewMessageHighlighted(false);
-    }, remainingMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [isNewMessageHighlighted, message.timestamp]);
-
-  useEffect(() => {
-    messageRef.current = message;
-    onVisibleRef.current = onVisible;
-  }, [message, onVisible]);
-
-  useEffect(() => {
-    if (!onVisible) return;
-    const el = ref.current;
-    if (!el) return;
-    // Resolve the observer root at effect-time. Falls back to the document
-    // viewport (null) when no root is provided — preserves pre-contract
-    // behavior for layouts without a known scroll owner.
-    const root = observerRoot?.current ?? null;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        if (reportedRef.current) return;
-        const cb = onVisibleRef.current;
-        const msg = messageRef.current;
-        if (!cb) return;
-        reportedRef.current = true;
-        cb(msg);
-      },
-      { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [onVisible, observerRoot]);
-
-  return (
-    <AnimatedHeightReveal animate={isNew} containerRef={ref}>
-      <ActivityItem
-        message={message}
-        teamName={teamName}
-        memberRole={memberRole}
-        memberColor={memberColor}
-        recipientColor={recipientColor}
-        isUnread={isUnread}
-        isNewMessageHighlighted={isNewMessageHighlighted}
-        zebraShade={zebraShade}
-        memberColorMap={memberColorMap}
-        localMemberNames={localMemberNames}
-        onMemberNameClick={onMemberNameClick}
-        onCreateTask={onCreateTask}
-        onReply={onReply}
-        canRevise={message.messageId === revisionMessageId}
-        onRevise={onRevise}
-        onTaskIdClick={onTaskIdClick}
-        onRestartTeam={onRestartTeam}
-        collapseMode={collapseMode}
-        isCollapsed={isCollapsed}
-        canToggleCollapse={canToggleCollapse}
-        collapseToggleKey={collapseToggleKey}
-        onToggleCollapse={onToggleCollapse}
-        compactHeader={compactHeader}
-        teamNames={teamNames}
-        teamColorByName={teamColorByName}
-        onTeamClick={onTeamClick}
-        onExpand={onExpand}
-        expandItemKey={expandItemKey}
-        onExpandContent={onExpandContent}
-        timelineCardPosition={timelineCardPosition}
-      />
-    </AnimatedHeightReveal>
-  );
-};
-
-const MemoizedMessageRowWithObserver = React.memo(
-  MessageRowWithObserver,
-  (prev, next) =>
-    prev.teamName === next.teamName &&
-    prev.memberRole === next.memberRole &&
-    prev.memberColor === next.memberColor &&
-    prev.recipientColor === next.recipientColor &&
-    prev.isUnread === next.isUnread &&
-    prev.isNew === next.isNew &&
-    prev.isNewlyAdded === next.isNewlyAdded &&
-    prev.zebraShade === next.zebraShade &&
-    prev.memberColorMap === next.memberColorMap &&
-    prev.localMemberNames === next.localMemberNames &&
-    prev.onMemberNameClick === next.onMemberNameClick &&
-    prev.onCreateTask === next.onCreateTask &&
-    prev.onReply === next.onReply &&
-    prev.revisionMessageId === next.revisionMessageId &&
-    prev.onRevise === next.onRevise &&
-    prev.onVisible === next.onVisible &&
-    prev.onTaskIdClick === next.onTaskIdClick &&
-    prev.onRestartTeam === next.onRestartTeam &&
-    prev.collapseMode === next.collapseMode &&
-    prev.isCollapsed === next.isCollapsed &&
-    prev.canToggleCollapse === next.canToggleCollapse &&
-    prev.collapseToggleKey === next.collapseToggleKey &&
-    prev.onToggleCollapse === next.onToggleCollapse &&
-    prev.compactHeader === next.compactHeader &&
-    areStringArraysEqual(prev.teamNames, next.teamNames) &&
-    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
-    prev.onTeamClick === next.onTeamClick &&
-    prev.onExpand === next.onExpand &&
-    prev.expandItemKey === next.expandItemKey &&
-    prev.onExpandContent === next.onExpandContent &&
-    prev.observerRoot === next.observerRoot &&
-    prev.timelineCardPosition === next.timelineCardPosition &&
-    areInboxMessagesEquivalentForRender(prev.message, next.message)
-);
-
 export const ActivityTimeline = React.memo(function ActivityTimeline({
   messages,
   teamName,
@@ -522,6 +322,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onExpandItem,
   onExpandContent,
   loading = false,
+  showRecipientRoute = true,
+  unreadSnapshot,
+  emptyLabel,
+  emptyHint,
   viewport,
 }: ActivityTimelineProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
@@ -922,7 +726,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         const renderProps = resolveMessageRenderProps(message, ctx);
         const collapseProps = getItemCollapseProps(key, itemIndex);
         const isUnread = readState
-          ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
+          ? Boolean(unreadSnapshot?.has(readState.getMessageKey(message))) ||
+            isUserUnreadMessage(message, readState.readSet, readState.getMessageKey)
           : !message.read;
         return (
           <MemoizedMessageRowWithObserver
@@ -960,6 +765,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             observerRoot={observerRoot}
             onExpandContent={onExpandContent}
             timelineCardPosition={cardPosition}
+            showRecipientRoute={showRecipientRoute}
           />
         );
       }
@@ -969,7 +775,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   if (messages.length === 0) {
     return (
       <div ref={rootRef} className="flex flex-col">
-        {loading ? <TimelineLoadingState /> : <TimelineEmptyState />}
+        {loading ? (
+          <TimelineLoadingState />
+        ) : (
+          <TimelineEmptyState label={emptyLabel} hint={emptyHint} />
+        )}
       </div>
     );
   }

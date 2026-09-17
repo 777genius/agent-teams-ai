@@ -797,3 +797,50 @@ describe('ActivityItem legacy system message fallback', () => {
     });
   });
 });
+
+describe('ActivityItem bootstrap recipient route', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  const bootstrapMessage: InboxMessage = {
+    from: 'oscar',
+    to: 'alice',
+    text: [
+      'You are alice, on team "demo".',
+      'Your FIRST action: call MCP tool member_briefing',
+      'Do NOT start work, claim tasks, or improvise workflow/task/process rules before member_briefing succeeds.',
+      'If member_briefing fails, send',
+    ].join('\n'),
+    timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+    read: true,
+    source: 'inbox',
+  };
+
+  it('hides from→to on bootstrap start rows in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          showRecipientRoute: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(0);
+    expect(host.textContent).toContain('oscar');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});

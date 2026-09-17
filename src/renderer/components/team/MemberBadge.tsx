@@ -158,7 +158,15 @@ const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): Rea
       : EMPTY_TEAM_MEMBERS
   );
   const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
-  return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={avatarMap.get(props.name)} />;
+  const resolvedColor =
+    props.color ?? teamMembers.find((member) => member.name === props.name)?.color;
+  return (
+    <MemberBadgeResolvedContent
+      {...props}
+      color={resolvedColor}
+      resolvedAvatarUrl={avatarMap.get(props.name)}
+    />
+  );
 });
 
 MemberBadgeWithResolvedAvatar.displayName = 'MemberBadgeWithResolvedAvatar';

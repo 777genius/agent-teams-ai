@@ -1,0 +1,134 @@
+import { type ConversationScope, normalizeConversationParticipant } from './conversationScope';
+
+import type { InboxMessage } from '@shared/types';
+
+const USER_PARTICIPANT = 'user';
+
+function isLeadAlias(value: string | undefined): boolean {
+  const normalized = normalizeConversationParticipant(value).replace(/[\s_]+/g, '-');
+  return (
+    normalized === 'lead' ||
+    normalized === 'team-lead' ||
+    normalized === 'teamlead' ||
+    normalized === 'team-leader'
+  );
+}
+
+export function isLeadConversationParticipant(
+  value: string | undefined,
+  leadNames: Iterable<string>
+): boolean {
+  if (isLeadAlias(value)) {
+    return true;
+  }
+  const normalized = normalizeConversationParticipant(value);
+  if (!normalized) {
+    return false;
+  }
+  for (const leadName of leadNames) {
+    if (normalizeConversationParticipant(leadName) === normalized) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isQualifiedParticipant(value: string): boolean {
+  return value.includes('/');
+}
+
+function isCrossTeamMessage(message: InboxMessage): boolean {
+  if (message.source === 'cross_team' || message.source === 'cross_team_sent') {
+    return true;
+  }
+  return isQualifiedParticipant(message.from) || isQualifiedParticipant(message.to ?? '');
+}
+
+function isUserParticipant(value: string): boolean {
+  return value === USER_PARTICIPANT;
+}
+
+function isDirectPair(from: string, to: string, participant: string): boolean {
+  if (!participant || isQualifiedParticipant(from) || isQualifiedParticipant(to)) {
+    return false;
+  }
+  return (
+    (isUserParticipant(from) && to === participant) ||
+    (from === participant && isUserParticipant(to))
+  );
+}
+
+function isLeadThreadTraffic(
+  from: string,
+  to: string,
+  participant: string,
+  leadNames: Iterable<string>
+): boolean {
+  if (!to || !isLeadConversationParticipant(participant, leadNames)) {
+    return false;
+  }
+  if (isQualifiedParticipant(from) || isQualifiedParticipant(to)) {
+    return false;
+  }
+  return (
+    isLeadConversationParticipant(from, leadNames) || isLeadConversationParticipant(to, leadNames)
+  );
+}
+
+function isLeadBootstrapToParticipant(
+  from: string,
+  to: string,
+  participant: string,
+  leadNames: Iterable<string>
+): boolean {
+  if (!participant || to !== participant) {
+    return false;
+  }
+  if (isQualifiedParticipant(from) || isQualifiedParticipant(to)) {
+    return false;
+  }
+  return isLeadConversationParticipant(from, leadNames);
+}
+
+function isLeadThoughtForLead(
+  message: InboxMessage,
+  participant: string,
+  leadNames: Iterable<string>
+): boolean {
+  if (!isLeadConversationParticipant(participant, leadNames)) {
+    return false;
+  }
+  if (typeof message.to === 'string' && message.to.trim().length > 0) {
+    return false;
+  }
+  return message.source === 'lead_session' || message.source === 'lead_process';
+}
+
+export function belongsToConversation(
+  message: InboxMessage,
+  scope: ConversationScope,
+  leadNames: Iterable<string>
+): boolean {
+  if (scope.kind === 'team-feed') {
+    return true;
+  }
+  if (isCrossTeamMessage(message)) {
+    return false;
+  }
+  const participant = normalizeConversationParticipant(scope.participant);
+  if (!participant) {
+    return false;
+  }
+  const from = normalizeConversationParticipant(message.from);
+  const to = normalizeConversationParticipant(message.to);
+  if (isDirectPair(from, to, participant)) {
+    return true;
+  }
+  if (isLeadThreadTraffic(from, to, participant, leadNames)) {
+    return true;
+  }
+  if (isLeadBootstrapToParticipant(from, to, participant, leadNames)) {
+    return true;
+  }
+  return isLeadThoughtForLead(message, participant, leadNames);
+}

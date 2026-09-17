@@ -790,6 +790,20 @@
       "unread_one": "Непрочитанное: {{count}}",
       "unread_other": "Непрочитано: {{count}}"
     },
+    "chats": {
+      "teamFeed": "Эта команда",
+      "back": "Назад к чатам",
+      "emptyList": "Пока нет чатов",
+      "emptyThread": "В этом чате нет сообщений",
+      "emptyPreview": "Пока нет сообщений",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Вы",
+      "rowAria": "{{name}}, непрочитано {{unread}}, для вас {{attention}}",
+      "rowAriaCounts": "непрочитано {{unread}}, для вас {{attention}}",
+      "activityUnread": "непрочитано {{count}}",
+      "attentionUnread": "для вас {{count}}",
+      "sortByActivity": "Сортировать по новым сообщениям"
+    },
     "filter": {
       "ariaLabel": "Фильтровать сообщения",
       "tooltip": "Фильтровать сообщения",

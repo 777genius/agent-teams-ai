@@ -4812,6 +4812,20 @@ export default interface Resources {
         panelActions: 'Message panel actions';
         searchMessages: 'Search messages';
       };
+      chats: {
+        activityUnread: '{{count}} unread';
+        attentionUnread: '{{count}} for you';
+        back: 'Back to chats';
+        emptyList: 'No chats yet';
+        emptyPreview: 'No messages yet';
+        emptyThread: 'No messages in this chat';
+        previewFrom: '{{name}}: {{text}}';
+        rowAria: '{{name}}, {{unread}} unread, {{attention}} for you';
+        rowAriaCounts: '{{unread}} unread, {{attention}} for you';
+        sortByActivity: 'Sort by new messages';
+        teamFeed: 'This team';
+        you: 'You';
+      };
       delivery: {
         copied: 'Copied';
         copyDebugDetails: 'Copy debug details';
