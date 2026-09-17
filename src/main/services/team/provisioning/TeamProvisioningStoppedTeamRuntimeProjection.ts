@@ -1,10 +1,16 @@
+import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
 import type { TeamAgentRuntimeEntry, TeamAgentRuntimeSnapshot } from '@shared/types';
 
 export function shouldStripStoppedTeamRuntimeResources(input: {
   isTeamAlive: boolean;
   hasProvisioningRun: boolean;
+  freshnessKind?: TeamLaunchFreshness['kind'] | null;
 }): boolean {
-  return input.isTeamAlive !== true && input.hasProvisioningRun !== true;
+  return (
+    input.isTeamAlive !== true &&
+    input.hasProvisioningRun !== true &&
+    input.freshnessKind === 'stop'
+  );
 }
 
 const STOPPED_TEAM_RUNTIME_RESOURCE_KEYS = [
@@ -63,11 +69,13 @@ export function applyStoppedTeamRuntimeResources(input: {
   snapshot: TeamAgentRuntimeSnapshot;
   isTeamAlive: boolean;
   hasProvisioningRun: boolean;
+  freshnessKind?: TeamLaunchFreshness['kind'] | null;
 }): TeamAgentRuntimeSnapshot {
   if (
     !shouldStripStoppedTeamRuntimeResources({
       isTeamAlive: input.isTeamAlive,
       hasProvisioningRun: input.hasProvisioningRun,
+      freshnessKind: input.freshnessKind,
     })
   ) {
     return input.snapshot;

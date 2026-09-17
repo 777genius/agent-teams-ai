@@ -28,10 +28,28 @@ function snapshotWithResources(): TeamAgentRuntimeSnapshot {
 }
 
 describe('TeamProvisioningStoppedTeamRuntimeProjection', () => {
-  it('strips leftover resource metrics only when the team is idle and untracked', () => {
+  it('strips leftover resource metrics only after a durable stop while idle and untracked', () => {
     expect(
-      shouldStripStoppedTeamRuntimeResources({ isTeamAlive: false, hasProvisioningRun: false })
+      shouldStripStoppedTeamRuntimeResources({
+        isTeamAlive: false,
+        hasProvisioningRun: false,
+        freshnessKind: 'stop',
+      })
     ).toBe(true);
+    expect(
+      shouldStripStoppedTeamRuntimeResources({
+        isTeamAlive: false,
+        hasProvisioningRun: false,
+        freshnessKind: 'launch',
+      })
+    ).toBe(false);
+    expect(
+      shouldStripStoppedTeamRuntimeResources({
+        isTeamAlive: false,
+        hasProvisioningRun: false,
+        freshnessKind: null,
+      })
+    ).toBe(false);
     expect(
       shouldStripStoppedTeamRuntimeResources({ isTeamAlive: true, hasProvisioningRun: false })
     ).toBe(false);
@@ -84,6 +102,7 @@ describe('TeamProvisioningStoppedTeamRuntimeProjection', () => {
       snapshot,
       isTeamAlive: false,
       hasProvisioningRun: false,
+      freshnessKind: 'stop',
     });
     expect(projected.members.oscar.alive).toBe(false);
     expect(projected.members.oscar.rssBytes).toBeUndefined();
@@ -97,6 +116,7 @@ describe('TeamProvisioningStoppedTeamRuntimeProjection', () => {
         snapshot: live,
         isTeamAlive: true,
         hasProvisioningRun: false,
+        freshnessKind: 'stop',
       })
     ).toBe(live);
     expect(
@@ -104,6 +124,19 @@ describe('TeamProvisioningStoppedTeamRuntimeProjection', () => {
         snapshot: live,
         isTeamAlive: false,
         hasProvisioningRun: true,
+        freshnessKind: 'stop',
+      })
+    ).toBe(live);
+  });
+
+  it('keeps leftover metrics after a main restart when freshness is still launch', () => {
+    const live = snapshotWithResources();
+    expect(
+      applyStoppedTeamRuntimeResources({
+        snapshot: live,
+        isTeamAlive: false,
+        hasProvisioningRun: false,
+        freshnessKind: 'launch',
       })
     ).toBe(live);
   });

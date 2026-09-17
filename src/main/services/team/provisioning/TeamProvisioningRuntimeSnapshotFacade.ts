@@ -1,3 +1,5 @@
+import { readTeamLaunchFreshness } from '../TeamLaunchFreshness';
+
 import {
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
@@ -9,6 +11,7 @@ import {
 } from './TeamProvisioningRuntimeStateProjection';
 import { applyStoppedTeamRuntimeResources } from './TeamProvisioningStoppedTeamRuntimeProjection';
 
+import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
 import type { TeamProvisioningAgentRuntimeSnapshotCachePort } from './TeamProvisioningRuntimeSnapshotCache';
@@ -70,6 +73,7 @@ export interface TeamProvisioningRuntimeSnapshotFacadePorts {
     params: BuildTeamAgentRuntimeSnapshotParams
   ): Promise<TeamAgentRuntimeSnapshot>;
   logDebug(message: string): void;
+  readLaunchFreshness?(teamName: string): Promise<TeamLaunchFreshness | null>;
 }
 
 interface AgentRuntimeSnapshotInFlightRequest {
@@ -112,14 +116,22 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     return this.runtimeStateProjection.isTeamAlive(teamName);
   }
 
-  private resolveRuntimeSnapshot(
+  private async resolveRuntimeSnapshot(
     teamName: string,
     snapshot: TeamAgentRuntimeSnapshot
-  ): TeamAgentRuntimeSnapshot {
+  ): Promise<TeamAgentRuntimeSnapshot> {
+    const readLaunchFreshness = this.ports.readLaunchFreshness ?? readTeamLaunchFreshness;
+    let freshnessKind: TeamLaunchFreshness['kind'] | null = null;
+    try {
+      freshnessKind = (await readLaunchFreshness(teamName))?.kind ?? null;
+    } catch {
+      freshnessKind = null;
+    }
     return applyStoppedTeamRuntimeResources({
       snapshot,
       isTeamAlive: this.isTeamAlive(teamName),
       hasProvisioningRun: this.hasProvisioningRun(teamName),
+      freshnessKind,
     });
   }
 
