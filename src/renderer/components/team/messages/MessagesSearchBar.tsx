@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { ChevronsDownUp, ChevronsUpDown, Search, X } from 'lucide-react';
@@ -33,6 +34,7 @@ export const MessagesSearchControls = ({
   onFilterApply,
   searchPlaceholder,
 }: MessagesSearchControlsProps): JSX.Element => {
+  const { t } = useAppTranslation('team');
   return (
     <div className="flex items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
@@ -50,6 +52,7 @@ export const MessagesSearchControls = ({
           <button
             type="button"
             className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+            aria-label={t('messages.chats.clearSearch')}
             onClick={() => onSearchQueryChange('')}
           >
             <X size={14} />
@@ -92,6 +95,7 @@ export const MessagesSearchBar = ({
             variant="ghost"
             size="sm"
             className="pointer-events-auto size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            aria-label={collapsed ? expandLabel : collapseLabel}
             onClick={(event) => {
               event.stopPropagation();
               onToggleCollapsed();

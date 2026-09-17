@@ -1,5 +1,7 @@
 import { useAppTranslation } from '@features/localization/renderer';
 
+import { conversationScopeKey } from '../../core/domain/conversationScope';
+
 import { ChatListRow } from './ChatListRow';
 
 import type { ConversationScope } from '../../core/domain/conversationScope';
@@ -26,7 +28,7 @@ export const ChatList = ({ items, teamName, onOpen }: ChatListProps): JSX.Elemen
     <div className="flex flex-col gap-0.5 overflow-visible px-1 pb-3">
       {items.map((item) => (
         <ChatListRow
-          key={item.scope.kind === 'team-feed' ? 'team-feed' : `direct:${item.displayName}`}
+          key={conversationScopeKey(item.scope)}
           item={item}
           teamName={teamName}
           onOpen={onOpen}

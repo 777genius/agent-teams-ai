@@ -789,18 +789,19 @@
       "unread_other": "{{count}} non letti"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Questo team",
+      "back": "Torna alle chat",
+      "clearSearch": "Cancella ricerca",
+      "emptyList": "Nessuna chat ancora",
+      "emptyThread": "Nessun messaggio in questa chat",
+      "emptyPreview": "Nessun messaggio ancora",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Tu",
+      "rowAria": "{{name}}, {{unread}} non letti, {{attention}} per te",
+      "rowAriaCounts": "{{unread}} non letti, {{attention}} per te",
+      "activityUnread": "{{count}} non letti",
+      "attentionUnread": "{{count}} per te",
+      "sortByActivity": "Ordina per nuovi messaggi"
     },
     "filter": {
       "ariaLabel": "Filtra messaggi",

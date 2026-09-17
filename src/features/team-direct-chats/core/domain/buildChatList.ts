@@ -83,12 +83,12 @@ export function buildChatList({
   sortByActivity = false,
 }: BuildChatListArgs): ChatListItem[] {
   const orderedMembers = orderMembers(members);
+  const leadNameList = [...leadNames];
   const scopes: ConversationScope[] = [
     TEAM_FEED_SCOPE,
     ...orderedMembers.map((member) => createDirectScope(member.name)),
   ];
-  const counts = countUnreadByConversation(messages, scopes, readSet, toKey, leadNames);
-  const leadNameList = [...leadNames];
+  const counts = countUnreadByConversation(messages, scopes, readSet, toKey, leadNameList);
   const teamScoped = scopedMessages(messages, TEAM_FEED_SCOPE, leadNameList);
 
   const rows: ChatListItem[] = [

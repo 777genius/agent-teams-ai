@@ -1254,8 +1254,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       {...searchControlProps}
       collapsed={messagesCollapsed}
       onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
-      expandLabel="Expand all messages"
-      collapseLabel="Collapse all messages"
+      expandLabel={t('messages.actions.expandAll')}
+      collapseLabel={t('messages.actions.collapseAll')}
     />
   );
 

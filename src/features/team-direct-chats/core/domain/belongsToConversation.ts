@@ -112,16 +112,17 @@ export function belongsToConversation(
   if (!participant) {
     return false;
   }
+  const leadNameList = [...leadNames];
   const from = normalizeConversationParticipant(message.from);
   const to = normalizeConversationParticipant(message.to);
   if (isDirectPair(from, to, participant)) {
     return true;
   }
-  if (isLeadThreadTraffic(from, to, participant, leadNames)) {
+  if (isLeadThreadTraffic(from, to, participant, leadNameList)) {
     return true;
   }
-  if (isLeadBootstrapToParticipant(from, to, participant, leadNames)) {
+  if (isLeadBootstrapToParticipant(from, to, participant, leadNameList)) {
     return true;
   }
-  return isLeadThoughtForLead(message, participant, leadNames);
+  return isLeadThoughtForLead(message, participant, leadNameList);
 }

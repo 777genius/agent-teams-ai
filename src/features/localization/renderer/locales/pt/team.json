@@ -789,18 +789,19 @@
       "unread_other": "{{count}} não lido"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Esta equipe",
+      "back": "Voltar aos chats",
+      "clearSearch": "Limpar pesquisa",
+      "emptyList": "Ainda não há chats",
+      "emptyThread": "Não há mensagens neste chat",
+      "emptyPreview": "Ainda não há mensagens",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Você",
+      "rowAria": "{{name}}, {{unread}} não lidas, {{attention}} para você",
+      "rowAriaCounts": "{{unread}} não lidas, {{attention}} para você",
+      "activityUnread": "{{count}} não lidas",
+      "attentionUnread": "{{count}} para você",
+      "sortByActivity": "Ordenar por mensagens novas"
     },
     "filter": {
       "ariaLabel": "Filtrar mensagens",

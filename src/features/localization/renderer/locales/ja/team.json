@@ -789,18 +789,19 @@
       "unread_other": "{{count}} 未読"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "このチーム",
+      "back": "チャット一覧に戻る",
+      "clearSearch": "検索をクリア",
+      "emptyList": "チャットはまだありません",
+      "emptyThread": "このチャットにはメッセージがありません",
+      "emptyPreview": "まだメッセージはありません",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "あなた",
+      "rowAria": "{{name}}、未読 {{unread}}、あなた宛て {{attention}}",
+      "rowAriaCounts": "未読 {{unread}}、あなた宛て {{attention}}",
+      "activityUnread": "未読 {{count}}",
+      "attentionUnread": "あなた宛て {{count}}",
+      "sortByActivity": "新しいメッセージ順"
     },
     "filter": {
       "ariaLabel": "フィルターメッセージ",

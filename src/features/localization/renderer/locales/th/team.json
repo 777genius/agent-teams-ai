@@ -789,18 +789,19 @@
       "unread_other": "{{count}} ยังไม่อ่าน"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "ทีมนี้",
+      "back": "กลับไปที่แชท",
+      "clearSearch": "ล้างการค้นหา",
+      "emptyList": "ยังไม่มีแชท",
+      "emptyThread": "ไม่มีข้อความในแชทนี้",
+      "emptyPreview": "ยังไม่มีข้อความ",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "คุณ",
+      "rowAria": "{{name}}, ยังไม่ได้อ่าน {{unread}}, ถึงคุณ {{attention}}",
+      "rowAriaCounts": "ยังไม่ได้อ่าน {{unread}}, ถึงคุณ {{attention}}",
+      "activityUnread": "ยังไม่ได้อ่าน {{count}}",
+      "attentionUnread": "ถึงคุณ {{count}}",
+      "sortByActivity": "เรียงตามข้อความใหม่"
     },
     "filter": {
       "ariaLabel": "กรองข้อความ",

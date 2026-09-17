@@ -789,18 +789,19 @@
       "unread_other": "{{count}} non lus"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
-      "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "teamFeed": "Cette équipe",
+      "back": "Retour aux discussions",
+      "clearSearch": "Effacer la recherche",
+      "emptyList": "Aucune discussion pour le moment",
+      "emptyThread": "Aucun message dans cette discussion",
+      "emptyPreview": "Aucun message pour le moment",
+      "previewFrom": "{{name}} : {{text}}",
+      "you": "Vous",
+      "rowAria": "{{name}}, {{unread}} non lus, {{attention}} pour vous",
+      "rowAriaCounts": "{{unread}} non lus, {{attention}} pour vous",
+      "activityUnread": "{{count}} non lus",
+      "attentionUnread": "{{count}} pour vous",
+      "sortByActivity": "Trier par nouveaux messages"
     },
     "filter": {
       "ariaLabel": "Filtrer les messages",

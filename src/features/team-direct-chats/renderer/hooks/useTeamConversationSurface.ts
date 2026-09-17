@@ -81,7 +81,9 @@ export function useTeamConversationSurface(args: {
   }, [args.members, args.teamName, scope, surface]);
 
   const onScopeChangeRef = useRef(args.onScopeChange);
-  onScopeChangeRef.current = args.onScopeChange;
+  useEffect(() => {
+    onScopeChangeRef.current = args.onScopeChange;
+  }, [args.onScopeChange]);
 
   const openChat = useCallback((nextScope: ConversationScope) => {
     setScope(nextScope);

@@ -789,18 +789,19 @@
       "unread_other": "{{count}} படிக்காதவை"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "இந்த அணி",
+      "back": "அரட்டைகளுக்குத் திரும்பு",
+      "clearSearch": "தேடலை அழி",
+      "emptyList": "இன்னும் அரட்டைகள் இல்லை",
+      "emptyThread": "இந்த அரட்டையில் செய்திகள் இல்லை",
+      "emptyPreview": "இன்னும் செய்திகள் இல்லை",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "நீங்கள்",
+      "rowAria": "{{name}}, {{unread}} படிக்காதவை, உங்களுக்கானவை {{attention}}",
+      "rowAriaCounts": "{{unread}} படிக்காதவை, உங்களுக்கானவை {{attention}}",
+      "activityUnread": "{{count}} படிக்காதவை",
+      "attentionUnread": "உங்களுக்கானவை {{count}}",
+      "sortByActivity": "புதிய செய்திகளின்படி வரிசைப்படுத்து"
     },
     "filter": {
       "ariaLabel": "செய்திகளை வடிகட்டு",

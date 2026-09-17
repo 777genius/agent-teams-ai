@@ -789,18 +789,19 @@
       "unread_other": "{{count}} hindi nabasa"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Ang team na ito",
+      "back": "Bumalik sa mga chat",
+      "clearSearch": "I-clear ang search",
+      "emptyList": "Wala pang chat",
+      "emptyThread": "Walang mensahe sa chat na ito",
+      "emptyPreview": "Wala pang mensahe",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Ikaw",
+      "rowAria": "{{name}}, {{unread}} hindi pa nababasa, {{attention}} para sa iyo",
+      "rowAriaCounts": "{{unread}} hindi pa nababasa, {{attention}} para sa iyo",
+      "activityUnread": "{{count}} hindi pa nababasa",
+      "attentionUnread": "{{count}} para sa iyo",
+      "sortByActivity": "I-sort ayon sa mga bagong mensahe"
     },
     "filter": {
       "ariaLabel": "I-filter ang mga mensahe",

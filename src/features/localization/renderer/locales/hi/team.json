@@ -789,18 +789,19 @@
       "unread_other": "{{count}} unreaded"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "यह टीम",
+      "back": "चैट पर वापस जाएँ",
+      "clearSearch": "खोज साफ़ करें",
+      "emptyList": "अभी कोई चैट नहीं",
+      "emptyThread": "इस चैट में कोई संदेश नहीं",
+      "emptyPreview": "अभी कोई संदेश नहीं",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "आप",
+      "rowAria": "{{name}}, {{unread}} अपठित, आपके लिए {{attention}}",
+      "rowAriaCounts": "{{unread}} अपठित, आपके लिए {{attention}}",
+      "activityUnread": "{{count}} अपठित",
+      "attentionUnread": "आपके लिए {{count}}",
+      "sortByActivity": "नए संदेशों के अनुसार क्रमबद्ध करें"
     },
     "filter": {
       "ariaLabel": "फ़िल्टर संदेश",

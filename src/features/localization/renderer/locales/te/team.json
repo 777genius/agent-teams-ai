@@ -789,18 +789,19 @@
       "unread_other": "{{count}} చదవనివి"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "ఈ జట్టు",
+      "back": "చాట్‌లకు తిరిగి వెళ్లండి",
+      "clearSearch": "శోధనను క్లియర్ చేయండి",
+      "emptyList": "ఇంకా చాట్‌లు లేవు",
+      "emptyThread": "ఈ చాట్‌లో సందేశాలు లేవు",
+      "emptyPreview": "ఇంకా సందేశాలు లేవు",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "మీరు",
+      "rowAria": "{{name}}, {{unread}} చదవనివి, మీ కోసం {{attention}}",
+      "rowAriaCounts": "{{unread}} చదవనివి, మీ కోసం {{attention}}",
+      "activityUnread": "{{count}} చదవనివి",
+      "attentionUnread": "మీ కోసం {{count}}",
+      "sortByActivity": "కొత్త సందేశాల ప్రకారం క్రమబద్ధీకరించండి"
     },
     "filter": {
       "ariaLabel": "సందేశాలను ఫిల్టర్ చేయి",

@@ -791,18 +791,19 @@
       "unread_other": "{{count}} непрочитаних"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Ця команда",
+      "back": "Назад до чатів",
+      "clearSearch": "Очистити пошук",
+      "emptyList": "Поки немає чатів",
+      "emptyThread": "У цьому чаті немає повідомлень",
+      "emptyPreview": "Поки немає повідомлень",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Ви",
+      "rowAria": "{{name}}, непрочитано {{unread}}, для вас {{attention}}",
+      "rowAriaCounts": "непрочитано {{unread}}, для вас {{attention}}",
+      "activityUnread": "непрочитано {{count}}",
+      "attentionUnread": "для вас {{count}}",
+      "sortByActivity": "Сортувати за новими повідомленнями"
     },
     "filter": {
       "ariaLabel": "Фільтрувати повідомлення",

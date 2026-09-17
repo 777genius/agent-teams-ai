@@ -95,15 +95,9 @@ export function useThreadUnreadSnapshot({
   readSet: ReadonlySet<string>;
 }): ReadonlySet<string> {
   const visitKey = `${renderSurface}:${conversationScopeKey(scope)}:${threadOpenedAt}`;
-  const visitKeyRef = useRef(visitKey);
   const readAtOpenRef = useRef(readSet);
   const [snapshot, setSnapshot] = useState<Set<string>>(() => new Set());
   const lastVisitRef = useRef(visitKey);
-
-  if (visitKeyRef.current !== visitKey) {
-    visitKeyRef.current = visitKey;
-    readAtOpenRef.current = readSet;
-  }
 
   useEffect(() => {
     if (renderSurface !== 'thread') {
@@ -111,7 +105,10 @@ export function useThreadUnreadSnapshot({
       return;
     }
     const visitChanged = lastVisitRef.current !== visitKey;
-    lastVisitRef.current = visitKey;
+    if (visitChanged) {
+      lastVisitRef.current = visitKey;
+      readAtOpenRef.current = readSet;
+    }
     setSnapshot((prev) => {
       const next = collectThreadUnreadSnapshotKeys({
         messages,
@@ -125,7 +122,7 @@ export function useThreadUnreadSnapshot({
       }
       return next;
     });
-  }, [messages, renderSurface, threadOpenedAt, visitKey]);
+  }, [messages, readSet, renderSurface, threadOpenedAt, visitKey]);
 
   return snapshot;
 }

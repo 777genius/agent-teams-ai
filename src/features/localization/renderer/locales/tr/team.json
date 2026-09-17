@@ -789,18 +789,19 @@
       "unread_other": "{{count}} okunmamış"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Bu ekip",
+      "back": "Sohbetlere dön",
+      "clearSearch": "Aramayı temizle",
+      "emptyList": "Henüz sohbet yok",
+      "emptyThread": "Bu sohbette mesaj yok",
+      "emptyPreview": "Henüz mesaj yok",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Siz",
+      "rowAria": "{{name}}, {{unread}} okunmamış, sizin için {{attention}}",
+      "rowAriaCounts": "{{unread}} okunmamış, sizin için {{attention}}",
+      "activityUnread": "{{count}} okunmamış",
+      "attentionUnread": "sizin için {{count}}",
+      "sortByActivity": "Yeni mesajlara göre sırala"
     },
     "filter": {
       "ariaLabel": "Mesajları filtrele",

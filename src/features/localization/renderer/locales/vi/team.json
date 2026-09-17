@@ -789,18 +789,19 @@
       "unread_other": "{{count}} chưa đọc"
     },
     "chats": {
-      "teamFeed": "This team",
-      "back": "Back to chats",
-      "emptyList": "No chats yet",
-      "emptyThread": "No messages in this chat",
-      "emptyPreview": "No messages yet",
+      "teamFeed": "Nhóm này",
+      "back": "Quay lại cuộc trò chuyện",
+      "clearSearch": "Xóa tìm kiếm",
+      "emptyList": "Chưa có cuộc trò chuyện",
+      "emptyThread": "Không có tin nhắn trong cuộc trò chuyện này",
+      "emptyPreview": "Chưa có tin nhắn",
       "previewFrom": "{{name}}: {{text}}",
-      "you": "You",
-      "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
-      "rowAriaCounts": "{{unread}} unread, {{attention}} for you",
-      "activityUnread": "{{count}} unread",
-      "attentionUnread": "{{count}} for you",
-      "sortByActivity": "Sort by new messages"
+      "you": "Bạn",
+      "rowAria": "{{name}}, {{unread}} chưa đọc, {{attention}} dành cho bạn",
+      "rowAriaCounts": "{{unread}} chưa đọc, {{attention}} dành cho bạn",
+      "activityUnread": "{{count}} chưa đọc",
+      "attentionUnread": "{{count}} dành cho bạn",
+      "sortByActivity": "Sắp xếp theo tin nhắn mới"
     },
     "filter": {
       "ariaLabel": "Lọc tin nhắn",

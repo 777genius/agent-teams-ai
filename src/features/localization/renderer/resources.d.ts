@@ -4817,6 +4817,7 @@ export default interface Resources {
         activityUnread: '{{count}} unread';
         attentionUnread: '{{count}} for you';
         back: 'Back to chats';
+        clearSearch: 'Clear search';
         emptyList: 'No chats yet';
         emptyPreview: 'No messages yet';
         emptyThread: 'No messages in this chat';
