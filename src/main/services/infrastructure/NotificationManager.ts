@@ -8,6 +8,7 @@
  * - Shared internal pipeline: storeNotification() for unconditional storage + IPC emission
  * - Two-level dedup: dedupeKey for storage dedup, toast throttle (5s) for native toasts
  * - Storage is unconditional — enabled/snoozed only affect native OS toasts
+ * - Viewing a team stores its events as already-read so the bell does not count them
  * - Respect config.notifications.enabled and snoozedUntil for toasts
  * - Filter errors matching ignoredRegex patterns (error-specific)
  * - Filter errors from ignoredProjects (error-specific)
@@ -27,6 +28,7 @@ import {
 } from '@shared/constants/memberColors';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
+import { notificationBelongsToTeam } from '@shared/utils/notificationTeam';
 import { nativeImage, Notification as ElectronNotification } from 'electron';
 import { EventEmitter } from 'events';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
@@ -572,6 +574,7 @@ export class NotificationManager extends EventEmitter {
   private initPromise: Promise<void> | null = null;
   private notificationsPath = NOTIFICATIONS_PATH;
   private saveChain: Promise<void> = Promise.resolve();
+  private viewedTeamName: string | null = null;
 
   constructor(configManager?: ConfigManager) {
     super();
@@ -1146,7 +1149,7 @@ export class NotificationManager extends EventEmitter {
 
     const storedNotification: StoredNotification = {
       ...error,
-      isRead: false,
+      isRead: this.viewedTeamName != null && notificationBelongsToTeam(error, this.viewedTeamName),
       createdAt: Date.now(),
     };
 
@@ -1206,7 +1209,7 @@ export class NotificationManager extends EventEmitter {
     // Team-specific toast policy: enabled/snoozed + suppressToast + dedupeKey throttle only
     const enabled = this.areNotificationsEnabled();
     const throttled = this.isToastThrottled(error);
-    const shouldShow = !payload.suppressToast && enabled && !throttled;
+    const shouldShow = stored.isRead !== true && !payload.suppressToast && enabled && !throttled;
     logger.debug(
       `[team-notification] toast decision: type=${payload.teamEventType} suppressToast=${String(payload.suppressToast ?? false)} enabled=${String(enabled)} throttled=${String(throttled)} → show=${String(shouldShow)}`
     );
@@ -1281,6 +1284,44 @@ export class NotificationManager extends EventEmitter {
     }
 
     return true;
+  }
+
+  /**
+   * Marks unread notifications for one team as read. Used when that team is the
+   * focused UI surface so the bell does not count events the user is already watching.
+   */
+  markTeamRead(teamName: string): number {
+    const name = teamName.trim();
+    if (!name) {
+      return 0;
+    }
+
+    let changed = 0;
+    for (const notification of this.notifications) {
+      if (notification.isRead) continue;
+      if (!notificationBelongsToTeam(notification, name)) continue;
+      notification.isRead = true;
+      changed += 1;
+    }
+
+    if (changed > 0) {
+      this.saveNotifications();
+      this.emitNotificationUpdated();
+    }
+
+    return changed;
+  }
+
+  /**
+   * Remembers which team the UI is currently showing. Incoming events for that
+   * team are stored as already-read; existing unread events for it are cleared.
+   */
+  setViewedTeamName(teamName: string | null): void {
+    const next = teamName?.trim() ? teamName.trim() : null;
+    this.viewedTeamName = next;
+    if (next) {
+      this.markTeamRead(next);
+    }
   }
 
   /**

@@ -5,6 +5,7 @@
 import { api } from '@renderer/api';
 import { createErrorNavigationRequest, findTabBySessionAndProject } from '@renderer/types/tabs';
 import { createLogger } from '@shared/utils/logger';
+import { getNotificationTeamName, notificationBelongsToTeam } from '@shared/utils/notificationTeam';
 
 import { getAllTabs } from '../utils/paneHelpers';
 
@@ -17,11 +18,7 @@ const logger = createLogger('Store:notification');
 const NOTIFICATIONS_FETCH_LIMIT = 200;
 
 function getTeamNameFromError(error: DetectedError): string | null {
-  if (error.sessionId.startsWith('team:')) {
-    const teamName = error.sessionId.slice('team:'.length).trim();
-    return teamName || null;
-  }
-  return null;
+  return getNotificationTeamName(error);
 }
 
 function isNotificationTarget(value: unknown): value is NotificationTarget {
@@ -127,6 +124,7 @@ export interface NotificationSlice {
   fetchNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (triggerName?: string) => Promise<void>;
+  setViewedTeamForNotifications: (teamName: string | null) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   clearNotifications: (triggerName?: string) => Promise<void>;
   navigateToError: (error: DetectedError) => void;
@@ -233,6 +231,30 @@ export const createNotificationSlice: StateCreator<AppState, [], [], Notificatio
       }
     } catch (error) {
       logger.error('Failed to mark all notifications as read:', error);
+    }
+  },
+
+  setViewedTeamForNotifications: async (teamName: string | null) => {
+    try {
+      const success = await api.notifications.setViewedTeam(teamName);
+      if (!success) {
+        await get().fetchNotifications();
+        return;
+      }
+      if (!teamName) {
+        return;
+      }
+      set((state) => {
+        const notifications = state.notifications.map((n) =>
+          notificationBelongsToTeam(n, teamName) ? { ...n, isRead: true } : n
+        );
+        return {
+          notifications,
+          unreadCount: notifications.filter((n) => !n.isRead).length,
+        };
+      });
+    } catch (error) {
+      logger.error('Failed to set viewed team for notifications:', error);
     }
   },
 

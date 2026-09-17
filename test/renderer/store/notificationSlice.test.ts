@@ -70,6 +70,59 @@ describe('notificationSlice', () => {
     });
   });
 
+  describe('setViewedTeamForNotifications', () => {
+    const makeTeamNotification = (
+      id: string,
+      teamName: string,
+      isRead: boolean
+    ): DetectedError => ({
+      id,
+      sessionId: `team:${teamName}`,
+      projectId: teamName,
+      filePath: '/path/to/inbox.json',
+      source: 'user_inbox',
+      lineNumber: 1,
+      timestamp: Date.now(),
+      createdAt: Date.now(),
+      message: `msg-${id}`,
+      isRead,
+      category: 'team',
+      context: { projectName: teamName },
+    });
+
+    it('marks only the viewed team unread as read and keeps other teams', async () => {
+      const viewed = makeTeamNotification('n1', 'mixed-v2150-20260917', false);
+      const otherTeam = makeTeamNotification('n2', 'other-team', false);
+      const alreadyRead = makeTeamNotification('n3', 'mixed-v2150-20260917', true);
+      store.setState({
+        notifications: [viewed, otherTeam, alreadyRead] as never[],
+        unreadCount: 2,
+      });
+
+      await store.getState().setViewedTeamForNotifications('mixed-v2150-20260917');
+
+      expect(mockAPI.notifications.setViewedTeam).toHaveBeenCalledWith('mixed-v2150-20260917');
+      const state = store.getState();
+      expect(state.notifications.find((n) => n.id === 'n1')!.isRead).toBe(true);
+      expect(state.notifications.find((n) => n.id === 'n2')!.isRead).toBe(false);
+      expect(state.notifications.find((n) => n.id === 'n3')!.isRead).toBe(true);
+      expect(state.unreadCount).toBe(1);
+    });
+
+    it('re-fetches when setting the viewed team fails', async () => {
+      store.setState({
+        notifications: [makeTeamNotification('n1', 'mixed-v2150-20260917', false)] as never[],
+        unreadCount: 1,
+      });
+      mockAPI.notifications.setViewedTeam.mockResolvedValue(false);
+      mockAPI.notifications.get.mockResolvedValue({ notifications: [] });
+
+      await store.getState().setViewedTeamForNotifications('mixed-v2150-20260917');
+
+      expect(mockAPI.notifications.get).toHaveBeenCalled();
+    });
+  });
+
   describe('scoped markAllNotificationsRead', () => {
     const makeNotification = (
       id: string,

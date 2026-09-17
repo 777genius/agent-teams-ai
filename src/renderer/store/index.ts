@@ -1032,8 +1032,9 @@ export function initializeNotificationListeners(): () => void {
     teamLastRelevantActivityAt.set(teamName, timestamp);
   };
 
-  const getFocusedVisibleTeamName = (): string | null => {
-    const state = useStore.getState();
+  const getFocusedVisibleTeamName = (
+    state: ReturnType<typeof useStore.getState> = useStore.getState()
+  ): string | null => {
     const focusedPane = state.paneLayout.panes.find(
       (pane) => pane.id === state.paneLayout.focusedPaneId
     );
@@ -1052,6 +1053,32 @@ export function initializeNotificationListeners(): () => void {
 
     return activeTab.teamName;
   };
+
+  let lastViewedTeamForNotifications: string | null | undefined;
+  const syncViewedTeamForNotifications = (
+    state: ReturnType<typeof useStore.getState> = useStore.getState()
+  ): void => {
+    const focused = getFocusedVisibleTeamName(state);
+    if (focused === lastViewedTeamForNotifications) {
+      return;
+    }
+    lastViewedTeamForNotifications = focused;
+    void state.setViewedTeamForNotifications(focused);
+  };
+  syncViewedTeamForNotifications();
+  const unsubscribeViewedTeamForNotifications = useStore.subscribe((state, prevState) => {
+    if (
+      state.paneLayout === prevState.paneLayout &&
+      state.selectedTeamName === prevState.selectedTeamName &&
+      state.selectedTeamData === prevState.selectedTeamData &&
+      state.teamDataCacheByName === prevState.teamDataCacheByName
+    ) {
+      return;
+    }
+    syncViewedTeamForNotifications(state);
+  });
+  cleanupFns.push(unsubscribeViewedTeamForNotifications);
+
   const buildProcessFanoutDecision = (
     event: TeamChangeEvent,
     isStaleRuntimeEvent: boolean

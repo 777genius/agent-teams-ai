@@ -386,3 +386,74 @@ describe('NotificationManager.addTeamNotification', () => {
     expect(options.body).toContain('3/4 joined · @tom did not join');
   });
 });
+
+describe('NotificationManager viewed team', () => {
+  let manager: NotificationManager;
+
+  beforeEach(async () => {
+    NotificationManager.resetInstance();
+    manager = new NotificationManager();
+    await manager.initialize();
+    mockNotificationShow.mockClear();
+    mockNotificationOn.mockClear();
+    const configMock = ConfigManager.getInstance().getConfig as ReturnType<typeof vi.fn>;
+    configMock.mockReturnValue({
+      notifications: {
+        enabled: true,
+        soundEnabled: false,
+        snoozedUntil: null,
+        ignoredRegex: [],
+        ignoredRepositories: [],
+      },
+    });
+  });
+
+  afterEach(() => {
+    NotificationManager.resetInstance();
+  });
+
+  it('marks matching unread notifications read when that team is viewed', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:1' }));
+    await manager.addTeamNotification(
+      makeTeamPayload({
+        teamName: 'other-team',
+        teamDisplayName: 'Other',
+        dedupeKey: 'inbox:other-team:a:1',
+      })
+    );
+
+    expect(await manager.getUnreadCount()).toBe(2);
+    manager.setViewedTeamName('test-team');
+    expect(await manager.getUnreadCount()).toBe(1);
+    const remaining = await manager.getNotifications({ limit: 10, offset: 0 });
+    expect(remaining.notifications.find((n) => n.sessionId === 'team:other-team')?.isRead).toBe(
+      false
+    );
+  });
+
+  it('stores new events for the viewed team as read and skips the OS toast', async () => {
+    manager.setViewedTeamName('test-team');
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:viewed' })
+    );
+
+    expect(stored?.isRead).toBe(true);
+    expect(mockNotificationShow).not.toHaveBeenCalled();
+    expect(await manager.getUnreadCount()).toBe(0);
+  });
+
+  it('stores later events as unread after the team tab is left', async () => {
+    manager.setViewedTeamName('test-team');
+    manager.setViewedTeamName(null);
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:after-leave' })
+    );
+
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+  });
+});

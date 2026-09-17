@@ -5,6 +5,7 @@
  * - notifications:get: Get all notifications (paginated)
  * - notifications:markRead: Mark notification as read
  * - notifications:markAllRead: Mark all as read
+ * - notifications:setViewedTeam: Mark the focused team's notifications as read
  * - notifications:delete: Delete a single notification
  * - notifications:clear: Clear all notifications
  * - notifications:getUnreadCount: Get unread count for badge
@@ -21,7 +22,7 @@ import {
   NotificationManager,
 } from '../services';
 
-import { coercePageLimit, validateNotificationId } from './guards';
+import { coercePageLimit, validateNotificationId, validateTeamName } from './guards';
 
 const logger = createLogger('IPC:notifications');
 
@@ -34,6 +35,7 @@ export function registerNotificationHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('notifications:get', handleGetNotifications);
   ipcMain.handle('notifications:markRead', handleMarkRead);
   ipcMain.handle('notifications:markAllRead', handleMarkAllRead);
+  ipcMain.handle('notifications:setViewedTeam', handleSetViewedTeam);
   ipcMain.handle('notifications:delete', handleDelete);
   ipcMain.handle('notifications:clear', handleClear);
   ipcMain.handle('notifications:getUnreadCount', handleGetUnreadCount);
@@ -50,6 +52,7 @@ export function removeNotificationHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('notifications:get');
   ipcMain.removeHandler('notifications:markRead');
   ipcMain.removeHandler('notifications:markAllRead');
+  ipcMain.removeHandler('notifications:setViewedTeam');
   ipcMain.removeHandler('notifications:delete');
   ipcMain.removeHandler('notifications:clear');
   ipcMain.removeHandler('notifications:getUnreadCount');
@@ -131,6 +134,32 @@ async function handleMarkAllRead(_event: IpcMainInvokeEvent): Promise<boolean> {
     return success;
   } catch (error) {
     logger.error('Error in notifications:markAllRead:', error);
+    return false;
+  }
+}
+
+/**
+ * Handler for 'notifications:setViewedTeam' IPC call.
+ * Marks that team's in-app notifications read while its tab is focused.
+ */
+function handleSetViewedTeam(_event: IpcMainInvokeEvent, teamName: string | null): boolean {
+  try {
+    const manager = NotificationManager.getInstance();
+    if (teamName == null || (typeof teamName === 'string' && teamName.trim() === '')) {
+      manager.setViewedTeamName(null);
+      return true;
+    }
+    const validated = validateTeamName(teamName);
+    if (!validated.valid) {
+      logger.error(
+        `notifications:setViewedTeam rejected: ${validated.error ?? 'Invalid teamName'}`
+      );
+      return false;
+    }
+    manager.setViewedTeamName(validated.value!);
+    return true;
+  } catch (error) {
+    logger.error('Error in notifications:setViewedTeam:', error);
     return false;
   }
 }
