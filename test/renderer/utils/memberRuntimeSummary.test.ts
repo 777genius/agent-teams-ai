@@ -92,7 +92,7 @@ describe('resolveMemberRuntimeSummary', () => {
       updatedAt: '2026-04-18T18:00:00.000Z',
     };
 
-    expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry)).toBe(
+    expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry, true)).toBe(
       '5.4 Mini · Medium · Codex · 256.0 MB'
     );
   });
@@ -109,9 +109,9 @@ describe('resolveMemberRuntimeSummary', () => {
       updatedAt: '2026-04-18T18:00:00.000Z',
     };
 
-    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)).toBe(
-      '5.4 Mini · Medium · Codex · 256.0 MB'
-    );
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never, true)
+    ).toBe('5.4 Mini · Medium · Codex · 256.0 MB');
   });
 
   it('does not append Codex again when the model summary already says via Codex', () => {
@@ -175,6 +175,28 @@ describe('resolveMemberRuntimeSummary', () => {
 
     expect(
       resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never, false)
+    ).toBe('5.4 Mini · Medium · Codex');
+  });
+
+  it('hides leftover RSS while team liveness is still unknown after Stop', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      rssBytes: 482.1 * 1024 * 1024,
+      updatedAt: '2026-09-17T04:50:00.000Z',
+    };
+
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)
     ).toBe('5.4 Mini · Medium · Codex');
   });
 
@@ -484,7 +506,8 @@ describe('resolveMemberRuntimeSummary', () => {
           runtimeModel: 'opencode/minimax-m2.5-free',
           rssBytes: 183.9 * 1024 * 1024,
           updatedAt: '2026-04-18T18:00:00.000Z',
-        }
+        },
+        true
       )
     ).toBe('minimax-m2.5-free · via OpenCode Zen · 183.9 MB');
   });

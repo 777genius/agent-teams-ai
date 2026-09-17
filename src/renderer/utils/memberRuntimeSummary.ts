@@ -18,7 +18,7 @@ function shouldShowRuntimeMemory(
   runtimeEntry: TeamAgentRuntimeEntry | undefined,
   isTeamAlive?: boolean
 ): boolean {
-  if (isTeamAlive === false) {
+  if (isTeamAlive !== true) {
     return false;
   }
   if (typeof runtimeEntry?.rssBytes !== 'number' || runtimeEntry.rssBytes <= 0) {
