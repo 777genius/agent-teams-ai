@@ -38,8 +38,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/13.jpg">
-    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
+  <a href="docs/screenshots/1.jpg">
+    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with team messages and agent tasks" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -74,8 +74,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/1.jpg">
-    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with agent tasks" width="100%" loading="lazy" />
+  <a href="docs/screenshots/13.jpg">
+    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
