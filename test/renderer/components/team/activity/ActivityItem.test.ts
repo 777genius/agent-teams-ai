@@ -844,6 +844,32 @@ describe('ActivityItem bootstrap recipient route', () => {
     });
   });
 
+  it('keeps bootstrap teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('alice');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps the task chip clickable in a 1:1 thread', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

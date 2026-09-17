@@ -5,6 +5,7 @@ import { useTeamConversationSurface } from '@features/team-direct-chats/renderer
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
+  useThreadUnreadSnapshot,
 } from '@renderer/components/team/messages/useMessagesPanelChats';
 import {
   createDefaultMessagesSidebarUiState,
@@ -48,6 +49,45 @@ describe('useTeamConversationSurface', () => {
     expect(latest.current?.navigationSurface).toBe('list');
     expect(latest.current?.scope).toEqual({ kind: 'team-feed' });
     expect(host.textContent).toBe('thread');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('unlocks floating-composer to the team feed even when a DM is open', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const latest: { current: TeamConversationSurfaceState | null } = { current: null };
+
+    function Probe({ position }: { position: string }): React.JSX.Element {
+      latest.current = useTeamConversationSurface({
+        teamName: 'probe-floating-dm',
+        members: [{ name: 'alice' }, { name: 'oscar', agentType: 'team-lead' }],
+        position,
+      });
+      return React.createElement('span', null, latest.current.renderSurface);
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Probe, { position: 'sidebar' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      latest.current?.openChat({ kind: 'direct', participant: 'alice' });
+      await Promise.resolve();
+    });
+    expect(latest.current?.scope).toEqual({ kind: 'direct', participant: 'alice' });
+
+    await act(async () => {
+      root.render(React.createElement(Probe, { position: 'floating-composer' }));
+      await Promise.resolve();
+    });
+    expect(latest.current?.renderSurface).toBe('thread');
+    expect(latest.current?.navigationSurface).toBe('thread');
+    expect(latest.current?.scope).toEqual({ kind: 'team-feed' });
 
     await act(async () => {
       root.unmount();
@@ -391,6 +431,63 @@ describe('useResetScrollOnConversationChange', () => {
     });
     expect(persistScrollTop).toHaveBeenCalledWith(0);
     expect(scrollElement.scrollTop).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});
+
+describe('useThreadUnreadSnapshot', () => {
+  it('does not restore dismissed keys after mark-all-read', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const latest: {
+      current: {
+        snapshot: ReadonlySet<string>;
+        dismissUnreadKeys: (keys: readonly string[]) => void;
+      } | null;
+    } = { current: null };
+    const unread = {
+      from: 'alice',
+      to: 'user',
+      text: 'hello',
+      timestamp: '2026-09-17T12:00:00.000Z',
+      read: true,
+      messageId: 'm-unread',
+      source: 'inbox' as const,
+    };
+
+    function Probe(): React.JSX.Element {
+      latest.current = useThreadUnreadSnapshot({
+        renderSurface: 'thread',
+        scope: { kind: 'direct', participant: 'alice' },
+        threadOpenedAt: Date.parse('2026-09-17T12:00:01.000Z'),
+        messages: [unread],
+        readSet: new Set(),
+      });
+      return React.createElement('span', null, String(latest.current.snapshot.size));
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Probe));
+      await Promise.resolve();
+    });
+    expect(latest.current?.snapshot.has('m-unread')).toBe(true);
+
+    await act(async () => {
+      latest.current?.dismissUnreadKeys(['m-unread']);
+      await Promise.resolve();
+    });
+    expect(latest.current?.snapshot.has('m-unread')).toBe(false);
+
+    await act(async () => {
+      root.render(React.createElement(Probe));
+      await Promise.resolve();
+    });
+    expect(latest.current?.snapshot.has('m-unread')).toBe(false);
 
     await act(async () => {
       root.unmount();

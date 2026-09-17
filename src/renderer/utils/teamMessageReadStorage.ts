@@ -1,4 +1,5 @@
 const STORAGE_PREFIX = 'team-messages-read:';
+const BACKFILL_PREFIX = 'team-messages-read-backfill:';
 
 const listeners = new Set<() => void>();
 let snapshotVersion = 0;
@@ -31,6 +32,10 @@ export function getReadSetSnapshot(teamName: string): Set<string> {
 
 function storageKey(teamName: string): string {
   return `${STORAGE_PREFIX}${teamName}`;
+}
+
+function backfillKey(teamName: string): string {
+  return `${BACKFILL_PREFIX}${teamName}`;
 }
 
 export function getReadSet(teamName: string): Set<string> {
@@ -74,6 +79,35 @@ export function markBulkRead(teamName: string, fullSet: Set<string>): void {
   try {
     localStorage.setItem(storageKey(teamName), JSON.stringify([...fullSet]));
     notifyReadStore();
+  } catch {
+    // quota or disabled
+  }
+}
+
+/**
+ * One-time upgrade: seed localStorage from persisted `message.read` flags.
+ * Call only after the team feed has hydrated so an empty async load cannot
+ * lock the flag before historical rows arrive.
+ */
+export function seedPersistedReadKeysOnce(teamName: string, keys: readonly string[]): void {
+  if (!teamName) return;
+  try {
+    if (localStorage.getItem(backfillKey(teamName)) === '1') return;
+    if (keys.length > 0) {
+      const existing = getReadSet(teamName);
+      let changed = false;
+      for (const key of keys) {
+        if (!existing.has(key)) {
+          existing.add(key);
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem(storageKey(teamName), JSON.stringify([...existing]));
+        notifyReadStore();
+      }
+    }
+    localStorage.setItem(backfillKey(teamName), '1');
   } catch {
     // quota or disabled
   }

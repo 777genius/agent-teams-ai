@@ -888,6 +888,8 @@ export const ActivityItem = memo(
     const structured = parseStructuredAgentMessageCached(message.text);
     const bootstrapDisplay = getBootstrapPromptDisplay(message);
     const bootstrapAcknowledgement = getBootstrapAcknowledgementDisplay(message);
+    const hideDirectRoute = (to?: string): boolean =>
+      shouldHideDirectMemberRoute(to, message.from, directParticipant);
     // Only flag agent messages as rate-limited, not user's own quotes
     const rateLimited = message.from !== 'user' && isRateLimitMessage(message.text);
     // Highlight messages containing API errors
@@ -1155,7 +1157,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
-          showRecipientRoute={directParticipant == null}
+          showRecipientRoute={!hideDirectRoute(bootstrapDisplay.teammateName ?? message.to)}
         />
       );
     }
@@ -1171,7 +1173,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
-          showRecipientRoute={directParticipant == null}
+          showRecipientRoute={!hideDirectRoute(message.to)}
         />
       );
     }
@@ -1288,11 +1290,7 @@ export const ActivityItem = memo(
       </span>
     ) : null;
 
-    const hideMemberRoute = shouldHideDirectMemberRoute(
-      message.to,
-      message.from,
-      directParticipant
-    );
+    const hideMemberRoute = hideDirectRoute(message.to);
     const recipientBadge =
       commentTaskRef && commentTaskDisplayId ? (
         <>

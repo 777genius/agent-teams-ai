@@ -57,7 +57,7 @@ export const MemberMessagesTab = ({
       loadOlderTeamMessages: s.loadOlderTeamMessages,
     }))
   );
-  const { readSet } = useTeamMessagesRead(teamName);
+  const { readSet } = useTeamMessagesRead(teamName, messages);
   const taskMap = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
 

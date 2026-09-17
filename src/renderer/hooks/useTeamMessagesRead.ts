@@ -1,15 +1,23 @@
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import {
   getReadSetSnapshot,
   markBulkRead as markBulkReadStorage,
   markRead as markReadStorage,
+  seedPersistedReadKeysOnce,
   subscribeTeamMessageReadStore,
 } from '@renderer/utils/teamMessageReadStorage';
 
-const EMPTY_READ_SET = new Set<string>();
+import type { InboxMessage } from '@shared/types';
 
-export function useTeamMessagesRead(teamName: string): {
+const EMPTY_READ_SET = new Set<string>();
+const EMPTY_MESSAGES: readonly InboxMessage[] = [];
+
+export function useTeamMessagesRead(
+  teamName: string,
+  messages: readonly InboxMessage[] = EMPTY_MESSAGES
+): {
   readSet: Set<string>;
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
@@ -22,6 +30,14 @@ export function useTeamMessagesRead(teamName: string): {
     [teamName]
   );
   const readSet = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    if (!teamName || messages.length === 0) return;
+    seedPersistedReadKeysOnce(
+      teamName,
+      messages.filter((message) => message.read === true).map(toMessageKey)
+    );
+  }, [messages, teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {

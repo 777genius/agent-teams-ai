@@ -161,12 +161,16 @@ const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): Rea
   );
   const avatarMap = useMemo(() => getCachedMemberAvatarMap(teamMembers), [teamMembers]);
   const colorMap = useMemo(() => buildMemberColorMap(teamMembers), [teamMembers]);
-  const resolvedColor = resolveMemberIdentityColor(props.name, colorMap, props.color);
+  const resolvedColor = props.color
+    ? props.color
+    : resolveMemberIdentityColor(props.name, colorMap);
+  const resolvedAvatarUrl =
+    props.hideAvatar || props.avatarUrl != null ? props.avatarUrl : avatarMap.get(props.name);
   return (
     <MemberBadgeResolvedContent
       {...props}
       color={resolvedColor}
-      resolvedAvatarUrl={avatarMap.get(props.name)}
+      resolvedAvatarUrl={resolvedAvatarUrl}
     />
   );
 });
@@ -174,9 +178,6 @@ const MemberBadgeWithResolvedAvatar = memo((props: MemberBadgeContentProps): Rea
 MemberBadgeWithResolvedAvatar.displayName = 'MemberBadgeWithResolvedAvatar';
 
 const MemberBadgeContent = memo((props: MemberBadgeContentProps): React.JSX.Element => {
-  if (props.hideAvatar || props.avatarUrl != null) {
-    return <MemberBadgeResolvedContent {...props} resolvedAvatarUrl={props.avatarUrl} />;
-  }
   return <MemberBadgeWithResolvedAvatar {...props} />;
 });
 

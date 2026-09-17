@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   buildChatListView,
@@ -93,7 +93,10 @@ export function useThreadUnreadSnapshot({
   threadOpenedAt: number;
   messages: readonly InboxMessage[];
   readSet: ReadonlySet<string>;
-}): ReadonlySet<string> {
+}): {
+  snapshot: ReadonlySet<string>;
+  dismissUnreadKeys: (keys: readonly string[]) => void;
+} {
   const visitKey = `${renderSurface}:${conversationScopeKey(scope)}:${threadOpenedAt}`;
   const readAtOpenRef = useRef(readSet);
   const [snapshot, setSnapshot] = useState<Set<string>>(() => new Set());
@@ -124,7 +127,24 @@ export function useThreadUnreadSnapshot({
     });
   }, [messages, readSet, renderSurface, threadOpenedAt, visitKey]);
 
-  return snapshot;
+  const dismissUnreadKeys = useCallback((keys: readonly string[]) => {
+    if (keys.length === 0) return;
+    const nextOpen = new Set(readAtOpenRef.current);
+    for (const key of keys) {
+      nextOpen.add(key);
+    }
+    readAtOpenRef.current = nextOpen;
+    setSnapshot((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const key of keys) {
+        if (next.delete(key)) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  return { snapshot, dismissUnreadKeys };
 }
 
 export function useResetScrollOnConversationChange({

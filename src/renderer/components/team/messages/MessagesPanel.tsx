@@ -350,10 +350,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
-  // Scroll container inside `Sheet.Content` for the bottom-sheet layout.
-  // react-modal-sheet merges this ref with its own internal scroll ref.
-  // Held here so future viewport consumers (virtualization) can observe the
-  // true scrolling element in bottom-sheet mode.
+  // Bottom-sheet scroller; react-modal-sheet merges this with its internal ref.
   const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Resolve the active scroll owner for the current layout. This is the
@@ -572,7 +569,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     scopeKey,
     navigationSurface,
     persistScrollTop: persistMessagesScrollTop,
-    scrollElementRef: sidebarScrollRef,
+    scrollElementRef: activeScrollContainerRef ?? sidebarScrollRef,
   });
 
   useLayoutEffect(() => {
@@ -776,7 +773,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     if (!open) setExpandedItemKey(null);
   }, []);
 
-  const { readSet, markAllRead } = useTeamMessagesRead(teamName);
+  const { readSet, markAllRead } = useTeamMessagesRead(teamName, canonicalMessages);
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
   const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
   const visibleReadFlushFrameRef = useRef<number | null>(null);
@@ -851,7 +848,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     loadingOlder: loadingOlderMessages,
     loadOlder: loadOlderMessages,
   });
-  const unreadSnapshot = useThreadUnreadSnapshot({
+  const { snapshot: unreadSnapshot, dismissUnreadKeys } = useThreadUnreadSnapshot({
     renderSurface,
     scope,
     threadOpenedAt,
@@ -864,8 +861,10 @@ export const MessagesPanel = memo(function MessagesPanel({
   });
 
   const handleMarkAllRead = useCallback(() => {
-    markAllRead(scopedUnreadKeys(threadMessages, readSet, toMessageKey));
-  }, [markAllRead, readSet, threadMessages]);
+    const keys = scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey);
+    markAllRead(keys);
+    dismissUnreadKeys(keys);
+  }, [dismissUnreadKeys, markAllRead, readSet, threadCanonicalMessages]);
 
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {

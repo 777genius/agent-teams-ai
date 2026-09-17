@@ -5,6 +5,7 @@ import {
   getReadSetSnapshot,
   markBulkRead,
   markRead,
+  seedPersistedReadKeysOnce,
   subscribeTeamMessageReadStore,
 } from '@renderer/utils/teamMessageReadStorage';
 
@@ -30,5 +31,27 @@ describe('teamMessageReadStorage subscribe', () => {
     markBulkRead('alpha', new Set(['m1', 'm2']));
     expect(getReadSet('alpha').has('m2')).toBe(true);
     unsubB();
+  });
+});
+
+describe('seedPersistedReadKeysOnce', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('seeds unread keys once and ignores later persisted flags', () => {
+    seedPersistedReadKeysOnce('alpha', ['old-read']);
+    expect(getReadSet('alpha').has('old-read')).toBe(true);
+    expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBe('1');
+
+    seedPersistedReadKeysOnce('alpha', ['new-read']);
+    expect(getReadSet('alpha').has('new-read')).toBe(false);
+  });
+
+  it('still records the backfill after a hydrated feed with no persisted-read keys', () => {
+    seedPersistedReadKeysOnce('alpha', []);
+    expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBe('1');
+    seedPersistedReadKeysOnce('alpha', ['later']);
+    expect(getReadSet('alpha').has('later')).toBe(false);
   });
 });
