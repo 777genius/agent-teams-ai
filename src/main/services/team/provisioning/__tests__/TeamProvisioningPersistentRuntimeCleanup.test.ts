@@ -56,14 +56,17 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
 
   it('reports unconfirmed persistent cleanup when any owned process stop fails', () => {
     const members = [{ name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' }];
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
     const ports = createPorts({
       readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
       killPersistedPaneMembers: vi.fn(() => false),
+      clearPersistedLiveRuntimeHandles,
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+    expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
   });
 
   it('uses the configured Claude base path for Anthropic helper cleanup', async () => {

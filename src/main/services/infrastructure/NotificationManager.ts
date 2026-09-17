@@ -575,6 +575,7 @@ export class NotificationManager extends EventEmitter {
   private notificationsPath = NOTIFICATIONS_PATH;
   private saveChain: Promise<void> = Promise.resolve();
   private viewedTeamName: string | null = null;
+  private unbindMainWindowFocus: (() => void) | null = null;
 
   constructor(configManager?: ConfigManager) {
     super();
@@ -634,10 +635,38 @@ export class NotificationManager extends EventEmitter {
   }
 
   /**
+   * Viewing a team auto-reads only while the app window is focused.
+   * Headless/tests with no window still treat the team as viewed.
+   */
+  private isViewedTeamWindowFocused(): boolean {
+    const win = this.mainWindow;
+    if (!win || win.isDestroyed()) {
+      return true;
+    }
+    return win.isFocused();
+  }
+
+  /**
    * Sets the main window reference for sending IPC events.
    */
   setMainWindow(window: BrowserWindow | null): void {
+    this.unbindMainWindowFocus?.();
+    this.unbindMainWindowFocus = null;
     this.mainWindow = window;
+    if (!window || window.isDestroyed()) {
+      return;
+    }
+    const onFocus = (): void => {
+      if (this.viewedTeamName) {
+        this.markTeamRead(this.viewedTeamName);
+      }
+    };
+    window.on('focus', onFocus);
+    this.unbindMainWindowFocus = () => {
+      if (!window.isDestroyed()) {
+        window.removeListener('focus', onFocus);
+      }
+    };
   }
 
   // ===========================================================================
@@ -1149,7 +1178,10 @@ export class NotificationManager extends EventEmitter {
 
     const storedNotification: StoredNotification = {
       ...error,
-      isRead: this.viewedTeamName != null && notificationBelongsToTeam(error, this.viewedTeamName),
+      isRead:
+        this.viewedTeamName != null &&
+        this.isViewedTeamWindowFocused() &&
+        notificationBelongsToTeam(error, this.viewedTeamName),
       createdAt: Date.now(),
     };
 
@@ -1314,7 +1346,8 @@ export class NotificationManager extends EventEmitter {
 
   /**
    * Remembers which team the UI is currently showing. Incoming events for that
-   * team are stored as already-read; existing unread events for it are cleared.
+   * team are stored as already-read only while the window is focused;
+   * existing unread events for it are cleared.
    */
   setViewedTeamName(teamName: string | null): void {
     const next = teamName?.trim() ? teamName.trim() : null;

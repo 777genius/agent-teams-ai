@@ -444,6 +444,48 @@ describe('NotificationManager viewed team', () => {
     expect(await manager.getUnreadCount()).toBe(0);
   });
 
+  it('keeps viewed-team events unread and toasted when the window is unfocused', async () => {
+    const win = {
+      isDestroyed: () => false,
+      isFocused: () => false,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    manager.setViewedTeamName('test-team');
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:unfocused' })
+    );
+
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
+  it('marks viewed-team events read when the window is focused again', async () => {
+    const listeners = new Map<string, () => void>();
+    const win = {
+      isDestroyed: () => false,
+      isFocused: vi.fn(() => false),
+      on: vi.fn((event: string, listener: () => void) => {
+        listeners.set(event, listener);
+      }),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    manager.setViewedTeamName('test-team');
+    await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:while-blurred' })
+    );
+    expect(await manager.getUnreadCount()).toBe(1);
+
+    win.isFocused.mockReturnValue(true);
+    listeners.get('focus')?.();
+    expect(await manager.getUnreadCount()).toBe(0);
+  });
+
   it('stores later events as unread after the team tab is left', async () => {
     manager.setViewedTeamName('test-team');
     manager.setViewedTeamName(null);

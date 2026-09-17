@@ -86,7 +86,12 @@ vi.mock('@renderer/components/ui/tabs', () => {
 });
 
 vi.mock('@renderer/components/team/members/MemberDetailHeader', () => ({
-  MemberDetailHeader: () => React.createElement('div', null, 'header'),
+  MemberDetailHeader: ({ runtimeSummary }: { runtimeSummary?: string }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'member-detail-runtime-summary' },
+      runtimeSummary ?? 'header'
+    ),
 }));
 
 vi.mock('@renderer/components/team/members/MemberDetailStats', () => ({
@@ -667,6 +672,66 @@ describe('MemberDetailDialog activity count', () => {
     });
 
     expect(onRestartMember).toHaveBeenCalledWith('tom');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('hides leftover RSS in the detail summary after the mixed team is stopped', async () => {
+    const member: ResolvedTeamMember = {
+      name: 'cody',
+      status: 'idle',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+      providerId: 'codex',
+      model: 'gpt-5.4-mini',
+      effort: 'medium',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'mixed-v2150-20260917',
+          members: [member],
+          tasks: [],
+          isTeamAlive: false,
+          spawnEntry: {
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            agentToolAccepted: true,
+            updatedAt: '2026-09-17T04:50:00.000Z',
+          },
+          runtimeEntry: {
+            memberName: 'cody',
+            alive: true,
+            restartable: true,
+            pid: 4242,
+            rssBytes: 482.1 * 1024 * 1024,
+            updatedAt: '2026-09-17T04:50:00.000Z',
+          },
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('5.4 Mini · Medium · Codex');
+    expect(host.textContent).not.toMatch(/\d+(?:\.\d+)?\sMB/);
 
     await act(async () => {
       root.unmount();

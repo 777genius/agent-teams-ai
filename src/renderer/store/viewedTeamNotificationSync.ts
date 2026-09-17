@@ -2,10 +2,10 @@ import { selectTeamDataForName } from './team/teamDataSelectors';
 
 import type { AppState } from './types';
 
-type ViewedTeamStore = {
+interface ViewedTeamStore {
   getState: () => AppState;
   subscribe: (listener: (state: AppState, prevState: AppState) => void) => () => void;
-};
+}
 
 export function getFocusedVisibleTeamName(state: AppState): string | null {
   const focusedPane = state.paneLayout.panes.find(
@@ -35,7 +35,11 @@ export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => v
       return;
     }
     lastViewedTeamForNotifications = focused;
-    void state.setViewedTeamForNotifications(focused);
+    void state.setViewedTeamForNotifications(focused).catch(() => {
+      if (lastViewedTeamForNotifications === focused) {
+        lastViewedTeamForNotifications = undefined;
+      }
+    });
   };
 
   sync();

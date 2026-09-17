@@ -592,7 +592,7 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   }
   const stoppedProjection = await applyStoppedTeamSpawnProjection(
     teamName,
-    false,
+    resolvedRunId != null,
     attachedStatuses,
     (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName)
   );

@@ -37,8 +37,11 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         teamName,
         ports.getCurrentRunPid(teamName)
       );
-      ports.clearPersistedLiveRuntimeHandles?.(teamName);
-      return panesConfirmed && processesConfirmed;
+      const confirmed = panesConfirmed && processesConfirmed;
+      if (confirmed) {
+        ports.clearPersistedLiveRuntimeHandles?.(teamName);
+      }
+      return confirmed;
     },
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
