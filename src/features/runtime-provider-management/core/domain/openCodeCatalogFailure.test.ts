@@ -14,6 +14,7 @@ const KEYS = {
   catalogCheckCredential: (provider: string) =>
     `Couldn't load ${provider} models. Check the saved credential, then refresh.`,
   catalogLoadFailed: (provider: string) => `Couldn't load ${provider} models.`,
+  catalogSourceLoadFailed: (provider: string) => `Couldn't load ${provider} models from OpenCode.`,
   catalogDirectoryFailed: () => 'OpenCode could not load the provider list.',
   catalogTimedOut: (provider: string) => `${provider} models timed out. Refresh to try again.`,
   catalogStale: (provider: string) => `${provider} models are cached and may be out of date.`,
@@ -237,7 +238,59 @@ describe('openCodeCatalogFailure', () => {
         (key, provider) => KEYS[key](provider)
       )
     ).toBe(
-      'SuperGrok models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.'
+      "SuperGrok models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh. Couldn't load xAI models from OpenCode."
     );
+  });
+
+  it('puts the OpenCode source name next to a product alias in the headline', () => {
+    expect(
+      formatOpenCodeCatalogAlertMessage(
+        [
+          {
+            operation: 'provider_models',
+            sourceProviderId: 'xai',
+            origin: 'main',
+            message: "Couldn't load xAI models from OpenCode.",
+            errorCode: 'runtime-unhealthy',
+            displayName: 'xAI',
+            connectedAuthHint: 'oauth',
+          },
+        ],
+        (key, provider) => KEYS[key](provider)
+      )
+    ).toBe("Couldn't load SuperGrok models. Couldn't load xAI models from OpenCode.");
+  });
+
+  it('does not repeat the OpenCode source name when it already matches the product name', () => {
+    expect(
+      formatOpenCodeCatalogAlertMessage(
+        [
+          {
+            operation: 'provider_models',
+            sourceProviderId: 'openrouter',
+            origin: 'main',
+            message: 'OpenCode catalog request failed.',
+            displayName: 'OpenRouter',
+            connectedAuthHint: 'api',
+          },
+        ],
+        (key, provider) => KEYS[key](provider)
+      )
+    ).toBe("Couldn't load OpenRouter models.");
+    expect(
+      formatOpenCodeCatalogAlertMessage(
+        [
+          {
+            operation: 'provider_models',
+            sourceProviderId: 'github-copilot',
+            origin: 'main',
+            message: 'UnauthorizedError: bad credentials',
+            errorCode: 'runtime-unhealthy',
+            displayName: 'GitHub Copilot',
+          },
+        ],
+        (key, provider) => KEYS[key](provider)
+      )
+    ).toBe('GitHub Copilot sign-in is no longer valid. Sign in again, then refresh.');
   });
 });

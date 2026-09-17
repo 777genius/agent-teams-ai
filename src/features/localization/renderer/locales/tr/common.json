@@ -716,6 +716,7 @@
     "catalogCheckCredential": "{{provider}} modelleri yüklenemedi. Kayıtlı kimlik bilgisini kontrol edin, ardından yenileyin.",
     "catalogDirectoryFailed": "OpenCode sağlayıcı listesini yükleyemedi.",
     "catalogLoadFailed": "{{provider}} modelleri yüklenemedi.",
+    "catalogSourceLoadFailed": "{{provider}} modelleri OpenCode'dan yüklenemedi.",
     "catalogSignInExpired": "{{provider}} oturumu artık geçerli değil. Yeniden oturum açın, ardından yenileyin.",
     "catalogSignInMaybe": "{{provider}} modelleri yüklenemedi. OAuth ile oturum açtıysanız yeniden oturum açmanız, ardından yenilemeniz gerekebilir.",
     "catalogStale": "{{provider}} modelleri önbellekte ve güncel olmayabilir.",

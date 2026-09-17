@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
+import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 
 const storeState = {
   sendTeamMessage: vi.fn().mockResolvedValue(undefined),
@@ -28,6 +29,12 @@ const storeState = {
   clearSendMessageRuntimeDiagnostics: vi.fn(),
   refreshSendMessageRuntimeDeliveryStatus: vi.fn().mockResolvedValue(undefined),
   teams: [],
+  selectedTeamName: null as string | null,
+  selectedTeamData: null,
+  teamDataCacheByName: {},
+  teamByName: {},
+  memberActivityMetaByTeam: {},
+  leadActivityByTeam: {},
   openTeamTab: vi.fn(),
   loadOlderTeamMessages: vi.fn().mockResolvedValue(undefined),
   refreshTeamMessagesHead: vi.fn().mockResolvedValue({
@@ -73,6 +80,8 @@ const sidebarUiState = {
   expandedItemKey: null as string | null,
   messagesScrollTop: 0,
   bottomSheetSnapIndex: 2,
+  conversationSurface: 'thread' as ConversationSurface,
+  conversationScope: { kind: 'team-feed' } as ConversationScope,
 };
 
 vi.mock('@renderer/store', () => ({
@@ -103,10 +112,9 @@ vi.mock('@renderer/components/ui/button', () => ({
   Button: ({
     children,
     onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: React.MouseEventHandler<HTMLButtonElement>;
-  }) => React.createElement('button', { type: 'button', onClick }, children),
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) =>
+    React.createElement('button', { type: 'button', ...props, onClick }, children),
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
@@ -116,6 +124,22 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+}));
+
+vi.mock('@renderer/components/ui/context-menu', () => ({
+  ContextMenu: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+  ContextMenuItem: ({
+    children,
+    onSelect,
+  }: {
+    children: React.ReactNode;
+    onSelect?: () => void;
+  }) => React.createElement('button', { type: 'button', onClick: onSelect }, children),
 }));
 
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
@@ -158,6 +182,8 @@ vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
     expandedItemKey: sidebarUiState.expandedItemKey,
     messagesScrollTop: sidebarUiState.messagesScrollTop,
     bottomSheetSnapIndex: sidebarUiState.bottomSheetSnapIndex,
+    conversationSurface: sidebarUiState.conversationSurface,
+    conversationScope: sidebarUiState.conversationScope,
   }),
   setTeamMessagesSidebarUiState: vi.fn(),
 }));
@@ -210,6 +236,10 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
 
 vi.mock('@renderer/components/team/activity/MessageExpandDialog', () => ({
   MessageExpandDialog: () => null,
+}));
+
+vi.mock('@renderer/components/team/MemberBadge', () => ({
+  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
 }));
 
 vi.mock('react-modal-sheet', () => ({
@@ -277,6 +307,8 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.expandedItemKey = null;
     sidebarUiState.messagesScrollTop = 0;
     sidebarUiState.bottomSheetSnapIndex = 2;
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.conversationScope = { kind: 'team-feed' };
   });
 
   it('shows timeline loading before the initial message page has a cache entry', async () => {
@@ -723,8 +755,8 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(host.textContent).not.toContain('passive-idle');
     expect(host.textContent).toContain('human-reply');
-    expect(host.textContent).toContain('1 new');
-    expect(host.textContent).not.toContain('2 new');
+    expect(host.textContent).toContain('1 unread');
+    expect(host.textContent).not.toContain('2 unread');
 
     await act(async () => {
       root.unmount();
@@ -1762,6 +1794,120 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('opens a 1:1 thread from the chat list and can go back', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'list';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [
+          makeMessage({
+            from: 'alice',
+            to: 'user',
+            text: 'need you',
+            messageId: 'dm-1',
+            read: false,
+          }),
+          makeMessage({
+            from: 'cody',
+            to: 'oscar',
+            text: 'handoff',
+            messageId: 'a2a-1',
+            timestamp: '2026-04-08T13:00:00.000Z',
+            read: false,
+          }),
+        ],
+        optimisticMessages: [],
+        feedRevision: 'rev-list',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [
+            {
+              agentType: 'team-lead',
+              currentTaskId: null,
+              lastActiveAt: null,
+              messageCount: 0,
+              name: 'oscar',
+              role: 'Lead',
+              status: 'idle',
+              taskCount: 0,
+            },
+            {
+              agentType: 'developer',
+              currentTaskId: null,
+              lastActiveAt: null,
+              messageCount: 0,
+              name: 'alice',
+              role: 'Developer',
+              status: 'idle',
+              taskCount: 0,
+            },
+          ],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Group chat');
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).toContain('need you');
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+
+    const aliceRow = Array.from(host.querySelectorAll('button')).find((button) =>
+      (button.getAttribute('aria-label') ?? '').includes('alice')
+    );
+    expect(aliceRow).toBeTruthy();
+
+    await act(async () => {
+      aliceRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('alice');
+    expect(host.querySelector('[data-testid="activity-timeline"]')).not.toBeNull();
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'dm-1' })])
+    );
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'a2a-1' })])
+    );
+
+    const backButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.getAttribute('aria-label') === 'Back to chats'
+    );
+    expect(backButton).toBeTruthy();
+
+    await act(async () => {
+      backButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+    expect(host.textContent).toContain('Group chat');
 
     await act(async () => {
       root.unmount();

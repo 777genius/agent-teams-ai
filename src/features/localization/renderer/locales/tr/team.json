@@ -788,6 +788,24 @@
       "unread_one": "{{count}} okunmamış",
       "unread_other": "{{count}} okunmamış"
     },
+    "chats": {
+      "teamFeed": "Grup sohbeti",
+      "back": "Sohbetlere dön",
+      "clearSearch": "Aramayı temizle",
+      "emptyList": "Henüz sohbet yok",
+      "emptyThread": "Bu sohbette mesaj yok",
+      "emptyPreview": "Henüz mesaj yok",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Siz",
+      "rowAria": "{{name}}, {{unread}} okunmamış, sizin için {{attention}}",
+      "rowAriaCounts": "{{unread}} okunmamış, sizin için {{attention}}",
+      "activityUnread": "{{count}} okunmamış",
+      "attentionUnread": "sizin için {{count}}",
+      "sortByActivity": "Yeni mesajlara göre sırala",
+      "pin": "Sohbeti sabitle",
+      "unpin": "Sohbeti sabitlemeyi kaldır",
+      "pinned": "Sabitlendi"
+    },
     "filter": {
       "ariaLabel": "Mesajları filtrele",
       "tooltip": "Mesajları filtrele",

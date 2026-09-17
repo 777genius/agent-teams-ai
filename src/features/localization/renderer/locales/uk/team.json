@@ -790,6 +790,24 @@
       "unread_one": "{{count}} непрочитане",
       "unread_other": "{{count}} непрочитаних"
     },
+    "chats": {
+      "teamFeed": "Груповий чат",
+      "back": "Назад до чатів",
+      "clearSearch": "Очистити пошук",
+      "emptyList": "Поки немає чатів",
+      "emptyThread": "У цьому чаті немає повідомлень",
+      "emptyPreview": "Поки немає повідомлень",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Ви",
+      "rowAria": "{{name}}, непрочитано {{unread}}, для вас {{attention}}",
+      "rowAriaCounts": "непрочитано {{unread}}, для вас {{attention}}",
+      "activityUnread": "непрочитано {{count}}",
+      "attentionUnread": "для вас {{count}}",
+      "sortByActivity": "Сортувати за новими повідомленнями",
+      "pin": "Закріпити чат",
+      "unpin": "Відкріпити чат",
+      "pinned": "Закріплено"
+    },
     "filter": {
       "ariaLabel": "Фільтрувати повідомлення",
       "tooltip": "Фільтрувати повідомлення",

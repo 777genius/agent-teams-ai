@@ -788,6 +788,24 @@
       "unread_one": "{{count}} belum dibaca",
       "unread_other": "{{count}} belum dibaca"
     },
+    "chats": {
+      "teamFeed": "Obrolan grup",
+      "back": "Kembali ke obrolan",
+      "clearSearch": "Hapus pencarian",
+      "emptyList": "Belum ada obrolan",
+      "emptyThread": "Tidak ada pesan di obrolan ini",
+      "emptyPreview": "Belum ada pesan",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Anda",
+      "rowAria": "{{name}}, {{unread}} belum dibaca, {{attention}} untuk Anda",
+      "rowAriaCounts": "{{unread}} belum dibaca, {{attention}} untuk Anda",
+      "activityUnread": "{{count}} belum dibaca",
+      "attentionUnread": "{{count}} untuk Anda",
+      "sortByActivity": "Urutkan menurut pesan baru",
+      "pin": "Sematkan obrolan",
+      "unpin": "Lepas sematan obrolan",
+      "pinned": "Disematkan"
+    },
     "filter": {
       "ariaLabel": "Menyaring pesan",
       "tooltip": "Menyaring pesan",

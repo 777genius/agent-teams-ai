@@ -797,3 +797,155 @@ describe('ActivityItem legacy system message fallback', () => {
     });
   });
 });
+
+describe('ActivityItem bootstrap recipient route', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  const bootstrapMessage: InboxMessage = {
+    from: 'oscar',
+    to: 'alice',
+    text: [
+      'You are alice, on team "demo".',
+      'Your FIRST action: call MCP tool member_briefing',
+      'Do NOT start work, claim tasks, or improvise workflow/task/process rules before member_briefing succeeds.',
+      'If member_briefing fails, send',
+    ].join('\n'),
+    timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+    read: true,
+    source: 'inbox',
+  };
+
+  it('hides from→to on bootstrap start rows in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          directParticipant: 'alice',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(0);
+    expect(host.textContent).toContain('oscar');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps bootstrap teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('alice');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the task chip clickable in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'alice',
+            to: 'user',
+            text: 'please review',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+            messageKind: 'task_comment_notification',
+            taskRefs: [{ taskId: 'task-abc123', displayId: '#42', teamName: 'demo' }],
+          },
+          teamName: 'demo',
+          directParticipant: 'alice',
+          onTaskIdClick,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('#42');
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+      (button.textContent ?? '').includes('#42')
+    );
+    expect(taskChip).toBeDefined();
+    await act(async () => {
+      taskChip?.click();
+      await Promise.resolve();
+    });
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps lead→teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'lead',
+            to: 'cody',
+            text: 'please take this',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+          },
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('cody');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});

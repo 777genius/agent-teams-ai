@@ -716,6 +716,7 @@
     "catalogCheckCredential": "โหลดโมเดล {{provider}} ไม่ได้ ตรวจสอบข้อมูลรับรองที่บันทึกไว้แล้วรีเฟรช",
     "catalogDirectoryFailed": "OpenCode โหลดรายชื่อผู้ให้บริการไม่ได้",
     "catalogLoadFailed": "โหลดโมเดล {{provider}} ไม่ได้",
+    "catalogSourceLoadFailed": "โหลดโมเดล {{provider}} จาก OpenCode ไม่ได้",
     "catalogSignInExpired": "การลงชื่อเข้าใช้ {{provider}} ไม่ถูกต้องแล้ว ลงชื่อเข้าใช้อีกครั้งแล้วรีเฟรช",
     "catalogSignInMaybe": "โหลดโมเดล {{provider}} ไม่ได้ หากลงชื่อเข้าใช้ด้วย OAuth อาจต้องลงชื่อเข้าใช้อีกครั้งแล้วรีเฟรช",
     "catalogStale": "โมเดล {{provider}} มาจากแคชและอาจล้าสมัย",

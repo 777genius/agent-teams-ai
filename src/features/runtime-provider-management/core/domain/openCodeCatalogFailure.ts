@@ -15,6 +15,7 @@ export type OpenCodeCatalogUserCopyKey =
   | 'catalogSignInMaybe'
   | 'catalogCheckCredential'
   | 'catalogLoadFailed'
+  | 'catalogSourceLoadFailed'
   | 'catalogDirectoryFailed'
   | 'catalogTimedOut'
   | 'catalogStale';
@@ -69,6 +70,32 @@ export function catalogProviderDisplayName(
     return 'xAI';
   }
   return providerId?.trim() || 'OpenCode';
+}
+
+/** OpenCode's own catalog name, before product aliases such as SuperGrok. */
+export function catalogSourceLabel(input: OpenCodeCatalogFailureClassificationInput): string {
+  const directoryName = input.displayName?.trim();
+  if (directoryName) {
+    return directoryName;
+  }
+  if (input.sourceProviderId === 'xai') {
+    return 'xAI';
+  }
+  return input.sourceProviderId?.trim() ?? '';
+}
+
+function normalizeCatalogName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s._-]+/g, '');
+}
+
+function shouldClarifyOpenCodeSource(friendlyName: string, sourceLabel: string): boolean {
+  if (!sourceLabel) {
+    return false;
+  }
+  return normalizeCatalogName(friendlyName) !== normalizeCatalogName(sourceLabel);
 }
 
 function isGenericOpenCodeCatalogFailureMessage(message: string): boolean {
@@ -198,7 +225,11 @@ export function formatOpenCodeCatalogAlertMessage(
   const seen = new Set<string>();
   for (const failure of failures) {
     const copy = describeOpenCodeCatalogFailure(failure);
-    const line = translate(copy.key, copy.provider);
+    let line = translate(copy.key, copy.provider);
+    const sourceLabel = catalogSourceLabel(failure);
+    if (shouldClarifyOpenCodeSource(copy.provider, sourceLabel)) {
+      line = `${line} ${translate('catalogSourceLoadFailed', sourceLabel)}`;
+    }
     if (!seen.has(line)) {
       seen.add(line);
       lines.push(line);

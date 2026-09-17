@@ -788,6 +788,24 @@
       "unread_one": "{{count}} ยังไม่อ่าน",
       "unread_other": "{{count}} ยังไม่อ่าน"
     },
+    "chats": {
+      "teamFeed": "แชทกลุ่ม",
+      "back": "กลับไปที่แชท",
+      "clearSearch": "ล้างการค้นหา",
+      "emptyList": "ยังไม่มีแชท",
+      "emptyThread": "ไม่มีข้อความในแชทนี้",
+      "emptyPreview": "ยังไม่มีข้อความ",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "คุณ",
+      "rowAria": "{{name}}, ยังไม่ได้อ่าน {{unread}}, ถึงคุณ {{attention}}",
+      "rowAriaCounts": "ยังไม่ได้อ่าน {{unread}}, ถึงคุณ {{attention}}",
+      "activityUnread": "ยังไม่ได้อ่าน {{count}}",
+      "attentionUnread": "ถึงคุณ {{count}}",
+      "sortByActivity": "เรียงตามข้อความใหม่",
+      "pin": "ปักหมุดแชท",
+      "unpin": "ยกเลิกปักหมุดแชท",
+      "pinned": "ปักหมุดแล้ว"
+    },
     "filter": {
       "ariaLabel": "กรองข้อความ",
       "tooltip": "กรองข้อความ",

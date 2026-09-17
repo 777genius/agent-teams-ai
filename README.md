@@ -38,8 +38,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/13.jpg">
-    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
+  <a href="docs/screenshots/1.jpg">
+    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with team messages and agent tasks" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -74,8 +74,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/1.jpg">
-    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with agent tasks" width="100%" loading="lazy" />
+  <a href="docs/screenshots/13.jpg">
+    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -528,7 +528,7 @@ local packaging.
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-By opening a pull request you agree to the [Contributor License Agreement](.github/CLA.md) v2. You keep copyright. You do not add your name to a table.
+By opening a pull request you agree to the [Contributor License Agreement](.github/CLA.md) v2. You keep copyright.
 
 ## Partnerships
 

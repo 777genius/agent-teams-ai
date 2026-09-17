@@ -788,6 +788,24 @@
       "unread_one": "{{count}} انڈیا",
       "unread_other": "{{count}} انڈیا"
     },
+    "chats": {
+      "teamFeed": "گروپ چیٹ",
+      "back": "چیٹس پر واپس جائیں",
+      "clearSearch": "تلاش صاف کریں",
+      "emptyList": "ابھی کوئی چیٹ نہیں",
+      "emptyThread": "اس چیٹ میں کوئی پیغام نہیں",
+      "emptyPreview": "ابھی کوئی پیغام نہیں",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "آپ",
+      "rowAria": "{{name}}، {{unread}} ان پڑھے، آپ کے لیے {{attention}}",
+      "rowAriaCounts": "{{unread}} ان پڑھے، آپ کے لیے {{attention}}",
+      "activityUnread": "{{count}} ان پڑھے",
+      "attentionUnread": "آپ کے لیے {{count}}",
+      "sortByActivity": "نئے پیغامات کے مطابق ترتیب دیں",
+      "pin": "چیٹ پن کریں",
+      "unpin": "چیٹ ان پن کریں",
+      "pinned": "پن شدہ"
+    },
     "filter": {
       "ariaLabel": "فائلز",
       "tooltip": "فائلز",

@@ -77,6 +77,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
+import { shouldHideDirectMemberRoute } from './activityRecipientRoute';
 import {
   encodeCacheParts,
   extractMarkdownPlainTextCached,
@@ -85,6 +86,8 @@ import {
   stringMapCacheSignature,
   taskRefsCacheSignature,
 } from './activityRenderCache';
+import { formatActivityTimestamp } from './activityTimestamp';
+import { BootstrapAcknowledgementRow, BootstrapSystemRow } from './BootstrapActivityRows';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 import {
   getTimelineCardBorderRadius,
@@ -280,6 +283,8 @@ interface ActivityItemProps {
   /** Called when ExpandableContent is expanded via "Show more". */
   onExpandContent?: () => void;
   timelineCardPosition?: TimelineCardPosition;
+  /** 1:1 participant; when set, hide redundant from→to member routes. */
+  directParticipant?: string;
 }
 
 function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
@@ -293,7 +298,6 @@ function getStringField(obj: StructuredMessage, key: string): string | null {
 
 const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
 const MAX_ACTIVITY_ITEM_CACHE_ENTRIES = 500;
-const activityTimestampCache = new Map<string, string>();
 const activityDisplayTextCache = new Map<string, string>();
 const activityStructuredMessageCache = new Map<string, StructuredMessage | null>();
 const activityIdleSemanticCache = new Map<string, ReturnType<typeof classifyIdleNotification>>();
@@ -651,124 +655,6 @@ const MemberWorkSyncNudgeRow = ({
   );
 };
 
-const BootstrapSystemRow = ({
-  teamName,
-  eventKind,
-  senderName,
-  recipientName,
-  runtime,
-  senderColor,
-  recipientColor,
-  isLight,
-  timestamp,
-  onMemberNameClick,
-}: {
-  teamName: string;
-  eventKind: 'start' | 'restart';
-  senderName: string;
-  recipientName: string;
-  runtime?: string;
-  senderColor?: string;
-  recipientColor?: string;
-  isLight: boolean;
-  timestamp: string;
-  onMemberNameClick?: (memberName: string) => void;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const isRestart = eventKind === 'restart';
-  return (
-    <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.82 }}>
-      <span
-        className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide ${
-          isRestart ? 'bg-amber-500/12 text-amber-300' : 'bg-sky-500/12 text-sky-300'
-        }`}
-      >
-        {isRestart ? t('activity.badges.restart') : t('activity.badges.start')}
-      </span>
-      <MemberBadge
-        name={senderName}
-        color={senderColor}
-        teamName={teamName}
-        isLight={isLight}
-        variant="text"
-        hideAvatar
-        onClick={onMemberNameClick}
-      />
-      <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-      <MemberBadge
-        name={recipientName}
-        color={recipientColor}
-        teamName={teamName}
-        isLight={isLight}
-        variant="text"
-        hideAvatar
-        onClick={onMemberNameClick}
-      />
-      <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-        {runtime ||
-          (isRestart ? t('activity.bootstrap.restarting') : t('activity.bootstrap.starting'))}
-      </span>
-      <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-        {timestamp}
-      </span>
-    </div>
-  );
-};
-
-const BootstrapAcknowledgementRow = ({
-  teamName,
-  senderName,
-  recipientName,
-  senderColor,
-  recipientColor,
-  isLight,
-  timestamp,
-  onMemberNameClick,
-}: {
-  teamName: string;
-  senderName: string;
-  recipientName: string;
-  senderColor?: string;
-  recipientColor?: string;
-  isLight: boolean;
-  timestamp: string;
-  onMemberNameClick?: (memberName: string) => void;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  return (
-    <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.72 }}>
-      <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-emerald-300">
-        {t('activity.badges.bootstrap')}
-      </span>
-      <MemberBadge
-        name={senderName}
-        color={senderColor}
-        teamName={teamName}
-        isLight={isLight}
-        variant="text"
-        hideAvatar
-        onClick={onMemberNameClick}
-      />
-      <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-      <MemberBadge
-        name={recipientName}
-        color={recipientColor}
-        teamName={teamName}
-        isLight={isLight}
-        variant="text"
-        hideAvatar
-        onClick={onMemberNameClick}
-      />
-      <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-        {t('activity.bootstrap.acknowledged')}
-      </span>
-      <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-        {timestamp}
-      </span>
-    </div>
-  );
-};
-
 // ---------------------------------------------------------------------------
 // Detect historical system/automated messages that should be collapsed by default.
 // These patterns are kept only for legacy compatibility with old inbox/session rows;
@@ -815,7 +701,6 @@ function highlightSystemLabels(text: string, isSystem: boolean): string {
   return result;
 }
 
-/** Detect authentication/authorization errors that may be resolved by restarting. */
 const AUTH_ERROR_PATTERNS = [
   /OAuth token has expired/i,
   /API Error:\s*401/i,
@@ -824,32 +709,6 @@ const AUTH_ERROR_PATTERNS = [
   /invalid.*api.key/i,
   /unauthorized/i,
 ];
-
-function getLocalDayCacheKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function formatActivityTimestamp(timestamp: string): string {
-  const now = new Date();
-  return getCachedString(
-    activityTimestampCache,
-    encodeCacheParts([timestamp, getLocalDayCacheKey(now)]),
-    () => {
-      const parsed = Date.parse(timestamp);
-      if (Number.isNaN(parsed)) return timestamp;
-
-      const date = new Date(parsed);
-      const isToday =
-        date.getFullYear() === now.getFullYear() &&
-        date.getMonth() === now.getMonth() &&
-        date.getDate() === now.getDate();
-
-      return isToday
-        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : date.toLocaleString();
-    }
-  );
-}
 
 function buildActivityDisplayText(
   strippedText: string,
@@ -1012,6 +871,7 @@ export const ActivityItem = memo(
     expandItemKey,
     onExpandContent,
     timelineCardPosition = 'single',
+    directParticipant,
   }: Readonly<ActivityItemProps>): React.JSX.Element => {
     const { t } = useAppTranslation('team');
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
@@ -1028,6 +888,8 @@ export const ActivityItem = memo(
     const structured = parseStructuredAgentMessageCached(message.text);
     const bootstrapDisplay = getBootstrapPromptDisplay(message);
     const bootstrapAcknowledgement = getBootstrapAcknowledgementDisplay(message);
+    const hideDirectRoute = (to?: string): boolean =>
+      shouldHideDirectMemberRoute(to, message.from, directParticipant);
     // Only flag agent messages as rate-limited, not user's own quotes
     const rateLimited = message.from !== 'user' && isRateLimitMessage(message.text);
     // Highlight messages containing API errors
@@ -1295,6 +1157,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
+          showRecipientRoute={!hideDirectRoute(bootstrapDisplay.teammateName ?? message.to)}
         />
       );
     }
@@ -1310,6 +1173,7 @@ export const ActivityItem = memo(
           isLight={isLight}
           timestamp={timestamp}
           onMemberNameClick={onMemberNameClick}
+          showRecipientRoute={!hideDirectRoute(message.to)}
         />
       );
     }
@@ -1426,6 +1290,7 @@ export const ActivityItem = memo(
       </span>
     ) : null;
 
+    const hideMemberRoute = hideDirectRoute(message.to);
     const recipientBadge =
       commentTaskRef && commentTaskDisplayId ? (
         <>
@@ -1437,7 +1302,7 @@ export const ActivityItem = memo(
             onTaskIdClick={onTaskIdClick}
           />
         </>
-      ) : message.to && message.to !== message.from ? (
+      ) : hideMemberRoute || !(message.to && message.to !== message.from) ? null : (
         <>
           <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
           {crossTeamTarget ? (
@@ -1459,7 +1324,7 @@ export const ActivityItem = memo(
             />
           ) : null}
         </>
-      ) : null;
+      );
 
     const summaryContent =
       isSlashCommandResult && message.commandOutput ? (
@@ -1985,6 +1850,7 @@ export const ActivityItem = memo(
     prev.expandItemKey === next.expandItemKey &&
     prev.onExpandContent === next.onExpandContent &&
     prev.timelineCardPosition === next.timelineCardPosition &&
+    prev.directParticipant === next.directParticipant &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );
 

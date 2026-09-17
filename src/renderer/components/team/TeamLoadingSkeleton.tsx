@@ -10,8 +10,6 @@ import {
   Eye,
   History,
   MessageSquare,
-  MoreHorizontal,
-  Paperclip,
   PlayCircle,
   ShieldCheck,
   Users,
@@ -19,7 +17,10 @@ import {
 
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './kanban/KanbanColumn';
 import { KanbanTaskCardSkeleton } from './kanban/KanbanTaskCardSkeleton';
+import { MessagesConversationSkeleton } from './messages/MessagesConversationSkeleton';
+import { conversationDisplayTitle } from './messages/messagesPanelConversations';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
+import { getTeamMessagesSidebarUiState } from './sidebar/teamSidebarUiState';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
@@ -107,48 +108,15 @@ const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
   </div>
 );
 
-const TeamLoadingMessageComposerSkeleton = (): React.JSX.Element => (
-  <div className="message-composer-flat-layout relative mb-2" aria-hidden="true">
-    <div className="message-composer-flat-toolbar grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 pl-2">
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-70">
-        <Paperclip size={14} />
-      </span>
-      <div className="flex h-full min-w-0 items-stretch justify-end">
-        <div className="grid w-full min-w-0 max-w-[430px] grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-stretch overflow-hidden">
-          <div className="flex min-w-0 items-center justify-end gap-1 border-r border-[var(--color-border)] px-1">
-            <SkeletonPill className="size-2 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-14 rounded bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
-          </div>
-          <div className="flex min-w-0 items-center justify-end gap-1 px-1">
-            <SkeletonPill className="size-5 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-10 rounded bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="message-composer-flat-body relative h-[96px]">
-      <SkeletonPill className="absolute left-3 top-3 h-3 w-[62%] rounded bg-[var(--skeleton-base-dim)]" />
-      <SkeletonPill className="absolute left-3 top-8 h-3 w-[42%] rounded bg-[var(--skeleton-base-dim)]" />
-      <div className="message-composer-action-modes absolute bottom-2 left-2 flex h-7 w-[124px] overflow-hidden rounded-md border border-[var(--color-border)]">
-        <SkeletonPill className="h-full flex-1 rounded-none bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-yellow-500/20" />
-      </div>
-      <div className="absolute bottom-2 right-2 flex items-center">
-        <SkeletonPill className="size-8 rounded-md bg-[var(--skeleton-base-dim)]" />
-      </div>
-    </div>
-    <div className="message-composer-flat-footer flex items-center justify-between gap-3">
-      <SkeletonPill className="h-3 w-[58%] rounded bg-[var(--skeleton-base-dim)]" />
-      <SkeletonPill className="h-3 w-10 shrink-0 rounded bg-[var(--skeleton-base-dim)]" />
-    </div>
-  </div>
-);
-
-const TeamLoadingSidebarSkeleton = (): React.JSX.Element => {
+const TeamLoadingSidebarSkeleton = ({ teamName }: { teamName: string }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const ui = getTeamMessagesSidebarUiState(teamName);
+  const surface = ui.conversationSurface ?? 'list';
+  const scope = ui.conversationScope ?? { kind: 'team-feed' };
+  const title = conversationDisplayTitle(surface, scope, {
+    list: t('messages.title'),
+    teamFeed: t('messages.chats.teamFeed'),
+  });
 
   return (
     <aside
@@ -181,37 +149,7 @@ const TeamLoadingSidebarSkeleton = (): React.JSX.Element => {
       </div>
       <div className="bg-[var(--color-text-muted)]/35 h-px shrink-0" />
       <div className="min-h-0 flex-1">
-        <div className="flex size-full flex-col overflow-hidden bg-[var(--color-surface-sidebar)]">
-          <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
-            <MessageSquare size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-            <SkeletonPill className="h-4 w-24" />
-            <SkeletonPill className="h-5 w-8" />
-            <span className="ml-auto inline-flex size-7 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
-              <MoreHorizontal size={15} />
-            </span>
-          </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden pb-14 pr-3 pt-2">
-            <div className="pl-3">
-              <TeamLoadingMessageComposerSkeleton />
-            </div>
-            <div className="space-y-3 overflow-hidden pl-3">
-              {[0, 1, 2].map((index) => (
-                <div
-                  key={index}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <SkeletonPill className="h-5 w-12" />
-                    <SkeletonPill className="h-3 w-16" />
-                    <SkeletonPill className="ml-auto h-3 w-12" />
-                  </div>
-                  <SkeletonPill className="mt-5 h-4 w-[88%]" />
-                  <SkeletonPill className="mt-2 h-4 w-[72%]" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <MessagesConversationSkeleton surface={surface} scope={scope} title={title} />
       </div>
     </aside>
   );
@@ -486,7 +424,7 @@ export const TeamLoadingSkeleton = ({
         isFocused={Boolean(isFocused)}
         reserveSpaceWithoutSource
       >
-        <TeamLoadingSidebarSkeleton />
+        <TeamLoadingSidebarSkeleton teamName={teamName} />
       </TeamSidebarHost>
     ) : null}
     <div className="relative min-h-0 min-w-0 flex-1">

@@ -788,6 +788,24 @@
       "unread_one": "{{count}} 未读",
       "unread_other": "{{count}} 未读"
     },
+    "chats": {
+      "teamFeed": "群聊",
+      "back": "返回聊天列表",
+      "clearSearch": "清除搜索",
+      "emptyList": "暂无聊天",
+      "emptyThread": "此聊天暂无消息",
+      "emptyPreview": "暂无消息",
+      "previewFrom": "{{name}}：{{text}}",
+      "you": "你",
+      "rowAria": "{{name}}，{{unread}} 条未读，{{attention}} 条发给你",
+      "rowAriaCounts": "{{unread}} 条未读，{{attention}} 条发给你",
+      "activityUnread": "{{count}} 条未读",
+      "attentionUnread": "{{count}} 条发给你",
+      "sortByActivity": "按新消息排序",
+      "pin": "置顶聊天",
+      "unpin": "取消置顶",
+      "pinned": "已置顶"
+    },
     "filter": {
       "ariaLabel": "过滤消息",
       "tooltip": "过滤消息",

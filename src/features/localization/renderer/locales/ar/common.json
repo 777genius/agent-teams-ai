@@ -716,6 +716,7 @@
     "catalogCheckCredential": "تعذر تحميل نماذج {{provider}}. تحقق من بيانات الاعتماد المحفوظة ثم حدّث.",
     "catalogDirectoryFailed": "تعذر على OpenCode تحميل قائمة المزودين.",
     "catalogLoadFailed": "تعذر تحميل نماذج {{provider}}.",
+    "catalogSourceLoadFailed": "تعذر تحميل نماذج {{provider}} من OpenCode.",
     "catalogSignInExpired": "تسجيل الدخول إلى {{provider}} لم يعد صالحًا. سجّل الدخول مرة أخرى ثم حدّث.",
     "catalogSignInMaybe": "تعذر تحميل نماذج {{provider}}. إذا سجّلت الدخول عبر OAuth، قد تحتاج إلى تسجيل الدخول مرة أخرى ثم التحديث.",
     "catalogStale": "نماذج {{provider}} من ذاكرة التخزين المؤقت وقد تكون قديمة.",

@@ -716,6 +716,7 @@
     "catalogCheckCredential": "Не удалось загрузить модели {{provider}}. Проверьте сохранённые данные входа и обновите каталог.",
     "catalogDirectoryFailed": "OpenCode не смог загрузить список провайдеров.",
     "catalogLoadFailed": "Не удалось загрузить модели {{provider}}.",
+    "catalogSourceLoadFailed": "Не удалось загрузить модели {{provider}} из OpenCode.",
     "catalogSignInExpired": "Вход в {{provider}} больше не действует. Войдите снова, затем обновите каталог.",
     "catalogSignInMaybe": "Не удалось загрузить модели {{provider}}. Если вы входили через OAuth, возможно, нужно войти снова и обновить каталог.",
     "catalogStale": "Модели {{provider}} из кэша и могут быть устаревшими.",
