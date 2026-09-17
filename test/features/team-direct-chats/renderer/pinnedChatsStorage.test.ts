@@ -29,4 +29,12 @@ describe('pinnedChatsStorage', () => {
     savePinnedChatKeys('robots', ['nope', 'direct:alice', 'direct:alice']);
     expect([...getPinnedChatKeysSnapshot('robots')]).toEqual(['direct:alice']);
   });
+
+  it('keeps pin order in memory when localStorage writes fail', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    savePinnedChatKeys('robots', ['direct:alice', 'team-feed']);
+    expect([...getPinnedChatKeysSnapshot('robots')]).toEqual(['direct:alice', 'team-feed']);
+  });
 });

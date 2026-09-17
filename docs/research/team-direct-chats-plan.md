@@ -62,7 +62,7 @@ Identity 1:1: `(teamName, user, participant)`. Same-team `conversationId` не �
 
 Не копировать правила `filterTeamMessages` в domain. Иначе noise/relay разъедутся.
 
-```
+```text
 effectiveMessages          // selectTeamMessages: merge + optimistic + coalesce
   → filterTeamMessages(    // noise, automation, relay-dupe, timeWindow
        filter: { from:∅, to:∅, showNoise:false },
@@ -135,7 +135,7 @@ Hidden-kinds отсекает `filterTeamMessages`, не эти helpers.
 
 Геометрия как у комментариев на канбане, **не** импортировать `UnreadCommentsBadge`:
 
-```
+```text
 [ 3 ]          ← secondary, весь unread
    └ [2]       ← default, top-right overlay, только to=user
 ```
@@ -159,7 +159,7 @@ Hidden-kinds отсекает `filterTeamMessages`, не эти helpers.
 
 Feed после `mergeTeamMessages` — **newest-first**. `pickPreviewMessage(newestFirst)` без своей сортировки:
 
-```
+```text
 first isAddressedToUser(newestFirst)  ??  newestFirst[0]  ??  null
 ```
 
@@ -408,7 +408,7 @@ This team: иконка команды / MessageSquare, не аватар lead.
 
 Тело: StatusBlock + composer + timeline.
 
-```
+```text
 scoped = belongsTo(filterTeamMessages(effective, panelOptions), scope)
 ```
 
@@ -416,7 +416,7 @@ scoped = belongsTo(filterTeamMessages(effective, panelOptions), scope)
 
 ### Host
 
-```
+```text
 floating-composer → composer only
 list              → ChatList в слоте content
 thread            → composer + status + timeline
@@ -428,7 +428,7 @@ thread            → composer + status + timeline
 
 ## i18n ключи
 
-```
+```text
 messages.chats.teamFeed
 messages.chats.back
 messages.chats.emptyList

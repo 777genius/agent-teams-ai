@@ -54,13 +54,14 @@ export const SortableChatListRow = ({
     opacity: isDragging ? 0.55 : 1,
   };
 
+  const dragListeners = pinned ? listeners : undefined;
+
   return (
-    // eslint-disable-next-line react/jsx-props-no-spreading -- @dnd-kit useSortable requires spreading attributes/listeners
     <div
       ref={setNodeRef}
       style={style}
       className={pinned ? 'cursor-grab active:cursor-grabbing' : undefined}
-      {...(pinned ? listeners : {})}
+      {...dragListeners}
     >
       <ContextMenu>
         <ContextMenuTrigger asChild>

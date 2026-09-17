@@ -16,7 +16,8 @@ const EMPTY_MESSAGES: readonly InboxMessage[] = [];
 
 export function useTeamMessagesRead(
   teamName: string,
-  messages: readonly InboxMessage[] = EMPTY_MESSAGES
+  messages: readonly InboxMessage[] = EMPTY_MESSAGES,
+  hydrationComplete = false
 ): {
   readSet: Set<string>;
   markRead: (messageKey: string) => void;
@@ -35,9 +36,10 @@ export function useTeamMessagesRead(
     if (!teamName || messages.length === 0) return;
     seedPersistedReadKeysOnce(
       teamName,
-      messages.filter((message) => message.read === true).map(toMessageKey)
+      messages.filter((message) => message.read === true).map(toMessageKey),
+      { finalize: hydrationComplete }
     );
-  }, [messages, teamName]);
+  }, [hydrationComplete, messages, teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {

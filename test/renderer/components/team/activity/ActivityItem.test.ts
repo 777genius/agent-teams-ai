@@ -900,6 +900,15 @@ describe('ActivityItem bootstrap recipient route', () => {
 
     expect(host.textContent).toContain('#42');
     expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+      (button.textContent ?? '').includes('#42')
+    );
+    expect(taskChip).toBeDefined();
+    await act(async () => {
+      taskChip?.click();
+      await Promise.resolve();
+    });
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
 
     await act(async () => {
       root.unmount();

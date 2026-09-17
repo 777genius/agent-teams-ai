@@ -5,6 +5,7 @@ const EMPTY_KEYS: readonly string[] = Object.freeze([]);
 const listeners = new Set<() => void>();
 let snapshotVersion = 0;
 const snapshotCache = new Map<string, { version: number; keys: readonly string[] }>();
+const volatileFallback = new Map<string, readonly string[]>();
 
 function storageKey(teamName: string): string {
   return `${STORAGE_PREFIX}${teamName}`;
@@ -28,6 +29,10 @@ export function subscribePinnedChats(listener: () => void): () => void {
 export function loadPinnedChatKeys(teamName: string): string[] {
   if (!teamName) {
     return [];
+  }
+  const fallback = volatileFallback.get(teamName);
+  if (fallback) {
+    return [...fallback];
   }
   try {
     const raw = localStorage.getItem(storageKey(teamName));
@@ -58,11 +63,13 @@ export function savePinnedChatKeys(teamName: string, keys: readonly string[]): v
   if (!teamName) {
     return;
   }
+  const normalized = Object.freeze(normalizePinnedChatKeys(keys));
   try {
-    const normalized = normalizePinnedChatKeys(keys);
     localStorage.setItem(storageKey(teamName), JSON.stringify(normalized));
+    volatileFallback.delete(teamName);
     notifyPinnedChats();
   } catch {
-    // quota or disabled
+    volatileFallback.set(teamName, normalized);
+    notifyPinnedChats();
   }
 }

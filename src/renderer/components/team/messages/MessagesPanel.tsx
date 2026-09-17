@@ -773,7 +773,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     if (!open) setExpandedItemKey(null);
   }, []);
 
-  const { readSet, markAllRead } = useTeamMessagesRead(teamName, canonicalMessages);
+  const { readSet, markAllRead } = useTeamMessagesRead(teamName, canonicalMessages, !hasMore);
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
   const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
   const visibleReadFlushFrameRef = useRef<number | null>(null);

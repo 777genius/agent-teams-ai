@@ -42,14 +42,19 @@ describe('seedPersistedReadKeysOnce', () => {
   it('seeds unread keys once and ignores later persisted flags', () => {
     seedPersistedReadKeysOnce('alpha', ['old-read']);
     expect(getReadSet('alpha').has('old-read')).toBe(true);
-    expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBe('1');
+    expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBeNull();
 
     seedPersistedReadKeysOnce('alpha', ['new-read']);
-    expect(getReadSet('alpha').has('new-read')).toBe(false);
+    expect(getReadSet('alpha').has('new-read')).toBe(true);
+
+    seedPersistedReadKeysOnce('alpha', ['old-read', 'new-read'], { finalize: true });
+    expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBe('1');
+    seedPersistedReadKeysOnce('alpha', ['after-lock']);
+    expect(getReadSet('alpha').has('after-lock')).toBe(false);
   });
 
   it('still records the backfill after a hydrated feed with no persisted-read keys', () => {
-    seedPersistedReadKeysOnce('alpha', []);
+    seedPersistedReadKeysOnce('alpha', [], { finalize: true });
     expect(localStorage.getItem('team-messages-read-backfill:alpha')).toBe('1');
     seedPersistedReadKeysOnce('alpha', ['later']);
     expect(getReadSet('alpha').has('later')).toBe(false);

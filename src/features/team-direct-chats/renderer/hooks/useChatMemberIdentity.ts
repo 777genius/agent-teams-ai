@@ -18,6 +18,7 @@ import {
   resolveMemberIdentityColor,
   STATUS_DOT_COLORS,
 } from '@renderer/utils/memberHelpers';
+import { isProvisioningProgressActive } from '@renderer/utils/teamProvisioningPresentation';
 import { isLeadMember, isLeadNameAlias } from '@shared/utils/leadDetection';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -87,10 +88,10 @@ export function useChatMemberIdentity(
     useShallow((state) => ({
       members: selectResolvedMembersForTeamName(state, teamName),
       isTeamAlive: selectTeamIsAliveForName(state, teamName),
-      leadActivity: state.leadActivityByTeam[teamName],
+      leadActivity: state.leadActivityByTeam?.[teamName],
       progress: getCurrentProvisioningProgressForTeam(state, teamName),
-      memberSpawnSnapshot: state.memberSpawnSnapshotsByTeam[teamName],
-      memberSpawnStatuses: state.memberSpawnStatusesByTeam[teamName],
+      memberSpawnSnapshot: state.memberSpawnSnapshotsByTeam?.[teamName],
+      memberSpawnStatuses: state.memberSpawnStatusesByTeam?.[teamName],
       runtimeEntries: state.teamAgentRuntimeByTeam?.[teamName]?.members,
     }))
   );
@@ -135,7 +136,7 @@ export function useChatMemberIdentity(
         runtimeAdvisory: member.runtimeAdvisory,
         isLaunchSettling,
         isTeamAlive,
-        isTeamProvisioning: false,
+        isTeamProvisioning: isProvisioningProgressActive(progress),
         leadActivity: isLeadMember(member) ? leadActivity : undefined,
       })
     : null;

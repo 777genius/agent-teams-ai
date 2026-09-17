@@ -85,11 +85,15 @@ export function markBulkRead(teamName: string, fullSet: Set<string>): void {
 }
 
 /**
- * One-time upgrade: seed localStorage from persisted `message.read` flags.
- * Call only after the team feed has hydrated so an empty async load cannot
- * lock the flag before historical rows arrive.
+ * Upgrade path: seed localStorage from persisted `message.read` flags.
+ * Do not finalize until the caller has the full migration range (`finalize: true`).
+ * Partial heads and per-member subsets must keep merging without locking the marker.
  */
-export function seedPersistedReadKeysOnce(teamName: string, keys: readonly string[]): void {
+export function seedPersistedReadKeysOnce(
+  teamName: string,
+  keys: readonly string[],
+  options?: { readonly finalize?: boolean }
+): void {
   if (!teamName) return;
   try {
     if (localStorage.getItem(backfillKey(teamName)) === '1') return;
@@ -107,7 +111,9 @@ export function seedPersistedReadKeysOnce(teamName: string, keys: readonly strin
         notifyReadStore();
       }
     }
-    localStorage.setItem(backfillKey(teamName), '1');
+    if (options?.finalize === true) {
+      localStorage.setItem(backfillKey(teamName), '1');
+    }
   } catch {
     // quota or disabled
   }
