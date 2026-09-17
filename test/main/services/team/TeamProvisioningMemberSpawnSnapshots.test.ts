@@ -204,6 +204,7 @@ function makeSnapshotPorts(params?: {
       ),
       getOpenCodeSecondaryBootstrapPendingMemberNames: vi.fn(() => new Set<string>()),
       resumeActiveTaskActivityForMembers: vi.fn(),
+      readLaunchFreshness: vi.fn(() => Promise.resolve(null)),
     },
     live: {
       refreshMemberSpawnStatusesFromLeadInbox: vi.fn(() => Promise.resolve(undefined)),

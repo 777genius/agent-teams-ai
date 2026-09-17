@@ -99,7 +99,14 @@ function shouldClarifyOpenCodeSource(friendlyName: string, sourceLabel: string):
 }
 
 function isGenericOpenCodeCatalogFailureMessage(message: string): boolean {
-  return GENERIC_CATALOG_FAILURE_MESSAGES.has(message.trim().toLowerCase());
+  const normalized = message.trim().toLowerCase();
+  if (GENERIC_CATALOG_FAILURE_MESSAGES.has(normalized)) {
+    return true;
+  }
+  // Orchestrator sanitizes unknown catalog crashes to this shape after the old
+  // "OpenCode catalog request failed." copy. Treat it the same way so SuperGrok
+  // OAuth still gets reconnect-maybe instead of a blank generic load failure.
+  return /^couldn't load .+ models from opencode\.?$/.test(normalized);
 }
 
 function looksLikeOAuthProvider(input: OpenCodeCatalogFailureClassificationInput): boolean {

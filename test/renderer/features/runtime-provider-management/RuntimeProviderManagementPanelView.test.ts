@@ -4484,4 +4484,69 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
     expect(onProjectContextChange).not.toHaveBeenCalled();
   });
+
+  it('replaces inventory models unknown with the loaded catalog count', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider = {
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: false,
+      modelCount: null,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [],
+      sources: ['inventory'] as const,
+      sourceLabel: 'inventory',
+      providerSource: 'opencode',
+      detail: null,
+      setupKind: 'connected' as const,
+      metadata: {
+        hasKnownModels: false,
+        requiresManualConfig: false,
+        supportedInlineAuth: true,
+        configuredAuthless: false,
+      },
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [provider],
+            selectedProviderId: 'xai',
+            directorySelectedProviderId: 'xai',
+            modelPickerProviderId: 'xai',
+            modelPickerMode: 'use',
+            modelsLoading: false,
+            modelsTotalCount: 12,
+            models: [
+              {
+                providerId: 'xai',
+                modelId: 'xai/grok-4.5',
+                displayName: 'grok-4.5',
+                sourceLabel: 'xAI',
+                free: false,
+                default: false,
+                availability: 'available',
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(row?.textContent).toContain('12 models');
+    expect(row?.textContent).not.toContain('models unknown');
+    expect(row?.textContent).toContain('grok-4.5');
+  });
 });

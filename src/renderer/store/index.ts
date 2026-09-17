@@ -54,6 +54,7 @@ import {
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
+import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
   decideProcessFanoutMode,
@@ -64,6 +65,10 @@ import {
   noteTeamRefreshFanout,
   type TeamRefreshFanoutOperation,
 } from './teamRefreshFanoutDiagnostics';
+import {
+  getFocusedVisibleTeamName as readFocusedVisibleTeamName,
+  startViewedTeamNotificationSync,
+} from './viewedTeamNotificationSync';
 
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
@@ -1032,26 +1037,10 @@ export function initializeNotificationListeners(): () => void {
     teamLastRelevantActivityAt.set(teamName, timestamp);
   };
 
-  const getFocusedVisibleTeamName = (): string | null => {
-    const state = useStore.getState();
-    const focusedPane = state.paneLayout.panes.find(
-      (pane) => pane.id === state.paneLayout.focusedPaneId
-    );
-    if (!focusedPane?.activeTabId) {
-      return null;
-    }
+  const getFocusedVisibleTeamName = (): string | null =>
+    readFocusedVisibleTeamName(useStore.getState());
+  cleanupFns.push(startViewedTeamNotificationSync(useStore));
 
-    const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-    if ((activeTab?.type !== 'team' && activeTab?.type !== 'graph') || !activeTab.teamName) {
-      return null;
-    }
-
-    if (!selectTeamDataForName(state, activeTab.teamName)) {
-      return null;
-    }
-
-    return activeTab.teamName;
-  };
   const buildProcessFanoutDecision = (
     event: TeamChangeEvent,
     isStaleRuntimeEvent: boolean
@@ -1684,12 +1673,10 @@ export function initializeNotificationListeners(): () => void {
           const baseTeamData =
             prev.teamDataCacheByName[event.teamName] ??
             (prev.selectedTeamName === event.teamName ? prev.selectedTeamData : null);
+          const nextAlive = nextTeamAliveFromLeadActivity(baseTeamData?.isAlive, nextActivity);
           const nextTeamData =
-            baseTeamData && baseTeamData.isAlive !== (nextActivity !== 'offline')
-              ? {
-                  ...baseTeamData,
-                  isAlive: nextActivity !== 'offline',
-                }
+            baseTeamData && baseTeamData.isAlive !== nextAlive
+              ? { ...baseTeamData, isAlive: nextAlive === true }
               : baseTeamData;
 
           if (nextTeamData) {

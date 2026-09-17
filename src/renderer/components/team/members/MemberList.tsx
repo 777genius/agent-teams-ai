@@ -1126,16 +1126,10 @@ export const MemberList = memo(function MemberList({
   ]);
 
   const buildRuntimeSummary = useCallback(
-    (
-      member: ResolvedTeamMember,
-      spawnEntry: MemberSpawnStatusEntry | undefined,
-      runtimeEntry: TeamAgentRuntimeEntry | undefined
-    ): string | undefined => {
-      return resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry);
-    },
-    [launchParams]
+    (m: ResolvedTeamMember, s?: MemberSpawnStatusEntry, r?: TeamAgentRuntimeEntry) =>
+      resolveMemberRuntimeSummary(m, launchParams, s, r, isTeamAlive),
+    [isTeamAlive, launchParams]
   );
-
   const expectsTeammates = (expectedTeammateCount ?? 0) > 0;
   const canStillHydrateExpectedTeammates =
     Boolean(isRosterLoading || isTeamProvisioning) ||
@@ -1338,7 +1332,7 @@ export const MemberList = memo(function MemberList({
                 reviewTaskTimerRunning={false}
                 pendingDeliveryState={undefined}
                 taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
-                runtimeSummary={buildRuntimeSummary(member, undefined, undefined)}
+                runtimeSummary={buildRuntimeSummary(member)}
                 runtimeEntry={undefined}
                 runtimeRunId={undefined}
                 spawnStatus={undefined}

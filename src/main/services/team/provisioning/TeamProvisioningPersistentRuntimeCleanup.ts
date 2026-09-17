@@ -14,6 +14,7 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
     baseClaudeDir: string;
   }): Promise<void>;
   getClaudeBasePath(): string;
+  clearPersistedLiveRuntimeHandles?(teamName: string): boolean;
   logger: TeamProvisioningPersistentRuntimeCleanupLogger;
 }
 
@@ -36,7 +37,19 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         teamName,
         ports.getCurrentRunPid(teamName)
       );
-      return panesConfirmed && processesConfirmed;
+      const confirmed = panesConfirmed && processesConfirmed;
+      if (confirmed) {
+        try {
+          ports.clearPersistedLiveRuntimeHandles?.(teamName);
+        } catch (error) {
+          ports.logger.warn(
+            `[${teamName}] Failed to clear persisted live runtime handles: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+      return confirmed;
     },
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {

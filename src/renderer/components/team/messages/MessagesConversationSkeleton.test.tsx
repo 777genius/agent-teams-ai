@@ -13,6 +13,7 @@ async function renderSkeleton(props: {
   surface: 'list' | 'thread';
   scope: { kind: 'team-feed' } | { kind: 'direct'; participant: string };
   title: string;
+  memberCount?: number;
 }): Promise<HTMLElement> {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const host = document.createElement('div');
@@ -24,6 +25,7 @@ async function renderSkeleton(props: {
         surface={props.surface}
         scope={props.scope}
         title={props.title}
+        memberCount={props.memberCount}
       />
     );
     await Promise.resolve();
@@ -46,7 +48,21 @@ describe('MessagesConversationSkeleton', () => {
     expect(skeleton.querySelector('.lucide-arrow-left')).toBeNull();
     expect(skeleton.querySelector('.message-composer-flat-layout')).toBeNull();
     expect(skeleton.querySelectorAll('.lucide-users')).toHaveLength(1);
+    expect(skeleton.getAttribute('data-messages-skeleton-members')).toBe('0');
     expect(skeleton.textContent).toContain('Messages');
+  });
+
+  it('renders one chat row per known member, matching the real messages list', async () => {
+    const skeleton = await renderSkeleton({
+      surface: 'list',
+      scope: { kind: 'team-feed' },
+      title: 'Messages',
+      memberCount: 4,
+    });
+
+    expect(skeleton.getAttribute('data-messages-skeleton-members')).toBe('4');
+    expect(skeleton.querySelectorAll('.lucide-users')).toHaveLength(1);
+    expect(skeleton.querySelectorAll('[style*="border-color"]')).toHaveLength(4);
   });
 
   it('shows the selected chat header, composer, and message cards', async () => {

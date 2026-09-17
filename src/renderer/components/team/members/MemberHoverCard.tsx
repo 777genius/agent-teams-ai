@@ -322,6 +322,7 @@ const MemberHoverCardContent = ({
               borderColor={colors.border}
               maxSubjectLength={28}
               activityLabel="working on"
+              isTimerRunning={isTeamAlive === true}
               onOpenTask={onOpenTask ? () => onOpenTask(currentTask) : undefined}
             />
           </div>
@@ -335,6 +336,7 @@ const MemberHoverCardContent = ({
               borderColor={colors.border}
               maxSubjectLength={28}
               activityLabel="reviewing"
+              isTimerRunning={isTeamAlive === true}
               onOpenTask={onOpenTask ? () => onOpenTask(reviewTask) : undefined}
             />
           </div>

@@ -389,7 +389,7 @@ const DEFAULT_CONFIG: AppConfig = {
     notifyOnUsageBudgetCritical: true,
     notifyOnUsageBudgetNativeToast: true,
     autoResumeOnRateLimit: false,
-    statusChangeOnlySolo: false,
+    statusChangeOnlySolo: true,
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
   },

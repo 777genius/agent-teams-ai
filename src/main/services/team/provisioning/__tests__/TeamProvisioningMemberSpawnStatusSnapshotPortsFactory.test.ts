@@ -68,6 +68,7 @@ describe('TeamProvisioningMemberSpawnStatusSnapshotPortsFactory', () => {
         attachLiveRuntimeMetadataToStatuses: vi.fn(),
         getOpenCodeSecondaryBootstrapPendingMemberNames: vi.fn(),
         resumeActiveTaskActivityForMembers: vi.fn(),
+        readLaunchFreshness: vi.fn(),
       },
       live: {
         refreshMemberSpawnStatusesFromLeadInbox: vi.fn(),
@@ -110,6 +111,7 @@ describe('TeamProvisioningMemberSpawnStatusSnapshotPortsFactory', () => {
     const attachLiveRuntimeMetadataToStatuses = vi.fn(async (_teamName, statuses) => statuses);
     const getOpenCodeSecondaryBootstrapPendingMemberNames = vi.fn(() => pendingMembers);
     const resumeActiveTaskActivityForMembers = vi.fn();
+    const readLaunchFreshness = vi.fn(async () => null);
     const refreshMemberSpawnStatusesFromLeadInbox = vi.fn(async () => undefined);
     const maybeAuditMemberSpawnStatuses = vi.fn(async () => undefined);
     const persistLaunchStateSnapshot = vi.fn(async () => undefined);
@@ -142,6 +144,7 @@ describe('TeamProvisioningMemberSpawnStatusSnapshotPortsFactory', () => {
         attachLiveRuntimeMetadataToStatuses,
         getOpenCodeSecondaryBootstrapPendingMemberNames,
         resumeActiveTaskActivityForMembers,
+        readLaunchFreshness,
       },
       live: {
         refreshMemberSpawnStatusesFromLeadInbox,
@@ -181,6 +184,7 @@ describe('TeamProvisioningMemberSpawnStatusSnapshotPortsFactory', () => {
       pendingMembers
     );
     ports.persisted.resumeActiveTaskActivityForMembers('team-a', ['Builder'], NOW);
+    await expect(ports.persisted.readLaunchFreshness('team-a')).resolves.toBeNull();
     await ports.live.refreshMemberSpawnStatusesFromLeadInbox(targetRun);
     await ports.live.maybeAuditMemberSpawnStatuses(targetRun);
     await ports.live.persistLaunchStateSnapshot(targetRun, 'active');

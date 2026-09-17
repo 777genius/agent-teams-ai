@@ -12,6 +12,7 @@ interface ProcessesSectionProps {
   teamName: string;
   members: ResolvedTeamMember[];
   processes: TeamProcess[];
+  isTeamAlive?: boolean;
 }
 
 function areMembersEquivalent(
@@ -57,6 +58,7 @@ export const ProcessesSection = memo(function ProcessesSection({
   teamName,
   members,
   processes,
+  isTeamAlive,
 }: ProcessesSectionProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
   if (!teamName || processes.length === 0) return null;
@@ -64,8 +66,8 @@ export const ProcessesSection = memo(function ProcessesSection({
   const memberColorMap = new Map(members.map((m) => [m.name, m.color]));
 
   const sorted = [...processes].sort((a, b) => {
-    const aAlive = !a.stoppedAt;
-    const bAlive = !b.stoppedAt;
+    const aAlive = isTeamAlive === true && !a.stoppedAt;
+    const bAlive = isTeamAlive === true && !b.stoppedAt;
     if (aAlive !== bAlive) return aAlive ? -1 : 1;
     return Date.parse(b.registeredAt) - Date.parse(a.registeredAt);
   });
@@ -73,14 +75,16 @@ export const ProcessesSection = memo(function ProcessesSection({
   return (
     <div className="space-y-0.5">
       {sorted.map((proc) => {
-        const alive = !proc.stoppedAt;
+        const alive = isTeamAlive === true && !proc.stoppedAt;
         const timeStr = alive
           ? t('processes.ago', {
               time: formatCompactRelativeTime(new Date(proc.registeredAt)),
             })
-          : t('processes.stoppedAgo', {
-              time: formatCompactRelativeTime(new Date(proc.stoppedAt!)),
-            });
+          : proc.stoppedAt
+            ? t('processes.stoppedAgo', {
+                time: formatCompactRelativeTime(new Date(proc.stoppedAt)),
+              })
+            : '';
 
         return (
           <div
@@ -160,7 +164,7 @@ export const ProcessesSection = memo(function ProcessesSection({
                   teamName={teamName}
                 />
               )}
-              <span className="text-[var(--color-text-muted)]">{timeStr}</span>
+              {timeStr ? <span className="text-[var(--color-text-muted)]">{timeStr}</span> : null}
             </span>
           </div>
         );
@@ -175,6 +179,7 @@ function areProcessesSectionPropsEqual(
 ): boolean {
   return (
     prev.teamName === next.teamName &&
+    prev.isTeamAlive === next.isTeamAlive &&
     areMembersEquivalent(prev.members, next.members) &&
     areProcessesEquivalent(prev.processes, next.processes)
   );

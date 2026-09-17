@@ -967,6 +967,9 @@ export function shouldDisplayMemberCurrentTask({
   if (member.removedAt || member.status === 'terminated') {
     return false;
   }
+  if (member.runtimeAdvisory?.reasonCode === 'quota_exhausted') {
+    return false;
+  }
   if (isTeamAlive === false) {
     return false;
   }
@@ -1305,7 +1308,8 @@ export function buildMemberLaunchPresentation({
     livenessKind: visualSpawnLivenessKind ?? visualRuntimeEntry?.livenessKind,
     runtimeEntry: visualRuntimeEntry,
   });
-  const displayRuntimeAdvisory = suppressOpenCodeAppMcpAdvisory ? undefined : runtimeAdvisory;
+  const displayRuntimeAdvisory =
+    isTeamAlive === false || suppressOpenCodeAppMcpAdvisory ? undefined : runtimeAdvisory;
   const effectiveSpawnStatus =
     hasConfirmedSpawnLaunch &&
     currentRuntimeOfflineVisualState == null &&

@@ -246,9 +246,12 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     });
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
     expect(ports.readLaunchState).toHaveBeenCalledWith('team-a');
-    expect(
+    expect(vi.mocked(ports.readLaunchState).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(ports.setSecondaryRuntimeRun).mock.invocationCallOrder[0]
+    );
+    expect(vi.mocked(ports.setSecondaryRuntimeRun).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(ports.publishMixedSecondaryLaneStatusChange).mock.invocationCallOrder[0]
-    ).toBeLessThan(vi.mocked(ports.readLaunchState).mock.invocationCallOrder[0]);
+    );
   });
 
   it('leaves unowned provisional metadata after cancellation during index setup', async () => {
@@ -320,5 +323,46 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     );
     expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
+  });
+
+  it('force-stops a leftover same-lane OpenCode run before registering the successor', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const adapter = createAdapter();
+    const ports = createPorts({
+      getOpenCodeRuntimeAdapter: vi.fn(() => adapter),
+      readLaunchState: vi.fn(async () => ({
+        ...createSnapshot(),
+        members: {
+          Bob: {
+            name: 'Bob',
+            providerId: 'opencode' as const,
+            laneId: 'secondary:opencode:bob',
+            runtimeRunId: 'run-old',
+            launchState: 'starting' as const,
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-07-03T00:00:00.000Z',
+          },
+        },
+      })),
+    });
+
+    const result = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+
+    expect(result.outcome).toBe('ready');
+    expect(adapter.stop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'run-old',
+        laneId: 'secondary:opencode:bob',
+        force: true,
+        reason: 'cleanup',
+      })
+    );
+    expect(ports.setSecondaryRuntimeRun).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: 'generated-run-id' })
+    );
   });
 });

@@ -1,3 +1,5 @@
+import { readTeamLaunchFreshness } from '../TeamLaunchFreshness';
+
 import {
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
@@ -7,7 +9,9 @@ import {
   type TeamProvisioningRuntimeStateProjectionPorts,
   type TeamProvisioningRuntimeStateProjectionState,
 } from './TeamProvisioningRuntimeStateProjection';
+import { applyStoppedTeamRuntimeResources } from './TeamProvisioningStoppedTeamRuntimeProjection';
 
+import type { TeamLaunchFreshness } from '../TeamLaunchFreshness';
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
 import type { TeamProvisioningAgentRuntimeSnapshotCachePort } from './TeamProvisioningRuntimeSnapshotCache';
@@ -69,6 +73,7 @@ export interface TeamProvisioningRuntimeSnapshotFacadePorts {
     params: BuildTeamAgentRuntimeSnapshotParams
   ): Promise<TeamAgentRuntimeSnapshot>;
   logDebug(message: string): void;
+  readLaunchFreshness?(teamName: string): Promise<TeamLaunchFreshness | null>;
 }
 
 interface AgentRuntimeSnapshotInFlightRequest {
@@ -111,6 +116,35 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     return this.runtimeStateProjection.isTeamAlive(teamName);
   }
 
+  private async resolveRuntimeSnapshot(
+    teamName: string,
+    snapshot: TeamAgentRuntimeSnapshot
+  ): Promise<TeamAgentRuntimeSnapshot> {
+    const isTeamAlive = this.isTeamAlive(teamName);
+    const hasProvisioningRun = this.hasProvisioningRun(teamName);
+    if (isTeamAlive || hasProvisioningRun) {
+      return applyStoppedTeamRuntimeResources({
+        snapshot,
+        isTeamAlive,
+        hasProvisioningRun,
+        freshnessKind: null,
+      });
+    }
+    const readLaunchFreshness = this.ports.readLaunchFreshness ?? readTeamLaunchFreshness;
+    let freshnessKind: TeamLaunchFreshness['kind'] | null = null;
+    try {
+      freshnessKind = (await readLaunchFreshness(teamName))?.kind ?? null;
+    } catch {
+      freshnessKind = null;
+    }
+    return applyStoppedTeamRuntimeResources({
+      snapshot,
+      isTeamAlive,
+      hasProvisioningRun,
+      freshnessKind,
+    });
+  }
+
   getAliveTeams(): string[] {
     return this.runtimeStateProjection.getAliveTeams();
   }
@@ -123,7 +157,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     const runId = this.ports.getTrackedRunId(teamName);
     const cached = this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId);
     if (cached) {
-      return cached;
+      return this.resolveRuntimeSnapshot(teamName, cached);
     }
 
     const generationAtStart =
@@ -176,7 +210,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       ? this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId)
       : undefined;
     if (cached) {
-      return cached;
+      return this.resolveRuntimeSnapshot(teamName, cached);
     }
     const generationAtStart =
       this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(teamName);
@@ -249,7 +283,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     const samplingPorts = this.ports.createRuntimeSnapshotResourceSamplingPorts(
       options?.readOnly === true ? { readOnly: true } : undefined
     );
-    return buildSnapshot({
+    const snapshot = await buildSnapshot({
       teamName,
       runId,
       generationAtStart,
@@ -286,5 +320,6 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       },
       logDebug: (message) => this.ports.logDebug(message),
     });
+    return this.resolveRuntimeSnapshot(teamName, snapshot);
   }
 }

@@ -76,6 +76,7 @@ vi.mock('@main/utils/textFormatting', () => ({
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { Notification as ElectronNotification } from 'electron';
+import { readFile } from 'fs/promises';
 
 function decodeXmlText(value: string): string {
   return value
@@ -384,5 +385,209 @@ describe('NotificationManager.addTeamNotification', () => {
     const options = getLastNotificationOptions();
     expect(options.title).toBe('Team launch incomplete');
     expect(options.body).toContain('3/4 joined · @tom did not join');
+  });
+});
+
+
+function focusedWindow() {
+  return {
+    isDestroyed: () => false,
+    isFocused: () => true,
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  };
+}
+
+describe('NotificationManager viewed team', () => {
+  let manager: NotificationManager;
+
+  beforeEach(async () => {
+    NotificationManager.resetInstance();
+    manager = new NotificationManager();
+    await manager.initialize();
+    mockNotificationShow.mockClear();
+    mockNotificationOn.mockClear();
+    const configMock = ConfigManager.getInstance().getConfig as ReturnType<typeof vi.fn>;
+    configMock.mockReturnValue({
+      notifications: {
+        enabled: true,
+        soundEnabled: false,
+        snoozedUntil: null,
+        ignoredRegex: [],
+        ignoredRepositories: [],
+      },
+    });
+  });
+
+  afterEach(() => {
+    NotificationManager.resetInstance();
+  });
+
+  it('marks matching unread notifications read when that team is viewed', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:1' }));
+    await manager.addTeamNotification(
+      makeTeamPayload({
+        teamName: 'other-team',
+        teamDisplayName: 'Other',
+        dedupeKey: 'inbox:other-team:a:1',
+      })
+    );
+
+    expect(await manager.getUnreadCount()).toBe(2);
+    manager.setMainWindow(focusedWindow() as never);
+    manager.setViewedTeamName('test-team');
+    expect(await manager.getUnreadCount()).toBe(1);
+    const remaining = await manager.getNotifications({ limit: 10, offset: 0 });
+    expect(remaining.notifications.find((n) => n.sessionId === 'team:other-team')?.isRead).toBe(
+      false
+    );
+  });
+
+  it('stores new events for the viewed team as read and skips the OS toast', async () => {
+    manager.setMainWindow(focusedWindow() as never);
+    manager.setViewedTeamName('test-team');
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:viewed' })
+    );
+
+    expect(stored?.isRead).toBe(true);
+    expect(mockNotificationShow).not.toHaveBeenCalled();
+    expect(await manager.getUnreadCount()).toBe(0);
+  });
+
+  it('keeps viewed-team events unread and toasted when the window is unfocused', async () => {
+    const win = {
+      isDestroyed: () => false,
+      isFocused: () => false,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    manager.setViewedTeamName('test-team');
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:unfocused' })
+    );
+
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
+  it('does not mark existing viewed-team unread while the window is unfocused', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:existing' }));
+    const win = {
+      isDestroyed: () => false,
+      isFocused: () => false,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    expect(await manager.getUnreadCount()).toBe(1);
+
+    manager.setViewedTeamName('test-team');
+
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
+  it('marks viewed-team events read when the window is focused again', async () => {
+    const listeners = new Map<string, () => void>();
+    const win = {
+      isDestroyed: () => false,
+      isFocused: vi.fn(() => false),
+      on: vi.fn((event: string, listener: () => void) => {
+        listeners.set(event, listener);
+      }),
+      removeListener: vi.fn(),
+    };
+    manager.setMainWindow(win as never);
+    manager.setViewedTeamName('test-team');
+    await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:while-blurred' })
+    );
+    expect(await manager.getUnreadCount()).toBe(1);
+
+    win.isFocused.mockReturnValue(true);
+    listeners.get('focus')?.();
+    expect(await manager.getUnreadCount()).toBe(0);
+  });
+
+
+  it('does not auto-read when there is no usable window', async () => {
+    await manager.addTeamNotification(makeTeamPayload({ dedupeKey: 'inbox:test-team:a:nowin' }));
+    manager.setViewedTeamName('test-team');
+    expect(await manager.getUnreadCount()).toBe(1);
+  });
+
+  it('clears the viewed team when the main window is closed', async () => {
+    manager.setMainWindow(focusedWindow() as never);
+    manager.setViewedTeamName('test-team');
+    manager.setMainWindow(null);
+    mockNotificationShow.mockClear();
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:after-close' })
+    );
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+  });
+
+  it('stores later events as unread after the team tab is left', async () => {
+    manager.setMainWindow(focusedWindow() as never);
+    manager.setViewedTeamName('test-team');
+    manager.setViewedTeamName(null);
+    mockNotificationShow.mockClear();
+
+    const stored = await manager.addTeamNotification(
+      makeTeamPayload({ dedupeKey: 'inbox:test-team:a:after-leave' })
+    );
+
+    expect(stored?.isRead).toBe(false);
+    expect(mockNotificationShow).toHaveBeenCalledOnce();
+  });
+});
+
+describe('NotificationManager viewed team initialize race', () => {
+  afterEach(() => {
+    NotificationManager.resetInstance();
+    vi.mocked(readFile).mockRejectedValue({ code: 'ENOENT' });
+  });
+
+  it('marks persisted viewed-team history read after setViewedTeam during load', async () => {
+    let releaseLoad!: () => void;
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve;
+    });
+    vi.mocked(readFile).mockImplementation(async () => {
+      await loadGate;
+      return JSON.stringify([
+        {
+          id: 'persisted-team',
+          title: 'Alice',
+          message: 'Hello',
+          timestamp: '2026-09-17T10:00:00.000Z',
+          type: 'info',
+          sessionId: 'team:test-team',
+          category: 'team',
+          isRead: false,
+          createdAt: Date.parse('2026-09-17T10:00:00.000Z'),
+        },
+      ]);
+    });
+
+    const delayed = new NotificationManager();
+    delayed.setMainWindow(focusedWindow() as never);
+    const initializing = delayed.initialize();
+    delayed.setViewedTeamName('test-team');
+    expect(delayed.getUnreadCountSync()).toBe(0);
+
+    releaseLoad();
+    await initializing;
+
+    expect(delayed.getUnreadCountSync()).toBe(0);
+    const loaded = await delayed.getNotifications({ limit: 10, offset: 0 });
+    expect(loaded.notifications[0]?.isRead).toBe(true);
   });
 });

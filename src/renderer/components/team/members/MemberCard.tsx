@@ -647,8 +647,8 @@ export const MemberCard = memo(function MemberCard({
   reviewTask,
   currentTaskTimer,
   reviewTaskTimer,
-  currentTaskTimerRunning = isTeamAlive !== false,
-  reviewTaskTimerRunning = isTeamAlive !== false,
+  currentTaskTimerRunning = isTeamAlive === true,
+  reviewTaskTimerRunning = isTeamAlive === true,
   isAwaitingReply,
   pendingDeliveryState,
   isRemoved,
@@ -1090,7 +1090,7 @@ export const MemberCard = memo(function MemberCard({
           }
         }}
       >
-        {!isRemoved && renderRuntimeTelemetryStrip ? (
+        {!isRemoved && renderRuntimeTelemetryStrip && isTeamAlive === true ? (
           <MemberRuntimeTelemetryStrip runtimeEntry={runtimeEntry} scale={runtimeTelemetryScale} />
         ) : null}
         <div className="pointer-events-none absolute inset-0 z-10 rounded transition-colors group-hover:bg-white/5" />
@@ -1247,7 +1247,7 @@ export const MemberCard = memo(function MemberCard({
                   style={{ backgroundColor: 'var(--skeleton-base)' }}
                 />
               </div>
-            ) : runtimeSummaryText || roleLabel || memoryLabel ? (
+            ) : runtimeSummaryText || roleLabel || (isTeamAlive === true && memoryLabel) ? (
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-[var(--color-text-muted)]">
                 {runtimeSummaryText ? (
                   <span className="min-w-0 truncate">{runtimeSummaryText}</span>
@@ -1256,10 +1256,10 @@ export const MemberCard = memo(function MemberCard({
                   <span className="shrink-0 opacity-60">•</span>
                 ) : null}
                 {roleLabel ? <span className="shrink-0">{roleLabel}</span> : null}
-                {(runtimeSummaryText || roleLabel) && memoryLabel ? (
+                {(runtimeSummaryText || roleLabel) && isTeamAlive === true && memoryLabel ? (
                   <span className="shrink-0 opacity-60">•</span>
                 ) : null}
-                {memoryLabel ? (
+                {isTeamAlive === true && memoryLabel ? (
                   <span className="shrink-0" title={memorySourceLabel}>
                     {memoryLabel}
                   </span>

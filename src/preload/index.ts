@@ -596,6 +596,8 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('notifications:get', options),
     markRead: (id: string) => ipcRenderer.invoke('notifications:markRead', id),
     markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
+    setViewedTeam: (teamName: string | null) =>
+      ipcRenderer.invoke('notifications:setViewedTeam', teamName),
     delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
     clear: () => ipcRenderer.invoke('notifications:clear'),
     getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),

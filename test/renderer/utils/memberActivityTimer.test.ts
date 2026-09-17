@@ -470,6 +470,37 @@ describe('memberActivityTimer', () => {
     ).toBe(65_000);
   });
 
+  it('does not keep counting while the caller says the timer is paused', () => {
+    const timerId = createMemberActivityTimerId({
+      teamName: 'alpha',
+      memberName: 'bob',
+      phase: 'work',
+      taskId: 'task-1',
+      startedAt: '2026-05-07T09:00:00.000Z',
+    });
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+
+    syncMemberActivityTimer({
+      timerId,
+      startedAtMs,
+      baseElapsedMs: 0,
+      running: true,
+      runId: 'run-1',
+      nowMs: Date.parse('2026-05-07T09:01:00.000Z'),
+    });
+
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId,
+        startedAtMs,
+        baseElapsedMs: 0,
+        running: false,
+        runId: 'run-1',
+        nowMs: Date.parse('2026-05-07T09:17:20.000Z'),
+      })
+    ).toBe(60_000);
+  });
+
   it('formats seconds, minutes, and hours compactly', () => {
     expect(formatMemberActivityElapsed(9_000)).toBe('9s');
     expect(formatMemberActivityElapsed(65_000)).toBe('1m 05s');

@@ -227,6 +227,7 @@ export interface NotificationsAPI {
   get: (options?: { limit?: number; offset?: number }) => Promise<NotificationsResult>;
   markRead: (id: string) => Promise<boolean>;
   markAllRead: () => Promise<boolean>;
+  setViewedTeam: (teamName: string | null) => Promise<boolean>;
   delete: (id: string) => Promise<boolean>;
   clear: () => Promise<boolean>;
   getUnreadCount: () => Promise<number>;

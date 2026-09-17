@@ -76,8 +76,9 @@ export class TeamProvisioningRuntimeStateProjection<
   async getRuntimeState(teamName: string): Promise<TeamRuntimeState> {
     const runId = this.options.ports.getTrackedRunId(teamName);
     const run = runId ? (this.options.state.runs.get(runId) ?? null) : null;
+    const isAlive = this.isTeamAlive(teamName);
 
-    if (!run) {
+    if (!run && !isAlive) {
       const recovered = await this.options.ports.readBootstrapRuntimeState(teamName);
       if (recovered) {
         return recovered;
@@ -86,7 +87,7 @@ export class TeamProvisioningRuntimeStateProjection<
 
     return {
       teamName,
-      isAlive: this.isTeamAlive(teamName),
+      isAlive,
       runId: run?.runId ?? runId ?? null,
       progress:
         run?.progress ??

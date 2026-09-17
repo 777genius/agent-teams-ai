@@ -1,4 +1,7 @@
+import { readAttributedCursorAgentProcesses } from '../opencode/bridge/CursorAgentAttributionRecords';
+
 import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { stopLeftoverOpenCodeSecondaryLaneRuns } from './TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime/TeamRuntimeAdapter';
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
@@ -174,6 +177,16 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   lane.warnings = [];
   lane.diagnostics = [...requestedDiagnostics, ...migration.diagnostics];
   const laneCwd = lane.member.cwd?.trim() || run.request.cwd;
+  const previousLaunchState = await ports.readLaunchState(run.teamName);
+  await stopLeftoverOpenCodeSecondaryLaneRuns({
+    adapter,
+    teamName: run.teamName,
+    laneId: lane.laneId,
+    nextRunId: laneRunId,
+    cwd: laneCwd,
+    previousLaunchState,
+    attributed: await readAttributedCursorAgentProcesses().catch(() => []),
+  });
   ports.setSecondaryRuntimeRun({
     teamName: run.teamName,
     runId: laneRunId,
@@ -183,7 +196,6 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     cwd: laneCwd,
   });
   await ports.publishMixedSecondaryLaneStatusChange(run, lane);
-  const previousLaunchState = await ports.readLaunchState(run.teamName);
 
   return {
     ...baseResult,

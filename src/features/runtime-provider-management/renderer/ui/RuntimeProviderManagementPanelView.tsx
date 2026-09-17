@@ -173,14 +173,41 @@ function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): s
   }
 }
 
-function getDirectoryModelsLabel(provider: RuntimeProviderDirectoryEntryDto): string {
-  if (provider.modelCount === null) {
+function resolveDirectoryModelCount(
+  provider: RuntimeProviderDirectoryEntryDto,
+  state: Pick<
+    RuntimeProviderManagementState,
+    | 'modelPickerProviderId'
+    | 'modelQuery'
+    | 'modelsLoading'
+    | 'modelsError'
+    | 'modelsTotalCount'
+    | 'models'
+  >
+): number | null {
+  if (state.modelPickerProviderId !== provider.providerId) {
+    return provider.modelCount;
+  }
+  if (state.modelsLoading || state.modelsError || state.modelQuery.trim()) {
+    return provider.modelCount;
+  }
+  if (state.modelsTotalCount !== null) {
+    return state.modelsTotalCount;
+  }
+  if (state.models.length > 0) {
+    return state.models.length;
+  }
+  return provider.modelCount;
+}
+
+function getDirectoryModelsLabel(modelCount: number | null): string {
+  if (modelCount === null) {
     return 'models unknown';
   }
-  if (provider.modelCount <= 0) {
+  if (modelCount <= 0) {
     return 'models not reported';
   }
-  return `${provider.modelCount} model${provider.modelCount === 1 ? '' : 's'}`;
+  return `${modelCount} model${modelCount === 1 ? '' : 's'}`;
 }
 
 function formatOpenCodeProviderCount(count: number): string {
@@ -201,7 +228,7 @@ function directoryEntryMatchesQuery(
     provider.defaultModelId ?? '',
     provider.sourceLabel ?? '',
     provider.providerSource ?? '',
-    getDirectoryModelsLabel(provider),
+    getDirectoryModelsLabel(provider.modelCount),
     formatDirectorySetupKind(provider),
     ...provider.authMethods,
   ]
@@ -1283,7 +1310,7 @@ const DirectoryProviderRow = ({
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-text-secondary)]">
-            <span>{getDirectoryModelsLabel(provider)}</span>
+            <span>{getDirectoryModelsLabel(resolveDirectoryModelCount(provider, state))}</span>
             {provider.sourceLabel && provider.sourceLabel !== 'configured' ? (
               <span>{provider.sourceLabel}</span>
             ) : null}

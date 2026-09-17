@@ -2152,7 +2152,8 @@ export const TeamDetailView = memo(function TeamDetailView({
         teamName,
         isTeamAlive: data?.isAlive === true,
         request,
-        members: nextMembers, memberSettingsRelaunch,
+        members: nextMembers,
+        memberSettingsRelaunch,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
@@ -2184,7 +2185,14 @@ export const TeamDetailView = memo(function TeamDetailView({
         launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName, validateMemberSettingsRelaunch]
+    [
+      data?.isAlive,
+      data?.members,
+      data?.tasks,
+      launchTeam,
+      teamName,
+      validateMemberSettingsRelaunch,
+    ]
   );
 
   const handleChangeLeadRuntime = useCallback(
@@ -3286,9 +3294,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                   variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
-                  badge={data.processes.filter((p) => !p.stoppedAt).length}
+                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}
                   headerExtra={
-                    data.processes.some((p) => !p.stoppedAt) ? (
+                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (
                       <span
                         className="pointer-events-none relative inline-flex size-2 shrink-0"
                         title={t('detail.status.active')}
@@ -3304,6 +3312,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     teamName={teamName}
                     members={membersWithLiveBranches}
                     processes={data.processes}
+                    isTeamAlive={data.isAlive}
                   />
                 </CollapsibleTeamSection>
               )}
