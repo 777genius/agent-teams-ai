@@ -42,12 +42,31 @@ export interface OpenCodeReadinessBridgeTimeoutOptions {
   cleanupTimeoutMs?: number;
 }
 
+function isLocalOpenCodeLaunchModel(selectedModel: string): boolean {
+  const provider = selectedModel.split('/')[0]?.toLowerCase() ?? '';
+  return (
+    provider === 'ollama' ||
+    provider === 'llama.cpp' ||
+    provider === 'llamacpp' ||
+    provider === 'lmstudio' ||
+    provider === 'lm-studio' ||
+    provider === 'local' ||
+    provider === 'vllm'
+  );
+}
+
 export function resolveOpenCodeLaunchTimeoutMs(
   input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members'>,
   configuredTimeoutMs?: number
 ): number {
   if (configuredTimeoutMs !== undefined) {
     return configuredTimeoutMs;
+  }
+  if (
+    isLocalOpenCodeLaunchModel(input.selectedModel) &&
+    !input.selectedModel.toLowerCase().includes('cloud')
+  ) {
+    return OPEN_CODE_BRIDGE_TIMEOUTS_MS.readiness;
   }
   const usesSerialNativeSubscriptionCli =
     input.selectedModel.startsWith('cursor-acp/') || input.selectedModel.startsWith('kiro/');

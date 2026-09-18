@@ -25,6 +25,15 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
     );
   });
 
+  it('gives local Ollama-style models the readiness budget for launch proof', () => {
+    expect(
+      resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'ollama/qwen2.5-coder:7b-32k', members: [] })
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'llama.cpp/qwen-test:0.5b', members: [] })
+    ).toBe(300_000);
+  });
+
   it('scales the timeout for serial native subscription CLI members', () => {
     const members = [
       { name: 'one', role: 'developer', prompt: 'one' },
