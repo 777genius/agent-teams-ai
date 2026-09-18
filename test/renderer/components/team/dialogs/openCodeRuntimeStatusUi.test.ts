@@ -5,6 +5,7 @@ import {
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
   isOpenCodeSourceTabCountPending,
+  mergeOpenCodePassiveProviderStatus,
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
 import { describe, expect, it } from 'vitest';
 
@@ -62,6 +63,16 @@ describe('isOpenCodeSourceTabCountPending', () => {
         passiveCatalogPending: false,
       })
     ).toBe(false);
+  });
+});
+
+describe('mergeOpenCodePassiveProviderStatus', () => {
+  it('keeps the dedicated OpenCode snapshot even when the inspected provider list is Anthropic', () => {
+    const anthropic = { ...status('authoritative', true), providerId: 'anthropic' as const };
+    const opencode = status('pending', true);
+    const merged = mergeOpenCodePassiveProviderStatus([anthropic], opencode);
+    expect(merged.get('anthropic')).toBe(anthropic);
+    expect(merged.get('opencode')).toBe(opencode);
   });
 });
 

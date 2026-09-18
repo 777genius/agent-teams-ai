@@ -1,3 +1,5 @@
+import './project-row-zebra-card.css';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { FolderGit2, FolderOpen, Search } from 'lucide-react';

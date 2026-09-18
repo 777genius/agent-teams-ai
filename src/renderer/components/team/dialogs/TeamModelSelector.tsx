@@ -113,9 +113,10 @@ import {
   hasFreeOpenCodeModelRoute,
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
-  isOpenCodeSourceTabCountPending,
+  mergeOpenCodePassiveProviderStatus,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
+import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
@@ -1255,15 +1256,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       },
       onReady: onValueChange,
     });
-  const runtimeProviderStatusById = useMemo(() => {
-    const statuses = new Map(
-      (effectiveCliStatus?.providers ?? []).map((provider) => [provider.providerId, provider])
-    );
-    if (openCodePassiveProviderStatus) {
-      statuses.set('opencode', openCodePassiveProviderStatus);
-    }
-    return statuses;
-  }, [effectiveCliStatus?.providers, openCodePassiveProviderStatus]);
+  const runtimeProviderStatusById = useMemo(
+    () =>
+      mergeOpenCodePassiveProviderStatus(
+        effectiveCliStatus?.providers,
+        openCodePassiveProviderStatus
+      ),
+    [effectiveCliStatus?.providers, openCodePassiveProviderStatus]
+  );
   const openCodeProviderStatus = runtimeProviderStatusById.get('opencode') ?? null;
   const openCodeRuntimeStatusUiState = getOpenCodeRuntimeStatusUiState({
     providerStatus: openCodeProviderStatus,
@@ -3306,67 +3306,24 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   ))
                 : null}
               {openCodeProviderTabs.map((provider) => {
-                const openCodeDisabledReason = getProviderDisabledReason('opencode');
-                const sourceModelCount = openCodeSourceModelCountById.get(provider.sourceId) ?? 0;
                 const sourceLoadable = isOpenCodeSourceTabLoadable(provider);
-                const sourceCountPending = isOpenCodeSourceTabCountPending({
-                  sourceModelCount,
-                  sourceScopedLoading:
-                    openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
-                    openCodeScopedCatalog.status === 'loading',
-                  directoryExpectsModels:
-                    provider.directoryModelCount === null ||
-                    (provider.directoryModelCount !== undefined &&
-                      provider.directoryModelCount > 0),
-                  passiveCatalogPending: openCodePassiveCatalogPending,
-                });
-                const sourceDisabled =
-                  !sourceLoadable ||
-                  (!isProviderSelectable('opencode') && !isProviderInspectable('opencode'));
                 return (
-                  <TabsTrigger
+                  <OpenCodeSourceProviderTabTrigger
                     key={provider.id}
-                    value={provider.id}
-                    disabled={sourceDisabled}
-                    aria-disabled={sourceDisabled || undefined}
-                    aria-description={
-                      sourceCountPending
-                        ? `${provider.label} is connected. Loading models.`
-                        : sourceLoadable
-                          ? (openCodeDisabledReason ?? undefined)
-                          : `${provider.label} has no available models.`
+                    provider={provider}
+                    sourceModelCount={openCodeSourceModelCountById.get(provider.sourceId) ?? 0}
+                    sourceScopedLoading={
+                      openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
+                      openCodeScopedCatalog.status === 'loading'
                     }
-                    data-connection-status={provider.connected ? 'connected' : undefined}
-                    data-testid={`team-model-selector-provider-nav-${provider.sourceId}`}
-                    className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-45 data-[state=active]:border-white/[0.06] data-[state=active]:bg-white/[0.065] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-emerald-300 data-[state=active]:before:content-['']"
-                  >
-                    <ProviderBrandIcon
-                      provider={{ providerId: provider.sourceId, displayName: provider.label }}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-                      {provider.label}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1 text-[10px] tabular-nums text-[var(--color-text-muted)]">
-                      {provider.connected ? (
-                        <>
-                          <span
-                            data-testid={`team-model-selector-provider-nav-connected-${provider.sourceId}`}
-                            className="size-1.5 rounded-full bg-emerald-300"
-                            aria-hidden="true"
-                          />
-                          <span className="sr-only">Connected provider, </span>
-                        </>
-                      ) : null}
-                      {sourceCountPending ? (
-                        <>
-                          <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
-                          <span className="sr-only">Loading models</span>
-                        </>
-                      ) : (
-                        sourceModelCount
-                      )}
-                    </span>
-                  </TabsTrigger>
+                    passiveCatalogPending={openCodePassiveCatalogPending}
+                    sourceLoadable={sourceLoadable}
+                    sourceDisabled={
+                      !sourceLoadable ||
+                      (!isProviderSelectable('opencode') && !isProviderInspectable('opencode'))
+                    }
+                    disabledReason={getProviderDisabledReason('opencode')}
+                  />
                 );
               })}
             </TabsList>

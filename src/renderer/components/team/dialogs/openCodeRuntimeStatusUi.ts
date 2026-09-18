@@ -174,6 +174,17 @@ export function isOpenCodeSourceTabCountPending(input: {
   return input.sourceScopedLoading || (input.directoryExpectsModels && input.passiveCatalogPending);
 }
 
+export function mergeOpenCodePassiveProviderStatus(
+  providers: readonly CliProviderStatus[] | undefined,
+  openCodePassiveProviderStatus: CliProviderStatus | null | undefined
+): Map<string, CliProviderStatus> {
+  const statuses = new Map((providers ?? []).map((provider) => [provider.providerId, provider]));
+  if (openCodePassiveProviderStatus) {
+    statuses.set('opencode', openCodePassiveProviderStatus);
+  }
+  return statuses;
+}
+
 export function shouldShowOpenCodeRuntimeLoading(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState
