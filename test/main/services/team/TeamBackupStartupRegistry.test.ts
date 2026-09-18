@@ -14,7 +14,10 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 }));
 
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
-import { loadTeamBackupStartupRegistry } from '../../../../src/main/services/team/TeamBackupStartupRegistry';
+import {
+  loadTeamBackupStartupRegistry,
+  prefetchTeamBackupStartupRegistry,
+} from '../../../../src/main/services/team/TeamBackupStartupRegistry';
 
 const services: TeamBackupService[] = [];
 function service() {
@@ -308,13 +311,21 @@ describe('strict backup startup registry', () => {
     }
   });
 
-  it('joins a second startup registry load for the same backup root', async () => {
+  it('joins initialize to an in-flight startup registry prefetch', async () => {
     await writeManifest('sandbox-shared');
-    const first = loadTeamBackupStartupRegistry(backups());
-    const second = loadTeamBackupStartupRegistry(backups());
-    expect(second).toBe(first);
-    expect(await first).toBe(await second);
-    expect((await first).teams['sandbox-shared']?.identityId).toBe('identity-sandbox-shared');
+    const prefetch = prefetchTeamBackupStartupRegistry(backups());
+    const loaded = loadTeamBackupStartupRegistry(backups());
+    expect(loaded).toBe(prefetch);
+    expect((await loaded).teams['sandbox-shared']?.identityId).toBe('identity-sandbox-shared');
+  });
+
+  it('re-reads the backup root after a consumed prefetch', async () => {
+    await writeManifest('sandbox-first');
+    prefetchTeamBackupStartupRegistry(backups());
+    await loadTeamBackupStartupRegistry(backups());
+    await writeManifest('sandbox-second');
+    const again = await loadTeamBackupStartupRegistry(backups());
+    expect(again.teams['sandbox-second']?.identityId).toBe('identity-sandbox-second');
   });
 
   it('retries startup registry discovery after a failed load', async () => {

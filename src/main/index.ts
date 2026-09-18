@@ -168,7 +168,7 @@ import {
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
-import { loadTeamBackupStartupRegistry } from '@main/services/team/TeamBackupStartupRegistry';
+import { prefetchTeamBackupStartupRegistry } from '@main/services/team/TeamBackupStartupRegistry';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -2086,7 +2086,7 @@ async function initializeServices(): Promise<void> {
   );
   // Reap older, profile-owned orphans before adapter initialization so the
   // first launch cannot race a stale host holding its loopback port.
-  void loadTeamBackupStartupRegistry(getBackupsBasePath()).catch((error: unknown) =>
+  void prefetchTeamBackupStartupRegistry(getBackupsBasePath()).catch((error: unknown) =>
     logger.warn(`[Backup] startup registry prefetch failed: ${String(error)}`)
   );
   publishStartupStatus({

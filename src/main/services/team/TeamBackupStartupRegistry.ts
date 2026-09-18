@@ -109,7 +109,9 @@ async function runBounded<T>(
 }
 
 /** Single-flight startup discovery; an incomplete inventory cannot establish readiness. */
-export function loadTeamBackupStartupRegistry(backupsBasePath: string): Promise<BackupRegistry> {
+export function prefetchTeamBackupStartupRegistry(
+  backupsBasePath: string
+): Promise<BackupRegistry> {
   const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
   if (existing) return existing;
   const request = loadTeamBackupStartupRegistryOnce(backupsBasePath);
@@ -120,6 +122,15 @@ export function loadTeamBackupStartupRegistry(backupsBasePath: string): Promise<
     }
   });
   return request;
+}
+
+export function loadTeamBackupStartupRegistry(backupsBasePath: string): Promise<BackupRegistry> {
+  const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
+  if (existing) {
+    startupRegistryLoadByBasePath.delete(backupsBasePath);
+    return existing;
+  }
+  return loadTeamBackupStartupRegistryOnce(backupsBasePath);
 }
 
 async function loadTeamBackupStartupRegistryOnce(backupsBasePath: string): Promise<BackupRegistry> {
