@@ -1,3 +1,5 @@
+import './project-row-zebra-card.css';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';

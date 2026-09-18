@@ -20,7 +20,6 @@ import {
   applyMemberSettingsRelaunch,
   buildMemberSettingsRelaunchIntent,
   filterMemberSettingsRelaunchInputs,
-  type MemberSettingsRelaunchDraft,
 } from '@features/team-provisioning/renderer';
 import {
   useWorkspaceTrustStatus,
@@ -146,6 +145,7 @@ import {
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -182,7 +182,7 @@ import {
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
 
-import type { ActiveTeamRef } from './CreateTeamDialog';
+import type { LaunchTeamDialogProps } from './LaunchTeamDialog.types';
 import type { ProjectPathProject } from './projectPathProjects';
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -190,8 +190,6 @@ import type {
   CliProviderId,
   CreateScheduleInput,
   EffortLevel,
-  ResolvedTeamMember,
-  Schedule,
   ScheduleLaunchConfig,
   TeamCreateRequest,
   TeamFastMode,
@@ -201,78 +199,12 @@ import type {
   UpdateSchedulePatch,
 } from '@shared/types';
 
-function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
-}
-
-// Props — discriminated union
-
-interface LaunchDialogBase {
-  memberSettingsDraft?: MemberSettingsRelaunchDraft;
-  validateMemberSettings?: () => Promise<void>;
-  open: boolean;
-  teamName: string;
-  onClose: () => void;
-}
-export type TeamLaunchDialogMode = 'launch' | 'relaunch';
-
-interface LaunchDialogLaunchMode extends LaunchDialogBase {
-  mode: 'launch';
-  members: ResolvedTeamMember[];
-  defaultProjectPath?: string;
-  provisioningError: string | null;
-  clearProvisioningError?: (teamName?: string) => void;
-  activeTeams?: ActiveTeamRef[];
-  onLaunch: (request: TeamLaunchRequest) => Promise<void>;
-}
-
-interface LaunchDialogRelaunchMode extends LaunchDialogBase {
-  mode: 'relaunch';
-  members: ResolvedTeamMember[];
-  defaultProjectPath?: string;
-  provisioningError: string | null;
-  clearProvisioningError?: (teamName?: string) => void;
-  activeTeams?: ActiveTeamRef[];
-  onRelaunch: (
-    request: TeamLaunchRequest,
-    members: TeamCreateRequest['members'],
-    intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']
-  ) => Promise<void>;
-}
-
-interface LaunchDialogScheduleMode {
-  mode: 'schedule';
-  open: boolean;
-  /** Team name — optional when creating from standalone schedules page */
-  teamName?: string;
-  onClose: () => void;
-  /** When provided → edit mode; null/undefined → create mode */
-  schedule?: Schedule | null;
-}
-
-export type LaunchTeamDialogProps =
-  | LaunchDialogLaunchMode
-  | LaunchDialogRelaunchMode
-  | LaunchDialogScheduleMode;
-
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
   'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
+
+export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
 // Component
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
