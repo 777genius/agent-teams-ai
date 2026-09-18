@@ -112,6 +112,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     onProgress?: (progress: TeamBackupRestoreProgress) => void
   ): Promise<string[]> {
     const restored: string[] = [];
+    const deferredHoleFill: string[] = [];
     const active = Object.entries(this.ports.registry()).filter(
       ([, entry]) => entry.status === 'active'
     );
@@ -132,7 +133,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
           await this.ports.withIdentityFence(teamName, () =>
             this.ports.withTeamMutex(teamName, async () => {
               if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
-                await this.ports.restoreGenericHoles(teamName);
+                deferredHoleFill.push(teamName);
                 skipped = true;
               }
             })
@@ -158,7 +159,29 @@ export class TeamBackupWorkSyncRestoreCoordinator {
         noteProgress();
       }
     });
+    void this.flushDeferredGenericHoles(deferredHoleFill);
     return restored;
+  }
+
+  private async flushDeferredGenericHoles(names: string[]): Promise<void> {
+    if (names.length === 0) return;
+    await runBounded(names, RESTORE_CONCURRENCY, async (teamName) => {
+      try {
+        if (this.ports.isShuttingDown()) return;
+        const entry = this.ports.registry()[teamName];
+        if (!entry || entry.status !== 'active') return;
+        if (await this.isFenced(teamName, entry.identityId)) return;
+        await this.ports.withIdentityFence(teamName, () =>
+          this.ports.withTeamMutex(teamName, async () => {
+            if (this.ports.isShuttingDown()) return;
+            if (!(await this.canSkipConfiguredRestore(teamName, entry.identityId))) return;
+            await this.ports.restoreGenericHoles(teamName);
+          })
+        );
+      } catch (error) {
+        logger.warn(`[Backup] deferred hole-fill failed for ${teamName}: ${String(error)}`);
+      }
+    });
   }
 
   private async canSkipConfiguredRestore(teamName: string, identityId: string): Promise<boolean> {

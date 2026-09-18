@@ -278,7 +278,7 @@ it('skips restore for a healthy live config without pending', async () => {
     expect(await owner.restoreIfNeeded()).toEqual([]);
     expect(prepare).not.toHaveBeenCalled();
     expect(generic).not.toHaveBeenCalled();
-    expect(holes).toHaveBeenCalledWith('sandbox');
+    await vi.waitFor(() => expect(holes).toHaveBeenCalledWith('sandbox'));
     expect(
       JSON.parse(await fs.readFile(path.join(backups, 'sandbox', 'manifest.json'), 'utf8'))
         .workSyncRestorePending
