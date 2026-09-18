@@ -1522,16 +1522,110 @@ describe('ProviderConnectionService', () => {
       await import('@main/services/runtime/ProviderConnectionService');
     const getSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
     const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const lookupPreferred = vi.fn();
     const service = new ProviderConnectionService(
-      { lookupPreferred: vi.fn() } as never,
+      { lookupPreferred } as never,
       { getConfig: () => createConfig('auto') } as never
     );
     service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
     const env = { ANTHROPIC_API_KEY: 'existing' };
 
     expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+    expect(env).toEqual({ ANTHROPIC_API_KEY: 'existing' });
     expect(getSnapshot).not.toHaveBeenCalled();
     expect(getCachedSnapshot).not.toHaveBeenCalled();
+    expect(lookupPreferred).not.toHaveBeenCalled();
+  });
+
+  it('projects a usable Anthropic-compatible base URL into passive status env without decrypting credentials', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const getSnapshot = vi.fn().mockRejectedValue(new Error('passive status must not refresh'));
+    const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const lookupPreferred = vi.fn().mockRejectedValue(new Error('passive status must not decrypt'));
+    const service = new ProviderConnectionService(
+      { lookupPreferred } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', {
+            enabled: true,
+            baseUrl: ' http://localhost:1234 ',
+          }),
+      } as never
+    );
+    service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+    const env = {
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      ANTHROPIC_API_KEY: 'existing-key',
+    };
+
+    expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+    expect(env).toEqual({
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      ANTHROPIC_API_KEY: 'existing-key',
+      ANTHROPIC_BASE_URL: 'http://localhost:1234',
+    });
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(getSnapshot).not.toHaveBeenCalled();
+    expect(getCachedSnapshot).not.toHaveBeenCalled();
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { enabled: true, baseUrl: '' },
+    { enabled: true, baseUrl: 'https://api.anthropic.com' },
+    { enabled: true, baseUrl: 'http://token@localhost:1234' },
+    { enabled: false, baseUrl: 'http://localhost:1234' },
+  ])(
+    'does not project unusable Anthropic-compatible endpoint %j into passive status env',
+    async (compatibleEndpoint) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+      const lookupPreferred = vi.fn();
+      const service = new ProviderConnectionService(
+        { lookupPreferred } as never,
+        { getConfig: () => createConfig('auto', compatibleEndpoint) } as never
+      );
+      const env = { ANTHROPIC_AUTH_TOKEN: 'compatible-token' };
+
+      expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+      expect(env).toEqual({ ANTHROPIC_AUTH_TOKEN: 'compatible-token' });
+      expect(lookupPreferred).not.toHaveBeenCalled();
+    }
+  );
+
+  it('restores the configured compatible endpoint after Anthropic routing scrub', async () => {
+    const { applyProviderRuntimeEnv } = await import('@main/services/runtime/providerRuntimeEnv');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const lookupPreferred = vi.fn();
+    const service = new ProviderConnectionService(
+      { lookupPreferred } as never,
+      {
+        getConfig: () =>
+          createConfig('api_key', {
+            enabled: true,
+            baseUrl: 'http://127.0.0.1:11434',
+          }),
+      } as never
+    );
+    const env: NodeJS.ProcessEnv = {
+      ANTHROPIC_BASE_URL: 'https://ambient-gateway.example.test',
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+    };
+
+    applyProviderRuntimeEnv(env, 'anthropic', {
+      authMode: 'api_key',
+      compatibleEndpoint: { enabled: true },
+    });
+    expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(env.AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE).toBe('compatible');
+
+    await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic');
+
+    expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:11434');
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
+    expect(lookupPreferred).not.toHaveBeenCalled();
   });
 
   it('leaves passive Codex status env unchanged when no account snapshot is cached', async () => {

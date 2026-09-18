@@ -168,6 +168,7 @@ import {
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import { prefetchTeamBackupStartupRegistry } from '@main/services/team/TeamBackupStartupRegistry';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -301,6 +302,7 @@ import { installPersistentAppLog } from './utils/persistentAppLog';
 import {
   getAutoDetectedClaudeBasePath,
   getAppDataPath,
+  getBackupsBasePath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
@@ -2010,6 +2012,9 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   teamDataService = new TeamDataService();
+  void teamDataService
+    .listTeams()
+    .catch((error: unknown) => logger.warn(`[Init] team list prefetch failed: ${String(error)}`));
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
@@ -2081,6 +2086,9 @@ async function initializeServices(): Promise<void> {
   );
   // Reap older, profile-owned orphans before adapter initialization so the
   // first launch cannot race a stale host holding its loopback port.
+  void prefetchTeamBackupStartupRegistry(getBackupsBasePath()).catch((error: unknown) =>
+    logger.warn(`[Backup] startup registry prefetch failed: ${String(error)}`)
+  );
   publishStartupStatus({
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
@@ -2318,26 +2326,6 @@ async function initializeServices(): Promise<void> {
   teamLogSourceTracker.onLogSourceChange((teamName) => {
     teammateToolTracker?.handleLogSourceChange(teamName);
   });
-  scheduleStartupTask(() => {
-    void teamDataService
-      .listTeams()
-      .then(async (teams) => {
-        const activeTeamNames = teams
-          .filter((team) => !team.deletedAt)
-          .map((team) => team.teamName);
-        await runStartupJobsBounded(
-          activeTeamNames,
-          STARTUP_RECOVERY_CONCURRENCY,
-          async (teamName) => {
-            await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
-          }
-        );
-      })
-      .catch((error: unknown) =>
-        logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
-      );
-  }, STARTUP_RECOVERY_DELAY_MS);
-  teamTaskStallMonitor.start();
 
   // Allow SchedulerService to push schedule events to renderer
   schedulerService.setChangeEmitter((event) => {
@@ -2858,6 +2846,9 @@ async function initializeServices(): Promise<void> {
       });
     },
   });
+  void teamDataService
+    .getAllTasks()
+    .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));
   bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
   scheduleStartupTask(() => {
     void listMemberWorkSyncLifecycleActiveTeamNames()
@@ -3279,6 +3270,26 @@ function runPostRendererStartupTasks(): void {
     .catch((error: unknown) =>
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
+  teamTaskStallMonitor?.start();
+  scheduleStartupTask(() => {
+    void teamDataService
+      .listTeams()
+      .then(async (teams) => {
+        const activeTeamNames = teams
+          .filter((team) => !team.deletedAt)
+          .map((team) => team.teamName);
+        await runStartupJobsBounded(
+          activeTeamNames,
+          STARTUP_RECOVERY_CONCURRENCY,
+          async (teamName) => {
+            await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
+          }
+        );
+      })
+      .catch((error: unknown) =>
+        logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
+      );
+  }, STARTUP_RECOVERY_DELAY_MS);
 
   scheduleStartupTask(() => {
     teamDataService.startProcessHealthPolling();

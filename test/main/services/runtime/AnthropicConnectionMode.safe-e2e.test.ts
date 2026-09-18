@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const configState = vi.hoisted(() => ({
   authMode: 'auto' as 'auto' | 'oauth' | 'api_key',
+  compatibleEndpoint: { enabled: false, baseUrl: '' },
 }));
 
 vi.mock('@main/services/infrastructure/ConfigManager', () => {
@@ -16,7 +17,7 @@ vi.mock('@main/services/infrastructure/ConfigManager', () => {
         anthropic: {
           authMode: configState.authMode,
           fastModeDefault: false,
-          compatibleEndpoint: { enabled: false, baseUrl: '' },
+          compatibleEndpoint: configState.compatibleEndpoint,
         },
         codex: {
           preferredAuthMode: 'auto',
@@ -44,6 +45,7 @@ describe('Anthropic connection mode safe e2e', () => {
   beforeEach(async () => {
     vi.resetModules();
     configState.authMode = 'auto';
+    configState.compatibleEndpoint = { enabled: false, baseUrl: '' };
     tempHome = await mkdtemp(path.join(os.tmpdir(), 'anthropic-connection-mode-e2e-'));
   });
 
@@ -53,9 +55,7 @@ describe('Anthropic connection mode safe e2e', () => {
 
   it('keeps explicit API key mode on the direct Anthropic route despite Bedrock shell env', async () => {
     configState.authMode = 'api_key';
-    const { buildProviderAwareCliEnv } = await import(
-      '@main/services/runtime/providerAwareCliEnv'
-    );
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
 
     const result = await buildProviderAwareCliEnv({
       binaryPath: '/mock/claude-multimodel',
@@ -87,9 +87,7 @@ describe('Anthropic connection mode safe e2e', () => {
 
   it('keeps subscription mode on Anthropic OAuth despite Bedrock and API-key shell env', async () => {
     configState.authMode = 'oauth';
-    const { buildProviderAwareCliEnv } = await import(
-      '@main/services/runtime/providerAwareCliEnv'
-    );
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
 
     const result = await buildProviderAwareCliEnv({
       binaryPath: '/mock/claude-multimodel',
@@ -113,5 +111,40 @@ describe('Anthropic connection mode safe e2e', () => {
     expect(result.env.ANTHROPIC_BASE_URL).toBeUndefined();
     expect(result.env.ANTHROPIC_API_KEY).toBeUndefined();
     expect(result.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+  });
+
+  it('restores the configured compatible endpoint on passive status after routing scrub', async () => {
+    configState.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://127.0.0.1:11434',
+    };
+    const { buildPassiveProviderStatusCliEnv } =
+      await import('@main/services/runtime/providerAwareCliEnv');
+    const { providerConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const { env: passiveEnv } = buildPassiveProviderStatusCliEnv({
+      binaryPath: '/mock/claude-multimodel',
+      providerId: 'anthropic',
+      shellEnv: {
+        HOME: tempHome,
+        USERPROFILE: tempHome,
+        PATH: '/usr/bin:/bin',
+        ANTHROPIC_BASE_URL: 'https://ambient-gateway.example/anthropic',
+        ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      },
+    });
+
+    expect(passiveEnv.AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE).toBe('compatible');
+    expect(passiveEnv.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(passiveEnv.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
+
+    const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+      passiveEnv,
+      'anthropic'
+    );
+
+    expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:11434');
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
   });
 });

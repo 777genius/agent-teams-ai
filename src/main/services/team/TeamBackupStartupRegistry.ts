@@ -86,7 +86,8 @@ async function quarantineUnownedIncompleteBackupDir(
   }
 }
 
-const DISCOVERY_CONCURRENCY = 8;
+const DISCOVERY_CONCURRENCY = 16;
+const startupRegistryLoadByBasePath = new Map<string, Promise<BackupRegistry>>();
 
 async function runBounded<T>(
   items: readonly T[],
@@ -107,10 +108,32 @@ async function runBounded<T>(
   );
 }
 
-/** An incomplete inventory cannot establish startup readiness. */
-export async function loadTeamBackupStartupRegistry(
+/** Single-flight startup discovery; an incomplete inventory cannot establish readiness. */
+export function prefetchTeamBackupStartupRegistry(
   backupsBasePath: string
 ): Promise<BackupRegistry> {
+  const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
+  if (existing) return existing;
+  const request = loadTeamBackupStartupRegistryOnce(backupsBasePath);
+  startupRegistryLoadByBasePath.set(backupsBasePath, request);
+  void request.catch(() => {
+    if (startupRegistryLoadByBasePath.get(backupsBasePath) === request) {
+      startupRegistryLoadByBasePath.delete(backupsBasePath);
+    }
+  });
+  return request;
+}
+
+export function loadTeamBackupStartupRegistry(backupsBasePath: string): Promise<BackupRegistry> {
+  const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
+  if (existing) {
+    startupRegistryLoadByBasePath.delete(backupsBasePath);
+    return existing;
+  }
+  return loadTeamBackupStartupRegistryOnce(backupsBasePath);
+}
+
+async function loadTeamBackupStartupRegistryOnce(backupsBasePath: string): Promise<BackupRegistry> {
   const registry = await readTeamBackupRegistry(path.join(backupsBasePath, 'registry.json'));
   const teamsDir = path.join(backupsBasePath, 'teams');
   let entries: fs.Dirent[];
