@@ -30,6 +30,9 @@ const CURSOR_HANDOFF_ALLOWANCE_MS = 270_000;
 const CURSOR_PHASE_RESERVE_MS = 30_000;
 const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 90_000;
 const MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS = 10 * 60_000;
+// 7B Ollama dest:mcp proof spent 318s after host start; the 300s readiness
+// budget still deadline'd. Keep local launch above that observed wall.
+const LOCAL_OPENCODE_LAUNCH_TIMEOUT_MS = 420_000;
 
 /** Per-command timeout overrides accepted by the readiness bridge. */
 export interface OpenCodeReadinessBridgeTimeoutOptions {
@@ -66,7 +69,7 @@ export function resolveOpenCodeLaunchTimeoutMs(
     isLocalOpenCodeLaunchModel(input.selectedModel) &&
     !input.selectedModel.toLowerCase().includes('cloud')
   ) {
-    return OPEN_CODE_BRIDGE_TIMEOUTS_MS.readiness;
+    return LOCAL_OPENCODE_LAUNCH_TIMEOUT_MS;
   }
   const usesSerialNativeSubscriptionCli =
     input.selectedModel.startsWith('cursor-acp/') || input.selectedModel.startsWith('kiro/');
