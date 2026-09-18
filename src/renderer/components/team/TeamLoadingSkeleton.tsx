@@ -7,10 +7,9 @@ import {
   ChevronRight,
   ClipboardList,
   Columns3,
-  Expand,
   Eye,
   History,
-  MessageSquare,
+  PanelLeftClose,
   PlayCircle,
   ShieldCheck,
   Users,
@@ -129,41 +128,32 @@ const TeamLoadingSidebarSkeleton = ({
 
   return (
     <aside
-      className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]"
+      className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-sidebar)]"
       aria-label={t('detail.loadingSidebar')}
     >
-      <div className="shrink-0 overflow-hidden px-3">
-        <section className="min-w-0">
-          <div className="relative -mx-3 flex min-h-9 w-[calc(100%+1.5rem)] items-stretch py-0">
-            <div className="absolute inset-0 z-0 bg-[var(--color-section-bg)]" />
-            <div className="relative z-10 flex min-w-0 flex-1 basis-0 flex-wrap items-center gap-2 gap-y-1 py-1 pl-4 pr-1">
-              <ChevronRight
-                size={14}
-                className="shrink-0 text-[var(--color-text-muted)] transition-transform duration-150"
-              />
-              <SkeletonPill className="h-4 w-14" />
-              <SkeletonPill className="h-5 w-14" />
-              <span className="pointer-events-auto ml-auto inline-flex size-6 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
-                <Expand size={14} />
-              </span>
-              <span className="flex min-w-0 basis-full items-center gap-1.5 opacity-70">
-                <MessageSquare size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                <SkeletonPill className="h-3 w-12 rounded" />
-                <SkeletonPill className="h-3 w-2 rounded" />
-                <SkeletonPill className="h-3 min-w-0 flex-1 rounded" />
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
-      <div className="bg-[var(--color-text-muted)]/35 h-px shrink-0" />
-      <div className="min-h-0 flex-1">
+      <div data-team-sidebar-messages="" className="min-h-0 flex-1">
         <MessagesConversationSkeleton
           surface={surface}
           scope={scope}
           title={title}
           memberCount={memberCount}
         />
+      </div>
+      <div className="h-px shrink-0 bg-[var(--color-border)]" />
+      <div data-team-sidebar-logs="" className="shrink-0 overflow-hidden px-3">
+        <section className="min-w-0">
+          <div className="relative -mx-3 flex min-h-9 w-[calc(100%+1.5rem)] items-stretch bg-[var(--color-surface-sidebar)] py-0">
+            <div className="absolute inset-0 z-0 bg-[var(--color-surface-sidebar)]" />
+            <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2 py-2 pl-3 pr-3">
+              <ChevronRight size={14} className="shrink-0 text-[var(--color-text-muted)]" />
+              <SkeletonPill className="h-4 w-10" />
+              <SkeletonPill className="h-5 w-12 border border-[var(--color-border)]" />
+              <span className="ml-auto mr-3 inline-flex size-7 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
+                <PanelLeftClose size={15} />
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
     </aside>
   );

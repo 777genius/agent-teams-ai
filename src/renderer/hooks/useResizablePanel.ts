@@ -44,9 +44,26 @@ function isVerticalOptions(options: UseResizablePanelOptions): options is Vertic
   return options.side === 'top' || options.side === 'bottom';
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function computeVerticalResizeHeight(
+  side: 'top' | 'bottom',
+  startHeight: number,
+  startClientY: number,
+  clientY: number,
+  minHeight: number,
+  maxHeight: number
+): number {
+  const delta = side === 'bottom' ? startClientY - clientY : clientY - startClientY;
+  return clamp(startHeight + delta, minHeight, maxHeight);
+}
+
 export function useResizablePanel(options: UseResizablePanelOptions): UseResizablePanelReturn {
   const [isResizing, setIsResizing] = useState(false);
   const originRef = useRef(0);
+  const startSizeRef = useRef(0);
   const isVertical = isVerticalOptions(options);
 
   const onSizeChangeRef = useRef<(size: number) => void>(
@@ -86,11 +103,21 @@ export function useResizablePanel(options: UseResizablePanelOptions): UseResizab
           newSize = window.innerWidth - e.clientX;
           break;
         case 'top':
-          newSize = e.clientY - originRef.current;
-          break;
         case 'bottom':
-          newSize = window.innerHeight - e.clientY;
+          newSize = computeVerticalResizeHeight(
+            sideRef.current,
+            startSizeRef.current,
+            originRef.current,
+            e.clientY,
+            minSizeRef.current,
+            maxSizeRef.current
+          );
           break;
+      }
+
+      if (sideRef.current === 'top' || sideRef.current === 'bottom') {
+        onSizeChangeRef.current(newSize);
+        return;
       }
 
       if (newSize >= minSizeRef.current && newSize <= maxSizeRef.current) {
@@ -123,11 +150,11 @@ export function useResizablePanel(options: UseResizablePanelOptions): UseResizab
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
 
       if (isVerticalOptions(options)) {
-        if (options.side === 'top') {
-          originRef.current = e.clientY - options.height;
-        }
+        originRef.current = e.clientY;
+        startSizeRef.current = options.height;
       } else if (options.side === 'left') {
         originRef.current = e.clientX - options.width;
       }

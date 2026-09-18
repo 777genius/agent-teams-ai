@@ -1561,7 +1561,6 @@ export const CliStatusBanner = ({
     fetchCliStatus,
     fetchCliProviderStatus,
     fetchOpenCodeRuntimeStatus,
-    fetchCodexRuntimeStatus,
     invalidateCliStatus,
     invalidateOpenCodeRuntimeStatus,
     installCli,
@@ -1709,22 +1708,6 @@ export const CliStatusBanner = ({
     [loadingCliStatus, visibleCliProviders]
   );
   const renderCliStatus = effectiveCliStatus;
-
-  useEffect(() => {
-    if (!isElectron || codexRuntimeStatus || codexRuntimeStatusLoading) {
-      return;
-    }
-
-    if (visibleCliProviders.some((provider) => provider.providerId === 'codex')) {
-      void fetchCodexRuntimeStatus();
-    }
-  }, [
-    codexRuntimeStatus,
-    codexRuntimeStatusLoading,
-    fetchCodexRuntimeStatus,
-    isElectron,
-    visibleCliProviders,
-  ]);
 
   const shouldPollAnthropicSubscriptionLimits = useMemo(() => {
     if (

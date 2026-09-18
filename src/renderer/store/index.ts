@@ -100,11 +100,8 @@ const TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS = 10_000;
 const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 60_000;
 const TEAM_MESSAGE_FALLBACK_POLL_MS = 10_000;
 const TASK_LOG_ACTIVITY_PULSE_MS = 3_500;
-const STARTUP_CODEX_RUNTIME_STATUS_IDLE_DELAY_MS = 30_000;
 const STARTUP_PROVIDER_STATUS_MIN_DELAY_MS = 2_000;
-const STARTUP_PROVIDER_STATUS_MAX_DELAY_MS = 30_000;
-const STARTUP_GLOBAL_TASKS_MIN_DELAY_MS = 5_000;
-const STARTUP_GLOBAL_TASKS_MAX_DELAY_MS = 30_000;
+const STARTUP_PROVIDER_STATUS_MAX_DELAY_MS = 3_000;
 const ACTIVE_PROVISIONING_STATES_FOR_PROCESS_LITE: ReadonlySet<TeamProvisioningProgress['state']> =
   new Set(['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']);
 export const TEAM_PROCESS_LITE_FANOUT_STORAGE_KEY = 'team:processLiteFanout';
@@ -227,9 +224,7 @@ export function initializeNotificationListeners(): () => void {
   const cleanupFns: (() => void)[] = [];
   cleanupFns.push(installTeamRefreshFanoutDebugBridge());
   let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
-  let codexRuntimeStatusTimer: ReturnType<typeof setTimeout> | null = null;
   let deferredProviderStatusCleanup: (() => void) | null = null;
-  let deferredGlobalTasksCleanup: (() => void) | null = null;
   let disposed = false;
   useStore.getState().subscribeProvisioningProgress();
   cleanupFns.push(() => {
@@ -248,13 +243,6 @@ export function initializeNotificationListeners(): () => void {
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 
     if (api.cliInstaller) {
-      const multimodelEnabled = loadedConfig?.general?.multimodelEnabled ?? true;
-      if (multimodelEnabled && api.openCodeRuntime) {
-        // The dashboard provider gate only needs the lightweight runtime
-        // installer status. Start it immediately; the slower generic OpenCode
-        // provider hydration belongs to the idle provider batch below.
-        void useStore.getState().fetchOpenCodeRuntimeStatus();
-      }
       // Resolve the configured CLI flavor after config has loaded to avoid
       // bootstrapping multimodel placeholder state in Claude-only mode.
       type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
@@ -287,6 +275,12 @@ export function initializeNotificationListeners(): () => void {
                     checkReason: 'startup',
                   });
                 }
+                if (api.openCodeRuntime) {
+                  void useStore.getState().fetchOpenCodeRuntimeStatus();
+                }
+                if (api.codexRuntime) {
+                  void useStore.getState().fetchCodexRuntimeStatus();
+                }
                 deferredProviderStatusCleanup = null;
               },
               {
@@ -301,15 +295,9 @@ export function initializeNotificationListeners(): () => void {
         cliStatusTimer = null;
       }, delayMs);
     }
-    codexRuntimeStatusTimer = setTimeout(() => {
-      if (api.codexRuntime) {
-        void useStore.getState().fetchCodexRuntimeStatus();
-      }
-      codexRuntimeStatusTimer = null;
-    }, STARTUP_CODEX_RUNTIME_STATUS_IDLE_DELAY_MS);
 
     // Keep immediately visible startup data first; global task aggregation can
-    // scan all team task files, so hydrate it after first paint/idle.
+    // scan all team task files, so hydrate it after the team list.
     await Promise.all([
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
@@ -318,23 +306,12 @@ export function initializeNotificationListeners(): () => void {
     if (disposed) {
       return;
     }
-    deferredGlobalTasksCleanup = scheduleStartupIdleTask(
-      () => {
-        deferredGlobalTasksCleanup = null;
-        void useStore.getState().fetchAllTasks();
-      },
-      {
-        minDelayMs: STARTUP_GLOBAL_TASKS_MIN_DELAY_MS,
-        maxDelayMs: STARTUP_GLOBAL_TASKS_MAX_DELAY_MS,
-      }
-    );
+    void useStore.getState().fetchAllTasks();
   })();
   cleanupFns.push(() => {
     disposed = true;
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
-    if (codexRuntimeStatusTimer) clearTimeout(codexRuntimeStatusTimer);
     if (deferredProviderStatusCleanup) deferredProviderStatusCleanup();
-    if (deferredGlobalTasksCleanup) deferredGlobalTasksCleanup();
   });
   // TODO(task-change-presence): re-enable this only after the board uses a bounded
   // batch/priority presence pipeline. The old one-task-per-tick poll was accurate

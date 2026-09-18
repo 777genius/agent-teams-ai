@@ -228,7 +228,7 @@ describe('team change throttling', () => {
     expect(getRepositoryGroupsSpy).not.toHaveBeenCalled();
   });
 
-  it('defers the initial global task fetch until the startup idle window', async () => {
+  it('hydrates global tasks immediately after the initial team list', async () => {
     const fetchAllTasksSpy = vi.fn(async () => undefined);
     useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
 
@@ -236,31 +236,35 @@ describe('team change throttling', () => {
     cleanup = initializeNotificationListeners();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(4_999);
-    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1);
     expect(fetchAllTasksSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('cancels the deferred initial global task fetch during listener cleanup', async () => {
+  it('does not start the initial global task fetch after listener cleanup', async () => {
+    let releaseTeams!: () => void;
+    const teamsGate = new Promise<void>((resolve) => {
+      releaseTeams = resolve;
+    });
     const fetchAllTasksSpy = vi.fn(async () => undefined);
-    useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
-
     cleanup?.();
+    cleanup = null;
+    useStore.setState({
+      fetchTeams: vi.fn(() => teamsGate),
+      fetchAllTasks: fetchAllTasksSpy,
+    } as never);
+
     cleanup = initializeNotificationListeners();
     await vi.advanceTimersByTimeAsync(0);
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
     cleanup();
     cleanup = null;
-
-    await vi.advanceTimersByTimeAsync(30_000);
+    releaseTeams();
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(fetchAllTasksSpy).not.toHaveBeenCalled();
   });
 
-  it('checks the OpenCode runtime immediately and defers generic provider hydration to idle', async () => {
+  it('defers OpenCode runtime and generic provider hydration to the same idle window', async () => {
     const originalFetchConfig = useStore.getState().fetchConfig;
     const originalBootstrapCliStatus = useStore.getState().bootstrapCliStatus;
     const originalFetchCliProviderStatus = useStore.getState().fetchCliProviderStatus;
@@ -319,15 +323,16 @@ describe('team change throttling', () => {
         providerStatusMode: 'defer',
       });
       expect(fetchCliProviderStatus).not.toHaveBeenCalled();
-      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+      expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(3_000);
       expect(fetchCliProviderStatus).not.toHaveBeenCalled();
-      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+      expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
 
       resolveBootstrap();
       await Promise.resolve();
       await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
       expect(fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
         silent: false,
         checkReason: 'startup',
@@ -390,12 +395,10 @@ describe('team change throttling', () => {
     const snapshot = getTeamRefreshFanoutSnapshotForTests(
       'my-team'
     ) as TeamRefreshFanoutSnapshot | null;
-    expect(
-      snapshot?.counts['team-change-listener:event:process:refreshTeamData:scheduled']
-    ).toBe(1);
-    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:executed']).toBe(
+    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:scheduled']).toBe(
       1
     );
+    expect(snapshot?.counts['team-change-listener:event:process:refreshTeamData:executed']).toBe(1);
   });
 
   it('uses process-lite for strict candidates and delays structural reconcile', async () => {
@@ -1765,33 +1768,42 @@ describe('team change throttling', () => {
   });
 
   it('pulses task log activity only for real log signals and clears it after inactivity', async () => {
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-change-only',
-      taskSignalKind: 'change',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-change-only',
+        taskSignalKind: 'change',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
     useStore.setState({ currentRuntimeRunIdByTeam: { 'my-team': 'run-current' } } as never);
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      runId: 'run-old',
-      taskId: 'task-stale',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        runId: 'run-old',
+        taskId: 'task-stale',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      runId: 'run-current',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        runId: 'run-current',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toEqual({
       'task-live': true,
@@ -1912,24 +1924,30 @@ describe('team change throttling', () => {
       }
     });
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(activitySnapshots).toEqual([{ 'task-live': true }]);
 
     await vi.advanceTimersByTimeAsync(2000);
     expect(refreshTeamDataSpy).not.toHaveBeenCalled();
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-live',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-live',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(activitySnapshots).toEqual([{ 'task-live': true }]);
 
@@ -1950,12 +1968,15 @@ describe('team change throttling', () => {
       },
     } as never);
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'task-log-change',
-      teamName: 'my-team',
-      taskId: 'task-hidden',
-      taskSignalKind: 'log',
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'task-log-change',
+        teamName: 'my-team',
+        taskId: 'task-hidden',
+        taskSignalKind: 'log',
+      }
+    );
 
     expect(useStore.getState().activeTaskLogActivityByTeam['my-team']).toBeUndefined();
 
@@ -1990,15 +2011,18 @@ describe('team change throttling', () => {
       },
     } as never);
 
-    hoisted.onTeamChangeCb?.({}, {
-      type: 'tool-activity',
-      teamName: 'my-team',
-      detail: JSON.stringify({
-        action: 'reset',
-        memberName: 'alice',
-        toolUseIds: ['tool-a'],
-      }),
-    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'tool-activity',
+        teamName: 'my-team',
+        detail: JSON.stringify({
+          action: 'reset',
+          memberName: 'alice',
+          toolUseIds: ['tool-a'],
+        }),
+      }
+    );
 
     expect(useStore.getState().activeToolsByTeam['my-team']?.alice?.['tool-a']).toBeUndefined();
     expect(useStore.getState().activeToolsByTeam['my-team']?.alice?.['tool-b']).toBeDefined();

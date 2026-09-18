@@ -30,6 +30,10 @@ import { createLogger } from '@shared/utils/logger';
 import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
+import {
+  createSidebarLogsHeightSlice,
+  type SidebarLogsHeightSlice,
+} from '../team/sidebarLogsHeight';
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
 import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
 import {
@@ -271,7 +275,7 @@ export {
 const logger = createLogger('teamSlice');
 
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
-const TEAM_FETCH_TIMEOUT_MS = 30_000;
+const TEAM_FETCH_TIMEOUT_MS = 90_000;
 const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
@@ -1435,7 +1439,7 @@ function isVisibleInActiveTeamSurface(
   });
 }
 
-export interface TeamSlice {
+export interface TeamSlice extends SidebarLogsHeightSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
@@ -1715,10 +1719,8 @@ export interface TeamSlice {
   // Messages panel UI state
   messagesPanelMode: TeamMessagesPanelMode;
   messagesPanelWidth: number;
-  sidebarLogsHeight: number;
   setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
   setMessagesPanelWidth: (width: number) => void;
-  setSidebarLogsHeight: (height: number) => void;
 }
 
 // --- Per-team launch params persistence ---
@@ -2025,13 +2027,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   // Messages panel UI state
   messagesPanelMode: loadPersistedMessagesPanelMode(),
   messagesPanelWidth: 340,
-  sidebarLogsHeight: 213,
+  ...createSidebarLogsHeightSlice(set, get),
   setMessagesPanelMode: (mode: TeamMessagesPanelMode) => {
     savePersistedMessagesPanelMode(mode);
     set({ messagesPanelMode: mode });
   },
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
-  setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
 
   fetchBranches: async (paths: string[]) => {
     const entries = await Promise.all(
