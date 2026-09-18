@@ -146,10 +146,32 @@ export function canUseCachedOpenCodeModelsDuringTransientCheck(
   return Boolean(
     providerStatus &&
     runtimeStatusUiState !== 'missing' &&
-    (providerStatus?.statusCheckOutcome === 'transient_error' ||
-      providerStatus?.statusCheckOutcome === 'model_only') &&
+    (providerStatus.statusCheckOutcome === 'transient_error' ||
+      providerStatus.statusCheckOutcome === 'model_only' ||
+      providerStatus.statusCheckOutcome === 'pending') &&
     (providerStatus.models.length > 0 || (providerStatus.modelCatalog?.models.length ?? 0) > 0)
   );
+}
+
+export function isOpenCodePassiveCatalogPendingForTabCount(
+  readyForCatalog: boolean,
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState
+): boolean {
+  return (
+    !readyForCatalog && (runtimeStatusUiState === 'checking' || runtimeStatusUiState === 'retry')
+  );
+}
+
+export function isOpenCodeSourceTabCountPending(input: {
+  sourceModelCount: number;
+  sourceScopedLoading: boolean;
+  directoryExpectsModels: boolean;
+  passiveCatalogPending: boolean;
+}): boolean {
+  if (input.sourceModelCount > 0) {
+    return false;
+  }
+  return input.sourceScopedLoading || (input.directoryExpectsModels && input.passiveCatalogPending);
 }
 
 export function shouldShowOpenCodeRuntimeLoading(

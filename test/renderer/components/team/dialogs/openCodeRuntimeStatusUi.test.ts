@@ -1,7 +1,10 @@
 import {
+  canUseCachedOpenCodeModelsDuringTransientCheck,
   getOpenCodeDisabledPanelPresentation,
   getOpenCodeRuntimeStatusUiState,
+  isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeSourceTabCountPending,
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
 import { describe, expect, it } from 'vitest';
 
@@ -20,6 +23,60 @@ function status(
     models: ['stale/model'],
   } as CliProviderStatus;
 }
+
+describe('canUseCachedOpenCodeModelsDuringTransientCheck', () => {
+  it('keeps dashboard models usable while a project-scoped check is still pending', () => {
+    expect(
+      canUseCachedOpenCodeModelsDuringTransientCheck(status('pending', true), 'checking')
+    ).toBe(true);
+  });
+
+  it('does not treat an empty pending probe as cached models', () => {
+    expect(
+      canUseCachedOpenCodeModelsDuringTransientCheck(
+        { ...status('pending', false), models: [] },
+        'checking'
+      )
+    ).toBe(false);
+  });
+});
+
+describe('isOpenCodeSourceTabCountPending', () => {
+  it('shows a spinner instead of zero while directory-backed providers are still hydrating', () => {
+    expect(
+      isOpenCodeSourceTabCountPending({
+        sourceModelCount: 0,
+        sourceScopedLoading: false,
+        directoryExpectsModels: true,
+        passiveCatalogPending: true,
+      })
+    ).toBe(true);
+  });
+
+  it('keeps a settled empty count after the catalog is ready', () => {
+    expect(
+      isOpenCodeSourceTabCountPending({
+        sourceModelCount: 0,
+        sourceScopedLoading: false,
+        directoryExpectsModels: true,
+        passiveCatalogPending: false,
+      })
+    ).toBe(false);
+  });
+});
+
+describe('isOpenCodePassiveCatalogPendingForTabCount', () => {
+  it('keeps connected-source counts pending through a retryable OpenCode check', () => {
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'retry')).toBe(true);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'checking')).toBe(true);
+  });
+
+  it('does not spin after a settled catalog or a missing runtime', () => {
+    expect(isOpenCodePassiveCatalogPendingForTabCount(true, 'retry')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'ready')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'missing')).toBe(false);
+  });
+});
 
 describe('isOpenCodePassiveStatusReadyForCatalog', () => {
   it('accepts authoritative supported runtime evidence', () => {
