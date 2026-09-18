@@ -832,7 +832,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     Record<string, number>
   >({});
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const hasFetchedRef = useRef(false);
   const readState = useReadStateSnapshot();
   const taskLocalState = useTaskLocalState();
   const electronMode = isElectronMode();
@@ -1122,15 +1121,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [fetchAllTasks, softDeleteTask, t]
   );
 
-  // Fetch tasks on mount — loading guard in the store action prevents
-  // duplicate IPC calls when the centralized init chain is already fetching.
-  useEffect(() => {
-    if (!hasFetchedRef.current && !globalTasksLoading) {
-      hasFetchedRef.current = true;
-      void fetchAllTasks();
-    }
-  }, [fetchAllTasks, globalTasksLoading]);
-
   useEffect(() => {
     if (!filtersPopoverOpen) {
       return;
@@ -1254,10 +1244,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const projectGroups = useMemo(
     () =>
       groupingMode === 'project'
-        ? sortProjectGroupsByPin(
-            groupTasksByProject(normalTasks),
-            taskLocalState.pinnedProjectKeys
-          )
+        ? sortProjectGroupsByPin(groupTasksByProject(normalTasks), taskLocalState.pinnedProjectKeys)
         : EMPTY_PROJECT_GROUPS,
     [groupingMode, normalTasks, taskLocalState.pinnedProjectKeys]
   );

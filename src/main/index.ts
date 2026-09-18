@@ -3261,29 +3261,24 @@ function runPostRendererStartupTasks(): void {
     updaterService.startPeriodicCheck(60 * 60 * 1000);
   }
 
-  scheduleStartupTask(
-    () => {
-      void getTeamFsWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-fs-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
-        );
-      void getTeamDataWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-data-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
-        );
-    },
-    process.platform === 'win32' ? 2500 : 1000
-  );
+  void getTeamFsWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-fs-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
+  void getTeamDataWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-data-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
 
   scheduleStartupTask(() => {
     teamDataService.startProcessHealthPolling();

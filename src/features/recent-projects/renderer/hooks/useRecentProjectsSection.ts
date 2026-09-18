@@ -69,9 +69,7 @@ export function useRecentProjectsSection(
 } {
   const {
     globalTasks,
-    globalTasksInitialized,
     globalTasksLoading,
-    fetchAllTasks,
     teams,
     activeContextId,
     provisioningRuns,
@@ -80,9 +78,7 @@ export function useRecentProjectsSection(
   } = useStore(
     useShallow((state) => ({
       globalTasks: state.globalTasks,
-      globalTasksInitialized: state.globalTasksInitialized,
       globalTasksLoading: state.globalTasksLoading,
-      fetchAllTasks: state.fetchAllTasks,
       teams: state.teams,
       activeContextId: state.activeContextId,
       provisioningRuns: state.provisioningRuns,
@@ -109,7 +105,6 @@ export function useRecentProjectsSection(
   const [visibleProjects, setVisibleProjects] = useState(maxProjects);
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
   const [openHistoryVersion, setOpenHistoryVersion] = useState(0);
-  const hasFetchedTasksRef = useRef(globalTasksInitialized);
   const recentProjectsRef = useRef<DashboardRecentProject[]>(
     initialSnapshot?.payload.projects ?? []
   );
@@ -221,16 +216,6 @@ export function useRecentProjectsSection(
       window.clearTimeout(timer);
     };
   }, [degradedRefreshCount, recentProjectsDegraded, reload]);
-
-  useEffect(() => {
-    if (recentProjects.length === 0 || hasFetchedTasksRef.current || globalTasksInitialized) {
-      hasFetchedTasksRef.current = hasFetchedTasksRef.current || globalTasksInitialized;
-      return;
-    }
-
-    hasFetchedTasksRef.current = true;
-    void fetchAllTasks();
-  }, [fetchAllTasks, globalTasksInitialized, recentProjects.length]);
 
   useEffect(() => {
     let cancelled = false;
