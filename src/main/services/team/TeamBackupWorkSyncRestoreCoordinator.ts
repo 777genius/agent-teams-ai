@@ -25,7 +25,7 @@ export interface TeamBackupRestoreProgress {
   current: number;
   total: number;
 }
-const RESTORE_CONCURRENCY = 8;
+const RESTORE_CONCURRENCY = 16;
 
 async function runBounded<T>(
   items: readonly T[],
