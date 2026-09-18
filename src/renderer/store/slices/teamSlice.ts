@@ -303,7 +303,8 @@ const pendingFreshTeamMessagesHeadRefreshes = new Set<string>();
 const inFlightTeamMemberActivityMetaRequests = new Map<string, Promise<void>>();
 const pendingFreshTeamMemberActivityMetaRefreshes = new Set<string>();
 const pendingTeamPendingReplyRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
-let latestTeamsFetchRequestId = 0;
+let latestTeamsFetchRequestId = 0,
+  deletedTasksFetchId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
 let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
@@ -481,6 +482,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   }
   pendingTeamPendingReplyRefreshTimers.clear();
   latestTeamsFetchRequestId = 0;
+  deletedTasksFetchId = 0;
   inFlightGlobalTasksRefresh = null;
   pendingFreshGlobalTasksRefresh = false;
   reportedTaskEndKeys.clear();
@@ -2839,6 +2841,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       selectedTeamLoadNonce: requestNonce,
       selectedTeamError: null,
       reviewActionError: null,
+      ...(state.selectedTeamName !== teamName
+        ? { deletedTasks: [], deletedTasksLoading: false }
+        : {}),
     }));
 
     scheduleToolApprovalSettingsSync(teamName, selectedSettings);
@@ -3668,7 +3673,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       })();
     }, delayMs);
-
     pendingTeamPendingReplyRefreshTimers.set(teamName, timer);
   },
 
@@ -4166,15 +4170,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   fetchDeletedTasks: async (teamName: string) => {
+    const id = ++deletedTasksFetchId;
     set({ deletedTasksLoading: true });
     try {
       const tasks = await unwrapIpc('team:getDeletedTasks', () =>
         api.teams.getDeletedTasks(teamName)
       );
-      set({ deletedTasks: tasks, deletedTasksLoading: false });
+      if (id === deletedTasksFetchId)
+        set({
+          deletedTasksLoading: false,
+          ...(get().selectedTeamName === teamName ? { deletedTasks: tasks } : {}),
+        });
     } catch (error) {
       logger.error('Failed to fetch deleted tasks:', error);
-      set({ deletedTasks: [], deletedTasksLoading: false });
+      if (id === deletedTasksFetchId)
+        set({
+          deletedTasksLoading: false,
+          ...(get().selectedTeamName === teamName ? { deletedTasks: [] } : {}),
+        });
     }
   },
 
@@ -4414,7 +4427,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         providerIds: getProviderIdsFromTeamCreateRequest(request),
         multimodelEnabled: isMultimodelTeamRequest(request),
       });
-
       saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
         launchParamsByTeam: {
@@ -4422,7 +4434,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           [request.teamName]: optimisticLaunchParams,
         },
       }));
-
       set((state) => {
         const nextRuns = { ...state.provisioningRuns };
         const pendingRun = nextRuns[pendingRunId];
@@ -4613,7 +4624,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       responseRunId = response.runId;
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
-
       saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
         launchParamsByTeam: {
@@ -4621,7 +4631,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           [request.teamName]: optimisticLaunchParams,
         },
       }));
-
       set((state) => {
         const nextRuns = { ...state.provisioningRuns };
         const pendingRun = nextRuns[pendingRunId];
@@ -4716,7 +4725,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
       const nextRuns = { ...state.provisioningRuns };
       delete nextRuns[runId];
-
       const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
       const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
       if (isCanonicalRun) {
@@ -4737,7 +4745,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
               [runId]: existing.teamName,
             }
           : state.ignoredRuntimeRunIds;
-
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
       const nextRuntime = { ...state.teamAgentRuntimeByTeam };
@@ -4898,11 +4905,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         provisioningSnapshotByTeam: nextSnapshots,
       };
     });
-
     const isCanonicalRun =
       get().currentProvisioningRunIdByTeam[progress.teamName] === progress.runId;
     let hydratedVisibleTeam = false;
-
     if (isCanonicalRun && isTerminalProvisioningState(progress.state)) {
       recordTeamLaunchTerminalProgress(progress, selectTeamDataForName(get(), progress.teamName));
     }
