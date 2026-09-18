@@ -706,7 +706,8 @@ export const CreateTeamDialog = ({
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
-    passiveStatusPrefetchEnabled: open && Boolean(effectiveCwd) && multimodelEnabled,
+    passiveStatusPrefetchEnabled:
+      openCodeCatalogEnabled && launchPreflightSelectionReady && Boolean(effectiveCwd),
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members,
     syncModelsWithLead,

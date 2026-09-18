@@ -1869,7 +1869,7 @@ describe('teamSlice actions', () => {
     );
     store.setState({
       selectedTeamName: 'team-a',
-      deletedTasks: [{ id: 'task-a' }],
+      deletedTasks: [createTeamTaskFixture({ id: 'task-a' })],
       deletedTasksLoading: true,
     });
 
@@ -1891,12 +1891,12 @@ describe('teamSlice actions', () => {
     );
     store.setState({
       selectedTeamName: 'team-a',
-      deletedTasks: [{ id: 'task-a' }],
+      deletedTasks: [createTeamTaskFixture({ id: 'task-a' })],
       deletedTasksLoading: false,
     });
 
     await store.getState().selectTeam('team-a');
-    expect(store.getState().deletedTasks).toEqual([{ id: 'task-a' }]);
+    expect(store.getState().deletedTasks).toEqual([createTeamTaskFixture({ id: 'task-a' })]);
   });
 
   it('refetches messages head after paint when the cached head is from an older load', async () => {
