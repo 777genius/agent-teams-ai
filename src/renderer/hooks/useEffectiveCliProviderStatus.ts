@@ -117,7 +117,10 @@ export function useLaunchAuthorityGatedCliStatus(
   return gatedStatus;
 }
 
-/** Resolves one exact project scope without borrowing global catalog or launch authority. */
+/** Resolves one exact project scope without borrowing global launch authority.
+ * A still-missing project probe may keep the dashboard catalog visible as
+ * provisional display evidence so Create Team / member edit do not flash zeros.
+ */
 export function resolveProjectScopedProviderStatus(
   providerId: CliProviderId,
   scopedProviderStatus: CliProviderStatus | null,
@@ -142,22 +145,34 @@ export function resolveProjectScopedProviderStatus(
   if (!globalProviderStatus || globalProviderStatus.providerId !== providerId) {
     return null;
   }
-  return reconcileCliStatus(undefined, {
+  const provisional = reconcileCliStatus(globalProviderStatus, {
     ...globalProviderStatus,
-    authenticated: false,
-    authMethod: null,
-    verificationState: 'unknown',
     statusCheckOutcome: 'pending',
     statusCheckErrorCode: 'partial_response',
-    models: [],
-    modelAvailability: [],
-    modelCatalog: null,
-    modelCatalogRefreshState: 'loading',
+    modelCatalogRefreshState: globalProviderStatus.modelCatalog ? 'loading' : 'idle',
     capabilities: {
       ...globalProviderStatus.capabilities,
       teamLaunch: false,
     },
   });
+  const hasDisplayModels =
+    globalProviderStatus.models.length > 0 ||
+    (globalProviderStatus.modelCatalog?.models.length ?? 0) > 0;
+  return {
+    ...provisional,
+    supported: globalProviderStatus.supported,
+    ...(hasDisplayModels
+      ? {
+          authenticated: globalProviderStatus.authenticated,
+          authMethod: globalProviderStatus.authMethod,
+          verificationState: globalProviderStatus.verificationState,
+        }
+      : {}),
+    capabilities: {
+      ...provisional.capabilities,
+      teamLaunch: false,
+    },
+  };
 }
 
 export function useEffectiveCliProviderStatus(

@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { Loader2 } from 'lucide-react';
 
@@ -96,6 +97,10 @@ export const AddMemberDialog = ({
   existingMembers,
 }: AddMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  useOpenCodePassiveStatusPrefetch({
+    enabled: open && Boolean(projectPath?.trim()),
+    projectPath,
+  });
   const existingWorktreeDefault = deriveExistingWorktreeDefault(existingMembers);
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(existingWorktreeDefault);
   const [members, setMembers] = useState<MemberDraft[]>(() =>

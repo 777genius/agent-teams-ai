@@ -111,7 +111,9 @@ import {
   getOpenCodeReadinessSummary,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
+  isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeSourceTabCountPending,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
@@ -1124,7 +1126,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   useOpenCodePassiveStatusPrefetch({
-    enabled: effectiveProviderId === 'opencode',
+    enabled: Boolean(openCodeCatalogScopeKey),
     projectPath: openCodeCatalogScopeKey || null,
   });
   const {
@@ -1135,6 +1137,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } = useEffectiveCliProviderStatus(effectiveProviderId, {
     projectPath: effectiveProviderId === 'opencode' ? openCodeCatalogScopeKey || null : null,
   });
+  const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
+    'opencode',
+    { projectPath: openCodeCatalogScopeKey || null }
+  );
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
@@ -1194,7 +1200,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     scopeKey: openCodeSelectionAuthorityScopeKey,
   });
   const openCodePassiveStatusReadyForCatalog = isOpenCodePassiveStatusReadyForCatalog(
-    passiveRuntimeProviderStatus,
+    openCodePassiveProviderStatus,
     openCodeRuntimeStatus
   );
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
@@ -1249,13 +1255,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       },
       onReady: onValueChange,
     });
-  const runtimeProviderStatusById = useMemo(
-    () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map((provider) => [provider.providerId, provider])
-      ),
-    [effectiveCliStatus?.providers]
-  );
+  const runtimeProviderStatusById = useMemo(() => {
+    const statuses = new Map(
+      (effectiveCliStatus?.providers ?? []).map((provider) => [provider.providerId, provider])
+    );
+    if (openCodePassiveProviderStatus) {
+      statuses.set('opencode', openCodePassiveProviderStatus);
+    }
+    return statuses;
+  }, [effectiveCliStatus?.providers, openCodePassiveProviderStatus]);
   const openCodeProviderStatus = runtimeProviderStatusById.get('opencode') ?? null;
   const openCodeRuntimeStatusUiState = getOpenCodeRuntimeStatusUiState({
     providerStatus: openCodeProviderStatus,
@@ -2542,10 +2550,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   // Local inventory stays independent from the currently inspected runtime.
   const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
+  const openCodePassiveCatalogPending = isOpenCodePassiveCatalogPendingForTabCount(
+    openCodePassiveStatusReadyForCatalog,
+    openCodeRuntimeStatusUiState
+  );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
-    (openCodeScopedCatalog.status === 'loading' ||
-      (!openCodePassiveStatusReadyForCatalog && openCodeRuntimeStatusUiState === 'checking'));
+    (openCodeScopedCatalog.status === 'loading' || openCodePassiveCatalogPending);
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
   const retryOpenCodeCatalogRefresh = (): void => {
@@ -3298,6 +3309,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 const openCodeDisabledReason = getProviderDisabledReason('opencode');
                 const sourceModelCount = openCodeSourceModelCountById.get(provider.sourceId) ?? 0;
                 const sourceLoadable = isOpenCodeSourceTabLoadable(provider);
+                const sourceCountPending = isOpenCodeSourceTabCountPending({
+                  sourceModelCount,
+                  sourceScopedLoading:
+                    openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
+                    openCodeScopedCatalog.status === 'loading',
+                  directoryExpectsModels:
+                    provider.directoryModelCount === null ||
+                    (provider.directoryModelCount !== undefined &&
+                      provider.directoryModelCount > 0),
+                  passiveCatalogPending: openCodePassiveCatalogPending,
+                });
                 const sourceDisabled =
                   !sourceLoadable ||
                   (!isProviderSelectable('opencode') && !isProviderInspectable('opencode'));
@@ -3308,9 +3330,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     disabled={sourceDisabled}
                     aria-disabled={sourceDisabled || undefined}
                     aria-description={
-                      sourceLoadable
-                        ? (openCodeDisabledReason ?? undefined)
-                        : `${provider.label} has no available models.`
+                      sourceCountPending
+                        ? `${provider.label} is connected. Loading models.`
+                        : sourceLoadable
+                          ? (openCodeDisabledReason ?? undefined)
+                          : `${provider.label} has no available models.`
                     }
                     data-connection-status={provider.connected ? 'connected' : undefined}
                     data-testid={`team-model-selector-provider-nav-${provider.sourceId}`}
@@ -3333,7 +3357,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           <span className="sr-only">Connected provider, </span>
                         </>
                       ) : null}
-                      {sourceModelCount}
+                      {sourceCountPending ? (
+                        <>
+                          <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
+                          <span className="sr-only">Loading models</span>
+                        </>
+                      ) : (
+                        sourceModelCount
+                      )}
                     </span>
                   </TabsTrigger>
                 );
