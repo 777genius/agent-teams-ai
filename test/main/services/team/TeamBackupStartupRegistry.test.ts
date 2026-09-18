@@ -307,4 +307,23 @@ describe('strict backup startup registry', () => {
       expect(registry.teams[name]?.identityId).toBe(`identity-${name}`);
     }
   });
+
+  it('joins a second startup registry load for the same backup root', async () => {
+    await writeManifest('sandbox-shared');
+    const first = loadTeamBackupStartupRegistry(backups());
+    const second = loadTeamBackupStartupRegistry(backups());
+    expect(second).toBe(first);
+    expect(await first).toBe(await second);
+    expect((await first).teams['sandbox-shared']?.identityId).toBe('identity-sandbox-shared');
+  });
+
+  it('retries startup registry discovery after a failed load', async () => {
+    await fs.promises.mkdir(backups(), { recursive: true });
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{broken');
+    await expect(loadTeamBackupStartupRegistry(backups())).rejects.toThrow();
+    await writeManifest('sandbox-retry');
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{"version":1,"teams":{}}');
+    const registry = await loadTeamBackupStartupRegistry(backups());
+    expect(registry.teams['sandbox-retry']?.identityId).toBe('identity-sandbox-retry');
+  });
 });
