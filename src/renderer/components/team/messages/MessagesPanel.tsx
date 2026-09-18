@@ -90,6 +90,7 @@ import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMe
 import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
 import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems';
 import { StatusBlock } from './StatusBlock';
+import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
@@ -1062,7 +1063,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, [bottomSheetSnapIndex]);
 
   const renderDefaultComposerSection = (): React.JSX.Element => (
-    <MessagesComposerSection
+    <ThreadAwareMessageComposer
       teamName={teamName}
       members={members}
       isTeamAlive={isTeamAlive}
@@ -1115,7 +1116,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const renderCompactComposerSection = (): React.JSX.Element => (
-    <MessagesComposerSection
+    <ThreadAwareMessageComposer
       teamName={teamName}
       layout="compact"
       members={members}

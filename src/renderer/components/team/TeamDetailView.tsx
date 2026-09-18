@@ -51,6 +51,10 @@ import {
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
 import {
+  SIDEBAR_LOGS_MAX_HEIGHT,
+  SIDEBAR_LOGS_MIN_HEIGHT,
+} from '@renderer/store/team/sidebarLogsHeight';
+import {
   buildChangeReviewLifecycleSessionId,
   requestChangeReviewLifecycleReservation,
   requestCloseChangeReviewLifecycleHost,
@@ -1476,9 +1480,11 @@ export const TeamDetailView = memo(function TeamDetailView({
     messagesPanelMode,
     messagesPanelWidth,
     sidebarLogsHeight,
+    sidebarLogsHeightCustom,
     setMessagesPanelMode,
     setMessagesPanelWidth,
     setSidebarLogsHeight,
+    applyDefaultSidebarLogsHeight,
     selectReviewFile,
     pendingReviewRequest,
     setPendingReviewRequest,
@@ -1538,9 +1544,11 @@ export const TeamDetailView = memo(function TeamDetailView({
       messagesPanelMode: s.messagesPanelMode,
       messagesPanelWidth: s.messagesPanelWidth,
       sidebarLogsHeight: s.sidebarLogsHeight,
+      sidebarLogsHeightCustom: s.sidebarLogsHeightCustom,
       setMessagesPanelMode: s.setMessagesPanelMode,
       setMessagesPanelWidth: s.setMessagesPanelWidth,
       setSidebarLogsHeight: s.setSidebarLogsHeight,
+      applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       selectReviewFile: s.selectReviewFile,
       pendingReviewRequest: s.pendingReviewRequest,
       setPendingReviewRequest: s.setPendingReviewRequest,
@@ -1589,9 +1597,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const { isResizing: isLogsPanelResizing, handleProps: logsPanelHandleProps } = useResizablePanel({
     height: sidebarLogsHeight,
     onHeightChange: setSidebarLogsHeight,
-    minHeight: 120,
-    maxHeight: 520,
-    side: 'top',
+    minHeight: SIDEBAR_LOGS_MIN_HEIGHT,
+    maxHeight: SIDEBAR_LOGS_MAX_HEIGHT,
+    side: 'bottom',
   });
 
   const changeMessagesPanelMode = useCallback(
@@ -2896,8 +2904,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                 isResizing={isMessagesPanelResizing}
                 onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
                 logsHeight={sidebarLogsHeight}
+                logsHeightIsCustom={sidebarLogsHeightCustom}
                 isLogsResizing={isLogsPanelResizing}
                 onLogsResizeMouseDown={logsPanelHandleProps.onMouseDown}
+                onApplyDefaultLogsHeight={applyDefaultSidebarLogsHeight}
               />
             </TeamSidebarPortalSource>
           </TeamSidebarHost>
