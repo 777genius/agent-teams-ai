@@ -1127,7 +1127,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
   useOpenCodePassiveStatusPrefetch({
-    enabled: Boolean(openCodeCatalogScopeKey),
+    enabled: effectiveProviderId === 'opencode',
     projectPath: openCodeCatalogScopeKey || null,
   });
   const {

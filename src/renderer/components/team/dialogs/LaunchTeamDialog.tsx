@@ -463,7 +463,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
-    passiveStatusPrefetchEnabled: open && Boolean(effectiveCwd) && multimodelEnabled,
+    passiveStatusPrefetchEnabled: openCodeCatalogEnabled && launchPreflightSelectionReady,
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
