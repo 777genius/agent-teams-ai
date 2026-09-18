@@ -129,16 +129,10 @@ export class TeamBackupWorkSyncRestoreCoordinator {
       try {
         if (this.binding) {
           if (await this.isFenced(teamName, entry.identityId)) return;
-          let skipped = false;
-          await this.ports.withIdentityFence(teamName, () =>
-            this.ports.withTeamMutex(teamName, async () => {
-              if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
-                deferredHoleFill.push(teamName);
-                skipped = true;
-              }
-            })
-          );
-          if (skipped) return;
+          if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
+            deferredHoleFill.push(teamName);
+            return;
+          }
           if (await this.restoreConfigured(teamName, entry.identityId, this.binding))
             restored.push(teamName);
         } else {

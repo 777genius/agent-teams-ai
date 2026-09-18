@@ -2144,11 +2144,6 @@ async function initializeServices(): Promise<void> {
       });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
-  void teamDataService
-    .initializeTaskCommentNotificationState()
-    .catch((error: unknown) =>
-      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
-    );
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
 
@@ -3278,6 +3273,11 @@ function runPostRendererStartupTasks(): void {
           error instanceof Error ? error.message : String(error)
         }`
       )
+    );
+  void teamDataService
+    .initializeTaskCommentNotificationState()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
 
   scheduleStartupTask(() => {

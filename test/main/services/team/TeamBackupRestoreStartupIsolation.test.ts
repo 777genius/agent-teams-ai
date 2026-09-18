@@ -236,7 +236,11 @@ function createSkipCoordinator(
   backups: string,
   generic: (team: string) => Promise<boolean>,
   holes: (team: string) => Promise<boolean> = async () => false,
-  options: { fenced?: boolean } = {}
+  options: {
+    fenced?: boolean;
+    withIdentityFence?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+    withTeamMutex?: (teamName: string, operation: () => Promise<void>) => Promise<void>;
+  } = {}
 ) {
   const registry = { sandbox: { identityId: 'sandbox', status: 'active' as const } };
   return new TeamBackupWorkSyncRestoreCoordinator({
@@ -245,8 +249,8 @@ function createSkipCoordinator(
     isShuttingDown: () => false,
     isReplacementForPendingDeletion: () => false,
     isPermanentDeletionFenced: async () => options.fenced === true,
-    withIdentityFence: async (_name, operation) => operation(),
-    withTeamMutex: async (_name, operation) => operation(),
+    withIdentityFence: options.withIdentityFence ?? (async (_name, operation) => operation()),
+    withTeamMutex: options.withTeamMutex ?? (async (_name, operation) => operation()),
     restoreLegacy: async () => {
       throw new Error('legacy must not run');
     },
@@ -267,18 +271,33 @@ it('skips restore for a healthy live config without pending', async () => {
   );
   const generic = vi.fn(async () => true);
   const holes = vi.fn(async () => false);
+  let fenceCalls = 0;
+  let mutexCalls = 0;
   const prepare = vi.fn(async () => ({
     importAndVerify: async () => {
       throw new Error('work-sync import must not run');
     },
   }));
-  const owner = createSkipCoordinator(backups, generic, holes);
+  const owner = createSkipCoordinator(backups, generic, holes, {
+    withIdentityFence: async <T>(_name: string, operation: () => Promise<T>) => {
+      fenceCalls += 1;
+      return operation();
+    },
+    withTeamMutex: async (_name, operation) => {
+      mutexCalls += 1;
+      await operation();
+    },
+  });
   owner.configure(new MemberWorkSyncTeamOperationGate(), { prepare });
   try {
     expect(await owner.restoreIfNeeded()).toEqual([]);
     expect(prepare).not.toHaveBeenCalled();
     expect(generic).not.toHaveBeenCalled();
+    expect(fenceCalls).toBe(0);
+    expect(mutexCalls).toBe(0);
     await vi.waitFor(() => expect(holes).toHaveBeenCalledWith('sandbox'));
+    expect(fenceCalls).toBeGreaterThan(0);
+    expect(mutexCalls).toBeGreaterThan(0);
     expect(
       JSON.parse(await fs.readFile(path.join(backups, 'sandbox', 'manifest.json'), 'utf8'))
         .workSyncRestorePending
