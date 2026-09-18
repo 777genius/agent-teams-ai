@@ -265,3 +265,44 @@ describe('TeamLoadingSkeleton messages sidebar', () => {
     });
   });
 });
+
+describe('TeamLoadingSkeleton sidebar', () => {
+  it('keeps the logs strip at the bottom of the loading sidebar', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <TeamLoadingSkeleton
+          teamName="test-team"
+          messagesPanelMode="sidebar"
+          headerColorSet={{
+            border: '#3b82f6',
+            badge: 'rgba(59, 130, 246, 0.15)',
+            text: '#60a5fa',
+          }}
+          isLight={false}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const messages = host.querySelector('[data-team-sidebar-messages]');
+    const logs = host.querySelector('[data-team-sidebar-logs]');
+    expect(messages).not.toBeNull();
+    expect(logs).not.toBeNull();
+    expect(
+      Boolean(messages!.compareDocumentPosition(logs!) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ).toBe(true);
+    expect(logs!.querySelector('.lucide-message-square')).toBeNull();
+    expect(logs!.querySelector('.lucide-panel-left-close')).not.toBeNull();
+    expect(logs!.className).toContain('px-3');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});
