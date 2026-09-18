@@ -216,7 +216,10 @@ export function resolveOpenCodeLocalModelPresentation({
   if (actionState?.status === 'needs_verification') {
     return { status: 'needs_verification', reason: actionState.message };
   }
-  if (advisoryReason?.toLowerCase().includes('experimental local-model override')) {
+  if (
+    advisoryReason?.toLowerCase().includes('experimental local-model override is enabled') ||
+    advisoryReason?.toLowerCase().includes('explicitly enable the experimental local-model')
+  ) {
     return { status: 'experimental', reason: advisoryReason };
   }
   if (proofState === 'verified') {

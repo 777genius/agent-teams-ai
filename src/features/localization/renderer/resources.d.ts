@@ -1125,7 +1125,7 @@ export default interface Resources {
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
         retryOpenCode: 'Repair OpenCode';
-        setupModelEndpoint: 'Set up model endpoint';
+        setupModelEndpoint: 'Local model or endpoint';
         signIn: 'Sign in';
         signInRequired: 'Sign in required';
         statusUnavailable: 'Status unavailable';
@@ -4288,7 +4288,7 @@ export default interface Resources {
         blocked: 'Runtime environment is not available - {{action}} is blocked';
         checkingProviders: 'Checking selected providers...';
         experimentalLocalModelOverride: 'Launch this local model experimentally';
-        experimentalLocalModelOverrideHint: 'This only skips the “too small / weak tools” warning. 0.5B–1.5B will still not do teammate work. For real tasks use a 7B+ coder with 16K+ context, for example qwen2.5-coder:7b.';
+        experimentalLocalModelOverrideHint: 'This never skips a failed tool-call check. If the model answered in chat instead of calling tools, pick a different model.';
         failed: 'Failed to prepare selected providers';
         preflight: 'Pre-flight check to catch errors before {{action}}';
         preparingEnvironment: 'Preparing environment...';
@@ -4949,11 +4949,12 @@ export default interface Resources {
         installedNotAdded: 'Installed in {{provider}} · Not added to this project';
         lookupErrorFallback: 'Existing runtime models remain available.';
         lookupErrorTitle: 'Local models could not be checked';
-        needsVerificationHint: 'You can select it now. Launch still needs tool calling and 16K+ context. For teammates pick 7B or larger, for example qwen2.5-coder:7b.';
+        needsVerificationHint: 'You can select it now. Launch still runs a native tool-call check with 16K+ context. Size and the Ollama tools tag are not enough. Add and test is the fastest way to find out.';
         teammateRequirementsContext: 'Need at least 16K context (32K is better). Ollama starts at 4K — raise it to 32K before launch, or teammates will fail.';
-        teammateRequirementsSize: 'Smallest working size: a 7B coding model that can call tools. Example: qwen2.5-coder:7b. Anything under 3B is blocked.';
-        teammateRequirementsTiny: '0.5B and 1.5B can only start as an experiment. They will not write files, use tools, or talk to the team.';
+        teammateRequirementsSize: 'Use a 7B+ coding model. Under 3B almost never call tools and will fail Add and test.';
+        teammateRequirementsTiny: '0.5B and 1.5B fail the tool-call check. They will not write files or talk to the team.';
         teammateRequirementsTitle: 'Minimum for teammates';
+        teammateRequirementsTools: 'It must actually call tools — write files, run commands, and use Agent Teams MCP — not print JSON in chat. An Ollama “tools” tag is not enough. Use Add and test: if the model only writes chat, launch is blocked.';
         none: 'None';
         privateNetworkApproval: {
           allowAndTest: 'Allow and test';

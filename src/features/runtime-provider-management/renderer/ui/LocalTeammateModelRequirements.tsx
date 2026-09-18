@@ -5,14 +5,16 @@ import type { JSX } from 'react';
 export interface LocalTeammateModelRequirementsProps {
   readonly title: string;
   readonly size: string;
+  readonly tools: string;
   readonly context: string;
   readonly tiny: string;
 }
 
-/** Always-visible teammate size/context requirements for local model settings. */
+/** Always-visible teammate size/context/tool requirements for local model settings. */
 export const LocalTeammateModelRequirements = ({
   title,
   size,
+  tools,
   context,
   tiny,
 }: LocalTeammateModelRequirementsProps): JSX.Element => {
@@ -27,6 +29,7 @@ export const LocalTeammateModelRequirements = ({
           <p className="font-medium text-cyan-50">{title}</p>
           <ul className="list-disc space-y-1 pl-4 text-cyan-100/80">
             <li>{size}</li>
+            <li>{tools}</li>
             <li>{context}</li>
             <li>{tiny}</li>
           </ul>

@@ -105,6 +105,7 @@
     "quickConnect": {
       "alsoConnectOpenCode": "Также подключить через OpenCode",
       "browseAll": "Все провайдеры",
+      "setupModelEndpoint": "Локальная модель или эндпоинт",
       "checkingOpenCode": "Проверяем OpenCode",
       "checkingPlan": "Проверяем статус плана",
       "checkAndConnect": "Проверить и подключить",

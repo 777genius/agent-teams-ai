@@ -299,10 +299,10 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       severity: 'blocking',
       code: 'local_coordination_probe_failed',
       coordinationProbeStatus: 'failed',
-      experimentalOverrideAvailable: true,
+      experimentalOverrideAvailable: false,
       message: expect.stringContaining('plain text'),
     });
-    expect(result?.message).toContain('experimental local-model override');
+    expect(result?.message).toContain('verify it again');
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
@@ -352,7 +352,7 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     ]);
   });
 
-  it('allows an explicit experimental override to defer a failed direct probe to OpenCode', async () => {
+  it('keeps a failed native tool probe blocking even when experimental override is enabled', async () => {
     const inventory = createInventory([ollamaProvider()]);
     const fetchImpl = vi.fn<typeof fetch>(async (input) =>
       String(input).endsWith('/api/show')
@@ -385,11 +385,11 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     );
 
     expect(result).toMatchObject({
-      severity: 'warning',
+      severity: 'blocking',
       code: 'local_coordination_probe_failed',
       coordinationProbeStatus: 'failed',
-      experimentalOverrideAvailable: true,
-      message: expect.stringContaining('override is enabled'),
+      experimentalOverrideAvailable: false,
+      message: expect.stringContaining('verify it again'),
     });
     expect(result?.effectiveContextTokens).toBe(32_768);
   });
@@ -432,7 +432,7 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
       code: 'local_coordination_probe_failed',
       coordinationProbeStatus: 'failed',
       experimentalOverrideAvailable: false,
-      message: expect.stringContaining('override cannot bypass'),
+      message: expect.stringContaining('cannot continue'),
     });
   });
 

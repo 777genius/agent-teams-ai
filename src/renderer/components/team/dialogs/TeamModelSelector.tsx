@@ -2784,6 +2784,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       !isInspectingInactiveProvider &&
       activeProviderSelectable &&
       !modelDisabledReason;
+    const localModelCanRetry =
+      Boolean(openCodeCatalogScopeKey) &&
+      !isInspectingInactiveProvider &&
+      activeProviderSelectable &&
+      !modelDisabledReason &&
+      Boolean(localModelDescriptor) &&
+      (localModelPresentation?.status === 'incompatible' ||
+        localModelActionState?.status === 'error');
+    const localModelCanAddOrRetry = localModelCanAdd || localModelCanRetry;
     const localModelCanSelect =
       localModelPresentation === null ||
       localModelPresentation.status === 'ready' ||
@@ -2804,7 +2813,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ? true
         : !modelUnavailableReason &&
           (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
-    const modelInteractable = modelSelectable || localModelCanAdd || codexModelCanUpdate;
+    const modelInteractable = modelSelectable || localModelCanAddOrRetry || codexModelCanUpdate;
     const localModelStatusHint =
       localModelPresentation?.status === 'needs_verification'
         ? t('modelSelector.localModels.needsVerificationHint')
@@ -2839,7 +2848,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         type="button"
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
-        aria-pressed={localModelCanAdd ? undefined : isSelectedModel}
+        aria-pressed={localModelCanAddOrRetry ? undefined : isSelectedModel}
         aria-disabled={!modelInteractable}
         aria-label={
           modelButtonDescription
@@ -2884,7 +2893,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         )}
         onClick={() => {
           if (codexModelCanUpdate) return void setCodexRuntimeDialogOpen(true);
-          if (localModelCanAdd && localModelDescriptor) {
+          if (localModelCanAddOrRetry && localModelDescriptor) {
             const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
               modelId: localModelDescriptor.modelId,
@@ -2928,8 +2937,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               presentation={localModelPresentation}
               providerDisplayName={localModelDescriptor.presetDisplayName}
               statusMessage={modelStatusMessage}
-              canAdd={localModelCanAdd}
-              retry={localModelActionState?.status === 'error'}
+              canAdd={localModelCanAddOrRetry}
+              retry={localModelCanRetry}
             />
           ) : null}
           {openCodePricingInfo?.summary ? (
@@ -3435,6 +3444,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     <LocalTeammateModelRequirements
                       title={t('modelSelector.localModels.teammateRequirementsTitle')}
                       size={t('modelSelector.localModels.teammateRequirementsSize')}
+                      tools={t('modelSelector.localModels.teammateRequirementsTools')}
                       context={t('modelSelector.localModels.teammateRequirementsContext')}
                       tiny={t('modelSelector.localModels.teammateRequirementsTiny')}
                     />

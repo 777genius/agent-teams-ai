@@ -189,6 +189,20 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
     ).toEqual({ status: 'needs_verification', reason: 'Refresh failed after configuration.' });
   });
 
+  it('never lets a blocked tool-call failure look experimental', () => {
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        advisoryReason:
+          'Launch is blocked until the model actually invokes native tools. Printing JSON in chat is not enough, and the experimental local-model override cannot skip this check.',
+      })
+    ).toEqual({
+      status: 'needs_verification',
+      reason:
+        'Launch is blocked until the model actually invokes native tools. Printing JSON in chat is not enough, and the experimental local-model override cannot skip this check.',
+    });
+  });
+
   it('never lets a cached Ready state hide current availability or provisioning blockers', () => {
     const unavailableDescriptor = buildOpenCodeLocalModelOverlay(
       [

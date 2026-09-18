@@ -291,7 +291,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       ['opencode'],
       ['ollama/qwen3:8b'],
       false,
-      'compatibility'
+      'deep'
     );
   });
 
@@ -508,7 +508,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     });
 
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Model endpoints');
+      expect(host.textContent).toContain('Local models and endpoints');
       expect(host.textContent).toContain('1 of 2 endpoints available.');
       expect(host.textContent).toContain(
         'Unavailable endpoints remain configured but cannot launch.'
@@ -543,22 +543,22 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     ).toBe('unchecked');
 
     const backButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Back to providers')
+      button.textContent?.includes('Back to list')
     );
     await act(async () => {
       backButton?.click();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.textContent).toContain('Configured providers'));
+    await vi.waitFor(() => expect(host.textContent).toContain('Saved models and endpoints'));
 
     const addButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Add provider'
+      (button) => button.textContent?.trim() === 'Add model or endpoint'
     );
     await act(async () => {
       addButton?.click();
       await Promise.resolve();
     });
-    expect(host.textContent).toContain('Add a model endpoint');
+    expect(host.textContent).toContain('Add a local model or endpoint');
     expect(host.textContent).toContain('Atomic Chat');
     expect(
       host.querySelector('#runtime-local-provider-project-default')?.getAttribute('data-state')
@@ -647,7 +647,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       );
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.textContent).toContain('Configured providers'));
+    await vi.waitFor(() => expect(host.textContent).toContain('Saved models and endpoints'));
 
     const editButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Edit'
@@ -1077,7 +1077,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     await vi.waitFor(() => {
       expect(host.textContent).toContain('Setup saved, but the model check needs attention.');
       expect(host.textContent).toContain('Agent Teams requires at least 16K.');
-      expect(host.textContent).not.toContain('Your model endpoint is ready for Agent Teams.');
+      expect(host.textContent).not.toContain('This model is ready for Agent Teams.');
     });
     expect(mocks.testModel).not.toHaveBeenCalled();
   });
@@ -1248,7 +1248,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
 
     await vi.waitFor(
       () => {
-        expect(host.textContent).toContain('Your model endpoint is ready for Agent Teams.');
+        expect(host.textContent).toContain('This model is ready for Agent Teams.');
         expect(host.textContent).not.toContain('needs attention');
       },
       { timeout: 3_000 }
@@ -1329,7 +1329,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
 
     await vi.waitFor(() => {
       expect(host.textContent).toContain('The server is running, but no models are loaded.');
-      expect(host.textContent).toContain('at least one model has been pulled locally');
+      expect(host.textContent).toContain('The Ollama tools tag is not enough');
       expect(host.textContent).toContain('Load a model in Ollama, then refresh the model list.');
     });
     const saveButton = Array.from(host.querySelectorAll('button')).find((button) =>
@@ -1421,7 +1421,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('Your model endpoint is ready for Agent Teams.');
+      expect(host.textContent).toContain('This model is ready for Agent Teams.');
       expect(host.textContent).toContain(
         'OpenCode ran qwen3:8b, and the Agent Teams launch preflight passed.'
       );

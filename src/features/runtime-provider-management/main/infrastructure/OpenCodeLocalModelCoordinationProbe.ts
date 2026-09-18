@@ -113,7 +113,7 @@ export async function probeOpenCodeLocalModelCoordination(
       return failedResult(
         input,
         `${input.provider.preset.displayName} returned a response, but ${input.modelId} did not ` +
-          'complete the required task_briefing tool step.'
+          `complete the required task_briefing tool step.${describeNativeToolFailure(first.value)}`
       );
     }
 
@@ -156,7 +156,8 @@ export async function probeOpenCodeLocalModelCoordination(
       return failedResult(
         input,
         `${input.provider.preset.displayName} returned a response, but ${input.modelId} wrote ` +
-          'plain text or an invalid call instead of the required Agent Teams message_send tool.'
+          'plain text or an invalid call instead of the required Agent Teams message_send tool.' +
+          describeNativeToolFailure(second.value)
       );
     }
 
@@ -554,6 +555,50 @@ function parseToolArguments(value: unknown): Record<string, unknown> | null {
 
 function findToolCall(toolCalls: readonly ToolCall[], expectedName: string): ToolCall | null {
   return toolCalls.find((toolCall) => normalizeToolName(toolCall.name) === expectedName) ?? null;
+}
+
+function describeNativeToolFailure(response: ProbeResponse): string {
+  const text = collectAssistantText(response.assistant);
+  if (looksLikeEmulatedToolCall(text)) {
+    return (
+      ' It printed a fake tool call in chat instead of a native tool_calls payload. ' +
+      'Choose a model that actually invokes tools, then verify it again.'
+    );
+  }
+  return ' Choose a model that actually invokes tools, then verify it again.';
+}
+
+function collectAssistantText(assistant: Record<string, unknown>): string {
+  const content = assistant.content;
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  return content
+    .map((part) => {
+      if (typeof part === 'string') {
+        return part;
+      }
+      const record = asRecord(part);
+      if (typeof record?.text === 'string') {
+        return record.text;
+      }
+      return typeof record?.content === 'string' ? record.content : '';
+    })
+    .join('\n');
+}
+
+function looksLikeEmulatedToolCall(text: string): boolean {
+  const normalized = text.trim();
+  if (!normalized) {
+    return false;
+  }
+  const hasJsonToolShape = /"name"\s*:\s*"/.test(normalized) && /"arguments"\s*:/.test(normalized);
+  return (
+    hasJsonToolShape || /```(?:json|tool)/i.test(normalized) || /"tool_calls"\s*:/.test(normalized)
+  );
 }
 
 function normalizeToolName(value: string): string {
