@@ -1575,7 +1575,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
   );
   const isThisTabActive = isActive;
-  const wasInteractiveRef = useRef(false);
+  const interactiveTeamRef = useRef<string | null>(null);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
   const loadingHeaderColorSet = useMemo(
     () =>
@@ -1685,33 +1685,63 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [isThisTabActive, pendingRevealFile, data?.config.projectPath]);
 
   useEffect(() => {
-    if (!isThisTabActive || !teamName) {
+    if (!isThisTabActive || !isPaneFocused || !teamName) {
+      return;
+    }
+    if (useStore.getState().selectedTeamName === teamName) {
       return;
     }
     void selectTeam(teamName);
+  }, [isThisTabActive, isPaneFocused, teamName, selectTeam]);
+
+  useEffect(() => {
+    if (!isThisTabActive || !teamName) {
+      return;
+    }
+    const selected = useStore.getState();
+    if (selected.selectedTeamName !== teamName || selected.selectedTeamLoading) {
+      return;
+    }
     void fetchDeletedTasks(teamName);
-  }, [isThisTabActive, teamName, selectTeam, fetchDeletedTasks]);
+  }, [isThisTabActive, teamName, loading, fetchDeletedTasks]);
 
   // Re-trigger selectTeam when this visible tab becomes active and store data is stale.
   const storedTeamName = data?.teamName;
   useEffect(() => {
-    if (!isThisTabActive || !teamName || loading) return;
+    if (!isThisTabActive || !isPaneFocused || !teamName || loading) return;
     if (storedTeamName != null && storedTeamName !== teamName) {
       void selectTeam(teamName);
     }
-  }, [isThisTabActive, teamName, storedTeamName, loading, selectTeam]);
+  }, [isThisTabActive, isPaneFocused, teamName, storedTeamName, loading, selectTeam]);
 
   useEffect(() => {
     const isInteractive = isThisTabActive && isPaneFocused;
-    const justBecameInteractive = isInteractive && !wasInteractiveRef.current;
-    wasInteractiveRef.current = isInteractive;
-    if (!justBecameInteractive || !teamName) {
+    if (!isInteractive) {
+      interactiveTeamRef.current = null;
       return;
     }
+    if (!teamName) {
+      return;
+    }
+
+    const selected = useStore.getState();
+    if (selected.selectedTeamName === teamName && selected.selectedTeamLoading) {
+      // Drop the marker so error/provisioning paths that skip post-paint still retry.
+      interactiveTeamRef.current = null;
+      return;
+    }
+
+    if (interactiveTeamRef.current === teamName) {
+      return;
+    }
+    interactiveTeamRef.current = teamName;
 
     void (async () => {
       try {
         const headResult = await refreshTeamMessagesHead(teamName);
+        if (interactiveTeamRef.current !== teamName) {
+          return;
+        }
         if (headResult.feedChanged) {
           await refreshMemberActivityMeta(teamName);
         }
@@ -1722,6 +1752,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [
     isPaneFocused,
     isThisTabActive,
+    loading,
     refreshMemberActivityMeta,
     refreshTeamMessagesHead,
     teamName,
