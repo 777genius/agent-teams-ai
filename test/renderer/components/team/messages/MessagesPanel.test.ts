@@ -14,9 +14,9 @@ import {
 import { setTeamMessagesSidebarUiState } from '@renderer/components/team/sidebar/teamSidebarUiState';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
-import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 
 const storeState = {
   sendTeamMessage: vi.fn().mockResolvedValue(undefined),
@@ -144,13 +144,15 @@ vi.mock('@renderer/components/ui/context-menu', () => ({
 
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
   MessageComposer: ({
+    autoFocusKey,
     revisionRequest,
   }: {
+    autoFocusKey?: number;
     revisionRequest?: { originalMessageId: string; originalText: string } | null;
   }) =>
     React.createElement(
       'div',
-      { 'data-testid': 'composer' },
+      { 'data-testid': 'composer', 'data-auto-focus-key': String(autoFocusKey ?? 0) },
       revisionRequest
         ? `composer revision:${revisionRequest.originalMessageId}:${revisionRequest.originalText}`
         : 'composer'
@@ -1888,6 +1890,9 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(host.textContent).toContain('alice');
+    expect(
+      Number(host.querySelector('[data-testid="composer"]')?.getAttribute('data-auto-focus-key'))
+    ).toBeGreaterThan(0);
     expect(host.querySelector('[data-testid="activity-timeline"]')).not.toBeNull();
     expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
       expect.arrayContaining([expect.objectContaining({ messageId: 'dm-1' })])

@@ -78,6 +78,8 @@ interface MessageComposerProps {
   lockedRecipient?: string;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
+  /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
+  autoFocusKey?: number;
   onSend: (
     recipient: string,
     text: string,
@@ -136,6 +138,7 @@ export const MessageComposer = ({
   cornerActionPrefix,
   textareaRef: externalTextareaRef,
   lockedRecipient,
+  autoFocusKey,
   onSend,
   onCrossTeamSend,
   onRevisionCancel,
@@ -162,6 +165,13 @@ export const MessageComposer = ({
     queueMicrotask(focus);
     window.requestAnimationFrame(focus);
   }, []);
+
+  useEffect(() => {
+    if (autoFocusKey === undefined || autoFocusKey <= 0) {
+      return;
+    }
+    focusComposerTextarea();
+  }, [autoFocusKey, focusComposerTextarea]);
   const [recipient, setRecipient] = useState<string>(() => {
     const lead = members.find((m) => isLeadMember(m));
     return lead?.name ?? members[0]?.name ?? '';

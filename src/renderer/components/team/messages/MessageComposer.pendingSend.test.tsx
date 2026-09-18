@@ -770,6 +770,32 @@ describe('MessageComposer pending send lifecycle', () => {
     }
   );
 
+  it('does not autofocus the textarea until a chat thread is opened', () => {
+    const { host, root } = renderComposer();
+    expect(document.activeElement).not.toBe(getTextarea(host));
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('autofocuses the textarea when a chat thread is opened', async () => {
+    const { host, root } = renderComposer({ autoFocusKey: Date.parse('2026-09-18T09:00:00.000Z') });
+    const textarea = getTextarea(host);
+
+    await act(async () => {
+      await Promise.resolve();
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('returns focus to the textarea after sending', () => {
     const { host, root } = renderComposer();
     const sendButton = getSendButton(host);
