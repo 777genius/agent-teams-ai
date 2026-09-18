@@ -49,6 +49,7 @@ import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
+import { LocalTeammateModelRequirements } from './ui/LocalTeammateModelRequirements';
 import { RuntimeLocalProviderInlineError as InlineError } from './ui/RuntimeLocalProviderInlineError';
 import { RuntimeProviderEndpointCredentialsFields } from './ui/RuntimeProviderEndpointCredentialsFields';
 import { RuntimeProviderModelTestResult } from './ui/RuntimeProviderModelTestResult';
@@ -58,6 +59,7 @@ import {
   getFriendlyVerificationError,
   getProjectConfigPath,
   hasConfiguredProviderApiKey,
+  LOCAL_TEAMMATE_REQUIREMENTS,
   SERVER_START_GUIDANCE,
   splitConfigPath,
 } from './runtimeLocalProviderSetupCopy';
@@ -1441,10 +1443,16 @@ export const RuntimeLocalProviderSetupDialog = ({
                 <SetupStep
                   number={3}
                   title="Model"
-                  description="Pick a model and run one short verification request."
+                  description="Pick a teammate-capable model and run one short verification request."
                   complete={Boolean(scopeProgressComplete && selectedModelId)}
                   icon={<Box className="size-4.5" aria-hidden="true" />}
                 >
+                  <LocalTeammateModelRequirements
+                    title={LOCAL_TEAMMATE_REQUIREMENTS.title}
+                    size={LOCAL_TEAMMATE_REQUIREMENTS.size}
+                    context={LOCAL_TEAMMATE_REQUIREMENTS.context}
+                    tiny={LOCAL_TEAMMATE_REQUIREMENTS.tiny}
+                  />
                   {serverHasModels ? (
                     <div className="space-y-1.5">
                       <Label htmlFor="runtime-local-provider-model">Model</Label>

@@ -7,6 +7,7 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   isPrivateNetworkRuntimeLocalProviderUrl,
+  LocalTeammateModelRequirements,
   type OpenCodeLocalModelSetupTarget,
   ProviderBrandIcon,
   resolveOpenCodeCatalogSourceProviderId,
@@ -3427,6 +3428,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         ) : null}
                       </div>
                     </div>
+                  </div>
+                ) : null}
+                {isLocalModelsTabActive ? (
+                  <div className="mb-3">
+                    <LocalTeammateModelRequirements
+                      title={t('modelSelector.localModels.teammateRequirementsTitle')}
+                      size={t('modelSelector.localModels.teammateRequirementsSize')}
+                      context={t('modelSelector.localModels.teammateRequirementsContext')}
+                      tiny={t('modelSelector.localModels.teammateRequirementsTiny')}
+                    />
                   </div>
                 ) : null}
                 {effectiveProviderId === 'opencode' && openCodeLocalProviderLookupError ? (

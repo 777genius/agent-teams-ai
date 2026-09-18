@@ -4288,7 +4288,7 @@ export default interface Resources {
         blocked: 'Runtime environment is not available - {{action}} is blocked';
         checkingProviders: 'Checking selected providers...';
         experimentalLocalModelOverride: 'Launch this local model experimentally';
-        experimentalLocalModelOverrideHint: 'Only the advisory coordination check is bypassed. Provider, tool, context, and real OpenCode execution checks still apply.';
+        experimentalLocalModelOverrideHint: 'This only skips the “too small / weak tools” warning. 0.5B–1.5B will still not do teammate work. For real tasks use a 7B+ coder with 16K+ context, for example qwen2.5-coder:7b.';
         failed: 'Failed to prepare selected providers';
         preflight: 'Pre-flight check to catch errors before {{action}}';
         preparingEnvironment: 'Preparing environment...';
@@ -4949,7 +4949,11 @@ export default interface Resources {
         installedNotAdded: 'Installed in {{provider}} · Not added to this project';
         lookupErrorFallback: 'Existing runtime models remain available.';
         lookupErrorTitle: 'Local models could not be checked';
-        needsVerificationHint: 'Selectable now. Agent Teams will verify tool coordination before launch.';
+        needsVerificationHint: 'You can select it now. Launch still needs tool calling and 16K+ context. For teammates pick 7B or larger, for example qwen2.5-coder:7b.';
+        teammateRequirementsContext: 'Need at least 16K context (32K is better). Ollama starts at 4K — raise it to 32K before launch, or teammates will fail.';
+        teammateRequirementsSize: 'Smallest working size: a 7B coding model that can call tools. Example: qwen2.5-coder:7b. Anything under 3B is blocked.';
+        teammateRequirementsTiny: '0.5B and 1.5B can only start as an experiment. They will not write files, use tools, or talk to the team.';
+        teammateRequirementsTitle: 'Minimum for teammates';
         none: 'None';
         privateNetworkApproval: {
           allowAndTest: 'Allow and test';
