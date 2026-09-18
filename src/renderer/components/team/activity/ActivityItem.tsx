@@ -1369,7 +1369,7 @@ export const ActivityItem = memo(
         renderInlineBoldSummary(rawSummary)
       );
 
-    const showHoverToolbar = Boolean(isExpanded && displayText);
+    const showHoverToolbar = Boolean(displayText);
     const card = (
       <article
         className={[
@@ -1804,6 +1804,8 @@ export const ActivityItem = memo(
             side="right"
             align="start"
             sideOffset={0}
+            avoidCollisions={false}
+            hideWhenDetached={false}
             className="activity-message-toolbar w-auto min-w-0 bg-[var(--color-surface-raised)] p-1 shadow-none data-[side=left]:rounded-r-none data-[side=right]:rounded-l-none data-[side=left]:border-r-0 data-[side=right]:border-l-0"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
