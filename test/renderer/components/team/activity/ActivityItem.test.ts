@@ -47,11 +47,22 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     children,
     className,
     side,
+    avoidCollisions,
   }: {
     children: React.ReactNode;
     className?: string;
     side?: string;
-  }) => React.createElement('div', { className, 'data-side': side }, children),
+    avoidCollisions?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        className,
+        'data-side': side,
+        'data-avoid-collisions': avoidCollisions === false ? 'false' : undefined,
+      },
+      children
+    ),
 }));
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
@@ -269,8 +280,50 @@ describe('ActivityItem compact header preview', () => {
     expect(toolbar).not.toBeNull();
     expect(article?.contains(toolbar)).toBe(false);
     expect(toolbarHost?.getAttribute('data-side')).toBe('right');
+    expect(toolbarHost?.getAttribute('data-avoid-collisions')).toBe('false');
     expect(toolbarHost?.className).toContain('activity-message-toolbar');
     expect(toolbar?.className).not.toContain('absolute');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders the right-side hover toolbar for collapsed older messages', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'oscar',
+      text: 'agent-teams_task_create { "teamName": "local-7b-teammate-20260918" }',
+      timestamp: new Date('2026-04-18T16:29:00.000Z').toISOString(),
+      read: true,
+      source: 'inbox',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          collapseMode: 'managed',
+          isCollapsed: true,
+          compactHeader: true,
+          onReply: vi.fn(),
+          onCreateTask: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const toolbar = host.querySelector('[data-activity-message-toolbar="true"]');
+    const toolbarHost = toolbar?.closest('[data-side]');
+
+    expect(toolbar).not.toBeNull();
+    expect(toolbarHost?.getAttribute('data-side')).toBe('right');
+    expect(toolbarHost?.getAttribute('data-avoid-collisions')).toBe('false');
 
     await act(async () => {
       root.unmount();
