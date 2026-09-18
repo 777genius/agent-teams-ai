@@ -189,7 +189,7 @@ describe('TeamFsWorkerClient', () => {
     const client = new TeamFsWorkerClient();
 
     const prewarmResult = client.prewarm().catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(20_001);
+    await vi.advanceTimersByTimeAsync(5_001);
     const prewarmError = await prewarmResult;
     expect(prewarmError).toBeInstanceOf(Error);
     expect((prewarmError as Error).message).toContain('Worker call timeout');
@@ -250,5 +250,54 @@ describe('TeamFsWorkerClient', () => {
 
     expect(hoisted.workers).toHaveLength(1);
     expect(hoisted.workers[0].messages).toHaveLength(1);
+  });
+
+  it('keeps queued getAllTasks alive when listTeams times out', async () => {
+    vi.useFakeTimers();
+    hoisted.skipResponsesForOps.add('listTeams');
+    hoisted.skipResponsesForOps.add('getAllTasks');
+    const { TeamFsWorkerClient } =
+      await import('../../../../src/main/services/team/TeamFsWorkerClient');
+    const client = new TeamFsWorkerClient();
+    const listOptions = {
+      largeConfigBytes: 8 * 1024,
+      configHeadBytes: 4 * 1024,
+      maxConfigBytes: 256 * 1024,
+      maxMembersMetaBytes: 256 * 1024,
+      maxSessionHistoryInSummary: 10,
+      maxProjectPathHistoryInSummary: 10,
+    };
+
+    const listPromise = client.listTeams(listOptions);
+    const tasksPromise = client.getAllTasks({
+      maxTaskBytes: 256 * 1024,
+    });
+    const listSettled = listPromise.then(
+      () => 'resolved' as const,
+      () => 'rejected' as const
+    );
+    const tasksSettled = tasksPromise.then(
+      () => 'resolved' as const,
+      () => 'rejected' as const
+    );
+
+    await vi.advanceTimersByTimeAsync(90_001);
+    await expect(listPromise).rejects.toThrow('Worker call timeout after 90000ms (listTeams)');
+    expect(await listSettled).toBe('rejected');
+    expect(await Promise.race([tasksSettled, Promise.resolve('pending')])).toBe('pending');
+    expect(hoisted.workers).toHaveLength(2);
+    expect(hoisted.workers[1].messages[0]).toMatchObject({ op: 'getAllTasks' });
+
+    const tasksRequest = hoisted.workers[1].messages[0] as { id: string };
+    hoisted.workers[1].handlers.get('message')?.({
+      id: tasksRequest.id,
+      ok: true,
+      result: [],
+      diag: { op: 'getAllTasks', totalMs: 1 },
+    });
+    await expect(tasksPromise).resolves.toMatchObject({
+      tasks: [],
+      diag: { op: 'getAllTasks', totalMs: 1 },
+    });
   });
 });

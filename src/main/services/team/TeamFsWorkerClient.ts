@@ -14,7 +14,8 @@ const logger = createLogger('Service:TeamFsWorkerClient');
 
 const DEFAULT_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
 const DEFAULT_READ_TIMEOUT_MS = 5_000;
-const WORKER_CALL_TIMEOUT_MS = 20_000;
+const WARMUP_TIMEOUT_MS = 5_000;
+const SCAN_TIMEOUT_MS = 90_000;
 
 type WorkerDiag = Record<string, unknown>;
 
@@ -159,6 +160,18 @@ export class TeamFsWorkerClient {
     }
   }
 
+  private failActiveCall(worker: Worker, id: string, error: Error): void {
+    if (this.worker !== worker) return;
+    if (this.activeCallId !== id) return;
+    const entry = this.pending.get(id);
+    this.pending.delete(id);
+    this.clearActiveCall(id);
+    this.worker = null;
+    entry?.reject(error);
+    void worker.terminate().catch(() => undefined);
+    this.processQueue();
+  }
+
   isAvailable(): boolean {
     if (!this.workerPath && !this.warnedUnavailable && shouldWarnUnavailableWorker()) {
       this.warnedUnavailable = true;
@@ -249,22 +262,19 @@ export class TeamFsWorkerClient {
     };
     this.pending.set(entry.id, pendingEntry);
     this.activeCallId = entry.id;
+    const timeoutMs = entry.op === 'warmup' ? WARMUP_TIMEOUT_MS : SCAN_TIMEOUT_MS;
     this.activeTimeout = setTimeout(() => {
       if (this.activeCallId !== entry.id) {
         return;
       }
-      const timeoutError = new Error(
-        `Worker call timeout after ${WORKER_CALL_TIMEOUT_MS}ms (${entry.op})`
-      );
+      const timeoutError = new Error(`Worker call timeout after ${timeoutMs}ms (${entry.op})`);
       logger.warn(
         `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} workerMs=${Date.now() - postedAt} queuedMs=${postedAt - entry.createdAt} pendingAtStart=${pendingAtStart} pendingNow=${this.pending.size} queued=${this.queue.length} payload=${JSON.stringify(
           summarizeWorkerPayload(entry.payload)
         )} memory=${formatCurrentProcessMemorySnapshot()}`
       );
-      this.failWorker(worker, timeoutError);
-      // Terminate and recreate on next call - worker may be stuck in native IO.
-      void worker.terminate().catch(() => undefined);
-    }, WORKER_CALL_TIMEOUT_MS);
+      this.failActiveCall(worker, entry.id, timeoutError);
+    }, timeoutMs);
 
     try {
       worker.postMessage({ id: entry.id, op: entry.op, payload: entry.payload } as WorkerRequest);

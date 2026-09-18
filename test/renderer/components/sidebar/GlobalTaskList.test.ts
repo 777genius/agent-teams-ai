@@ -271,6 +271,28 @@ describe('GlobalTaskList project grouping', () => {
     storeListeners.clear();
   });
 
+  it('does not fetch tasks on mount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasksLoading = false;
+    storeState.globalTasksInitialized = false;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchAllTasks).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('fetches repository groups when grouped project filter data is needed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.viewMode = 'grouped';

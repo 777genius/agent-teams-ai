@@ -63,9 +63,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   const {
     teams,
     globalTasks,
-    globalTasksInitialized,
-    globalTasksLoading,
-    fetchAllTasks,
     openTeamTab,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
@@ -75,9 +72,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     useShallow((state) => ({
       teams: state.teams,
       globalTasks: state.globalTasks,
-      globalTasksInitialized: state.globalTasksInitialized,
-      globalTasksLoading: state.globalTasksLoading,
-      fetchAllTasks: state.fetchAllTasks,
       openTeamTab: state.openTeamTab,
       provisioningRuns: state.provisioningRuns,
       currentProvisioningRunIdByTeam: state.currentProvisioningRunIdByTeam,
@@ -127,26 +121,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       cancelled = true;
     };
   }, [provisioningTeamNamesKey, searchActive, teams]);
-
-  useEffect(() => {
-    if (
-      searchActive ||
-      globalTasksInitialized ||
-      globalTasksLoading ||
-      (teams.length === 0 && provisioningTeamNames.length === 0)
-    ) {
-      return;
-    }
-
-    void fetchAllTasks();
-  }, [
-    fetchAllTasks,
-    globalTasksInitialized,
-    globalTasksLoading,
-    provisioningTeamNames.length,
-    searchActive,
-    teams.length,
-  ]);
 
   const rows = useMemo(() => {
     if (searchActive) {

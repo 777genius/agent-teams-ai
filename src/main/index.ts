@@ -2144,11 +2144,6 @@ async function initializeServices(): Promise<void> {
       });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
-  void teamDataService
-    .initializeTaskCommentNotificationState()
-    .catch((error: unknown) =>
-      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
-    );
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
 
@@ -3261,29 +3256,29 @@ function runPostRendererStartupTasks(): void {
     updaterService.startPeriodicCheck(60 * 60 * 1000);
   }
 
-  scheduleStartupTask(
-    () => {
-      void getTeamFsWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-fs-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
-        );
-      void getTeamDataWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-data-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
-        );
-    },
-    process.platform === 'win32' ? 2500 : 1000
-  );
+  void getTeamFsWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-fs-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
+  void getTeamDataWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-data-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
+  void teamDataService
+    .initializeTaskCommentNotificationState()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
+    );
 
   scheduleStartupTask(() => {
     teamDataService.startProcessHealthPolling();
