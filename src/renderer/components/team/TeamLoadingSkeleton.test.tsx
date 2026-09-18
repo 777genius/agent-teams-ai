@@ -182,6 +182,9 @@ describe('TeamLoadingSkeleton messages sidebar', () => {
     expect(skeleton?.getAttribute('data-messages-skeleton')).toBe('list');
     expect(skeleton?.getAttribute('data-messages-skeleton-title')).toBe('messages.title');
     expect(host.querySelector('.message-composer-flat-layout')).toBeNull();
+    const logs = host.querySelector('[data-team-sidebar-logs]');
+    expect(logs?.querySelector('.lucide-message-square')).toBeNull();
+    expect(logs?.querySelector('.lucide-panel-left-close')).not.toBeNull();
 
     await act(async () => {
       root.unmount();

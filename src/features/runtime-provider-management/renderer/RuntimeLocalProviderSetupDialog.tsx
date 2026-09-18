@@ -49,6 +49,7 @@ import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
+import { SetupLocalTeammateModelRequirements } from './ui/LocalTeammateModelRequirements';
 import { RuntimeLocalProviderInlineError as InlineError } from './ui/RuntimeLocalProviderInlineError';
 import { RuntimeProviderEndpointCredentialsFields } from './ui/RuntimeProviderEndpointCredentialsFields';
 import { RuntimeProviderModelTestResult } from './ui/RuntimeProviderModelTestResult';
@@ -390,8 +391,8 @@ export const RuntimeLocalProviderSetupDialog = ({
         setConfiguredProviders([]);
         setProviderListError(
           scope === 'global'
-            ? 'Could not load the model endpoints available to all projects.'
-            : 'Could not load the model endpoints saved in this project.'
+            ? 'Could not load local models and endpoints available to all projects.'
+            : 'Could not load local models and endpoints saved in this project.'
         );
         if (options.showListAfterLoad) showProviderView('list');
       } finally {
@@ -421,7 +422,7 @@ export const RuntimeLocalProviderSetupDialog = ({
       return 'Settings are saved. Retry the check now, or close and fix the server later.';
     }
     if (savedConfiguration && verificationPassed) {
-      return 'Your model endpoint is ready for Agent Teams launch.';
+      return 'This model is ready for Agent Teams launch.';
     }
     if (scanLoading) return 'Looking for local model servers on this computer...';
     if (apiKeyRequiredForEdit) return 'Re-enter the stored API key to verify and save changes.';
@@ -657,16 +658,13 @@ export const RuntimeLocalProviderSetupDialog = ({
     setVerificationResult(null);
     setVerificationPassed(false);
     try {
-      // Check model/runtime capacity before asking OpenCode to execute a model turn.
-      // This rejects known-incompatible local models from metadata in milliseconds
-      // instead of waiting for a doomed execution probe to time out.
       const readiness = await api.teams.prepareProvisioning(
         getLocalModelVerificationCwd(configuration, targetProjectPath),
         'opencode',
         ['opencode'],
         [configuration.modelRoute],
         false,
-        'compatibility'
+        'deep'
       );
       if (dialogSessionRef.current !== sessionId) return;
       if (!readiness.ready) {
@@ -959,13 +957,13 @@ export const RuntimeLocalProviderSetupDialog = ({
               {providerView === 'editor'
                 ? editingProviderId
                   ? `Edit ${selectedPreset.displayName}`
-                  : 'Add a model endpoint'
-                : 'Model endpoints'}
+                  : 'Add a local model or endpoint'
+                : 'Local models and endpoints'}
             </DialogTitle>
             <DialogDescription className="max-w-2xl">
               {providerView === 'editor'
-                ? 'Connect an OpenAI-compatible server, choose where it is available, and verify one model through OpenCode.'
-                : `See every configured endpoint available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit providers in one place.`}
+                ? 'Connect a local model server or any OpenAI-compatible endpoint, choose where it is available, and verify one model through OpenCode.'
+                : `See every configured local model or endpoint available ${configurationScope === 'global' ? 'to all projects' : 'to the selected project'}, then add or edit them in one place.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -1031,13 +1029,13 @@ export const RuntimeLocalProviderSetupDialog = ({
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--color-text)]">
-                      Configured providers
+                      Saved models and endpoints
                     </h3>
                     <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
                       {configuredProviders.length === 0
                         ? configurationScope === 'global'
-                          ? 'No model endpoints are available to all projects yet.'
-                          : 'No model endpoints have been added to this project yet.'
+                          ? 'No local models or endpoints are available to all projects yet.'
+                          : 'No local models or endpoints have been added to this project yet.'
                         : getEndpointAvailabilitySummary(
                             configuredProviders.length,
                             runningProviderCount
@@ -1052,7 +1050,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     onClick={beginAddProvider}
                   >
                     <Plus className="size-3.5" />
-                    Add provider
+                    Add model or endpoint
                   </Button>
                 </div>
 
@@ -1060,7 +1058,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 {providerListLoading || providerView === 'loading' ? (
                   <div className="flex items-center gap-2 border-t border-white/[0.07] py-6 text-xs text-[var(--color-text-muted)]">
                     <Loader2 className="size-4 animate-spin" />
-                    Checking configured model endpoints...
+                    Checking configured local models and endpoints...
                   </div>
                 ) : configuredProviders.length > 0 ? (
                   <div className="divide-y divide-white/[0.07] border-t border-white/[0.07]">
@@ -1147,7 +1145,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     </span>
                     <span>
                       <span className="block text-sm font-medium text-[var(--color-text)]">
-                        Add your first model endpoint
+                        Add your first local model or endpoint
                       </span>
                       <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
                         Ollama, LM Studio, Atomic Chat, llama.cpp, or another compatible server.
@@ -1441,10 +1439,11 @@ export const RuntimeLocalProviderSetupDialog = ({
                 <SetupStep
                   number={3}
                   title="Model"
-                  description="Pick a model and run one short verification request."
+                  description="Pick a model that actually calls tools, then Save & verify."
                   complete={Boolean(scopeProgressComplete && selectedModelId)}
                   icon={<Box className="size-4.5" aria-hidden="true" />}
                 >
+                  <SetupLocalTeammateModelRequirements presetId={selectedPresetId} />
                   {serverHasModels ? (
                     <div className="space-y-1.5">
                       <Label htmlFor="runtime-local-provider-model">Model</Label>
@@ -1540,7 +1539,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                         {verificationError
                           ? 'Setup saved, but the model check needs attention.'
                           : verificationPassed
-                            ? 'Your model endpoint is ready for Agent Teams.'
+                            ? 'This model is ready for Agent Teams.'
                             : savedSummary}
                       </div>
                     </div>
@@ -1593,7 +1592,7 @@ export const RuntimeLocalProviderSetupDialog = ({
               </>
             ) : (
               <>
-                Add as many model endpoints as you need. Only one model is marked as the{' '}
+                Add as many local models or endpoints as you need. Only one model is marked as the{' '}
                 {configurationScope === 'global' ? 'global' : 'project'} default.
               </>
             )}
@@ -1608,7 +1607,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                 {phase === 'done' ? (
                   <Button type="button" variant="ghost" onClick={showProviderList}>
                     <ArrowLeft className="mr-1.5 size-3.5" />
-                    Back to providers
+                    Back to list
                   </Button>
                 ) : null}
                 {phase === 'done' ? (
@@ -1619,7 +1618,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                     onClick={beginAddProvider}
                   >
                     <Plus className="size-3.5" />
-                    Add another provider
+                    Add another
                   </Button>
                 ) : null}
                 <Button type="button" variant="ghost" onClick={requestClose}>
@@ -1653,7 +1652,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                   {configuredProviders.length > 0 ? (
                     <ArrowLeft className="mr-1.5 size-3.5" />
                   ) : null}
-                  {configuredProviders.length > 0 ? 'Back to providers' : 'Cancel'}
+                  {configuredProviders.length > 0 ? 'Back to list' : 'Cancel'}
                 </Button>
                 <Button
                   type="button"

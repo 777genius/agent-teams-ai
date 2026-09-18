@@ -73,6 +73,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
   input: {
     readonly projectPath: string;
     readonly modelRoute: string;
+    /** Kept for launch-cache identity. Failed native tool probes stay blocking even when this is true. */
     readonly allowExperimentalLocalModels?: boolean;
     readonly classificationOnly?: boolean;
   },
@@ -260,7 +261,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
         code: 'local_tools_unsupported',
         message:
           `${provider.preset.displayName} reports that ${input.modelRoute} does not support ` +
-          'tool calling. Choose a tool-capable model before launching Agent Teams.',
+          'tool calling. Choose a model that actually invokes tools, then verify it again.',
       };
     }
     if (
@@ -292,7 +293,6 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
         toolCapable: metadata?.toolCapable ?? null,
         effectiveContextTokens: metadata?.contextTokens ?? null,
         coordination,
-        allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
       });
     }
     if (metadata?.contextTokens != null) {
@@ -373,7 +373,7 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       code: 'local_tools_unsupported',
       message:
         `Ollama reports that ${input.modelRoute} does not support tool calling. ` +
-        'Choose a tool-capable model before launching Agent Teams.',
+        'Choose a model that actually invokes tools, then verify it again.',
     };
   }
 
@@ -417,7 +417,6 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
       configuredContextTokens,
       effectiveContextTokens,
       coordination,
-      allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
     });
   }
 
@@ -533,13 +532,10 @@ function buildCoordinationProbeFailure(input: {
   configuredContextTokens?: number | null;
   effectiveContextTokens?: number | null;
   coordination: OpenCodeLocalModelCoordinationProbeResult;
-  allowExperimentalLocalModels: boolean;
 }): OpenCodeLocalModelRuntimeReadiness {
   const unavailable = input.coordination.status === 'unavailable';
   const failed = input.coordination.status === 'failed';
   const requestRejected = input.coordination.failureKind === 'request_rejected';
-  const experimentalOverride = failed && !requestRejected;
-  const overrideApplied = experimentalOverride && input.allowExperimentalLocalModels;
   return {
     providerId: input.providerId,
     modelId: input.modelId,
@@ -550,20 +546,18 @@ function buildCoordinationProbeFailure(input: {
     configuredContextTokens: input.configuredContextTokens ?? null,
     effectiveContextTokens: input.effectiveContextTokens ?? null,
     coordinationProbeStatus: input.coordination.status,
-    severity: unavailable || overrideApplied ? 'warning' : 'blocking',
-    experimentalOverrideAvailable: experimentalOverride,
+    severity: unavailable ? 'warning' : 'blocking',
+    experimentalOverrideAvailable: false,
     code: failed ? 'local_coordination_probe_failed' : 'local_coordination_probe_unavailable',
     message: unavailable
       ? `${input.coordination.message} This is a verification availability problem, not proof ` +
         'that the model is unsupported. The real OpenCode execution probe will make the launch decision.'
       : requestRejected
         ? `${input.coordination.message} The local server rejected the required tool-call request, ` +
-          'so the experimental local-model override cannot bypass this failure.'
-        : overrideApplied
-          ? `${input.coordination.message} Experimental local-model override is enabled; the real ` +
-            'OpenCode execution probe must still pass.'
-          : `${input.coordination.message} You can explicitly enable the experimental local-model ` +
-            'override to continue to the real OpenCode execution probe.',
+          'so launch cannot continue with this model.'
+        : `${input.coordination.message} Launch is blocked until the model actually invokes ` +
+          'native tools. Printing JSON in chat is not enough. Choose a different model, then ' +
+          'verify it again.',
   };
 }
 

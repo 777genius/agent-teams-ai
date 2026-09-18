@@ -216,7 +216,10 @@ export function resolveOpenCodeLocalModelPresentation({
   if (actionState?.status === 'needs_verification') {
     return { status: 'needs_verification', reason: actionState.message };
   }
-  if (advisoryReason?.toLowerCase().includes('experimental local-model override')) {
+  if (
+    advisoryReason?.toLowerCase().includes('experimental local-model override is enabled') ||
+    advisoryReason?.toLowerCase().includes('explicitly enable the experimental local-model')
+  ) {
     return { status: 'experimental', reason: advisoryReason };
   }
   if (proofState === 'verified') {
@@ -226,4 +229,55 @@ export function resolveOpenCodeLocalModelPresentation({
     status: 'needs_verification',
     reason: advisoryReason ?? actionState?.message ?? null,
   };
+}
+
+export function canRetryOpenCodeLocalModel(input: {
+  catalogScopeKey: string | null | undefined;
+  isInspectingInactiveProvider: boolean;
+  activeProviderSelectable: boolean;
+  modelDisabledReason: string | null | undefined;
+  hasDescriptor: boolean;
+  presentationStatus: OpenCodeLocalModelPresentationStatus | undefined;
+  actionStatus: OpenCodeLocalModelActionState['status'] | undefined;
+}): boolean {
+  return (
+    Boolean(input.catalogScopeKey) &&
+    !input.isInspectingInactiveProvider &&
+    input.activeProviderSelectable &&
+    !input.modelDisabledReason &&
+    input.hasDescriptor &&
+    (input.presentationStatus === 'incompatible' || input.actionStatus === 'error')
+  );
+}
+
+export function resolveOpenCodeLocalModelCardActions(input: {
+  catalogScopeKey: string | null | undefined;
+  isInspectingInactiveProvider: boolean;
+  activeProviderSelectable: boolean;
+  modelDisabledReason: string | null | undefined;
+  hasDescriptor: boolean;
+  presentationStatus: OpenCodeLocalModelPresentationStatus | null | undefined;
+  actionStatus: OpenCodeLocalModelActionState['status'] | undefined;
+}): {
+  canAdd: boolean;
+  canRetry: boolean;
+  canAddOrRetry: boolean;
+  canSelect: boolean;
+} {
+  const canAdd =
+    input.presentationStatus === 'not_configured' &&
+    Boolean(input.catalogScopeKey) &&
+    !input.isInspectingInactiveProvider &&
+    input.activeProviderSelectable &&
+    !input.modelDisabledReason;
+  const canRetry = canRetryOpenCodeLocalModel({
+    ...input,
+    presentationStatus: input.presentationStatus ?? undefined,
+  });
+  const canSelect =
+    input.presentationStatus == null ||
+    input.presentationStatus === 'ready' ||
+    input.presentationStatus === 'needs_verification' ||
+    input.presentationStatus === 'experimental';
+  return { canAdd, canRetry, canAddOrRetry: canAdd || canRetry, canSelect };
 }

@@ -11,6 +11,7 @@ import {
   ProviderBrandIcon,
   resolveOpenCodeCatalogSourceProviderId,
   resolveOpenCodeSelectionScopeDecision,
+  SelectorLocalTeammateModelRequirements,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
   useOpenCodeProviderModelCatalog,
@@ -95,6 +96,7 @@ import {
 } from './openCodeLocalCatalogVisibility';
 import {
   buildOpenCodeLocalModelOverlay,
+  resolveOpenCodeLocalModelCardActions,
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
 import { OpenCodeLocalModelPrivateNetworkApprovalDialog } from './OpenCodeLocalModelPrivateNetworkApprovalDialog';
@@ -1380,8 +1382,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           getTeamModelSourceBadgeLabel('opencode', `${sourceId}/pending-model`) ||
           entry.displayName.trim() ||
           sourceId,
-        // Companion routes can be present in OpenCode config while their
-        // separate Cursor/Kiro account session is signed out.
         status: OPENCODE_COMPANION_SOURCE_IDS.has(sourceId) ? 'checking' : 'connected',
       });
     }
@@ -2547,7 +2547,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       (provider.directoryModelCount !== undefined && provider.directoryModelCount > 0);
     return visibleModelCount > 0 || directoryExpectsModels || scopedLoadPending;
   };
-  // Local inventory stays independent from the currently inspected runtime.
   const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
   const openCodePassiveCatalogPending = isOpenCodePassiveCatalogPendingForTabCount(
@@ -2788,17 +2787,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             reason: t('modelSelector.localModels.chooseProject'),
           }
         : resolvedLocalModelPresentation;
-    const localModelCanAdd =
-      localModelPresentation?.status === 'not_configured' &&
-      Boolean(openCodeCatalogScopeKey) &&
-      !isInspectingInactiveProvider &&
-      activeProviderSelectable &&
-      !modelDisabledReason;
-    const localModelCanSelect =
-      localModelPresentation === null ||
-      localModelPresentation.status === 'ready' ||
-      localModelPresentation.status === 'needs_verification' ||
-      localModelPresentation.status === 'experimental';
+    const localModelActions = resolveOpenCodeLocalModelCardActions({
+      catalogScopeKey: openCodeCatalogScopeKey,
+      isInspectingInactiveProvider,
+      activeProviderSelectable,
+      modelDisabledReason,
+      hasDescriptor: Boolean(localModelDescriptor),
+      presentationStatus: localModelPresentation?.status ?? null,
+      actionStatus: localModelActionState?.status,
+    });
     const hasBlockingModelIssue =
       localModelPresentation?.status === 'incompatible' ||
       (!localModelPresentation && Boolean(modelIssueReason || modelUnavailableReason));
@@ -2809,12 +2806,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       !isInspectingInactiveProvider &&
       activeProviderSelectable &&
       !modelDisabledReason &&
-      localModelCanSelect &&
+      localModelActions.canSelect &&
       (localModelDescriptor
         ? true
         : !modelUnavailableReason &&
           (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
-    const modelInteractable = modelSelectable || localModelCanAdd || codexModelCanUpdate;
+    const modelInteractable =
+      modelSelectable || localModelActions.canAddOrRetry || codexModelCanUpdate;
     const localModelStatusHint =
       localModelPresentation?.status === 'needs_verification'
         ? t('modelSelector.localModels.needsVerificationHint')
@@ -2849,7 +2847,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         type="button"
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
-        aria-pressed={localModelCanAdd ? undefined : isSelectedModel}
+        aria-pressed={localModelActions.canAddOrRetry ? undefined : isSelectedModel}
         aria-disabled={!modelInteractable}
         aria-label={
           modelButtonDescription
@@ -2894,7 +2892,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         )}
         onClick={() => {
           if (codexModelCanUpdate) return void setCodexRuntimeDialogOpen(true);
-          if (localModelCanAdd && localModelDescriptor) {
+          if (localModelActions.canAddOrRetry && localModelDescriptor) {
             const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
               modelId: localModelDescriptor.modelId,
@@ -2938,8 +2936,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               presentation={localModelPresentation}
               providerDisplayName={localModelDescriptor.presetDisplayName}
               statusMessage={modelStatusMessage}
-              canAdd={localModelCanAdd}
-              retry={localModelActionState?.status === 'error'}
+              canAdd={localModelActions.canAddOrRetry}
+              retry={localModelActions.canRetry}
             />
           ) : null}
           {openCodePricingInfo?.summary ? (
@@ -3417,6 +3415,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     </div>
                   </div>
                 ) : null}
+                {isLocalModelsTabActive ? <SelectorLocalTeammateModelRequirements /> : null}
                 {effectiveProviderId === 'opencode' && openCodeLocalProviderLookupError ? (
                   <OpenCodeLocalModelsLookupError
                     error={openCodeLocalProviderLookupError}

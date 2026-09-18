@@ -501,6 +501,40 @@ describe('probeOpenCodeLocalModelCoordination', () => {
       status: 'failed',
       message: expect.stringContaining('plain text'),
     });
+    expect(result.message).toContain('actually invokes tools');
+  });
+
+  it('blocks a model that prints a fake JSON tool call instead of native tool_calls', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: JSON.stringify({
+                name: 'write',
+                arguments: { file_path: 'workspace/proof.txt', contents: 'ok' },
+              }),
+              tool_calls: null,
+            },
+          },
+        ],
+      })
+    );
+
+    const result = await probeOpenCodeLocalModelCoordination(
+      {
+        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1'),
+        modelId: 'qwen2.5-coder:7b',
+      },
+      { fetchImpl, createNonce: () => 'fixed-nonce' }
+    );
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      message: expect.stringContaining('fake tool call'),
+    });
+    expect(result.message).toContain('native tool_calls');
   });
 
   it('supports OpenAI-compatible local servers and string tool arguments', async () => {

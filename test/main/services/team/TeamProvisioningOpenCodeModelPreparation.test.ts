@@ -799,7 +799,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       severity: 'blocking',
       code: 'local_coordination_probe_failed',
       message: 'Custom local model did not complete message_send coordination.',
-      experimentalOverrideAvailable: true,
+      experimentalOverrideAvailable: false,
     } as const);
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
@@ -817,7 +817,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(result.issues).toEqual([
       expect.objectContaining({
         code: 'local_coordination_probe_failed',
-        experimentalOverrideAvailable: true,
+        experimentalOverrideAvailable: false,
       }),
     ]);
     expect(inspectLocalModelRuntime).toHaveBeenCalledWith({

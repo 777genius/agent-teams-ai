@@ -50,6 +50,7 @@ import { AlertCircle, Check, ChevronDown, Mic, Paperclip, Search, Send } from 'l
 import { useShallow } from 'zustand/react/shallow';
 
 import { buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
+import { useComposerTextarea } from './useComposerTextarea';
 
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftContent } from '@renderer/hooks/useComposerDraft';
@@ -78,6 +79,8 @@ interface MessageComposerProps {
   lockedRecipient?: string;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
+  /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
+  autoFocusKey?: number;
   onSend: (
     recipient: string,
     text: string,
@@ -136,32 +139,17 @@ export const MessageComposer = ({
   cornerActionPrefix,
   textareaRef: externalTextareaRef,
   lockedRecipient,
+  autoFocusKey,
   onSend,
   onCrossTeamSend,
   onRevisionCancel,
   onRevisionComplete,
 }: MessageComposerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const textareaRef = useMemo(() => {
-    // Merge internal and external refs into a single callback ref
-    return (node: HTMLTextAreaElement | null) => {
-      (internalTextareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-      if (typeof externalTextareaRef === 'function') {
-        externalTextareaRef(node);
-      } else if (externalTextareaRef) {
-        (externalTextareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-      }
-    };
-  }, [externalTextareaRef]);
-  const focusComposerTextarea = useCallback(() => {
-    const focus = (): void => {
-      internalTextareaRef.current?.focus();
-    };
-    focus();
-    queueMicrotask(focus);
-    window.requestAnimationFrame(focus);
-  }, []);
+  const { textareaRef, internalTextareaRef, focusComposerTextarea } = useComposerTextarea(
+    externalTextareaRef,
+    autoFocusKey
+  );
   const [recipient, setRecipient] = useState<string>(() => {
     const lead = members.find((m) => isLeadMember(m));
     return lead?.name ?? members[0]?.name ?? '';
@@ -808,7 +796,7 @@ export const MessageComposer = ({
     setFloatingComposerWidth((currentWidth) =>
       currentWidth === nextWidth ? currentWidth : nextWidth
     );
-  }, [draft.attachments.length, draft.text, isFloatingAdaptiveWidth]);
+  }, [draft.attachments.length, draft.text, isFloatingAdaptiveWidth, internalTextareaRef]);
 
   const floatingAdaptiveStyle = isFloatingAdaptiveWidth
     ? {

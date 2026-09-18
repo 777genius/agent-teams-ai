@@ -1062,24 +1062,27 @@ export const MessagesPanel = memo(function MessagesPanel({
     );
   }, [bottomSheetSnapIndex]);
 
+  const sharedComposerProps = {
+    teamName,
+    members,
+    isTeamAlive,
+    sending: sendingMessage,
+    sendError: sendMessageError,
+    sendWarning: effectiveSendMessageWarning,
+    sendDebugDetails: effectiveSendMessageDebugDetails,
+    lastResult: lastSendMessageResult,
+    revisionRequest,
+    textareaRef: composerTextareaRef,
+    lockedRecipient,
+    autoFocusKey: threadOpenedAt,
+    onSend: handleSend,
+    onCrossTeamSend: handleCrossTeamSend,
+    onRevisionCancel: handleRevisionCancel,
+    onRevisionComplete: handleRevisionComplete,
+  };
+
   const renderDefaultComposerSection = (): React.JSX.Element => (
-    <ThreadAwareMessageComposer
-      teamName={teamName}
-      members={members}
-      isTeamAlive={isTeamAlive}
-      sending={sendingMessage}
-      sendError={sendMessageError}
-      sendWarning={effectiveSendMessageWarning}
-      sendDebugDetails={effectiveSendMessageDebugDetails}
-      lastResult={lastSendMessageResult}
-      revisionRequest={revisionRequest}
-      textareaRef={composerTextareaRef}
-      lockedRecipient={lockedRecipient}
-      onSend={handleSend}
-      onCrossTeamSend={handleCrossTeamSend}
-      onRevisionCancel={handleRevisionCancel}
-      onRevisionComplete={handleRevisionComplete}
-    />
+    <ThreadAwareMessageComposer {...sharedComposerProps} />
   );
 
   const renderFloatingComposerModeControls = (): React.JSX.Element => (
@@ -1116,46 +1119,15 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const renderCompactComposerSection = (): React.JSX.Element => (
-    <ThreadAwareMessageComposer
-      teamName={teamName}
-      layout="compact"
-      members={members}
-      isTeamAlive={isTeamAlive}
-      sending={sendingMessage}
-      sendError={sendMessageError}
-      sendWarning={effectiveSendMessageWarning}
-      sendDebugDetails={effectiveSendMessageDebugDetails}
-      lastResult={lastSendMessageResult}
-      revisionRequest={revisionRequest}
-      textareaRef={composerTextareaRef}
-      lockedRecipient={lockedRecipient}
-      onSend={handleSend}
-      onCrossTeamSend={handleCrossTeamSend}
-      onRevisionCancel={handleRevisionCancel}
-      onRevisionComplete={handleRevisionComplete}
-    />
+    <ThreadAwareMessageComposer layout="compact" {...sharedComposerProps} />
   );
 
   const renderFloatingComposerSection = (): React.JSX.Element => (
     <MessagesComposerSection
-      teamName={teamName}
+      {...sharedComposerProps}
       layout="compact"
       widthMode="floating-adaptive"
-      members={members}
-      isTeamAlive={isTeamAlive}
-      sending={sendingMessage}
-      sendError={sendMessageError}
-      sendWarning={effectiveSendMessageWarning}
-      sendDebugDetails={effectiveSendMessageDebugDetails}
-      lastResult={lastSendMessageResult}
       cornerActionPrefix={renderFloatingComposerModeControls()}
-      revisionRequest={revisionRequest}
-      textareaRef={composerTextareaRef}
-      lockedRecipient={lockedRecipient}
-      onSend={handleSend}
-      onCrossTeamSend={handleCrossTeamSend}
-      onRevisionCancel={handleRevisionCancel}
-      onRevisionComplete={handleRevisionComplete}
     />
   );
 
