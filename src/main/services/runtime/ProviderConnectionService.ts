@@ -609,16 +609,24 @@ export class ProviderConnectionService {
       : null;
   }
 
-  private async applyConfiguredAnthropicCompatibleEndpointEnv(
-    env: NodeJS.ProcessEnv,
-    options?: StoredApiKeyAccessOptions
-  ): Promise<boolean> {
+  private projectConfiguredAnthropicCompatibleEndpointRoute(env: NodeJS.ProcessEnv): boolean {
     const endpoint = this.getConfiguredAnthropicCompatibleEndpoint();
     if (!endpoint) {
       return false;
     }
 
     env[ANTHROPIC_BASE_URL_ENV_VAR] = endpoint.baseUrl;
+    return true;
+  }
+
+  private async applyConfiguredAnthropicCompatibleEndpointEnv(
+    env: NodeJS.ProcessEnv,
+    options?: StoredApiKeyAccessOptions
+  ): Promise<boolean> {
+    if (!this.projectConfiguredAnthropicCompatibleEndpointRoute(env)) {
+      return false;
+    }
+
     const token = await this.getConfiguredAnthropicCompatibleToken(options);
     if (token?.value.trim()) {
       env[ANTHROPIC_AUTH_TOKEN_ENV_VAR] = token.value.trim();
@@ -810,7 +818,8 @@ export class ProviderConnectionService {
   }
 
   /**
-   * Projects cached Codex account context into a read-only runtime status probe.
+   * Projects non-secret host routing into a read-only runtime status probe:
+   * the configured Anthropic-compatible base URL and cached Codex account context.
    * This does not decrypt credentials, refresh account state, install runtimes,
    * or run launch/login commands. The runtime status command remains responsible
    * for producing authoritative authentication and launch evidence.
@@ -819,6 +828,11 @@ export class ProviderConnectionService {
     env: NodeJS.ProcessEnv,
     providerId: CliProviderId
   ): Promise<NodeJS.ProcessEnv> {
+    if (providerId === 'anthropic') {
+      this.projectConfiguredAnthropicCompatibleEndpointRoute(env);
+      return env;
+    }
+
     if (providerId !== 'codex') {
       return env;
     }
