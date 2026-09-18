@@ -513,7 +513,7 @@ describe('probeOpenCodeLocalModelCoordination', () => {
               role: 'assistant',
               content: JSON.stringify({
                 name: 'write',
-                arguments: { file_path: '/tmp/proof.txt', contents: 'ok' },
+                arguments: { file_path: 'workspace/proof.txt', contents: 'ok' },
               }),
               tool_calls: null,
             },

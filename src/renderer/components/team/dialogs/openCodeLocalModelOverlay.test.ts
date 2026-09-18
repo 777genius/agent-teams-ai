@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildOpenCodeLocalModelOverlay,
+  canRetryOpenCodeLocalModel,
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
 
@@ -232,5 +233,38 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
       status: 'incompatible',
       reason: 'The latest deep check rejected this route.',
     });
+  });
+
+  it('allows retry after an incompatible or failed add-and-test', () => {
+    const allowed = {
+      catalogScopeKey: '/workspace/project',
+      isInspectingInactiveProvider: false,
+      activeProviderSelectable: true,
+      modelDisabledReason: null,
+      hasDescriptor: true,
+    };
+
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        presentationStatus: 'incompatible',
+        actionStatus: undefined,
+      })
+    ).toBe(true);
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        presentationStatus: 'ready',
+        actionStatus: 'error',
+      })
+    ).toBe(true);
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        catalogScopeKey: '',
+        presentationStatus: 'incompatible',
+        actionStatus: undefined,
+      })
+    ).toBe(false);
   });
 });

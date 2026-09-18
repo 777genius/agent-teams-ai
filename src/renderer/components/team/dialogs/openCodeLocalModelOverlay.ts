@@ -230,3 +230,54 @@ export function resolveOpenCodeLocalModelPresentation({
     reason: advisoryReason ?? actionState?.message ?? null,
   };
 }
+
+export function canRetryOpenCodeLocalModel(input: {
+  catalogScopeKey: string | null | undefined;
+  isInspectingInactiveProvider: boolean;
+  activeProviderSelectable: boolean;
+  modelDisabledReason: string | null | undefined;
+  hasDescriptor: boolean;
+  presentationStatus: OpenCodeLocalModelPresentationStatus | undefined;
+  actionStatus: OpenCodeLocalModelActionState['status'] | undefined;
+}): boolean {
+  return (
+    Boolean(input.catalogScopeKey) &&
+    !input.isInspectingInactiveProvider &&
+    input.activeProviderSelectable &&
+    !input.modelDisabledReason &&
+    input.hasDescriptor &&
+    (input.presentationStatus === 'incompatible' || input.actionStatus === 'error')
+  );
+}
+
+export function resolveOpenCodeLocalModelCardActions(input: {
+  catalogScopeKey: string | null | undefined;
+  isInspectingInactiveProvider: boolean;
+  activeProviderSelectable: boolean;
+  modelDisabledReason: string | null | undefined;
+  hasDescriptor: boolean;
+  presentationStatus: OpenCodeLocalModelPresentationStatus | null | undefined;
+  actionStatus: OpenCodeLocalModelActionState['status'] | undefined;
+}): {
+  canAdd: boolean;
+  canRetry: boolean;
+  canAddOrRetry: boolean;
+  canSelect: boolean;
+} {
+  const canAdd =
+    input.presentationStatus === 'not_configured' &&
+    Boolean(input.catalogScopeKey) &&
+    !input.isInspectingInactiveProvider &&
+    input.activeProviderSelectable &&
+    !input.modelDisabledReason;
+  const canRetry = canRetryOpenCodeLocalModel({
+    ...input,
+    presentationStatus: input.presentationStatus ?? undefined,
+  });
+  const canSelect =
+    input.presentationStatus == null ||
+    input.presentationStatus === 'ready' ||
+    input.presentationStatus === 'needs_verification' ||
+    input.presentationStatus === 'experimental';
+  return { canAdd, canRetry, canAddOrRetry: canAdd || canRetry, canSelect };
+}

@@ -1695,12 +1695,6 @@ a[href],
   background-color: var(--row-card-bg);
 }
 
-.project-row-zebra-card {
-  --row-card-bg: var(--color-surface);
-  --row-zebra-bg: color-mix(in srgb, var(--color-surface) 99%, var(--color-text) 1%);
-  --row-zebra-hover-bg: color-mix(in srgb, var(--color-surface) 96%, var(--color-text) 4%);
-}
-
 .activity-timeline-card {
   content-visibility: auto;
   contain-intrinsic-size: auto 96px;

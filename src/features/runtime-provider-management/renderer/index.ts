@@ -42,7 +42,11 @@ export { RuntimeProviderManagementPanel } from './RuntimeProviderManagementPanel
 export { RuntimeProviderOnboardingDialog } from './RuntimeProviderOnboardingDialog';
 export { RuntimeProviderQuickConnect } from './RuntimeProviderQuickConnect';
 export { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
-export { LocalTeammateModelRequirements } from './ui/LocalTeammateModelRequirements';
+export {
+  LocalTeammateModelRequirements,
+  SelectorLocalTeammateModelRequirements,
+  SetupLocalTeammateModelRequirements,
+} from './ui/LocalTeammateModelRequirements';
 export { OpenCodeCatalogErrorAlert } from './ui/OpenCodeCatalogErrorAlert';
 export { ProviderBrandIcon } from './ui/providerBrandIcons';
 export { RuntimeProviderErrorAlert } from './ui/RuntimeProviderErrorAlert';

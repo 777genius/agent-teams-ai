@@ -49,7 +49,7 @@ import { LocalProviderBrandIcon } from './ui/LocalProviderBrandIcon';
 import { LocalProviderModelAssignmentControls } from './ui/LocalProviderModelAssignmentControls';
 import { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 import { LocalProviderScopeSelector } from './ui/LocalProviderScopeSelector';
-import { LocalTeammateModelRequirements } from './ui/LocalTeammateModelRequirements';
+import { SetupLocalTeammateModelRequirements } from './ui/LocalTeammateModelRequirements';
 import { RuntimeLocalProviderInlineError as InlineError } from './ui/RuntimeLocalProviderInlineError';
 import { RuntimeProviderEndpointCredentialsFields } from './ui/RuntimeProviderEndpointCredentialsFields';
 import { RuntimeProviderModelTestResult } from './ui/RuntimeProviderModelTestResult';
@@ -59,7 +59,6 @@ import {
   getFriendlyVerificationError,
   getProjectConfigPath,
   hasConfiguredProviderApiKey,
-  LOCAL_TEAMMATE_REQUIREMENTS,
   SERVER_START_GUIDANCE,
   splitConfigPath,
 } from './runtimeLocalProviderSetupCopy';
@@ -659,7 +658,6 @@ export const RuntimeLocalProviderSetupDialog = ({
     setVerificationResult(null);
     setVerificationPassed(false);
     try {
-      // Same deep check as Add and test / launch: native tool calls, not metadata tags.
       const readiness = await api.teams.prepareProvisioning(
         getLocalModelVerificationCwd(configuration, targetProjectPath),
         'opencode',
@@ -1445,17 +1443,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                   complete={Boolean(scopeProgressComplete && selectedModelId)}
                   icon={<Box className="size-4.5" aria-hidden="true" />}
                 >
-                  <LocalTeammateModelRequirements
-                    title={LOCAL_TEAMMATE_REQUIREMENTS.title}
-                    size={LOCAL_TEAMMATE_REQUIREMENTS.size}
-                    tools={LOCAL_TEAMMATE_REQUIREMENTS.tools}
-                    context={
-                      selectedPresetId === 'ollama'
-                        ? LOCAL_TEAMMATE_REQUIREMENTS.ollamaContext
-                        : LOCAL_TEAMMATE_REQUIREMENTS.context
-                    }
-                    tiny={LOCAL_TEAMMATE_REQUIREMENTS.tiny}
-                  />
+                  <SetupLocalTeammateModelRequirements presetId={selectedPresetId} />
                   {serverHasModels ? (
                     <div className="space-y-1.5">
                       <Label htmlFor="runtime-local-provider-model">Model</Label>

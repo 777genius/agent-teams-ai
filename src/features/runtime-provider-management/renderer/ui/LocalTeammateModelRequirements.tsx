@@ -1,5 +1,9 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Info } from 'lucide-react';
 
+import { LOCAL_TEAMMATE_REQUIREMENTS } from '../runtimeLocalProviderSetupCopy';
+
+import type { RuntimeLocalProviderPresetIdDto } from '../../contracts';
 import type { JSX } from 'react';
 
 export interface LocalTeammateModelRequirementsProps {
@@ -35,6 +39,39 @@ export const LocalTeammateModelRequirements = ({
           </ul>
         </div>
       </div>
+    </div>
+  );
+};
+
+export const SetupLocalTeammateModelRequirements = ({
+  presetId,
+}: {
+  readonly presetId: RuntimeLocalProviderPresetIdDto | string | null;
+}): JSX.Element => (
+  <LocalTeammateModelRequirements
+    title={LOCAL_TEAMMATE_REQUIREMENTS.title}
+    size={LOCAL_TEAMMATE_REQUIREMENTS.size}
+    tools={LOCAL_TEAMMATE_REQUIREMENTS.tools}
+    context={
+      presetId === 'ollama'
+        ? LOCAL_TEAMMATE_REQUIREMENTS.ollamaContext
+        : LOCAL_TEAMMATE_REQUIREMENTS.context
+    }
+    tiny={LOCAL_TEAMMATE_REQUIREMENTS.tiny}
+  />
+);
+
+export const SelectorLocalTeammateModelRequirements = (): JSX.Element => {
+  const { t } = useAppTranslation('team');
+  return (
+    <div className="mb-3">
+      <LocalTeammateModelRequirements
+        title={t('modelSelector.localModels.teammateRequirementsTitle')}
+        size={t('modelSelector.localModels.teammateRequirementsSize')}
+        tools={t('modelSelector.localModels.teammateRequirementsTools')}
+        context={t('modelSelector.localModels.teammateRequirementsContext')}
+        tiny={t('modelSelector.localModels.teammateRequirementsTiny')}
+      />
     </div>
   );
 };

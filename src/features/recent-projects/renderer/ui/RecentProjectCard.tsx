@@ -6,6 +6,7 @@ import { cn } from '@renderer/lib/utils';
 import { FolderOpen, GitBranch, Terminal } from 'lucide-react';
 
 import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
+import { PROJECT_ROW_SURFACE } from './projectRowSurface';
 
 interface RecentProjectCardProps {
   card: RecentProjectCardModel;
@@ -28,6 +29,7 @@ export const RecentProjectCard = ({
       aria-disabled={isDeleted}
       data-recent-project-cell="project"
       className={cn(
+        PROJECT_ROW_SURFACE,
         'project-row-zebra-card group relative flex min-h-[112px] flex-col overflow-hidden p-3.5 text-left transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis',
         isDeleted && 'cursor-default bg-red-500/[0.03]'
       )}
