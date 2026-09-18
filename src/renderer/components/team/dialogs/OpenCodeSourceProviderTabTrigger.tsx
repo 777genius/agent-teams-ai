@@ -4,6 +4,8 @@ import { ProviderBrandIcon } from '@features/runtime-provider-management/rendere
 import { TabsTrigger } from '@renderer/components/ui/tabs';
 import { RefreshCw } from 'lucide-react';
 
+import { isOpenCodeSourceTabCountPending } from './openCodeRuntimeStatusUi';
+
 export interface OpenCodeSourceProviderTabTriggerProps {
   provider: {
     id: string;
@@ -18,18 +20,6 @@ export interface OpenCodeSourceProviderTabTriggerProps {
   sourceLoadable: boolean;
   sourceDisabled: boolean;
   disabledReason: string | null;
-}
-
-function isOpenCodeSourceTabCountPending(input: {
-  sourceModelCount: number;
-  sourceScopedLoading: boolean;
-  directoryExpectsModels: boolean;
-  passiveCatalogPending: boolean;
-}): boolean {
-  if (input.sourceModelCount > 0) {
-    return false;
-  }
-  return input.sourceScopedLoading || (input.directoryExpectsModels && input.passiveCatalogPending);
 }
 
 export const OpenCodeSourceProviderTabTrigger = ({

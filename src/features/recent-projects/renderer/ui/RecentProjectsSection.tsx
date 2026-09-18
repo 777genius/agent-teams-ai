@@ -1,10 +1,11 @@
+import './project-row-zebra-card.css';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { FolderGit2, FolderOpen, Search } from 'lucide-react';
 
 import { useRecentProjectsSection } from '../hooks/useRecentProjectsSection';
 
-import { PROJECT_ROW_SURFACE } from './projectRowSurface';
 import { RecentProjectCard } from './RecentProjectCard';
 
 interface RecentProjectsSectionProps {
@@ -22,7 +23,7 @@ const SelectProjectFolderCard = ({
   const { t } = useAppTranslation('dashboard');
   return (
     <button
-      className={`${PROJECT_ROW_SURFACE} project-row-zebra-card group relative flex min-h-[112px] flex-col items-center justify-center p-3.5 transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis`}
+      className="project-row-zebra-card group relative flex min-h-[112px] flex-col items-center justify-center p-3.5 transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis"
       onClick={onClick}
       aria-label={t('recentProjects.selectFolderTitle')}
       data-recent-project-cell="select-folder"
@@ -63,7 +64,7 @@ export const RecentProjectsSection = ({
         {Array.from({ length: 8 }).map((_, index) => (
           <div
             key={index}
-            className={`${PROJECT_ROW_SURFACE} project-row-zebra-card skeleton-card flex min-h-[112px] flex-col p-3.5`}
+            className="project-row-zebra-card skeleton-card flex min-h-[112px] flex-col p-3.5"
             style={{
               animationDelay: `${index * 80}ms`,
             }}

@@ -113,7 +113,9 @@ import {
   getOpenCodeReadinessSummary,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
+  isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
+  mergeOpenCodePassiveProviderStatus,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
@@ -1138,6 +1140,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } = useEffectiveCliProviderStatus(effectiveProviderId, {
     projectPath: effectiveProviderId === 'opencode' ? openCodeCatalogScopeKey || null : null,
   });
+  const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
+    'opencode',
+    { projectPath: openCodeCatalogScopeKey || null }
+  );
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
@@ -1197,7 +1203,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     scopeKey: openCodeSelectionAuthorityScopeKey,
   });
   const openCodePassiveStatusReadyForCatalog = isOpenCodePassiveStatusReadyForCatalog(
-    passiveRuntimeProviderStatus,
+    openCodePassiveProviderStatus,
     openCodeRuntimeStatus
   );
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
@@ -1254,10 +1260,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     });
   const runtimeProviderStatusById = useMemo(
     () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map((provider) => [provider.providerId, provider])
+      mergeOpenCodePassiveProviderStatus(
+        effectiveCliStatus?.providers,
+        openCodePassiveProviderStatus
       ),
-    [effectiveCliStatus?.providers]
+    [effectiveCliStatus?.providers, openCodePassiveProviderStatus]
   );
   const openCodeProviderStatus = runtimeProviderStatusById.get('opencode') ?? null;
   const openCodeRuntimeStatusUiState = getOpenCodeRuntimeStatusUiState({
@@ -1375,8 +1382,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           getTeamModelSourceBadgeLabel('opencode', `${sourceId}/pending-model`) ||
           entry.displayName.trim() ||
           sourceId,
-        // Companion routes can be present in OpenCode config while their
-        // separate Cursor/Kiro account session is signed out.
         status: OPENCODE_COMPANION_SOURCE_IDS.has(sourceId) ? 'checking' : 'connected',
       });
     }
@@ -2542,13 +2547,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       (provider.directoryModelCount !== undefined && provider.directoryModelCount > 0);
     return visibleModelCount > 0 || directoryExpectsModels || scopedLoadPending;
   };
-  // Local inventory stays independent from the currently inspected runtime.
   const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
+  const openCodePassiveCatalogPending = isOpenCodePassiveCatalogPendingForTabCount(
+    openCodePassiveStatusReadyForCatalog,
+    openCodeRuntimeStatusUiState
+  );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
-    (openCodeScopedCatalog.status === 'loading' ||
-      (!openCodePassiveStatusReadyForCatalog && openCodeRuntimeStatusUiState === 'checking'));
+    (openCodeScopedCatalog.status === 'loading' || openCodePassiveCatalogPending);
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
   const retryOpenCodeCatalogRefresh = (): void => {
@@ -2780,12 +2787,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             reason: t('modelSelector.localModels.chooseProject'),
           }
         : resolvedLocalModelPresentation;
-    const {
-      canAdd: localModelCanAdd,
-      canRetry: localModelCanRetry,
-      canAddOrRetry: localModelCanAddOrRetry,
-      canSelect: localModelCanSelect,
-    } = resolveOpenCodeLocalModelCardActions({
+    const localModelActions = resolveOpenCodeLocalModelCardActions({
       catalogScopeKey: openCodeCatalogScopeKey,
       isInspectingInactiveProvider,
       activeProviderSelectable,
@@ -2804,12 +2806,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       !isInspectingInactiveProvider &&
       activeProviderSelectable &&
       !modelDisabledReason &&
-      localModelCanSelect &&
+      localModelActions.canSelect &&
       (localModelDescriptor
         ? true
         : !modelUnavailableReason &&
           (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
-    const modelInteractable = modelSelectable || localModelCanAddOrRetry || codexModelCanUpdate;
+    const modelInteractable =
+      modelSelectable || localModelActions.canAddOrRetry || codexModelCanUpdate;
     const localModelStatusHint =
       localModelPresentation?.status === 'needs_verification'
         ? t('modelSelector.localModels.needsVerificationHint')
@@ -2844,7 +2847,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         type="button"
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
-        aria-pressed={localModelCanAddOrRetry ? undefined : isSelectedModel}
+        aria-pressed={localModelActions.canAddOrRetry ? undefined : isSelectedModel}
         aria-disabled={!modelInteractable}
         aria-label={
           modelButtonDescription
@@ -2889,7 +2892,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         )}
         onClick={() => {
           if (codexModelCanUpdate) return void setCodexRuntimeDialogOpen(true);
-          if (localModelCanAddOrRetry && localModelDescriptor) {
+          if (localModelActions.canAddOrRetry && localModelDescriptor) {
             const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
               modelId: localModelDescriptor.modelId,
@@ -2933,8 +2936,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               presentation={localModelPresentation}
               providerDisplayName={localModelDescriptor.presetDisplayName}
               statusMessage={modelStatusMessage}
-              canAdd={localModelCanAddOrRetry}
-              retry={localModelCanRetry}
+              canAdd={localModelActions.canAddOrRetry}
+              retry={localModelActions.canRetry}
             />
           ) : null}
           {openCodePricingInfo?.summary ? (
@@ -3311,11 +3314,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
                       openCodeScopedCatalog.status === 'loading'
                     }
-                    passiveCatalogPending={
-                      !openCodePassiveStatusReadyForCatalog &&
-                      (openCodeRuntimeStatusUiState === 'checking' ||
-                        openCodeRuntimeStatusUiState === 'retry')
-                    }
+                    passiveCatalogPending={openCodePassiveCatalogPending}
                     sourceLoadable={sourceLoadable}
                     sourceDisabled={
                       !sourceLoadable ||

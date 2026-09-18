@@ -150,18 +150,43 @@ describe('resolveProjectScopedProviderStatus', () => {
     ).toBe(false);
   });
 
-  it('does not reuse a global catalog before the exact project responds', () => {
+  it('keeps the global catalog visible as provisional before the exact project responds', () => {
     const resolved = resolveProjectScopedProviderStatus('opencode', null, status());
 
     expect(resolved).toMatchObject({
       providerId: 'opencode',
-      authenticated: false,
-      authMethod: null,
+      supported: true,
+      authenticated: true,
+      authMethod: 'builtin_free',
+      verificationState: 'verified',
       statusCheckOutcome: 'pending',
       statusCheckErrorCode: 'partial_response',
-      models: [],
-      modelCatalog: null,
+      models: ['opencode/big-pickle'],
+      modelCatalog: {
+        status: 'stale',
+        models: [expect.objectContaining({ launchModel: 'opencode/big-pickle' })],
+      },
       modelCatalogRefreshState: 'loading',
+      capabilities: { teamLaunch: false },
+    });
+  });
+
+  it('does not treat an empty global catalog as connected before the exact project responds', () => {
+    const resolved = resolveProjectScopedProviderStatus(
+      'opencode',
+      null,
+      status({
+        models: [],
+        modelCatalog: { ...status().modelCatalog!, models: [] },
+      })
+    );
+
+    expect(resolved).toMatchObject({
+      providerId: 'opencode',
+      supported: true,
+      authenticated: false,
+      statusCheckOutcome: 'pending',
+      models: [],
       capabilities: { teamLaunch: false },
     });
   });
@@ -289,9 +314,12 @@ describe('resolveProjectScopedProviderStatus', () => {
 
     expect(resolved).toMatchObject({
       providerId: 'opencode',
-      authenticated: false,
-      models: [],
-      modelCatalog: null,
+      authenticated: true,
+      models: ['opencode/big-pickle'],
+      modelCatalog: {
+        status: 'stale',
+        models: [expect.objectContaining({ launchModel: 'opencode/big-pickle' })],
+      },
       statusCheckOutcome: 'pending',
       capabilities: { teamLaunch: false },
     });

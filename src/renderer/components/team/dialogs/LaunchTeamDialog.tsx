@@ -16,7 +16,11 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
+import {
+  applyMemberSettingsRelaunch,
+  buildMemberSettingsRelaunchIntent,
+  filterMemberSettingsRelaunchInputs,
+} from '@features/team-provisioning/renderer';
 import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchControl,
@@ -141,6 +145,7 @@ import {
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -177,7 +182,7 @@ import {
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
 
-import type { ActiveTeamRef } from './CreateTeamDialog';
+import type { LaunchTeamDialogProps } from './LaunchTeamDialog.types';
 import type { ProjectPathProject } from './projectPathProjects';
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -185,8 +190,6 @@ import type {
   CliProviderId,
   CreateScheduleInput,
   EffortLevel,
-  ResolvedTeamMember,
-  Schedule,
   ScheduleLaunchConfig,
   TeamCreateRequest,
   TeamFastMode,
@@ -196,74 +199,12 @@ import type {
   UpdateSchedulePatch,
 } from '@shared/types';
 
-function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
-}
-
-// Props — discriminated union
-
-interface LaunchDialogBase {
-  memberSettingsDraft?: MemberSettingsRelaunchDraft;
-  validateMemberSettings?: () => Promise<void>;
-  open: boolean;
-  teamName: string;
-  onClose: () => void;
-}
-export type TeamLaunchDialogMode = 'launch' | 'relaunch';
-
-interface LaunchDialogLaunchMode extends LaunchDialogBase {
-  mode: 'launch';
-  members: ResolvedTeamMember[];
-  defaultProjectPath?: string;
-  provisioningError: string | null;
-  clearProvisioningError?: (teamName?: string) => void;
-  activeTeams?: ActiveTeamRef[];
-  onLaunch: (request: TeamLaunchRequest) => Promise<void>;
-}
-
-interface LaunchDialogRelaunchMode extends LaunchDialogBase {
-  mode: 'relaunch';
-  members: ResolvedTeamMember[];
-  defaultProjectPath?: string;
-  provisioningError: string | null;
-  clearProvisioningError?: (teamName?: string) => void;
-  activeTeams?: ActiveTeamRef[];
-  onRelaunch: (request: TeamLaunchRequest, members: TeamCreateRequest['members'], intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']) => Promise<void>;
-}
-
-interface LaunchDialogScheduleMode {
-  mode: 'schedule';
-  open: boolean;
-  /** Team name — optional when creating from standalone schedules page */
-  teamName?: string;
-  onClose: () => void;
-  /** When provided → edit mode; null/undefined → create mode */
-  schedule?: Schedule | null;
-}
-
-export type LaunchTeamDialogProps =
-  | LaunchDialogLaunchMode
-  | LaunchDialogRelaunchMode
-  | LaunchDialogScheduleMode;
-
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
   'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
+
+export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
 // Component
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
@@ -411,8 +352,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const sourceMembers = isLaunchMode ? props.members : storeMembers;
   const memberSettingsDraft = isLaunchMode ? props.memberSettingsDraft : undefined;
-  const members = useMemo(() => applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft),
-    [sourceMembers, memberSettingsDraft]);
+  const members = useMemo(
+    () => applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft),
+    [sourceMembers, memberSettingsDraft]
+  );
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -421,7 +364,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!open) {
       setProviderSettingsProviderId(null);
       hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
-    relaunchSyncEditedRef.current = false; relaunchInheritedSyncRef.current = undefined;
+      relaunchSyncEditedRef.current = false;
+      relaunchInheritedSyncRef.current = undefined;
       setLaunchHydratedTeamName(null);
     }
   }, [open]);
@@ -519,7 +463,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
-    passiveStatusPrefetchEnabled: prepareState !== 'idle' && openCodeCatalogEnabled,
+    passiveStatusPrefetchEnabled: openCodeCatalogEnabled && launchPreflightSelectionReady,
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
@@ -914,8 +858,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     ): void => {
       const inputs =
         members.length > 0
-          ? memberSettingsDraft ? filterMemberSettingsRelaunchInputs(members) : filterEditableMemberInputs(members)
-          : memberSettingsDraft ? filterMemberSettingsRelaunchInputs(savedMembers ?? []) : filterEditableMemberInputs(savedMembers ?? []);
+          ? memberSettingsDraft
+            ? filterMemberSettingsRelaunchInputs(members)
+            : filterEditableMemberInputs(members)
+          : memberSettingsDraft
+            ? filterMemberSettingsRelaunchInputs(savedMembers ?? [])
+            : filterEditableMemberInputs(savedMembers ?? []);
       setMembersDrafts(
         createMemberDraftsFromInputs(inputs).map((member) =>
           normalizeMemberDraftForProviderMode(member, multimodelEnabled)
@@ -929,15 +877,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         relaunchInheritedSyncRef.current = savedSyncModelsWithLead;
         // Reopening must not apply the synchronize-all action to explicit overrides.
         setSyncModelsWithLead(
-          !memberSettingsDraft && savedSyncModelsWithLead !== false &&
+          !memberSettingsDraft &&
+            savedSyncModelsWithLead !== false &&
             !inputs.some(
-              (member) => member.providerId || member.providerBackendId || member.model ||
-                member.effort || ('fastMode' in member && member.fastMode)
+              (member) =>
+                member.providerId ||
+                member.providerBackendId ||
+                member.model ||
+                member.effort ||
+                ('fastMode' in member && member.fastMode)
             )
         );
       }
     };
-    if (memberSettingsDraft ? members.length > 0 : filterEditableMemberInputs(members).length > 0) applyEditableRoster();
+    if (memberSettingsDraft ? members.length > 0 : filterEditableMemberInputs(members).length > 0)
+      applyEditableRoster();
 
     let cancelled = false;
     void (async () => {
@@ -982,11 +936,18 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         multimodelEnabled
       );
       setSelectedProviderIdRaw(leadProviderId);
-      setSelectedModelRaw(memberSettingsDraft?.targetKind === 'lead'
-        ? memberSettingsDraft.settings.model ?? ''
-        : leadProviderId === launchPrefill.providerId ? launchPrefill.model : '');
-      setSelectedEffortRaw(memberSettingsDraft?.targetKind === 'lead'
-        ? memberSettingsDraft.settings.effort ?? '' : launchPrefill.effort);
+      setSelectedModelRaw(
+        memberSettingsDraft?.targetKind === 'lead'
+          ? (memberSettingsDraft.settings.model ?? '')
+          : leadProviderId === launchPrefill.providerId
+            ? launchPrefill.model
+            : ''
+      );
+      setSelectedEffortRaw(
+        memberSettingsDraft?.targetKind === 'lead'
+          ? (memberSettingsDraft.settings.effort ?? '')
+          : launchPrefill.effort
+      );
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
       const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
@@ -997,7 +958,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, isLaunchMode, effectiveTeamName, members, multimodelEnabled, previousLaunchParams, memberSettingsDraft]);
+  }, [
+    open,
+    isLaunchMode,
+    effectiveTeamName,
+    members,
+    multimodelEnabled,
+    previousLaunchParams,
+    memberSettingsDraft,
+  ]);
   const previousProviderId = useMemo<TeamProviderId | null>(() => {
     if (!isLaunchMode) {
       return null;
@@ -2349,14 +2318,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
             extraCliArgs: customArgs.trim() || undefined,
           };
-          const intent = buildMemberSettingsRelaunchIntent(memberSettingsDraft, sourceMembers,
-            selectedModel || null, (selectedEffortForCurrentSelection as EffortLevel) || null, nextMembers);
+          const intent = buildMemberSettingsRelaunchIntent(
+            memberSettingsDraft,
+            sourceMembers,
+            selectedModel || null,
+            (selectedEffortForCurrentSelection as EffortLevel) || null,
+            nextMembers
+          );
           if (isRelaunch) {
             await props.onRelaunch(launchRequest, nextMembers, intent);
           } else {
             await props.validateMemberSettings?.();
             await api.teams.replaceMembers(effectiveTeamName, {
-              members: nextMembers, memberSettingsRelaunch: intent,
+              members: nextMembers,
+              memberSettingsRelaunch: intent,
             });
             await props.onLaunch(launchRequest);
           }

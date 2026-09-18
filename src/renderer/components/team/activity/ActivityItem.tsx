@@ -1369,7 +1369,7 @@ export const ActivityItem = memo(
         renderInlineBoldSummary(rawSummary)
       );
 
-    const showHoverToolbar = Boolean(isExpanded && displayText);
+    const showHoverToolbar = Boolean(displayText);
     const card = (
       <article
         className={[
@@ -1387,29 +1387,25 @@ export const ActivityItem = memo(
           backgroundColor:
             rateLimited || isApiError
               ? 'var(--tool-result-error-bg)'
-              : isSlashCommandResult
+              : isSlashCommandResult || isSlashCommandMessage
                 ? 'rgba(245, 158, 11, 0.08)'
-                : isSlashCommandMessage
-                  ? 'rgba(245, 158, 11, 0.08)'
-                  : isCrossTeamAny
-                    ? 'var(--cross-team-bg)'
-                    : isSystemMessage
-                      ? 'var(--system-activity-bg)'
-                      : zebraShade
-                        ? CARD_BG_ZEBRA
-                        : CARD_BG,
+                : isCrossTeamAny
+                  ? 'var(--cross-team-bg)'
+                  : isSystemMessage
+                    ? 'var(--system-activity-bg)'
+                    : zebraShade
+                      ? CARD_BG_ZEBRA
+                      : CARD_BG,
           border:
             rateLimited || isApiError
               ? '1px solid var(--tool-result-error-border)'
-              : isSlashCommandResult
+              : isSlashCommandResult || isSlashCommandMessage
                 ? '1px solid rgba(245, 158, 11, 0.22)'
-                : isSlashCommandMessage
-                  ? '1px solid rgba(245, 158, 11, 0.22)'
-                  : isCrossTeamAny
-                    ? '1px solid var(--cross-team-border)'
-                    : isSystemMessage
-                      ? '1px solid var(--system-activity-border)'
-                      : CARD_BORDER_STYLE,
+                : isCrossTeamAny
+                  ? '1px solid var(--cross-team-border)'
+                  : isSystemMessage
+                    ? '1px solid var(--system-activity-border)'
+                    : CARD_BORDER_STYLE,
           borderTopWidth: joinsPreviousTimelineCard(timelineCardPosition) ? 0 : undefined,
         }}
       >
@@ -1804,6 +1800,8 @@ export const ActivityItem = memo(
             side="right"
             align="start"
             sideOffset={0}
+            avoidCollisions={false}
+            hideWhenDetached={false}
             className="activity-message-toolbar w-auto min-w-0 bg-[var(--color-surface-raised)] p-1 shadow-none data-[side=left]:rounded-r-none data-[side=right]:rounded-l-none data-[side=left]:border-r-0 data-[side=right]:border-l-0"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
