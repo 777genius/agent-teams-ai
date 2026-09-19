@@ -6,6 +6,7 @@ import path from 'node:path';
 import { killProcessTree } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import {
+  collectRuntimePathBinaryCandidates,
   findFirstRuntimePathBinaryCandidate,
   RUNTIME_PATH_SHELL_ENV_TIMEOUT_MS,
 } from '@main/utils/runtimePathBinaryResolver';
@@ -188,6 +189,54 @@ async function getAvailableBytesDefault(installRoot: string): Promise<number | n
   } catch {
     return null;
   }
+}
+
+export function isAmbiguousCompanionBinaryName(
+  filePath: string,
+  ambiguousExecutableNames: readonly string[] = []
+): boolean {
+  const names = new Set(ambiguousExecutableNames.map((name) => name.toLowerCase()));
+  return names.has(path.basename(filePath).toLowerCase());
+}
+
+export async function selectRuntimeProviderCompanionBinary(input: {
+  candidates: readonly string[];
+  versionArgs: readonly string[];
+  runCommand: (
+    command: string,
+    args: readonly string[],
+    options: RuntimeProviderCliCompanionRunCommandOptions
+  ) => Promise<RuntimeProviderCliCompanionCommandResult>;
+  env: NodeJS.ProcessEnv;
+  matchesVersionOutput?: (output: string) => boolean;
+  ambiguousExecutableNames?: readonly string[];
+}): Promise<string | null> {
+  const unambiguous = input.candidates.find(
+    (candidate) => !isAmbiguousCompanionBinaryName(candidate, input.ambiguousExecutableNames)
+  );
+  if (unambiguous) {
+    return unambiguous;
+  }
+
+  const matcher = input.matchesVersionOutput;
+  if (!matcher) {
+    return input.candidates[0] ?? null;
+  }
+  for (const candidate of input.candidates) {
+    const result = await input
+      .runCommand(candidate, input.versionArgs, {
+        env: input.env,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      })
+      .catch(() => null);
+    if (!result || result.exitCode !== 0) {
+      continue;
+    }
+    if (matcher(`${result.stdout}\n${result.stderr}`)) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 function trimCommandOutput(result: RuntimeProviderCliCompanionCommandResult): string | null {
@@ -380,10 +429,21 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       fallbackEnv: process.env,
       background: false,
     });
-    return findFirstRuntimePathBinaryCandidate({
+    const candidateOptions = {
       executableNames: [...this.#definition.binary.executableNames(this.#platform)],
       additionalEnvSources: [shellEnv],
       extraCandidates: [...this.#definition.binary.extraCandidates(this.#platform, this.#homeDir)],
+    };
+    if (!this.#definition.binary.matchesVersionOutput) {
+      return findFirstRuntimePathBinaryCandidate(candidateOptions);
+    }
+    return selectRuntimeProviderCompanionBinary({
+      candidates: collectRuntimePathBinaryCandidates(candidateOptions),
+      versionArgs: this.#definition.binary.versionArgs,
+      runCommand: this.#runCommand,
+      env: { ...process.env, ...shellEnv },
+      matchesVersionOutput: this.#definition.binary.matchesVersionOutput,
+      ambiguousExecutableNames: this.#definition.binary.ambiguousExecutableNames,
     });
   }
 

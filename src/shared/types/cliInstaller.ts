@@ -204,6 +204,12 @@ export interface CliProviderModelCatalogItem {
     /** Authoritative runtime hint that the model is in its new-model announcement window. */
     recentlyReleased?: boolean;
     opencode?: OpenCodeModelRouteMetadata | null;
+    /**
+     * Model came from a provider-local extra catalog (for example Codex
+     * `model_catalog_json`) rather than the live vendor list. Availability
+     * probes that assume the vendor endpoint should skip these rows.
+     */
+    configuredFromLocalCatalog?: boolean;
   } | null;
 }
 

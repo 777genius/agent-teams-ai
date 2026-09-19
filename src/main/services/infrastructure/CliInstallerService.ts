@@ -672,6 +672,7 @@ export class CliInstallerService {
           },
         },
         backend: provider.backend ? { ...provider.backend } : null,
+        modelCatalog: provider.modelCatalog ?? null,
       },
     };
   }

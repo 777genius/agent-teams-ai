@@ -86,34 +86,42 @@ export const CURSOR_AGENT_COMPANION_DEFINITION: RuntimeProviderCliCompanionDefin
     executableNames: (platform) =>
       platform === 'win32'
         ? [
-            'agent.exe',
             'cursor-agent.exe',
-            'agent.cmd',
             'cursor-agent.cmd',
-            'agent',
             'cursor-agent',
+            'agent.exe',
+            'agent.cmd',
+            'agent',
           ]
-        : ['agent', 'cursor-agent'],
+        : ['cursor-agent', 'agent'],
     extraCandidates: (platform, homeDir) => {
       if (platform === 'win32') {
         const root = path.join(process.env.LOCALAPPDATA ?? '', 'cursor-agent');
         return [
-          path.join(root, 'agent.exe'),
           path.join(root, 'cursor-agent.exe'),
-          path.join(root, 'agent.cmd'),
           path.join(root, 'cursor-agent.cmd'),
+          path.join(root, 'agent.exe'),
+          path.join(root, 'agent.cmd'),
         ];
       }
       return [
-        path.join(homeDir, '.local', 'bin', 'agent'),
         path.join(homeDir, '.local', 'bin', 'cursor-agent'),
-        '/usr/local/bin/agent',
         '/usr/local/bin/cursor-agent',
-        '/opt/homebrew/bin/agent',
         '/opt/homebrew/bin/cursor-agent',
+        path.join(homeDir, '.local', 'bin', 'agent'),
+        '/usr/local/bin/agent',
+        '/opt/homebrew/bin/agent',
       ];
     },
     versionArgs: ['--version'],
+    ambiguousExecutableNames: ['agent', 'agent.exe', 'agent.cmd'],
+    matchesVersionOutput: (output) => {
+      const text = output.toLowerCase();
+      if (/\bgrok\b/.test(text)) {
+        return false;
+      }
+      return /cursor-agent|cursor agent|\d{4}\.\d{2}\.\d{2}/.test(text);
+    },
   },
   auth: {
     loginArgs: ['login'],

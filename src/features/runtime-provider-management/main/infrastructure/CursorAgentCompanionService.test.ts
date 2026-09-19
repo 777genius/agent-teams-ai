@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CURSOR_AGENT_COMPANION_DEFINITION } from './cli-companion/definitions/CursorAgentCompanionDefinition';
+import { selectRuntimeProviderCompanionBinary } from './cli-companion/RuntimeProviderCliCompanionService';
 import { CursorAgentCompanionService } from './CursorAgentCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/usr/bin/env bash
@@ -195,5 +197,69 @@ describe('CursorAgentCompanionService', () => {
     await Promise.all([first, second]);
 
     expect(runCommand.mock.calls.filter(([command]) => command === '/bin/bash')).toHaveLength(1);
+  });
+
+  it('prefers cursor-agent over a colliding generic agent name', () => {
+    expect(CURSOR_AGENT_COMPANION_DEFINITION.binary.ambiguousExecutableNames).toEqual([
+      'agent',
+      'agent.exe',
+      'agent.cmd',
+    ]);
+    expect(
+      CURSOR_AGENT_COMPANION_DEFINITION.binary.extraCandidates('darwin', '/Users/test')[0]
+    ).toBe('/Users/test/.local/bin/cursor-agent');
+    expect(
+      CURSOR_AGENT_COMPANION_DEFINITION.binary.matchesVersionOutput?.(
+        'grok 1.0.34 (3736acbc8658)\n'
+      )
+    ).toBe(false);
+    expect(
+      CURSOR_AGENT_COMPANION_DEFINITION.binary.matchesVersionOutput?.('2026.09.15-d2fe57e\n')
+    ).toBe(true);
+  });
+
+  it('skips a grok agent binary when cursor-agent is also on PATH', async () => {
+    const selected = await selectRuntimeProviderCompanionBinary({
+      candidates: ['/Users/test/.local/bin/agent', '/Users/test/.local/bin/cursor-agent'],
+      versionArgs: ['--version'],
+      env: {},
+      matchesVersionOutput: CURSOR_AGENT_COMPANION_DEFINITION.binary.matchesVersionOutput,
+      ambiguousExecutableNames: CURSOR_AGENT_COMPANION_DEFINITION.binary.ambiguousExecutableNames,
+      runCommand: async (command) =>
+        command.endsWith('cursor-agent')
+          ? { exitCode: 0, stdout: '2026.09.15-d2fe57e', stderr: '' }
+          : { exitCode: 0, stdout: 'grok 1.0.34 (3736acbc8658)', stderr: '' },
+    });
+    expect(selected).toBe('/Users/test/.local/bin/cursor-agent');
+  });
+
+  it('selects cursor-agent without waiting on a slow --version probe', async () => {
+    const selected = await selectRuntimeProviderCompanionBinary({
+      candidates: ['/Users/test/.local/bin/cursor-agent', '/Users/test/.local/bin/agent'],
+      versionArgs: ['--version'],
+      env: {},
+      matchesVersionOutput: CURSOR_AGENT_COMPANION_DEFINITION.binary.matchesVersionOutput,
+      ambiguousExecutableNames: CURSOR_AGENT_COMPANION_DEFINITION.binary.ambiguousExecutableNames,
+      runCommand: async () => {
+        throw new Error('cursor-agent timed out');
+      },
+    });
+    expect(selected).toBe('/Users/test/.local/bin/cursor-agent');
+  });
+
+  it('rejects a grok-only agent binary when no cursor-agent candidate exists', async () => {
+    const selected = await selectRuntimeProviderCompanionBinary({
+      candidates: ['/Users/test/.local/bin/agent'],
+      versionArgs: ['--version'],
+      env: {},
+      matchesVersionOutput: CURSOR_AGENT_COMPANION_DEFINITION.binary.matchesVersionOutput,
+      ambiguousExecutableNames: CURSOR_AGENT_COMPANION_DEFINITION.binary.ambiguousExecutableNames,
+      runCommand: async () => ({
+        exitCode: 0,
+        stdout: 'grok 1.0.34 (3736acbc8658)',
+        stderr: '',
+      }),
+    });
+    expect(selected).toBeNull();
   });
 });

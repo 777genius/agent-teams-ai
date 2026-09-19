@@ -302,6 +302,35 @@ export function extractStreamUserText(msg: Record<string, unknown>): string | nu
   return text.length > 0 ? text : null;
 }
 
+export function extractProvisioningStreamError(msg: Record<string, unknown>): string {
+  if (typeof msg.error === 'string' && msg.error.trim()) {
+    return msg.error.trim();
+  }
+  if (Array.isArray(msg.errors)) {
+    const parts = msg.errors.filter(
+      (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0
+    );
+    if (parts.length > 0) {
+      return parts.join('\n');
+    }
+  }
+  const nested = msg.result;
+  if (nested && typeof nested === 'object') {
+    const nestedError = extractProvisioningStreamError(nested as Record<string, unknown>);
+    if (nestedError !== 'unknown') {
+      return nestedError;
+    }
+  }
+  const assistantText = extractStreamUserText(msg);
+  if (assistantText) {
+    return assistantText.length > 500 ? `${assistantText.slice(0, 500)}…` : assistantText;
+  }
+  if (msg.error != null) {
+    return JSON.stringify(msg.error);
+  }
+  return 'unknown';
+}
+
 export function extractStreamContentBlocks(
   msg: Record<string, unknown>
 ): Record<string, unknown>[] {
@@ -1016,8 +1045,7 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
 ): void {
-  const errorMsg =
-    typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
+  const errorMsg = extractProvisioningStreamError(msg);
   logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
   const causedByRecoveryMessageId = run.leadRelayCapture?.recoveryMessageId;
   if (run.leadRelayCapture) {
