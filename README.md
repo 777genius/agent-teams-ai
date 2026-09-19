@@ -43,15 +43,15 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/14.png">
-    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  <a href="docs/screenshots/8.png">
+    <img src="docs/screenshots/previews/8.webp" alt="Task details, attachments, and execution logs" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/8.png">
-    <img src="docs/screenshots/previews/8.webp" alt="Task details, attachments, and execution logs" width="100%" loading="lazy" />
+  <a href="docs/screenshots/14.png">
+    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">

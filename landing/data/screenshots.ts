@@ -19,7 +19,7 @@ export const screenshots: Screenshot[] = [
     alt: 'Kanban board with team messages and agent tasks',
     ruAlt: 'Канбан-доска с сообщениями команды и задачами агентов',
     width: 1024,
-    height: 582,
+    height: 640,
   },
   {
     path: 'screenshots/14.png',
@@ -42,8 +42,8 @@ export const screenshots: Screenshot[] = [
     previewPath: 'screenshots/previews/13.webp',
     alt: 'Connected AI coding providers and subscription limits',
     ruAlt: 'Подключённые AI-провайдеры и лимиты подписок',
-    width: 2560,
-    height: 1606,
+    width: 1024,
+    height: 640,
   },
   {
     path: 'screenshots/2.png',
@@ -98,8 +98,8 @@ export const screenshots: Screenshot[] = [
     previewPath: 'screenshots/previews/8.webp',
     alt: 'Task details, attachments, and execution logs',
     ruAlt: 'Детали задачи, вложения и логи выполнения',
-    width: 2624,
-    height: 1638,
+    width: 1024,
+    height: 639,
   },
   {
     path: 'screenshots/9.png',
