@@ -38,7 +38,7 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/1.jpg">
+  <a href="docs/screenshots/1.png">
     <img src="docs/screenshots/previews/1.webp" alt="Kanban board with team messages and agent tasks" width="100%" loading="lazy" />
   </a>
 </td>
@@ -74,7 +74,7 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/13.jpg">
+  <a href="docs/screenshots/13.png">
     <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
   </a>
 </td>
@@ -91,7 +91,7 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/12.jpg">
+  <a href="docs/screenshots/12.png">
     <img src="docs/screenshots/previews/12.webp" alt="Organization structure map with team and task details" width="100%" loading="lazy" />
   </a>
 </td>
