@@ -1,7 +1,7 @@
 import {
   sanitizeTaskChangeOptions,
   sanitizeTeamTaskChangeSummaryRequests,
-} from '@features/change-review/main';
+} from '@features/change-review/core/domain/reviewQueryPolicy';
 import { describe, expect, it } from 'vitest';
 
 describe('review query policy', () => {
@@ -30,6 +30,7 @@ describe('review query policy', () => {
         stateBucket: 'approved',
         summaryOnly: true,
         forceFresh: 'yes',
+        retryBackfill: true,
         ignored: 'value',
       })
     ).toEqual({
@@ -46,6 +47,7 @@ describe('review query policy', () => {
       stateBucket: 'approved',
       summaryOnly: true,
       forceFresh: false,
+      retryBackfill: true,
     });
   });
 
@@ -74,6 +76,7 @@ describe('review query policy', () => {
         stateBucket: undefined,
         summaryOnly: true,
         forceFresh: false,
+        retryBackfill: false,
       },
     });
     expect(sanitized.at(-1)).toEqual({

@@ -924,5 +924,23 @@
       "needsFix": "Necesită remedieri"
     },
     "unassigned": "neatribuit"
+  },
+  "announcements": {
+    "title": "Noutăți",
+    "historyTitle": "Ce este nou",
+    "description": "Actualizări, îmbunătățiri și noutăți de la Agent Teams.",
+    "imageUnavailable": "Imagine indisponibilă",
+    "loading": "Se încarcă noutățile…",
+    "loadError": "Acest articol nu este disponibil. Reîmprospătează noutățile sau încearcă din nou mai târziu.",
+    "expired": "Nu mai este de actualitate",
+    "empty": "Ești la zi",
+    "emptyDescription": "Noutățile proiectului vor apărea aici după publicare.",
+    "allNews": "Toate noutățile",
+    "status": {
+      "offline": "Ești offline. Articolele încărcate anterior sunt disponibile; este posibil să lipsească imagini.",
+      "writer_busy": "Noutățile sunt deschise într-o altă instanță a aplicației. Poți răsfoi lista aici; deschide articolele în cealaltă instanță.",
+      "unavailable": "Noutățile sunt disponibile în aplicația desktop.",
+      "state_unavailable": "Poți citi, dar progresul nu poate fi salvat momentan. Noutățile automate sunt întrerupte."
+    }
   }
 }

@@ -80,6 +80,7 @@ import {
   REVISION_NOTICE_PREFIX,
   trimString,
 } from './messagesPanelLogic';
+import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { StatusBlock } from './StatusBlock';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
@@ -87,10 +88,10 @@ import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type {
+  DiscardQueuedUserMessagesResult,
   InboxMessage,
   ResolvedTeamMember,
   TaskRef,
-  TeamSummary,
   TeamTaskWithKanban,
 } from '@shared/types';
 
@@ -105,101 +106,7 @@ const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
 const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
-const EMPTY_TEAM_NAMES: string[] = [];
-const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
-
-interface TeamMentionMeta {
-  teamNames: string[];
-  teamColorByName: ReadonlyMap<string, string>;
-}
-
-interface TeamMentionEntry {
-  teamName: string;
-  displayName: string;
-  color: string;
-  deletedAt: string;
-}
-
-let cachedTeamMentionSignature = '';
-let cachedTeamMentionSource: readonly TeamSummary[] | null = null;
-let cachedTeamMentionMeta: TeamMentionMeta = {
-  teamNames: EMPTY_TEAM_NAMES,
-  teamColorByName: EMPTY_TEAM_COLOR_MAP,
-};
-
-function encodeTeamMentionParts(parts: readonly string[]): string {
-  return parts.map((part) => `${part.length}:${part}`).join('|');
-}
-
-function compareTeamMentionEntries(a: TeamMentionEntry, b: TeamMentionEntry): number {
-  return (
-    a.teamName.localeCompare(b.teamName, undefined, { sensitivity: 'base' }) ||
-    a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })
-  );
-}
-
-function getTeamMentionSignature(teams: readonly TeamSummary[]): string {
-  return encodeTeamMentionParts(
-    teams.flatMap((team) => [
-      team.teamName ?? '',
-      team.displayName ?? '',
-      team.color ?? '',
-      team.deletedAt ?? '',
-    ])
-  );
-}
-
-function selectMessagesPanelTeamMentionMeta(teams: readonly TeamSummary[]): TeamMentionMeta {
-  if (teams === cachedTeamMentionSource) {
-    return cachedTeamMentionMeta;
-  }
-
-  const signature = getTeamMentionSignature(teams);
-  if (signature === cachedTeamMentionSignature) {
-    cachedTeamMentionSource = teams;
-    return cachedTeamMentionMeta;
-  }
-
-  const entries = teams
-    .map((team) => ({
-      teamName: team.teamName ?? '',
-      displayName: team.displayName ?? '',
-      color: team.color ?? '',
-      deletedAt: team.deletedAt ?? '',
-    }))
-    .sort(compareTeamMentionEntries);
-
-  if (entries.length === 0) {
-    cachedTeamMentionSource = teams;
-    cachedTeamMentionSignature = signature;
-    cachedTeamMentionMeta = {
-      teamNames: EMPTY_TEAM_NAMES,
-      teamColorByName: EMPTY_TEAM_COLOR_MAP,
-    };
-    return cachedTeamMentionMeta;
-  }
-
-  const teamNames: string[] = [];
-  const teamColorByName = new Map<string, string>();
-
-  for (const entry of entries) {
-    if (!entry.deletedAt && entry.teamName) {
-      teamNames.push(entry.teamName);
-    }
-    if (entry.teamName) {
-      teamColorByName.set(entry.teamName, entry.color);
-    }
-    if (entry.displayName) {
-      teamColorByName.set(entry.displayName, entry.color);
-    }
-  }
-
-  cachedTeamMentionSource = teams;
-  cachedTeamMentionSignature = signature;
-  cachedTeamMentionMeta = { teamNames, teamColorByName };
-  return cachedTeamMentionMeta;
-}
 
 interface MessagesPanelProps {
   teamName: string;
@@ -442,6 +349,30 @@ export const MessagesPanel = memo(function MessagesPanel({
   const handleLoadOlderMessagesClick = useCallback(() => {
     void loadOlderMessages();
   }, [loadOlderMessages]);
+
+  const handleQueuedDiscarded = useCallback(
+    (memberName: string, result: DiscardQueuedUserMessagesResult) => {
+      // Only drop the pending entry when the member's queue is empty and this
+      // discard is what emptied it. A discard that removed nothing means the
+      // runtime took the message first, so the entry has to stay and become
+      // "delivered" on the next head refresh. A discard that removed rows while
+      // others were still queued has to keep it too: nothing recreates the
+      // entry - reconcilePendingRepliesByMember only ever removes, and the head
+      // refresh below reloads messages, not this map - so dropping it would
+      // hide the rows that survived until the user sends the member something
+      // new.
+      if (result.discarded > 0 && result.remainingQueued === 0) {
+        onPendingReplyChange((prev) => {
+          if (!(memberName in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberName];
+          return next;
+        });
+      }
+      void refreshTeamMessagesHead(teamName);
+    },
+    [onPendingReplyChange, refreshTeamMessagesHead, teamName]
+  );
 
   const loadingOlderMessages = messagesLoadingOlder;
   const hasMore = messagesHasMore;
@@ -1173,6 +1104,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="inline"
       onMemberClick={onMemberClick}
@@ -1187,6 +1120,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="sidebar"
       onMemberClick={onMemberClick}

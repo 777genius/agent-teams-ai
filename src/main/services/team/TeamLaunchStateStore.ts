@@ -1,521 +1,69 @@
+import { randomUUID } from 'node:crypto';
+
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
-import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
+import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
+import {
+  isSupportedLaunchStateDocument,
+  isSupportedLaunchSummaryDocument,
+  type JsonRecord,
+  LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS,
+  MAX_LAUNCH_STATE_BYTES,
+  mergeLaunchState,
+  readVersionedDocumentForMutation,
+  replaceKnownFields,
+} from './TeamLaunchStateDocumentPersistence';
+import {
+  createPersistedLaunchSnapshot,
+  normalizePersistedLaunchSnapshot,
+} from './TeamLaunchStateEvaluator';
 import {
   createPersistedLaunchSummaryProjection,
   TEAM_LAUNCH_SUMMARY_FILE,
 } from './TeamLaunchSummaryProjection';
 
+import type { TeamLaunchFreshness } from './TeamLaunchFreshness';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
-const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
-const publicationQueueByTeam = new Map<string, Promise<void>>();
+const stopIntentByTeam = new Map<string, number>();
+const publicationQueueByTeam = new Map<string, Promise<unknown>>();
 
-type JsonRecord = Record<string, unknown>;
-
-const LAUNCH_STATE_KNOWN_FIELDS = [
-  'version',
-  'teamName',
-  'updatedAt',
-  'leadSessionId',
-  'launchPhase',
-  'expectedMembers',
-  'bootstrapExpectedMembers',
-  'members',
-  'summary',
-  'teamLaunchState',
-] as const;
-const LAUNCH_MEMBER_KNOWN_FIELDS = [
-  'name',
-  'providerId',
-  'providerBackendId',
-  'billingMode',
-  'model',
-  'effort',
-  'cwd',
-  'selectedFastMode',
-  'resolvedFastMode',
-  'laneId',
-  'laneKind',
-  'laneOwnerProviderId',
-  'launchIdentity',
-  'launchState',
-  'skippedForLaunch',
-  'skipReason',
-  'skippedAt',
-  'agentToolAccepted',
-  'runtimeAlive',
-  'bootstrapConfirmed',
-  'hardFailure',
-  'hardFailureReason',
-  'pendingPermissionRequestIds',
-  'runtimePid',
-  'runtimeRunId',
-  'runtimeSessionId',
-  'bootstrapEvidenceSource',
-  'bootstrapMode',
-  'appManagedBootstrapCandidate',
-  'livenessKind',
-  'pidSource',
-  'runtimeDiagnostic',
-  'runtimeDiagnosticSeverity',
-  'bootstrapStalled',
-  'runtimeLastSeenAt',
-  'firstSpawnAcceptedAt',
-  'lastHeartbeatAt',
-  'lastRuntimeAliveAt',
-  'lastEvaluatedAt',
-  'sources',
-  'diagnostics',
-] as const;
-const LAUNCH_MEMBER_SOURCE_KNOWN_FIELDS = [
-  'inboxHeartbeat',
-  'nativeHeartbeat',
-  'processAlive',
-  'configRegistered',
-  'configDrift',
-  'hardFailureSignal',
-  'duplicateRespawnBlocked',
-] as const;
-const APP_BOOTSTRAP_CANDIDATE_KNOWN_FIELDS = [
-  'schemaVersion',
-  'source',
-  'teamName',
-  'memberName',
-  'runId',
-  'laneId',
-  'runtimeSessionId',
-  'messageID',
-  'contextHash',
-  'briefingHash',
-  'injectionVerifiedAt',
-  'candidateAt',
-  'model',
-  'agent',
-] as const;
-const LAUNCH_IDENTITY_KNOWN_FIELDS = [
-  'providerId',
-  'providerBackendId',
-  'billingMode',
-  'selectedModel',
-  'selectedModelKind',
-  'resolvedLaunchModel',
-  'catalogId',
-  'catalogSource',
-  'catalogFetchedAt',
-  'selectedEffort',
-  'resolvedEffort',
-  'selectedFastMode',
-  'resolvedFastMode',
-  'fastResolutionReason',
-] as const;
-const LAUNCH_SUMMARY_KNOWN_FIELDS = [
-  'confirmedCount',
-  'pendingCount',
-  'failedCount',
-  'skippedCount',
-  'runtimeAlivePendingCount',
-  'shellOnlyPendingCount',
-  'runtimeProcessPendingCount',
-  'runtimeCandidatePendingCount',
-  'noRuntimePendingCount',
-  'permissionPendingCount',
-] as const;
-const LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS = [
-  'version',
-  'teamName',
-  'updatedAt',
-  'launchPhase',
-  'mixedAware',
-  'partialLaunchFailure',
-  'expectedMemberCount',
-  'confirmedMemberCount',
-  'missingMembers',
-  'skippedMembers',
-  'teamLaunchState',
-  'launchUpdatedAt',
-  ...LAUNCH_SUMMARY_KNOWN_FIELDS,
-] as const;
-
-function isJsonRecord(value: unknown): value is JsonRecord {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isOptionalString(value: unknown): boolean {
-  return value === undefined || typeof value === 'string';
-}
-
-function isOptionalBoolean(value: unknown): boolean {
-  return value === undefined || typeof value === 'boolean';
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function isOptionalStringArray(value: unknown): boolean {
-  return value === undefined || isStringArray(value);
-}
-
-function isNonNegativeInteger(value: unknown): boolean {
-  return Number.isSafeInteger(value) && Number(value) >= 0;
-}
-
-function isOptionalNonNegativeInteger(value: unknown): boolean {
-  return value === undefined || isNonNegativeInteger(value);
-}
-
-function isProviderId(value: unknown): boolean {
-  return value === 'anthropic' || value === 'codex' || value === 'gemini' || value === 'opencode';
-}
-
-function isProviderBackendId(value: unknown): boolean {
+/**
+ * Launch publication still has to fence directory replacement on filesystems
+ * that report no usable inode (notably some Windows filesystems). Keep this
+ * compatibility fallback local: other durable path operations require a
+ * positive inode to prove identity.
+ */
+function isSameLaunchDirectoryIdentity(
+  left: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>,
+  right: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
+): boolean {
   return (
-    value === 'auto' ||
-    value === 'adapter' ||
-    value === 'api' ||
-    value === 'cli-sdk' ||
-    value === 'codex-native' ||
-    value === 'opencode-cli'
+    left.dev === right.dev &&
+    (left.ino > 0 && right.ino > 0
+      ? left.ino === right.ino
+      : left.birthtimeMs === right.birthtimeMs)
   );
 }
 
-function isEffort(value: unknown): boolean {
-  return (
-    value === 'none' ||
-    value === 'minimal' ||
-    value === 'low' ||
-    value === 'medium' ||
-    value === 'high' ||
-    value === 'xhigh' ||
-    value === 'max' ||
-    value === 'ultra'
-  );
+/** Capture before any caller queue/await; a later Stop revokes this request. */
+export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
+  const intent = stopIntentByTeam.get(teamName);
+  const admitted = getAdmittedTeamPublicationAuthority(teamName);
+  return () => admitted?.() !== false && stopIntentByTeam.get(teamName) === intent;
 }
 
-function isFastMode(value: unknown): boolean {
-  return value === 'inherit' || value === 'on' || value === 'off';
-}
-
-function isLaunchPhase(value: unknown): boolean {
-  return value === 'active' || value === 'finished' || value === 'reconciled';
-}
-
-function isTeamLaunchState(value: unknown): boolean {
-  return (
-    value === 'partial_failure' ||
-    value === 'partial_skipped' ||
-    value === 'partial_pending' ||
-    value === 'clean_success'
-  );
-}
-
-function isLaunchIdentity(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
-  return (
-    isProviderId(value.providerId) &&
-    (value.providerBackendId === null || isProviderBackendId(value.providerBackendId)) &&
-    (value.billingMode === undefined ||
-      value.billingMode === 'api' ||
-      value.billingMode === 'subscription' ||
-      value.billingMode === 'free' ||
-      value.billingMode === 'unknown') &&
-    (value.selectedModel === null || typeof value.selectedModel === 'string') &&
-    (value.selectedModelKind === 'default' || value.selectedModelKind === 'explicit') &&
-    (value.resolvedLaunchModel === null || typeof value.resolvedLaunchModel === 'string') &&
-    (value.catalogId === null || typeof value.catalogId === 'string') &&
-    (value.catalogSource === 'anthropic-models-api' ||
-      value.catalogSource === 'anthropic-compatible-api' ||
-      value.catalogSource === 'app-server' ||
-      value.catalogSource === 'static-fallback' ||
-      value.catalogSource === 'runtime' ||
-      value.catalogSource === 'unavailable') &&
-    (value.catalogFetchedAt === null || typeof value.catalogFetchedAt === 'string') &&
-    (value.selectedEffort === null || isEffort(value.selectedEffort)) &&
-    (value.resolvedEffort === null || isEffort(value.resolvedEffort)) &&
-    (value.selectedFastMode === undefined ||
-      value.selectedFastMode === null ||
-      isFastMode(value.selectedFastMode)) &&
-    (value.resolvedFastMode === undefined ||
-      value.resolvedFastMode === null ||
-      typeof value.resolvedFastMode === 'boolean') &&
-    (value.fastResolutionReason === undefined ||
-      value.fastResolutionReason === null ||
-      typeof value.fastResolutionReason === 'string')
-  );
-}
-
-function isAppManagedBootstrapCandidate(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
-  return (
-    value.schemaVersion === 1 &&
-    value.source === 'app_managed_bootstrap' &&
-    typeof value.teamName === 'string' &&
-    typeof value.memberName === 'string' &&
-    typeof value.runId === 'string' &&
-    typeof value.laneId === 'string' &&
-    typeof value.runtimeSessionId === 'string' &&
-    typeof value.messageID === 'string' &&
-    typeof value.contextHash === 'string' &&
-    typeof value.briefingHash === 'string' &&
-    typeof value.injectionVerifiedAt === 'string' &&
-    typeof value.candidateAt === 'string' &&
-    isOptionalString(value.model) &&
-    isOptionalString(value.agent)
-  );
-}
-
-function isLaunchMemberSources(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
-  return LAUNCH_MEMBER_SOURCE_KNOWN_FIELDS.every((field) => isOptionalBoolean(value[field]));
-}
-
-function isLaunchMember(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
-  return (
-    typeof value.name === 'string' &&
-    value.name.trim().length > 0 &&
-    (value.providerId === undefined || isProviderId(value.providerId)) &&
-    (value.providerBackendId === undefined || isProviderBackendId(value.providerBackendId)) &&
-    (value.billingMode === undefined ||
-      value.billingMode === 'api' ||
-      value.billingMode === 'subscription' ||
-      value.billingMode === 'free' ||
-      value.billingMode === 'unknown') &&
-    isOptionalString(value.model) &&
-    (value.effort === undefined || isEffort(value.effort)) &&
-    isOptionalString(value.cwd) &&
-    (value.selectedFastMode === undefined || isFastMode(value.selectedFastMode)) &&
-    isOptionalBoolean(value.resolvedFastMode) &&
-    isOptionalString(value.laneId) &&
-    (value.laneKind === undefined ||
-      value.laneKind === 'primary' ||
-      value.laneKind === 'secondary') &&
-    (value.laneOwnerProviderId === undefined || isProviderId(value.laneOwnerProviderId)) &&
-    (value.launchIdentity === undefined || isLaunchIdentity(value.launchIdentity)) &&
-    (value.launchState === 'starting' ||
-      value.launchState === 'runtime_pending_bootstrap' ||
-      value.launchState === 'runtime_pending_permission' ||
-      value.launchState === 'confirmed_alive' ||
-      value.launchState === 'failed_to_start' ||
-      value.launchState === 'skipped_for_launch') &&
-    isOptionalBoolean(value.skippedForLaunch) &&
-    isOptionalString(value.skipReason) &&
-    isOptionalString(value.skippedAt) &&
-    typeof value.agentToolAccepted === 'boolean' &&
-    typeof value.runtimeAlive === 'boolean' &&
-    typeof value.bootstrapConfirmed === 'boolean' &&
-    typeof value.hardFailure === 'boolean' &&
-    isOptionalString(value.hardFailureReason) &&
-    isOptionalStringArray(value.pendingPermissionRequestIds) &&
-    isOptionalNonNegativeInteger(value.runtimePid) &&
-    isOptionalString(value.runtimeRunId) &&
-    isOptionalString(value.runtimeSessionId) &&
-    (value.bootstrapEvidenceSource === undefined ||
-      value.bootstrapEvidenceSource === 'runtime_bootstrap_checkin' ||
-      value.bootstrapEvidenceSource === 'app_managed_bootstrap') &&
-    (value.bootstrapMode === undefined ||
-      value.bootstrapMode === 'model_tool_checkin' ||
-      value.bootstrapMode === 'app_managed_context') &&
-    (value.appManagedBootstrapCandidate === undefined ||
-      isAppManagedBootstrapCandidate(value.appManagedBootstrapCandidate)) &&
-    (value.livenessKind === undefined ||
-      value.livenessKind === 'confirmed_bootstrap' ||
-      value.livenessKind === 'runtime_process' ||
-      value.livenessKind === 'runtime_process_candidate' ||
-      value.livenessKind === 'permission_blocked' ||
-      value.livenessKind === 'shell_only' ||
-      value.livenessKind === 'registered_only' ||
-      value.livenessKind === 'stale_metadata' ||
-      value.livenessKind === 'not_found') &&
-    (value.pidSource === undefined ||
-      value.pidSource === 'lead_process' ||
-      value.pidSource === 'tmux_pane' ||
-      value.pidSource === 'tmux_child' ||
-      value.pidSource === 'agent_process_table' ||
-      value.pidSource === 'opencode_bridge' ||
-      value.pidSource === 'runtime_bootstrap' ||
-      value.pidSource === 'persisted_metadata') &&
-    isOptionalString(value.runtimeDiagnostic) &&
-    (value.runtimeDiagnosticSeverity === undefined ||
-      value.runtimeDiagnosticSeverity === 'info' ||
-      value.runtimeDiagnosticSeverity === 'warning' ||
-      value.runtimeDiagnosticSeverity === 'error') &&
-    isOptionalBoolean(value.bootstrapStalled) &&
-    isOptionalString(value.runtimeLastSeenAt) &&
-    isOptionalString(value.firstSpawnAcceptedAt) &&
-    isOptionalString(value.lastHeartbeatAt) &&
-    isOptionalString(value.lastRuntimeAliveAt) &&
-    typeof value.lastEvaluatedAt === 'string' &&
-    value.lastEvaluatedAt.trim().length > 0 &&
-    (value.sources === undefined || isLaunchMemberSources(value.sources)) &&
-    isOptionalStringArray(value.diagnostics)
-  );
-}
-
-function isLaunchSummary(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
-  return (
-    isNonNegativeInteger(value.confirmedCount) &&
-    isNonNegativeInteger(value.pendingCount) &&
-    isNonNegativeInteger(value.failedCount) &&
-    isOptionalNonNegativeInteger(value.skippedCount) &&
-    isNonNegativeInteger(value.runtimeAlivePendingCount) &&
-    isOptionalNonNegativeInteger(value.shellOnlyPendingCount) &&
-    isOptionalNonNegativeInteger(value.runtimeProcessPendingCount) &&
-    isOptionalNonNegativeInteger(value.runtimeCandidatePendingCount) &&
-    isOptionalNonNegativeInteger(value.noRuntimePendingCount) &&
-    isOptionalNonNegativeInteger(value.permissionPendingCount)
-  );
-}
-
-function replaceKnownFields(
-  existing: JsonRecord | null,
-  replacement: JsonRecord,
-  knownFields: readonly string[]
-): JsonRecord {
-  const merged = { ...(existing ?? {}) };
-  for (const field of knownFields) {
-    delete merged[field];
-  }
-  return Object.assign(merged, replacement);
-}
-
-function mergeNestedKnownRecord(
-  existing: JsonRecord | null,
-  replacement: JsonRecord,
-  field: string,
-  knownFields: readonly string[]
-): void {
-  if (isJsonRecord(replacement[field])) {
-    replacement[field] = replaceKnownFields(
-      isJsonRecord(existing?.[field]) ? existing[field] : null,
-      replacement[field],
-      knownFields
-    );
-  }
-}
-
-function mergeLaunchMember(existing: JsonRecord | null, replacement: JsonRecord): JsonRecord {
-  const merged = replaceKnownFields(existing, replacement, LAUNCH_MEMBER_KNOWN_FIELDS);
-  mergeNestedKnownRecord(existing, merged, 'sources', LAUNCH_MEMBER_SOURCE_KNOWN_FIELDS);
-  mergeNestedKnownRecord(existing, merged, 'launchIdentity', LAUNCH_IDENTITY_KNOWN_FIELDS);
-  mergeNestedKnownRecord(
-    existing,
-    merged,
-    'appManagedBootstrapCandidate',
-    APP_BOOTSTRAP_CANDIDATE_KNOWN_FIELDS
-  );
-  return merged;
-}
-
-function mergeLaunchState(
-  existing: JsonRecord | null,
-  snapshot: PersistedTeamLaunchSnapshot
-): JsonRecord {
-  const replacement = { ...(snapshot as unknown as JsonRecord) };
-  const existingMembers = isJsonRecord(existing?.members) ? existing.members : {};
-  const replacementMembers = isJsonRecord(replacement.members) ? replacement.members : {};
-  replacement.members = Object.fromEntries(
-    Object.entries(replacementMembers).map(([name, member]) => [
-      name,
-      mergeLaunchMember(
-        isJsonRecord(existingMembers[name]) ? existingMembers[name] : null,
-        member as JsonRecord
-      ),
-    ])
-  );
-  mergeNestedKnownRecord(existing, replacement, 'summary', LAUNCH_SUMMARY_KNOWN_FIELDS);
-  return replaceKnownFields(existing, replacement, LAUNCH_STATE_KNOWN_FIELDS);
-}
-
-function isSupportedLaunchStateDocument(teamName: string, document: JsonRecord): boolean {
-  if (
-    document.teamName !== teamName ||
-    typeof document.updatedAt !== 'string' ||
-    document.updatedAt.trim().length === 0 ||
-    !isOptionalString(document.leadSessionId) ||
-    !isLaunchPhase(document.launchPhase) ||
-    !isStringArray(document.expectedMembers) ||
-    document.expectedMembers.some((member) => !member.trim()) ||
-    !isOptionalStringArray(document.bootstrapExpectedMembers) ||
-    (Array.isArray(document.bootstrapExpectedMembers) &&
-      document.bootstrapExpectedMembers.some((member) => !member.trim())) ||
-    !isJsonRecord(document.members) ||
-    !isLaunchSummary(document.summary) ||
-    !isTeamLaunchState(document.teamLaunchState)
-  ) {
-    return false;
-  }
-  return Object.entries(document.members).every(
-    ([memberName, member]) =>
-      memberName.trim().length > 0 &&
-      isLaunchMember(member) &&
-      (member as JsonRecord).name === memberName
-  );
-}
-
-function isSupportedLaunchSummaryDocument(teamName: string, document: JsonRecord): boolean {
-  return (
-    document.teamName === teamName &&
-    typeof document.updatedAt === 'string' &&
-    document.updatedAt.trim().length > 0 &&
-    (document.launchPhase === undefined || isLaunchPhase(document.launchPhase)) &&
-    (document.mixedAware === undefined || document.mixedAware === true) &&
-    (document.partialLaunchFailure === undefined || document.partialLaunchFailure === true) &&
-    isOptionalNonNegativeInteger(document.expectedMemberCount) &&
-    isOptionalNonNegativeInteger(document.confirmedMemberCount) &&
-    isOptionalStringArray(document.missingMembers) &&
-    isOptionalStringArray(document.skippedMembers) &&
-    (document.teamLaunchState === undefined || isTeamLaunchState(document.teamLaunchState)) &&
-    isOptionalString(document.launchUpdatedAt) &&
-    LAUNCH_SUMMARY_KNOWN_FIELDS.every((field) => isOptionalNonNegativeInteger(document[field]))
-  );
-}
-
-async function readVersionedDocumentForMutation(
-  filePath: string,
-  expectedVersion: number,
-  teamName?: string
-): Promise<JsonRecord | null> {
-  let stat: fs.Stats;
-  try {
-    stat = await fs.promises.stat(filePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-  if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
-    throw new Error('Refusing to replace unsafe or oversized launch state');
-  }
-  const raw = await fs.promises.readFile(filePath, 'utf8');
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch (error) {
-    throw new Error('Refusing to replace malformed launch state', { cause: error });
-  }
-  if (
-    expectedVersion === 2 &&
-    teamName !== undefined &&
-    isJsonRecord(parsed) &&
-    parsed.state === 'partial_launch_failure'
-  ) {
-    const normalized = normalizePersistedLaunchSnapshot(teamName, parsed);
-    if (normalized) return normalized as unknown as JsonRecord;
-  }
-  if (!isJsonRecord(parsed) || parsed.version !== expectedVersion) {
-    throw new Error('Refusing to replace unsupported launch state');
-  }
-  return parsed;
+export interface TeamLaunchStopAuthority {
+  teamName: string;
+  stopIntent: number;
+  freshness: TeamLaunchFreshness | null;
 }
 
 export function getTeamLaunchStatePath(teamName: string): string {
@@ -524,6 +72,40 @@ export function getTeamLaunchStatePath(teamName: string): string {
 
 export function getTeamLaunchSummaryPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_SUMMARY_FILE);
+}
+
+/**
+ * Marker written when a team is stopped. While it exists, launch-state
+ * reconciliation must not re-derive a half-launched snapshot from leftover
+ * metadata: a stopped mixed OpenCode team used to come back as "Last launch
+ * failed partway - 2/3 teammates did not join", with members reported as
+ * never spawned, because the lane metadata of the run that was just stopped
+ * was still on disk. An explicitly authorized new run removes it.
+ */
+export const TEAM_LAUNCH_STOPPED_MARKER_FILE = 'launch-stopped.json';
+
+export function getTeamLaunchStoppedMarkerPath(teamName: string): string {
+  return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE);
+}
+
+export interface TeamLaunchStatePublicationOptions {
+  /**
+   * True when the write republishes launch truth that already existed instead
+   * of starting a launch: the rollback of a stale write restoring what it
+   * overwrote, or a recovery re-deriving the run that was just stopped. Only a
+   * launch may lift a stop, so a stop that landed meanwhile stays final over
+   * such a write - it is not published, and it never removes the marker.
+   */
+  republishesExistingLaunch?: boolean;
+  runId?: string;
+  isAuthorized?: () => boolean;
+  authorizesNewRun?: () => boolean;
+}
+
+async function removeStoppedMarkerIfPresent(teamName: string): Promise<void> {
+  const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+  if (!fs.existsSync(markerPath)) return;
+  await fs.promises.rm(markerPath, { force: true });
 }
 
 async function isMissingTeamDirectoryWriteRace(
@@ -543,7 +125,23 @@ async function isMissingTeamDirectoryWriteRace(
   }
 }
 
-function enqueuePublication(teamName: string, operation: () => Promise<void>): Promise<void> {
+/** Reports the revocation failures the caller has to see; silent when there are none. */
+function throwPublicationRevocationFailure(
+  teamName: string,
+  results: PromiseSettledResult<void>[]
+): void {
+  const errors = results
+    .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    .map((result) => result.reason);
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length > 1) {
+    throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state publication`);
+  }
+}
+
+function enqueuePublication<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
   const previous = publicationQueueByTeam.get(teamName);
   const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
   publicationQueueByTeam.set(teamName, queued);
@@ -554,42 +152,214 @@ function enqueuePublication(teamName: string, operation: () => Promise<void>): P
   });
 }
 
+/**
+ * Runs `operation` in this team's launch-state publication queue - the same one
+ * `write` and `markStopped` use. A caller that publishes or withdraws these
+ * files from outside the store needs it, because a stop is not one instant:
+ * `markStopped` removes the publication files first and writes its marker
+ * afterwards, and only the queue makes those two steps indivisible from the
+ * outside. Checking the marker without holding the queue reads a stop that has
+ * begun as a stop that never happened.
+ */
+export function withTeamLaunchStatePublicationLock<T>(
+  teamName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  return enqueuePublication(teamName, operation);
+}
+
+/**
+ * What a launch-state read found. `absent` is an answer - this team published
+ * no launch state - while `unreadable` is the lack of one: something is on
+ * disk that the store could not turn into a snapshot, so nothing may be
+ * concluded about what the team has running.
+ */
+export type TeamLaunchStateReadResult =
+  | { status: 'snapshot'; snapshot: PersistedTeamLaunchSnapshot }
+  | { status: 'absent' }
+  | { status: 'unreadable'; reason: string };
+
+function describeReadFailure(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class TeamLaunchStateStore {
+  /**
+   * The launch snapshot, or `null` when there is none to be had. It cannot say
+   * why: a team that never launched and a launch state this app could not read
+   * both answer `null`. Callers that draw a conclusion from the absence of
+   * recorded state - "nothing is running" - need `readResult` instead.
+   */
   async read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null> {
+    const result = await this.readResult(teamName);
+    return result.status === 'snapshot' ? result.snapshot : null;
+  }
+
+  /**
+   * The same read, keeping "this team has no launch state" apart from "the
+   * launch state could not be read". Only the first is evidence about the team;
+   * the second is the absence of evidence, and a caller that counts it as an
+   * empty snapshot reports a probe that answered nothing as a definite zero.
+   */
+  async readResult(teamName: string): Promise<TeamLaunchStateReadResult> {
     const targetPath = getTeamLaunchStatePath(teamName);
+    let raw: string;
     try {
       const stat = await fs.promises.stat(targetPath);
-      if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
-        return null;
+      if (!stat.isFile()) {
+        return { status: 'unreadable', reason: 'launch state path is not a file' };
       }
-      const raw = await fs.promises.readFile(targetPath, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const record = parsed as Record<string, unknown>;
-        if (
-          record.version === 2 &&
-          (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
-        ) {
-          return null;
-        }
+      if (stat.size > MAX_LAUNCH_STATE_BYTES) {
+        return { status: 'unreadable', reason: `launch state exceeds ${MAX_LAUNCH_STATE_BYTES}B` };
       }
-      return normalizePersistedLaunchSnapshot(teamName, parsed);
-    } catch {
-      return null;
+      raw = await fs.promises.readFile(targetPath, 'utf8');
+    } catch (error) {
+      // Only a missing file is an answer; every other failure leaves the
+      // question open.
+      return (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ? { status: 'absent' }
+        : { status: 'unreadable', reason: describeReadFailure(error) };
     }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (error) {
+      return { status: 'unreadable', reason: describeReadFailure(error) };
+    }
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      if (
+        record.version === 2 &&
+        (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
+      ) {
+        return { status: 'unreadable', reason: 'launch state names a different team' };
+      }
+    }
+    const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
+    if (
+      snapshot &&
+      parsed &&
+      typeof parsed === 'object' &&
+      'publicationRunId' in parsed &&
+      typeof parsed.publicationRunId === 'string'
+    )
+      snapshot.publicationRunId = parsed.publicationRunId;
+    return snapshot
+      ? { status: 'snapshot', snapshot }
+      : { status: 'unreadable', reason: 'launch state did not describe a launch' };
   }
 
-  async write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
-    await enqueuePublication(teamName, () => this.writeNow(teamName, snapshot));
+  async beginLaunch(
+    teamName: string,
+    runId: string,
+    expectedMembers: string[],
+    isAuthorized: () => boolean
+  ): Promise<boolean> {
+    if (!runId.trim()) throw new Error('Launch publication requires a run identity');
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    return enqueuePublication(teamName, () =>
+      this.writeNow(
+        teamName,
+        createPersistedLaunchSnapshot({
+          teamName,
+          expectedMembers,
+          launchPhase: 'active',
+          members: {},
+        }),
+        {
+          runId,
+          isAuthorized: () => isAuthorized() && publicationIsCurrent(),
+        },
+        true
+      )
+    );
   }
 
-  private async writeNow(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
-    const launchStatePath = getTeamLaunchStatePath(teamName);
-    const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
+  async write(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: TeamLaunchStatePublicationOptions
+  ): Promise<boolean> {
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    return enqueuePublication(teamName, () =>
+      this.writeNow(teamName, snapshot, {
+        ...options,
+        runId: options?.runId ?? snapshot.publicationRunId,
+        isAuthorized: () => options?.isAuthorized?.() !== false && publicationIsCurrent(),
+      })
+    );
+  }
+
+  private async writeNow(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options: TeamLaunchStatePublicationOptions,
+    beginsLaunch = false
+  ): Promise<boolean> {
+    if (options.isAuthorized?.() === false) return false;
+    const freshness = await readTeamLaunchFreshness(teamName);
+    if (options.isAuthorized?.() === false) return false;
+    // Existing native launch flows publish their first active snapshot through the
+    // boundary. Only their current, explicitly checked new run can begin here.
+    beginsLaunch ||=
+      snapshot.launchPhase === 'active' &&
+      options.republishesExistingLaunch !== true &&
+      !!options.runId &&
+      options.authorizesNewRun?.() === true &&
+      (freshness === null ||
+        (freshness.kind === 'stop' ? freshness.stoppedRunId : freshness.runId) !== options.runId);
+    if (!beginsLaunch && (await this.isStopped(teamName))) return false;
+    if (!beginsLaunch && freshness?.kind === 'launch' && options.runId !== freshness.runId)
+      return false;
+    const statePath = getTeamLaunchStatePath(teamName);
+    const directory = path.dirname(statePath);
+    const directoryIdentity = await fs.promises.stat(directory).catch(() => null);
+    if (!directoryIdentity) return false;
+    const directoryIsCurrent = async (): Promise<boolean> => {
+      const current = await fs.promises.stat(directory).catch(() => null);
+      return (
+        current !== null && isSameLaunchDirectoryIdentity(current, directoryIdentity)
+      );
+    };
+    const beforeCommit = async (): Promise<void> => {
+      if (options.isAuthorized?.() === false || !(await directoryIsCurrent())) {
+        throw new Error('Launch publication authorization changed');
+      }
+    };
+    const summaryPath = getTeamLaunchSummaryPath(teamName);
+    const paths = beginsLaunch
+      ? [
+          statePath,
+          summaryPath,
+          getTeamLaunchFreshnessPath(teamName),
+          getTeamLaunchStoppedMarkerPath(teamName),
+        ]
+      : [statePath, summaryPath];
+    const previous = await Promise.all(
+      paths.map(async (file) => {
+        try {
+          return await fs.promises.readFile(file, 'utf8');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+          throw error;
+        }
+      })
+    );
+    const rollback = async (): Promise<void> => {
+      const beforeRollbackCommit = async (): Promise<void> => {
+        if (!(await directoryIsCurrent())) throw new Error('Launch rollback directory changed');
+      };
+      for (let i = 0; i < paths.length; i++) {
+        if (!(await directoryIsCurrent())) return;
+        if (previous[i] === null) await fs.promises.rm(paths[i], { force: true });
+        else await atomicWriteAsync(paths[i], previous[i]!, { beforeCommit: beforeRollbackCommit });
+      }
+    };
+    if (options.isAuthorized?.() === false) return false;
     try {
       const [existingState, existingSummary] = await Promise.all([
-        readVersionedDocumentForMutation(launchStatePath, 2, teamName),
-        readVersionedDocumentForMutation(launchSummaryPath, 1),
+        readVersionedDocumentForMutation(statePath, 2, teamName),
+        readVersionedDocumentForMutation(summaryPath, 1),
       ]);
       if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
         throw new Error('Refusing to replace malformed launch state');
@@ -599,49 +369,156 @@ export class TeamLaunchStateStore {
       }
       const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
       await atomicWriteAsync(
-        launchStatePath,
-        `${JSON.stringify(mergeLaunchState(existingState, snapshot), null, 2)}\n`
+        statePath,
+        `${JSON.stringify(
+          { ...mergeLaunchState(existingState, snapshot), publicationRunId: options.runId },
+          null,
+          2
+        )}\n`,
+        { beforeCommit }
       );
       await atomicWriteAsync(
-        launchSummaryPath,
+        summaryPath,
         `${JSON.stringify(
           replaceKnownFields(
             existingSummary,
-            launchSummary as unknown as JsonRecord,
+            { ...launchSummary, publicationRunId: options.runId } as unknown as JsonRecord,
             LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
           ),
           null,
           2
-        )}\n`
+        )}\n`,
+        { beforeCommit }
       );
-    } catch (error) {
-      if (await isMissingTeamDirectoryWriteRace(launchStatePath, error)) {
-        return;
+      if (beginsLaunch) {
+        await atomicWriteAsync(
+          getTeamLaunchFreshnessPath(teamName),
+          JSON.stringify({
+            version: 1,
+            teamName,
+            kind: 'launch',
+            runId: options.runId,
+          }),
+          { beforeCommit, durability: 'strict', syncDirectory: true }
+        );
+        if (options.isAuthorized?.() !== false) await removeStoppedMarkerIfPresent(teamName);
       }
+      if (options.isAuthorized?.() === false) {
+        await rollback();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      if (await isMissingTeamDirectoryWriteRace(statePath, error)) return false;
+      await rollback();
+      if (options.isAuthorized?.() === false || !(await directoryIsCurrent())) return false;
       logger.warn(
-        `[${teamName}] Failed to persist launch-state: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `[${teamName}] Failed to persist launch-state: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
   }
 
-  async clear(teamName: string): Promise<void> {
+  /** Admit before runtime/cleanup awaits, revoking pending earlier publications. */
+  beginStop(teamName: string): Promise<TeamLaunchStopAuthority> {
+    const stopIntent = (stopIntentByTeam.get(teamName) ?? 0) + 1;
+    stopIntentByTeam.set(teamName, stopIntent);
+    return enqueuePublication(teamName, async () => ({
+      teamName,
+      stopIntent,
+      freshness: await readTeamLaunchFreshness(teamName),
+    }));
+  }
+
+  /** A cleanup tail retains its admission; it cannot stop a successor publication. */
+  async markStopped(teamName: string, authority?: TeamLaunchStopAuthority): Promise<void> {
+    const stopIntent = authority?.stopIntent ?? (stopIntentByTeam.get(teamName) ?? 0) + 1;
+    if (!authority) stopIntentByTeam.set(teamName, stopIntent);
     await enqueuePublication(teamName, async () => {
-      const results = await Promise.allSettled([
+      const previous = await readTeamLaunchFreshness(teamName);
+      const admitted = authority ?? { teamName, stopIntent, freshness: previous };
+      if (
+        admitted.teamName !== teamName ||
+        admitted.stopIntent !== stopIntentByTeam.get(teamName) ||
+        JSON.stringify(previous) !== JSON.stringify(admitted.freshness)
+      )
+        return;
+      const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
-      const errors = results
-        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-        .map((result) => result.reason);
-      if (errors.length === 1) {
-        throw errors[0];
+      const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+      const stopId = randomUUID();
+      try {
+        await atomicWriteAsync(
+          getTeamLaunchFreshnessPath(teamName),
+          JSON.stringify({
+            version: 1,
+            teamName,
+            kind: 'stop',
+            stopId,
+            stoppedRunId: previous?.kind === 'launch' ? previous.runId : previous?.stoppedRunId,
+          }),
+          { durability: 'strict', syncDirectory: true }
+        );
+        await atomicWriteAsync(
+          markerPath,
+          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString() }, null, 2)}\n`
+        );
+      } catch (error) {
+        if (await isMissingTeamDirectoryWriteRace(markerPath, error)) {
+          return;
+        }
+        throw error;
       }
-      if (errors.length > 1) {
-        throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state publication`);
+      // The marker comes first even when a publication file survives, because
+      // a stop the user asked for must stay final for reconciliation. What
+      // must not stay silent is the survivor: read() answers from the launch
+      // state and not from the marker, so a snapshot that could not be removed
+      // is still served to the UI. The caller reports it as a stop diagnostic.
+      throwPublicationRevocationFailure(teamName, revocations);
+    });
+  }
+
+  async isStopped(teamName: string): Promise<boolean> {
+    return (
+      fs.existsSync(getTeamLaunchStoppedMarkerPath(teamName)) ||
+      (await readTeamLaunchFreshness(teamName))?.kind === 'stop'
+    );
+  }
+
+  /**
+   * Removes the launch publication only. The stop marker survives a clear:
+   * stop flows and stale-write cleanups clear the publication after the team
+   * was marked stopped, and only a real launch (an 'active' write) may lift
+   * the marker again. Recovery clears additionally compare the persisted run and
+   * live freshness inside the publication queue before deleting either file.
+   */
+  async clear(
+    teamName: string,
+    isAuthorized?: () => boolean,
+    persistedRunId?: string
+  ): Promise<void> {
+    await enqueuePublication(teamName, async () => {
+      if (isAuthorized?.() === false) return;
+      if (persistedRunId !== undefined) {
+        const current = await this.read(teamName);
+        const freshness = await readTeamLaunchFreshness(teamName);
+        if (
+          current?.publicationRunId !== persistedRunId ||
+          (freshness !== null &&
+            (freshness.kind !== 'launch' || freshness.runId !== persistedRunId)) ||
+          isAuthorized?.() === false
+        )
+          return;
       }
+      throwPublicationRevocationFailure(
+        teamName,
+        await Promise.allSettled([
+          fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
+          fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
+        ])
+      );
     });
   }
 }

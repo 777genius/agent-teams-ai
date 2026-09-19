@@ -78,7 +78,8 @@ describe('createTeamRuntimeOperationsRendererSlice', () => {
 
   it('preserves each runtime command refresh set', async () => {
     const restart = createHarness();
-    await restart.slice.restartMember('sandbox-team', 'alice');
+    await restart.slice.restartMember('sandbox-team', 'alice', true);
+    expect(restart.transport.restartMember).toHaveBeenCalledWith('sandbox-team', 'alice', true);
     expect(restart.trace).toEqual([
       'transport:restart',
       'refresh:messages',
@@ -152,11 +153,12 @@ describe('createTeamRuntimeOperationsRendererSlice', () => {
     const transport = createTeamRuntimeOperationsTransport();
 
     await transport.stopRegisteredProcess('sandbox-team', 4312);
-    await transport.restartMember('sandbox-team', 'alice');
+    await transport.restartMember('sandbox-team', 'alice', true);
     await transport.retryFailedSecondaryLanes('sandbox-team');
     await transport.skipMemberForLaunch('sandbox-team', 'alice');
 
     expect(apiMocks.killProcess).toHaveBeenCalledWith('sandbox-team', 4312);
+    expect(apiMocks.restartMember).toHaveBeenCalledWith('sandbox-team', 'alice', true);
     expect(apiMocks.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith('sandbox-team');
     expect(apiMocks.unwrapIpc.mock.calls.map(([operation]) => operation)).toEqual([
       'team:killProcess',

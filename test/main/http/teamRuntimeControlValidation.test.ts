@@ -3,17 +3,19 @@ import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
-import type { TeamApplicationRuntimeIngressApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
+  TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 
 function unexpectedTeamApiCall(): never {
   throw new Error('Unexpected team API call in runtime-control validation fixture');
 }
 
-function createHttpServices(teamRuntimeIngressApi: TeamApplicationRuntimeIngressApi): HttpServices {
+function createHttpServices(
+  teamRuntimeControlApi: TeamRuntimeControlCompatibilityApi
+): HttpServices {
   return {
     projectScanner: {} as HttpServices['projectScanner'],
     sessionParser: {} as HttpServices['sessionParser'],
@@ -38,20 +40,25 @@ function createHttpServices(teamRuntimeIngressApi: TeamApplicationRuntimeIngress
         stopTeam: unexpectedTeamApiCall,
         getAliveTeams: unexpectedTeamApiCall,
       },
-      runtimeIngress: teamRuntimeIngressApi,
+      runtimeControl: teamRuntimeControlApi,
+      memberDiagnostics: {
+        getMemberSpawnStatusesReadOnly: unexpectedTeamApiCall,
+        getTeamAgentRuntimeSnapshotReadOnly: unexpectedTeamApiCall,
+      },
     } satisfies TeamHttpHandlerApis,
   };
 }
 
-function createRuntimeIngressApi(overrides: Partial<TeamApplicationRuntimeIngressApi> = {}) {
+function createRuntimeControlApi(overrides: Partial<TeamRuntimeControlCompatibilityApi> = {}) {
   const ack = vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
   const api = {
-    recordRuntimeBootstrapCheckin: ack,
-    deliverRuntimeMessage: ack,
-    recordRuntimeTaskEvent: ack,
-    recordRuntimeHeartbeat: ack,
+    recordOpenCodeRuntimeBootstrapCheckin: ack,
+    deliverOpenCodeRuntimeMessage: ack,
+    recordOpenCodeRuntimeTaskEvent: ack,
+    recordOpenCodeRuntimeHeartbeat: ack,
+    answerOpenCodeRuntimePermission: ack,
     ...overrides,
-  } satisfies TeamApplicationRuntimeIngressApi;
+  } satisfies TeamRuntimeControlCompatibilityApi;
 
   return api;
 }
@@ -73,7 +80,9 @@ describe('HTTP team runtime-control validation', () => {
     const app = Fastify();
     registerTeamRoutes(
       app,
-      createHttpServices(createRuntimeIngressApi({ recordRuntimeHeartbeat }))
+      createHttpServices(
+        createRuntimeControlApi({ recordOpenCodeRuntimeHeartbeat: recordRuntimeHeartbeat })
+      )
     );
     await app.ready();
 
@@ -127,7 +136,12 @@ describe('HTTP team runtime-control validation', () => {
       new Error('Runtime delivery target must be user or object')
     );
     const app = Fastify();
-    registerTeamRoutes(app, createHttpServices(createRuntimeIngressApi({ deliverRuntimeMessage })));
+    registerTeamRoutes(
+      app,
+      createHttpServices(
+        createRuntimeControlApi({ deliverOpenCodeRuntimeMessage: deliverRuntimeMessage })
+      )
+    );
     await app.ready();
 
     try {
@@ -155,7 +169,12 @@ describe('HTTP team runtime-control validation', () => {
       new Error('Runtime delivery envelope missing idempotencyKey')
     );
     const app = Fastify();
-    registerTeamRoutes(app, createHttpServices(createRuntimeIngressApi({ deliverRuntimeMessage })));
+    registerTeamRoutes(
+      app,
+      createHttpServices(
+        createRuntimeControlApi({ deliverOpenCodeRuntimeMessage: deliverRuntimeMessage })
+      )
+    );
     await app.ready();
 
     try {
@@ -181,7 +200,9 @@ describe('HTTP team runtime-control validation', () => {
     const app = Fastify();
     registerTeamRoutes(
       app,
-      createHttpServices(createRuntimeIngressApi({ recordRuntimeHeartbeat }))
+      createHttpServices(
+        createRuntimeControlApi({ recordOpenCodeRuntimeHeartbeat: recordRuntimeHeartbeat })
+      )
     );
     await app.ready();
 

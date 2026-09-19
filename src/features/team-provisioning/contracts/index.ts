@@ -36,6 +36,7 @@ export type {
   TeamProvisioningRuntimeDeliveryApi,
 } from './runtime-delivery';
 export type { TeamProvisioningRuntimeSnapshotApi } from './runtime-snapshot';
+export { fingerprintSavedLaunchSettings } from './savedLaunchSettings';
 export type {
   RespondToToolApprovalCommand,
   TeamProvisioningToolApprovalApi,

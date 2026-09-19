@@ -1,8 +1,103 @@
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
+
+import { deriveMemberLaunchState } from './TeamProvisioningLaunchFailurePolicy';
+
 import type { MemberSpawnStatusEntry, PersistedTeamLaunchSummary } from '@shared/types';
 
 export const TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS = 5_000;
 export const MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS = 10_000;
 export const MEMBER_LAUNCH_GRACE_MS = 120_000;
+
+export { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON };
+
+/**
+ * True when a member that accepted the agent tool never joined and its runtime
+ * is gone by the time the grace window expired.
+ *
+ * The predicate reads liveness, so it is only meaningful once live runtime
+ * metadata has been applied to the entry. Evaluating it against a persisted
+ * `runtimeAlive: true` that a later liveness check disproves is how a member
+ * whose process died mid-launch kept reporting "waiting" forever.
+ *
+ * A member waiting on a permission prompt is excluded: that member has not
+ * failed to start, it is blocked on a human answering, and how long the answer
+ * takes is not the runtime's business. Both markers are checked, because the
+ * two do not always travel together - `deriveMemberLaunchState` reads the
+ * request ids, while a persisted entry can carry the `runtime_pending_permission`
+ * launch state after a liveness pass cleared `runtimeAlive`. Without the
+ * exclusion the grace projection sets `hardFailure`, `deriveMemberLaunchState`
+ * then answers `failed_to_start` (the hard-failure branch runs before the
+ * pending-permission one), and the card claims a teammate crashed while it is
+ * in fact still waiting for the user's approval.
+ */
+export function hasExpiredMemberLaunchGrace(
+  entry: Pick<
+    MemberSpawnStatusEntry,
+    | 'agentToolAccepted'
+    | 'bootstrapConfirmed'
+    | 'bootstrapStalled'
+    | 'firstSpawnAcceptedAt'
+    | 'hardFailure'
+    | 'launchState'
+    | 'pendingPermissionRequestIds'
+    | 'runtimeAlive'
+  >,
+  options: { nowMs: number; graceMs?: number }
+): boolean {
+  if (
+    entry.agentToolAccepted !== true ||
+    entry.bootstrapConfirmed === true ||
+    entry.bootstrapStalled === true ||
+    entry.hardFailure === true ||
+    entry.runtimeAlive === true ||
+    entry.launchState === 'failed_to_start' ||
+    entry.launchState === 'confirmed_alive' ||
+    entry.launchState === 'skipped_for_launch' ||
+    entry.launchState === 'runtime_pending_permission' ||
+    (entry.pendingPermissionRequestIds?.length ?? 0) > 0 ||
+    !entry.firstSpawnAcceptedAt
+  ) {
+    return false;
+  }
+  const acceptedAtMs = Date.parse(entry.firstSpawnAcceptedAt);
+  if (!Number.isFinite(acceptedAtMs)) {
+    return false;
+  }
+  return options.nowMs - acceptedAtMs >= (options.graceMs ?? MEMBER_LAUNCH_GRACE_MS);
+}
+
+/**
+ * Project the expired launch grace onto an already-liveness-resolved status
+ * record, in place.
+ *
+ * A persisted read applies the launch grace rule while `runtimeAlive` still
+ * holds whatever the launch last wrote; the liveness check that disproves it
+ * runs afterwards. Without a second pass a member whose process died mid-launch
+ * reports "waiting" for as long as the team is not running - there is no live
+ * run left to re-evaluate it, so the read is the only place the verdict can be
+ * recomputed. It stays a pure transform: a later read on the same inputs
+ * produces the same answer, and nothing is persisted.
+ */
+export function applyExpiredLaunchGraceToPersistedStatuses(
+  statuses: Record<string, MemberSpawnStatusEntry>,
+  nowMs: number
+): void {
+  for (const [memberName, entry] of Object.entries(statuses)) {
+    if (!entry || !hasExpiredMemberLaunchGrace(entry, { nowMs })) {
+      continue;
+    }
+    const next: MemberSpawnStatusEntry = {
+      ...entry,
+      hardFailure: true,
+      hardFailureReason: entry.hardFailureReason ?? MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+      runtimeAlive: false,
+      livenessSource: undefined,
+    };
+    next.launchState = deriveMemberLaunchState(next);
+    next.status = 'error';
+    statuses[memberName] = next;
+  }
+}
 
 export function shouldWarnOnUnreadableMemberAuditConfig(params: {
   nowMs: number;

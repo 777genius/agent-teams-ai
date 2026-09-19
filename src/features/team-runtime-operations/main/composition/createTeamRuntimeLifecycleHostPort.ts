@@ -17,7 +17,8 @@ export function createTeamRuntimeLifecycleHostPort(
 ): TeamRuntimeLifecycleHostPort {
   return {
     getMemberSpawnStatuses: (teamName) => source.getMemberSpawnStatuses(teamName),
-    restartMember: (teamName, memberName) => source.restartMember(teamName, memberName),
+    restartMember: (teamName, memberName, expectedSecondary) =>
+      source.restartMember(teamName, memberName, expectedSecondary),
     retryFailedRuntimeLanes: (teamName) => source.retryFailedOpenCodeSecondaryLanes(teamName),
     skipMemberForLaunch: (teamName, memberName) => source.skipMemberForLaunch(teamName, memberName),
   };

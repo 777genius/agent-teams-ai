@@ -70,6 +70,7 @@ export interface DeterministicCreateSetupFlowPorts<TMixedSecondaryLane> {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;
@@ -250,6 +251,7 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
       providerId: request.providerId,
       model: request.model,
       effort: request.effort,
+      syncModelsWithLead: request.syncModelsWithLead,
     },
     primaryProviderId: request.providerId,
     primaryEnv: provisioningEnv,

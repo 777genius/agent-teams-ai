@@ -1,12 +1,14 @@
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
   getTeamLaunchStatePath,
+  getTeamLaunchStoppedMarkerPath,
   getTeamLaunchSummaryPath,
   TeamLaunchStateStore,
+  withTeamLaunchStatePublicationLock,
 } from '@main/services/team/TeamLaunchStateStore';
 import * as fs from 'fs';
 import * as path from 'path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
@@ -43,9 +45,21 @@ function snapshot(updatedAt = '2026-01-01T00:00:00.000Z'): PersistedTeamLaunchSn
   });
 }
 
+function writeStopMarkerOnDisk(teamName: string): void {
+  const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+  fs.mkdirSync(path.dirname(markerPath), { recursive: true });
+  fs.writeFileSync(markerPath, '{"version":1}\n');
+}
+
 describe('TeamLaunchStateStore', () => {
   beforeEach(() => {
     mocks.atomicWriteAsync.mockReset();
+    fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
+    fs.mkdirSync(path.join(mocks.teamsBasePath, 'demo'), { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
   });
 
   it('rejects a versioned snapshot whose persisted team identity does not match its path', async () => {
@@ -64,6 +78,59 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('separates a launch state that is absent from one it could not read', async () => {
+    const store = new TeamLaunchStateStore();
+
+    await expect(store.readResult('demo')).resolves.toEqual({ status: 'absent' });
+
+    const statePath = getTeamLaunchStatePath('demo');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{ not json');
+
+    // Both answer `null` through `read`, which is why a caller that has to tell
+    // "nothing recorded" from "nothing readable" cannot use it.
+    await expect(store.read('demo')).resolves.toBeNull();
+    await expect(store.readResult('demo')).resolves.toMatchObject({ status: 'unreadable' });
+  });
+
+  it('reports a launch state the filesystem refused as unreadable, not absent', async () => {
+    const readFile = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockRejectedValue(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+
+    try {
+      const statePath = getTeamLaunchStatePath('demo');
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      fs.writeFileSync(statePath, JSON.stringify(snapshot()));
+
+      await expect(new TeamLaunchStateStore().readResult('demo')).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'permission denied',
+      });
+    } finally {
+      readFile.mockRestore();
+    }
+  });
+
+  it('holds a caller-supplied publication until an in-flight stop has finished', async () => {
+    // markStopped removes the publication files and writes its marker after
+    // them. A caller that publishes those files from outside the store - the
+    // backup restore - must not run between the two, so it shares the queue
+    // rather than checking the marker on its own.
+    const order: string[] = [];
+    mocks.atomicWriteAsync.mockImplementation(async (target: string) => {
+      order.push(`stop-marker:${path.basename(target)}`);
+    });
+
+    const stopping = new TeamLaunchStateStore().markStopped('demo');
+    const restoring = withTeamLaunchStatePublicationLock('demo', async () => {
+      order.push('restore-commit');
+    });
+    await Promise.all([stopping, restoring]);
+
+    expect(order).toEqual(['stop-marker:launch-freshness.json', 'stop-marker:launch-stopped.json', 'restore-commit']);
+  });
+
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
     const writeError = Object.assign(new Error('disk full'), { code: 'ENOSPC' });
     mocks.atomicWriteAsync.mockResolvedValueOnce(undefined).mockRejectedValueOnce(writeError);
@@ -77,12 +144,14 @@ describe('TeamLaunchStateStore', () => {
     expect(mocks.atomicWriteAsync).toHaveBeenNthCalledWith(
       1,
       getTeamLaunchStatePath('demo'),
-      expect.any(String)
+      expect.any(String),
+      expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
     expect(mocks.atomicWriteAsync).toHaveBeenNthCalledWith(
       2,
       getTeamLaunchSummaryPath('demo'),
-      expect.any(String)
+      expect.any(String),
+      expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
   });
 
@@ -164,7 +233,7 @@ describe('TeamLaunchStateStore', () => {
 
     await expect(
       new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(true);
 
     expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(4);
     const publications = mocks.atomicWriteAsync.mock.calls.map(([targetPath, payload]) => ({
@@ -222,8 +291,8 @@ describe('TeamLaunchStateStore', () => {
 
     await expect(
       new TeamLaunchStateStore().write('removed-team', snapshot())
-    ).resolves.toBeUndefined();
-    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
+    ).resolves.toBe(false);
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
   it('rejects a missing temporary file when the team directory still exists', async () => {
@@ -289,6 +358,158 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('drops both publications and records the stop marker when a team is marked stopped', async () => {
+    const remove = vi.spyOn(fs.promises, 'rm').mockResolvedValue(undefined);
+
+    try {
+      await new TeamLaunchStateStore().markStopped('demo');
+
+      expect(remove).toHaveBeenNthCalledWith(1, getTeamLaunchStatePath('demo'), { force: true });
+      expect(remove).toHaveBeenNthCalledWith(2, getTeamLaunchSummaryPath('demo'), { force: true });
+      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+      const [markerPath, markerPayload] = mocks.atomicWriteAsync.mock.calls[1] as [string, string];
+      expect(markerPath).toBe(getTeamLaunchStoppedMarkerPath('demo'));
+      expect(JSON.parse(markerPayload)).toMatchObject({ version: 1, teamName: 'demo' });
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('keeps the stop marker as a compatible no-op when the team directory disappeared', async () => {
+    const markerPath = getTeamLaunchStoppedMarkerPath('removed-team');
+    const missingDirectoryError = Object.assign(new Error('directory removed'), {
+      code: 'ENOENT',
+      path: path.join(path.dirname(markerPath), '.tmp.removed'),
+      dest: markerPath,
+    });
+    mocks.atomicWriteAsync.mockRejectedValueOnce(missingDirectoryError);
+
+    await expect(new TeamLaunchStateStore().markStopped('removed-team')).resolves.toBeUndefined();
+  });
+
+  it('records the stop marker and still reports a publication that survived the stop', async () => {
+    // read() answers from the launch state and never from the marker, so a
+    // snapshot that could not be revoked is still served. The stop stays final
+    // - the marker is written either way - but the survivor is reported.
+    const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
+    const remove = vi
+      .spyOn(fs.promises, 'rm')
+      .mockRejectedValueOnce(stateRemovalError)
+      .mockResolvedValueOnce(undefined);
+
+    try {
+      await expect(new TeamLaunchStateStore().markStopped('demo')).rejects.toBe(stateRemovalError);
+
+      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+      expect(mocks.atomicWriteAsync.mock.calls[1]?.[0]).toBe(
+        getTeamLaunchStoppedMarkerPath('demo')
+      );
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('reports every publication that survived the stop', async () => {
+    const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
+    const summaryRemovalError = Object.assign(new Error('summary is read-only'), { code: 'EROFS' });
+    const remove = vi
+      .spyOn(fs.promises, 'rm')
+      .mockRejectedValueOnce(stateRemovalError)
+      .mockRejectedValueOnce(summaryRemovalError);
+
+    try {
+      await expect(new TeamLaunchStateStore().markStopped('demo')).rejects.toMatchObject({
+        errors: [stateRemovalError, summaryRemovalError],
+        message: '[demo] Failed to clear launch-state publication',
+      });
+      expect(mocks.atomicWriteAsync.mock.calls[1]?.[0]).toBe(
+        getTeamLaunchStoppedMarkerPath('demo')
+      );
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('ignores a late reconciled launch-state write while the team is stopped', async () => {
+    writeStopMarkerOnDisk('demo');
+    const stale = { ...snapshot(), launchPhase: 'reconciled' as const };
+
+    await expect(new TeamLaunchStateStore().write('demo', stale)).resolves.toBe(false);
+
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
+  });
+
+  it('lifts the stop marker when a real launch publishes an active snapshot', async () => {
+    writeStopMarkerOnDisk('demo');
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+
+    await new TeamLaunchStateStore().beginLaunch('demo', 'new-run', ['Builder'], () => true);
+
+    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(3);
+    expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(false);
+  });
+
+  it('ignores a republished active snapshot while the team is stopped', async () => {
+    // The rollback of a stale write, and a recovery re-deriving the run that was
+    // just stopped, both republish an active snapshot they read earlier. Neither
+    // is a launch, so the stop stays final over them.
+    writeStopMarkerOnDisk('demo');
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+
+    await new TeamLaunchStateStore().write('demo', snapshot(), {
+      republishesExistingLaunch: true,
+    });
+
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
+  });
+
+  it('publishes a republished active snapshot for a team that was never stopped', async () => {
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+
+    await new TeamLaunchStateStore().write('demo', snapshot(), {
+      republishesExistingLaunch: true,
+    });
+
+    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the stop marker across a launch-state clear', async () => {
+    writeStopMarkerOnDisk('demo');
+
+    await new TeamLaunchStateStore().clear('demo');
+
+    expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
+  });
+
+  it('still revokes both publications for a team that was never marked stopped', async () => {
+    const remove = vi.spyOn(fs.promises, 'rm').mockResolvedValue(undefined);
+
+    try {
+      await new TeamLaunchStateStore().clear('demo');
+
+      expect(remove.mock.calls.map(([targetPath]) => targetPath)).toEqual([
+        getTeamLaunchStatePath('demo'),
+        getTeamLaunchSummaryPath('demo'),
+      ]);
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('publishes a reconciled snapshot for a team that was never marked stopped', async () => {
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+    const stale = { ...snapshot(), launchPhase: 'reconciled' as const };
+
+    await new TeamLaunchStateStore().write('demo', stale);
+
+    expect(mocks.atomicWriteAsync.mock.calls.map(([targetPath]) => targetPath)).toEqual([
+      getTeamLaunchStatePath('demo'),
+      getTeamLaunchSummaryPath('demo'),
+    ]);
+  });
+
   it('reports every I/O failure when neither publication file can be revoked', async () => {
     const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
     const summaryRemovalError = Object.assign(new Error('summary is read-only'), {
@@ -315,6 +536,7 @@ describe('TeamLaunchStateStore', () => {
 
   it('preserves supported unknown fields while replacing known launch entities', async () => {
     const statePath = getTeamLaunchStatePath('demo');
+    const summaryPath = getTeamLaunchSummaryPath('demo');
     const existingState = {
       ...snapshot(),
       futureRoot: { retained: true },
@@ -354,9 +576,11 @@ describe('TeamLaunchStateStore', () => {
     });
     const readSpy = vi
       .spyOn(fs.promises, 'readFile')
-      .mockImplementation(async (filePath) =>
-        JSON.stringify(filePath === statePath ? existingState : existingSummary)
-      );
+      .mockImplementation(async (filePath) => {
+        if (filePath === statePath) return JSON.stringify(existingState);
+        if (filePath === summaryPath) return JSON.stringify(existingSummary);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
 
     try {
       const next = snapshot('2026-01-01T00:00:01.000Z');
@@ -388,6 +612,8 @@ describe('TeamLaunchStateStore', () => {
 
   it('migrates a legacy partial launch marker before publishing a successor snapshot', async () => {
     const statePath = getTeamLaunchStatePath('demo');
+    const teamDirectory = path.dirname(statePath);
+    const teamDirectoryStat = fs.statSync(teamDirectory);
     const legacy = JSON.stringify({
       state: 'partial_launch_failure',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -399,12 +625,16 @@ describe('TeamLaunchStateStore', () => {
       if (filePath === statePath) {
         return { isFile: () => true, size: Buffer.byteLength(legacy) } as fs.Stats;
       }
+      if (filePath === teamDirectory) return teamDirectoryStat;
       throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
     });
-    const readSpy = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(legacy);
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockImplementation(async (filePath) => {
+      if (filePath === statePath) return legacy;
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
 
     try {
-      await expect(new TeamLaunchStateStore().write('demo', snapshot())).resolves.toBeUndefined();
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).resolves.toBe(true);
       const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
       expect(persisted).toMatchObject({ version: 2, teamName: 'demo' });
       expect(persisted.members).toHaveProperty('Builder');

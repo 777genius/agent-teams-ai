@@ -1,10 +1,14 @@
-import type {
-  MemberWorkSyncAuditEvent,
-  MemberWorkSyncAuditJournalPort,
-  MemberWorkSyncLoggerPort,
-  MemberWorkSyncQueueDiagnostics,
-  MemberWorkSyncTriggerReason,
+import {
+  type MemberWorkSyncAuditEvent,
+  type MemberWorkSyncAuditJournalPort,
+  type MemberWorkSyncLoggerPort,
+  type MemberWorkSyncQueueDiagnostics,
+  MemberWorkSyncTeamQuiescedError,
+  type MemberWorkSyncTriggerReason,
 } from '../../core/application';
+
+import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
+
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
 
 interface QueueItem {
@@ -18,6 +22,7 @@ interface QueueItem {
   triggerReasonCounts: Map<MemberWorkSyncTriggerReason, number>;
   retryCount: number;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
+  settlement?: MemberWorkSyncReconcileContext['settlement'];
 }
 
 interface RunningItem {
@@ -27,6 +32,7 @@ interface RunningItem {
   rerunRequested: boolean;
   triggerReasons: Set<MemberWorkSyncTriggerReason>;
   recovery?: MemberWorkSyncReconcileContext['recovery'];
+  settlement?: MemberWorkSyncReconcileContext['settlement'];
 }
 
 interface TriggerTimingPolicy {
@@ -83,6 +89,8 @@ export class MemberWorkSyncEventQueue {
   private readonly activeKeys = new Set<string>();
   private readonly inFlight = new Set<Promise<void>>();
   private readonly inFlightByTeam = new Map<string, Set<Promise<void>>>();
+  private readonly settling = new Set<Promise<void>>();
+  private readonly settlingByTeam = new Map<string, Set<Promise<void>>>();
   private readonly auditInFlightByTeam = new Map<string, Set<Promise<void>>>();
   private readonly quiescedTeams = new Set<string>();
   private readonly quietWindowMs: number;
@@ -141,6 +149,7 @@ export class MemberWorkSyncEventQueue {
     triggerReason: MemberWorkSyncTriggerReason;
     runAfterMs?: number;
     recovery?: MemberWorkSyncReconcileContext['recovery'];
+    settlement?: MemberWorkSyncReconcileContext['settlement'];
   }): boolean {
     if (this.stopped || this.quiescedTeams.has(input.teamName.trim())) {
       return false;
@@ -164,6 +173,10 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         running.recovery = input.recovery;
       }
+      running.settlement = preferLaterMemberWorkSyncSettlement(
+        running.settlement,
+        input.settlement
+      );
       this.counters.coalesced += 1;
       this.appendAudit({
         teamName,
@@ -181,6 +194,10 @@ export class MemberWorkSyncEventQueue {
       if (input.recovery) {
         existing.recovery = input.recovery;
       }
+      existing.settlement = preferLaterMemberWorkSyncSettlement(
+        existing.settlement,
+        input.settlement
+      );
       existing.lastQueuedAt = now;
       existing.maxRunAt = Math.max(
         existing.maxRunAt,
@@ -219,6 +236,7 @@ export class MemberWorkSyncEventQueue {
       triggerReasonCounts: new Map([[input.triggerReason, 1]]),
       retryCount: 0,
       ...(input.recovery ? { recovery: input.recovery } : {}),
+      ...(input.settlement ? { settlement: input.settlement } : {}),
     });
     this.counters.enqueued += 1;
     this.appendAudit({
@@ -230,6 +248,39 @@ export class MemberWorkSyncEventQueue {
     });
     this.schedule();
     return true;
+  }
+
+  enqueueTurnSettled(input: {
+    teamName: string;
+    memberName: string;
+    event: {
+      sourceId: string;
+      recordedAt: string;
+      turnId?: string;
+      threadId?: string;
+      runtimeInstanceId?: string;
+      completedGeneration?: number;
+      outcome?: string;
+    };
+  }): boolean {
+    return this.enqueue({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      triggerReason: 'turn_settled',
+      settlement: {
+        sourceId: input.event.sourceId,
+        recordedAt: input.event.recordedAt,
+        ...(input.event.turnId ? { turnId: input.event.turnId } : {}),
+        ...(input.event.threadId ? { threadId: input.event.threadId } : {}),
+        ...(input.event.runtimeInstanceId
+          ? { runtimeInstanceId: input.event.runtimeInstanceId }
+          : {}),
+        ...(typeof input.event.completedGeneration === 'number'
+          ? { completedGeneration: input.event.completedGeneration }
+          : {}),
+        ...(input.event.outcome ? { outcome: input.event.outcome } : {}),
+      },
+    });
   }
 
   dropTeam(teamName: string): void {
@@ -257,6 +308,7 @@ export class MemberWorkSyncEventQueue {
     while (true) {
       const pending = [
         ...(this.inFlightByTeam.get(normalizedTeamName) ?? []),
+        ...(this.settlingByTeam.get(normalizedTeamName) ?? []),
         ...(this.auditInFlightByTeam.get(normalizedTeamName) ?? []),
       ];
       if (pending.length === 0) break;
@@ -326,7 +378,9 @@ export class MemberWorkSyncEventQueue {
     this.items.clear();
     this.running.clear();
     this.activeKeys.clear();
-    await Promise.allSettled([...this.inFlight]);
+    while (this.inFlight.size > 0 || this.settling.size > 0) {
+      await Promise.allSettled([...this.inFlight, ...this.settling]);
+    }
   }
 
   private schedule(): void {
@@ -396,6 +450,7 @@ export class MemberWorkSyncEventQueue {
       rerunRequested: false,
       triggerReasons: new Set(item.triggerReasons),
       ...(item.recovery ? { recovery: item.recovery } : {}),
+      ...(item.settlement ? { settlement: item.settlement } : {}),
     };
     this.running.set(key, running);
     this.activeKeys.add(key);
@@ -413,7 +468,7 @@ export class MemberWorkSyncEventQueue {
 
     const finishTrackedItem = (): void => {
       try {
-        this.finishItem(key, item, running, failed);
+        this.finishItem(key, item, running, failed, failure);
       } finally {
         resolveTeamCompletion();
       }
@@ -447,7 +502,13 @@ export class MemberWorkSyncEventQueue {
     this.inFlight.add(promise);
   }
 
-  private finishItem(key: string, item: QueueItem, running: RunningItem, failed: boolean): void {
+  private finishItem(
+    key: string,
+    item: QueueItem,
+    running: RunningItem,
+    failed: boolean,
+    failure: unknown
+  ): void {
     if (this.running.get(key) !== running) {
       return;
     }
@@ -457,13 +518,19 @@ export class MemberWorkSyncEventQueue {
     if (running.rerunRequested && canAdmitFollowUp) {
       this.enqueueFollowUp(item, running);
     } else if (failed && canAdmitFollowUp) {
-      this.enqueueRetryAfterFailure(key, item, running);
+      this.enqueueRetryAfterFailure(key, item, running, failure);
     }
     this.pump();
   }
 
-  private enqueueRetryAfterFailure(key: string, item: QueueItem, running: RunningItem): void {
-    if (item.retryCount >= this.maxRetryAttempts) {
+  private enqueueRetryAfterFailure(
+    key: string,
+    item: QueueItem,
+    running: RunningItem,
+    failure: unknown
+  ): void {
+    const quiesced = failure instanceof MemberWorkSyncTeamQuiescedError;
+    if (!quiesced && item.retryCount >= this.maxRetryAttempts) {
       this.counters.dropped += 1;
       this.appendAudit({
         teamName: item.teamName,
@@ -481,8 +548,9 @@ export class MemberWorkSyncEventQueue {
     }
 
     const now = this.now();
-    const retryCount = item.retryCount + 1;
+    const retryCount = quiesced ? item.retryCount : item.retryCount + 1;
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     this.items.set(key, {
       ...item,
       lastQueuedAt: now,
@@ -492,13 +560,14 @@ export class MemberWorkSyncEventQueue {
       triggerReasonCounts: new Map(item.triggerReasonCounts),
       retryCount,
       ...(recovery ? { recovery } : {}),
+      ...(settlement ? { settlement } : {}),
     });
     this.appendAudit({
       teamName: item.teamName,
       memberName: item.memberName,
       event: 'queue_retry_scheduled',
       source: 'event_queue',
-      reason: 'reconcile_failed',
+      reason: quiesced ? 'team_quiesced' : 'reconcile_failed',
       triggerReasons: [...running.triggerReasons].sort(),
       metadata: {
         retryCount,
@@ -512,6 +581,7 @@ export class MemberWorkSyncEventQueue {
   private enqueueFollowUp(item: QueueItem, running: RunningItem): void {
     const reasons = [...running.triggerReasons].sort();
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     const primaryReason =
       reasons.find((reason) => reason === 'manual_refresh') ??
       reasons.find((reason) => reason === 'turn_settled' || reason === 'tool_finished') ??
@@ -523,6 +593,7 @@ export class MemberWorkSyncEventQueue {
       triggerReason: primaryReason,
       runAfterMs: Math.min(this.resolveTimingPolicy(primaryReason).runAfterMs, 5_000),
       ...(recovery ? { recovery } : {}),
+      ...(settlement ? { settlement } : {}),
     });
     const queued = this.items.get(keyOf(item.teamName, item.memberName));
     if (!queued) {
@@ -550,6 +621,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     const recovery = running.recovery ?? item.recovery;
+    const settlement = preferLaterMemberWorkSyncSettlement(item.settlement, running.settlement);
     await this.runReconcileWithTimeout(
       { teamName: item.teamName, memberName: item.memberName },
       {
@@ -557,6 +629,7 @@ export class MemberWorkSyncEventQueue {
         triggerReasons: [...running.triggerReasons].sort(),
         isCancelled: () => this.quiescedTeams.has(item.teamName),
         ...(recovery ? { recovery } : {}),
+        ...(settlement ? { settlement } : {}),
       }
     );
     this.counters.reconciled += 1;
@@ -583,6 +656,12 @@ export class MemberWorkSyncEventQueue {
       () => undefined,
       () => undefined
     );
+    this.settling.add(settlePromise);
+    this.addTrackedPromise(this.settlingByTeam, input.teamName, settlePromise);
+    void settlePromise.finally(() => {
+      this.settling.delete(settlePromise);
+      this.removeTrackedPromise(this.settlingByTeam, input.teamName, settlePromise);
+    });
     try {
       await Promise.race([
         reconcilePromise,

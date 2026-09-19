@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+
 const flowMocks = vi.hoisted(() => ({
   materializeDeterministicLaunchBootstrapFiles: vi.fn(),
   removeDeterministicBootstrapSpecFile: vi.fn<() => Promise<void>>(),
@@ -237,6 +239,7 @@ function runPreSpawnFailureFlow(
       launchIdentity,
       effectiveMemberSpecs: syntheticRequest.members,
       allEffectiveMemberSpecs: syntheticRequest.members,
+      configuredMemberSpecs: syntheticRequest.members,
       teammateRuntimeDisallowedTools: 'TeamDelete',
     },
     ports
@@ -314,6 +317,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         syntheticRequest: normalizedSyntheticRequest,
         launchIdentity,
         allEffectiveMemberSpecs: normalizedSyntheticRequest.members,
+        configuredMemberSpecs: normalizedSyntheticRequest.members,
       },
       {
         teamMetaStore: { writeMeta },
@@ -363,6 +367,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         request,
         syntheticRequest,
         launchIdentity,
+        configuredMemberSpecs: [{ name: 'Builder', role: 'Build' }],
         allEffectiveMemberSpecs: [
           { name: ' team-lead ', role: 'Lead' },
           { name: 'USER', role: 'User' },
@@ -463,6 +468,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
           syntheticRequest,
           launchIdentity,
           allEffectiveMemberSpecs: syntheticRequest.members,
+          configuredMemberSpecs: syntheticRequest.members,
           run,
           runId: 'run-1',
           provisioningEnv: { env: {} },
@@ -735,8 +741,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     triggerTimeout();
     await Promise.resolve();
     await Promise.resolve();
-    expect(run.processKilled).toBe(true);
-    expect(run.finalizingByTimeout).toBe(true);
+    expect(run.processKilled).toBe(false);
+    expect(run.finalizingByTimeout).toBe(false);
   });
 
   it('catches a rejected launch close barrier and leaves the run tracked', async () => {
@@ -772,7 +778,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(cleanupRun).not.toHaveBeenCalled();
   });
 
-  it('does not kill or fail a timed-out launch when timeout recovery succeeds', async () => {
+  it('terminates a timed-out launch before reporting the already-provisioned team', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
@@ -806,14 +812,15 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     });
 
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(killTeamProcessAndWait).toHaveBeenCalledExactlyOnceWith(child);
     expect(updateProgress).not.toHaveBeenCalled();
     expect(cleanupRun).not.toHaveBeenCalled();
-    expect(run.processKilled).toBe(false);
+    expect(run.processKilled).toBe(true);
+    expect(run.processClosed).toBe(true);
     expect(run.finalizingByTimeout).toBe(true);
   });
 
-  it('tries timeout recovery before killing and cleaning up an unrecovered launch', async () => {
+  it('terminates before timeout recovery and cleanup of an unrecovered launch', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
@@ -857,7 +864,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect(cleanupRun).toHaveBeenCalledWith(run);
     });
 
-    expect(order).toEqual(['recover', 'kill']);
+    expect(order).toEqual(['kill', 'recover']);
     expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
     expect(updateProgress).toHaveBeenCalledWith(
@@ -1011,7 +1018,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
-  it('does not terminate or clean a replacement launch child after timeout probing', async () => {
+  it('does not clean a replacement launch child during post-termination reporting', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const replacementChild = new EventEmitter() as ChildProcess;
@@ -1053,15 +1060,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     run.child = replacementChild;
+    run.processKilled = false;
+    run.processClosed = false;
+    run.finalizingByTimeout = false;
     finishProbe(false);
     await vi.waitFor(() => {
       expect(run.finalizingByTimeout).toBe(false);
     });
 
     expect(run.processKilled).toBe(false);
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
-    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
-    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(killTeamProcessAndWait).toHaveBeenCalledExactlyOnceWith(child);
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
     expect(cleanupRun).not.toHaveBeenCalled();
   });
 

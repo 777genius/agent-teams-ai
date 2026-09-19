@@ -34,7 +34,11 @@ export interface MemberWorkSyncFeatureFacade {
   scheduleProofMissingRecovery(
     request: MemberWorkSyncProofMissingRecoveryScheduleRequest
   ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult>;
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
   noteTeamChange(event: TeamChangeEvent): void;
@@ -49,6 +53,35 @@ export interface MemberWorkSyncFeatureFacade {
   }): Promise<Record<string, string> | null>;
   drainRuntimeTurnSettledEvents(): Promise<RuntimeTurnSettledDrainSummary>;
   getQueueDiagnostics(): MemberWorkSyncQueueDiagnostics;
+  getSchedulerHealth(): {
+    pendingDiscovery: number;
+    retainedDispatches: number;
+    lastDiscoveryAt: number | null;
+    discoveryCapacityExhausted: boolean;
+  };
+  stopAutoResume(input: {
+    teamName: string;
+    memberName: string;
+    reason?: string;
+    expectedIncarnation?: string;
+    expectedRuntimeInstanceId?: string;
+    localStopId?: string;
+  }): Promise<MemberWorkSyncStatus>;
+  resumeAutoResume(input: { teamName: string; memberName: string }): Promise<MemberWorkSyncStatus>;
+  continueManually(input: {
+    teamName: string;
+    memberName: string;
+    idempotencyKey?: string;
+  }): Promise<MemberWorkSyncStatus>;
+  recordStallObservation(input: {
+    teamName: string;
+    memberName: string;
+    taskId: string;
+    reason: string;
+    observedAt?: string;
+  }): Promise<void>;
+  /** Starts background schedulers once; has no effect after disposal. */
+  startBackground(): void;
   dispose(): Promise<void>;
 }
 

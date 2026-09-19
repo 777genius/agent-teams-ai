@@ -112,6 +112,26 @@ describe('launch pending message helpers', () => {
     expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
   });
 
+  it('uses persisted permission-pending state for snapshot approval copy', () => {
+    const message = buildPendingBootstrapStatusMessage({
+      prefix: 'Finishing launch',
+      run: { expectedMembers: [], memberSpawnStatuses: new Map() },
+      launchSummary: {
+        confirmedCount: 0,
+        pendingCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      snapshot: snapshot({
+        expectedMembers: ['api'],
+        members: {
+          api: persistedMember('api', { launchState: 'permission_pending' as never }),
+        },
+      }),
+    });
+
+    expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+  });
+
   it('detects pending launch members from live or persisted expected member counts', () => {
     expect(
       hasPendingLaunchMembers({
@@ -158,6 +178,7 @@ describe('launch pending message helpers', () => {
           api: persistedMember('api', {
             launchState: 'runtime_pending_bootstrap',
             runtimeAlive: true,
+            livenessKind: 'runtime_process',
           }),
         },
       }),
@@ -165,6 +186,36 @@ describe('launch pending message helpers', () => {
 
     expect(message).toBe('Finishing launch — teammates online');
     expect(message).not.toContain('/0');
+  });
+
+  it('recomputes the contact count from the durable roster instead of a stale snapshot summary', () => {
+    const persisted = snapshot({
+      expectedMembers: ['api', 'web'],
+      members: {
+        api: persistedMember('api', { launchState: 'confirmed_alive', bootstrapConfirmed: true }),
+        web: persistedMember('web', { launchState: 'confirmed_alive', bootstrapConfirmed: true }),
+      },
+    });
+    const message = buildPendingBootstrapStatusMessage({
+      prefix: 'Finishing launch',
+      run: { expectedMembers: ['api', 'web'], memberSpawnStatuses: new Map() },
+      launchSummary: {
+        confirmedCount: 1,
+        pendingCount: 1,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      snapshot: persisted,
+    });
+
+    expect(message).toBe('Finishing launch — 2/2 teammates made contact');
+    expect(
+      hasPendingLaunchMembers({
+        run: { expectedMembers: ['api', 'web'], memberSpawnStatuses: new Map() },
+        launchSummary: { pendingCount: 1 },
+        snapshot: persisted,
+      })
+    ).toBe(false);
   });
 
   it('reports pending secondary runtime lane members', () => {

@@ -15,7 +15,7 @@ type ProvisioningMemberSpec = TeamCreateRequest['members'][number];
 
 type PrimaryOwnedRuntimeDefaults = Pick<
   TeamCreateRequest,
-  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
+  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode' | 'syncModelsWithLead'
 >;
 
 export function buildConfiguredProvisioningMember(
@@ -47,12 +47,12 @@ export function buildPrimaryOwnedMemberSpecForRuntime(input: {
   const configuredSpec = buildConfiguredProvisioningMember(input.configuredMember);
   const defaultProviderId = resolveTeamProviderId(input.request.providerId);
   const memberProviderId = normalizeTeamMemberProviderId(configuredSpec.providerId);
-  const inheritsDefaultRuntime =
-    memberProviderId == null || memberProviderId === defaultProviderId;
+  const inheritsDefaultRuntime = memberProviderId == null || memberProviderId === defaultProviderId;
   const effectiveSpec = buildEffectiveTeamMemberSpec(configuredSpec, {
     providerId: defaultProviderId,
     model: input.request.model,
     effort: input.request.effort,
+    syncModelsWithLead: input.request.syncModelsWithLead,
   });
   const effectiveProviderId = resolveTeamProviderId(effectiveSpec.providerId);
   const providerBackendId =
@@ -69,4 +69,16 @@ export function buildPrimaryOwnedMemberSpecForRuntime(input: {
     ...(fastMode ? { fastMode } : {}),
     ...(input.configuredMember.agentType ? { agentType: input.configuredMember.agentType } : {}),
   };
+}
+
+/** Persist caller intent; runtime preparation contributes only resolved workspaces. */
+export function buildConfiguredMembersForPersistence(
+  configuredMembers: TeamCreateRequest['members'],
+  runtimeMembers: TeamCreateRequest['members']
+): TeamCreateRequest['members'] {
+  const runtimeByName = new Map(runtimeMembers.map(member => [member.name.trim().toLowerCase(), member]));
+  return configuredMembers.map(member => ({
+    ...member,
+    cwd: runtimeByName.get(member.name.trim().toLowerCase())?.cwd ?? member.cwd,
+  }));
 }

@@ -54,19 +54,25 @@
       "choosingAllProjects": "اختر نموذجًا للمشاريع التي ليس لديها تجاوز.",
       "choosingProject": "اختر نموذجًا لـ {{project}} فقط.",
       "cancelChoosing": "إلغاء",
+      "select": "اختيار",
+      "selected": "تم الاختيار",
       "testAndUse": "اختبار واستخدام",
       "testAndUseAllProjects": "اختبار واستخدام لجميع المشاريع",
       "testAndUseProject": "اختبار واستخدام لهذا المشروع"
     },
     "diagnostics": {
+      "previousPage": "الصفحة السابقة",
+      "nextPage": "الصفحة التالية",
       "copied": "أجهزة التشخيص",
       "copiedShort": "Copied",
       "copy": "تشخيص النسخ",
+      "copyAll": "نسخ الكل",
       "hints": "Hints",
       "likelyCause": "السبب الغالب:",
       "windowsSymlinkAdminHint": "Windows: شغّل Agent Teams AI كمسؤول"
     },
     "models": {
+      "testingElapsed": "بانتظار نتيجة الاختبار... {{seconds}} ث",
       "alreadyDefault": "هذا هو التخلف المختار من قبل",
       "empty": "لا توجد نماذج",
       "emptyFree": "لا توجد نماذج مجانية",

@@ -50,6 +50,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
     fetchCliProviderStatus,
     fetchCliStatus,
     installCodexRuntime,
+    invalidateCliProviderModelCatalog,
     invalidateCliStatus,
     multimodelEnabled,
     updateConfig,
@@ -65,6 +66,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       fetchCliProviderStatus: s.fetchCliProviderStatus,
       fetchCliStatus: s.fetchCliStatus,
       installCodexRuntime: s.installCodexRuntime,
+      invalidateCliProviderModelCatalog: s.invalidateCliProviderModelCatalog,
       invalidateCliStatus: s.invalidateCliStatus,
       multimodelEnabled: s.appConfig?.general?.multimodelEnabled ?? true,
       updateConfig: s.updateConfig,
@@ -99,6 +101,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
         },
       });
 
+      invalidateCliProviderModelCatalog();
       try {
         const refreshed = await fetchCliProviderStatus(providerId, {
           silent: false,
@@ -115,6 +118,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
     [
       appConfig?.runtime?.providerBackends,
       fetchCliProviderStatus,
+      invalidateCliProviderModelCatalog,
       onProviderRuntimeChanged,
       updateConfig,
     ]
@@ -125,6 +129,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
+      invalidateCliProviderModelCatalog();
       const refreshed = await fetchCliProviderStatus(providerId, {
         silent: false,
         checkReason,
@@ -132,7 +137,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       onProviderRuntimeChanged?.(providerId);
       return refreshed;
     },
-    [fetchCliProviderStatus, onProviderRuntimeChanged]
+    [fetchCliProviderStatus, invalidateCliProviderModelCatalog, onProviderRuntimeChanged]
   );
 
   const refreshRuntimeAfterTerminal = useCallback(() => {

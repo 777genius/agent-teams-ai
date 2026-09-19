@@ -96,7 +96,9 @@ describe('probeOpenCodeLocalModelCoordination', () => {
 
     const result = await probeOpenCodeLocalModelCoordination(
       {
-        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1'),
+        // Registered by the connector, which configures the models it registers
+        // to run with a reasoning effort of none.
+        provider: localProvider('ollama', 'http://127.0.0.1:11434/v1', { 'qwen3:8b': 'none' }),
         modelId: 'qwen3:8b',
       },
       { fetchImpl, createNonce: () => 'fixed-nonce' }
@@ -613,14 +615,144 @@ describe('probeOpenCodeLocalModelCoordination', () => {
       message: expect.stringContaining('HTTP 400: tools are not supported by this model'),
     });
   });
+
+  describe('configured reasoning effort', () => {
+    const streamingProvider = (
+      configuredModelReasoningEffort?: Readonly<Record<string, string>>
+    ): RuntimeLocalProviderListEntryDto =>
+      localProvider('ollama', 'http://127.0.0.1:11434/v1', configuredModelReasoningEffort);
+
+    it('mirrors a configured effort and leaves room for the reasoning tokens', async () => {
+      for (const body of await probeRequestBodies(
+        streamingProvider({ 'model-a': 'high' }),
+        'model-a'
+      )) {
+        expect(body.reasoning_effort).toBe('high');
+        expect(body.max_tokens).toBe(4_096);
+      }
+    });
+
+    it('turns thinking off, and keeps the tight budget, only for an effort of none', async () => {
+      for (const body of await probeRequestBodies(
+        streamingProvider({ 'model-a': 'none' }),
+        'model-a'
+      )) {
+        expect(body.reasoning_effort).toBe('none');
+        expect(body.max_tokens).toBe(1_024);
+      }
+    });
+
+    it('sends no effort for a model that has none configured', async () => {
+      // OpenCode sends no reasoning_effort for such a model either, so the
+      // server default is the mode the lane will run in. Probing it with
+      // thinking forced off measured a mode the runtime never uses.
+      for (const body of await probeRequestBodies(streamingProvider(), 'model-a')) {
+        expect(body).not.toHaveProperty('reasoning_effort');
+        expect(body.max_tokens).toBe(4_096);
+        expect(body.stream).toBe(true);
+      }
+    });
+
+    it('treats a blank configured effort as no effort rather than as none', async () => {
+      for (const body of await probeRequestBodies(
+        streamingProvider({ 'model-a': '   ' }),
+        'model-a'
+      )) {
+        expect(body).not.toHaveProperty('reasoning_effort');
+        expect(body.max_tokens).toBe(4_096);
+      }
+    });
+
+    it('reads the effort of the probed model, not of a sibling in the same provider', async () => {
+      for (const body of await probeRequestBodies(
+        streamingProvider({ 'model-b': 'none' }),
+        'model-a'
+      )) {
+        expect(body).not.toHaveProperty('reasoning_effort');
+        expect(body.max_tokens).toBe(4_096);
+      }
+    });
+
+    it('sends no effort to a non-streaming provider, even with one configured', async () => {
+      const provider = localProvider('lm-studio', 'http://127.0.0.1:1234/v1', {
+        'model-a': 'high',
+      });
+
+      for (const body of await probeRequestBodies(provider, 'model-a')) {
+        expect(body).not.toHaveProperty('reasoning_effort');
+        expect(body.max_tokens).toBe(1_024);
+        expect(body.stream).toBe(false);
+      }
+    });
+  });
 });
+
+/** Drives one passing probe and returns the JSON request body of every call. */
+async function probeRequestBodies(
+  provider: RuntimeLocalProviderListEntryDto,
+  modelId: string
+): Promise<Record<string, unknown>[]> {
+  const streaming = provider.preset.id === 'ollama';
+  const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+    const request = readRequestBody(init?.body) as { messages: unknown[] };
+    const toolCall =
+      request.messages.length === 2
+        ? {
+            id: 'call-1',
+            type: 'function',
+            function: {
+              name: 'agent-teams_task_briefing',
+              arguments: JSON.stringify({
+                teamName: 'agent-teams-local-probe',
+                memberName: 'probe-member',
+              }),
+            },
+          }
+        : {
+            id: 'call-2',
+            type: 'function',
+            function: {
+              name: 'agent-teams_message_send',
+              arguments: JSON.stringify({
+                teamName: 'agent-teams-local-probe',
+                to: 'probe-lead',
+                from: 'probe-member',
+                text: 'fixed-nonce',
+              }),
+            },
+          };
+    return streaming
+      ? sseResponse([{ choices: [{ delta: { tool_calls: [{ index: 0, ...toolCall }] } }] }])
+      : jsonResponse({
+          choices: [{ message: { role: 'assistant', content: null, tool_calls: [toolCall] } }],
+        });
+  });
+
+  const result = await probeOpenCodeLocalModelCoordination(
+    { provider, modelId },
+    { fetchImpl, createNonce: () => 'fixed-nonce' }
+  );
+
+  expect(result.status).toBe('passed');
+  return fetchImpl.mock.calls.map((call) => readRequestBody(call[1]?.body));
+}
+
+/** Reads a request body the probe sent; every probe request carries a JSON string. */
+function readRequestBody(body: BodyInit | null | undefined): Record<string, unknown> {
+  if (typeof body !== 'string') {
+    throw new TypeError('probe request body was not a JSON string');
+  }
+  return JSON.parse(body) as Record<string, unknown>;
+}
 
 function localProvider(
   presetId: RuntimeLocalProviderListEntryDto['preset']['id'],
-  baseUrl: string
+  baseUrl: string,
+  configuredModelReasoningEffort?: Readonly<Record<string, string>>
 ): RuntimeLocalProviderListEntryDto {
   const providerId = presetId === 'lm-studio' ? 'lmstudio' : presetId;
   return {
+    ...(configuredModelReasoningEffort ? { configuredModelReasoningEffort } : {}),
     preset: {
       id: presetId,
       providerId,

@@ -102,6 +102,7 @@ function createCallbacks(
     injectGeminiPostLaunchHydration: vi.fn(async () => undefined),
     completeProvisioningFromSuccessfulResult: vi.fn(),
     handleControlRequest: vi.fn(),
+    launchMixedSecondaryLaneIfNeeded: vi.fn(async () => undefined),
     handleProvisioningTurnComplete: vi.fn(async () => undefined),
     cleanupRun: vi.fn(),
     emitApiErrorWarning: vi.fn(),
@@ -112,7 +113,7 @@ function createCallbacks(
     markUnconfirmedBootstrapMembersFailed: vi.fn(),
     stopPersistentTeamMembers: vi.fn(),
     persistLaunchStateSnapshot: vi.fn(async () => undefined),
-    observeRuntimeFailure: vi.fn(async () => undefined),
+    observeRuntimeFailure: vi.fn(),
     ...overrides,
   };
 }
@@ -139,6 +140,7 @@ function createServiceAdapter(
     injectGeminiPostLaunchHydration: callbacks.injectGeminiPostLaunchHydration,
     completeProvisioningFromSuccessfulResult: callbacks.completeProvisioningFromSuccessfulResult,
     handleControlRequest: callbacks.handleControlRequest,
+    launchMixedSecondaryLaneIfNeeded: callbacks.launchMixedSecondaryLaneIfNeeded,
     handleProvisioningTurnComplete: callbacks.handleProvisioningTurnComplete,
     cleanupRun: callbacks.cleanupRun,
     setMemberSpawnStatus: callbacks.setMemberSpawnStatus,
@@ -162,7 +164,62 @@ function createOutputRecoveryAdapter(
 }
 
 describe('TeamProvisioningStreamEventPortsFactory', () => {
-  it('wires service callbacks and shared provisioning helpers into stream event ports', async () => {
+  it.each([
+    { content: [{ type: 'text', text: 'I am delegating the task.' }] },
+    {
+      content: [
+        { type: 'tool_use', id: 'tool-1', name: 'TaskCreate', input: { subject: 'Test task' } },
+      ],
+    },
+  ])(
+    'publishes substantive assistant activity without completing the first turn: %j',
+    ({ content }) => {
+      const callbacks = createCallbacks();
+      const ports = createTeamProvisioningStreamEventPorts(callbacks);
+      const run = createRun({ requiresFirstRealTurnSuccess: true });
+
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'assistant', content }, ports);
+
+      expect(callbacks.setLeadActivity).toHaveBeenCalledWith(run, 'active');
+      expect(callbacks.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+      expect(callbacks.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+      expect(run.provisioningComplete).toBe(false);
+    }
+  );
+
+  it.each(['cancelled', 'killed', 'failed', 'empty', 'api-error', 'system-init'])(
+    'does not publish observed assistant activity for %s',
+    (reason) => {
+      const callbacks = createCallbacks();
+      const ports = createTeamProvisioningStreamEventPorts(callbacks);
+      const run = createRun({
+        cancelRequested: reason === 'cancelled',
+        processKilled: reason === 'killed',
+        progress: createProgress({ state: reason === 'failed' ? 'failed' : 'finalizing' }),
+      });
+      const text =
+        reason === 'empty'
+          ? '  '
+          : reason === 'api-error'
+            ? 'API Error: 429 Rate limit reached'
+            : 'Working';
+
+      handleTeamProvisioningStreamJsonMessage(
+        run,
+        {
+          type: reason === 'system-init' ? 'system' : 'assistant',
+          subtype: reason === 'system-init' ? 'init' : undefined,
+          content: [{ type: 'text', text }],
+        },
+        ports
+      );
+
+      expect(callbacks.setLeadActivity).not.toHaveBeenCalledWith(run, 'active');
+      expect(callbacks.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+    }
+  );
+
+  it('wires service callbacks and shared provisioning helpers into stream event ports', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPorts(callbacks);
     const run = createRun({ claudeLogLines: ['first', 'second'] });
@@ -171,7 +228,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
       createProgress({ state: 'finalizing', message: 'done' })
     );
     ports.resetLiveLeadTextBuffer(run);
-    await ports.observeRuntimeFailure(run, {
+    ports.observeRuntimeFailure(run, {
       phase: 'terminal',
       detail: 'runtime stopped',
       observedAt: '2026-01-01T00:00:01.000Z',
@@ -193,7 +250,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     expect(ports.extractCliLogsFromRun(run)).toBe('first\nsecond');
   });
 
-  it('builds stream event ports from a service adapter boundary', async () => {
+  it('builds stream event ports from a service adapter boundary', () => {
     const callbacks = createCallbacks();
     const emitTeamChange = vi.fn();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
@@ -202,13 +259,14 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
         stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
       },
       outputRecovery: createOutputRecoveryAdapter(callbacks),
+      prepareMixedSecondaryLaunch: vi.fn(async () => true),
       updateProgress: callbacks.updateProgress,
       emitTeamChange,
     });
     const run = createRun();
 
     ports.setLeadActivity(run, 'active');
-    await ports.observeRuntimeFailure(run, {
+    ports.observeRuntimeFailure(run, {
       phase: 'sdk_retrying',
       detail: 'rate limited',
       observedAt: '2026-01-01T00:00:02.000Z',
@@ -244,7 +302,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     });
   });
 
-  it('keeps assistant stream-json behavior routed through the extracted service boundary', async () => {
+  it('keeps assistant stream-json behavior routed through the extracted service boundary', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPortsBoundary({
       service: createServiceAdapter(callbacks),
@@ -252,6 +310,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
         stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
       },
       outputRecovery: createOutputRecoveryAdapter(callbacks),
+      prepareMixedSecondaryLaunch: vi.fn(async () => true),
       updateProgress: callbacks.updateProgress,
     });
     const run = createRun();
@@ -260,7 +319,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
       content: [{ type: 'text', text: 'Ready to coordinate' }],
     };
 
-    await handleTeamProvisioningStreamJsonMessage(run, msg, ports);
+    handleTeamProvisioningStreamJsonMessage(run, msg, ports);
 
     expect(callbacks.handleAuthFailureInOutput).toHaveBeenCalledWith(
       run,
@@ -283,44 +342,61 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     expect(callbacks.captureSendMessages).toHaveBeenCalledWith(run, msg.content);
   });
 
-  it('clears terminal turn state before propagating a failure barrier rejection', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
+  it('waits for authoritative roster publication before starting the early side lane', async () => {
+    let finishRuntimeLaunch!: () => void;
     const callbacks = createCallbacks({
-      observeRuntimeFailure: vi.fn(async () => Promise.reject(failure)),
+      launchMixedSecondaryLaneIfNeeded: vi.fn(
+        () => new Promise<void>((resolve) => (finishRuntimeLaunch = resolve))
+      ),
     });
-    const ports = createTeamProvisioningStreamEventPorts(callbacks);
-    const run = createRun({ provisioningComplete: true });
-
-    await expect(
-      handleTeamProvisioningStreamJsonMessage(
-        run,
-        { type: 'result', subtype: 'error', error: 'owner lost' },
-        ports
-      )
-    ).rejects.toBe(failure);
-
-    expect(callbacks.resetRuntimeToolActivity).toHaveBeenCalledWith(run, 'Lead');
-    expect(callbacks.setLeadActivity).toHaveBeenCalledWith(run, 'idle');
-    warn.mockRestore();
+    let completePreparation!: (ready: boolean) => void;
+    const prepareMixedSecondaryLaunch = vi.fn(
+      () => new Promise<boolean>((resolve) => (completePreparation = resolve))
+    );
+    const ports = createTeamProvisioningStreamEventPortsBoundary({
+      service: createServiceAdapter(callbacks),
+      persistentRuntimeCleanup: { stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers },
+      outputRecovery: createOutputRecoveryAdapter(callbacks),
+      updateProgress: callbacks.updateProgress,
+      prepareMixedSecondaryLaunch,
+    });
+    const run = createRun();
+    const pending = ports.launchMixedSecondaryLaneIfNeeded(run);
+    expect(prepareMixedSecondaryLaunch).toHaveBeenCalledWith(run);
+    expect(run.mixedSecondaryRosterPreparation).toBe(
+      prepareMixedSecondaryLaunch.mock.results[0].value
+    );
+    expect(callbacks.launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    completePreparation(true);
+    await expect(run.mixedSecondaryRosterPreparation).resolves.toBe(true);
+    expect(callbacks.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    finishRuntimeLaunch();
+    await pending;
   });
 
-  it('propagates the failure barrier rejection from an API-retry observation', async () => {
-    const failure = new Error('hosted-approval-runtime-revocation-unconfirmed');
-    const callbacks = createCallbacks({
-      observeRuntimeFailure: vi.fn(() => Promise.reject(failure)),
-    });
-    const ports = createTeamProvisioningStreamEventPorts(callbacks);
-    const run = createRun({ provisioningComplete: true });
-
-    await expect(
-      handleTeamProvisioningStreamJsonMessage(
-        run,
-        { type: 'system', subtype: 'api_retry', error_message: 'owner lease lost' },
-        ports
-      )
-    ).rejects.toBe(failure);
-
-    expect(run.onProgress).not.toHaveBeenCalled();
-  });
+  it.each(['cancelled', 'killed', 'stale', 'write-failed'])(
+    'does not start an early side lane when roster preparation is %s',
+    async (outcome) => {
+      const callbacks = createCallbacks();
+      const run = createRun();
+      const ports = createTeamProvisioningStreamEventPortsBoundary({
+        service: createServiceAdapter(callbacks),
+        persistentRuntimeCleanup: {
+          stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
+        },
+        outputRecovery: createOutputRecoveryAdapter(callbacks),
+        updateProgress: callbacks.updateProgress,
+        prepareMixedSecondaryLaunch: async () => {
+          if (outcome === 'cancelled') run.cancelRequested = true;
+          if (outcome === 'killed') run.processKilled = true;
+          if (outcome === 'write-failed') throw new Error('config write failed');
+          return outcome !== 'stale';
+        },
+      });
+      const pending = ports.launchMixedSecondaryLaneIfNeeded(run);
+      if (outcome === 'write-failed') await expect(pending).rejects.toThrow('config write failed');
+      else await pending;
+      expect(callbacks.launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    }
+  );
 });

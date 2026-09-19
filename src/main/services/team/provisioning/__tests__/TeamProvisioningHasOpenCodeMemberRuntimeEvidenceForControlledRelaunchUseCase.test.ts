@@ -157,4 +157,40 @@ describe('TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchU
       })
     ).resolves.toBe(false);
   });
+
+  it('fails closed when persisted runtime evidence cannot be read', async () => {
+    const useCase = createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+      readLaunchStateSnapshot: vi.fn(async () => {
+        throw new Error('launch state unavailable');
+      }),
+      getLiveTeamAgentRuntimeMetadata: vi.fn(async () => new Map()),
+    });
+
+    await expect(
+      useCase({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        laneId: 'secondary:opencode:worker',
+        existingLane: null,
+      })
+    ).rejects.toThrow('launch state unavailable');
+  });
+
+  it('fails closed when live runtime evidence cannot be read', async () => {
+    const useCase = createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+      readLaunchStateSnapshot: vi.fn(async () => null),
+      getLiveTeamAgentRuntimeMetadata: vi.fn(async () => {
+        throw new Error('runtime metadata unavailable');
+      }),
+    });
+
+    await expect(
+      useCase({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        laneId: 'secondary:opencode:worker',
+        existingLane: null,
+      })
+    ).rejects.toThrow('runtime metadata unavailable');
+  });
 });

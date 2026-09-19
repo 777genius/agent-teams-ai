@@ -210,6 +210,20 @@ Check `from`, `to`, `messageId`, `relayOfMessageId`, and `taskRefs`. Unknown aut
 
 For OpenCode "message saved but not delivered" cases, inspect the OpenCode prompt-delivery ledger and response proof. Do not synthesize visible replies in the frontend.
 
+Headless task delivery has two separate contracts:
+
+- OpenCode app-managed bootstrap is silent context injection (`noReply: true`). A healthy session with bootstrap evidence and no assistant reply is expected; it is not task-delivery proof.
+- Raw MCP `task_create` does not apply renderer defaults. `owner` alone creates a `pending` task. For immediate headless work, pass `createdBy: "user"` and `startImmediately: true`. The actor/sender must be `user` or a configured team member; arbitrary integration names do not produce an inbox assignment.
+
+The main-process FileWatcher owns inbox-to-runtime relay. It starts when main services are ready,
+does not require an active team tab, and remains active while the renderer reloads or recovers.
+Initial replay is limited to inboxes of explicitly scoped live teams, so durable assignments written
+before watcher readiness are recovered without replaying historical stopped-team inboxes.
+
+When a headless task does not run, check the returned task first. `pending` with no creation actor and
+no owner inbox row is a request-semantics problem. `in_progress` plus an unread owner inbox row is a
+watcher/runtime-delivery problem.
+
 ## Task And Work-Stall Debug Flow
 
 For task stalls:

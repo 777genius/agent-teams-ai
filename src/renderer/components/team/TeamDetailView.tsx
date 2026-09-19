@@ -10,18 +10,22 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { createTeamListLifecyclePorts } from '@features/team-lifecycle/renderer';
-import * as tp from '@features/team-provisioning/renderer';
-import { createTeamListRosterPorts } from '@features/team-roster-mutations/renderer';
+import {
+  assertMemberSettingsRelaunchRoster,
+  createTeamMemberSettingsRendererApi,
+  type MemberSettingsRelaunchDraft,
+  refreshTeamMemberSettings,
+  TeamMemberSettingsDialogBridge,
+} from '@features/team-provisioning/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -32,7 +36,6 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -107,32 +110,34 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
+import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { TeamStatusBadge } from './TeamStatusBadge';
+import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
-import type { TeamGraphTaskNotificationPort } from '@features/agent-graph/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { ComponentProps, CSSProperties } from 'react';
 
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
-const launchFromStore = (request: TeamLaunchRequest) => useStore.getState().launchTeam(request);
-const detailLifecyclePorts = createTeamListLifecyclePorts(api);
-const provisioningPorts = tp.createTeamListProvisioningPorts(api, { launchTeam: launchFromStore });
-const memberSettingsApi = tp.createTeamMemberSettingsRendererApi(api);
-const detailRosterPorts = createTeamListRosterPorts(api);
-const detailTaskPorts = createTeamTaskDetailTransport();
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
+// Stable empty roster for the draft view: an inline [] would change identity
+// every render and retrigger LaunchTeamDialog's hydration effect.
+const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
+const teamMemberSettingsApi = createTeamMemberSettingsRendererApi(api);
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
-const TeamGraphOverlay = lazy(async () => ({
-  default: (await import('@features/agent-graph/renderer')).TeamGraphOverlay,
-}));
+const TeamGraphOverlay = lazy(() =>
+  import('@features/agent-graph/renderer').then((m) => ({
+    default: m.TeamGraphOverlay,
+  }))
+);
 type TaskDetailDialogComponent = typeof import('./dialogs/TaskDetailDialog').TaskDetailDialog;
 let loadedTaskDetailDialogComponent: TaskDetailDialogComponent | null = null;
 let taskDetailDialogImportPromise: Promise<{ default: TaskDetailDialogComponent }> | null = null;
@@ -167,27 +172,27 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
-import {
-  getTeamPendingRepliesState,
-  setTeamPendingRepliesState,
-} from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+// import { deriveLeadLoadButtonLabel } from './lead-load-guards';
 import { LeadSessionDetailGate } from './LeadSessionDetailGate';
 import { LiveRuntimeStatusBridge } from './LiveRuntimeStatusBridge';
 import { ProcessesSection } from './ProcessesSection';
 import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provisioningSteps';
 import { TeamChangesSection } from './TeamChangesSection';
 import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
+import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
+import { useStableActiveMembers } from './useStableActiveMembers';
 import { useTeamAgentRuntimeWatcher } from './useTeamAgentRuntimeWatcher';
 
 import type { UsageLike } from './context-metric-alias';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { KanbanSortState } from './kanban/KanbanSortPopover';
 import type { SessionInjection } from './session-injection-types';
+import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
@@ -204,10 +209,12 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
+
 interface TaskDetailDialogHostHandle {
   openTask: (task: TeamTaskWithKanban) => void;
   close: () => void;
 }
+
 interface TaskDetailDialogHostProps {
   teamName: string;
   kanbanTaskStateByTaskId: Record<string, KanbanTaskState>;
@@ -218,6 +225,7 @@ interface TaskDetailDialogHostProps {
   onOpenInEditor: (filePath: string) => void;
   onDeleteTask: (taskId: string) => void;
 }
+
 const TaskDetailDialogHost = memo(
   forwardRef<TaskDetailDialogHostHandle, TaskDetailDialogHostProps>(function TaskDetailDialogHost(
     {
@@ -238,7 +246,8 @@ const TaskDetailDialogHost = memo(
     const selectedTaskSnapshot =
       selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
     const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask = loadedTask?.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
+    const currentTask =
+      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
     const dialogTaskMap = useMemo(() => {
       if (!currentTask) {
         return taskMap;
@@ -247,6 +256,7 @@ const TaskDetailDialogHost = memo(
       next.set(currentTask.id, currentTask);
       return next;
     }, [currentTask, taskMap]);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -261,25 +271,29 @@ const TaskDetailDialogHost = memo(
       }),
       []
     );
+
     useEffect(() => {
       if (!selectedTaskId) {
         setLoadedTask(null);
         return undefined;
       }
+
       let cancelled = false;
       setLoadedTask(null);
-      void detailTaskPorts
-        .readTask(teamName, selectedTaskId)
+      void api.teams
+        .getTask(teamName, selectedTaskId)
         .then((task) => {
           if (!cancelled && task?.id === selectedTaskId) {
             setLoadedTask(task);
           }
         })
         .catch(() => undefined);
+
       return () => {
         cancelled = true;
       };
     }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
+
     const handleScrollToTask = useCallback((taskId: string) => {
       setSelectedTask(null);
       setLoadedTask(null);
@@ -294,9 +308,11 @@ const TaskDetailDialogHost = memo(
         });
       }
     }, []);
+
     if (currentTask === null) {
       return null;
     }
+
     const DialogComponent = loadedTaskDetailDialogComponent ?? LazyTaskDetailDialog;
     const dialog = (
       <DialogComponent
@@ -317,21 +333,21 @@ const TaskDetailDialogHost = memo(
         onDeleteTask={onDeleteTask}
       />
     );
+
     if (loadedTaskDetailDialogComponent) {
       return dialog;
     }
+
     return <Suspense fallback={null}>{dialog}</Suspense>;
   })
 );
 TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
-
 interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
-  taskNotificationPort: TeamGraphTaskNotificationPort;
+  taskNotificationPort: ComponentProps<typeof TeamGraphOverlay>['taskNotificationPort'];
 }
-
 interface TeamReviewDialogState {
   open: boolean;
   mode: 'agent' | 'task';
@@ -354,6 +370,7 @@ const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
+
 function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number {
   if (!summary) {
     return 0;
@@ -407,89 +424,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
       (summary.failedCount ?? 0) +
       (summary.skippedCount ?? 0)
   );
-}
-
-function areResolvedMembersEqual(
-  prev: readonly ResolvedTeamMember[],
-  next: readonly ResolvedTeamMember[]
-): boolean {
-  if (prev === next) return true;
-  if (prev.length !== next.length) return false;
-  for (let i = 0; i < prev.length; i++) {
-    const prevMember = prev[i];
-    const nextMember = next[i];
-    if (
-      prevMember.name !== nextMember.name ||
-      prevMember.agentId !== nextMember.agentId ||
-      prevMember.joinedAt !== nextMember.joinedAt ||
-      prevMember.status !== nextMember.status ||
-      prevMember.currentTaskId !== nextMember.currentTaskId ||
-      prevMember.taskCount !== nextMember.taskCount ||
-      prevMember.lastActiveAt !== nextMember.lastActiveAt ||
-      prevMember.messageCount !== nextMember.messageCount ||
-      prevMember.color !== nextMember.color ||
-      prevMember.agentType !== nextMember.agentType ||
-      prevMember.role !== nextMember.role ||
-      prevMember.workflow !== nextMember.workflow ||
-      prevMember.isolation !== nextMember.isolation ||
-      prevMember.providerId !== nextMember.providerId ||
-      prevMember.providerBackendId !== nextMember.providerBackendId ||
-      prevMember.model !== nextMember.model ||
-      prevMember.effort !== nextMember.effort ||
-      prevMember.selectedFastMode !== nextMember.selectedFastMode ||
-      JSON.stringify(prevMember.configuredRuntimeSettings) !==
-        JSON.stringify(nextMember.configuredRuntimeSettings) ||
-      prevMember.resolvedFastMode !== nextMember.resolvedFastMode ||
-      prevMember.laneId !== nextMember.laneId ||
-      prevMember.laneKind !== nextMember.laneKind ||
-      prevMember.laneOwnerProviderId !== nextMember.laneOwnerProviderId ||
-      prevMember.cwd !== nextMember.cwd ||
-      prevMember.gitBranch !== nextMember.gitBranch ||
-      prevMember.removedAt !== nextMember.removedAt ||
-      !areMemberMcpPoliciesEqual(prevMember.mcpPolicy, nextMember.mcpPolicy) ||
-      prevMember.runtimeAdvisory?.kind !== nextMember.runtimeAdvisory?.kind ||
-      prevMember.runtimeAdvisory?.observedAt !== nextMember.runtimeAdvisory?.observedAt ||
-      prevMember.runtimeAdvisory?.retryUntil !== nextMember.runtimeAdvisory?.retryUntil ||
-      prevMember.runtimeAdvisory?.retryDelayMs !== nextMember.runtimeAdvisory?.retryDelayMs ||
-      prevMember.runtimeAdvisory?.reasonCode !== nextMember.runtimeAdvisory?.reasonCode ||
-      prevMember.runtimeAdvisory?.message !== nextMember.runtimeAdvisory?.message
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function areMemberMcpPoliciesEqual(
-  prev: ResolvedTeamMember['mcpPolicy'],
-  next: ResolvedTeamMember['mcpPolicy']
-): boolean {
-  if (prev === next) return true;
-  if (!prev || !next) return prev === next;
-  return (
-    prev.mode === next.mode &&
-    prev.scopes?.user === next.scopes?.user &&
-    prev.scopes?.project === next.scopes?.project &&
-    prev.scopes?.local === next.scopes?.local &&
-    (prev.serverNames ?? []).length === (next.serverNames ?? []).length &&
-    (prev.serverNames ?? []).every((serverName, index) => serverName === next.serverNames?.[index])
-  );
-}
-
-function useStableActiveMembers(
-  members: readonly ResolvedTeamMember[] | undefined
-): ResolvedTeamMember[] {
-  const filteredMembers = useMemo(
-    () => (members ?? []).filter((member) => !member.removedAt),
-    [members]
-  );
-  const stableMembersRef = useRef(filteredMembers);
-
-  if (!areResolvedMembersEqual(stableMembersRef.current, filteredMembers)) {
-    stableMembersRef.current = filteredMembers;
-  }
-
-  return stableMembersRef.current;
 }
 
 interface TimeWindow {
@@ -581,6 +515,7 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
     </div>
   );
 });
+
 type LeadUpdatedKey = `lead${'Con'}${'text'}UpdatedAt`;
 type TeamMessagesPanelBridgeProps = Omit<
   ComponentProps<typeof MessagesPanel>,
@@ -591,9 +526,6 @@ type SendMessageDialogBridgeProps = Omit<
   'sending' | 'sendError' | 'sendWarning' | 'sendDebugDetails' | 'lastResult' | 'onSend'
 >;
 type SendMessageDialogOnSend = ComponentProps<typeof SendMessageDialog>['onSend'];
-type PendingRepliesUpdater =
-  | Record<string, number>
-  | ((current: Record<string, number>) => Record<string, number>);
 type SharedTeamMessagesPanelProps = Omit<TeamMessagesPanelBridgeProps, 'position'>;
 type TeamMemberListBridgeProps = Omit<
   ComponentProps<typeof MemberList>,
@@ -621,53 +553,6 @@ interface LeadLoadBridgeProps {
   leadProviderId?: TeamProviderId;
   fallbackProjectRoot?: string;
   isThisTabActive: boolean;
-}
-
-const pendingRepliesCacheByTeam = new Map<string, Record<string, number>>();
-const pendingRepliesListenersByTeam = new Map<string, Set<() => void>>();
-
-function getPendingRepliesSnapshot(teamName: string): Record<string, number> {
-  let snapshot = pendingRepliesCacheByTeam.get(teamName);
-  if (!snapshot) {
-    snapshot = getTeamPendingRepliesState(teamName);
-    pendingRepliesCacheByTeam.set(teamName, snapshot);
-  }
-  return snapshot;
-}
-
-function subscribePendingReplies(teamName: string, listener: () => void): () => void {
-  let listeners = pendingRepliesListenersByTeam.get(teamName);
-  if (!listeners) {
-    listeners = new Set();
-    pendingRepliesListenersByTeam.set(teamName, listeners);
-  }
-  listeners.add(listener);
-  return () => {
-    listeners?.delete(listener);
-    if (listeners?.size === 0) {
-      pendingRepliesListenersByTeam.delete(teamName);
-    }
-  };
-}
-
-function setPendingRepliesForTeam(teamName: string, updater: PendingRepliesUpdater): void {
-  const current = getPendingRepliesSnapshot(teamName);
-  const next = typeof updater === 'function' ? updater(current) : updater;
-  if (next === current) {
-    return;
-  }
-  pendingRepliesCacheByTeam.set(teamName, next);
-  setTeamPendingRepliesState(teamName, next);
-  pendingRepliesListenersByTeam.get(teamName)?.forEach((listener) => listener());
-}
-
-function useTeamPendingReplies(teamName: string): Record<string, number> {
-  const subscribe = useCallback(
-    (listener: () => void) => subscribePendingReplies(teamName, listener),
-    [teamName]
-  );
-  const getSnapshot = useCallback(() => getPendingRepliesSnapshot(teamName), [teamName]);
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
@@ -1392,12 +1277,10 @@ const TeamKanbanBoardBridge = memo(function TeamKanbanBoardBridge({
   ...props
 }: TeamKanbanBoardBridgeProps): React.JSX.Element {
   const activeTaskLogActivity = useStore((s) => s.activeTaskLogActivityByTeam[teamName]);
-
   return (
     <KanbanBoard {...props} teamName={teamName} activeTaskLogActivity={activeTaskLogActivity} />
   );
 });
-
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
@@ -1406,6 +1289,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
+  const teamStopControl = useTeamStopControl();
   const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
@@ -1427,6 +1311,8 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [launchDialogState, setLaunchDialogState] = useState<{
     open: boolean;
     mode: TeamLaunchDialogMode;
+    memberSettingsDraft?: MemberSettingsRelaunchDraft;
+    baselineMembers?: ResolvedTeamMember[];
   }>({
     open: false,
     mode: 'launch',
@@ -1519,7 +1405,6 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [stoppingTeam, setStoppingTeam] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
   const [sendDialogDefaultText, setSendDialogDefaultText] = useState<string | undefined>(undefined);
@@ -1574,6 +1459,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     skipMemberForLaunch,
     removeMember,
     restoreMember,
+    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1622,6 +1508,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
+      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -1838,7 +1725,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
-        const aliveList = await detailLifecyclePorts.listAliveTeams();
+        const aliveList = await api.teams.aliveList();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
         const refs = teamsSnapshot
@@ -1942,13 +1829,14 @@ export const TeamDetailView = memo(function TeamDetailView({
       uniquePaths.set(key, trimmed);
     };
 
+    addPath(teamProjectPath);
     addPath(leadProjectPath);
     for (const member of members) {
       addPath(member.cwd);
     }
 
     return Array.from(uniquePaths.values());
-  }, [members, leadProjectPath]);
+  }, [members, leadProjectPath, teamProjectPath]);
   const activeBranchSyncPaths = useMemo(
     () => (isThisTabActive ? branchSyncPaths : []),
     [branchSyncPaths, isThisTabActive]
@@ -1967,19 +1855,23 @@ export const TeamDetailView = memo(function TeamDetailView({
   const leadBranch = leadProjectPath
     ? (trackedBranches[normalizePath(leadProjectPath)] ?? null)
     : null;
+  const commonProjectBranch = teamProjectPath
+    ? (trackedBranches[normalizePath(teamProjectPath)] ?? null)
+    : leadBranch;
   const hasSelectedTeamData = data !== null;
   const membersWithLiveBranches = useMemo(() => {
-    if (!hasSelectedTeamData) return [];
+    if (!hasSelectedTeamData) return EMPTY_RESOLVED_MEMBERS;
 
     return members.map((member) => {
-      const memberPath = member.cwd?.trim();
-      const nextGitBranch =
-        memberPath && !isLeadMember(member) && leadBranch !== null
-          ? (() => {
-              const branch = trackedBranches[normalizePath(memberPath)] ?? null;
-              return branch && branch !== leadBranch ? branch : undefined;
-            })()
-          : undefined;
+      const memberPath =
+        member.cwd?.trim() ||
+        (member.isolation === 'worktree' ? null : (teamProjectPath ?? leadProjectPath));
+      const actualBranch = memberPath ? trackedBranches[normalizePath(memberPath)] : null;
+      const nextGitBranch = resolveBranchDeviation(
+        actualBranch,
+        commonProjectBranch,
+        member.isolation === 'worktree'
+      );
 
       if (member.gitBranch === nextGitBranch) {
         return member;
@@ -1993,7 +1885,14 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
       return nextMember;
     });
-  }, [hasSelectedTeamData, leadBranch, members, trackedBranches]);
+  }, [
+    commonProjectBranch,
+    hasSelectedTeamData,
+    leadProjectPath,
+    members,
+    teamProjectPath,
+    trackedBranches,
+  ]);
   const resolvedMemberColorMap = useMemo(
     () => buildMemberColorMap(membersWithLiveBranches),
     [membersWithLiveBranches]
@@ -2223,22 +2122,41 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleRestartTeam = useCallback(() => {
     openLaunchDialog('relaunch');
   }, [openLaunchDialog]);
-  const handleLaunchDialogSubmit = useCallback(async (request: TeamLaunchRequest) => {
-    await provisioningPorts.launchTeam(request);
-  }, []);
+
+  const handleLaunchDialogSubmit = useCallback(
+    async (request: TeamLaunchRequest): Promise<void> => {
+      await launchTeam(request);
+    },
+    [launchTeam]
+  );
+
+  const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
+    const { memberSettingsDraft, baselineMembers } = launchDialogState;
+    if (!memberSettingsDraft || !baselineMembers) return;
+    const current = await api.teams.getData(teamName, { includeMemberBranches: false });
+    assertMemberSettingsRelaunchRoster(
+      current.teamName,
+      current.members,
+      baselineMembers,
+      memberSettingsDraft
+    );
+  }, [launchDialogState, teamName]);
+
   const handleRelaunchDialogSubmit = useCallback(
     async (
       request: TeamLaunchRequest,
-      nextMembers: TeamCreateRequest['members']
+      nextMembers: TeamCreateRequest['members'],
+      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']
     ): Promise<void> => {
       await executeTeamRelaunch({
         teamName,
         isTeamAlive: data?.isAlive === true,
         request,
-        members: nextMembers,
+        members: nextMembers, memberSettingsRelaunch,
+        validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
-            await detailLifecyclePorts.stopRunningTeam(nextTeamName);
+            await api.teams.stop(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
               success: true,
@@ -2262,20 +2180,32 @@ export const TeamDetailView = memo(function TeamDetailView({
           }
         },
         replaceMembers: (nextTeamName, nextRequest) =>
-          detailRosterPorts.replaceRoster(nextTeamName, nextRequest),
-        launchTeam: provisioningPorts.launchTeam,
+          api.teams.replaceMembers(nextTeamName, nextRequest),
+        launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, teamName]
+    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName, validateMemberSettingsRelaunch]
   );
 
-  const handleChangeLeadRuntime = useCallback(() => {
-    setEditTarget(null);
-    openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch');
-  }, [data?.isAlive, isTeamProvisioning, openLaunchDialog]);
+  const handleChangeLeadRuntime = useCallback(
+    (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
+      setEditTarget(null);
+      setLaunchDialogState({
+        open: true,
+        mode: data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch',
+        memberSettingsDraft,
+        baselineMembers: membersWithLiveBranches,
+      });
+    },
+    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches]
+  );
   const handleRestartMember = useCallback(
-    async (memberName: string): Promise<void> => {
-      await restartMember(teamName, memberName);
+    async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
+      await restartMember(
+        teamName,
+        memberName,
+        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      );
     },
     [restartMember, teamName]
   );
@@ -2396,36 +2326,22 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const handleStopTeam = useCallback(async (): Promise<void> => {
-    setStoppingTeam(true);
-    try {
-      await detailLifecyclePorts.stopRunningTeam(teamName);
-      recordTeamStop({
-        source: 'detail',
-        success: true,
-        memberCount: data?.members.length ?? null,
-        providerIds: data?.members.map((member) => member.providerId ?? null),
-        runtimeActive: data?.isAlive ?? null,
-        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
-        errorClass: 'none',
-      });
-      // Backend sends 'disconnected' progress which triggers store refresh,
-      // but refresh here too as a safety net (e.g. if progress event is missed).
-      await refreshTeamData(teamName);
-    } catch (err) {
-      recordTeamStop({
-        source: 'detail',
-        success: false,
-        memberCount: data?.members.length ?? null,
-        providerIds: data?.members.map((member) => member.providerId ?? null),
-        runtimeActive: data?.isAlive ?? null,
-        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
-        errorClass: classifyAnalyticsError(err),
-      });
-      console.error('Failed to stop team:', err);
-    } finally {
-      setStoppingTeam(false);
-    }
-  }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
+    await teamStopControl.stopTeam(teamName, {
+      refresh: () => refreshTeamData(teamName),
+      onOutcome: (outcome, error) => {
+        const success = outcome === 'stopped' || outcome === 'stopped_after_transport_error';
+        recordTeamStop({
+          source: 'detail',
+          success,
+          memberCount: data?.members.length ?? null,
+          providerIds: data?.members.map((member) => member.providerId ?? null),
+          runtimeActive: data?.isAlive ?? null,
+          hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+          errorClass: success ? 'none' : classifyAnalyticsError(error),
+        });
+      },
+    });
+  }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData, teamStopControl]);
 
   // Pick up pending review request from GlobalTaskDetailDialog
   useEffect(() => {
@@ -2593,7 +2509,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             const task = taskMapRef.current.get(taskId);
             try {
               if (result.notifiedOwner && task?.owner) {
-                await detailTaskPorts.notifyTaskLead(
+                await api.teams.processSend(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                 );
@@ -2601,7 +2517,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 const desc = task?.description?.trim()
                   ? `\nDescription: ${task.description.trim()}`
                   : '';
-                await detailTaskPorts.notifyTaskLead(
+                await api.teams.processSend(
                   teamName,
                   `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                 );
@@ -2637,9 +2553,11 @@ export const TeamDetailView = memo(function TeamDetailView({
         try {
           const task = taskMapRef.current.get(taskId);
           await updateTaskStatus(teamName, taskId, 'pending');
+
+          // Notify assignee directly via inbox - they'll see it immediately
           if (task?.owner) {
             try {
-              await useStore.getState().sendTeamMessage(teamName, {
+              await api.teams.sendMessage(teamName, {
                 member: task.owner,
                 text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
                 summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
@@ -2653,7 +2571,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await detailTaskPorts.notifyTaskLead(
+              await api.teams.processSend(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -2717,35 +2635,22 @@ export const TeamDetailView = memo(function TeamDetailView({
         await deleteTeam(teamName);
         if (tabId) closeTab(tabId);
         openTeamsTab();
-      } catch {
-        // error is shown via store
+      } catch (deleteError) {
+        showTeamDeleteError(t, deleteError);
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
+  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
-  // Command identity (idempotency) is resolved by CreateTaskDialog via resolveCreateTaskCommand;
-  // this handler must not mint its own.
-  const handleCreateTask = async (taskRequest: CreateTaskRequest): Promise<void> => {
-    const {
-      owner: taskOwner,
-      prompt: taskPrompt,
-      startImmediately: taskStartImmediately,
-      subject,
-    } = taskRequest;
+  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
+    const { owner, prompt, startImmediately, subject } = request;
     setCreatingTask(true);
     try {
-      await createTeamTask(teamName, taskRequest);
+      await createTeamTask(teamName, request);
 
-      if (
-        taskPrompt &&
-        taskOwner &&
-        data?.isAlive &&
-        !isTeamProvisioning &&
-        taskStartImmediately !== false
-      ) {
-        const msg = `New task assigned to ${taskOwner}: "${subject}". Instructions:\n${taskPrompt}`;
+      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
+        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
         try {
-          await detailTaskPorts.notifyTaskLead(teamName, msg);
+          await api.teams.processSend(teamName, msg);
         } catch {
           // best-effort
         }
@@ -2882,65 +2787,39 @@ export const TeamDetailView = memo(function TeamDetailView({
       const draftMemberCount = draftTeamSummary?.memberCount ?? 0;
 
       return (
-        <>
-          <div className="size-full overflow-auto p-6">
-            <div ref={provisioningBannerRef}>
-              <TeamProvisioningBanner teamName={teamName} />
-            </div>
-            <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-              <div className="max-w-md text-center">
-                <p className="text-sm font-medium text-text">{t('detail.draft.title')}</p>
-                <p className="mt-2 text-xs text-text-secondary">
-                  {t('detail.draft.descriptionPrefix')} <strong>{draftDisplayName}</strong>{' '}
-                  {t('detail.draft.descriptionSuffix', {
-                    count: draftMemberCount,
-                    member: t('detail.draft.member', { count: draftMemberCount }),
-                  })}
-                </p>
-                <div className="mt-4 flex justify-center gap-2">
-                  <button
-                    className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-                    onClick={() => openLaunchDialog('launch')}
-                  >
-                    {t('detail.actions.launch')}
-                  </button>
-                  <button
-                    className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
-                    onClick={() => {
-                      void provisioningPorts.deleteDraft(teamName).catch(() => {});
-                    }}
-                  >
-                    {t('detail.actions.delete')}
-                  </button>
-                </div>
+        <div className="size-full overflow-auto p-6">
+          <div ref={provisioningBannerRef}>
+            <TeamProvisioningBanner teamName={teamName} />
+          </div>
+          <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+            <div className="max-w-md text-center">
+              <p className="text-sm font-medium text-text">{t('detail.draft.title')}</p>
+              <p className="mt-2 text-xs text-text-secondary">
+                {t('detail.draft.descriptionPrefix')} <strong>{draftDisplayName}</strong>{' '}
+                {t('detail.draft.descriptionSuffix', {
+                  count: draftMemberCount,
+                  member: t('detail.draft.member', { count: draftMemberCount }),
+                })}
+              </p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+                  onClick={() => openLaunchDialog('launch')}
+                >
+                  {t('detail.actions.launch')}
+                </button>
+                <button
+                  className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
+                  onClick={() => {
+                    void api.teams.deleteDraft(teamName).catch(() => {});
+                  }}
+                >
+                  {t('detail.actions.delete')}
+                </button>
               </div>
             </div>
           </div>
-          {launchDialogOpen && (
-            <Suspense
-              fallback={
-                <LaunchTeamDialogLoadingFallback
-                  mode={launchDialogState.mode}
-                  teamName={teamName}
-                  onClose={closeLaunchDialog}
-                />
-              }
-            >
-              <LaunchTeamDialog
-                mode={launchDialogState.mode}
-                open={launchDialogOpen}
-                teamName={teamName}
-                members={[]}
-                defaultProjectPath={draftTeamSummary?.projectPath}
-                provisioningError={provisioningError}
-                clearProvisioningError={clearProvisioningError}
-                onClose={closeLaunchDialog}
-                onLaunch={handleLaunchDialogSubmit}
-                onRelaunch={handleRelaunchDialogSubmit}
-              />
-            </Suspense>
-          )}
-        </>
+        </div>
       );
     }
 
@@ -2973,8 +2852,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       : nameColorSet(data.config.name);
     const shouldReserveFloatingComposerScrollSpace =
       messagesPanelMode === 'floating-composer' && isThisTabActive && isPaneFocused && !graphOpen;
-    const shouldRenderGraphMessagesPanel =
-      messagesPanelMode === 'floating-composer' || messagesPanelMode === 'bottom-sheet';
     const floatingComposerScrollReserve = shouldReserveFloatingComposerScrollSpace
       ? FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX + floatingComposerHeight
       : undefined;
@@ -3035,16 +2912,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                     <h2 className="min-w-0 truncate text-base font-semibold text-[var(--color-text)]">
                       {data.config.name}
                     </h2>
-                    {data.isAlive && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                        <span className="size-1.5 rounded-full bg-emerald-400" />
-                        {t('detail.status.running')}
-                      </span>
-                    )}
-                    {!data.isAlive && isTeamProvisioning && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
-                        <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
-                        {t('detail.status.launching')}
+                    {(data.isAlive || isTeamProvisioning) && (
+                      <span className="shrink-0">
+                        <TeamStatusBadge
+                          teamName={teamName}
+                          status={isTeamProvisioning ? 'provisioning' : 'idle'}
+                        />
                       </span>
                     )}
                   </div>
@@ -3057,11 +2930,24 @@ export const TeamDetailView = memo(function TeamDetailView({
                             variant="ghost"
                             size="sm"
                             className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                            disabled={stoppingTeam}
+                            disabled={teamStopControl.isStopping(teamName)}
+                            aria-busy={teamStopControl.isStopping(teamName)}
+                            aria-label={
+                              teamStopControl.isStopping(teamName)
+                                ? t('detail.actions.stopping')
+                                : t('detail.actions.stop')
+                            }
                             onClick={() => void handleStopTeam()}
                           >
-                            <Square size={12} className={stoppingTeam ? 'animate-pulse' : ''} />
-                            {t('detail.actions.stop')}
+                            <Square
+                              size={12}
+                              className={
+                                teamStopControl.isStopping(teamName) ? 'animate-pulse' : ''
+                              }
+                            />
+                            {teamStopControl.isStopping(teamName)
+                              ? t('detail.actions.stopping')
+                              : t('detail.actions.stop')}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
@@ -3546,18 +3432,18 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onSaved={() => void selectTeam(teamName)}
                 />
               )}
-
               {editTarget?.kind === 'member' ? (
-                <tp.TeamMemberSettingsDialogBridge
+                <TeamMemberSettingsDialogBridge
                   teamName={teamName}
                   memberName={editTarget.memberName}
                   members={membersWithLiveBranches}
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
-                  updateMemberSettings={memberSettingsApi.updateMemberSettings}
+                  getSavedRequest={api.teams.getSavedRequest}
+                  updateMemberSettings={teamMemberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
-                  onRefresh={(settings) => tp.refreshTeamMemberSettings(teamName, settings)}
+                  onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}
                 />
               ) : null}
@@ -3658,32 +3544,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              )}
-
-              {launchDialogOpen && (
-                <Suspense
-                  fallback={
-                    <LaunchTeamDialogLoadingFallback
-                      mode={launchDialogState.mode}
-                      teamName={teamName}
-                      onClose={closeLaunchDialog}
-                    />
-                  }
-                >
-                  <LaunchTeamDialog
-                    mode={launchDialogState.mode}
-                    open={launchDialogOpen}
-                    teamName={teamName}
-                    members={membersWithLiveBranches}
-                    defaultProjectPath={data.config.projectPath}
-                    provisioningError={provisioningError}
-                    clearProvisioningError={clearProvisioningError}
-                    activeTeams={activeTeamsForLaunch}
-                    onClose={closeLaunchDialog}
-                    onLaunch={handleLaunchDialogSubmit}
-                    onRelaunch={handleRelaunchDialogSubmit}
-                  />
-                </Suspense>
               )}
 
               {sendDialogOpen && (
@@ -3803,6 +3663,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Suspense fallback={null}>
             <TeamGraphOverlay
               teamName={teamName}
+              announcementsVisible={isElectronMode()}
               taskNotificationPort={taskNotificationPort}
               onClose={() => setGraphOpen(false)}
               onPinAsTab={() => {
@@ -3812,7 +3673,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                   .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
               }}
               messagesPanelEnabled={
-                shouldRenderGraphMessagesPanel && isThisTabActive && isPaneFocused
+                (messagesPanelMode === 'floating-composer' ||
+                  messagesPanelMode === 'bottom-sheet') &&
+                isThisTabActive &&
+                isPaneFocused
               }
             />
           </Suspense>
@@ -3821,11 +3685,46 @@ export const TeamDetailView = memo(function TeamDetailView({
     );
   };
 
+  // The launch dialog renders outside renderBody's branches so a branch change
+  // (e.g. draft view → provisioning view after Launch) does not unmount it and
+  // discard in-progress user edits. The draft view has no resolved members yet.
+  const isDraftTeamView = error === 'TEAM_DRAFT';
+  const launchDialogDefaultProjectPath = isDraftTeamView
+    ? useStore.getState().teamByName[teamName]?.projectPath
+    : data?.config.projectPath;
+
   return (
     <>
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
       {renderBody()}
+      {launchDialogOpen && (
+        <Suspense
+          fallback={
+            <LaunchTeamDialogLoadingFallback
+              mode={launchDialogState.mode}
+              teamName={teamName}
+              onClose={closeLaunchDialog}
+            />
+          }
+        >
+          <LaunchTeamDialog
+            mode={launchDialogState.mode}
+            open={launchDialogOpen}
+            teamName={teamName}
+            members={isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches}
+            defaultProjectPath={launchDialogDefaultProjectPath}
+            provisioningError={provisioningError}
+            clearProvisioningError={clearProvisioningError}
+            activeTeams={isDraftTeamView ? undefined : activeTeamsForLaunch}
+            onClose={closeLaunchDialog}
+            onLaunch={handleLaunchDialogSubmit}
+            onRelaunch={handleRelaunchDialogSubmit}
+            memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            validateMemberSettings={validateMemberSettingsRelaunch}
+          />
+        </Suspense>
+      )}
     </>
   );
 });

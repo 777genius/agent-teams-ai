@@ -2,6 +2,7 @@ import type {
   RetryFailedRuntimeLanesResult,
   RuntimeLogQuery,
   RuntimeLogResponse,
+  TeamForceStopResult,
 } from '../../../contracts';
 
 export type TeamRuntimeLogQuery = RuntimeLogQuery;
@@ -164,13 +165,14 @@ export interface TeamMemberSpawnStatusPort {
 }
 
 export interface TeamRuntimeLifecycleCommandPort {
-  restartMember(teamName: string, memberName: string): Promise<void>;
+  restartMember(teamName: string, memberName: string, expectedSecondary?: boolean): Promise<void>;
   retryFailedRuntimeLanes(teamName: string): Promise<RetryFailedRuntimeLanesResult>;
   skipMemberForLaunch(teamName: string, memberName: string): Promise<void>;
 }
 
 export interface TeamRuntimeStopPort {
   stopTeam(teamName: string): Promise<void>;
+  forceStopTeam?(teamName: string): Promise<TeamForceStopResult>;
 }
 
 export interface TeamRuntimeLivenessPort {

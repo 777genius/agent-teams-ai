@@ -286,6 +286,15 @@ provider/topology/failure cross-product.
 
 ### Live provider and desktop release gates
 
+- Core release proof uses one production-composed mixed-team E2E with Claude, Codex, Gemini, and
+  OpenCode together, plus one independent short live smoke for each provider. The mixed run proves
+  cross-provider lifecycle, task/message, SSE, and cleanup behavior. Each provider smoke separately
+  proves `create -> launch -> ready -> task -> message -> stop`, so a mixed-team success cannot hide
+  a provider-specific bootstrap, authentication, parsing, delivery, or shutdown failure.
+- The provider-neutral proof groups above run once against the shared production composition; they
+  are not multiplied across all four providers. Provider-specific branches remain covered by their
+  focused contracts and live smoke. This consolidation must preserve isolated roots, ports, volumes,
+  evidence identities, and independent cleanup, and must not create an order-dependent mega-test.
 - Before release, run one sandbox-only live smoke for every supported provider, including Claude,
   Codex, Gemini, and OpenCode when advertised. Every smoke proves
   `create -> launch -> ready -> task -> message -> stop`; one smoke per provider family is

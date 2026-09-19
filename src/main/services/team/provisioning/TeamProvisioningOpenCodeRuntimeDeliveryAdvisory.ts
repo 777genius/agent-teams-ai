@@ -63,7 +63,11 @@ export interface OpenCodeRuntimeDeliveryAdvisoryPorts {
   readConfigSnapshot(teamName: string): Promise<OpenCodeRuntimeDeliveryAdvisoryTeamConfig | null>;
   addTeamNotification(notification: OpenCodeRuntimeDeliveryErrorNotification): Promise<void>;
   emitTeamChange(event: TeamChangeEvent): void;
-  invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void;
+  invalidateMemberRuntimeAdvisory(
+    teamName: string,
+    memberName: string | null,
+    options?: { runStartedAtMs?: number }
+  ): void;
   scheduleProofMissingWorkSyncRecovery: MemberWorkSyncProofMissingRecoveryScheduler | null;
   getLeadNoticeSink(teamName: string): OpenCodeRuntimeDeliveryLeadNoticeSink | null;
   logInfo(message: string, detail?: string): void;
@@ -101,7 +105,11 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryAdvisoryServiceHost<
   };
   appShellBoundary: {
     getMemberRuntimeAdvisoryInvalidator():
-      | ((teamName: string, memberName: string) => unknown)
+      | ((
+          teamName: string,
+          memberName: string | null,
+          options?: { runStartedAtMs?: number }
+        ) => unknown)
       | null
       | undefined;
     getMemberWorkSyncProofMissingRecoveryScheduler():
@@ -141,8 +149,12 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryAdvisoryPortsFromSe
     emitTeamChange: (event) => {
       service.teamChangeEmitter?.(event);
     },
-    invalidateMemberRuntimeAdvisory: (teamName, memberName) => {
-      service.appShellBoundary.getMemberRuntimeAdvisoryInvalidator()?.(teamName, memberName);
+    invalidateMemberRuntimeAdvisory: (teamName, memberName, invalidation) => {
+      service.appShellBoundary.getMemberRuntimeAdvisoryInvalidator()?.(
+        teamName,
+        memberName,
+        invalidation
+      );
     },
     scheduleProofMissingWorkSyncRecovery: async (input) => {
       const scheduler = service.appShellBoundary.getMemberWorkSyncProofMissingRecoveryScheduler();
@@ -497,6 +509,35 @@ export class TeamProvisioningOpenCodeRuntimeDeliveryAdvisory {
       }
       this.clearTimer(timer);
       this.advisoryReviewTimers.delete(timerKey);
+    }
+  }
+
+  /**
+   * Launch start. Beyond cancelling deferred reviews, this drops the run-scoped
+   * dedupe keys (they embed the dead run's ledger record ids) and clears the
+   * derived member advisory registry, so a fresh run cannot show the previous
+   * run's memberCardError. Stop and cleanup keep using `cancelTeam`: a stopped
+   * team keeps the advisory that explains why it died.
+   */
+  resetTeamForNewRun(teamName: string, runStartedAtMs: number = this.getNowMs()): void {
+    this.cancelTeam(teamName);
+    const dedupePrefix = `opencode_runtime_delivery_error:${teamName}:`;
+    for (const key of this.advisoryEventSentAt.keys()) {
+      if (key.startsWith(dedupePrefix)) {
+        this.advisoryEventSentAt.delete(key);
+      }
+    }
+    for (const key of this.leadNoticeSentAt.keys()) {
+      if (key.startsWith(dedupePrefix)) {
+        this.leadNoticeSentAt.delete(key);
+      }
+    }
+    try {
+      this.ports.invalidateMemberRuntimeAdvisory(teamName, null, { runStartedAtMs });
+    } catch (error) {
+      this.ports.logWarning(
+        `[${teamName}] Failed to reset OpenCode runtime advisory registry for a new run: ${this.ports.getErrorMessage(error)}`
+      );
     }
   }
 

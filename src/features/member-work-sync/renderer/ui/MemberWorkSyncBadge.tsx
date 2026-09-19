@@ -1,4 +1,10 @@
 import { Badge } from '@renderer/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 
 import {
@@ -31,16 +37,25 @@ export function MemberWorkSyncBadge({
   const resolved = viewModel ?? toMemberWorkSyncStatusViewModel(status);
 
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'cursor-default whitespace-nowrap font-medium',
-        toneClassName[resolved.tone],
-        className
-      )}
-      title={resolved.tooltip}
-    >
-      {resolved.label}
-    </Badge>
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            data-testid="member-work-sync-badge"
+            className={cn(
+              'cursor-default whitespace-nowrap font-medium',
+              toneClassName[resolved.tone],
+              className
+            )}
+          >
+            {resolved.label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-72 text-pretty text-xs leading-relaxed">
+          {resolved.tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -76,6 +76,9 @@ import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './TeamProv
 
 import type { TeamProvisioningOutputRecoveryFacade } from './TeamProvisioningOutputRecoveryFacade';
 import type { TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
+import type {
+  OpenCodeAggregatePrimaryRestartLease as RuntimeStateOpenCodeAggregatePrimaryRestartLease,
+} from './TeamProvisioningServiceRuntimeStateFacade';
 import type { TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import type { TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import type {
@@ -89,6 +92,11 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
+
+export interface OpenCodeAggregatePrimaryRestartLease
+  extends RuntimeStateOpenCodeAggregatePrimaryRestartLease {
+  candidateRunId?: string;
+}
 
 function mergeProvisioningMembersWithRemovalTombstones(
   activeMembers: readonly TeamMember[],
@@ -162,6 +170,10 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
+  protected declare readonly openCodeAggregatePrimaryRestartByTeam: Map<
+    string,
+    OpenCodeAggregatePrimaryRestartLease
+  >;
   async runLiveRosterMutation(teamName: string, mutation: () => Promise<void>): Promise<void> {
     await this.executeLiveRosterMutation(teamName.trim().toLowerCase(), mutation);
   }
@@ -355,14 +367,21 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     createTeamProvisioningMixedSecondaryLaneWiring<ProvisioningRun>(
       createTeamProvisioningMixedSecondaryLaneWiringDepsFromService(
         this as unknown as TeamProvisioningMixedSecondaryLaneWiringServiceHost<ProvisioningRun>,
-        { logger }
+        { logger, isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run) }
       )
     );
   protected readonly openCodeLaunchWiring =
     createTeamProvisioningOpenCodeLaunchWiring<ProvisioningRun>(
       createTeamProvisioningOpenCodeLaunchWiringHostFromService(
         this as unknown as TeamProvisioningOpenCodeLaunchWiringServiceHost<ProvisioningRun>
-      )
+      ),
+      (input) => {
+        void this.openCodePromptDeliveryWatchdogCoordinator
+          .wakeAfterRuntimeRegistration(input)
+          .catch((error: unknown) =>
+            logger.warn(`OpenCode registered runtime inbox wake failed: ${String(error)}`)
+          );
+      }
     );
   protected readonly requestAdmissionBoundary!: TeamProvisioningServiceComposition['requestAdmissionBoundary'];
   protected readonly openCodeRuntimeDeliveryBoundaryHost!: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
@@ -444,6 +463,9 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
   }): Promise<TeamLaunchResponse> {
+    const restartLease = this.openCodeAggregatePrimaryRestartByTeam.get(
+      input.request.teamName.trim().toLowerCase()
+    );
     const configuredLanePlan = this.planRuntimeLanesOrThrow(
       input.request.providerId,
       input.members,
@@ -457,6 +479,13 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     return super.runOpenCodeTeamRuntimeAdapterLaunch({
       ...input,
       members: runtimeLaunchMembers,
+      onProgress: (progress) => {
+        // The initial callback precedes candidate persistence and any caller cancellation.
+        if (restartLease && progress.runId !== restartLease.runId) {
+          restartLease.candidateRunId ??= progress.runId;
+        }
+        input.onProgress(progress);
+      },
     });
   }
 }

@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildWorkspaceTrustPathCandidates } from '@features/workspace-trust/core/domain';
+import {
+  buildWorkspaceTrustPathCandidates,
+  normalizeWorkspaceTrustConfigKey,
+} from '@features/workspace-trust/core/domain';
 import { FileClaudeTrustPersister } from '@features/workspace-trust/main';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -10,6 +13,11 @@ let tmpDir: string;
 
 async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(await fs.readFile(filePath, 'utf8')) as Record<string, unknown>;
+}
+
+/** Trust config keys are always slash-separated, whatever the host separator is. */
+function trustKey(dir: string): string {
+  return normalizeWorkspaceTrustConfigKey(dir, { platform: 'posix' });
 }
 
 describe('FileClaudeTrustPersister', () => {
@@ -32,7 +40,7 @@ describe('FileClaudeTrustPersister', () => {
         {
           theme: 'dark',
           projects: {
-            [appDir]: {
+            [trustKey(appDir)]: {
               allowedTools: ['Read'],
             },
           },
@@ -58,11 +66,11 @@ describe('FileClaudeTrustPersister', () => {
     const parsed = await readJson(configPath);
     expect(parsed.theme).toBe('dark');
     expect(parsed.projects).toMatchObject({
-      [appDir]: {
+      [trustKey(appDir)]: {
         allowedTools: ['Read'],
         hasTrustDialogAccepted: true,
       },
-      [repoDir]: {
+      [trustKey(repoDir)]: {
         hasTrustDialogAccepted: true,
       },
     });
@@ -86,7 +94,7 @@ describe('FileClaudeTrustPersister', () => {
     expect(result.ok).toBe(true);
     await expect(readJson(configPath)).resolves.toMatchObject({
       projects: {
-        [projectDir]: {
+        [trustKey(projectDir)]: {
           hasTrustDialogAccepted: true,
         },
       },
@@ -134,7 +142,7 @@ describe('FileClaudeTrustPersister', () => {
     expect(result.ok).toBe(true);
     const parsed = await readJson(configPath);
     expect(parsed.projects).toMatchObject({
-      [projectDir]: {
+      [trustKey(projectDir)]: {
         hasTrustDialogAccepted: true,
       },
     });

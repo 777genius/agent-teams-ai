@@ -419,3 +419,37 @@ describe('OpenCodePromptDeliveryFollowUpPolicy', () => {
     expect(nextRecord.status).toBe('retry_scheduled');
   });
 });
+
+describe('force-cancelled follow-up', () => {
+  it.each([
+    { retry: true, reason: 'retry', responseState: 'not_observed' as const },
+    { retry: false, reason: 'session_stale', responseState: 'session_stale' as const },
+    {
+      retry: true,
+      reason: 'opencode_resolved_behavior_changed',
+      responseState: 'session_stale' as const,
+    },
+  ])(
+    'does not reinstall timers after a late $reason mutation',
+    async ({ retry, reason, responseState }) => {
+      const { policy, deps } = createPolicy();
+      const cancelled = baseRecord({ status: 'failed_terminal', cancelledAt: NOW_ISO });
+      const ledger = asLedger({
+        markNextAttemptScheduled: vi.fn(async () => cancelled),
+        markSessionRefreshScheduled: vi.fn(async () => cancelled),
+        markSessionStaleObservationScheduled: vi.fn(async () => cancelled),
+      });
+      const result = await policy.schedule({
+        teamName: 'team-a',
+        memberName: 'atlas',
+        ledger,
+        ledgerRecord: baseRecord({ responseState }),
+        retry,
+        reason,
+      });
+      expect(result).toEqual(cancelled);
+      expect(deps.scheduleWatchdog).not.toHaveBeenCalled();
+      expect(deps.logEvent).not.toHaveBeenCalled();
+    }
+  );
+});

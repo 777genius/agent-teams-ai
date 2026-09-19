@@ -386,9 +386,17 @@ export function resolveTeamMemberRuntimeLiveness(
     );
   }
 
+  // Deliberately asymmetric with the recorded-pid branch above: reaching here
+  // means the process table never contradicted the registration, so there is
+  // nothing to falsify. Reporting not-alive would strand every ephemeral lane
+  // that registers before it records a runtime pid, so the registration stays
+  // authoritative. Wider than the twin branch in projectRuntimeLiveness, which
+  // is reached only without an expected pid: a recorded pid that resolves to a
+  // process-table row the identity checks above could not verify also lands
+  // here and keeps the registration's verdict.
   if (hasPersistedEvidence(input)) {
     return result({
-      alive: false,
+      alive: true,
       livenessKind: 'registered_only',
       runtimeSessionId,
       runtimeDiagnostic: 'registered runtime metadata without live process',

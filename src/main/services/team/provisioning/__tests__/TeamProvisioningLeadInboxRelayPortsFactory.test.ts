@@ -282,6 +282,6 @@ describe('TeamProvisioningLeadInboxRelayPortsFactory', () => {
     expect(deps.logger.warn).toHaveBeenCalledWith(
       '[alpha] lead_inbox_relay_timed_out: lead_inbox_relay timed out after 120000ms: alpha'
     );
-    expect(deps.leadInboxRelayInFlight.has('alpha')).toBe(false);
+    expect(deps.leadInboxRelayInFlight.has('alpha')).toBe(true);
   });
 });

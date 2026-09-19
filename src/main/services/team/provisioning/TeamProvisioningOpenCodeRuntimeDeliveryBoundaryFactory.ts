@@ -1,9 +1,12 @@
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+
 import { type OpenCodeRuntimeCheckinRun } from './TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
 } from './TeamProvisioningOpenCodeRuntimeDelivery';
 
+import type { LaunchStateWriteOptions } from './TeamProvisioningLaunchStateStoreBoundary';
 import type { PersistedTeamLaunchPhase } from '@shared/types';
 
 type DeliveryBoundaryPorts<Run extends OpenCodeRuntimeCheckinRun> =
@@ -124,8 +127,12 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryServi
   writeLaunchStateSnapshot: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['writeLaunchStateSnapshot'];
   writeLaunchStateSnapshotNow(
     teamName: string,
-    snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1]
-  ): Promise<{ snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1] }>;
+    snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1],
+    options?: LaunchStateWriteOptions
+  ): Promise<{
+    wrote: boolean;
+    snapshot: Parameters<DeliveryBoundaryPorts<Run>['writeLaunchState']>[1];
+  }>;
   enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   withTeamLock: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['withTeamLock'];
   readConfigForStrictDecision: DeliveryBoundaryPorts<Run>['readConfigForStrictDecision'];
@@ -218,12 +225,19 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
     },
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       service.writeLaunchStateSnapshot(teamName, snapshot),
-    mutateLaunchStateSnapshot: (teamName, mutation) =>
-      service.enqueueLaunchStateStoreOperation(teamName, async () => {
+    mutateLaunchStateSnapshot: (teamName, mutation) => {
+      const isAuthorized = captureTeamLaunchPublicationAuthority(teamName);
+      return service.enqueueLaunchStateStoreOperation(teamName, async () => {
         const current = await service.launchStateStore.read(teamName);
         const next = await mutation(current);
-        return (await service.writeLaunchStateSnapshotNow(teamName, next)).snapshot;
-      }),
+        const result = await service.writeLaunchStateSnapshotNow(teamName, next, {
+          isAuthorized,
+          republishesExistingLaunch: true,
+        });
+        if (!result.wrote) throw new Error('OpenCode runtime publication was superseded');
+        return result.snapshot;
+      });
+    },
     withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
     readConfigForStrictDecision: (teamName) => service.readConfigForStrictDecision(teamName),
     membersMetaStore: {
@@ -315,8 +329,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromSer
     },
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       service.writeLaunchStateSnapshot(teamName, snapshot),
-    writeLaunchStateSnapshotNow: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshotNow(teamName, snapshot),
+    writeLaunchStateSnapshotNow: (teamName, snapshot, options) =>
+      service.writeLaunchStateSnapshotNow(teamName, snapshot, options),
     enqueueLaunchStateStoreOperation: (teamName, operation) =>
       service.enqueueLaunchStateStoreOperation(teamName, operation),
     withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),

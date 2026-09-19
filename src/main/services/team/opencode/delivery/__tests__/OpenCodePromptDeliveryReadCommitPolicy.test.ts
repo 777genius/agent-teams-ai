@@ -126,6 +126,86 @@ describe('OpenCode prompt delivery read commit policy', () => {
     ).toBe('visible_reply_missing_task_refs');
   });
 
+  it('commits reply-optional deliveries on any responded state (no progress proof, no answer check)', async () => {
+    const hasAcceptedMemberWorkSyncReport = vi.fn(async () => false);
+    // Task assignment notice: a tool-only turn without task_start. The observer
+    // used to see task_get mid-turn, decide there was no progress proof, and
+    // re-prompt the same notice up to three times.
+    const assignmentNotice = record({
+      replyRecipient: 'system',
+      taskRefs: [TASK_REF],
+      responseState: 'responded_non_visible_tool',
+      observedToolCallNames: ['task_get', 'cross_team_get_outbox'],
+    });
+    await expect(
+      isOpenCodeDeliveryResponseReadCommitAllowed({
+        responseState: 'responded_non_visible_tool',
+        taskRefs: [TASK_REF],
+        ledgerRecord: assignmentNotice,
+        hasAcceptedMemberWorkSyncReport,
+        taskRefsIncludeAll,
+      })
+    ).resolves.toBe(true);
+    expect(
+      getOpenCodeDeliveryPendingReason({
+        responseState: 'responded_non_visible_tool',
+        taskRefs: [TASK_REF],
+        ledgerRecord: assignmentNotice,
+        taskRefsIncludeAll,
+      })
+    ).not.toBe('non_visible_tool_without_task_progress');
+
+    // Teammate "done" report delivered to the lead: an ack-looking plain-text
+    // turn end is the whole contract.
+    const teammateReport = record({
+      memberName: 'team-lead',
+      replyRecipient: 'reviewer',
+      taskRefs: [TASK_REF],
+      responseState: 'responded_plain_text',
+      observedAssistantPreview: 'Noted, no reply needed.',
+    });
+    await expect(
+      isOpenCodeDeliveryResponseReadCommitAllowed({
+        responseState: 'responded_plain_text',
+        actionMode: 'ask',
+        taskRefs: [TASK_REF],
+        ledgerRecord: teammateReport,
+        hasAcceptedMemberWorkSyncReport,
+        taskRefsIncludeAll,
+      })
+    ).resolves.toBe(true);
+
+    // Negative control: lead- and user-addressed deliveries keep the strict
+    // contract, so a real question is still owed a visible answer.
+    await expect(
+      isOpenCodeDeliveryResponseReadCommitAllowed({
+        responseState: 'responded_non_visible_tool',
+        taskRefs: [TASK_REF],
+        ledgerRecord: record({
+          replyRecipient: 'team-lead',
+          taskRefs: [TASK_REF],
+          responseState: 'responded_non_visible_tool',
+          observedToolCallNames: ['task_get'],
+        }),
+        hasAcceptedMemberWorkSyncReport,
+        taskRefsIncludeAll,
+      })
+    ).resolves.toBe(false);
+    expect(
+      getOpenCodeDeliveryPendingReason({
+        responseState: 'responded_non_visible_tool',
+        taskRefs: [TASK_REF],
+        ledgerRecord: record({
+          replyRecipient: 'user',
+          taskRefs: [TASK_REF],
+          responseState: 'responded_non_visible_tool',
+          observedToolCallNames: ['task_get'],
+        }),
+        taskRefsIncludeAll,
+      })
+    ).toBe('non_visible_tool_without_task_progress');
+  });
+
   it('requires work-sync nudges to produce accepted work-sync proof', () => {
     expect(
       getOpenCodeDeliveryPendingReason({

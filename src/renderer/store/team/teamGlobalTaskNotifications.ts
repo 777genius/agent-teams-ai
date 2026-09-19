@@ -7,6 +7,11 @@ import {
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
 
+import {
+  captureContextScopedRequestEpoch,
+  captureContextScopedRequestEpochStartedAtMs,
+} from '../utils/contextScopedRequestEpoch';
+
 import type { AppConfig } from '@renderer/types/data';
 import type {
   GlobalTask,
@@ -24,6 +29,8 @@ const notifiedBlockedTaskKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
 const notificationTransport = createTeamNotificationTransport();
+let notificationContextEpoch = captureContextScopedRequestEpoch();
+let commentHistoryCutoffMs = captureContextScopedRequestEpochStartedAtMs();
 
 interface TaskNotificationIndexes {
   readonly firstOldTaskByKey: ReadonlyMap<string, GlobalTask>;
@@ -41,6 +48,10 @@ export interface ProcessGlobalTaskNotificationsParams {
 }
 
 export function resetGlobalTaskNotificationTrackerForTests(): void {
+  resetGlobalTaskNotificationTracker();
+}
+
+function resetGlobalTaskNotificationTracker(historyCutoffMs = Date.now()): void {
   notifiedClarificationTaskKeys.clear();
   notifiedStatusChangeKeys.clear();
   notifiedCommentKeys.clear();
@@ -48,18 +59,35 @@ export function resetGlobalTaskNotificationTrackerForTests(): void {
   notifiedAllCompletedTeams.clear();
   notifiedBlockedTaskKeys.clear();
   isFirstFetchAllTasks = true;
+  notificationContextEpoch = captureContextScopedRequestEpoch();
+  commentHistoryCutoffMs = historyCutoffMs;
+}
+
+function synchronizeNotificationContext(): void {
+  if (notificationContextEpoch !== captureContextScopedRequestEpoch()) {
+    resetGlobalTaskNotificationTracker(captureContextScopedRequestEpochStartedAtMs());
+  }
 }
 
 export function consumeFirstGlobalTasksFetchFlag(): boolean {
+  synchronizeNotificationContext();
   const wasFirst = isFirstFetchAllTasks;
   isFirstFetchAllTasks = false;
   return wasFirst;
 }
 
 export function processGlobalTaskNotifications(params: ProcessGlobalTaskNotificationsParams): void {
+  synchronizeNotificationContext();
   const { oldTasks, newTasks, appConfig, teamByName, isInitialFetch } = params;
 
   if (isInitialFetch) {
+    // The first response can already contain comments created while IPC loaded.
+    // Apply the context cutoff before seeding so those events are delivered once.
+    detectTaskCommentNotifications(
+      buildTaskNotificationIndexes(oldTasks),
+      newTasks,
+      appConfig?.notifications?.notifyOnTaskComments ?? true
+    );
     seedGlobalTaskNotificationState(newTasks);
     return;
   }
@@ -309,18 +337,18 @@ function detectTaskCommentNotifications(
 ): void {
   for (const task of newTasks) {
     const oldTask = oldTaskIndexes.lastOldTaskByKey.get(getTaskNotificationKey(task));
-    const oldCommentCount = oldTask?.comments?.length ?? 0;
-    const newCommentCount = task.comments?.length ?? 0;
-
-    if (newCommentCount <= oldCommentCount) continue;
-
-    const newComments = (task.comments ?? []).slice(oldCommentCount);
-    for (const comment of newComments) {
-      if (comment.author === 'user') continue;
-
+    const oldCommentIds = new Set(oldTask?.comments?.map((comment) => comment.id));
+    for (const comment of task.comments ?? []) {
       const key = `${task.teamName}:${task.id}:${comment.id}`;
       if (notifiedCommentKeys.has(key)) continue;
       notifiedCommentKeys.add(key);
+
+      // Global snapshots can be partial (including the 500-task export limit).
+      // First observation is not proof of creation: remember hydrated history
+      // without recreating unread notifications or toasts for old comments.
+      if (oldCommentIds.has(comment.id) || comment.author === 'user') continue;
+      const createdAtMs = Date.parse(comment.createdAt);
+      if (!Number.isFinite(createdAtMs) || createdAtMs < commentHistoryCutoffMs) continue;
 
       if (comment.type === 'review_request') {
         showTaskReviewRequestedNotification(task, comment, !notifyEnabled);

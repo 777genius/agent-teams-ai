@@ -13,6 +13,7 @@ import type {
   CodexManagedAccountDto,
   CodexRateLimitSnapshotDto,
 } from '@features/codex-account/contracts';
+import type { RuntimeProviderManagementErrorDiagnosticsDto } from '@features/runtime-provider-management/contracts';
 
 // =============================================================================
 // Platform Detection
@@ -200,6 +201,8 @@ export interface CliProviderModelCatalogItem {
     limits?: unknown;
     free?: boolean;
     releaseDate?: string | null;
+    /** Authoritative runtime hint that the model is in its new-model announcement window. */
+    recentlyReleased?: boolean;
     opencode?: OpenCodeModelRouteMetadata | null;
   } | null;
 }
@@ -275,6 +278,8 @@ export interface CliProviderStatus {
   /** Optional for compatibility with runtimes that predate typed status-check outcomes. */
   statusCheckOutcome?: CliProviderStatusCheckOutcome;
   statusCheckErrorCode?: CliProviderStatusCheckErrorCode;
+  /** App-derived from affirmative runtime support; never launch authorization. */
+  teamLaunchAuthorityRestriction?: 'catalog-refresh';
   modelVerificationState?: 'idle' | 'verifying' | 'verified';
   statusMessage?: string | null;
   detailMessage?: string | null;
@@ -452,6 +457,7 @@ export interface OpenCodeRuntimeStatus {
   state: OpenCodeRuntimeInstallerState;
   progress?: OpenCodeRuntimeInstallProgress;
   error?: string;
+  diagnostics?: RuntimeProviderManagementErrorDiagnosticsDto;
 }
 
 export interface OpenCodeRuntimeAPI {

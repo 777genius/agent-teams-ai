@@ -89,7 +89,10 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
   readonly restoreGeneration: number;
   readonly mountGeneration: number;
   readonly routeAdmissionBinding?: HostedRouteAdmissionBinding;
-  readonly onFatalOwnerLoss?: (error: Error) => void;
+  readonly onFatalOwnerLoss?: (
+    error: Error,
+    ownerBinding: OrchestratorLifecycleOwnerBinding
+  ) => void;
   readonly now?: () => number;
 }
 
@@ -168,9 +171,11 @@ export async function createTeamLifecycleCommandComposition(
     }>
   >();
   const socketPath = dependencies.orchestratorSocketPath ?? DEFAULT_ORCHESTRATOR_SOCKET_PATH;
+  const orchestratorExpectedOwnerBinding = dependencies.orchestratorExpectedOwnerBinding;
+  const orchestratorBootstrapBinding = dependencies.orchestratorBootstrapBinding;
   if (
-    dependencies.orchestratorExpectedOwnerBinding === undefined ||
-    dependencies.orchestratorBootstrapBinding === undefined
+    orchestratorExpectedOwnerBinding === undefined ||
+    orchestratorBootstrapBinding === undefined
   ) {
     throw new Error('hosted-lifecycle-command-authenticated-handoff-required');
   }
@@ -205,11 +210,14 @@ export async function createTeamLifecycleCommandComposition(
           : { retryBackoffMs: dependencies.orchestratorRetryBackoffMs }),
         onOwnerLoss: () => {
           gateway?.ownerLost();
-          dependencies.onFatalOwnerLoss?.(new Error('hosted-lifecycle-orchestrator-owner-lost'));
+          dependencies.onFatalOwnerLoss?.(
+            new Error('hosted-lifecycle-orchestrator-owner-lost'),
+            orchestratorExpectedOwnerBinding
+          );
         },
         trustAnchor: dependencies.orchestratorTrustAnchor,
-        expectedOwnerBinding: dependencies.orchestratorExpectedOwnerBinding,
-        bootstrapBinding: dependencies.orchestratorBootstrapBinding,
+        expectedOwnerBinding: orchestratorExpectedOwnerBinding,
+        bootstrapBinding: orchestratorBootstrapBinding,
       },
       (created) => {
         pendingReadiness = created;

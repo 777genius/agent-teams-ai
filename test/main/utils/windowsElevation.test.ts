@@ -154,6 +154,9 @@ describe('windowsElevation', () => {
 
     await createWindowsElevationStatusChecker({
       platform: 'win32',
+      // Pinned like the sibling cases: without it the probe path comes from the
+      // host's SystemRoot, whose spelling varies ("C:\WINDOWS").
+      systemRoot: 'C:\\Windows',
       timeoutMs: 750,
       runCommand,
     })();

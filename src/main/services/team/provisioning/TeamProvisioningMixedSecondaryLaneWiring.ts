@@ -4,6 +4,7 @@ import {
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { randomUUID } from 'crypto';
 
@@ -16,6 +17,7 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
@@ -68,6 +70,7 @@ export type TeamProvisioningMixedSecondaryLaneWiringRun = MixedSecondaryLaneLaun
 type LaunchFlowServicePortKey =
   | 'isStoppingSecondaryRuntimeTeam'
   | 'deleteSecondaryRuntimeRun'
+  | 'deleteSecondaryRuntimeRunIfOwned'
   | 'getOpenCodeRuntimeAdapter'
   | 'publishMixedSecondaryLaneStatusChange'
   | 'readLaunchState'
@@ -78,6 +81,7 @@ type LaunchFlowServicePortKey =
 
 type LaunchQueueServicePortKey =
   | 'deleteSecondaryRuntimeRun'
+  | 'deleteSecondaryRuntimeRunIfOwned'
   | 'launchSingleMixedSecondaryLane'
   | 'publishMixedSecondaryLaneStatusChange'
   | 'persistLaunchStateSnapshot'
@@ -86,7 +90,6 @@ type LaunchQueueServicePortKey =
 
 type StopServicePortKey =
   | 'getOpenCodeRuntimeAdapter'
-  | 'getSecondaryRuntimeRuns'
   | 'readLaunchState'
   | 'deleteSecondaryRuntimeRun';
 
@@ -113,6 +116,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringDeps<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 > {
   service: TeamProvisioningMixedSecondaryLaneWiringService<TRun>;
+  isCurrentTrackedRun(run: TRun): boolean;
   logger: MixedSecondaryLaunchQueuePorts<TRun>['logger'] &
     SingleMixedSecondaryRuntimeLaneStopPorts['logger'];
 }
@@ -147,8 +151,8 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
   runtimeLaneCoordinator: {
     buildAggregateLaunchSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildAggregateLaunchSnapshot'];
   };
-  getSecondaryRuntimeRuns: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['getSecondaryRuntimeRuns'];
   deleteSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRun'];
+  deleteSecondaryRuntimeRunIfOwned: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRunIfOwned'];
   publishMixedSecondaryLaneStatusChange: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['publishMixedSecondaryLaneStatusChange'];
   setSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['setSecondaryRuntimeRun'];
   buildOpenCodeSecondaryAppManagedLaunchPrompt: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildOpenCodeSecondaryAppManagedLaunchPrompt'];
@@ -164,6 +168,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
 export interface TeamProvisioningMixedSecondaryLaneWiringServiceHostOptions<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 > {
+  isCurrentTrackedRun(run: TRun): boolean;
   logger: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>['logger'];
 }
 
@@ -202,6 +207,7 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
   deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>
 ): MixedSecondaryLaneLaunchFlowPorts<TRun> {
   return {
+    isCurrentTrackedRun: deps.isCurrentTrackedRun,
     nowMs: () => Date.now(),
     randomUuid: () => randomUUID(),
     teamsBasePath: () => getTeamsBasePath(),
@@ -210,6 +216,8 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
     clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
       deps.service.deleteSecondaryRuntimeRun(teamName, laneId),
+    deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+      deps.service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     migrateLegacyOpenCodeRuntimeState,
     upsertOpenCodeRuntimeLaneIndexEntry,
@@ -235,9 +243,9 @@ export function createSingleMixedSecondaryRuntimeLaneStopPorts<
 ): SingleMixedSecondaryRuntimeLaneStopPorts {
   return {
     teamsBasePath: getTeamsBasePath(),
-    getSecondaryRuntimeRuns: (teamName) => deps.service.getSecondaryRuntimeRuns(teamName),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
+    isRuntimeProcessAlive: isProcessAlive,
     upsertOpenCodeRuntimeLaneIndexEntry,
     clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
@@ -250,6 +258,7 @@ export function createMixedSecondaryLaunchQueuePorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>): MixedSecondaryLaunchQueuePorts<TRun> {
   return {
+    isCurrentTrackedRun: deps.isCurrentTrackedRun,
     nowMs: () => Date.now(),
     randomUuid: () => randomUUID(),
     teamsBasePath: () => getTeamsBasePath(),
@@ -257,6 +266,8 @@ export function createMixedSecondaryLaunchQueuePorts<
     upsertOpenCodeRuntimeLaneIndexEntry,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
       deps.service.deleteSecondaryRuntimeRun(teamName, laneId),
+    deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+      deps.service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
     launchSingleMixedSecondaryLane: (run, lane) =>
       deps.service.launchSingleMixedSecondaryLane(run, lane),
     publishMixedSecondaryLaneStatusChange: (run, lane) =>
@@ -275,6 +286,7 @@ export function createStaleMixedSecondaryRecoveryPorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>): StaleMixedSecondaryRecoveryPorts {
   return {
+    isTeamLaunchStopped: (teamName) => new TeamLaunchStateStore().isStopped(teamName),
     hasMixedSecondaryLaunchMetadata: (snapshot) =>
       deps.service.hasMixedSecondaryLaunchMetadata(snapshot),
     shouldRecoverStalePersistedMixedLaunchSnapshot: (snapshot) =>
@@ -298,8 +310,8 @@ export function createStaleMixedSecondaryRecoveryPorts<
     nowIso,
     getTeamsBasePath,
     buildAggregateLaunchSnapshot: (input) => deps.service.buildAggregateLaunchSnapshot(input),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      deps.service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      deps.service.writeLaunchStateSnapshot(teamName, snapshot, options),
   };
 }
 
@@ -310,13 +322,15 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
   options: TeamProvisioningMixedSecondaryLaneWiringServiceHostOptions<TRun>
 ): TeamProvisioningMixedSecondaryLaneWiringDeps<TRun> {
   return {
+    isCurrentTrackedRun: options.isCurrentTrackedRun,
     service: {
       isStoppingSecondaryRuntimeTeam: (teamName) =>
         service.stoppingSecondaryRuntimeTeams.has(teamName),
       deleteSecondaryRuntimeRun: (teamName, laneId) =>
         service.deleteSecondaryRuntimeRun(teamName, laneId),
+      deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+        service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
       getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
-      getSecondaryRuntimeRuns: (teamName) => service.getSecondaryRuntimeRuns(teamName),
       publishMixedSecondaryLaneStatusChange: (run, lane) =>
         service.publishMixedSecondaryLaneStatusChange(run, lane),
       readLaunchState: (teamName) => service.launchStateStore.read(teamName),
@@ -353,8 +367,8 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
         ),
       buildAggregateLaunchSnapshot: (input) =>
         service.runtimeLaneCoordinator.buildAggregateLaunchSnapshot(input),
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        service.writeLaunchStateSnapshot(teamName, snapshot),
+      writeLaunchStateSnapshot: (teamName, snapshot, writeOptions) =>
+        service.writeLaunchStateSnapshot(teamName, snapshot, writeOptions),
     },
     logger: options.logger,
   };

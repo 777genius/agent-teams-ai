@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -93,7 +95,7 @@ describe('TeamProvisioningCreateTeamFlow', () => {
           { location: 'configured', basePath: '/teams' },
           { location: 'default', basePath: '/detected-teams' },
         ],
-        async (filePath) => filePath === '/detected-teams/runtime-team/config.json'
+        async (filePath) => filePath === path.join('/detected-teams', 'runtime-team', 'config.json')
       )
     ).rejects.toThrow('Team already exists (found under /detected-teams)');
   });

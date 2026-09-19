@@ -53,6 +53,21 @@ export function readUnixProcessTable(rootPid: number): Map<number, UnixProcessId
   }
 }
 
+/**
+ * The exact start identity of one live process, in the spelling the runtime's
+ * attribution records carry (`proc:<start ticks>` from `/proc/<pid>/stat`).
+ * Linux only: everywhere else the answer is `null`, and so is a process that is
+ * gone or whose stat cannot be read - both "cannot say", never "same process".
+ */
+export function readLinuxProcessStartToken(pid: number): string | null {
+  if (process.platform !== 'linux') return null;
+  try {
+    return readPreciseUnixProcessStartIdentity(pid, '');
+  } catch {
+    return null;
+  }
+}
+
 function readPreciseUnixProcessStartIdentity(pid: number, fallbackIdentity: string): string | null {
   if (process.platform !== 'linux') return `ps:${fallbackIdentity}`;
   try {

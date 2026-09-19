@@ -5,6 +5,12 @@ import {
   snapshotToMemberSpawnStatuses,
 } from '../TeamLaunchStateEvaluator';
 
+import { recordOpenCodePrimaryCleanup } from './OpenCodeAggregatePrimaryLaneStopHelpers';
+import {
+  buildUncommittableOpenCodeSessionDiagnostic,
+  describeBlockedOpenCodePrimaryLaneLaunch,
+  describeClearedOpenCodePrimaryLaneStorage,
+} from './TeamProvisioningOpenCodeBlockedLaunchReporting';
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
   hasCommittedOpenCodeRuntimeBootstrapSessionEvidence,
@@ -48,6 +54,8 @@ export interface OpenCodeAggregatePrimaryLaneRun {
 export interface PersistOpenCodeRuntimeAdapterLaunchResultPorts {
   createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
   nowIso(): string;
+  /** Durable sink for members whose session evidence could not be committed. */
+  logDiagnostic?(message: string): void;
   writeLaunchStateSnapshot(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
@@ -128,7 +136,20 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     state: 'disconnected' | 'failed';
     message: string;
   }): void;
+  /**
+   * The promotion gate every secondary lane already passes. Applied to the
+   * primary lane it is what stops a lead that claims `confirmed_alive` without a
+   * committed session record from being promoted at all.
+   */
+  guardCommittedOpenCodeLaneEvidence?(input: {
+    teamName: string;
+    laneId: string;
+    memberNames: readonly string[];
+    result: TeamRuntimeLaunchResult;
+  }): Promise<TeamRuntimeLaunchResult>;
   logWarning?(message: string): void;
+  /** Durable sink for expected operational events, separate from failures. */
+  logDiagnostic?(message: string): void;
 }
 
 export class OpenCodeAggregateRuntimeStopError extends AggregateError {
@@ -231,8 +252,26 @@ export async function launchOpenCodeAggregatePrimaryLane(
     previousLaunchState: params.previousLaunchState,
   };
   const launchResult = await params.adapter.launch(launchInput);
+  if (launchResult.teamLaunchState === 'partial_failure') {
+    // The single most important line in this flow: without it a primary lane
+    // that never reached session bootstrap produced zero output between app
+    // start and the first "No stored OpenCode session record" relay failure.
+    ports.logDiagnostic?.(
+      describeBlockedOpenCodePrimaryLaneLaunch({ teamName, runId, result: launchResult })
+    );
+  }
+  // The gate runs its own commit first, so the persist commit below is
+  // idempotent: the same id/member/run replaces the same session record.
+  const guardedLaunchResult = ports.guardCommittedOpenCodeLaneEvidence
+    ? await ports.guardCommittedOpenCodeLaneEvidence({
+        teamName,
+        laneId: 'primary',
+        memberNames: expectedMembers.map((member) => member.name),
+        result: launchResult,
+      })
+    : launchResult;
   const { snapshot, result } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
-    launchResult,
+    guardedLaunchResult,
     launchInput
   );
   params.assertStillCurrentAfterPersistence?.();
@@ -317,8 +356,13 @@ export async function launchOpenCodeAggregatePrimaryLane(
         if (cleared !== true && cleared !== 'cleared') {
           throw new Error('OpenCode primary lane did not confirm exact-runtime storage cleanup');
         }
+        // This is the operation that destroys the lane's session store, manifest
+        // and receipts. Only the failing catch below used to log, so a successful
+        // evidence wipe was completely silent.
+        ports.logDiagnostic?.(describeClearedOpenCodePrimaryLaneStorage({ teamName, runId }));
         ports.deleteRuntimeAdapterRunByTeamIfOwned?.(teamName, exactCleanupOwner);
         params.onUntrackedPrimaryStopConfirmed?.();
+        recordOpenCodePrimaryCleanup(params.run, runId);
       } catch (error) {
         ports.logWarning?.(
           `[${teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
@@ -455,10 +499,12 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
   },
   ports: Pick<
     PersistOpenCodeRuntimeAdapterLaunchResultPorts,
-    'createOpenCodeRuntimeBootstrapEvidencePorts' | 'nowIso'
+    'createOpenCodeRuntimeBootstrapEvidencePorts' | 'nowIso' | 'logDiagnostic'
   >
 ): Promise<TeamRuntimeLaunchResult> {
   let changed = false;
+  let promoted = false;
+  const uncommittableDiagnostics: string[] = [];
   const members: Record<string, TeamRuntimeMemberLaunchEvidence> = { ...params.result.members };
   const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
   for (const [memberName, evidence] of Object.entries(params.result.members)) {
@@ -480,6 +526,27 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
       appManagedCandidate.laneId === params.laneId &&
       appManagedCandidate.runtimeSessionId === runtimeSessionId;
     if ((!confirmed && !appManagedCandidateMatches) || !runtimeSessionId) {
+      // A bare `continue` here is the silence in the incident: a lead that
+      // claimed confirmation but could not be committed produced no log line,
+      // no diagnostic and no downgrade, and the launch promoted anyway.
+      //
+      // Primary lane only. A secondary member that is `confirmed_alive` before
+      // its session id lands is an ordinary launch race the lane guard already
+      // covers; reporting it would add a line on every healthy launch.
+      if (params.laneId === 'primary' && (confirmed || appManagedCandidate)) {
+        const diagnostic = buildUncommittableOpenCodeSessionDiagnostic({
+          memberName,
+          reason: runtimeSessionId
+            ? 'app_managed_candidate_mismatch'
+            : 'missing_runtime_session_id',
+        });
+        members[memberName] = {
+          ...evidence,
+          diagnostics: appendDiagnosticOnce(evidence.diagnostics, diagnostic),
+        };
+        uncommittableDiagnostics.push(diagnostic);
+        ports.logDiagnostic?.(`[${params.teamName}] ${diagnostic} (lane=${params.laneId})`);
+      }
       continue;
     }
     // For app-managed bootstrap, promotion is intentionally two-phase:
@@ -520,10 +587,28 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
     if (appManagedCandidateMatches && verified && !confirmed) {
       members[memberName] = promoteCommittedOpenCodeAppManagedBootstrapEvidence(evidence);
       changed = true;
+      promoted = true;
     }
   }
-  if (!changed) {
+  if (!changed && uncommittableDiagnostics.length === 0) {
     return params.result;
+  }
+  const diagnostics = Array.from(
+    new Set([
+      ...params.result.diagnostics,
+      ...(promoted
+        ? [
+            'OpenCode app-managed bootstrap evidence was committed and read back before readiness promotion.',
+          ]
+        : []),
+      ...uncommittableDiagnostics,
+    ])
+  );
+  if (!changed) {
+    // Reporting only. Re-summarizing here would let a member-level annotation
+    // silently UPGRADE a partial_failure launch to clean_success; the promotion
+    // decision belongs to the lane evidence guard, which reads disk.
+    return { ...params.result, members, diagnostics };
   }
   const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
   return {
@@ -531,9 +616,6 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
     launchPhase: teamLaunchState === 'clean_success' ? 'finished' : params.result.launchPhase,
     teamLaunchState,
     members,
-    diagnostics: appendDiagnosticOnce(
-      params.result.diagnostics,
-      'OpenCode app-managed bootstrap evidence was committed and read back before readiness promotion.'
-    ),
+    diagnostics,
   };
 }

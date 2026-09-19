@@ -1,7 +1,6 @@
 import {
-  isLeadMember,
+  isCanonicalSettingsLeadMember,
   isReservedLeadRole,
-  normalizeTeamMemberRole,
 } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
@@ -80,12 +79,7 @@ export function normalizeEditableMemberSettings(
 }
 
 export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boolean {
-  if (isLeadMember({ agentType: target.agentType, name: target.name })) return true;
-  if (normalizeIdentityText(target.agentType)) return false;
-
-  const name = normalizeIdentityText(target.name);
-  const role = target.settings.role ? normalizeTeamMemberRole(target.settings.role) : '';
-  return isReservedLeadRole(role) && (role !== 'lead' || name === 'lead');
+  return isCanonicalSettingsLeadMember({ name: target.name, agentType: target.agentType, role: target.settings.role });
 }
 
 export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {

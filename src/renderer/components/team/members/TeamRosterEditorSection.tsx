@@ -6,6 +6,7 @@ import { LeadModelRow } from './LeadModelRow';
 import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
@@ -40,6 +41,7 @@ interface TeamRosterEditorSectionProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
+  onEffortAutoReset?: () => void;
   onLimitContextChange: (value: boolean) => void;
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
@@ -62,6 +64,7 @@ interface TeamRosterEditorSectionProps {
   modelUnavailableReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   showWorktreeIsolationControls?: boolean;
   teammateWorktreeDefault?: boolean;
   worktreeIsolationDisabledReason?: string | null;
@@ -99,6 +102,7 @@ const TeamRosterEditorSectionImpl = ({
   onProviderChange,
   onModelChange,
   onEffortChange,
+  onEffortAutoReset,
   onLimitContextChange,
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
@@ -115,6 +119,7 @@ const TeamRosterEditorSectionImpl = ({
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
   showWorktreeIsolationControls = false,
   teammateWorktreeDefault = false,
   worktreeIsolationDisabledReason,
@@ -182,6 +187,7 @@ const TeamRosterEditorSectionImpl = ({
       modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
       modelIssueReasonByProvider={modelIssueReasonByProvider}
       modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+      onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
       showWorktreeIsolationControls={showWorktreeIsolationControls}
       teammateWorktreeDefault={teammateWorktreeDefault}
       worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
@@ -197,6 +203,7 @@ const TeamRosterEditorSectionImpl = ({
             onProviderChange={onProviderChange}
             onModelChange={onModelChange}
             onEffortChange={onEffortChange}
+            onEffortAutoReset={onEffortAutoReset}
             onLimitContextChange={onLimitContextChange}
             syncModelsWithTeammates={syncModelsWithTeammates}
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
@@ -208,6 +215,7 @@ const TeamRosterEditorSectionImpl = ({
             modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
             modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
             modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
+            onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
             showAnthropicContextLimit={hasAnthropicRuntime}
             disableAnthropicContextLimit={disableAnthropicContextLimit}
             layoutVariant="flat"

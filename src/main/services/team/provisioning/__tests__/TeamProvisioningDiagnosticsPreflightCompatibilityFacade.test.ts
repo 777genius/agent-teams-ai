@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +13,9 @@ import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisi
 import type { TeamProvisioningPrepareFacade } from '../TeamProvisioningPrepareFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { TeamCreateRequest, TeamProviderId, ToolApprovalSettings } from '@shared/types';
+
+/** The facade resolves the cwd before probing, which anchors it to a drive on Windows. */
+const probedCwd = (cwd: string): string => path.resolve(cwd);
 
 function createRuntimeAdapter(providerId: TeamRuntimeProviderId): TeamLaunchRuntimeAdapter {
   return {
@@ -122,6 +127,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   protected readonly memberSpawnStatusAuditPorts = {} as never;
   protected readonly runtimeSnapshotFacade = {
     getTeamAgentRuntimeSnapshot: vi.fn(),
+    getTeamAgentRuntimeSnapshotReadOnly: vi.fn(),
   };
   protected readonly runtimeSnapshotCacheBoundary = {
     getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
@@ -482,15 +488,19 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
       facade.getCliHelpOutput('/repo/second'),
     ]);
 
-    expect(first).toBe('Usage from /repo/first\nFlags from /repo/first');
-    expect(second).toBe('Usage from /repo/second\nFlags from /repo/second');
+    expect(first).toBe(
+      `Usage from ${probedCwd('/repo/first')}\nFlags from ${probedCwd('/repo/first')}`
+    );
+    expect(second).toBe(
+      `Usage from ${probedCwd('/repo/second')}\nFlags from ${probedCwd('/repo/second')}`
+    );
     expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledTimes(2);
     expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledWith(
-      '/repo/first',
+      probedCwd('/repo/first'),
       'anthropic'
     );
     expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledWith(
-      '/repo/second',
+      probedCwd('/repo/second'),
       'anthropic'
     );
     expect(facade.providerRuntimeMock.buildProvisioningEnv).toHaveBeenCalledTimes(2);
@@ -505,8 +515,12 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
       stderr: '',
     }));
 
-    await expect(facade.getCliHelpOutput('/repo/first')).resolves.toBe('Usage from /repo/first');
-    await expect(facade.getCliHelpOutput('/repo/second')).resolves.toBe('Usage from /repo/second');
+    await expect(facade.getCliHelpOutput('/repo/first')).resolves.toBe(
+      `Usage from ${probedCwd('/repo/first')}`
+    );
+    await expect(facade.getCliHelpOutput('/repo/second')).resolves.toBe(
+      `Usage from ${probedCwd('/repo/second')}`
+    );
 
     expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledTimes(2);
     expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledTimes(2);

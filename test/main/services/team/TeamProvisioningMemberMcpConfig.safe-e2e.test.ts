@@ -853,41 +853,67 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     }
   });
 
-  it('restartMember direct tmux sends explicit Codex fast mode args without obsolete flex tier', async () => {
-    const teamName = 'codex-fast-tier-tmux-restart';
-    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex tmux restart project-'));
-    writeProjectMcpConfig(projectDir);
+  // Direct tmux restart is POSIX-only by contract (isInteractiveShellCommand()
+  // returns false on win32), so the pane is never reused there and the restart
+  // goes through the orchestrator instead of sending keys.
+  it.skipIf(process.platform === 'win32')(
+    'restartMember direct tmux sends explicit Codex fast mode args without obsolete flex tier',
+    async () => {
+      const teamName = 'codex-fast-tier-tmux-restart';
+      const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex tmux restart project-'));
+      writeProjectMcpConfig(projectDir);
 
-    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
-      new Map([
-        [
-          '%7',
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+      vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([
+          [
+            '%7',
+            {
+              paneId: '%7',
+              panePid: 777,
+              currentCommand: 'zsh',
+              currentPath: projectDir,
+            },
+          ],
+        ])
+      );
+
+      const svc = new TeamProvisioningService();
+      configureLaunchStubs(svc);
+
+      let runId: string | undefined;
+      let launcherScriptPath: string | undefined;
+      try {
+        const created = await svc.createTeam(
           {
-            paneId: '%7',
-            panePid: 777,
-            currentCommand: 'zsh',
-            currentPath: projectDir,
+            teamName,
+            cwd: projectDir,
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.4',
+            members: [
+              {
+                name: 'alice',
+                role: 'developer',
+                providerId: 'codex',
+                model: 'gpt-5.4',
+                mcpPolicy: { mode: 'appOnly' },
+              },
+            ],
           },
-        ],
-      ])
-    );
+          () => {}
+        );
+        runId = created.runId;
+        markTeamRunAlive(svc, teamName, runId);
 
-    const svc = new TeamProvisioningService();
-    configureLaunchStubs(svc);
-
-    let runId: string | undefined;
-    let launcherScriptPath: string | undefined;
-    try {
-      const created = await svc.createTeam(
-        {
-          teamName,
-          cwd: projectDir,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model: 'gpt-5.4',
+        (
+          svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }
+        ).readConfigForStrictDecision = vi.fn(async () => ({
+          name: teamName,
+          projectPath: projectDir,
           members: [
+            { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
             {
               name: 'alice',
               role: 'developer',
@@ -896,74 +922,55 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
               mcpPolicy: { mode: 'appOnly' },
             },
           ],
-        },
-        () => {}
-      );
-      runId = created.runId;
-      markTeamRunAlive(svc, teamName, runId);
-
-      (
-        svc as unknown as { readConfigForStrictDecision: () => Promise<unknown> }
-      ).readConfigForStrictDecision = vi.fn(async () => ({
-        name: teamName,
-        projectPath: projectDir,
-        members: [
-          { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
+        }));
+        (
+          svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }
+        ).readPersistedRuntimeMembers = vi.fn(() => [
           {
             name: 'alice',
-            role: 'developer',
-            providerId: 'codex',
-            model: 'gpt-5.4',
-            mcpPolicy: { mode: 'appOnly' },
+            agentId: 'alice@codex-fast-tier-tmux-restart',
+            backendType: 'tmux',
+            tmuxPaneId: '%7',
+            cwd: projectDir,
           },
-        ],
-      }));
-      (
-        svc as unknown as { readPersistedRuntimeMembers: () => unknown[] }
-      ).readPersistedRuntimeMembers = vi.fn(() => [
-        {
-          name: 'alice',
-          agentId: 'alice@codex-fast-tier-tmux-restart',
-          backendType: 'tmux',
-          tmuxPaneId: '%7',
-          cwd: projectDir,
-        },
-      ]);
-      (
-        svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
-      ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
-      configureExplicitFastRuntimeArgsPlan(svc);
-      stubMemberLifecycleHostOptionalSeam(
-        svc,
-        'updateDirectTmuxRestartMemberConfig',
-        vi.fn(async () => {})
-      );
-      stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
+        ]);
+        (
+          svc as unknown as { getLiveTeamAgentRuntimeMetadata: () => Promise<Map<string, unknown>> }
+        ).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+        configureExplicitFastRuntimeArgsPlan(svc);
+        stubMemberLifecycleHostOptionalSeam(
+          svc,
+          'updateDirectTmuxRestartMemberConfig',
+          vi.fn(async () => {})
+        );
+        stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
 
-      vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockClear();
-      await svc.restartMember(teamName, 'alice');
+        vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockClear();
+        await svc.restartMember(teamName, 'alice');
 
-      expect(killTmuxPaneForCurrentPlatformSync).not.toHaveBeenCalled();
-      expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
-      const [paneId, command] = vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
-      expect(paneId).toBe('%7');
-      const launcher = readDirectTmuxRestartLauncher(command);
-      launcherScriptPath = launcher.scriptPath;
-      expect(command).not.toContain('--agent-id');
-      expect(launcher.script).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
-      expect(launcher.script).toContain("'--mcp-config'");
-      expectExplicitFastModeWithoutFlexCommand(launcher.script);
+        expect(killTmuxPaneForCurrentPlatformSync).not.toHaveBeenCalled();
+        expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+        const [paneId, command] =
+          vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
+        expect(paneId).toBe('%7');
+        const launcher = readDirectTmuxRestartLauncher(command);
+        launcherScriptPath = launcher.scriptPath;
+        expect(command).not.toContain('--agent-id');
+        expect(launcher.script).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
+        expect(launcher.script).toContain("'--mcp-config'");
+        expectExplicitFastModeWithoutFlexCommand(launcher.script);
 
-      await stopSafeE2eRun(svc, teamName, runId);
-      runId = undefined;
-    } finally {
-      if (runId) {
         await stopSafeE2eRun(svc, teamName, runId);
+        runId = undefined;
+      } finally {
+        if (runId) {
+          await stopSafeE2eRun(svc, teamName, runId);
+        }
+        if (launcherScriptPath) {
+          fs.rmSync(path.dirname(launcherScriptPath), { recursive: true, force: true });
+        }
+        fs.rmSync(projectDir, { recursive: true, force: true });
       }
-      if (launcherScriptPath) {
-        fs.rmSync(path.dirname(launcherScriptPath), { recursive: true, force: true });
-      }
-      fs.rmSync(projectDir, { recursive: true, force: true });
     }
-  });
+  );
 });

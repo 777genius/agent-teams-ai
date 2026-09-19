@@ -200,6 +200,6 @@ describe('team provisioning roster mutation lock', () => {
     await expect(service.restartMember('lock-team', 'worker')).resolves.toBeUndefined();
 
     expect(stopFlow).toHaveBeenCalledOnce();
-    expect(restart).toHaveBeenCalledWith('lock-team', 'worker');
+    expect(restart).toHaveBeenCalledWith('lock-team', 'worker', undefined);
   });
 });

@@ -1,8 +1,14 @@
+import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  createOpenCodeCanonicalProjectPathFingerprint,
+  createOpenCodeExecutionProofHash,
+  createOpenCodeExpectedBehaviorFingerprint,
+} from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
@@ -63,10 +69,39 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     const launchInput = captureAdapter.launchInputs[0];
     expect(launchInput).toBeDefined();
     expect(launchInput?.prompt ?? '').toContain('production desktop app');
-    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
+    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
     expect(launchInput?.prompt?.length ?? 0).toBeGreaterThan(1_500);
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
+    const checkReadiness = bridgeCapture.bridge.checkOpenCodeTeamLaunchReadiness;
+    const launchOpenCodeTeam = bridgeCapture.bridge.launchOpenCodeTeam;
+    bridgeCapture.bridge.checkOpenCodeTeamLaunchReadiness = async (input) => {
+      const readiness = await checkReadiness(input);
+      const capabilitySnapshotId = bridgeCapture.bridge.getLastOpenCodeRuntimeSnapshot?.(
+        input.projectPath,
+        input.selectedModel,
+        input.requireExecutionProbe
+      )?.capabilitySnapshotId;
+      if (!input.selectedModel || !capabilitySnapshotId) {
+        throw new Error('Semantic OpenCode readiness fixture requires model and capability proof.');
+      }
+      return {
+        ...readiness,
+        executionProof: buildExecutionProof(
+          input.projectPath,
+          input.selectedModel,
+          capabilitySnapshotId
+        ),
+      };
+    };
+    bridgeCapture.bridge.launchOpenCodeTeam = async (command) => ({
+      ...(await launchOpenCodeTeam!(command)),
+      expectedBehaviorFingerprint: command.expectedBehaviorFingerprint,
+    });
     const realAdapter = createOpenCodeRuntimeAdapterFromCapture(bridgeCapture);
     await expect(realAdapter.launch(launchInput!)).resolves.toMatchObject({
       teamLaunchState: 'clean_success',
@@ -74,15 +109,29 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
 
     expect(bridgeCapture.launchCommands).toHaveLength(1);
     const launchCommand = bridgeCapture.launchCommands[0];
+    expect(launchCommand?.runId).toBe(launchInput?.runId);
+    expect(launchCommand?.expectedCapabilitySnapshotId).toBe('capability-semantic-contract');
+    expect(launchCommand?.executionProof).toMatchObject({
+      providerId: 'opencode',
+      modelId: selectedModel,
+      projectPath,
+      capabilitySnapshotId: 'capability-semantic-contract',
+      reusable: false,
+    });
     expect(launchCommand?.leadPrompt).toContain('Known risk areas include stale runtime sessions');
     expect(launchCommand?.leadPrompt).toContain('OpenCode members bootstrap silently');
     expect(launchCommand?.leadPrompt.length ?? 0).toBeGreaterThan(1_500);
     expect(launchCommand?.leadPrompt.length ?? 0).toBeLessThan(80_000);
-    expect(launchCommand?.members.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
+    expect(launchCommand?.members.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);
-      expect(member.prompt).toContain('Team launch context:');
+      expect(member.prompt).toContain('Team launch context (HISTORICAL');
+      expect(member.prompt).toContain('Never act on the launch context directly from this briefing');
       expect(member.prompt).toContain('agent_teams_app_managed_bootstrap_briefing');
       expect(member.prompt).toContain('AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1');
       expect(member.prompt).toContain('agent-teams_message_send');
@@ -91,8 +140,9 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
         'That bootstrap restriction is only about team registry/startup files'
       );
       expect(member.prompt).toContain(
-        'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+        'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
       );
+      expect(member.prompt).toContain('registered for you as the MCP server named "agent-teams"');
       expect(member.prompt).toContain('stay idle silently');
       expect(member.prompt).not.toContain('Call SendMessage');
       expect(member.prompt).not.toContain('Use SendMessage');
@@ -162,3 +212,50 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     }
   });
 });
+
+function buildExecutionProof(
+  projectPath: string,
+  fullModelId: string,
+  capabilitySnapshotId: string
+) {
+  const modelProviderId = fullModelId.slice(0, fullModelId.indexOf('/')).toLowerCase();
+  const expectedBehavior = {
+    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint(projectPath),
+    modelProviderId,
+    fullModelId,
+    projectBehaviorFingerprint: sha256(`semantic-project:${projectPath}`),
+    effectiveConfigFingerprint: sha256(`semantic-config:${projectPath}:${fullModelId}`),
+    effectiveSelectedAuthFingerprint: sha256(`semantic-auth:${modelProviderId}`),
+  };
+  const verifiedAt = new Date();
+  const unsignedProof = {
+    schemaVersion: 1 as const,
+    providerId: 'opencode' as const,
+    modelId: fullModelId,
+    projectPath,
+    profileRootKey: sha256(`semantic-profile:${projectPath}`),
+    projectBehaviorFingerprint: expectedBehavior.projectBehaviorFingerprint,
+    managedConfigFingerprint: expectedBehavior.effectiveConfigFingerprint,
+    managedAuthFingerprint: expectedBehavior.effectiveSelectedAuthFingerprint,
+    binaryPath: '/opt/homebrew/bin/opencode',
+    binaryFingerprint: 'version:1.14.19',
+    opencodeVersion: '1.14.19',
+    capabilitySnapshotId,
+    credentialMode: 'api' as const,
+    reusable: false,
+    verifiedAt: verifiedAt.toISOString(),
+    expiresAt: new Date(verifiedAt.getTime() + 60_000).toISOString(),
+    expectedBehaviorEvidence: {
+      ...expectedBehavior,
+      expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(expectedBehavior),
+    },
+  };
+  return {
+    ...unsignedProof,
+    proofHash: createOpenCodeExecutionProofHash(unsignedProof),
+  };
+}
+
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}

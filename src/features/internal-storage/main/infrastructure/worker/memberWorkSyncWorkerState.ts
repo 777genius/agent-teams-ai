@@ -37,6 +37,7 @@ export const REPORT_INTENT_RECORD_SELECTION = {
   processedAt: memberWorkSyncReportIntents.processedAt,
   resultCode: memberWorkSyncReportIntents.resultCode,
   requestJson: memberWorkSyncReportIntents.requestJson,
+  journalJson: memberWorkSyncReportIntents.journalJson,
 };
 
 export const OUTBOX_ITEM_RECORD_SELECTION = {

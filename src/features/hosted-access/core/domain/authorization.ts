@@ -51,8 +51,13 @@ export interface HostedHttpRequest {
 export interface HostedHttpReply {
   readonly sent: boolean;
   readonly raw: {
+    readonly headersSent?: boolean;
+    readonly writableEnded?: boolean;
+    readonly destroyed?: boolean;
+    readonly closed?: boolean;
     once(event: 'close', listener: () => void): unknown;
   };
+  hijack?(): HostedHttpReply;
   code(statusCode: number): HostedHttpReply;
   send(payload?: unknown): unknown;
   header(name: string, value: unknown): HostedHttpReply;
@@ -80,8 +85,9 @@ export interface HostedHttpApplication {
     handler: (
       request: HostedHttpRequest,
       reply: HostedHttpReply,
-      payload: unknown
-    ) => Promise<unknown>
+      payload: unknown,
+      done: (error: Error | null, payload?: unknown) => void
+    ) => void
   ): void;
   addHook(
     name: 'onResponse',

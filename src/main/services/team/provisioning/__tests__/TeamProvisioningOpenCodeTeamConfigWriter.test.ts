@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -130,7 +132,7 @@ describe('TeamProvisioningOpenCodeTeamConfigWriter', () => {
 
     expect(writes).toEqual([
       {
-        filePath: '/teams/runtime-team/config.json',
+        filePath: path.join('/teams', 'runtime-team', 'config.json'),
         contents: `${JSON.stringify(
           {
             name: 'runtime-team',
@@ -159,6 +161,9 @@ describe('TeamProvisioningOpenCodeTeamConfigWriter', () => {
         )}\n`,
       },
     ]);
-    expect(calls).toEqual(['write:/teams/runtime-team/config.json', 'invalidate:runtime-team']);
+    expect(calls).toEqual([
+      `write:${path.join('/teams', 'runtime-team', 'config.json')}`,
+      'invalidate:runtime-team',
+    ]);
   });
 });

@@ -23,4 +23,16 @@ function normalizeCreationCommand(value) {
   };
 }
 
-module.exports = { normalizeCreationCommand };
+// An explicitly provided creation command id — an MCP requestKey/idempotencyKey or an
+// app command id — is the caller's own dedup key. Two creates that carry different ids
+// are two different intents even when their content matches, and a replay of one id is
+// collapsed by the command path in taskStore.js instead of by content dedup.
+function hasExplicitCreationCommand(input) {
+  const commandId =
+    input && input.creationCommand && typeof input.creationCommand.commandId === 'string'
+      ? input.creationCommand.commandId.trim()
+      : '';
+  return commandId.length > 0;
+}
+
+module.exports = { normalizeCreationCommand, hasExplicitCreationCommand };

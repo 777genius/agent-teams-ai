@@ -1,6 +1,7 @@
 import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
@@ -40,6 +41,11 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
     cwd?: string;
+    allowEmptyLaneStop?: boolean;
+    selectedModel?: string | null;
+    toolApprovalMode?: 'auto' | 'manual';
+    teamId?: string;
+    laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
     const result = await this.bridge.execute<
       {
@@ -48,6 +54,11 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         expectedRunId: string | null;
         expectedCapabilitySnapshotId: string | null;
         expectedManifestHighWatermark: number | null;
+        allowEmptyLaneStop?: boolean;
+        selectedModel?: string | null;
+        toolApprovalMode?: 'auto' | 'manual';
+        teamId?: string;
+        laneId?: string | null;
       },
       OpenCodeBridgeHandshake
     >(
@@ -58,6 +69,13 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         expectedRunId: input.expectedRunId,
         expectedCapabilitySnapshotId: input.expectedCapabilitySnapshotId,
         expectedManifestHighWatermark: input.expectedManifestHighWatermark,
+        ...(input.allowEmptyLaneStop === true ? { allowEmptyLaneStop: true } : {}),
+        ...(input.selectedModel === undefined ? {} : { selectedModel: input.selectedModel }),
+        ...(input.toolApprovalMode === undefined
+          ? {}
+          : { toolApprovalMode: input.toolApprovalMode }),
+        ...(input.teamId === undefined ? {} : { teamId: input.teamId }),
+        ...(input.laneId === undefined ? {} : { laneId: input.laneId }),
       },
       {
         cwd: input.cwd ?? process.cwd(),
@@ -94,9 +112,12 @@ export function createOpenCodeBridgeClientIdentity(input: {
         'opencode.commandStatus',
         'opencode.readiness',
         'opencode.cleanupHosts',
+        'opencode.cleanupStartupHosts',
         'opencode.launchTeam',
         'opencode.reconcileTeam',
         'opencode.stopTeam',
+        'opencode.stopOutcome',
+        'opencode.reconcileStop',
         'opencode.answerPermission',
         'opencode.listRuntimePermissions',
         'opencode.getRuntimeTranscript',
@@ -107,6 +128,8 @@ export function createOpenCodeBridgeClientIdentity(input: {
       opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
       opencodeDeliveryAcceptanceContractVersion: OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
       opencodeFilePartsContractVersion: OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
+      expectedBehaviorFingerprintSchemaVersion:
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
     },
     runtime: {
       providerId: 'opencode',

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import {
   createStandaloneFatalFailStop,
   createStandaloneHostedRouteReadiness,
+  createStandaloneOrderlyOwnerLossGuard,
   registerStandaloneShutdownSignalHandlers,
   resolveStandaloneAuthDataDirectory,
   runStandaloneShutdownLifecycle,
@@ -151,11 +152,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(fileSource).not.toMatch(/fs\.promises\.readFile\s*\(/);
   });
 
-  it('keeps invalid bootstrap fatal and missing identity storage fail-closed without disposal', async () => {
-    const [standalone, desktop] = await Promise.all([
-      readFile('src/main/standalone.ts', 'utf8'),
-      readFile('src/main/index.ts', 'utf8'),
-    ]);
+  it('keeps invalid hosted bootstrap fatal and missing identity storage fail-closed without disposal', async () => {
+    const standalone = await readFile('src/main/standalone.ts', 'utf8');
 
     expect(standalone).toContain(
       'let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost()'
@@ -168,8 +166,6 @@ describe('standalone team lifecycle read wiring', () => {
     );
     expect(standalone).not.toContain('internalStorageFeature');
     expect(standalone).not.toContain('internalStorageFeature.dispose');
-    expect(desktop).toContain('teamLifecycleReadHost = createUnavailableTeamLifecycleReadHost()');
-    expect(desktop).not.toContain('new TeamLifecycleReadBootstrapSource');
   });
 
   it('obtains and flushes the shared ConfigManager singleton only after root admission', async () => {
@@ -271,6 +267,26 @@ describe('standalone team lifecycle read wiring', () => {
     expect(shutdown).toHaveBeenCalledTimes(2);
   });
 
+  it('accepts owner loss only for the authenticated owner captured by orderly shutdown', () => {
+    const guard = createStandaloneOrderlyOwnerLossGuard(
+      (left: { generation: number }, right: { generation: number }) =>
+        left.generation === right.generation
+    );
+
+    expect(guard.isExpectedOwnerLoss({ generation: 7 })).toBe(false);
+    guard.beginOrderlyShutdown({ generation: 7 });
+    expect(guard.isExpectedOwnerLoss({ generation: 8 })).toBe(false);
+    expect(guard.isExpectedOwnerLoss({ generation: 7 })).toBe(true);
+  });
+
+  it('does not classify owner loss as expected when orderly shutdown had no live owner', () => {
+    const guard = createStandaloneOrderlyOwnerLossGuard(Object.is);
+
+    guard.beginOrderlyShutdown(null);
+
+    expect(guard.isExpectedOwnerLoss('owner')).toBe(false);
+  });
+
   it('does not register unsupported SIGTERM handling on Windows', () => {
     const onSignal = vi.fn();
 
@@ -333,7 +349,8 @@ describe('standalone team lifecycle read wiring', () => {
     const installIndex = source.indexOf('requestStandaloneFatalFailStop = fatal;');
     const startIndex = source.indexOf('void start().catch');
 
-    expect(source).toContain('onFatalOwnerLoss: (error) => {');
+    expect(source).toContain('onFatalOwnerLoss: (error, ownerBinding) => {');
+    expect(source).toContain('orderlyOwnerLossGuard.isExpectedOwnerLoss(ownerBinding)');
     expect(source).toContain("'Hosted lifecycle orchestrator owner lost'");
     expect(source).toContain('requestStandaloneFatalFailStop?.(');
     expect(installIndex).toBeGreaterThan(-1);

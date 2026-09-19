@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -128,7 +129,9 @@ describe('terminal workspace feature composition fixture-e2e', () => {
 
     expect(bootstrap).toMatchObject({
       controlPlaneUrl: 'ws://fixture-control-1',
-      defaultShell: '/bin/zsh',
+      // The default shell comes from the host (cmd.exe on Windows, a login
+      // shell elsewhere); this case is about the daemon and gateway wiring.
+      defaultShell: expect.stringMatching(/\S/),
       projectPath: sandboxProjectPath,
       sessionStreamUrl: 'ws://fixture-stream-1',
       teamName: 'terminal-fixture',
@@ -153,7 +156,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
       launch: {
         args: [],
         cwd: sandboxProjectPath,
-        program: '/bin/zsh',
+        program: bootstrap.defaultShell,
       },
     });
     expect(compositionFixture.startWorkspaceGatewayNodeServer).toHaveBeenCalledTimes(1);
@@ -371,7 +374,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
     process.env.CLAUDE_TERMINAL_PLATFORM_ROOT = path.join(tempRoot, 'terminal-platform');
 
     expect(terminalWorkspaceFeatureTestInternals.resolveTerminalNodePackageSpecifier()).toBe(
-      `file://${terminalNodePackagePath}`
+      pathToFileURL(terminalNodePackagePath).href
     );
   });
 
@@ -400,7 +403,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
       bundledRoot
     );
     expect(terminalWorkspaceFeatureTestInternals.resolveTerminalNodePackageSpecifier()).toBe(
-      `file://${terminalNodePackagePath}`
+      pathToFileURL(terminalNodePackagePath).href
     );
     await expect(terminalWorkspaceFeatureTestInternals.resolveDaemonBinaryPath()).resolves.toBe(
       daemonPath

@@ -9,6 +9,8 @@
 
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
+import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
+export type { MemberWorkSyncElectronApi } from '@features/member-work-sync/contracts';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
 import type {
@@ -17,6 +19,7 @@ import type {
   NotificationTrigger,
   TriggerTestResult,
 } from './notifications';
+import type { OpenCodeStartupCleanupRecoveryAPI } from './openCodeStartupCleanup';
 import type {
   AgentChangeSet,
   ApplyReviewRequest,
@@ -52,6 +55,7 @@ import type {
   ScheduleRun,
   UpdateSchedulePatch,
 } from './schedule';
+import type { SshAPI } from './ssh';
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,
@@ -66,6 +70,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  DiscardQueuedUserMessagesResult,
   GlobalTask,
   KanbanColumnId,
   LeadActivitySnapshot,
@@ -76,6 +81,7 @@ import type {
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
+  QueuedUserMessagesSnapshot,
   ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
@@ -91,6 +97,7 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -113,6 +120,7 @@ import type {
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
+import type { AnnouncementsApi } from '@features/announcements/contracts';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
@@ -122,14 +130,7 @@ import type {
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
-import type {
-  MemberWorkSyncMetricsRequest,
-  MemberWorkSyncReportRequest,
-  MemberWorkSyncReportResult,
-  MemberWorkSyncStatus,
-  MemberWorkSyncStatusRequest,
-  MemberWorkSyncTeamMetrics,
-} from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncElectronApi } from '@features/member-work-sync/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
@@ -154,6 +155,13 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+
+export type {
+  SentryTelemetryContext,
+  SentryTelemetryStatus,
+  TelemetryAPI,
+  WindowsElevationStatus,
+} from './desktopShell';
 
 // =============================================================================
 // Cost Calculation Types
@@ -376,7 +384,7 @@ export interface AppStartupStep {
   memoryAtEnd?: AppStartupMemorySnapshot;
 }
 
-export interface AppStartupAPI {
+export interface AppStartupAPI extends OpenCodeStartupCleanupRecoveryAPI {
   getStatus: () => Promise<AppStartupStatus>;
   onProgress: (callback: (status: AppStartupStatus) => void) => () => void;
 }
@@ -399,92 +407,6 @@ export interface AppStartupMemorySnapshot {
 export interface ContextInfo {
   id: string;
   type: 'local' | 'ssh';
-}
-
-// =============================================================================
-// SSH API
-// =============================================================================
-
-/**
- * SSH connection state.
- */
-export type SshConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
-
-/**
- * SSH authentication method.
- */
-export type SshAuthMethod = 'password' | 'privateKey' | 'agent' | 'auto';
-
-/**
- * SSH config host entry resolved from ~/.ssh/config.
- */
-export interface SshConfigHostEntry {
-  alias: string;
-  hostName?: string;
-  user?: string;
-  port?: number;
-  hasIdentityFile: boolean;
-}
-
-/**
- * SSH connection configuration sent from renderer.
- */
-export interface SshConnectionConfig {
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  password?: string;
-  privateKeyPath?: string;
-}
-
-/**
- * Saved SSH connection profile (no password stored).
- */
-export interface SshConnectionProfile {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  privateKeyPath?: string;
-}
-
-/**
- * SSH connection status returned from main process.
- */
-export interface SshConnectionStatus {
-  state: SshConnectionState;
-  host: string | null;
-  error: string | null;
-  remoteProjectsPath: string | null;
-}
-
-/**
- * SSH API exposed via preload.
- */
-/**
- * Saved SSH connection config (no password).
- */
-export interface SshLastConnection {
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  privateKeyPath?: string;
-}
-
-export interface SshAPI {
-  connect: (config: SshConnectionConfig) => Promise<SshConnectionStatus>;
-  disconnect: () => Promise<SshConnectionStatus>;
-  getState: () => Promise<SshConnectionStatus>;
-  test: (config: SshConnectionConfig) => Promise<{ success: boolean; error?: string }>;
-  getConfigHosts: () => Promise<SshConfigHostEntry[]>;
-  resolveHost: (alias: string) => Promise<SshConfigHostEntry | null>;
-  saveLastConnection: (config: SshLastConnection) => Promise<void>;
-  getLastConnection: () => Promise<SshLastConnection | null>;
-  onStatus: (callback: (event: unknown, status: SshConnectionStatus) => void) => () => void;
 }
 
 // =============================================================================
@@ -575,6 +497,17 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
+  forceStop: (teamName: string) => Promise<TeamForceStopResult>;
+  getQueuedUserMessages: (
+    teamName: string,
+    memberName: string
+  ) => Promise<QueuedUserMessagesSnapshot>;
+  /** Discards exactly the listed queued messages; rows that arrived since stay. */
+  discardQueuedUserMessages: (
+    teamName: string,
+    memberName: string,
+    messageIds: readonly string[]
+  ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (
@@ -641,7 +574,11 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
   retryFailedOpenCodeSecondaryLanes: (
     teamName: string
   ) => Promise<RetryFailedOpenCodeSecondaryLanesResult>;
-  restartMember: (teamName: string, memberName: string) => Promise<void>;
+  restartMember: (
+    teamName: string,
+    memberName: string,
+    expectedSecondary?: boolean
+  ) => Promise<void>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
@@ -687,13 +624,6 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
     callback: (event: unknown, data: TeamProvisioningProgress) => void
   ) => () => void;
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
-}
-
-export interface MemberWorkSyncElectronApi {
-  getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
-  getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
-  report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
 }
 
 // =============================================================================
@@ -911,35 +841,6 @@ export interface ReviewAPI {
 }
 
 // =============================================================================
-// Telemetry API
-// =============================================================================
-
-export interface SentryTelemetryContext {
-  userId: string;
-  tags: Record<string, string>;
-}
-
-export interface SentryTelemetryStatus {
-  state: 'disabled' | 'unconfigured' | 'active' | 'failed';
-  reason: 'telemetry-disabled' | 'invalid-dsn' | 'sdk-load-failed' | 'sdk-init-failed' | null;
-  environment: 'production' | 'development';
-  release: string | null;
-}
-
-export interface TelemetryAPI {
-  getSentryContext: () => Promise<SentryTelemetryContext | null>;
-  getSentryStatus: () => Promise<SentryTelemetryStatus>;
-}
-
-export interface WindowsElevationStatus {
-  platform: string;
-  isWindows: boolean;
-  isAdministrator: boolean | null;
-  checkFailed: boolean;
-  error: string | null;
-}
-
-// =============================================================================
 // Main Electron API
 // =============================================================================
 
@@ -950,6 +851,7 @@ export interface ElectronAPI
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     TeamLifecycleReadTransportApi {
+  announcements: AnnouncementsApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
   workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];

@@ -3,7 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => true,
   api: {
+    runtimeProviderManagement: {
+      loadModels: vi.fn(),
+      loadProviderDirectory: vi.fn(),
+      cancelModelLoad: vi.fn(async () => ({ ok: true })),
+    },
     teams: {
       updateConfig: vi.fn(async () => {}),
       replaceMembers: vi.fn(async () => {}),

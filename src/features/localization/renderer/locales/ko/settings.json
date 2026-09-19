@@ -54,19 +54,25 @@
       "choosingAllProjects": "재정의가 없는 프로젝트에 사용할 모델을 선택하세요.",
       "choosingProject": "{{project}}에만 사용할 모델을 선택하세요.",
       "cancelChoosing": "취소",
+      "select": "선택",
+      "selected": "선택됨",
       "testAndUse": "테스트 후 사용",
       "testAndUseAllProjects": "모든 프로젝트에 테스트 후 사용",
       "testAndUseProject": "이 프로젝트에 테스트 후 사용"
     },
     "diagnostics": {
+      "previousPage": "이전 페이지",
+      "nextPage": "다음 페이지",
       "copied": "진단",
       "copiedShort": "뚱 베어",
       "copy": "복사 진단",
+      "copyAll": "모든 진단 복사",
       "hints": "뚱 베어",
       "likelyCause": "같은 원인:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI를 관리자 권한으로 실행하세요"
     },
     "models": {
+      "testingElapsed": "테스트 결과 대기 중... {{seconds}}초",
       "alreadyDefault": "이미 선택한 OpenCode 기본값입니다.",
       "empty": "찾을 수 없습니다.",
       "emptyFree": "무료 모델이 없습니다.",

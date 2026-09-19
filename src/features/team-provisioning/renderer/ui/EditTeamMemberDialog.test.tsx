@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateMemberSettings = vi.hoisted(() => vi.fn());
+const getSavedRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -117,6 +118,8 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     ),
 }));
 
+import { fingerprintResolvedMember } from '../utils/memberSettingsPresentation';
+
 import { EditTeamMemberDialog } from './EditTeamMemberDialog';
 
 import type { ResolvedTeamMember } from '@shared/types';
@@ -149,6 +152,7 @@ function render(overrides: Partial<React.ComponentProps<typeof EditTeamMemberDia
       isTeamAlive={false}
       isTeamProvisioning={false}
       isMixedTeam={false}
+      getSavedRequest={getSavedRequest}
       updateMemberSettings={updateMemberSettings}
       onClose={onClose}
       onRefresh={onRefresh}
@@ -168,6 +172,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   updateMemberSettings.mockReset();
+  getSavedRequest.mockReset().mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
   onClose = vi.fn();
   onRefresh = vi.fn(async () => {});
   onRelaunchRequired = vi.fn();
@@ -407,15 +412,47 @@ describe('EditTeamMemberDialog', () => {
     expect(host.textContent).not.toContain('editTeam.errors.changesSavedRefreshFailed');
   });
 
-  it('switches unsafe live edits to the existing relaunch action without mutation', () => {
-    act(() => render({ isTeamAlive: true, isMixedTeam: true }));
+  it('switches unsafe live edits to the existing relaunch action without mutation', async () => {
+    await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
     const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('activity.actions.restartTeam')
     )!;
     act(() => relaunch.click());
     expect(updateMemberSettings).not.toHaveBeenCalled();
-    expect(onRelaunchRequired).toHaveBeenCalledOnce();
+    expect(onRelaunchRequired).toHaveBeenCalledWith({
+      teamName: 'alpha',
+      memberName: 'alice',
+      targetKind: 'member',
+      expectedTeamSettingsFingerprint: 'editor-team-baseline',
+      expectedFingerprint: fingerprintResolvedMember(member),
+      settings: expect.objectContaining({ role: 'reviewer', model: 'claude-opus-4-1' }),
+    });
+  });
+
+  it('carries the draft when backend admission requires relaunch without persisting', async () => {
+    updateMemberSettings.mockResolvedValue({ outcome: 'completed', effect: 'team_relaunch_required' });
+    await act(async () => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({
+      expectedFingerprint: fingerprintResolvedMember(member),
+      settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
+    }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('refuses a stale target before handing a draft to relaunch', async () => {
+    await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    act(() => render({ isTeamAlive: true, isMixedTeam: true, member: { ...member, agentId: 'replacement' } }));
+    const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('activity.actions.restartTeam'))!;
+    act(() => relaunch.click());
+    expect(onRelaunchRequired).not.toHaveBeenCalled();
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.settingsChanged');
   });
 
   it('blocks close while saving', async () => {
@@ -539,5 +576,44 @@ describe('EditTeamMemberDialog', () => {
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
     expect(host.textContent).toContain('editTeam.errors.settingsChanged');
     expect(saveButton().disabled).toBe(true);
+  });
+  it('freezes injected saved launch defaults through rerender and relaunch handoff', async () => {
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    getSavedRequest.mockResolvedValue({ savedSettingsFingerprint: 'newer-team-defaults' });
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+    );
+    const button = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'activity.actions.restartTeam'
+    )!;
+    await act(async () => button.click());
+
+    expect(getSavedRequest).toHaveBeenCalledTimes(1);
+    expect(getSavedRequest).toHaveBeenCalledWith('alpha');
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' })
+    );
+  });
+
+  it('fails a relaunch closed when the injected saved-request reader rejects', async () => {
+    getSavedRequest.mockRejectedValueOnce(new Error('read failed'));
+    await act(async () =>
+      render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+    );
+    const button = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'activity.actions.restartTeam'
+    )!;
+    await act(async () => button.click());
+
+    expect(button.disabled).toBe(true);
+    expect(onRelaunchRequired).not.toHaveBeenCalled();
   });
 });

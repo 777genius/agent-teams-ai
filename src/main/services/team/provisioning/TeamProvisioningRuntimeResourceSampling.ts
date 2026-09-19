@@ -138,6 +138,21 @@ export class TeamProvisioningRuntimeResourceSampling {
       this.pruneAgentRuntimeResourceHistory(teamName, activeKeys),
   };
 
+  /**
+   * The same port for a build that may not change what it observes: recording
+   * reports the series the member already has instead of appending to it, and
+   * pruning does nothing. The history is shared with every other reader of this
+   * team, so an observation endpoint that appended to it would make repeated
+   * polls visible in everyone's sparkline.
+   */
+  readonly readOnlyAgentRuntimeResourceHistoryPort = {
+    record: (
+      params: TeamAgentRuntimeResourceHistoryRecordInput
+    ): TeamAgentRuntimeResourceSample[] | undefined =>
+      this.readAgentRuntimeResourceSampleHistory(params),
+    prune: (): void => undefined,
+  };
+
   constructor(
     private readonly options: RuntimeResourceSamplingOptions,
     private readonly cacheAccess: RuntimeResourceSamplingCacheAccess,
@@ -162,7 +177,9 @@ export class TeamProvisioningRuntimeResourceSampling {
     return this.runtimeProcessRowsForUsageSnapshotByTeam;
   }
 
-  createRuntimeSnapshotResourceSamplingPorts(): TeamProvisioningRuntimeSnapshotResourceSamplingPorts {
+  createRuntimeSnapshotResourceSamplingPorts(portOptions?: {
+    readOnly?: boolean;
+  }): TeamProvisioningRuntimeSnapshotResourceSamplingPorts {
     return {
       readRuntimeProcessRowsForUsageSnapshot: (teamName, options) =>
         this.readRuntimeProcessRowsForUsageSnapshot(teamName, options),
@@ -170,7 +187,10 @@ export class TeamProvisioningRuntimeResourceSampling {
         this.readProcessUsageStatsByPid(pids, cacheOptions),
       buildRuntimeUsageProcessTrees: (input) => this.buildRuntimeUsageProcessTrees(input),
       buildRuntimeProcessLoadStats: (input) => this.buildRuntimeProcessLoadStats(input),
-      agentRuntimeResourceHistory: this.agentRuntimeResourceHistoryPort,
+      agentRuntimeResourceHistory:
+        portOptions?.readOnly === true
+          ? this.readOnlyAgentRuntimeResourceHistoryPort
+          : this.agentRuntimeResourceHistoryPort,
     };
   }
 
@@ -502,6 +522,12 @@ export class TeamProvisioningRuntimeResourceSampling {
     input: TeamAgentRuntimeResourceHistoryRecordInput
   ): TeamAgentRuntimeResourceSample[] | undefined {
     return this.agentRuntimeResourceHistory.record(input);
+  }
+
+  readAgentRuntimeResourceSampleHistory(
+    input: TeamAgentRuntimeResourceHistoryRecordInput
+  ): TeamAgentRuntimeResourceSample[] | undefined {
+    return this.agentRuntimeResourceHistory.read(input);
   }
 
   pruneAgentRuntimeResourceHistory(teamName: string, activeKeys: ReadonlySet<string>): void {

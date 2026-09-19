@@ -1,3 +1,8 @@
+import {
+  CODEX_CHATGPT_UNSUPPORTED_MODEL_MESSAGE_PATTERN,
+  CODEX_CHATGPT_UNSUPPORTED_MODEL_NORMALIZED_REASON,
+} from '@shared/utils/codexChatGptModelSupport';
+
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 const PROVIDER_MODEL_PROBE_TIMEOUT_MS = 60_000;
@@ -53,16 +58,17 @@ export function isProviderModelProbeTimeoutMessage(message: string): boolean {
   );
 }
 
+// Provisioning-facing alias; historically duplicated in TeamProvisioningRuntimeLaunchSelection.
+export const isProbeTimeoutMessage = isProviderModelProbeTimeoutMessage;
+
 export function normalizeProviderModelProbeFailureReason(message: string): string {
   const trimmed = message.trim();
   if (!trimmed) {
     return 'Model verification failed';
   }
 
-  if (
-    /The '[^']+' model is not supported when using Codex with a ChatGPT account\./i.test(trimmed)
-  ) {
-    return 'Not available on this Codex native runtime';
+  if (CODEX_CHATGPT_UNSUPPORTED_MODEL_MESSAGE_PATTERN.test(trimmed)) {
+    return CODEX_CHATGPT_UNSUPPORTED_MODEL_NORMALIZED_REASON;
   }
   if (/The requested model is not available for your account\./i.test(trimmed)) {
     return 'Not available for this account';

@@ -121,12 +121,14 @@ describe('providerDashboardRateLimits', () => {
       {
         label: '5h left',
         remaining: '75%',
+        remainingPercent: 75,
         resetsAt: 'reset unknown',
         isDepleted: false,
       },
       {
         label: 'Weekly left',
         remaining: '50%',
+        remainingPercent: 50,
         resetsAt: 'reset unknown',
         isDepleted: false,
       },
@@ -190,6 +192,7 @@ describe('providerDashboardRateLimits', () => {
       {
         label: '5h left',
         remaining: '80%',
+        remainingPercent: 80,
         resetsAt: 'reset unknown',
         isDepleted: false,
       },
@@ -215,6 +218,7 @@ describe('providerDashboardRateLimits', () => {
       {
         label: '5h left',
         remaining: '75%',
+        remainingPercent: 75,
         resetsAt: 'reset unknown',
         isDepleted: false,
       },
@@ -248,6 +252,7 @@ describe('providerDashboardRateLimits', () => {
 
     expect(items?.[0]).toMatchObject({
       remaining: '0%',
+      remainingPercent: 0,
       isDepleted: true,
     });
   });

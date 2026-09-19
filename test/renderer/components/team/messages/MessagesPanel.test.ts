@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
 import {
   buildRevisionNoticeText,
+  countQueuedUserMessages,
   findLatestRevisableUserSentMessage,
   getPendingMemberDeliveryState,
   hasVisibleReplyForSendMessageDiagnostics,
@@ -14,7 +15,7 @@ import { setTeamMessagesSidebarUiState } from '@renderer/components/team/sidebar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
-import type { InboxMessage } from '@shared/types';
+import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
 
 const storeState = {
   sendTeamMessage: vi.fn().mockResolvedValue(undefined),
@@ -56,6 +57,7 @@ const readHookState = {
   markAllRead: vi.fn(),
 };
 const activityTimelineRenderSpy = vi.hoisted(() => vi.fn());
+const statusBlockRenderSpy = vi.hoisted(() => vi.fn());
 
 const expandedHookState = {
   expandedSet: new Set<string>(),
@@ -136,7 +138,10 @@ vi.mock('@renderer/components/team/messages/MessagesFilterPopover', () => ({
 }));
 
 vi.mock('@renderer/components/team/messages/StatusBlock', () => ({
-  StatusBlock: () => React.createElement('div', null, 'status-block'),
+  StatusBlock: (props: Record<string, unknown>) => {
+    statusBlockRenderSpy(props);
+    return React.createElement('div', null, 'status-block');
+  },
 }));
 
 vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
@@ -248,6 +253,7 @@ describe('MessagesPanel idle summary invariants', () => {
     readHookState.markRead.mockReset();
     readHookState.markAllRead.mockReset();
     activityTimelineRenderSpy.mockClear();
+    statusBlockRenderSpy.mockClear();
     expandedHookState.expandedSet = new Set<string>();
     expandedHookState.toggle.mockReset();
     storeState.sendTeamMessage.mockClear();
@@ -881,6 +887,130 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(getPendingMemberDeliveryState(false, messages, 'alice', sentAtMs)).toBe('queued');
     expect(getPendingMemberDeliveryState(true, messages, 'alice', sentAtMs)).toBe('delivering');
+  });
+
+  it('counts only the undelivered user rows addressed to that member', () => {
+    const messages = [
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:01.000Z',
+        read: false,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:02.000Z',
+        read: false,
+      }),
+      // Negative controls: an agent-to-member row is not the user's to discard,
+      // and a row the runtime already read is history, not a queue entry.
+      makeMessage({
+        from: 'team-lead',
+        to: 'alice',
+        timestamp: '2026-04-08T12:00:03.000Z',
+        read: false,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:04.000Z',
+        read: true,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'bob',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:05.000Z',
+        read: false,
+      }),
+    ];
+
+    expect(countQueuedUserMessages(messages, 'alice')).toBe(2);
+    expect(countQueuedUserMessages(messages, 'bob')).toBe(1);
+    expect(countQueuedUserMessages(messages, 'team-lead')).toBe(0);
+  });
+
+  it('drops the pending entry only when queued rows really left the inbox', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onPendingReplyChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: { alice: Date.parse('2026-04-08T12:00:00.000Z') },
+          onPendingReplyChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const statusBlockProps = statusBlockRenderSpy.mock.calls.at(-1)?.[0] as {
+      teamName?: string;
+      onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
+    };
+    expect(statusBlockProps.teamName).toBe('atlas-hq');
+    storeState.refreshTeamMessagesHead.mockClear();
+
+    await act(async () => {
+      statusBlockProps.onQueuedDiscarded?.('alice', { discarded: 2, remainingQueued: 0 });
+      await Promise.resolve();
+    });
+
+    expect(onPendingReplyChange).toHaveBeenCalledTimes(1);
+    const updater = onPendingReplyChange.mock.calls[0][0] as (
+      prev: Record<string, number>
+    ) => Record<string, number>;
+    expect(updater({ alice: 1, bob: 2 })).toEqual({ bob: 2 });
+    const untouched = { bob: 2 };
+    expect(updater(untouched)).toBe(untouched);
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    // A discard that removed nothing means the runtime consumed the message
+    // first, so the entry has to stay and become "delivered" on the next head
+    // refresh instead of disappearing from the panel.
+    onPendingReplyChange.mockClear();
+    storeState.refreshTeamMessagesHead.mockClear();
+
+    await act(async () => {
+      statusBlockProps.onQueuedDiscarded?.('alice', { discarded: 0, remainingQueued: 0 });
+      await Promise.resolve();
+    });
+
+    expect(onPendingReplyChange).not.toHaveBeenCalled();
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    // Negative control for the drop rule: rows left the inbox but a message that
+    // arrived during the confirmation is still queued. Nothing recreates the
+    // pending entry - the head refresh reloads messages, not this map - so
+    // dropping it here would hide the surviving row.
+    onPendingReplyChange.mockClear();
+    storeState.refreshTeamMessagesHead.mockClear();
+
+    await act(async () => {
+      statusBlockProps.onQueuedDiscarded?.('alice', { discarded: 2, remainingQueued: 1 });
+      await Promise.resolve();
+    });
+
+    expect(onPendingReplyChange).not.toHaveBeenCalled();
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('marks a pending member message delivered after its inbox row is read', () => {

@@ -253,6 +253,92 @@ describe('agent-teams-mcp stdio e2e', () => {
     await rm(claudeDir, { recursive: true, force: true });
   });
 
+  it.each(['task_complete', 'task_set_status'])(
+    'issue-618 enforces dependencies and delivers one unblock notice via %s over stdio',
+    async (completionTool) => {
+      const teamName = 'issue-618-e2e';
+      await writeTeamConfig(claudeDir, teamName);
+      const client = new McpStdIoClient(serverPath, workspaceRoot);
+      let requestId = 3;
+      const call = async (name: string, args: Record<string, unknown>) => {
+        const response = await client.callTool(name, { claudeDir, teamName, ...args }, requestId++);
+        return (response as { result: unknown }).result;
+      };
+      try {
+        await client.initialize();
+        const blocker = parseJsonToolResult(
+          await call('task_create', { subject: 'Prepare input', owner: 'alice' })
+        );
+        const dependent = parseJsonToolResult(
+          await call('task_create', {
+            subject: 'Consume input',
+            owner: 'bob',
+            blockedBy: [blocker.id],
+          })
+        );
+        const dependentPath = path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`);
+        const before = await readFile(dependentPath, 'utf8');
+        for (const [name, extra] of [
+          ['task_start', {}],
+          ['task_complete', {}],
+          ['task_set_status', { status: 'in_progress' }],
+          ['task_set_status', { status: 'completed' }],
+        ] as const) {
+          const rejected = await call(name, { taskId: dependent.id, actor: 'bob', ...extra });
+          expect(rejected).toMatchObject({ isError: true });
+          expect(JSON.stringify(rejected)).toContain(`#${blocker.displayId}`);
+          expect(await readFile(dependentPath, 'utf8')).toBe(before);
+        }
+        for (const name of [
+          completionTool,
+          completionTool,
+          completionTool === 'task_complete' ? 'task_set_status' : 'task_complete',
+        ]) {
+          expect(
+            parseJsonToolResult(
+              await call(name, {
+                taskId: blocker.id,
+                actor: 'alice',
+                ...(name === 'task_set_status' ? { status: 'completed' } : {}),
+              })
+            ).status
+          ).toBe('completed');
+        }
+        const stored = JSON.parse(await readFile(dependentPath, 'utf8'));
+        const commentId = `dep-resolved-${blocker.id}-${dependent.id}`;
+        expect(
+          stored.comments.filter((entry: { id: string }) => entry.id === commentId)
+        ).toHaveLength(1);
+        const inbox = JSON.parse(
+          await readFile(path.join(claudeDir, 'teams', teamName, 'inboxes', 'bob.json'), 'utf8')
+        ) as Array<{ text: string }>;
+        const notices = inbox.filter((entry) => entry.text.includes('Dependency resolved'));
+        expect(notices).toHaveLength(1);
+        expect(notices[0].text).toContain('task_get');
+        expect(notices[0].text).toContain('task_start');
+        expect(notices[0].text).toContain(dependent.id);
+        expect(
+          parseJsonToolResult(
+            await call('task_start', {
+              taskId: dependent.id,
+              actor: 'bob',
+            })
+          ).status
+        ).toBe('in_progress');
+        expect(
+          parseJsonToolResult(
+            await call('task_complete', {
+              taskId: dependent.id,
+              actor: 'bob',
+            })
+          ).status
+        ).toBe('completed');
+      } finally {
+        await client.close();
+      }
+    }
+  );
+
   it('boots over stdio, lists task tools, and executes task lifecycle calls', async () => {
     await writeTeamConfig(claudeDir, 'e2e-team');
     const client = new McpStdIoClient(serverPath, workspaceRoot);

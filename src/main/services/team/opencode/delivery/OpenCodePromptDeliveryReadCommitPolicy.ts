@@ -1,11 +1,9 @@
+import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
+  isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
   type OpenCodePromptDeliveryLedgerRecord,
 } from './OpenCodePromptDeliveryLedger';
-import {
-  decideOpenCodePromptDeliveryRepair,
-  type OpenCodePromptDeliveryHardFailureKind,
-} from './OpenCodePromptDeliveryRepairPolicy';
 import {
   isOpenCodeVisibleReplyReadCommitAllowed,
   isOpenCodeVisibleReplySemanticallySufficient,
@@ -170,6 +168,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     expected: readonly TaskRef[] | undefined
   ) => boolean;
 }): Promise<boolean> {
+  if (input.ledgerRecord && isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) return false;
   const state = input.responseState;
   if (!state || !isOpenCodePromptResponseStateResponded(state)) {
     return false;
@@ -181,6 +180,13 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       ledgerRecord: input.ledgerRecord,
       hasAcceptedMemberWorkSyncReport: input.hasAcceptedMemberWorkSyncReport,
     });
+  }
+  // Informational notices and teammate reports never require a visible reply:
+  // any assistant response fulfils them. Demanding progress proof or a
+  // semantically sufficient answer here re-prompted members for messages that
+  // asked nothing of them, and every retry cost another model turn.
+  if (isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient)) {
+    return true;
   }
   if (state === 'responded_plain_text') {
     return isOpenCodePlainTextResponseReadCommitAllowed(input);
@@ -313,7 +319,10 @@ export function getOpenCodeDeliveryPendingReason(input: {
   if (record?.lastReason === 'visible_reply_ack_only_still_requires_answer') {
     return 'visible_reply_ack_only_still_requires_answer';
   }
-  if (state === 'responded_non_visible_tool' || state === 'responded_tool_call') {
+  if (
+    (state === 'responded_non_visible_tool' || state === 'responded_tool_call') &&
+    !isOpenCodeReplyOptionalDeliveryContract(record?.replyRecipient)
+  ) {
     const hasTaskRefs = (input.taskRefs ?? []).length > 0;
     if (!hasTaskRefs && input.actionMode !== 'do' && input.actionMode !== 'delegate') {
       return 'visible_reply_still_required';
@@ -493,67 +502,6 @@ export function isOpenCodeDeliveryRetryablePendingResponse(input: {
     return true;
   }
   return false;
-}
-
-export function getOpenCodeDeliveryHardFailureKind(
-  record?: OpenCodePromptDeliveryLedgerRecord | null
-): OpenCodePromptDeliveryHardFailureKind {
-  if (!record) {
-    return 'none';
-  }
-  if (record.status === 'failed_terminal') {
-    return 'unknown';
-  }
-  if (record.responseState === 'permission_blocked') {
-    return 'permission';
-  }
-  if (record.responseState === 'session_error') {
-    return 'session';
-  }
-  return 'none';
-}
-
-export function buildOpenCodePromptDeliveryRepairControlText(input: {
-  ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
-  readAllowed: boolean;
-  pendingReason: string;
-  controlUrl?: string | null;
-}): string | null {
-  const record = input.ledgerRecord;
-  if (!record) {
-    return null;
-  }
-  return decideOpenCodePromptDeliveryRepair({
-    teamName: record.teamName,
-    memberName: record.memberName,
-    inboxMessageId: record.inboxMessageId,
-    replyRecipient: record.replyRecipient,
-    messageKind: record.messageKind,
-    workSyncIntent: record.workSyncIntent,
-    actionMode: record.actionMode,
-    taskRefs: record.taskRefs,
-    status: record.status,
-    responseState: record.responseState,
-    attempts: record.attempts,
-    maxAttempts: record.maxAttempts,
-    pendingReason: input.pendingReason,
-    readAllowed: input.readAllowed,
-    inboxReadCommitted: Boolean(record.inboxReadCommittedAt),
-    visibleReplyFound: Boolean(record.visibleReplyMessageId),
-    hasKnownProgressProof: hasOpenCodeNonVisibleProgressProof(record),
-    toolCallNames: record.observedToolCallNames,
-    acceptanceUnknown: record.acceptanceUnknown,
-    hardFailureKind: getOpenCodeDeliveryHardFailureKind(record),
-    controlUrl: input.controlUrl,
-  }).controlText;
-}
-
-export function buildOpenCodePromptDeliveryAttemptText(input: {
-  text: string;
-  controlText?: string | null;
-}): string {
-  const controlText = input.controlText?.trim();
-  return controlText ? `${controlText}\n\n${input.text}` : input.text;
 }
 
 export function isOpenCodePromptAcceptanceUnknownFailure(diagnostics: readonly string[]): boolean {

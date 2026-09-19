@@ -17,6 +17,7 @@ import {
   beginHostedV1CleanupSignalScope,
   buildHostedV1AppImage,
   CADDY_HTTPS_TARGET_PORT,
+  captureHostedV1FailedRunHttpProbe,
   captureOriginalHostedV1HttpResponse,
   cleanupHostedV1SandboxRoots,
   createHostedV1ProbeDeadlineBudget,
@@ -452,6 +453,71 @@ describe('hosted-v1 probe deadline budget', () => {
     ).rejects.toMatchObject({ name: 'TimeoutError' });
     expect(cancel).toHaveBeenCalledOnce();
     expect(budget.remainingMs()).toBeLessThan(100);
+  });
+});
+
+describe('hosted-v1 failed-run HTTP probe', () => {
+  it('captures status and allowlisted readiness without retaining a response body', async () => {
+    const cancel = vi.fn(async () => undefined);
+    const probe = await captureHostedV1FailedRunHttpProbe({
+      origin: 'http://172.30.0.9:3456',
+      fetch: vi.fn(async () => ({
+        status: 503,
+        headers: new Headers({ 'x-agent-teams-lifecycle-owner-readiness': 'starting' }),
+        body: { cancel },
+      })) as unknown as typeof fetch,
+    });
+    expect(probe).toEqual({
+      schemaVersion: 1,
+      reachable: true,
+      errorCode: null,
+      httpStatus: 503,
+      readinessHeader: 'starting',
+    });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('redacts non-allowlisted headers and extracts only a bounded transport error code', async () => {
+    const secret = 'readiness-header-secret';
+    const redacted = await captureHostedV1FailedRunHttpProbe({
+      origin: 'http://172.30.0.9:3456',
+      fetch: vi.fn(
+        async () =>
+          new Response('', {
+            status: 500,
+            headers: { 'x-agent-teams-lifecycle-owner-readiness': secret },
+          })
+      ),
+    });
+    const refused = await captureHostedV1FailedRunHttpProbe({
+      origin: 'http://172.30.0.9:3456',
+      fetch: vi.fn(async () =>
+        Promise.reject(
+          new TypeError(secret, {
+            cause: Object.assign(new Error(secret), { code: 'ECONNREFUSED' }),
+          })
+        )
+      ),
+    });
+    expect(redacted.readinessHeader).toBe('[REDACTED]');
+    expect(JSON.stringify(redacted)).not.toContain(secret);
+    expect(refused).toEqual({
+      schemaVersion: 1,
+      reachable: false,
+      errorCode: 'ECONNREFUSED',
+      httpStatus: null,
+      readinessHeader: null,
+    });
+    expect(JSON.stringify(refused)).not.toContain(secret);
+  });
+
+  it('uses one hard deadline even when the fetch implementation ignores abort', async () => {
+    const probe = await captureHostedV1FailedRunHttpProbe({
+      origin: 'http://172.30.0.9:3456',
+      timeoutMs: 5,
+      fetch: vi.fn(() => new Promise<Response>(() => undefined)),
+    });
+    expect(probe).toMatchObject({ reachable: false, errorCode: 'ETIMEDOUT' });
   });
 });
 

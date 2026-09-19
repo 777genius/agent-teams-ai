@@ -4,7 +4,7 @@ import {
   getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterFromAdapter,
 } from './TeamProvisioningRuntimeRecipientResolution';
 
-import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
 import type {
   MemberWorkSyncAcceptedReportChecker,
@@ -18,9 +18,15 @@ import type {
 import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import type { CrossTeamSendRequest, CrossTeamSendResult } from '@shared/types';
 
+export interface TeamProvisioningMemberRuntimeAdvisoryInvalidationOptions {
+  /** Launch start: a null memberName plus this stamp resets the whole team's advisories. */
+  runStartedAtMs?: number;
+}
+
 export type TeamProvisioningMemberRuntimeAdvisoryInvalidator = (
   teamName: string,
-  memberName: string
+  memberName: string | null,
+  options?: TeamProvisioningMemberRuntimeAdvisoryInvalidationOptions
 ) => void;
 
 export type TeamProvisioningCrossTeamSender = (

@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { atomicWriteAsync } from '../atomicWrite';
 import { getTeamLaunchStatePath } from '../TeamLaunchStateStore';
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
 
@@ -154,16 +155,35 @@ export interface LaunchStateWriteResult {
 }
 
 export interface LaunchStateWriteOptions {
+  isAuthorized?: () => boolean;
   allowNoopSkip?: boolean;
   requireTrackedRun?: boolean;
   runId?: string;
+  /**
+   * True when the snapshot republishes launch truth that already existed
+   * instead of starting a launch. Forwarded to the store, where it keeps a stop
+   * that settled during the write final over this publication.
+   */
+  republishesExistingLaunch?: boolean;
+}
+
+/** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
+export interface LaunchStatePublicationOptions {
+  authorizesNewRun?: () => boolean;
+  runId?: string;
+  isAuthorized?: () => boolean;
+  republishesExistingLaunch?: boolean;
 }
 
 export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
-    clear(teamName: string): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   membersMetaStore: {
     getMembers(teamName: string): Promise<TeamMember[]>;
@@ -194,12 +214,20 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
 export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
-    clear?(teamName: string): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear?(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   defaultLaunchStateStore: {
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
-    clear(teamName: string): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
   };
   membersMetaStore: TeamProvisioningLaunchStateStoreBoundaryPorts['membersMetaStore'];
   getTrackedRunId(teamName: string): string | null | undefined;
@@ -307,12 +335,23 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     await this.enqueue(teamName, () => this.clearPersistedLaunchStateNow(teamName, options));
   }
 
-  canClearPersistedLaunchStateForRun(teamName: string, expectedRunId: string | undefined): boolean {
+  canClearPersistedLaunchStateForRun(
+    teamName: string,
+    expectedRunId: string | undefined,
+    allowUntracked = false
+  ): boolean {
     if (!expectedRunId) {
       return true;
     }
     const trackedRunId = this.ports.getTrackedRunId(teamName);
-    if (trackedRunId !== expectedRunId) {
+    if (
+      trackedRunId !== expectedRunId &&
+      !(
+        allowUntracked &&
+        trackedRunId == null &&
+        this.observedTrackedRunIdByTeam.get(teamName) !== expectedRunId
+      )
+    ) {
       return false;
     }
     const lastWrittenRunId = this.writtenRunIdByTeam.get(teamName);
@@ -326,14 +365,24 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     teamName: string,
     options?: { expectedRunId?: string }
   ): Promise<void> {
-    if (!this.canClearPersistedLaunchStateForRun(teamName, options?.expectedRunId)) {
+    // Reopened teams have no tracked run. Their persisted identity must be checked
+    // by the store inside publication serialization, never by an unscoped clear.
+    const persistedRunId =
+      this.ports.getTrackedRunId(teamName) == null ? options?.expectedRunId : undefined;
+    const canClear = (): boolean =>
+      this.canClearPersistedLaunchStateForRun(
+        teamName,
+        options?.expectedRunId,
+        persistedRunId !== undefined
+      );
+    if (!canClear()) {
       this.ports.logDebug(
         `[${teamName}] Skipping stale launch-state clear for run ${options?.expectedRunId}`
       );
       return;
     }
     const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
-    await this.ports.launchStateStore.clear(teamName);
+    await this.ports.launchStateStore.clear(teamName, canClear, persistedRunId);
     if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
       this.writtenRunIdByTeam.delete(teamName);
     }
@@ -350,8 +399,17 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<PersistedTeamLaunchSnapshot> {
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    const admittedOptions = {
+      ...options,
+      isAuthorized: () => publicationIsCurrent() && options?.isAuthorized?.() !== false,
+    };
     const result = await this.enqueue(teamName, async () => {
-      const writeResult = await this.writeLaunchStateSnapshotNow(teamName, snapshot, options);
+      const writeResult = await this.writeLaunchStateSnapshotNow(
+        teamName,
+        snapshot,
+        admittedOptions
+      );
       if (writeResult.wrote) {
         this.ports.invalidateRuntimeSnapshotCaches(teamName);
       }
@@ -365,6 +423,9 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult> {
+    if (options?.isAuthorized?.() === false) return { snapshot, wrote: false };
+    if (!options?.runId && snapshot.publicationRunId)
+      options = { ...options, runId: snapshot.publicationRunId };
     const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
     const trackedRunIdBeforeWrite =
       typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
@@ -390,8 +451,10 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       previousSnapshot,
       metaMembers,
     });
-    const normalizedSnapshot =
-      this.ports.applyBootstrapStallOverlay(overlaidSnapshot) ?? overlaidSnapshot;
+    const normalizedSnapshot = {
+      ...(this.ports.applyBootstrapStallOverlay(overlaidSnapshot) ?? overlaidSnapshot),
+      publicationRunId: options?.runId,
+    };
     if (
       options?.allowNoopSkip === true &&
       typeof options.runId === 'string' &&
@@ -403,7 +466,25 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       return { snapshot: previousSnapshot, wrote: false };
     }
     const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
-    await this.ports.launchStateStore.write(teamName, normalizedSnapshot);
+    const persisted = await this.ports.launchStateStore.write(teamName, normalizedSnapshot, {
+      runId: options?.runId,
+      republishesExistingLaunch: options?.republishesExistingLaunch,
+      authorizesNewRun: () =>
+        !!options?.runId && this.ports.getTrackedRunId(teamName) === options.runId,
+      isAuthorized: () => {
+        if (options?.isAuthorized?.() === false) return false;
+        if (!options?.runId) return true;
+        const tracked = this.ports.getTrackedRunId(teamName);
+        return (
+          tracked === options.runId ||
+          (tracked == null &&
+            options.requireTrackedRun !== true &&
+            this.observedTrackedRunIdByTeam.get(teamName) !== options.runId)
+        );
+      },
+    });
+    if (persisted === false)
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
     const trackedRunIdAfterWrite =
       typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
     if (typeof options?.runId === 'string' && trackedRunIdAfterWrite === options.runId) {
@@ -416,7 +497,8 @@ export class TeamProvisioningLaunchStateStoreBoundary {
           (options.requireTrackedRun === true ||
             this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
     ) {
-      await this.ports.launchStateStore.clear(teamName);
+      // The actual store checks authority and rolls back inside its publication queue.
+      // Never restore old truth here over a successor publication or a later Stop.
       if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
         this.writtenRunIdByTeam.delete(teamName);
       }
@@ -424,7 +506,7 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       this.ports.logDebug(
         `[${teamName}] Removed stale launch-state write for run ${options.runId}`
       );
-      return { snapshot: normalizedSnapshot, wrote: false };
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
     }
     if (typeof options?.runId === 'string') {
       this.writtenRunIdByTeam.set(teamName, options.runId);
@@ -460,24 +542,35 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
   return new TeamProvisioningLaunchStateStoreBoundary({
     launchStateStore: {
       read: (teamName) => service.launchStateStore.read(teamName),
-      write: async (teamName, snapshot) => {
-        await service.launchStateStore.write(teamName, snapshot);
+      write: async (teamName, snapshot, publicationOptions) => {
+        const persisted = await service.defaultLaunchStateStore.write(
+          teamName,
+          snapshot,
+          publicationOptions
+        );
+        if (persisted === false) return false;
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
-          await service.defaultLaunchStateStore.write(teamName, snapshot);
+          const secondary = await service.launchStateStore.write(
+            teamName,
+            snapshot,
+            publicationOptions
+          );
+          if (secondary === false) return false;
         }
+        return persisted;
       },
-      clear: async (teamName) => {
+      clear: async (teamName, isAuthorized, persistedRunId) => {
         const errors: unknown[] = [];
         if (typeof service.launchStateStore.clear === 'function') {
           try {
-            await service.launchStateStore.clear(teamName);
+            await service.launchStateStore.clear(teamName, isAuthorized, persistedRunId);
           } catch (error) {
             errors.push(error);
           }
         }
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
           try {
-            await service.defaultLaunchStateStore.clear(teamName);
+            await service.defaultLaunchStateStore.clear(teamName, isAuthorized, persistedRunId);
           } catch (error) {
             errors.push(error);
           }

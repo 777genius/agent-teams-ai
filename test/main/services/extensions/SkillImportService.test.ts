@@ -6,11 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { SkillImportService } from '@main/services/extensions/skills/SkillImportService';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 describe('SkillImportService', () => {
   const createdDirs: string[] = [];
 
   afterEach(async () => {
-    await Promise.all(createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+    await Promise.all(
+      createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true }))
+    );
   });
 
   it('skips hidden entries and reports the warning', async () => {
@@ -29,7 +33,7 @@ describe('SkillImportService', () => {
     expect(inspection.warnings).toContain('Hidden files and folders were skipped during import.');
   });
 
-  it('rejects symbolic links in the import source', async () => {
+  it.skipIf(!canCreateSymlinks())('rejects symbolic links in the import source', async () => {
     const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-import-'));
     createdDirs.push(sourceDir);
 

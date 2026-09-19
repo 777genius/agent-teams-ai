@@ -57,11 +57,11 @@ export function normalizeAddMemberInput(
 export function normalizeReplaceMembersInput(
   teamName: unknown,
   request: unknown
-): Result<{ teamName: string; members: RosterMemberInput[] }> {
+): Result<{ teamName: string; members: RosterMemberInput[]; memberSettingsRelaunch?: unknown }> {
   const validatedTeam = requiredTeamName(teamName);
   if (!validatedTeam.valid) return validatedTeam;
   if (!request || typeof request !== 'object') return failure('request must be an object');
-  const input = request as { members?: unknown };
+  const input = request as { members?: unknown; memberSettingsRelaunch?: unknown };
   if (!Array.isArray(input.members)) return failure('members must be an array');
 
   const seenMemberIdentities = new Set<string>();
@@ -97,7 +97,13 @@ export function normalizeReplaceMembersInput(
       mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
     });
   }
-  return success({ teamName: validatedTeam.value, members });
+  return success({
+    teamName: validatedTeam.value,
+    members,
+    ...(input.memberSettingsRelaunch === undefined
+      ? {}
+      : { memberSettingsRelaunch: input.memberSettingsRelaunch }),
+  });
 }
 
 export function normalizeMemberMutationInput(

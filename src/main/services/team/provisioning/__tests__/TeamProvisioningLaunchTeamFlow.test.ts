@@ -499,12 +499,17 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
     const existingTasks = [{ id: 'task-1', title: 'Resume work' } as unknown as TeamTask];
     const isValidationCancelled = vi.fn(() => false);
     const validationOptionsRef: { current?: { isCancelled(): boolean } } = {};
+    const allEffectiveMemberSpecs: TeamCreateRequest['members'] = [
+      ...syntheticRequest.members,
+      { name: 'OpenCode', role: 'Developer', providerId: 'opencode' },
+    ];
 
     const result = await materializeDeterministicLaunchBootstrapFiles(
       {
         request: launchRequest,
         run,
         effectiveMemberSpecs: syntheticRequest.members,
+        allEffectiveMemberSpecs,
         controlApiBaseUrl: 'http://127.0.0.1:1234',
         isValidationCancelled,
       },
@@ -517,7 +522,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         buildDeterministicLaunchHydrationPrompt: vi.fn((request, members, tasks, includeLead) => {
           order.push(`prompt:${tasks.length}:${includeLead}`);
           expect(request).toBe(launchRequest);
-          expect(members).toBe(syntheticRequest.members);
+          expect(members).toBe(allEffectiveMemberSpecs);
           expect(tasks).toBe(existingTasks);
           return 'hydrate\nprompt';
         }),
@@ -526,6 +531,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
           return { chars: 14, lines: 2 };
         }),
         buildNativeAppManagedBootstrapSpecsWithDiagnostics: vi.fn(async (input) => {
+          expect(input.members).toBe(syntheticRequest.members);
           order.push(`native:${input.teamName}:${input.members.length}`);
           return {
             specs: new Map([
@@ -637,6 +643,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         request: launchRequest,
         run,
         effectiveMemberSpecs: syntheticRequest.members,
+        allEffectiveMemberSpecs: syntheticRequest.members,
         isValidationCancelled: () => false,
       },
       {

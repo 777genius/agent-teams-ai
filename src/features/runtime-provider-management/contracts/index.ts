@@ -1,5 +1,11 @@
 export type * from './api';
 export * from './channels';
+export type { RuntimeErrorDetails } from './errorDiagnostics';
+export {
+  cleanRuntimeDiagnosticText,
+  normalizeRuntimeErrorDetails,
+  runtimeErrorDetailRows,
+} from './errorDiagnostics';
 export type * from './types';
 export {
   isRuntimeProviderCompanionAction,

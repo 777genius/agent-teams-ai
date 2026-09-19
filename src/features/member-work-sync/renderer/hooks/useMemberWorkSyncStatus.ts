@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 
+import { normalizeMemberName } from '../../core/domain/memberName';
+import { MEMBER_WORK_SYNC_STATUS_POLL_MS } from '../memberWorkSyncRendererConstants';
 import {
   type MemberWorkSyncStatusViewModel,
   toMemberWorkSyncStatusViewModel,
 } from '../view-models/memberWorkSyncStatusViewModel';
 
 import type { MemberWorkSyncStatus } from '../../contracts';
+
+export { MEMBER_WORK_SYNC_STATUS_POLL_MS } from '../memberWorkSyncRendererConstants';
 
 export interface UseMemberWorkSyncStatusOptions {
   teamName?: string | null;
@@ -21,6 +25,10 @@ export interface UseMemberWorkSyncStatusResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  continueManually: () => void;
+  stopAutoResume: () => void;
+  resumeAutoResume: () => void;
+  recoveryActionsAvailable: boolean;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -36,10 +44,14 @@ export function useMemberWorkSyncStatus({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const selectionRef = useRef({ teamName, memberName });
+  const statusRef = useRef(status);
+  selectionRef.current = { teamName, memberName };
+  statusRef.current = status;
 
   useEffect(() => {
-    const normalizedTeamName = teamName?.trim();
-    const normalizedMemberName = memberName?.trim();
+    const normalizedTeamName = normalizeMemberName(teamName);
+    const normalizedMemberName = normalizeMemberName(memberName);
 
     if (!enabled || !normalizedTeamName || !normalizedMemberName) {
       setStatus(null);
@@ -49,13 +61,15 @@ export function useMemberWorkSyncStatus({
     }
 
     let cancelled = false;
-    setLoading(true);
+    const current = statusRef.current;
+    const sameMember =
+      normalizeMemberName(current?.teamName) === normalizedTeamName &&
+      normalizeMemberName(current?.memberName) === normalizedMemberName;
+    if (!sameMember) {
+      setStatus(null);
+      setLoading(true);
+    }
     setError(null);
-    setStatus((current) =>
-      current?.teamName === normalizedTeamName && current.memberName === normalizedMemberName
-        ? current
-        : null
-    );
 
     api.memberWorkSync
       .getStatus({ teamName: normalizedTeamName, memberName: normalizedMemberName })
@@ -66,7 +80,9 @@ export function useMemberWorkSyncStatus({
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
-          setStatus(null);
+          if (!sameMember) {
+            setStatus(null);
+          }
           setError(getErrorMessage(nextError));
         }
       })
@@ -81,11 +97,63 @@ export function useMemberWorkSyncStatus({
     };
   }, [enabled, memberName, refreshKey, teamName]);
 
+  useEffect(() => {
+    if (!enabled || !normalizeMemberName(teamName) || !normalizeMemberName(memberName)) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRefreshKey((current) => current + 1);
+    }, MEMBER_WORK_SYNC_STATUS_POLL_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [enabled, memberName, teamName]);
+
+  const runStatusCommand = (method: 'continueManually' | 'stopAutoResume' | 'resumeAutoResume') => {
+    if (!isElectronMode()) {
+      return;
+    }
+    const normalizedTeamName = normalizeMemberName(teamName);
+    const normalizedMemberName = normalizeMemberName(memberName);
+    if (!normalizedTeamName || !normalizedMemberName) {
+      return;
+    }
+    void api.memberWorkSync[method]({
+      teamName: normalizedTeamName,
+      memberName: normalizedMemberName,
+    })
+      .then((nextStatus) => {
+        const current = selectionRef.current;
+        if (
+          normalizeMemberName(current.teamName) !== normalizedTeamName ||
+          normalizeMemberName(current.memberName) !== normalizedMemberName
+        ) {
+          return;
+        }
+        setStatus(nextStatus);
+        setError(null);
+      })
+      .catch((nextError: unknown) => {
+        const current = selectionRef.current;
+        if (
+          normalizeMemberName(current.teamName) !== normalizedTeamName ||
+          normalizeMemberName(current.memberName) !== normalizedMemberName
+        ) {
+          return;
+        }
+        setError(getErrorMessage(nextError));
+      });
+  };
+
   return {
     status,
     viewModel: toMemberWorkSyncStatusViewModel(status),
     loading,
     error,
     refresh: () => setRefreshKey((current) => current + 1),
+    continueManually: () => runStatusCommand('continueManually'),
+    stopAutoResume: () => runStatusCommand('stopAutoResume'),
+    resumeAutoResume: () => runStatusCommand('resumeAutoResume'),
+    recoveryActionsAvailable: isElectronMode(),
   };
 }

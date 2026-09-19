@@ -20,6 +20,14 @@ import { buildActionModeProtocol } from '../actionModeInstructions';
 import { normalizeLaunchFailureReasonText } from '../TeamLaunchStateEvaluator';
 
 import { getAgentLanguageInstruction } from './TeamProvisioningAgentLanguage';
+import {
+  buildCompactMembersRoster,
+  buildLeadRosterIntegrityRules,
+  buildMembersPrompt,
+  formatWorkflowBlock,
+  getTeammateRosterMembers,
+  indentMultiline,
+} from './TeamProvisioningRosterPrompt';
 
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
@@ -29,6 +37,9 @@ import type {
   TeamProviderId,
   TeamTask,
 } from '@shared/types';
+
+// Re-exported for backwards compatibility: these roster helpers used to live here.
+export { buildCompactMembersRoster, buildMembersPrompt } from './TeamProvisioningRosterPrompt';
 
 const { protocols } = agentTeamsControllerModule;
 
@@ -123,49 +134,6 @@ export function getVisibleTaskReferenceFormattingRule(): string {
 
 /** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
 const wrapInAgentBlock = wrapAgentBlock;
-
-function indentMultiline(text: string, indent: string): string {
-  return text
-    .split(/\r?\n/g)
-    .map((line) => `${indent}${line}`)
-    .join('\n');
-}
-
-function formatWorkflowBlock(workflow: string, indent: string): string {
-  const trimmed = workflow.trim();
-  if (trimmed.length === 0) return '';
-  const body = indentMultiline(trimmed, indent);
-  return `\n${indent}---BEGIN WORKFLOW---\n${body}\n${indent}---END WORKFLOW---`;
-}
-
-export function buildMembersPrompt(members: TeamCreateRequest['members']): string {
-  return members
-    .map((member) => {
-      const rolePart = member.role?.trim() ? ` (role: ${member.role.trim()})` : '';
-      const providerPart =
-        member.providerId && member.providerId !== 'anthropic'
-          ? ` [provider: ${member.providerId}]`
-          : '';
-      const modelPart = member.model?.trim() ? ` [model: ${member.model.trim()}]` : '';
-      const effortPart = member.effort ? ` [effort: ${member.effort}]` : '';
-      const isolationPart = member.isolation === 'worktree' ? ' [isolation: worktree]' : '';
-      const workflowPart = member.workflow?.trim()
-        ? `\n     Workflow/instructions:${formatWorkflowBlock(member.workflow, '       ')}`
-        : '';
-      return `- ${member.name}${rolePart}${providerPart}${modelPart}${effortPart}${isolationPart}${workflowPart}`;
-    })
-    .join('\n');
-}
-
-/** Compact roster: name + role only, no workflow details. Used for post-compact reminders. */
-export function buildCompactMembersRoster(members: TeamCreateRequest['members']): string {
-  return members
-    .map((member) => {
-      const rolePart = member.role?.trim() ? ` (${member.role.trim()})` : '';
-      return `- ${member.name}${rolePart}`;
-    })
-    .join('\n');
-}
 
 export function buildTeammateAgentBlockReminder(): string {
   return [
@@ -531,7 +499,7 @@ After member_briefing succeeds:
 - CRITICAL: If someone comments on your task, you MUST reply on that same task via task_add_comment. Never leave a user/lead/teammate task comment unanswered, even if the reply is only a short acknowledgement or status update. Do NOT treat status changes or direct messages as a substitute for an on-task reply.
 - CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.
 - CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment via task_add_comment BEFORE calling task_complete. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A SendMessage to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only SendMessage without a task comment, the user will never see your work.
-- After task_complete, notify your team lead via SendMessage. Keep the visible message human-readable only: include the task ref as plain #<short-id> text (not a code span and not a manual task:// Markdown link), a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <first-8-chars-of-commentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message: "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment e5f6a7b8. Moving to #efgh5678."
+- After task_complete, notify your team lead via SendMessage. Keep the visible message human-readable only: include the task ref as plain #<short-id> text (not a code span and not a manual task:// Markdown link), a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <first-8-chars-of-commentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message (<comment-id> is a placeholder - never send it literally, use the id you saved): "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment <comment-id>. Moving on to my next task."
 - Review discipline:
 ${indentMultiline(buildMemberReviewFlowReminder(), '  ')}
 - Beyond task-completion pings, direct messages to your team lead are only for urgent attention, no-task situations, or when the lead explicitly asked for a direct reply.
@@ -613,7 +581,7 @@ ${actionModeProtocol}
      - Only then run task_start when you truly begin.
      - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST leave a short task comment saying what you are about to do, THEN run task_start, then do the work, and when finished leave a short result comment and run task_complete again. Never skip this comment -> reopen -> work -> comment -> done cycle.
      - CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment BEFORE calling task_complete. The task comment is the primary delivery channel — the user reads results on the task board. A SendMessage to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only SendMessage without a task comment, the user will never see your work.
-     - After task_complete, notify your team lead via SendMessage. The task_add_comment response contains comment.id (UUID) - take its first 8 characters as the short commentId. Keep the visible message human-readable only: include the task ref as plain #<short-id> text (not a code span and not a manual task:// Markdown link), a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <shortCommentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message: "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment e5f6a7b8. Moving to #efgh5678."
+     - After task_complete, notify your team lead via SendMessage. The task_add_comment response contains comment.id (UUID) - take its first 8 characters as the short commentId. Keep the visible message human-readable only: include the task ref as plain #<short-id> text (not a code span and not a manual task:// Markdown link), a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <shortCommentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message (<comment-id> is a placeholder - never send it literally, use the id you saved): "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment <comment-id>. Moving on to my next task."
      - Review discipline:
 ${indentMultiline(buildMemberReviewFlowReminder(), '       ')}
      - Beyond task-completion pings, direct messages to your team lead are only for urgent attention, no-task situations, or when the lead explicitly asked for a direct reply.
@@ -746,6 +714,12 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `- Never bulk-move many tasks at the end of a session — update status incrementally as you work.`,
       `- Record meaningful progress, decisions, and blockers as task comments so context is preserved on the board.`,
       `- CRITICAL: Task results (findings, reports, analysis, code changes) MUST be posted as task comments — the user reads results on the task board. Direct messages alone are not visible on the board and the user will miss them.`,
+      ``,
+      `Delegated work boundary (CRITICAL — the lead must NOT execute teammates' tasks):`,
+      `- After you create and assign tasks, your turn ends with a short confirmation to "user" (task IDs + owners). Do NOT execute the content of tasks you assigned to teammates — do not read project files for them, do not write their deliverables, and do not create files a teammate's task is supposed to produce.`,
+      `- While any assigned task is pending or in_progress, the ONLY work you may do yourself is coordination: answer questions, unblock teammates, review posted results, and close tasks.`,
+      `- This applies even if a teammate seems slow or idle — a teammate's first turn can take minutes; wait for the owner instead of doing their task yourself.`,
+      `- Exception: the user explicitly tells you to do that work yourself, or the team is in SOLO MODE.`,
       ``,
       `Parallelization guideline (IMPORTANT):`,
       `- If a task is genuinely parallelizable, split it into multiple smaller tasks owned by different members.`,
@@ -906,6 +880,11 @@ export function buildPersistentLeadContext(opts: {
   const membersFooter = membersBlock
     ? `Members:\n${membersBlock}`
     : 'Members: (none — solo team lead)';
+  const teammateRoster = getTeammateRosterMembers(members);
+  const rosterRulesBlock =
+    teammateRoster.length > 0
+      ? `\n\n${buildLeadRosterIntegrityRules(teammateRoster.map((member) => member.name))}`
+      : '';
 
   return `${languageInstruction}
 
@@ -920,7 +899,8 @@ Constraints:
 - NEVER use SendMessage with to="*" (broadcast). The "*" address is NOT supported — it will create a phantom participant named "*" instead of reaching all teammates. To message multiple teammates, send a separate SendMessage to each one by name.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
-- DELEGATION-FIRST (behavior rule for ALL future lead turns): When "user" gives you work, your top priority as team lead is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
+- DELEGATION-FIRST (behavior rule for ALL future lead turns): When "user" gives you work, your top priority as team lead is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the user explicitly tells you to do that work yourself, or the team is truly in SOLO MODE (no teammates).
+- DELEGATION-FIRST does not end once tasks are created: after delegation, do NOT execute the content of tasks you assigned to teammates. While any assigned task is pending or in_progress, restrict yourself to coordination (answer questions, unblock, review posted results, close tasks) — unless the user explicitly tells you to do that work yourself, or the team is in SOLO MODE.
 - In a non-solo team, your default first lead move is delegation, NOT personal investigation. Do NOT read/search the codebase, inspect files, or do root-cause research yourself just to figure out ownership or scope before delegating.
 - This lead-only delegation rule does NOT restrict assigned teammates. Teammates who own implementation, fixes, review follow-up, or investigation tasks may inspect, read/search, and edit files in their working directory as needed for their assigned task.
 - If the request is ambiguous or still needs technical discovery, immediately create a coarse investigation/triage task for the best-fit teammate. That teammate owns the code inspection, scope refinement, and creation of any follow-up tasks needed for execution.
@@ -941,6 +921,8 @@ Communication protocol (CRITICAL — you are running headless, no one sees your 
 - Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(${buildCanonicalSendMessageExample({ to: 'alice', summary: 'short reply', message: 'your reply' })}).
 - Example: if alice asks "Сколько времени осталось?" and you need clarification, reply with SendMessage(${buildCanonicalSendMessageExample({ to: 'alice', summary: 'need clarification', message: 'Уточни, пожалуйста, до чего именно нужно время.' })}) instead of asking that question in plain assistant text.
 - Do NOT reply to low-value acknowledgements or presence pings such as "ready", "online", "status accepted", "awaiting task", or "received" unless you need to give the teammate a concrete next action.
+- Do NOT reply to system, task-comment, or dependency notifications (task started/completed, dependency resolved, comment added, review pickup pending) with a message to ANYONE unless the notification changes your plan or requires a concrete decision or action from you. Read them and move on; sending ACK/confirmation messages ("received", "noted", "acknowledged", "will do") for such notifications is forbidden.
+- Messages from "system" have no addressable sender. NEVER use "system" as a SendMessage recipient or message_send "to"/memberName value — it is not a team member and the call will fail.
 - Treat pure teammate idle/availability heartbeat notifications (for example idle_notification / "available" without task/failure state) as informational runtime noise. Do NOT message "user" or the teammate solely because someone became idle or available. If an idle notification only carries passive peer-summary context, do not send a user-facing reply just for that summary. Only react when the inbox item reflects interruption, failure, or concrete task-terminal state that requires action.
 - Cross-team communication: when work needs expertise, coordination, review, or a decision from ANOTHER team, CALL the MCP tool named "cross_team_send" with teamName: "${teamName}" and a focused actionable message.
 - Before sending cross-team, use MCP tool "cross_team_list_targets" with teamName: "${teamName}" to discover valid target teams.
@@ -973,7 +955,7 @@ Message formatting:
 ${getVisibleTaskReferenceFormattingRule()}
 ${agentBlockPolicy}
 
-${membersFooter}`;
+${membersFooter}${rosterRulesBlock}`;
 }
 
 export function buildAgentBlockUsagePolicy(): string {
@@ -1060,7 +1042,7 @@ export function buildDeterministicLaunchHydrationPrompt(
   const startupLabel = isResume ? 'resume/bootstrap' : 'launch/bootstrap';
   const headerModeLabel = isResume ? 'Deterministic resume' : 'Deterministic launch';
   const userPromptBlock = request.prompt?.trim()
-    ? `\nOriginal user instructions to apply after ${isResume ? 'resume' : 'startup'} is stable:\n${request.prompt.trim()}\n`
+    ? `\nOriginal user instructions to apply now:\n${request.prompt.trim()}\n`
     : '';
   const hasOriginalUserPrompt = Boolean(request.prompt?.trim());
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
@@ -1070,27 +1052,25 @@ export function buildDeterministicLaunchHydrationPrompt(
     isSolo,
     members,
   });
-  const nextSteps = isSolo
+  const nextSteps = hasOriginalUserPrompt
     ? `This ${startupLabel} step has already been completed deterministically by the runtime.
+Do NOT call TeamCreate.
+Do NOT use Agent to spawn or restore teammates.
+This is the first normal operating turn after bootstrap. Apply the original user instructions now; do not wait for another user message.
+${isSolo ? "Follow the user's requested action mode; answer read-only questions or carry out requested work and update the task board as appropriate." : "Follow the user's requested action mode, including read-only answers. Create or assign tasks only when the request calls for teammate work, using the exact roster below. If an owner is still joining, leave its assignment pending and wait for that owner; do not do its work yourself."}`
+    : isSolo
+      ? `This ${startupLabel} step has already been completed deterministically by the runtime.
 Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT start implementation in this turn.
 Use this turn only to review the current board snapshot and confirm operational readiness.
-${
-  hasOriginalUserPrompt
-    ? 'Do NOT create or update any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
-    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
-}`
-    : `This ${startupLabel} step has already been completed deterministically by the runtime.
+Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.`
+      : `This ${startupLabel} step has already been completed deterministically by the runtime.
 Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT repeat the launch summary.
 Use this turn only to review the current board snapshot and teammate readiness.
-${
-  hasOriginalUserPrompt
-    ? 'Do NOT create or assign any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
-    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
-}
+Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.
 Treat teammates whose bootstrap is still pending as not-yet-available for blocking assignments.`;
 
   return `${startLabel} [${headerModeLabel} | Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
@@ -1104,7 +1084,7 @@ ${nextSteps}
 ${taskBoardSnapshot}
 ${persistentContext}
 
-Reply with one concise user-facing team status line. Mention whether there is actionable board work and whether any teammate is still bootstrap-pending. Only report board readiness and teammate availability. Do not start work, create tasks, or delegate in this turn.`;
+${hasOriginalUserPrompt ? 'Carry out the requested operating turn once, then give the user a concise progress update.' : 'Reply with one concise user-facing team status line. Mention whether there is actionable board work and whether any teammate is still bootstrap-pending. Only report board readiness and teammate availability. Do not start work, create tasks, or delegate in this turn.'}`;
 }
 
 export function buildGeminiPostLaunchHydrationPrompt(

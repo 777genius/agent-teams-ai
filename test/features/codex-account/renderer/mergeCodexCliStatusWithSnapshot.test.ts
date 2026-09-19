@@ -113,9 +113,10 @@ describe('mergeCodexCliStatusWithSnapshot', () => {
     expect(merged?.providers[0]?.providerId).toBe('anthropic');
     expect(merged?.providers[0]?.statusMessage).toBe('Connected');
     expect(merged?.providers[1]?.providerId).toBe('codex');
-    expect(merged?.providers[1]?.authMethod).toBe('chatgpt');
+    expect(merged?.providers[1]?.authMethod).toBeNull();
     expect(merged?.providers[1]?.statusMessage).toBe('ChatGPT account ready');
     expect(merged?.providers[1]?.backend?.authMethodDetail).toBe('chatgpt');
     expect(merged?.providers[1]?.models).toEqual(['gpt-5.4', 'gpt-5.1-codex-max']);
+    expect(merged?.providers[1]?.capabilities.teamLaunch).toBe(false);
   });
 });

@@ -75,7 +75,7 @@ interface SideEffectHarness {
   addTeamNotification: ReturnType<typeof vi.fn>;
   sendMessageToRun: ReturnType<typeof vi.fn>;
   teamChangeEvents: TeamChangeEvent[];
-  invalidations: { teamName: string; memberName: string }[];
+  invalidations: { teamName: string; memberName: string | null }[];
 }
 
 interface TeamProvisioningSideEffectAccess {
@@ -332,7 +332,7 @@ async function runUserFacingSideEffects(
   const access = service as unknown as TeamProvisioningSideEffectAccess;
   const sendMessageToRun = vi.fn(() => Promise.resolve(undefined));
   const teamChangeEvents: TeamChangeEvent[] = [];
-  const invalidations: { teamName: string; memberName: string }[] = [];
+  const invalidations: { teamName: string; memberName: string | null }[] = [];
 
   service.setTeamChangeEmitter((event) => {
     teamChangeEvents.push(event);

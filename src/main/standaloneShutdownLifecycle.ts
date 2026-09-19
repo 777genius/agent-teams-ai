@@ -54,6 +54,30 @@ export interface StandaloneFatalFailStopActions {
   readonly hardExitTimeoutMs?: number;
 }
 
+export function createStandaloneOrderlyOwnerLossGuard<TOwner>(
+  sameOwner: (left: TOwner, right: TOwner) => boolean
+): Readonly<{
+  beginOrderlyShutdown(owner: TOwner | null): void;
+  isExpectedOwnerLoss(owner: TOwner): boolean;
+}> {
+  let orderlyShutdownRequested = false;
+  let orderlyShutdownOwner: TOwner | null = null;
+  return Object.freeze({
+    beginOrderlyShutdown(owner: TOwner | null): void {
+      if (orderlyShutdownRequested) return;
+      orderlyShutdownRequested = true;
+      orderlyShutdownOwner = owner;
+    },
+    isExpectedOwnerLoss(owner: TOwner): boolean {
+      return (
+        orderlyShutdownRequested &&
+        orderlyShutdownOwner !== null &&
+        sameOwner(orderlyShutdownOwner, owner)
+      );
+    },
+  });
+}
+
 type SynchronousCallResult<T> = { success: true; value: T } | { success: false; error: unknown };
 
 function captureSynchronousCall<T>(call: () => T): SynchronousCallResult<T> {
@@ -101,9 +125,13 @@ type StandaloneShutdownSignal = 'SIGINT' | 'SIGTERM';
 export function registerStandaloneShutdownSignalHandlers(input: {
   platform: NodeJS.Platform;
   onSignal: (signal: StandaloneShutdownSignal, listener: () => void) => void;
+  beforeShutdown?: (signal: StandaloneShutdownSignal) => void;
   shutdown: () => Promise<void>;
 }): void {
-  const requestShutdown = (): void => void input.shutdown();
-  input.onSignal('SIGINT', requestShutdown);
-  if (input.platform !== 'win32') input.onSignal('SIGTERM', requestShutdown);
+  const requestShutdown = (signal: StandaloneShutdownSignal): void => {
+    input.beforeShutdown?.(signal);
+    void input.shutdown();
+  };
+  input.onSignal('SIGINT', () => requestShutdown('SIGINT'));
+  if (input.platform !== 'win32') input.onSignal('SIGTERM', () => requestShutdown('SIGTERM'));
 }

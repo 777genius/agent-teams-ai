@@ -79,32 +79,37 @@ describe('promote-existing-draft', () => {
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macX64Zip);
   });
 
-  it('runs an isolated end-to-end dry run with verified release assets', async () => {
-    const root = await makeTemporaryDirectory('promote-e2e-');
-    const fixtures = path.join(root, 'fixtures');
-    const output = path.join(root, 'output');
-    const bin = path.join(root, 'bin');
-    await Promise.all([mkdir(fixtures), mkdir(output), mkdir(bin)]);
+  // The dry run fakes the gh CLI with a shebang script named `gh` and prepends
+  // its directory with a colon separator - neither works on Windows, where the
+  // real gh would be used against a repository that does not exist.
+  it.skipIf(process.platform === 'win32')(
+    'runs an isolated end-to-end dry run with verified release assets',
+    async () => {
+      const root = await makeTemporaryDirectory('promote-e2e-');
+      const fixtures = path.join(root, 'fixtures');
+      const output = path.join(root, 'output');
+      const bin = path.join(root, 'bin');
+      await Promise.all([mkdir(fixtures), mkdir(output), mkdir(bin)]);
 
-    const version = '9.9.9';
-    const tag = `v${version}`;
-    const targetCommit = 'a'.repeat(40);
-    const layout = getPromotionLayout(version);
-    const assets = [];
-    for (const sourceName of layout.sourceAssets) {
-      const contents = Buffer.from(`fixture:${sourceName}`);
-      await writeFile(path.join(fixtures, sourceName), contents);
-      assets.push({
-        name: sourceName,
-        digest: `sha256:${createHash('sha256').update(contents).digest('hex')}`,
-        size: contents.length,
-      });
-    }
+      const version = '9.9.9';
+      const tag = `v${version}`;
+      const targetCommit = 'a'.repeat(40);
+      const layout = getPromotionLayout(version);
+      const assets = [];
+      for (const sourceName of layout.sourceAssets) {
+        const contents = Buffer.from(`fixture:${sourceName}`);
+        await writeFile(path.join(fixtures, sourceName), contents);
+        assets.push({
+          name: sourceName,
+          digest: `sha256:${createHash('sha256').update(contents).digest('hex')}`,
+          size: contents.length,
+        });
+      }
 
-    const fakeGhPath = path.join(bin, 'gh');
-    await writeFile(
-      fakeGhPath,
-      `#!/usr/bin/env node
+      const fakeGhPath = path.join(bin, 'gh');
+      await writeFile(
+        fakeGhPath,
+        `#!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(2);
@@ -126,63 +131,64 @@ if (args[0] === 'release' && args[1] === 'download') {
 process.stderr.write('Unexpected gh call: ' + args.join(' ') + '\\n');
 process.exit(1);
 `
-    );
-    await chmod(fakeGhPath, 0o755);
+      );
+      await chmod(fakeGhPath, 0o755);
 
-    const release = {
-      body: 'Release notes',
-      assets,
-      isDraft: true,
-      isPrerelease: false,
-      targetCommitish: targetCommit,
-      name: tag,
-      tagName: tag,
-    };
-    const logPath = path.join(root, 'gh.log');
-    const scriptPath = path.resolve('scripts/ci/promote-existing-draft.mjs');
-    const result = spawnSync(process.execPath, [scriptPath], {
-      cwd: path.resolve('.'),
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
-        RELEASE_REPOSITORY: 'example/release-sandbox',
-        RELEASE_TAG: tag,
-        PROMOTE_DRY_RUN: 'true',
-        PROMOTION_OUTPUT_DIR: output,
-        FAKE_FIXTURES: fixtures,
-        FAKE_GH_LOG: logPath,
-        FAKE_RELEASE_JSON: JSON.stringify(release),
-        FAKE_TARGET_COMMIT: targetCommit,
-      },
-    });
+      const release = {
+        body: 'Release notes',
+        assets,
+        isDraft: true,
+        isPrerelease: false,
+        targetCommitish: targetCommit,
+        name: tag,
+        tagName: tag,
+      };
+      const logPath = path.join(root, 'gh.log');
+      const scriptPath = path.resolve('scripts/ci/promote-existing-draft.mjs');
+      const result = spawnSync(process.execPath, [scriptPath], {
+        cwd: path.resolve('.'),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          RELEASE_REPOSITORY: 'example/release-sandbox',
+          RELEASE_TAG: tag,
+          PROMOTE_DRY_RUN: 'true',
+          PROMOTION_OUTPUT_DIR: output,
+          FAKE_FIXTURES: fixtures,
+          FAKE_GH_LOG: logPath,
+          FAKE_RELEASE_JSON: JSON.stringify(release),
+          FAKE_TARGET_COMMIT: targetCommit,
+        },
+      });
 
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('"dryRun": true');
-    expect(await readFile(path.join(output, 'Agent.Teams.AI-arm64.dmg'), 'utf8')).toBe(
-      `fixture:Agent.Teams.AI-${version}-arm64.dmg`
-    );
-    expect(await readFile(path.join(output, 'Agent.Teams.AI.Setup-arm64.exe'), 'utf8')).toBe(
-      `fixture:Agent.Teams.AI.Setup.${version}-arm64.exe`
-    );
-    expect(await readFile(path.join(output, 'latest.yml'), 'utf8')).toContain(
-      `Agent.Teams.AI.Setup.${version}.exe`
-    );
-    expect(await readFile(path.join(output, 'latest-linux.yml'), 'utf8')).toContain(
-      `Agent.Teams.AI-${version}.AppImage`
-    );
-    expect(await readFile(path.join(output, 'latest-mac.yml'), 'utf8')).toContain(
-      `Agent.Teams.AI-${version}-x64-mac.zip`
-    );
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('"dryRun": true');
+      expect(await readFile(path.join(output, 'Agent.Teams.AI-arm64.dmg'), 'utf8')).toBe(
+        `fixture:Agent.Teams.AI-${version}-arm64.dmg`
+      );
+      expect(await readFile(path.join(output, 'Agent.Teams.AI.Setup-arm64.exe'), 'utf8')).toBe(
+        `fixture:Agent.Teams.AI.Setup.${version}-arm64.exe`
+      );
+      expect(await readFile(path.join(output, 'latest.yml'), 'utf8')).toContain(
+        `Agent.Teams.AI.Setup.${version}.exe`
+      );
+      expect(await readFile(path.join(output, 'latest-linux.yml'), 'utf8')).toContain(
+        `Agent.Teams.AI-${version}.AppImage`
+      );
+      expect(await readFile(path.join(output, 'latest-mac.yml'), 'utf8')).toContain(
+        `Agent.Teams.AI-${version}-x64-mac.zip`
+      );
 
-    const calls = (await readFile(logPath, 'utf8'))
-      .trim()
-      .split('\n')
-      .map((line) => JSON.parse(line) as string[]);
-    expect(calls.filter((args) => args[0] === 'release' && args[1] === 'download')).toHaveLength(
-      10
-    );
-    expect(calls.some((args) => args[0] === 'release' && args[1] === 'upload')).toBe(false);
-    expect(calls.some((args) => args[0] === 'release' && args[1] === 'edit')).toBe(false);
-  });
+      const calls = (await readFile(logPath, 'utf8'))
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as string[]);
+      expect(calls.filter((args) => args[0] === 'release' && args[1] === 'download')).toHaveLength(
+        10
+      );
+      expect(calls.some((args) => args[0] === 'release' && args[1] === 'upload')).toBe(false);
+      expect(calls.some((args) => args[0] === 'release' && args[1] === 'edit')).toBe(false);
+    }
+  );
 });

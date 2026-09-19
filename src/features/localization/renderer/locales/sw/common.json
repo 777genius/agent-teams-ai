@@ -924,5 +924,23 @@
       "needsFix": "Inahitaji Marekebisho"
     },
     "unassigned": "hawajakabidhiwa"
+  },
+  "announcements": {
+    "title": "Habari",
+    "historyTitle": "Mambo mapya",
+    "description": "Masasisho, maboresho na habari kutoka Agent Teams.",
+    "imageUnavailable": "Picha haipatikani",
+    "loading": "Inapakia habari…",
+    "loadError": "Makala hii haipatikani. Onyesha upya habari au ujaribu tena baadaye.",
+    "expired": "Si ya sasa tena",
+    "empty": "Umesoma yote",
+    "emptyDescription": "Habari za mradi zitaonekana hapa zitakapochapishwa.",
+    "allNews": "Habari zote",
+    "status": {
+      "offline": "Huna mtandao. Makala zilizopakiwa awali zinapatikana; baadhi ya picha zinaweza kukosekana.",
+      "writer_busy": "Habari zimefunguliwa katika nakala nyingine ya programu. Unaweza kuvinjari orodha hapa; fungua makala katika nakala nyingine.",
+      "unavailable": "Habari zinapatikana katika programu ya kompyuta.",
+      "state_unavailable": "Unaweza kusoma, lakini maendeleo yako hayawezi kuhifadhiwa sasa. Habari za kiotomatiki zimesitishwa."
+    }
   }
 }

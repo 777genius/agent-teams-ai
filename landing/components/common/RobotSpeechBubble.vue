@@ -3,8 +3,10 @@ type RobotSpeechBubbleTail = "down" | "right";
 
 const props = withDefaults(defineProps<{
   tail?: RobotSpeechBubbleTail;
+  withTextShadow?: boolean;
 }>(), {
   tail: "down",
+  withTextShadow: false,
 });
 
 const bubblePath = computed(() => {
@@ -19,7 +21,10 @@ const bubblePath = computed(() => {
 <template>
   <span
     class="robot-speech-bubble"
-    :class="`robot-speech-bubble--tail-${tail}`"
+    :class="[
+      `robot-speech-bubble--tail-${tail}`,
+      { 'robot-speech-bubble--with-text-shadow': withTextShadow },
+    ]"
   >
     <svg
       class="robot-speech-bubble__shape"
@@ -57,11 +62,14 @@ const bubblePath = computed(() => {
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: 0;
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.62);
   pointer-events: none;
   filter:
     drop-shadow(0 3px 0 rgba(0, 0, 0, 0.18))
     drop-shadow(0 0 11px rgba(255, 215, 0, 0.16));
+}
+
+.robot-speech-bubble--with-text-shadow {
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.62);
 }
 
 .robot-speech-bubble__shape {

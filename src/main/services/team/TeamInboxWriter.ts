@@ -9,6 +9,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
+import { pickTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
 import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
 
@@ -143,8 +144,33 @@ export interface CorrelateRuntimeDeliveryReplyResult {
   message?: InboxMessage & { messageId: string };
 }
 
+export interface SendInboxMessageOptions {
+  /**
+   * Evaluated once inside the inbox write lock, immediately before the message
+   * is appended. A false result rejects the write instead of queueing it.
+   *
+   * Acquiring the inbox lock is an unbounded wait behind every other writer of
+   * the same file, so a caller whose authority can expire (a team launch that a
+   * successor run takes over, for example) would otherwise enqueue a message
+   * that only its successor sees. The check runs under the lock, so it observes
+   * the state that holds at the moment this writer is allowed to append.
+   */
+  shouldStillWrite?: () => boolean | Promise<boolean>;
+}
+
+class TeamInboxWriteAbortedError extends Error {
+  constructor() {
+    super('Inbox write aborted before commit');
+    this.name = 'TeamInboxWriteAbortedError';
+  }
+}
+
 export class TeamInboxWriter {
-  async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
+  async sendMessage(
+    teamName: string,
+    request: SendMessageRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
     const inboxPath = resolveInboxPath(teamName, request.member);
     const explicitMessageId = request.messageId?.trim();
     const messageId = explicitMessageId || randomUUID();
@@ -181,22 +207,48 @@ export class TeamInboxWriter {
       ...(request.messageKind && { messageKind: request.messageKind }),
       ...(request.agentError && { agentError: request.agentError }),
       ...(request.runtimeRecovery && { runtimeRecovery: request.runtimeRecovery }),
-      ...(request.workSyncIntent && { workSyncIntent: request.workSyncIntent }),
-      ...(request.workSyncIntentKey && { workSyncIntentKey: request.workSyncIntentKey }),
-      ...(request.workSyncReviewRequestEventIds?.length
-        ? { workSyncReviewRequestEventIds: request.workSyncReviewRequestEventIds }
-        : {}),
-      ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
+      ...pickTeamInboxWorkSyncFields(request),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
     };
     let resultMessageId = messageId;
     let resultDeduplicated = false;
+    let rejectedByPrecondition = false;
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
+        const shouldAbortWrite = async (): Promise<boolean> => {
+          if (options?.shouldStillWrite && !(await options.shouldStillWrite())) {
+            rejectedByPrecondition = true;
+            return true;
+          }
+          return false;
+        };
+        const writeInboxList = async (list: InboxMessage[]): Promise<'aborted' | 'written'> => {
+          try {
+            await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2), {
+              beforeCommit: async () => {
+                if (await shouldAbortWrite()) {
+                  throw new TeamInboxWriteAbortedError();
+                }
+              },
+            });
+            return 'written';
+          } catch (error) {
+            if (error instanceof TeamInboxWriteAbortedError) {
+              return 'aborted';
+            }
+            throw error;
+          }
+        };
+        if (await shouldAbortWrite()) {
+          return;
+        }
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
+          if (await shouldAbortWrite()) {
+            return;
+          }
           const explicitDuplicateIndex = explicitMessageId
             ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
             : -1;
@@ -217,7 +269,12 @@ export class TeamInboxWriter {
                 ...duplicate,
                 taskRefs: merged.taskRefs,
               };
-              await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+              if (await shouldAbortWrite()) {
+                return;
+              }
+              if ((await writeInboxList(list)) === 'aborted') {
+                return;
+              }
               const written = await this.readInbox(inboxPath);
               const writtenDuplicateIndex = matchedExplicitMessageId
                 ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
@@ -236,7 +293,12 @@ export class TeamInboxWriter {
             return;
           }
           list.push(payload);
-          await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+          if (await shouldAbortWrite()) {
+            return;
+          }
+          if ((await writeInboxList(list)) === 'aborted') {
+            return;
+          }
           const written = await this.readInbox(inboxPath);
           if (written.some((msg) => msg.messageId === messageId)) {
             return;
@@ -247,6 +309,9 @@ export class TeamInboxWriter {
       });
     });
 
+    if (rejectedByPrecondition) {
+      return { deliveredToInbox: false, messageId };
+    }
     return {
       deliveredToInbox: true,
       messageId: resultMessageId,
@@ -282,6 +347,13 @@ export class TeamInboxWriter {
 
   private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
     const isRuntimeDelivery = message.source === 'runtime_delivery';
+    // An explicit messageId is a caller-supplied identity claim, not a
+    // best-effort retry match: a second message with the same messageId but
+    // different text/summary is a real content change (e.g. a corrected
+    // reply from a re-attempted read-commit-policy pass), and dropping it
+    // silently would lose it rather than raise the collision the caller can
+    // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
+    // intentionally more tolerant match used for non-explicit retries.
     return {
       from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
       to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
@@ -302,10 +374,7 @@ export class TeamInboxWriter {
       agentError: message.agentError,
       runtimeRecovery: message.runtimeRecovery,
       color: message.color,
-      workSyncIntent: message.workSyncIntent,
-      workSyncIntentKey: message.workSyncIntentKey,
-      workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
-      workSyncPayloadHash: message.workSyncPayloadHash,
+      ...pickTeamInboxWorkSyncFields(message),
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,
     };
@@ -369,6 +438,49 @@ export class TeamInboxWriter {
     });
 
     return result;
+  }
+
+  async invalidateMemberWorkSyncNudges(
+    teamName: string,
+    member: string,
+    input: { beforeControlRevision: number }
+  ): Promise<{ invalidated: number; messageIds: string[] }> {
+    const inboxPath = resolveInboxPath(teamName, member);
+    const messageIds: string[] = [];
+    await withFileLock(inboxPath, async () => {
+      await withInboxLock(inboxPath, async () => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(await fs.promises.readFile(inboxPath, 'utf8')) as unknown;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          return;
+        }
+        if (!Array.isArray(parsed)) return;
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object') continue;
+          const row = item as Record<string, unknown>;
+          const revision =
+            typeof row.workSyncControlRevision === 'number' ? row.workSyncControlRevision : -1;
+          if (
+            row.messageKind !== 'member_work_sync_nudge' ||
+            revision >= input.beforeControlRevision ||
+            row.read === true
+          ) {
+            continue;
+          }
+          row.read = true;
+          row.messageKind = 'default';
+          if (typeof row.messageId === 'string' && row.messageId.length > 0) {
+            messageIds.push(row.messageId);
+          }
+        }
+        if (messageIds.length > 0) {
+          await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+        }
+      });
+    });
+    return { invalidated: messageIds.length, messageIds };
   }
 
   async mergeRuntimeDeliveryTaskRefs(
@@ -558,18 +670,19 @@ export class TeamInboxWriter {
     const relayOfMessageId = payload.relayOfMessageId.trim();
     const from = this.normalizeComparableParticipant(payload.from);
     const to = this.normalizeComparableParticipant(payload.to);
-    const text = this.normalizeComparableText(payload.text);
-    if (!from || !to || !text) {
+    if (!from || !to) {
       return -1;
     }
 
+    // Replayed runtime deliveries of the same original message may arrive as
+    // paraphrases, so (relayOfMessageId, from, to) is the identity — text is
+    // deliberately excluded from the duplicate key.
     return messages.findIndex(
       (candidate) =>
         candidate.source === 'runtime_delivery' &&
         (candidate.relayOfMessageId ?? '').trim() === relayOfMessageId &&
         this.normalizeComparableParticipant(candidate.from) === from &&
-        this.normalizeComparableParticipant(candidate.to) === to &&
-        this.normalizeComparableText(candidate.text) === text
+        this.normalizeComparableParticipant(candidate.to) === to
     );
   }
 

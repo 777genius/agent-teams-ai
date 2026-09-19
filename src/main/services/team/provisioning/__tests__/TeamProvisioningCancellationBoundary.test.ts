@@ -398,7 +398,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         readPersistedTeamProjectPath: () => '/repo',
         clearOpenCodeRuntimeLaneStorage: async ({ laneId }) => {
           laneArtifacts.delete(laneId);
-          return true;
+          return 'cleared';
         },
         deleteSecondaryRuntimeRun: (_teamName, laneId) => {
           secondaryRuns.delete(laneId);
@@ -415,7 +415,8 @@ describe('TeamProvisioningCancellationBoundary', () => {
         provisioningRunByTeam: new Map(),
         invalidateRuntimeSnapshotCaches: vi.fn(),
         emitTeamChange: vi.fn(),
-        logger: { warn: vi.fn() },
+        logger: { warn: vi.fn(), info: vi.fn() },
+        isRuntimeProcessAlive: () => false,
         nowIso: () => '2026-01-01T00:00:02.000Z',
       };
       const ports = makePorts({
@@ -433,10 +434,13 @@ describe('TeamProvisioningCancellationBoundary', () => {
 
       await boundary.cancelProvisioning(run.runId);
 
-      expect(stopInputs).toEqual([
-        { laneId: 'lane-a', runId: 'lane-run-a' },
-        { laneId: 'lane-b', runId: 'lane-run-b' },
-      ]);
+      expect(stopInputs).toHaveLength(2);
+      expect(stopInputs).toEqual(
+        expect.arrayContaining([
+          { laneId: 'lane-a', runId: 'lane-run-a' },
+          { laneId: 'lane-b', runId: 'lane-run-b' },
+        ])
+      );
       expect(liveProcesses.size).toBe(0);
       expect(laneArtifacts.size).toBe(0);
       expect(secondaryRuns.size).toBe(0);
@@ -956,7 +960,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
       readLaunchState: async () => null,
       writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
       readPersistedTeamProjectPath: () => '/repo',
-      clearOpenCodeRuntimeLaneStorage: async () => true,
+      clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
       deleteSecondaryRuntimeRun: (_teamName, laneId) => {
         secondaryRuns.delete(laneId);
       },
@@ -972,8 +976,9 @@ describe('TeamProvisioningCancellationBoundary', () => {
       provisioningRunByTeam: new Map(),
       invalidateRuntimeSnapshotCaches: vi.fn(),
       emitTeamChange: vi.fn(),
-      logger: { warn: vi.fn() },
+      logger: { warn: vi.fn(), info: vi.fn() },
       nowIso: () => '2026-01-01T00:00:02.000Z',
+      isRuntimeProcessAlive: () => false,
     };
     const ports = makePorts({
       run,

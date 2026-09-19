@@ -53,6 +53,8 @@ export interface InvalidateTeamMessageFeedPayload {
 export interface InvalidateMemberRuntimeAdvisoryPayload {
   teamName: string;
   memberName?: string;
+  /** Set on a launch-start reset: floors advisory re-derivation at this run. */
+  runStartedAtMs?: number;
 }
 
 export interface TeamDataWorkerDiag {

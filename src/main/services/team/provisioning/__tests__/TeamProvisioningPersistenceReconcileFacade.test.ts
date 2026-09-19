@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { type TeamProvisioningPersistedLaunchReconcilePortsInput } from '../TeamProvisioningPersistedLaunchReconcilePorts';
 import {
+  createTeamProvisioningPersistenceReconcileFacadeFromService,
   TeamProvisioningPersistenceReconcileFacade,
   type TeamProvisioningPersistenceReconcileFacadePorts,
+  type TeamProvisioningPersistenceReconcileFacadeServiceHost,
   type TeamProvisioningPersistenceReconcileRun,
 } from '../TeamProvisioningPersistenceReconcileFacade';
+import { createTeamProvisioningPrimaryBootstrapTruthReportingBoundary } from '../TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory';
 
 import type {
   PersistedTeamLaunchMemberState,
@@ -91,6 +94,7 @@ function createPorts(
     buildLiveLaunchSnapshotForRun: vi.fn(() => null),
     invalidateRuntimeSnapshotCaches: vi.fn(() => undefined),
     reconcile: {
+      getTrackedRunId: vi.fn(() => 'run-1'),
       recoverStaleMixedSecondaryLaunchSnapshot: vi.fn(async () => null),
       applyOpenCodeSecondaryEvidenceOverlay: vi.fn(
         async (input: { snapshot: PersistedTeamLaunchSnapshot }) => input.snapshot
@@ -177,11 +181,83 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
     expect(ports.launchStateStoreBoundary.writeLaunchStateSnapshotNow).not.toHaveBeenCalled();
 
     vi.mocked(ports.buildLiveLaunchSnapshotForRun).mockReturnValue(cleanSnapshot);
-    await expect(facade.persistLaunchStateSnapshot(run(), 'finished')).resolves.toBeNull();
+    const published = await facade.persistLaunchStateSnapshot(run(), 'finished');
+    expect(published).toMatchObject({
+      teamLaunchState: 'clean_success',
+      summary: { confirmedCount: 1, pendingCount: 0 },
+      members: { Builder: { launchState: 'confirmed_alive', bootstrapConfirmed: true } },
+    });
 
     expect(ports.launchStateStoreBoundary.clearPersistedLaunchStateNow).toHaveBeenCalledTimes(2);
     expect(ports.launchStateStoreBoundary.writeLaunchStateSnapshotNow).not.toHaveBeenCalled();
   });
+
+  it.each(['successor', 'stop'])(
+    'does not resurrect cleaned success during a %s in final reporting',
+    async (transition) => {
+      const clean = {
+        ...snapshot({
+          members: {
+            Builder: member('Builder', {
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          },
+        }),
+        launchPhase: 'finished' as const,
+      };
+      let disk: PersistedTeamLaunchSnapshot | null = clean;
+      const ports = createPorts({ buildLiveLaunchSnapshotForRun: vi.fn(() => clean) });
+      vi.mocked(ports.launchStateStoreBoundary.clearPersistedLaunchStateNow).mockImplementation(
+        async () => {
+          disk = null;
+        }
+      );
+      const facade = new TeamProvisioningPersistenceReconcileFacade(ports);
+      const target = {
+        ...run(),
+        effectiveMembers: [{ name: 'Builder' }],
+        memberSpawnStatuses: new Map(),
+      };
+      const evidence = await facade.persistLaunchStateSnapshot(target, 'finished');
+      expect(evidence?.teamLaunchState).toBe('clean_success');
+      expect(disk).toBeNull();
+      let completeRead!: (value: PersistedTeamLaunchSnapshot) => void;
+      const writeLaunchStateSnapshot = vi.fn(
+        async (_team: string, next: PersistedTeamLaunchSnapshot) => {
+          disk = next;
+          return next;
+        }
+      );
+      const reporting = createTeamProvisioningPrimaryBootstrapTruthReportingBoundary({
+        service: {
+          isOpenCodeSecondaryLaneMemberInRun: () => false,
+          syncMemberTaskActivityForRuntimeTransition: vi.fn(),
+          syncMemberLaunchGraceCheck: vi.fn(),
+          syncRunMemberSpawnStatusesFromSnapshot: vi.fn(),
+        },
+        readBootstrapLaunchSnapshot: () =>
+          new Promise((resolve) => {
+            completeRead = resolve;
+          }),
+        writeLaunchStateSnapshot,
+        nowIso: () => '2026-01-01T00:00:02.000Z',
+        logger: { warn: vi.fn() },
+      });
+      const finishing = reporting.reconcileFinalLaunchReportingSnapshot(target, evidence);
+      const successor =
+        transition === 'successor' ? snapshot({ members: { Builder: member('Builder') } }) : null;
+      disk = successor;
+      completeRead(clean);
+      const result = await finishing;
+      expect(result).not.toBe(evidence);
+      expect(result?.teamLaunchState).toBe('clean_success');
+      expect(writeLaunchStateSnapshot).not.toHaveBeenCalled();
+      expect(disk).toBe(successor);
+    }
+  );
 
   it('passes facade-owned persistence ports into the reconcile runner', async () => {
     const persistedSnapshot = snapshot({
@@ -193,8 +269,9 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
       async (_teamName: string, input: TeamProvisioningPersistedLaunchReconcilePortsInput) => {
         await expect(input.readLaunchState('demo')).resolves.toBe(persistedSnapshot);
         await expect(input.readMembersMeta('demo')).resolves.toEqual([]);
-        await input.writeLaunchStateSnapshot('demo', persistedSnapshot);
-        await input.clearPersistedLaunchState('demo');
+        expect(input.getTrackedRunId('demo')).toBe('run-1');
+        await input.writeLaunchStateSnapshot('demo', persistedSnapshot, { runId: 'run-1' });
+        await input.clearPersistedLaunchState('demo', { expectedRunId: 'run-1' });
         return { snapshot: persistedSnapshot, statuses: {} };
       }
     );
@@ -216,15 +293,38 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
         readMembersMeta: expect.any(Function),
         writeLaunchStateSnapshot: expect.any(Function),
         clearPersistedLaunchState: expect.any(Function),
+        getTrackedRunId: expect.any(Function),
       })
     );
     expect(ports.launchStateStoreBoundary.writeLaunchStateSnapshot).toHaveBeenCalledWith(
       'demo',
-      persistedSnapshot
+      persistedSnapshot,
+      { runId: 'run-1' }
     );
-    expect(ports.launchStateStoreBoundary.clearPersistedLaunchState).toHaveBeenCalledWith(
-      'demo',
-      undefined
-    );
+    expect(ports.launchStateStoreBoundary.clearPersistedLaunchState).toHaveBeenCalledWith('demo', {
+      expectedRunId: 'run-1',
+    });
+  });
+
+  it('wires the tracked run of the service into the reconcile ports', async () => {
+    const basePorts = createPorts();
+    const getTrackedRunId = vi.fn(() => 'run-tracked');
+    const service = {
+      ...basePorts.reconcile,
+      getTrackedRunId,
+      launchStateStore: { read: async () => null },
+      membersMetaStore: { getMembers: async () => [] },
+      launchStateStoreBoundary: basePorts.launchStateStoreBoundary,
+      primaryBootstrapTruthReporting: {
+        overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: async () => undefined,
+      },
+      buildLiveLaunchSnapshotForRun: () => null,
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+    } satisfies TeamProvisioningPersistenceReconcileFacadeServiceHost<TestRun>;
+
+    const facade = createTeamProvisioningPersistenceReconcileFacadeFromService(service);
+    await facade.reconcilePersistedLaunchState('demo');
+
+    expect(getTrackedRunId).toHaveBeenCalledWith('demo');
   });
 });

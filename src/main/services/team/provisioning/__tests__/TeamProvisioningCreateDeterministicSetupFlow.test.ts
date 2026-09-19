@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -211,7 +213,7 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
       ports,
     });
 
-    expect(ports.pathExists).toHaveBeenCalledWith('/teams/setup-team/config.json');
+    expect(ports.pathExists).toHaveBeenCalledWith(path.join('/teams', 'setup-team', 'config.json'));
     expect(ports.buildProvisioningEnv).toHaveBeenCalledWith(
       'codex',
       'codex-native',

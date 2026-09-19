@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   consumeFirstGlobalTasksFetchFlag,
@@ -86,7 +86,14 @@ function sentNotifications(): TeamMessageNotificationData[] {
 }
 
 describe('teamGlobalTaskNotifications', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2026-05-22T09:00:00.000Z');
+    resetGlobalTaskNotificationTrackerForTests();
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     hoisted.showMessageNotification.mockClear();
     resetGlobalTaskNotificationTrackerForTests();
   });
@@ -107,7 +114,9 @@ describe('teamGlobalTaskNotifications', () => {
         createTask({
           needsClarification: 'user',
           blockedBy: ['task-2'],
-          comments: [createComment({ text: 'Needs review' })],
+          comments: [
+            createComment({ text: 'Needs review', createdAt: '2026-05-22T08:00:00.000Z' }),
+          ],
           status: 'completed',
         }),
       ],

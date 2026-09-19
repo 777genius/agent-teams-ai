@@ -3,13 +3,14 @@ name: Public Runtime Bootstrap Smoke
 on:
   workflow_dispatch:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'runtime.lock.json'
       - 'scripts/dev-with-runtime.mjs'
       - 'scripts/ci/verify-public-runtime-bootstrap.mjs'
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
+      - 'scripts/lib/runtime-cli-version.mjs'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'scripts/ci/verify-public-runtime-bootstrap.mjs'
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
+      - 'scripts/lib/runtime-cli-version.mjs'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
 
 permissions:

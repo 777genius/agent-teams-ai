@@ -1,12 +1,21 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
+import { isOpenCodeLeadRecipient } from '../opencode/delivery/OpenCodeLeadTurnActivity';
 import {
+  type OpenCodeLeadTurnActivityNotification,
   type OpenCodeMemberInboxDelivery,
   type OpenCodeMemberMessageDeliveryInput,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
+import {
+  isOpenCodePrimaryLaneSelfHealEnabledFromEnv,
+  OpenCodePrimaryLaneBootstrapSelfHealTracker,
+} from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
+import { inspectOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { type OpenCodeAttachmentPayloadStore } from './TeamProvisioningOpenCodeAttachmentPayloads';
+import { type TeamProvisioningOpenCodePrimaryLaneSelfHealPorts } from './TeamProvisioningOpenCodeDeliveryComposition';
 import {
   createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary,
   type TeamProvisioningOpenCodeInboxAttachmentPayloadBoundary,
@@ -44,10 +53,20 @@ const logger = createLogger('Service:TeamProvisioning');
 type OpenCodeMemberMessageDeliveryCompatibilityRuntimeIdentity =
   TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['openCodeRuntimeRecoveryIdentity'];
 
+type OpenCodeMemberMessageDeliveryHostRun = NonNullable<
+  ReturnType<TeamProvisioningOpenCodeMemberMessageDeliveryHost['runs']['get']>
+>;
+
+/** A lead turn reported 'active' without a settle signal falls back to 'idle' after this long. */
+export const OPENCODE_LEAD_ACTIVE_FALLBACK_MS = 4 * 60_000;
+
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
-> {
+> extends TeamProvisioningOpenCodePrimaryLaneSelfHealPorts {
+  readLeadActivityDirectory: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeRuntimeRecoveryFacade']['readOpenCodeMemberDirectory'];
   createDeliveryHost(): TeamProvisioningOpenCodeMemberMessageDeliveryHost;
+  /** Tracked run that owns the OpenCode primary lane for a team, if any. */
+  resolveLeadActivityRun(teamName: string): TRun | null;
   inboxRelayHost: TeamProvisioningOpenCodeMemberInboxRelayHost;
   getInboxReader(): ReturnType<
     TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['getInboxReader']
@@ -59,7 +78,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   >;
   getCleanedStoppedTeamOpenCodeRuntimeLanes(): TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['cleanedStoppedTeamOpenCodeRuntimeLanes'];
   isCurrentTrackedRun(run: TRun): boolean;
-  setLeadActivity(run: TRun, state: 'active'): void;
+  setLeadActivity(run: TRun, state: OpenCodeLeadTurnActivityNotification['state']): void;
   logger: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['logger'];
   nowIso: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['nowIso'];
   getErrorMessage: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['getErrorMessage'];
@@ -70,6 +89,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
 >
   extends
     TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost,
+    TeamProvisioningOpenCodePrimaryLaneSelfHealPorts,
     Omit<
       TeamProvisioningOpenCodeMemberInboxRelayServiceHost,
       'isOpenCodeDeliveryResponseReadCommitAllowed'
@@ -79,8 +99,9 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   openCodeRuntimeRecoveryIdentity: OpenCodeMemberMessageDeliveryCompatibilityRuntimeIdentity;
   openCodeVisibleReplyProofService: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeVisibleReplyProofService'];
   cleanedStoppedTeamOpenCodeRuntimeLanes: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['cleanedStoppedTeamOpenCodeRuntimeLanes'];
+  runs: { get(runId: string): (TRun & OpenCodeMemberMessageDeliveryHostRun) | undefined };
   isCurrentTrackedRun(run: TRun): boolean;
-  setLeadActivity(run: TRun, state: 'active'): void;
+  setLeadActivity(run: TRun, state: OpenCodeLeadTurnActivityNotification['state']): void;
 }
 
 export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
@@ -100,6 +121,8 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
 
   private openCodeMemberInboxRelayBoundaryValue: TeamProvisioningOpenCodeMemberInboxRelayBoundary | null =
     null;
+
+  private readonly openCodeLeadActiveFallbackTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly deps: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<TRun>
@@ -148,10 +171,135 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
     return this.openCodeMemberInboxRelayBoundaryValue;
   }
 
+  /**
+   * One tracker per service instance, never per delivery: the re-bootstrap
+   * budget and the in-flight guard only mean anything if they outlive a single
+   * pass.
+   */
+  private readonly primaryLaneBootstrapSelfHeal = new OpenCodePrimaryLaneBootstrapSelfHealTracker({
+    inspectLaneStorage: ({ teamName, laneId }) =>
+      inspectOpenCodeRuntimeLaneStorage({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId,
+      }),
+    rebootstrapPrimaryLane: async ({ teamName, reason, expectedRunId }) =>
+      (await this.deps.rebootstrapOpenCodeAggregatePrimaryLane?.(
+        teamName,
+        reason,
+        expectedRunId
+      )) ?? false,
+    // Falls back to the ENV READER, not to the constant. This port is always
+    // supplied, so the tracker never reaches its own default - and with the
+    // constant here, setting CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED
+    // changed nothing in the running app: the switch existed only in tests.
+    isOpenCodePrimaryLaneSelfHealEnabled: () =>
+      this.deps.isOpenCodePrimaryLaneSelfHealEnabled?.() ??
+      isOpenCodePrimaryLaneSelfHealEnabledFromEnv(),
+    // Durable: an automatic lead relaunch has to still be explainable once the
+    // lane-scoped ledger is gone, and it must not depend on a log level.
+    logWarning: (message) => logger.diagnostic(message),
+  });
+
   protected createOpenCodeMemberMessageDeliveryService(): ReturnType<
     typeof createOpenCodeMemberMessageDeliveryServiceFromHost
   > {
-    return createOpenCodeMemberMessageDeliveryServiceFromHost(this.deps.createDeliveryHost());
+    return createOpenCodeMemberMessageDeliveryServiceFromHost({
+      ...this.deps.createDeliveryHost(),
+      notifyOpenCodeLeadTurnActivity: (input) => {
+        void this.notifyOpenCodeLeadTurnActivity(input);
+      },
+      requestOpenCodePrimaryLaneRebootstrap: (input) =>
+        this.primaryLaneBootstrapSelfHeal.request(input),
+    });
+  }
+
+  private readonly leadActivityPending = new Map<string, Promise<void>>();
+
+  /**
+   * Mirrors `sendMessageToRun` -> `setLeadActivity(run, 'active')` for the
+   * OpenCode primary lane, whose lead has no stdin stream. No-op when the team
+   * has no deliverable tracked run.
+   */
+  notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): Promise<void> {
+    const key = input.teamName;
+    const pending = (this.leadActivityPending.get(key) ?? Promise.resolve()).then(() =>
+      this.applyOpenCodeLeadTurnActivity(input)
+    );
+    this.leadActivityPending.set(key, pending);
+    void pending.finally(() => {
+      if (this.leadActivityPending.get(key) === pending) this.leadActivityPending.delete(key);
+    });
+    return pending;
+  }
+
+  private async applyOpenCodeLeadTurnActivity(
+    input: OpenCodeLeadTurnActivityNotification
+  ): Promise<void> {
+    if (input.laneId !== 'primary' || !input.runId) return;
+    try {
+      const directory = await this.deps.readLeadActivityDirectory(input.teamName);
+      if (!isOpenCodeLeadRecipient(input.memberName, directory)) return;
+      const run = this.deps.resolveLeadActivityRun(input.teamName);
+      if (
+        !run ||
+        run.runId !== input.runId ||
+        run.processKilled ||
+        run.cancelRequested ||
+        !this.deps.isCurrentTrackedRun(run)
+      )
+        return;
+      this.deps.setLeadActivity(run, input.state);
+      this.armOpenCodeLeadActiveFallback(input.teamName, input.runId, input.state);
+    } catch (error) {
+      this.deps.logger.warn(
+        `OpenCode lead activity notification failed: ${this.deps.getErrorMessage(error)}`
+      );
+    }
+  }
+
+  /**
+   * The OpenCode lead has no stdin stream, so 'idle' can only arrive from a
+   * prompt-delivery settle. A runtime that keeps its session marked busy after a
+   * plain-text turn end never produces that settle, and the lead card would stay
+   * "processing" forever. A lead turn realistically finishes within minutes, so
+   * fall back to 'idle' when no newer signal arrives within the bound.
+   *
+   * Armed only past the guards above, so a notification that was dropped (wrong
+   * lane, not the lead recipient, a run that was replaced or stopped) neither
+   * arms a fallback nor disarms the one the live turn is relying on. Every
+   * accepted notification cancels the pending fallback first, so an 'idle' that
+   * does arrive disarms it (no late write over a newer real state), and repeated
+   * 'active' reports restart one timer rather than accumulating several. The
+   * fallback re-checks the same run identity when it fires, so a run that was
+   * replaced or stopped meanwhile is never written to.
+   */
+  private armOpenCodeLeadActiveFallback(
+    teamName: string,
+    runId: string,
+    state: OpenCodeLeadTurnActivityNotification['state']
+  ): void {
+    const existing = this.openCodeLeadActiveFallbackTimers.get(teamName);
+    if (existing) {
+      clearTimeout(existing);
+      this.openCodeLeadActiveFallbackTimers.delete(teamName);
+    }
+    if (state !== 'active') return;
+    const timer = setTimeout(() => {
+      this.openCodeLeadActiveFallbackTimers.delete(teamName);
+      const fallbackRun = this.deps.resolveLeadActivityRun(teamName);
+      if (
+        !fallbackRun ||
+        fallbackRun.runId !== runId ||
+        fallbackRun.processKilled ||
+        fallbackRun.cancelRequested ||
+        !this.deps.isCurrentTrackedRun(fallbackRun)
+      )
+        return;
+      this.deps.setLeadActivity(fallbackRun, 'idle');
+    }, OPENCODE_LEAD_ACTIVE_FALLBACK_MS);
+    timer.unref?.();
+    this.openCodeLeadActiveFallbackTimers.set(teamName, timer);
   }
 
   async deliverOpenCodeMemberMessage(
@@ -184,8 +332,14 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
   >
 ): TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun> {
   return new TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>({
+    readLeadActivityDirectory: (teamName) =>
+      service.openCodeRuntimeRecoveryFacade.readOpenCodeMemberDirectory(teamName),
     createDeliveryHost: () =>
       createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(service),
+    resolveLeadActivityRun: (teamName) => {
+      const runId = service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName);
+      return (runId ? service.runs.get(runId) : undefined) ?? null;
+    },
     inboxRelayHost: createTeamProvisioningOpenCodeMemberInboxRelayHostFromService(
       service as unknown as TeamProvisioningOpenCodeMemberInboxRelayServiceHost
     ),
@@ -196,6 +350,18 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
     getCleanedStoppedTeamOpenCodeRuntimeLanes: () => service.cleanedStoppedTeamOpenCodeRuntimeLanes,
     isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
     setLeadActivity: (run, state) => service.setLeadActivity(run, state),
+    ...(service.rebootstrapOpenCodeAggregatePrimaryLane
+      ? {
+          rebootstrapOpenCodeAggregatePrimaryLane: (
+            teamName: string,
+            reason: string,
+            expectedRunId: string | null
+          ) => service.rebootstrapOpenCodeAggregatePrimaryLane!(teamName, reason, expectedRunId),
+        }
+      : {}),
+    ...(service.isOpenCodePrimaryLaneSelfHealEnabled
+      ? { isOpenCodePrimaryLaneSelfHealEnabled: service.isOpenCodePrimaryLaneSelfHealEnabled }
+      : {}),
     ...options,
   });
 }
@@ -253,6 +419,10 @@ export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
         >;
       }
     ).createOpenCodeMemberMessageDeliveryService();
+  }
+
+  protected notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): void {
+    void this.openCodeMemberMessageDeliveryCompatibility.notifyOpenCodeLeadTurnActivity(input);
   }
 
   async deliverOpenCodeMemberMessage(

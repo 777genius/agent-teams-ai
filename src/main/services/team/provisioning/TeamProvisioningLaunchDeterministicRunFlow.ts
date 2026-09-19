@@ -85,6 +85,7 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
     expectedMembers,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
+    configuredMemberSpecs,
     launchIdentity,
     syntheticRequest,
     mixedSecondaryLanes,
@@ -151,6 +152,7 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
         launchIdentity,
         effectiveMemberSpecs,
         allEffectiveMemberSpecs,
+        configuredMemberSpecs,
         teammateRuntimeDisallowedTools: input.teammateRuntimeDisallowedTools,
       },
       ports

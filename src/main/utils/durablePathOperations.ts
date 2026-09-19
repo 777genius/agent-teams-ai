@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { RENAME_TREE_RETRY, retryOnTransientFsError } from './transientFsRetry';
+
 export * from './durablePathIdentity';
 
 import {
@@ -10,16 +12,12 @@ import {
   withBestEffortDirectoryTreeAsync,
 } from './bestEffortDurableDirectory';
 import {
-  reconcileDetachedRemovalPublicReservation,
-  resumeDeterministicDetachedRemoval,
-} from './durableDetachedRemoval';
-import {
   type DurablePathIdentity,
   getDurablePathIdentity,
   isSameDurablePathIdentity,
 } from './durablePathIdentity';
 
-import type { AtomicCreateResult } from './atomicCreateTypes';
+import type { AtomicCreateResult } from './atomicWrite';
 
 export type AtomicPathRemovalResult = 'deleted' | 'missing' | 'changed';
 export type DurableDirectoryEntryCleanupResult = 'cleaned' | 'missing' | 'validation_failed';
@@ -59,12 +57,6 @@ export function assertIdentityStableDirectoryChildOperationsSupported(): void {
   }
 }
 
-/**
- * Walk a directory path one component at a time from an already opened
- * directory. Every caller-controlled component is opened with O_NOFOLLOW, so
- * neither a pre-existing symlink nor an ancestor replacement can redirect
- * operations which use the returned /proc/self/fd path.
- */
 export async function withIdentityStableDirectoryPathAsync<T>(
   directoryPath: string,
   operation: (stableDirectoryPath: string, directoryHandle: fs.promises.FileHandle) => Promise<T>,
@@ -156,6 +148,7 @@ export async function withIdentityStableDirectoryPathAsync<T>(
     await directoryHandle.close().catch(() => undefined);
   }
 }
+
 export async function withIdentityStableDirectoryTreeAsync<T>(
   rootDirectoryPath: string,
   childDirectoryName: string,
@@ -197,6 +190,7 @@ export async function withIdentityStableDirectoryTreeAsync<T>(
   }
   return rootAccess.value;
 }
+
 export async function withIdentityStableIndexedDirectoryLocksAsync<T>(
   input: {
     rootDirectoryPath: string;
@@ -241,6 +235,7 @@ export async function withIdentityStableIndexedDirectoryLocksAsync<T>(
     { create: true }
   );
 }
+
 export {
   readJsonDataEnvelopeNoFollowAsync,
   readOptionalJsonNoFollowAsync,
@@ -297,9 +292,6 @@ export async function removeDirectoryEntriesExceptAsync(
       };
 
       try {
-        // Bind every retained pathname to an opened regular file before any
-        // transient entry is removed. O_NONBLOCK keeps a FIFO substitution from
-        // occupying a libuv worker while the fstat type check rejects it.
         for (const entry of entries) {
           if (!retainedEntryNames.has(entry.name)) continue;
           const retainedPath = path.join(stableDirectoryPath, entry.name);
@@ -325,7 +317,6 @@ export async function removeDirectoryEntriesExceptAsync(
           });
         }
         await verifyRetainedEntries();
-
         if (
           options.validateDirectory &&
           !(await options.validateDirectory(stableDirectoryPath, entries))
@@ -333,18 +324,13 @@ export async function removeDirectoryEntriesExceptAsync(
           return 'validation_failed';
         }
         await verifyRetainedEntries();
-
         for (const entry of entries) {
           if (!retainedEntryNames.has(entry.name) && entry.isDirectory()) {
-            // Node has no identity-checked recursive child-removal primitive.
             throw new Error(`Durable directory identity changed during cleanup: ${displayPath}`);
           }
         }
         for (const entry of entries) {
           if (retainedEntryNames.has(entry.name)) continue;
-          // This path stays anchored to the already validated directory handle.
-          // unlink removes a substituted symlink without traversing it and
-          // refuses a substituted directory.
           try {
             await fs.promises.unlink(path.join(stableDirectoryPath, entry.name));
           } catch (error) {
@@ -362,10 +348,14 @@ export async function removeDirectoryEntriesExceptAsync(
     },
     { errorPath: displayPath }
   );
-  if (access.state === 'missing') {
-    return 'missing';
-  }
-  return access.value;
+  return access.state === 'missing' ? 'missing' : access.value;
+}
+
+// The identity fence renames a whole directory tree aside and, on failure,
+// renames it back. On Windows either rename can be refused for as long as some
+// other process still holds a handle anywhere inside that tree.
+function renameWithTransientRetry(src: string, dest: string): Promise<void> {
+  return retryOnTransientFsError(() => fs.promises.rename(src, dest), RENAME_TREE_RETRY);
 }
 
 export interface DurablePathRemovalProofHooks {
@@ -379,8 +369,7 @@ export interface DurablePathRemovalProofHooks {
 }
 
 function getIdentityStableDirectoryPath(handle: fs.promises.FileHandle): string | null {
-  if (process.platform !== 'linux') return null;
-  return `/proc/self/fd/${handle.fd}`;
+  return process.platform === 'linux' ? `/proc/self/fd/${handle.fd}` : null;
 }
 
 async function syncDirectoryHandle(handle: fs.promises.FileHandle, strict: boolean): Promise<void> {
@@ -533,12 +522,7 @@ export async function atomicReplaceFileIfUnchangedAsync(
     await fs.promises.unlink(detachedPath);
     targetDetached = false;
     await syncDirectory(dir, true);
-    return {
-      dev: stagedStats.dev,
-      ino: stagedStats.ino,
-      birthtimeMs: stagedStats.birthtimeMs,
-      size: stagedStats.size,
-    };
+    return { dev: stagedStats.dev, ino: stagedStats.ino };
   } finally {
     await fs.promises.unlink(stagedPath).catch(() => undefined);
     if (targetDetached) {
@@ -692,7 +676,7 @@ export async function removePathWithIdentityFenceAsync(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     try {
-      await fs.promises.rename(detachedPath, targetPath);
+      await renameWithTransientRetry(detachedPath, targetPath);
       detached = false;
       await syncDirectory(dir, options.durability === 'strict');
       return true;
@@ -702,42 +686,45 @@ export async function removePathWithIdentityFenceAsync(
     }
   };
 
-  const resumeProofBackedRemoval = async (): Promise<AtomicPathRemovalResult> => {
-    if (!options.proofHooks) return 'missing';
-    if (options.reservePublicDirectory) {
-      // A crash between reservation publish and close leaves a dangling
-      // junction at the public name; free or settle it before resuming.
-      await reconcileDetachedRemovalPublicReservation({
-        targetPath,
-        parentDirectory: dir,
-        settleReservation: async (reservationPath) => {
-          await syncDirectory(dir, options.durability === 'strict');
-          publicReservationPath = reservationPath;
-          await settlePublicReservation();
-        },
-      });
+  const recoverDetachedWithProof = async (): Promise<AtomicPathRemovalResult> => {
+    const proofHooks = options.proofHooks;
+    if (!proofHooks) return 'missing';
+
+    let stats: fs.Stats;
+    try {
+      stats = await fs.promises.lstat(detachedPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+      throw error;
     }
-    return resumeDeterministicDetachedRemoval({
-      detachedPath,
-      removalOptions,
-      validateDetached: options.validateDetached,
-      proofHooks: options.proofHooks,
-      syncParentDirectory: () => syncDirectory(dir, options.durability === 'strict'),
-    });
+
+    const identity = getDurablePathIdentity(stats);
+    if (
+      options.validateDetached &&
+      !(await options.validateDetached(detachedPath, identity))
+    ) {
+      return 'changed';
+    }
+
+    await proofHooks.onDetachedValidated(detachedPath, identity);
+    await fs.promises.rm(detachedPath, removalOptions);
+    await syncDirectory(dir, options.durability === 'strict');
+    await proofHooks.onRemovalDurable(detachedPath, identity);
+    return 'deleted';
   };
 
   try {
     if (options.proofHooks) {
-      const resumed = await resumeProofBackedRemoval();
-      if (resumed !== 'missing') return resumed;
+      const recovered = await recoverDetachedWithProof();
+      if (recovered !== 'missing') return recovered;
     }
 
     try {
-      await fs.promises.rename(targetPath, detachedPath);
+      await renameWithTransientRetry(targetPath, detachedPath);
       detached = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return resumeProofBackedRemoval();
+        return options.proofHooks ? recoverDetachedWithProof() : 'missing';
       }
       throw error;
     }

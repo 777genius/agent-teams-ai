@@ -22,6 +22,24 @@ export default interface Resources {
       showLess: 'Show less';
       showMore: 'Show more';
     };
+    announcements: {
+      allNews: 'All news';
+      description: 'Updates, improvements, and stories from Agent Teams.';
+      empty: 'You’re all caught up';
+      emptyDescription: 'Project news will appear here when published.';
+      expired: 'No longer current';
+      historyTitle: 'What’s new';
+      imageUnavailable: 'Image unavailable';
+      loadError: 'This article is unavailable. Refresh the news or try again later.';
+      loading: 'Loading news…';
+      status: {
+        offline: 'You’re offline. Previously loaded articles are available; images may be missing.';
+        state_unavailable: 'Reading is available, but your progress cannot be saved right now. Automatic news is paused.';
+        unavailable: 'News is available in the desktop app.';
+        writer_busy: 'News is open in another app instance. You can browse the list here; open articles in the other instance.';
+      };
+      title: 'News';
+    };
     brand: {
       claude: 'Claude';
     };
@@ -1040,7 +1058,6 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
-        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
@@ -1056,7 +1073,7 @@ export default interface Resources {
         connectSuperGrok: 'Connect SuperGrok';
         connected: 'Connected';
         continue: 'Continue';
-        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams verifies a compatible explicit model for your plan.';
+        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams checks whether OpenCode can select a model allowed by your plan.';
         copyCommand: 'Copy command';
         cursorConnected: 'Cursor account connected';
         cursorDescription: 'Use your Cursor subscription through the managed OpenCode Cursor plugin.';
@@ -1100,13 +1117,14 @@ export default interface Resources {
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
         retryOpenCode: 'Repair OpenCode';
+        setupModelEndpoint: 'Set up model endpoint';
         signIn: 'Sign in';
         signInRequired: 'Sign in required';
         statusUnavailable: 'Status unavailable';
         superGrokConnected: 'SuperGrok OAuth saved';
         superGrokDescription: 'Use your SuperGrok subscription through OpenCode OAuth.';
         switchToSuperGrok: 'Switch to SuperGrok';
-        title: 'Optional providers & plans';
+        title: 'Providers & plans';
         unavailable: 'Unavailable';
         updateForSuperGrok: 'Update OpenCode for OAuth';
         updateOpenCode: 'Update OpenCode';
@@ -2677,25 +2695,6 @@ export default interface Resources {
       };
     };
     notifications: {
-      recovery: {
-        title: 'Automatic agent recovery';
-        transient: {
-          label: 'Recover transient runtime errors';
-          description: 'Continue the failed lead or teammate turn after safe transient provider and network errors';
-        };
-        rateLimits: {
-          label: 'Recover rate limits with a reset time';
-          description: 'Continue after a trusted Retry-After or reset time, with a safety buffer';
-        };
-        delay: {
-          label: 'Initial retry delay (seconds)';
-          description: 'Base delay before the first recovery attempt (15-900 seconds)';
-        };
-        attempts: {
-          label: 'Maximum recovery attempts';
-          description: 'Accepted runtime turns per failure chain (1-5)';
-        };
-      };
       dev: {
         descriptionPrefix: 'Notifications may not work in development mode. macOS identifies the app as "Electron" (bundle ID';
         descriptionSuffix: ') instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.';
@@ -2706,6 +2705,25 @@ export default interface Resources {
         empty: 'No repositories ignored';
         selectPlaceholder: 'Select repository to ignore...';
         title: 'Ignored Repositories';
+      };
+      recovery: {
+        attempts: {
+          description: 'Accepted runtime turns per failure chain (1-5)';
+          label: 'Maximum recovery attempts';
+        };
+        delay: {
+          description: 'Base delay before the first recovery attempt (15-900 seconds)';
+          label: 'Initial retry delay (seconds)';
+        };
+        rateLimits: {
+          description: 'Continue after a trusted Retry-After or reset time, with a safety buffer';
+          label: 'Recover rate limits with a reset time';
+        };
+        title: 'Automatic agent recovery';
+        transient: {
+          description: 'Continue the failed lead or teammate turn after safe transient provider and network errors';
+          label: 'Recover transient runtime errors';
+        };
       };
       settings: {
         enabled: {
@@ -3167,8 +3185,8 @@ export default interface Resources {
       actions: {
         cancel: 'Cancel';
         reconnect: 'Reconnect';
-        removeManagedCredential: 'Remove managed credential';
-        replaceCredential: 'Replace credential';
+        removeManagedCredential: 'Remove saved credentials';
+        replaceCredential: 'Replace API key';
         signInAgain: 'Sign in again';
         test: 'Test';
       };
@@ -3204,9 +3222,11 @@ export default interface Resources {
         projectOverrideContext: 'Project override context';
         scopeDescriptionAllProjects: 'Default for every project that does not have its own OpenCode override.';
         scopeDescriptionProject: 'Override only the selected project. Running teams are not changed.';
+        select: 'Select';
         selectProjectContext: 'Select project context';
         selectProjectHint: 'Select a project before testing local models or saving defaults.';
         selectValidationContext: 'Select validation context';
+        selected: 'Selected';
         setAllProjectsDefault: 'Set all-projects default';
         setProjectDefault: 'Set project default';
         testAndUse: 'Test and use';
@@ -3222,8 +3242,11 @@ export default interface Resources {
         copied: 'Diagnostics copied';
         copiedShort: 'Copied';
         copy: 'Copy diagnostics';
+        copyAll: 'Copy all diagnostics';
         hints: 'Hints';
         likelyCause: 'Likely cause:';
+        nextPage: 'Next page';
+        previousPage: 'Previous page';
         windowsSymlinkAdminHint: 'Windows: run Agent Teams AI as Administrator';
       };
       modelRoutes: {
@@ -3240,6 +3263,7 @@ export default interface Resources {
         freeOnly: 'Free only';
         launchableDescription: 'Known routes from OpenCode config, free built-in models, and the current default. Local routes need a successful test before they are ready for team launches.';
         launchableTitle: 'OpenCode model routes';
+        loaded: 'Loaded {{loaded}} of {{total}}';
         loadingRoutes: 'Loading OpenCode model routes...';
         noRoutesMatch: 'No OpenCode model routes match "{{query}}".';
         noneReported: 'No OpenCode model routes were reported yet. Configure a local route in OpenCode or use the Providers tab to inspect catalog providers.';
@@ -3249,9 +3273,18 @@ export default interface Resources {
         routeUnavailableGeneric: 'This model route cannot be used right now.';
         routeUnavailableUnknown: 'This model is the current OpenCode default, but it is not available in the live catalog yet.';
         searchPlaceholder: 'Search models';
+        searchingRemaining: 'No matches in the loaded models yet. Checking the rest of the catalog...';
         selectProjectBeforeTesting: 'Select a project context before testing models.';
         selectProjectBeforeTestingDefaults: 'Select a project context before testing or saving OpenCode defaults.';
+        shown: 'Shown: {{shown}}';
+        shownFree: 'Free models shown: {{shown}}';
+        stopTest: 'Stop';
+        stoppingTest: 'Stopping...';
+        testCancelFailed: 'Could not stop the test. Try again.';
+        testCancelUnsupported: 'Stopping tests is not supported by this runtime.';
+        testCancelled: 'Test stopped.';
         testInProgress: 'Model test is already running.';
+        testingElapsed: 'Waiting for test result... {{seconds}}s';
         useInTeamPicker: 'Save for team picker';
         validationContextRequired: 'Select a validation context above to enable Test and Set default. Saving for team picker only stores the route for new teams.';
       };
@@ -3267,6 +3300,12 @@ export default interface Resources {
         loading: 'Loading OpenCode providers';
         noMatches: 'No providers match that search.';
         noneReported: 'No OpenCode providers reported by the managed runtime.';
+        ownership: {
+          env: 'From environment variables';
+          local: 'From OpenCode settings';
+          managed: 'Saved in this app';
+          project: 'From project settings';
+        };
         recommended: 'Recommended';
         refreshCatalog: 'Refresh catalog';
         searchPlaceholder: 'Search providers';
@@ -3407,6 +3446,29 @@ export default interface Resources {
         awaitingApproval: 'awaiting approval';
         awaitingReply: 'awaiting reply';
         crossTeamAwaitingReply: 'Cross-team message sent, awaiting reply';
+        discardQueued: {
+          action: 'Discard queued messages';
+          alreadyDelivered: 'Nothing was discarded: those messages had already been delivered to "{{member}}".';
+          cancelLabel: 'Cancel';
+          confirmLabel: 'Discard';
+          count: '{{count}} queued';
+          count_few: '{{count}} queued';
+          count_many: '{{count}} queued';
+          count_one: '{{count}} queued';
+          count_other: '{{count}} queued';
+          failedFallbackMessage: 'An unexpected error occurred';
+          failedTitle: 'Failed to discard queued messages';
+          message: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_few: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_many: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_one: 'Discard {{count}} queued message for "{{member}}"? It has not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_other: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          okLabel: 'OK';
+          remaining: 'Discarded {{discarded}}. Still queued: {{remaining}}.';
+          resultTitle: 'Queued messages';
+          title: 'Discard queued messages';
+          tooltip: "Discard this member's queued messages";
+        };
         externalTeam: 'external team';
         messageSentAwaitingReply: 'Message sent, awaiting reply';
         openMember: 'Open member';
@@ -3453,7 +3515,7 @@ export default interface Resources {
       };
       recent: 'Recent';
       title: 'Advanced';
-      useWorktree: 'Use worktree';
+      useWorktree: 'Lead worktree (separate from teammate worktrees)';
       validate: 'Validate';
       validation: {
         allFlagsValid: 'All flags valid';
@@ -3749,6 +3811,7 @@ export default interface Resources {
         launch: 'Launch';
         remove: 'Remove';
         stop: 'Stop';
+        stopping: 'Stopping...';
         task: 'Task';
         usage: 'Usage';
         visualize: 'Visualize';
@@ -3803,6 +3866,14 @@ export default interface Resources {
         active: 'Active';
         launching: 'Launching...';
         running: 'Running';
+      };
+      stopFailed: {
+        message: 'The team is still running. Check its state and press Stop again.';
+        title: 'Unable to stop team';
+      };
+      stopUnknown: {
+        message: 'The runtime response was not received. Refresh the team state before retrying.';
+        title: 'Unable to confirm stop';
       };
       telemetry: {
         cpu: 'CPU';
@@ -4168,6 +4239,7 @@ export default interface Resources {
         relaunching: 'Relaunching...';
         saveChanges: 'Save Changes';
         saving: 'Saving...';
+        skipPreflightAndLaunch: 'Skip preflight and launch';
       };
       billing: {
         prefix: 'Starting June 15, 2026, Anthropic bills';
@@ -4260,8 +4332,8 @@ export default interface Resources {
         selectWorkingDirectory: 'Select working directory (cwd)';
       };
       workspaceTrust: {
-        description: 'Project hooks and MCP servers may run when the team starts.';
         title: 'First launch will trust this project';
+        description: 'Project hooks and MCP servers may run when the team starts.';
       };
     };
     layout: {
@@ -4290,6 +4362,11 @@ export default interface Resources {
         confirmLabel: 'Delete';
         message: 'Delete draft team "{{teamName}}"? This cannot be undone.';
         title: 'Delete draft';
+      };
+      deleteFailed: {
+        confirmLabel: 'OK';
+        fallbackMessage: 'An unexpected error occurred';
+        title: 'Failed to delete team';
       };
       deleteForever: {
         cancelLabel: 'Cancel';
@@ -4443,8 +4520,14 @@ export default interface Resources {
         saved: 'Saved';
       };
       worktree: {
-        description: 'Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.';
+        branch: 'Worktree branch: {{branch}}';
+        branchUnavailable: 'Not available';
+        description: 'Checked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.';
+        existing: 'Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.';
         label: 'Worktree';
+        new: 'Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.';
+        shared: 'Shared project workspace: {{path}}. Uses the project branch.';
+        sharedPending: 'Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.';
       };
     };
     memberLogStream: {
@@ -4465,13 +4548,17 @@ export default interface Resources {
     memberWorkSync: {
       details: {
         actionableItems: 'Actionable items';
+        autoResumeStopped: 'Automatic continuation is stopped.';
+        continue: 'Continue';
         diagnostics: 'Diagnostics: {{diagnostics}}';
         fingerprint: 'Fingerprint';
         moreActionableItems: '{{count}} more actionable item(s)';
         no: 'no';
         none: 'none';
         report: 'Report';
+        resumeAutoResume: 'Resume auto-resume';
         shadowWouldNudge: 'Shadow would nudge';
+        stopAutoResume: 'Stop auto-resume';
         title: 'Member work sync';
         yes: 'yes';
       };
@@ -4508,8 +4595,9 @@ export default interface Resources {
         memberNamesUnique: 'Member names must be unique';
         removedCount: 'Removed ({{count}})';
         removedModelLockReason: 'Removed members are kept for soft delete history. Restore them to edit settings.';
-        runInSeparateWorktrees: 'Run teammates in separate worktrees';
+        runInSeparateWorktrees: 'Worktree for all teammates';
         title: 'Members';
+        worktreeDescription: 'Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk.';
       };
       executionLog: {
         agentInstructions: 'Agent instructions';
@@ -4518,6 +4606,9 @@ export default interface Resources {
         emptyUserMessage: '{{time}} - (empty)';
         memberTurn: '{{member}} turn';
         turn: 'turn';
+      };
+      launchFailure: {
+        graceTimeout: 'Teammate did not join within the launch grace window.';
       };
       leadModel: {
         anthropicContextLimit: 'The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates.';
@@ -5029,56 +5120,6 @@ export default interface Resources {
         actions: {
           createTeamIn: 'Create team in {{label}}';
         };
-        layout: {
-          switchToHierarchy: 'Switch to hierarchy chart';
-          switchToNested: 'Switch to nested map';
-        };
-        view: {
-          hierarchy: 'Hierarchy';
-          overview: 'Overview';
-          relations: 'Relations';
-          structure: 'Structure';
-        };
-        overviewCard: {
-          activeTasks: '{{count}} active tasks';
-          attention: '{{count}} need attention';
-          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
-          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
-        };
-        toolbar: {
-          animation: 'Animation';
-          connections: 'Connections';
-          filters: 'Map filters';
-          fit: 'Fit meaningful overview';
-          reset: 'Reset search, focus, and filters';
-          tasks: 'Tasks';
-          zoomIn: 'Zoom in';
-          zoomOut: 'Zoom out';
-        };
-        legend: {
-          connection: 'Connection';
-          group: 'Group';
-          hierarchy: 'Hierarchy';
-          online: 'Online';
-          organization: 'Organization';
-        };
-        focus: {
-          clearFocus: 'Clear focus';
-          clearSearch: 'Clear search';
-          collapseBranch: 'Collapse branch';
-          connectedOnly: 'Connected ({{count}})';
-          expandBranch: 'Expand branch';
-          kind: {
-            container: 'group';
-            organization: 'organization';
-            team: 'team';
-          };
-          noResults: 'No results found';
-          pathToRoot: 'Path to root';
-          searchLabel: 'Search organization map';
-          searchPlaceholder: 'Organization, group, team, or task...';
-          taskMatch: 'Task: {{task}}';
-        };
         canvas: {
           activeAgents: '{{count}} active agents';
           activeAgents_few: '{{count}} active agents';
@@ -5097,6 +5138,8 @@ export default interface Resources {
           agents_one: '{{count}} agent';
           agents_other: '{{count}} agents';
           allOrganizations: 'All Organizations';
+          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
+          minimap: 'Organization map navigation';
           notFound: 'not found';
           offline: 'offline';
           online: 'online';
@@ -5104,9 +5147,7 @@ export default interface Resources {
           orgsAndTeams: '{{orgCount}} orgs - {{teamCount}} teams';
           teamReference: 'team reference';
           teamRole: '{{memberCount}} agents - {{activeCount}} active';
-          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
           teamSummary: '{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks';
-          minimap: 'Organization map navigation';
           teams: '{{count}} teams';
           teams_few: '{{count}} teams';
           teams_many: '{{count}} teams';
@@ -5128,6 +5169,56 @@ export default interface Resources {
           weight_many: 'weight {{count}}';
           weight_one: 'weight {{count}}';
           weight_other: 'weight {{count}}';
+        };
+        focus: {
+          clearFocus: 'Clear focus';
+          clearSearch: 'Clear search';
+          collapseBranch: 'Collapse branch';
+          connectedOnly: 'Connected ({{count}})';
+          expandBranch: 'Expand branch';
+          kind: {
+            container: 'group';
+            organization: 'organization';
+            team: 'team';
+          };
+          noResults: 'No results found';
+          pathToRoot: 'Path to root';
+          searchLabel: 'Search organization map';
+          searchPlaceholder: 'Organization, group, team, or task...';
+          taskMatch: 'Task: {{task}}';
+        };
+        layout: {
+          switchToHierarchy: 'Switch to hierarchy chart';
+          switchToNested: 'Switch to nested map';
+        };
+        legend: {
+          connection: 'Connection';
+          group: 'Group';
+          hierarchy: 'Hierarchy';
+          online: 'Online';
+          organization: 'Organization';
+        };
+        overviewCard: {
+          activeTasks: '{{count}} active tasks';
+          attention: '{{count}} need attention';
+          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
+          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
+        };
+        toolbar: {
+          animation: 'Animation';
+          connections: 'Connections';
+          filters: 'Map filters';
+          fit: 'Fit meaningful overview';
+          reset: 'Reset search, focus, and filters';
+          tasks: 'Tasks';
+          zoomIn: 'Zoom in';
+          zoomOut: 'Zoom out';
+        };
+        view: {
+          hierarchy: 'Hierarchy';
+          overview: 'Overview';
+          relations: 'Relations';
+          structure: 'Structure';
         };
       };
       inspector: {
@@ -5737,9 +5828,9 @@ export default interface Resources {
           applyRejections: 'Apply rejected hunks to disk; accepted changes are kept as-is';
           autoOff: 'Auto-mark files as viewed when scrolled to end (OFF)';
           autoOn: 'Auto-mark files as viewed when scrolled to end (ON)';
+          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           rejectAll: 'Reject all safely rejectable changes across all files';
           rejectAllDisabled: 'No pending files have a safe original baseline to reject.';
-          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           undo: 'Undo last review operation (Ctrl+Z)';
         };
       };

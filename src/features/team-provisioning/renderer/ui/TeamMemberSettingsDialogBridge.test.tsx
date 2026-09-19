@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dialogProps = vi.hoisted(() => vi.fn());
+const getSavedRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('./EditTeamMemberDialog', () => ({
   EditTeamMemberDialog: (props: Record<string, unknown>) => {
@@ -43,6 +44,7 @@ function render(members: readonly ResolvedTeamMember[]): void {
       members={members}
       isTeamAlive
       isTeamProvisioning={false}
+      getSavedRequest={getSavedRequest}
       updateMemberSettings={vi.fn()}
       onClose={vi.fn()}
       onRefresh={vi.fn()}
@@ -54,6 +56,7 @@ function render(members: readonly ResolvedTeamMember[]): void {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   dialogProps.mockReset();
+  getSavedRequest.mockReset().mockResolvedValue(null);
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -69,7 +72,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
   it('keeps the last target visible but stale when it disappears during editing', async () => {
     await act(async () => render([member]));
     expect(dialogProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ member, targetAvailable: true })
+      expect.objectContaining({ member, targetAvailable: true, getSavedRequest })
     );
 
     await act(async () => render([]));
@@ -101,6 +104,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[lead]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
           updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
@@ -125,6 +129,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[legacyLead]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
           updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
@@ -144,6 +149,7 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[teammate]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
           updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}

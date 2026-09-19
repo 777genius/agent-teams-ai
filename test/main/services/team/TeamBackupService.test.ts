@@ -2,6 +2,12 @@ import { spawn } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as nativeFs from 'node:fs';
 
+import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
+import { MemberWorkSyncTeamOperationGate } from '@features/member-work-sync/main';
+import { createMemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main/composition/createMemberWorkSyncRestoreParticipant';
+import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
+import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -24,12 +30,14 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 import { createTeamBackupService } from '../../../../src/main/services/team/TeamBackupComposition';
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
 import { TeamTaskAttachmentStore } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
+import { TeamPermanentDeletionLock } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
 
 import type {
   PermanentDeletionTarget,
   TeamPermanentDeletionIntent,
 } from '../../../../src/main/services/team/TeamBackupService';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 
 async function removePreparedDeletionTargets(
   service: TeamBackupService,
@@ -105,6 +113,489 @@ function getReleasePermanentDeletionLock(
 describe('TeamBackupService', () => {
   let tempDir = '';
 
+  it('coalesces periodic backup while an interrupted restore retains its physical tail', async () => {
+    const held = 'sandbox-held-a';
+    const healthy = 'sandbox-healthy-b';
+    const seed = new TeamBackupService();
+    try {
+      await seed.initialize();
+      for (const name of [held, healthy]) {
+        await fs.mkdir(path.join(hoisted.teamsBase, name), { recursive: true });
+        await fs.writeFile(
+          path.join(hoisted.teamsBase, name, 'config.json'),
+          JSON.stringify({ name, members: [] })
+        );
+        await seed.backupTeam(name);
+      }
+    } finally {
+      seed.dispose();
+    }
+    let releaseTail!: () => void;
+    const tail = new Promise<void>((resolve) => {
+      releaseTail = resolve;
+    });
+    let releaseBackup!: () => void;
+    const backupBarrier = new Promise<void>((resolve) => {
+      releaseBackup = resolve;
+    });
+    let enteredBackup!: () => void;
+    const backupEntered = new Promise<void>((resolve) => {
+      enteredBackup = resolve;
+    });
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const owner = new TeamBackupService();
+    let imports = 0;
+    owner.configureWorkSyncRestore(gate, {
+      prepare: async ({ teamName }) => ({
+        importAndVerify: async () => {
+          if (teamName === held && ++imports === 1)
+            throw new InternalStorageOperationInterruptedError(
+              'sandbox held writer',
+              'unknown',
+              tail
+            );
+        },
+      }),
+    });
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const ports = owner as unknown as {
+      runPeriodicBackup(): Promise<void>;
+      doBackupTeam(name: string): Promise<void>;
+    };
+    const actualBackup = ports.doBackupTeam.bind(ports);
+    let periodic: Promise<void> | undefined;
+    let retry: Promise<string[]> | undefined;
+    const backupSpy = vi.spyOn(ports, 'doBackupTeam').mockImplementation(async (name) => {
+      if (name === healthy) {
+        enteredBackup();
+        await backupBarrier;
+      }
+      return actualBackup(name);
+    });
+    try {
+      await owner.initialize();
+      await expect(gate.run(held, async () => true)).rejects.toThrow();
+      await expect(gate.run(healthy, async () => true)).resolves.toBe(true);
+      const manifestPath = path.join(hoisted.backupsBase, 'teams', held, 'manifest.json');
+      const pendingRaw = await fs.readFile(manifestPath, 'utf8');
+      for (const name of [held, healthy]) {
+        await fs.writeFile(
+          path.join(hoisted.teamsBase, name, 'team.meta.json'),
+          JSON.stringify({ changed: name })
+        );
+      }
+      periodic = ports.runPeriodicBackup();
+      await backupEntered;
+      await Promise.all(Array.from({ length: 5 }, () => ports.runPeriodicBackup()));
+      expect(backupSpy).toHaveBeenCalledTimes(1);
+      expect(backupSpy).toHaveBeenCalledWith(healthy);
+      let retryFinished = false;
+      retry = owner.restoreIfNeeded().then((result) => {
+        retryFinished = true;
+        return result;
+      });
+      releaseBackup();
+      await periodic;
+      expect(retryFinished).toBe(false);
+      expect(imports).toBe(1);
+      expect(
+        await fs.readFile(
+          path.join(hoisted.backupsBase, 'teams', healthy, 'team.meta.json'),
+          'utf8'
+        )
+      ).toBe(JSON.stringify({ changed: healthy }));
+      expect(await fs.readFile(manifestPath, 'utf8')).toBe(pendingRaw);
+      await expect(
+        fs.stat(path.join(hoisted.backupsBase, 'teams', held, 'team.meta.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(backupSpy).toHaveBeenCalledTimes(1);
+      releaseTail();
+      await retry;
+      await owner.restoreIfNeeded();
+      expect(imports).toBe(2);
+      await expect(gate.run(held, async () => true)).resolves.toBe(true);
+    } finally {
+      releaseBackup();
+      releaseTail();
+      await Promise.allSettled([periodic, retry]);
+      backupSpy.mockRestore();
+      warning.mockRestore();
+      owner.dispose();
+    }
+  });
+
+  it.each(['initial', 'retry', 'restart'] as const)(
+    'restores work-sync through configured production backup owner: %s',
+    async (mode) => {
+      const teamName = 'sandbox-owner-restore';
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: teamName, members: [] })
+      );
+      const seed = new TeamBackupService();
+      await seed.initialize();
+      await seed.backupTeam(teamName);
+      seed.dispose();
+      const backupTeams = path.join(hoisted.backupsBase, 'teams');
+      const manifestPath = path.join(backupTeams, teamName, 'manifest.json');
+      const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+      const status = {
+        teamName,
+        memberName: 'bob',
+        state: 'caught_up' as const,
+        evaluatedAt: '2026-09-10T00:00:00Z',
+        diagnostics: [],
+        agenda: {
+          teamName,
+          memberName: 'bob',
+          generatedAt: '2026-09-10T00:00:00Z',
+          fingerprint: 'f',
+          items: [],
+          diagnostics: [],
+        },
+        statusRevision: {
+          incarnation: manifest.identityId,
+          lineageId: 'lineage',
+          sequence: 1,
+          nonce: 'n',
+        },
+      };
+      const backupPaths = new MemberWorkSyncStorePaths(backupTeams);
+      await new JsonMemberWorkSyncStore(backupPaths).write(status);
+      await fs.rm(teamDir, { recursive: true, force: true });
+      const paths = new MemberWorkSyncStorePaths(hoisted.teamsBase);
+      const json = new JsonMemberWorkSyncStore(paths);
+      let gate = new MemberWorkSyncTeamOperationGate();
+      let service = new TeamBackupService();
+      let fail = mode !== 'initial';
+      const actual = createMemberWorkSyncRestoreParticipant(
+        json,
+        new HmacMemberWorkSyncReportTokenAdapter(paths, service.workSyncIdentity),
+        paths
+      );
+      const participant = {
+        prepare: async (input: Parameters<typeof actual.prepare>[0]) => {
+          const prepared = await actual.prepare(input);
+          return {
+            importAndVerify: async () => {
+              await prepared.importAndVerify();
+              if (fail) throw new Error('sandbox restore interruption after import');
+            },
+          };
+        },
+      };
+      service.configureWorkSyncRestore(gate, participant);
+      try {
+        const warning = fail ? vi.spyOn(console, 'warn').mockImplementation(() => undefined) : null;
+        try {
+          await service.initialize();
+          if (warning)
+            expect(warning.mock.calls.flat().join(' ')).toContain('sandbox restore interruption');
+        } finally {
+          warning?.mockRestore();
+        }
+        if (fail) {
+          const pendingRaw = await fs.readFile(manifestPath, 'utf8');
+          expect(JSON.parse(pendingRaw).workSyncRestorePending.identityId).toBe(
+            manifest.identityId
+          );
+          await expect(gate.run(teamName, async () => 'wrong')).rejects.toThrow();
+          expect(await service.workSyncIdentity.readCurrent(teamName)).toEqual({
+            status: 'unavailable',
+          });
+          await service.backupTeam(teamName);
+          expect(await fs.readFile(manifestPath, 'utf8')).toBe(pendingRaw);
+          fail = false;
+          if (mode === 'restart') {
+            service.dispose();
+            service = new TeamBackupService();
+            gate = new MemberWorkSyncTeamOperationGate();
+            service.configureWorkSyncRestore(gate, participant);
+            await service.initialize();
+          } else {
+            await service.restoreIfNeeded();
+          }
+        }
+        expect(await json.read({ teamName, memberName: 'bob' })).toMatchObject({
+          statusRevision: status.statusRevision,
+        });
+        expect(
+          JSON.parse(await fs.readFile(manifestPath, 'utf8')).workSyncRestorePending
+        ).toBeUndefined();
+        await expect(gate.run(teamName, async () => 'open')).resolves.toBe('open');
+        expect(await service.workSyncIdentity.readCurrent(teamName)).toMatchObject({
+          status: 'identified',
+          identityId: manifest.identityId,
+        });
+        expect(
+          await fs.readFile(backupPaths.getMemberStatusPath(teamName, 'bob'), 'utf8')
+        ).toContain('lineage');
+      } finally {
+        service.dispose();
+      }
+    }
+  );
+
+  it.each([
+    { pending: false, padding: '' },
+    { pending: true, padding: '' },
+    { pending: false, padding: 'leading' },
+    { pending: false, padding: 'trailing' },
+  ])(
+    'preserves replacement identity through configured restore %j',
+    async ({ pending, padding }) => {
+      const teamName = 'sandbox-replacement-owner';
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: teamName, members: [] })
+      );
+      const seed = new TeamBackupService();
+      try {
+        await seed.initialize();
+        await seed.backupTeam(teamName);
+      } finally {
+        seed.dispose();
+      }
+      const manifestPath = path.join(hoisted.backupsBase, 'teams', teamName, 'manifest.json');
+      const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+      if (pending) {
+        manifest.workSyncRestorePending = {
+          identityId: manifest.identityId,
+          generation: 'old-incarnation-restore',
+        };
+        await fs.writeFile(manifestPath, JSON.stringify(manifest));
+      }
+      const manifestRaw = await fs.readFile(manifestPath, 'utf8');
+      const replacementIdentity = `${padding === 'leading' ? ' ' : ''}${crypto.randomUUID()}${padding === 'trailing' ? ' ' : ''}`;
+      const replacementRaw = JSON.stringify({
+        name: teamName,
+        members: [],
+        _backupIdentityId: replacementIdentity,
+      });
+      await fs.writeFile(path.join(teamDir, 'config.json'), replacementRaw);
+      const importAndVerify = vi.fn(async () => undefined);
+      const participant = { prepare: vi.fn(async () => ({ importAndVerify })) };
+      const gate = new MemberWorkSyncTeamOperationGate();
+      const service = new TeamBackupService();
+      service.configureWorkSyncRestore(gate, participant);
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        await service.initialize();
+        expect(await service.restoreIfNeeded()).toEqual([]);
+        expect(participant.prepare).not.toHaveBeenCalled();
+        expect(importAndVerify).not.toHaveBeenCalled();
+        expect(await fs.readFile(path.join(teamDir, 'config.json'), 'utf8')).toBe(replacementRaw);
+        expect(await fs.readFile(manifestPath, 'utf8')).toBe(manifestRaw);
+        if (pending || padding) {
+          await expect(gate.run(teamName, async () => 'open')).rejects.toThrow();
+        } else {
+          await expect(gate.run(teamName, async () => 'open')).resolves.toBe('open');
+          expect(await service.workSyncIdentity.readCurrent(teamName)).toMatchObject({
+            status: 'identified',
+            identityId: replacementIdentity,
+          });
+        }
+      } finally {
+        warning.mockRestore();
+        service.dispose();
+      }
+    }
+  );
+
+  it.each([undefined, 'other-id'])(
+    'rejects backup config identity %s before full restore publishes config',
+    async (backupIdentity) => {
+      const service = new TeamBackupService() as unknown as {
+        getBackupDir(teamName: string): string;
+        restoreTeam(teamName: string): Promise<boolean>;
+      };
+      const teamName = 'sandbox-config-identity';
+      const backupDir = service.getBackupDir(teamName);
+      await fs.mkdir(backupDir, { recursive: true });
+      await fs.writeFile(
+        path.join(backupDir, 'manifest.json'),
+        JSON.stringify({
+          teamName,
+          identityId: 'id',
+          status: 'active',
+          firstBackupAt: 'now',
+          lastBackupAt: 'now',
+          fileStats: {},
+        })
+      );
+      await fs.writeFile(
+        path.join(backupDir, 'config.json'),
+        JSON.stringify({ name: teamName, _backupIdentityId: backupIdentity })
+      );
+      await expect(service.restoreTeam(teamName)).rejects.toThrow('identity does not match');
+      await expect(
+        fs.stat(path.join(hoisted.teamsBase, teamName, 'config.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
+  it('does not resurrect or prune a deleted registry entry with pending restore', async () => {
+    const service = new TeamBackupService();
+    await service.initialize();
+    const owner = service as unknown as {
+      registry: { teams: Record<string, unknown> };
+      reconcileResurrectedTeams(): Promise<void>;
+      discoverActiveTeams(): Promise<string[]>;
+    };
+    const teamName = 'sandbox-pending-prune';
+    const deletedByUserAt = '2020-01-01T00:00:00Z';
+    owner.registry.teams[teamName] = {
+      teamName,
+      identityId: 'id',
+      status: 'deleted_by_user',
+      deletedByUserAt,
+    };
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await fs.mkdir(backupDir, { recursive: true });
+    const raw = JSON.stringify({
+      teamName,
+      identityId: 'id',
+      status: 'deleted_by_user',
+      deletedByUserAt,
+      firstBackupAt: deletedByUserAt,
+      lastBackupAt: deletedByUserAt,
+      fileStats: {},
+      workSyncRestorePending: { identityId: 'id', generation: 'r1' },
+    });
+    await fs.writeFile(path.join(backupDir, 'manifest.json'), raw);
+    await fs.mkdir(path.join(hoisted.teamsBase, teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(hoisted.teamsBase, teamName, 'config.json'),
+      JSON.stringify({ name: teamName })
+    );
+    try {
+      await owner.reconcileResurrectedTeams();
+      expect(await owner.discoverActiveTeams()).not.toContain(teamName);
+      await service.pruneStaleBackups();
+      service.runShutdownBackupSync();
+      expect(owner.registry.teams[teamName]).toMatchObject({ status: 'deleted_by_user' });
+      expect(await fs.readFile(path.join(backupDir, 'manifest.json'), 'utf8')).toBe(raw);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it.each(['pending', 'corrupt'])(
+    'preserves recovery source during async and shutdown backup: %s',
+    async (scenario) => {
+      const service = new TeamBackupService();
+      const teamName = 'sandbox-pending';
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: teamName, members: [] })
+      );
+      try {
+        await service.initialize();
+        await service.backupTeam(teamName);
+        const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+        const manifestPath = path.join(backupDir, 'manifest.json');
+        const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+        manifest.workSyncRestorePending = { identityId: manifest.identityId, generation: 'r1' };
+        const raw = scenario === 'corrupt' ? '{broken' : JSON.stringify(manifest);
+        await fs.writeFile(manifestPath, raw);
+        const configBackup = await fs.readFile(path.join(backupDir, 'config.json'), 'utf8');
+        const source = JSON.parse(await fs.readFile(path.join(teamDir, 'config.json'), 'utf8'));
+        await fs.writeFile(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ ...source, changed: true })
+        );
+        if (scenario === 'corrupt') await expect(service.backupTeam(teamName)).rejects.toThrow();
+        else await service.backupTeam(teamName);
+        const warning =
+          scenario === 'corrupt'
+            ? vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+            : null;
+        try {
+          service.runShutdownBackupSync();
+          if (warning)
+            expect(warning.mock.calls.flat().join(' ')).toContain('shutdown backup failed');
+        } finally {
+          warning?.mockRestore();
+        }
+        expect(await fs.readFile(manifestPath, 'utf8')).toBe(raw);
+        expect(await fs.readFile(path.join(backupDir, 'config.json'), 'utf8')).toBe(configBackup);
+      } finally {
+        service.dispose();
+      }
+    }
+  );
+
+  it.each(['corrupt', 'wrong_owner', 'unreadable'])(
+    'restore refuses an unsafe manifest: %s',
+    async (scenario) => {
+      const service = new TeamBackupService() as unknown as {
+        getBackupDir(teamName: string): string;
+        restoreTeam(teamName: string): Promise<boolean>;
+      };
+      const backupDir = service.getBackupDir('sandbox-team');
+      await fs.mkdir(backupDir, { recursive: true });
+      const manifestPath = path.join(backupDir, 'manifest.json');
+      if (scenario === 'unreadable') await fs.mkdir(manifestPath);
+      else
+        await fs.writeFile(
+          manifestPath,
+          scenario === 'corrupt'
+            ? '{broken'
+            : JSON.stringify({
+                teamName: 'other-team',
+                identityId: 'id',
+                status: 'active',
+                firstBackupAt: 'now',
+                lastBackupAt: 'now',
+                fileStats: {},
+              })
+        );
+      await fs.writeFile(
+        path.join(backupDir, 'config.json'),
+        JSON.stringify({ name: 'sandbox-team' })
+      );
+      await expect(service.restoreTeam('sandbox-team')).rejects.toThrow();
+      await expect(
+        fs.stat(path.join(hoisted.teamsBase, 'sandbox-team', 'config.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
+  it.each(['before', 'during'] as const)(
+    'rejects strict manifest publication at shutdown %s commit',
+    async (timing) => {
+      const service = new TeamBackupService() as unknown as {
+        isShuttingDown: boolean;
+        getBackupDir(teamName: string): string;
+        saveManifest(
+          teamName: string,
+          manifest: unknown,
+          strict: boolean,
+          beforeCommit?: () => Promise<void>
+        ): Promise<void>;
+      };
+      const backupDir = service.getBackupDir('sandbox-team');
+      await fs.mkdir(backupDir, { recursive: true });
+      const manifestPath = path.join(backupDir, 'manifest.json');
+      await fs.writeFile(manifestPath, '{"original":true}');
+      service.isShuttingDown = timing === 'before';
+      let validations = 0;
+      await expect(
+        service.saveManifest('sandbox-team', { replacement: true }, true, async () => {
+          validations++;
+          if (timing === 'during' && validations === 2) service.isShuttingDown = true;
+        })
+      ).rejects.toThrow('interrupted by shutdown');
+      expect(await fs.readFile(manifestPath, 'utf8')).toBe('{"original":true}');
+    }
+  );
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-backup-service-'));
     hoisted.teamsBase = path.join(tempDir, 'teams');
@@ -126,6 +617,78 @@ describe('TeamBackupService', () => {
     hoisted.tasksBase = '';
     if (tempDir) {
       await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not adopt while the real owner is waiting for registry initialization', async () => {
+    const service = new TeamBackupService();
+    const readFile = nativeFs.promises.readFile.bind(nativeFs.promises);
+    const registryPath = path.join(hoisted.backupsBase, 'registry.json');
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const delayed = vi.spyOn(nativeFs.promises, 'readFile').mockImplementation((async (
+      file: unknown,
+      ...args: unknown[]
+    ) => {
+      if (String(file) === registryPath) await barrier;
+      return readFile(file as never, ...(args as never[]));
+    }) as typeof nativeFs.promises.readFile);
+    const initialization = service.initialize();
+    try {
+      const teamDir = path.join(hoisted.teamsBase, 'delayed-sandbox');
+      await fs.mkdir(teamDir);
+      const configPath = path.join(teamDir, 'config.json');
+      const raw = JSON.stringify({ name: 'delayed-sandbox', members: [] });
+      await fs.writeFile(configPath, raw);
+      expect(await service.workSyncIdentity.adoptLegacy('delayed-sandbox')).toEqual({
+        status: 'unavailable',
+      });
+      expect(await fs.readFile(configPath, 'utf8')).toBe(raw);
+    } finally {
+      release();
+      await initialization;
+      delayed.mockRestore();
+      service.dispose();
+    }
+  });
+
+  it.each([
+    'not_initialized',
+    'corrupt_manifest',
+    'unreadable_manifest',
+    'corrupt_registry',
+    'absent',
+  ])('work-sync adoption requires proven prior identity absence: %s', async (scenario) => {
+    const service = new TeamBackupService();
+    try {
+      if (scenario !== 'not_initialized') await service.initialize();
+      const teamName = 'work-sync-sandbox';
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      const configPath = path.join(teamDir, 'config.json');
+      const configRaw = JSON.stringify({ name: teamName, members: [] });
+      await fs.writeFile(configPath, configRaw);
+      const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+      await fs.mkdir(backupDir, { recursive: true });
+      if (scenario === 'corrupt_manifest') {
+        await fs.writeFile(path.join(backupDir, 'manifest.json'), '{broken');
+      } else if (scenario === 'unreadable_manifest') {
+        await fs.mkdir(path.join(backupDir, 'manifest.json'));
+      } else if (scenario === 'corrupt_registry') {
+        await fs.writeFile(path.join(hoisted.backupsBase, 'registry.json'), '{broken');
+      }
+      const result = await service.workSyncIdentity.adoptLegacy(teamName);
+      if (scenario === 'absent') {
+        expect(result.status).toBe('identified');
+        expect(await service.workSyncIdentity.readCurrent(teamName)).toEqual(result);
+      } else {
+        expect(result).toEqual({ status: 'unavailable' });
+        expect(await fs.readFile(configPath, 'utf8')).toBe(configRaw);
+      }
+    } finally {
+      service.dispose();
     }
   });
 
@@ -313,6 +876,338 @@ describe('TeamBackupService', () => {
     expect(restoredLaunchSummary.teamLaunchState).toBe('partial_pending');
     expect(restoredRuntimeLaneIndex.lanes['secondary:opencode:tom'].state).toBe('active');
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
+    // A team that was never stopped gains no stop marker from a restore.
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not resurrect launch state for a stopped team from a pre-stop backup', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'stopped-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(teamDir, { recursive: true });
+    const config = {
+      name: 'Stopped Team',
+      projectPath,
+      members: [{ name: 'team-lead', agentType: 'team-lead' }],
+    };
+    const launchState = { version: 2, teamName, launchPhase: 'reconciled', members: {} };
+    const launchSummary = { version: 1, teamName, teamLaunchState: 'partial_failure' };
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify(config), 'utf8');
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(launchState),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify(launchSummary),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop: the store removes both publication files and leaves the marker.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-stopped.json'),
+      JSON.stringify({ version: 1, teamName, stoppedAt: '2026-08-23T00:10:00.000Z' }),
+      'utf8'
+    );
+
+    // Partial restore (the config is present): the pre-stop snapshot stays gone.
+    await service.restoreIfNeeded();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    // Once the stop itself is backed up, a full restore after losing the team
+    // directory keeps the team stopped too.
+    await service.backupTeam(teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restored = await service.restoreIfNeeded();
+    service.dispose();
+    expect(restored).toContain(teamName);
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('drops a stop marker the relaunched team no longer has from the shutdown backup', async () => {
+    // Stop, relaunch, shutdown, restore. The synchronous shutdown backup only
+    // adds files, so the marker copied during the stop would outlive it in the
+    // backup and freeze the restore of the launch state the relaunch produced.
+    const service = new TeamBackupService();
+    const teamName = 'relaunched-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Relaunched Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+
+    // Relaunch: the store lifts the marker and publishes the launch state.
+    await fs.rm(markerPath, { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'active', members: {} }),
+      'utf8'
+    );
+
+    service.runShutdownBackupSync();
+
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).resolves.toBeUndefined();
+
+    // A full restore after losing the team directory brings the launch back
+    // instead of treating the outlived marker as a current stop.
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restoringService = new TeamBackupService();
+    await restoringService.initialize();
+    restoringService.dispose();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not restore pre-stop launch state when the stop marker cannot be read', async () => {
+    // The live marker is the only evidence a team is stopped until the marker
+    // itself reaches the backup. A read that fails for anything but ENOENT does
+    // not prove the team was never stopped, so it must not license the restore
+    // to put the pre-stop launch publication back and undo the stop.
+    const service = new TeamBackupService();
+    const teamName = 'unreadable-marker-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Unreadable Marker Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop, before the marker itself reached the backup.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    const realAccess = nativeFs.promises.access;
+    const accessSpy = vi
+      .spyOn(nativeFs.promises, 'access')
+      .mockImplementation(async (target, mode) => {
+        if (target === markerPath) {
+          throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
+        }
+        return realAccess(target, mode);
+      });
+
+    await service.restoreIfNeeded();
+    accessSpy.mockRestore();
+    service.dispose();
+
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Could not read the stop marker for ${teamName}`)
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('does not restore launch state for a team stopped after the restore read the fence', async () => {
+    // The stop fence is read once, before the restore loop. A stop that lands
+    // while the loop works removes the publication files and writes its marker
+    // after them, so a commit that is not fenced again puts the pre-stop launch
+    // state back with no marker left to hold it.
+    const service = new TeamBackupService();
+    const teamName = 'stopped-mid-restore-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Stopped Mid Restore Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ providerId: 'codex' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // What the restore is about to put back is gone and nothing says the team
+    // was stopped, so the fence read before the loop lets all three through.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'team.meta.json'), { force: true });
+
+    const backupLaunchState = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'launch-state.json'
+    );
+    const realReadFile = nativeFs.promises.readFile as (...args: unknown[]) => Promise<unknown>;
+    let stoppedDuringRestore = false;
+    const readFileSpy = vi.spyOn(nativeFs.promises, 'readFile').mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const content = await realReadFile(...args);
+      if (!stoppedDuringRestore && String(args[0]) === backupLaunchState) {
+        stoppedDuringRestore = true;
+        // The stop lands after the restore read its fence and before it
+        // commits the publication file it has just read out of the backup.
+        await new TeamLaunchStateStore().markStopped(teamName);
+      }
+      return content;
+    }) as unknown as typeof nativeFs.promises.readFile);
+
+    await service.restoreIfNeeded();
+    readFileSpy.mockRestore();
+    service.dispose();
+
+    expect(stoppedDuringRestore).toBe(true);
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    // The rest of the restore is untouched: only the publication files are
+    // fenced, so this is a restore that ran and skipped them, not one that
+    // never reached a commit.
+    await expect(fs.readFile(path.join(teamDir, 'team.meta.json'), 'utf8')).resolves.toContain(
+      'codex'
+    );
+  });
+
+  it('does not index a shutdown backup whose manifest could not be persisted', async () => {
+    // The shutdown backup copies the files first and writes the registry entry
+    // afterwards. A manifest that never landed leaves the backup directory with
+    // new files and the previous ownership and file stats, so the registry must
+    // not advertise it as the current backup.
+    const service = new TeamBackupService();
+    const blockedTeam = 'blocked-manifest-team';
+    const healthyTeam = 'healthy-manifest-team';
+    for (const teamName of [blockedTeam, healthyTeam]) {
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          projectPath: path.join(tempDir, 'project'),
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        }),
+        'utf8'
+      );
+    }
+
+    await service.initialize();
+    await service.backupTeam(blockedTeam);
+    await service.backupTeam(healthyTeam);
+
+    const registryPath = path.join(hoisted.backupsBase, 'registry.json');
+    const registryBefore = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+
+    // A directory where the manifest belongs: the atomic rename cannot land.
+    const blockedManifest = path.join(hoisted.backupsBase, 'teams', blockedTeam, 'manifest.json');
+    await fs.rm(blockedManifest, { force: true });
+    await fs.mkdir(blockedManifest, { recursive: true });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
+    service.runShutdownBackupSync();
+    vi.useRealTimers();
+
+    const registryAfter = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+    expect(registryAfter.teams[blockedTeam].lastBackupAt).toBe(
+      registryBefore.teams[blockedTeam].lastBackupAt
+    );
+    // The loop still reaches every later team: the failure belongs to one team.
+    expect(registryAfter.teams[healthyTeam].lastBackupAt).toBe('2026-09-04T12:00:00.000Z');
+
+    // Both layers report it: the manifest writer names the team, the shutdown
+    // loop names the backup it gave up on.
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Failed to save manifest for ${blockedTeam}`)
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`shutdown backup failed for ${blockedTeam}`)
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('never backs up or restores internal task attachment artifacts', async () => {
@@ -1367,6 +2262,98 @@ describe('TeamBackupService', () => {
     }
   });
 
+  it('retries publishing the lock when the contended lock vanishes during the occupancy probe', async () => {
+    const service = new TeamBackupService();
+    const scope = 'vanishing-contended-lock';
+    const acquireLock = getAcquirePermanentDeletionLock(service);
+    const releaseLock = getReleasePermanentDeletionLock(service);
+    const lockPath = getPermanentDeletionLockPath(hoisted.backupsBase, scope);
+
+    // Windows reports an occupied destination as EPERM, and the holder can
+    // release between that failure and the occupancy probe.
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    let publishAttempts = 0;
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (path.resolve(String(destinationPath)) === path.resolve(lockPath)) {
+          publishAttempts += 1;
+          if (publishAttempts === 1) {
+            throw Object.assign(new Error('EPERM: operation not permitted, rename'), {
+              code: 'EPERM',
+            });
+          }
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    let occupancyProbes = 0;
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (targetPath) => {
+      if (path.resolve(String(targetPath)) === path.resolve(lockPath)) {
+        occupancyProbes += 1;
+        if (occupancyProbes === 1) {
+          throw Object.assign(new Error('ENOENT: no such file or directory, lstat'), {
+            code: 'ENOENT',
+          });
+        }
+      }
+      return realLstat(targetPath);
+    });
+
+    let lock: PermanentDeletionTestLock | null = null;
+    try {
+      lock = await acquireLock(scope);
+      expect(lock.lockPath).toBe(lockPath);
+      expect(publishAttempts).toBe(2);
+      await expect(
+        fs.readFile(path.join(lockPath, lock.ownerEntryName), 'utf8')
+      ).resolves.toContain(lock.owner.token);
+    } finally {
+      renameSpy.mockRestore();
+      lstatSpy.mockRestore();
+      if (lock) await releaseLock(lock);
+      await fs.rm(lockPath, { recursive: true, force: true });
+      service.dispose();
+    }
+  });
+
+  it('surfaces a rename permission failure when the occupancy probe fails for another reason', async () => {
+    const service = new TeamBackupService();
+    const scope = 'unprobeable-lock-permission';
+    const acquireLock = getAcquirePermanentDeletionLock(service);
+    const lockPath = getPermanentDeletionLockPath(hoisted.backupsBase, scope);
+
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (path.resolve(String(destinationPath)) === path.resolve(lockPath)) {
+          throw Object.assign(new Error('EPERM: operation not permitted, rename'), {
+            code: 'EPERM',
+          });
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (targetPath) => {
+      if (path.resolve(String(targetPath)) === path.resolve(lockPath)) {
+        throw Object.assign(new Error('EACCES: permission denied, lstat'), { code: 'EACCES' });
+      }
+      return realLstat(targetPath);
+    });
+
+    try {
+      await expect(acquireLock(scope)).rejects.toMatchObject({ code: 'EPERM' });
+    } finally {
+      renameSpy.mockRestore();
+      lstatSpy.mockRestore();
+      await fs.rm(lockPath, { recursive: true, force: true });
+      service.dispose();
+    }
+  });
+
   it('does not let a stale releaser displace a recovered owner or admit a third contender', async () => {
     const service = new TeamBackupService();
     const scope = 'exact-release-ownership';
@@ -1623,16 +2610,18 @@ describe('TeamBackupService', () => {
     const abortLockAttempt = new Promise<void>((resolve) => {
       signalAbortLockAttempt = resolve;
     });
-    const globalLockPath = getPermanentDeletionLockPath(hoisted.backupsBase, 'intent-hierarchy');
     let lockAttempts = 0;
+    const realWithLock = TeamPermanentDeletionLock.prototype.withLock;
+    const lockRequestSpy = vi
+      .spyOn(TeamPermanentDeletionLock.prototype, 'withLock')
+      .mockImplementation(function (this: TeamPermanentDeletionLock, scope, operation) {
+        if (scope === 'intent-hierarchy' && ++lockAttempts === 2) signalAbortLockAttempt();
+        return realWithLock.call(this, scope, operation);
+      });
     const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
     const renameSpy = vi
       .spyOn(nativeFs.promises, 'rename')
       .mockImplementation(async (source, target) => {
-        if (path.resolve(String(target)) === path.resolve(globalLockPath)) {
-          lockAttempts += 1;
-          if (lockAttempts === 2) signalAbortLockAttempt();
-        }
         if (path.resolve(String(target)) === path.resolve(writingIntentPath)) {
           signalWriteCommitStarted();
           await writeCommitRelease;
@@ -1656,6 +2645,7 @@ describe('TeamBackupService', () => {
       releaseWriteCommit();
       await Promise.allSettled([writingBegin, ...(abortPromise ? [abortPromise] : [])]);
       renameSpy.mockRestore();
+      lockRequestSpy.mockRestore();
       service.dispose();
     }
   });
@@ -2083,6 +3073,69 @@ describe('TeamBackupService', () => {
     }
   });
 
+  it.each(['async', 'shutdown'] as const)(
+    'preserves root work-sync recovery files through repeated %s backup',
+    async (mode) => {
+      const service = new TeamBackupService();
+      const teamName = `sandbox-root-work-sync-${mode}`;
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+      const files = [
+        'sqlite-fallback-replica.json',
+        'report-token-secret.json',
+        'indexes/metrics.json',
+        'indexes/outbox-index.json',
+        'indexes/pending-reports-index.json',
+      ];
+      const transientFiles = ['.tmp.partial', 'replica.json.lock', 'indexes/.tmp.partial'];
+      try {
+        await fs.mkdir(teamDir, { recursive: true });
+        await fs.writeFile(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ name: teamName, members: [] })
+        );
+        await service.initialize();
+        for (const file of files) {
+          const destination = path.join(teamDir, '.member-work-sync', file);
+          await fs.mkdir(path.dirname(destination), { recursive: true });
+          await fs.writeFile(destination, JSON.stringify({ file, revision: 'initial' }));
+        }
+        for (const file of transientFiles) {
+          await fs.writeFile(path.join(teamDir, '.member-work-sync', file), '{partial');
+        }
+        await service.backupTeam(teamName);
+        for (const file of files) {
+          await expect(
+            fs.readFile(path.join(backupDir, '.member-work-sync', file), 'utf8')
+          ).resolves.toBe(JSON.stringify({ file, revision: 'initial' }));
+          await fs.writeFile(
+            path.join(teamDir, '.member-work-sync', file),
+            JSON.stringify({ file, revision: 'updated-before-second-backup' })
+          );
+        }
+        if (mode === 'shutdown') service.runShutdownBackupSync();
+        else await service.backupTeam(teamName);
+        const manifest = JSON.parse(
+          await fs.readFile(path.join(backupDir, 'manifest.json'), 'utf8')
+        ) as { fileStats: Record<string, unknown> };
+        for (const file of files) {
+          await expect(
+            fs.readFile(path.join(backupDir, '.member-work-sync', file), 'utf8')
+          ).resolves.toBe(JSON.stringify({ file, revision: 'updated-before-second-backup' }));
+          expect(Object.hasOwn(manifest.fileStats, `.member-work-sync/${file}`)).toBe(true);
+        }
+        for (const file of transientFiles) {
+          await expect(
+            fs.stat(path.join(backupDir, '.member-work-sync', file))
+          ).rejects.toMatchObject({ code: 'ENOENT' });
+          expect(Object.hasOwn(manifest.fileStats, `.member-work-sync/${file}`)).toBe(false);
+        }
+      } finally {
+        service.dispose();
+      }
+    }
+  );
+
   it('backs up member-scoped work sync status without copying the append-only journal', async () => {
     const service = new TeamBackupService();
     const teamName = 'member-work-sync-team';
@@ -2140,6 +3193,7 @@ describe('TeamBackupService', () => {
         '{"runtime":true}\n',
         'utf8'
       );
+      await service.initialize();
       const staleBackupJournalPath = path.join(
         hoisted.backupsBase,
         'teams',
@@ -2152,7 +3206,6 @@ describe('TeamBackupService', () => {
       await fs.mkdir(path.dirname(staleBackupJournalPath), { recursive: true });
       await fs.writeFile(staleBackupJournalPath, '{"old":true}\n', 'utf8');
 
-      await service.initialize();
       await service.backupTeam(teamName);
 
       const backupMemberDir = path.join(hoisted.backupsBase, 'teams', teamName, 'members', 'jack');
@@ -2527,7 +3580,16 @@ describe('TeamBackupService', () => {
     const deletionLockAttempted = new Promise<void>((resolve) => {
       signalDeletionLockAttempted = resolve;
     });
+    let teamLockRequests = 0;
+    const realWithLock = TeamPermanentDeletionLock.prototype.withLock;
+    const lockRequestSpy = vi
+      .spyOn(TeamPermanentDeletionLock.prototype, 'withLock')
+      .mockImplementation(function (this: TeamPermanentDeletionLock, scope, operation) {
+        if (scope === `team:${teamName}` && ++teamLockRequests === 2) signalDeletionLockAttempted();
+        return realWithLock.call(this, scope, operation);
+      });
     let teamLockPublishAttempts = 0;
+    let backupIsBlocked = false;
     let deletionAcquiredWhileBackupBlocked = false;
     const publicationOrder: string[] = [];
     let backupCommitWasBlocked = false;
@@ -2540,15 +3602,9 @@ describe('TeamBackupService', () => {
           teamLockPublishAttempts += 1;
         }
         if (teamLockPublishAttempts === 2 && resolvedDestination === path.resolve(teamLockPath)) {
-          try {
-            await realRename(sourcePath, destinationPath);
-            deletionAcquiredWhileBackupBlocked = true;
-            signalDeletionLockAttempted();
-            return;
-          } catch (error) {
-            signalDeletionLockAttempted();
-            throw error;
-          }
+          await realRename(sourcePath, destinationPath);
+          deletionAcquiredWhileBackupBlocked = backupIsBlocked;
+          return;
         }
         let deletingIntent = false;
         if (resolvedDestination === path.resolve(intentPath)) {
@@ -2563,8 +3619,10 @@ describe('TeamBackupService', () => {
         }
         if (!backupCommitWasBlocked && resolvedDestination === path.resolve(backupDataPath)) {
           backupCommitWasBlocked = true;
+          backupIsBlocked = true;
           signalBackupCommitBlocked();
           await backupCommitRelease;
+          backupIsBlocked = false;
         }
         await realRename(sourcePath, destinationPath);
         if (resolvedDestination === path.resolve(backupDataPath)) {
@@ -2615,6 +3673,7 @@ describe('TeamBackupService', () => {
       releaseBackupCommit();
       await Promise.allSettled([periodicBackup, ...(deletionBoundary ? [deletionBoundary] : [])]);
       renameSpy.mockRestore();
+      lockRequestSpy.mockRestore();
       deletionService.dispose();
       periodicService.dispose();
     }

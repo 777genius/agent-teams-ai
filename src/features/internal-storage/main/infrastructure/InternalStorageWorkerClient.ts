@@ -73,6 +73,9 @@ import type {
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
   MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncReportJournalOpResult,
+  MemberWorkSyncStatusCompareAndWriteInput,
+  MemberWorkSyncStatusCompareAndWriteResult,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -396,6 +399,16 @@ export class InternalStorageWorkerClient
   ): Promise<void> {
     await this.call('mws.status.write', { record, events });
   }
+
+  async statusCompareAndWrite(
+    input: MemberWorkSyncStatusCompareAndWriteInput
+  ): Promise<MemberWorkSyncStatusCompareAndWriteResult> {
+    return (await this.call(
+      'mws.status.compareAndWrite',
+      input
+    )) as MemberWorkSyncStatusCompareAndWriteResult;
+  }
+
   async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
   }
@@ -419,6 +432,53 @@ export class InternalStorageWorkerClient
   ): Promise<void> {
     await this.call('mws.reports.markProcessed', { teamName, id, ...result });
   }
+
+  async reportsJournalRead(input: {
+    teamName: string;
+    memberKey: string;
+    id: string;
+    journalJson: string;
+    requestJson: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalRead',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
+  }
+
+  async reportsJournalEnsure(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalEnsure',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
+  }
+
+  async reportsJournalTransfer(input: {
+    teamName: string;
+    memberKey: string;
+    memberName: string;
+    id: string;
+    requestJson: string;
+    journalJson: string;
+    receiptJson?: string;
+    terminalStatus?: 'rejected' | 'superseded';
+    resultCode?: string;
+    processedAt?: string;
+  }): Promise<MemberWorkSyncReportJournalOpResult> {
+    return (await this.call(
+      'mws.reports.journalTransfer',
+      input
+    )) as MemberWorkSyncReportJournalOpResult;
+  }
+
   async outboxEnsurePending(
     input: MemberWorkSyncOutboxEnsureRecordInput
   ): Promise<MemberWorkSyncOutboxEnsureRecordResult> {
@@ -470,8 +530,11 @@ export class InternalStorageWorkerClient
     memberKey: string;
     sinceIso: string;
     workSyncIntentKeyPrefix: string | null;
-  }): Promise<number> {
-    return (await this.call('mws.outbox.countRecentDelivered', input)) as number;
+  }): Promise<{ count: number; oldestUpdatedAt?: string }> {
+    return (await this.call('mws.outbox.countRecentDelivered', input)) as {
+      count: number;
+      oldestUpdatedAt?: string;
+    };
   }
   async outboxCountDeliveredForAgenda(input: {
     teamName: string;
@@ -704,6 +767,11 @@ export class InternalStorageWorkerClient
 
   async close(): Promise<void> {
     await this.transport.close();
+  }
+
+  /** Waits until a failed writer can no longer change the canonical database. */
+  async waitForSettling(): Promise<void> {
+    await this.transport.waitForSettling();
   }
 
   protected callCoordinationWorker<TOp extends InternalStorageWorkerRequest['op']>(

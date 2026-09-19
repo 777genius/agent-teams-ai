@@ -22,6 +22,7 @@ import {
 } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { classifyRuntimeDiagnostic } from './runtime/RuntimeDiagnosticClassifier';
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
+import { MemberRuntimeAdvisoryRunScope } from './TeamMemberRuntimeAdvisoryRunScope';
 
 import type { MemberLogSummary, MemberRuntimeAdvisory, ResolvedTeamMember } from '@shared/types';
 
@@ -106,6 +107,7 @@ export class TeamMemberRuntimeAdvisoryService {
     string,
     Promise<Map<string, MemberRuntimeAdvisory>>
   >();
+  private readonly runScope = new MemberRuntimeAdvisoryRunScope();
 
   constructor(
     private readonly logsFinder: RuntimeAdvisoryLogsFinder = new TeamMemberLogsFinder(),
@@ -129,10 +131,17 @@ export class TeamMemberRuntimeAdvisoryService {
     this.teamBatchCacheByTeam.delete(teamKey);
   }
 
-  invalidateTeamAdvisories(teamName: string): void {
+  /**
+   * `runStartedAtMs` marks a launch start: ledger and log evidence outlives a
+   * force-stop, so a new run also raises a floor under re-derivation.
+   */
+  invalidateTeamAdvisories(teamName: string, runStartedAtMs?: number): void {
     const teamKey = this.normalizeToken(teamName);
     if (!teamKey) {
       return;
+    }
+    if (runStartedAtMs !== undefined) {
+      this.runScope.startRun(teamKey, runStartedAtMs);
     }
 
     this.cacheGenerationByTeam.set(teamKey, (this.cacheGenerationByTeam.get(teamKey) ?? 0) + 1);
@@ -160,8 +169,8 @@ export class TeamMemberRuntimeAdvisoryService {
 
     const teamKey = this.normalizeToken(teamName);
     const membersSignature = this.buildMembersSignature(activeMembers);
-    const observedAfterMs = this.normalizeObservedAfterMs(options?.observedAfterMs);
-    const scopeKey = this.buildObservedAfterScopeKey(observedAfterMs);
+    const observedAfterMs = this.runScope.resolveObservedAfterMs(teamKey, options?.observedAfterMs);
+    const scopeKey = this.runScope.buildScopeKey(observedAfterMs);
     const now = Date.now();
     const cachedBatch = this.teamBatchCacheByTeam.get(teamKey);
     if (
@@ -213,7 +222,7 @@ export class TeamMemberRuntimeAdvisoryService {
     options?: RuntimeAdvisoryLookupOptions
   ): Promise<MemberRuntimeAdvisory | null> {
     const teamKey = this.normalizeToken(teamName);
-    const observedAfterMs = this.normalizeObservedAfterMs(options?.observedAfterMs);
+    const observedAfterMs = this.runScope.resolveObservedAfterMs(teamKey, options?.observedAfterMs);
     const cacheKey = this.getMemberCacheKey(teamName, memberName, observedAfterMs);
     const cached = this.memberCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -315,19 +324,9 @@ export class TeamMemberRuntimeAdvisoryService {
     memberName: string,
     observedAfterMs?: number | null
   ): string {
-    return `${this.normalizeToken(teamName)}::${this.normalizeToken(memberName)}::${this.buildObservedAfterScopeKey(
+    return `${this.normalizeToken(teamName)}::${this.normalizeToken(memberName)}::${this.runScope.buildScopeKey(
       observedAfterMs
     )}`;
-  }
-
-  private normalizeObservedAfterMs(value: number | null | undefined): number | null {
-    return typeof value === 'number' && Number.isFinite(value) && value > 0
-      ? Math.floor(value)
-      : null;
-  }
-
-  private buildObservedAfterScopeKey(observedAfterMs: number | null | undefined): string {
-    return observedAfterMs == null ? 'recent' : `after:${observedAfterMs}`;
   }
 
   private rememberRecentBatch(

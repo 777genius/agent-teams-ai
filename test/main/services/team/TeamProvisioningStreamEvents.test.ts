@@ -11,6 +11,8 @@ import {
   type TeamProvisioningStreamEventPorts,
   type TeamProvisioningStreamRun,
 } from '@main/services/team/provisioning/TeamProvisioningStreamEvents';
+import { scheduleProvisioningRunTimeout } from '@main/services/team/provisioning/TeamProvisioningTimeoutLifecycle';
+import { EventEmitter } from 'events';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -18,6 +20,7 @@ import type {
   MemberSpawnStatusEntry,
   TeamProvisioningProgress,
 } from '@shared/types';
+import type { ChildProcess } from 'child_process';
 
 const NOW = '2026-05-12T10:00:00.000Z';
 
@@ -114,6 +117,7 @@ function createStreamEventPorts(): {
   killTeamProcess: ReturnType<typeof vi.fn>;
   markUnconfirmedBootstrapMembersFailed: ReturnType<typeof vi.fn>;
   persistLaunchStateSnapshot: ReturnType<typeof vi.fn>;
+  launchMixedSecondaryLaneIfNeeded: ReturnType<typeof vi.fn>;
   cleanupRun: ReturnType<typeof vi.fn>;
   reevaluateMemberLaunchStatus: ReturnType<typeof vi.fn>;
 } {
@@ -121,6 +125,7 @@ function createStreamEventPorts(): {
   const killTeamProcess = vi.fn();
   const markUnconfirmedBootstrapMembersFailed = vi.fn();
   const persistLaunchStateSnapshot = vi.fn(async () => null);
+  const launchMixedSecondaryLaneIfNeeded = vi.fn(async () => null);
   const cleanupRun = vi.fn();
   const reevaluateMemberLaunchStatus = vi.fn(async () => undefined);
 
@@ -175,6 +180,7 @@ function createStreamEventPorts(): {
     stopPersistentTeamMembers: vi.fn(),
     killTeamProcess,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     handleProvisioningTurnComplete: vi.fn(async () => undefined),
   } as Partial<
@@ -187,6 +193,7 @@ function createStreamEventPorts(): {
     killTeamProcess,
     markUnconfirmedBootstrapMembersFailed,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     reevaluateMemberLaunchStatus,
   };
@@ -352,6 +359,81 @@ describe('TeamProvisioningStreamEvents', () => {
     });
   });
 
+  it('starts mixed secondary lanes when primary bootstrap completes before the first real turn', () => {
+    const { run } = createDeterministicBootstrapRun({
+      requiresFirstRealTurnSuccess: true,
+      mixedSecondaryLanes: [{}],
+    });
+    const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+    const event = {
+      type: 'system',
+      subtype: 'team_bootstrap',
+      event: 'completed',
+      failed_members: [],
+      run_id: run.runId,
+      team_name: run.teamName,
+      seq: 1,
+    };
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])(
+    'starts secondary preparation before immediate completion (isLaunch=%s)',
+    (isLaunch) => {
+      const { run } = createDeterministicBootstrapRun({
+        isLaunch,
+        requiresFirstRealTurnSuccess: false,
+        mixedSecondaryLanes: [{}],
+      });
+      const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+      expect(
+        handleDeterministicBootstrapEvent(
+          run,
+          {
+            type: 'system',
+            subtype: 'team_bootstrap',
+            event: 'completed',
+            failed_members: [],
+            run_id: run.runId,
+            team_name: run.teamName,
+            seq: 1,
+          },
+          ports
+        )
+      ).toBe(true);
+
+      expect(ports.handleProvisioningTurnComplete).toHaveBeenCalledExactlyOnceWith(run);
+      expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledExactlyOnceWith(run);
+      expect(launchMixedSecondaryLaneIfNeeded.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(ports.handleProvisioningTurnComplete).mock.invocationCallOrder[0]
+      );
+    }
+  );
+
+  it('does not start eager roster preparation after completion has claimed the run', () => {
+    const { run } = createDeterministicBootstrapRun({
+      provisioningComplete: true,
+      mixedSecondaryLanes: [{}],
+    });
+    const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+    handleDeterministicBootstrapEvent(
+      run,
+      { type: 'system', subtype: 'team_bootstrap', event: 'completed' },
+      ports
+    );
+
+    expect(launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+  });
+
   it('reports workspace trust deterministic bootstrap failures through stream events', () => {
     const reason =
       'Teammate "Gayani" cannot start in headless process runtime because workspace trust is not accepted for "C:\\Users\\vilok\\OneDrive\\Desktop\\Safar 0.1". Open that workspace once interactively and accept trust, then launch the team again.';
@@ -422,6 +504,76 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
     (console.warn as unknown as { mockClear?: () => void }).mockClear?.();
   }
 
+  it('keeps the mixed run owned until a result arriving after the original 300s deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const { run } = createDeterministicBootstrapRun({
+        child: new EventEmitter() as ChildProcess,
+        requiresFirstRealTurnSuccess: true,
+        mixedSecondaryLanes: [{}],
+      });
+      const timedRun = Object.assign(run, { timeoutHandle: null as NodeJS.Timeout | null });
+      const ports = makeResultPorts();
+      const expire = vi.fn(() => ports.cleanupRun(run));
+      scheduleProvisioningRunTimeout(timedRun, 300_000, expire);
+      await vi.advanceTimersByTimeAsync(145_000);
+      handleDeterministicBootstrapEvent(
+        run,
+        {
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'completed',
+          run_id: run.runId,
+          team_name: run.teamName,
+          seq: 1,
+        },
+        ports
+      );
+      await vi.advanceTimersByTimeAsync(155_000);
+      expect(expire).not.toHaveBeenCalled();
+      expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+      expect(ports.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(15_000);
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype: 'success' }, ports);
+      expect(ports.completeProvisioningFromSuccessfulResult).toHaveBeenCalledExactlyOnceWith(run);
+      expect(run).toMatchObject({ firstRealTurnSucceeded: true });
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not extend a deadline from bootstrap events belonging to another run', async () => {
+    vi.useFakeTimers();
+    try {
+      const { run } = createDeterministicBootstrapRun({
+        child: new EventEmitter() as ChildProcess,
+        requiresFirstRealTurnSuccess: true,
+      });
+      const timedRun = Object.assign(run, { timeoutHandle: null as NodeJS.Timeout | null });
+      const ports = makeResultPorts();
+      const expire = vi.fn();
+      scheduleProvisioningRunTimeout(timedRun, 300_000, expire);
+      await vi.advanceTimersByTimeAsync(145_000);
+      handleDeterministicBootstrapEvent(
+        run,
+        {
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'completed',
+          run_id: 'old-run',
+          team_name: run.teamName,
+          seq: 1,
+        },
+        ports
+      );
+      await vi.advanceTimersByTimeAsync(155_000);
+      expect(expire).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // Any non-success result subtype is a turn-ending failure. error_during_execution and
   // error_max_turns must be handled like plain 'error' (fail + kill + cleanup the run),
   // not fall through and hang the turn (relay capture never settles, provisioning never
@@ -431,7 +583,11 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
       const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
       const ports = makeResultPorts();
 
-      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype, error: 'boom' }, ports);
+      handleTeamProvisioningStreamJsonMessage(
+        run,
+        { type: 'result', subtype, error: 'boom' },
+        ports
+      );
 
       expect(run.progress.state).toBe('failed');
       expect(ports.killTeamProcess).toHaveBeenCalledWith(run.child);

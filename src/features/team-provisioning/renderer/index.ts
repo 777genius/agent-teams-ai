@@ -122,3 +122,10 @@ export {
   type TeamMemberSettingsDialogBridgeProps,
 } from './ui/TeamMemberSettingsDialogBridge';
 /* eslint-enable simple-import-sort/exports */
+export type { MemberSettingsRelaunchDraft } from './utils/memberSettingsRelaunch';
+export {
+  applyMemberSettingsRelaunch,
+  assertMemberSettingsRelaunchRoster,
+  buildMemberSettingsRelaunchIntent,
+} from './utils/memberSettingsRelaunch';
+export { filterMemberSettingsRelaunchInputs } from './utils/memberSettingsRelaunch';

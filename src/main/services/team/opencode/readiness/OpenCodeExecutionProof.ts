@@ -18,4 +18,5 @@ export interface OpenCodeExecutionProof {
   verifiedAt: string;
   expiresAt: string;
   proofHash: string;
+  expectedBehaviorEvidence?: unknown;
 }

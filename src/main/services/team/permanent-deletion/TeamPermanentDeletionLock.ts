@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { KeyedMutex } from '@features/internal-storage/main';
 import {
   type DurablePathIdentity,
   getDurablePathIdentity,
@@ -44,9 +45,44 @@ const PERMANENT_DELETION_LOCK_OWNER_PREFIX = 'owner-';
 const PERMANENT_DELETION_LOCK_DETACHED_PREFIX = 'detached-';
 const PERMANENT_DELETION_LOCK_ENTRY_SUFFIX = '.json';
 const PROCESS_INSTANCE_ID = crypto.randomUUID();
+// Shared by every lifecycle-owner instance in this desktop process. A failed
+// filesystem heartbeat cannot let another local owner overtake physical work.
+const localScopeDrain = new KeyedMutex();
 
 function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
+}
+
+/**
+ * True when publishing the candidate failed because the lock is already held.
+ *
+ * POSIX reports that as EEXIST/ENOTEMPTY (rename cannot replace a non-empty
+ * directory). Windows reports the very same situation as EPERM - and does so
+ * for any rename onto an existing directory - so the lock path is checked
+ * before treating it as contention; without that check every contended
+ * acquisition on Windows failed the whole permanent deletion instead of
+ * waiting for the holder.
+ *
+ * The probe is not atomic with the failed rename: the holder can release
+ * between the two, which is exactly the moment the caller is waiting for. A
+ * lock that is already gone is therefore resolved contention and must be
+ * retried, not reported as the stale rename error. Every other probe failure
+ * still surfaces the original error, and the candidate directory was created
+ * in this same directory moments earlier, so a permanent permission problem
+ * cannot hide behind the retry.
+ */
+async function isOccupiedLockRenameError(error: unknown, lockPath: string): Promise<boolean> {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'ENOTDIR' || code === 'EISDIR') {
+    return true;
+  }
+  if (code !== 'EPERM' && code !== 'EACCES') {
+    return false;
+  }
+  return await fs.promises
+    .lstat(lockPath)
+    .then(() => true)
+    .catch((probeError: unknown) => isEnoent(probeError));
 }
 
 function sleep(ms: number): Promise<void> {
@@ -333,13 +369,7 @@ export class TeamPermanentDeletionLock {
             ownerEntryName,
           };
         } catch (error) {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (
-            code !== 'EEXIST' &&
-            code !== 'ENOTEMPTY' &&
-            code !== 'ENOTDIR' &&
-            code !== 'EISDIR'
-          ) {
+          if (!(await isOccupiedLockRenameError(error, lockPath))) {
             throw error;
           }
           await this.removeStalePermanentDeletionLock(lockPath);
@@ -408,6 +438,12 @@ export class TeamPermanentDeletionLock {
   }
 
   async withLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {
+    return localScopeDrain.run(this.getPermanentDeletionLockPath(scope), () =>
+      this.withAcquiredLock(scope, operation)
+    );
+  }
+
+  private async withAcquiredLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {
     const lock = await this.acquirePermanentDeletionLock(scope);
     let heartbeatError: unknown;
     let heartbeatRunning = false;

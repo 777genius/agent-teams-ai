@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -17,6 +19,8 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
 } from '@shared/types';
+
+vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
 
 const request: TeamLaunchRequest = {
   teamName: 'demo',
@@ -62,7 +66,7 @@ const anthropicApiKeyHelper = {
 
 function createMembers(): TeamCreateRequest['members'] {
   return [
-    { name: 'Lead', role: 'Lead', providerId: 'codex' },
+    { name: 'Planner', role: 'Planner', providerId: 'codex' },
     { name: 'Reviewer', role: 'Review', providerId: 'anthropic' },
   ];
 }
@@ -159,7 +163,8 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     const ports = createPorts({
       getExistingAliveRunId: vi.fn(() => 'run-existing'),
       getExistingRun: vi.fn(() => ({ child: {}, processKilled: false, cancelRequested: false })),
-      getRunTrackedCwd: vi.fn(() => '/tmp'),
+      // The live-run reuse check compares resolved cwds.
+      getRunTrackedCwd: vi.fn(() => path.resolve('/tmp')),
     });
 
     await expect(prepareDeterministicLaunchSetup(request, ports)).resolves.toEqual({
@@ -200,7 +205,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       startedAt: '2026-01-01T00:00:00.000Z',
       claudePath: '/usr/local/bin/claude',
       resolvedProviderId: 'codex',
-      expectedMembers: ['Lead'],
+      expectedMembers: ['Planner'],
       providerArgsForLaunch: ['--primary-provider-arg'],
       crossProviderMemberArgsForLaunch: {
         args: ['--member-provider', 'anthropic'],
@@ -215,10 +220,10 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       },
     });
     expect(result.allEffectiveMemberSpecs.map((member) => member.name)).toEqual([
-      'Lead',
+      'Planner',
       'Reviewer',
     ]);
-    expect(result.effectiveMemberSpecs.map((member) => member.name)).toEqual(['Lead']);
+    expect(result.effectiveMemberSpecs.map((member) => member.name)).toEqual(['Planner']);
     expect(result.shellEnv).toMatchObject({
       BASE_ENV: '1',
       CODEX_TURN_SETTLED: '1',

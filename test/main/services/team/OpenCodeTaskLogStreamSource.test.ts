@@ -353,6 +353,92 @@ describe('OpenCodeTaskLogStreamSource', () => {
     ).toEqual(['runtime-user-evidence', 'assistant-start-evidence', 'assistant-native-evidence']);
   });
 
+  it('keeps ledger attribution inside its delivered turn even when other task markers share the window', async () => {
+    const messages = [
+      textLogMessage({ uuid: 'assignment', type: 'user', timestamp: '2026-04-21T10:01:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'native-write',
+        parentUuid: 'assignment',
+        timestamp: '2026-04-21T10:02:00Z',
+        toolName: 'write',
+        input: { filePath: 'sum.cjs' },
+      }),
+      toolResultLogMessage({
+        uuid: 'write-result',
+        parentUuid: 'native-write',
+        sourceToolAssistantUUID: 'native-write',
+        timestamp: '2026-04-21T10:02:01Z',
+      }),
+      taskMarkerLogMessage({
+        uuid: 'complete',
+        parentUuid: 'assignment',
+        timestamp: '2026-04-21T10:03:00Z',
+        toolName: 'agent-teams_task_complete',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      textLogMessage({ uuid: 'peer-task', type: 'user', timestamp: '2026-04-21T10:03:01Z' }),
+      taskMarkerLogMessage({
+        uuid: 'peer-write',
+        parentUuid: 'peer-task',
+        timestamp: '2026-04-21T10:03:02Z',
+        toolName: 'write',
+        input: { filePath: 'peer.cjs' },
+      }),
+      taskMarkerLogMessage({
+        uuid: 'later-same-task-marker',
+        parentUuid: 'peer-task',
+        timestamp: '2026-04-21T10:03:03Z',
+        toolName: 'agent-teams_task_add_comment',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      textLogMessage({
+        uuid: 'assignment-final',
+        parentUuid: 'assignment',
+        timestamp: '2026-04-21T10:03:04Z',
+      }),
+    ];
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((projected) => [
+        { id: 'chunk', kind: 'assistant', messages: projected },
+      ]),
+    };
+    const source = new OpenCodeTaskLogStreamSource(
+      {
+        getOpenCodeTranscript: vi.fn(async () => ({
+          sessionId: 'session-opencode',
+          logProjection: { messages },
+        })),
+      } as never,
+      { resolve: async () => '/tmp/claude' },
+      { getTasks: async () => [createTask()], getDeletedTasks: async () => [] } as never,
+      chunkBuilder as never,
+      { readTaskRecords: async () => [] },
+      {
+        readTaskRecords: async () => [
+          {
+            taskId: 'task-a',
+            memberName: 'alice',
+            scope: 'member_session_window',
+            source: 'delivery_ledger',
+            sessionId: 'session-opencode',
+            startMessageUuid: 'assignment',
+            since: '2026-04-21T10:01:00Z',
+            until: '2026-04-21T10:08:00Z',
+          },
+        ],
+      }
+    );
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.source).toBe('opencode_runtime_attribution');
+    expect(response?.runtimeProjection?.nativeToolCount).toBe(1);
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls[0][0].map(
+        (message: { uuid: string }) => message.uuid
+      )
+    ).toEqual(['assignment', 'native-write', 'write-result', 'complete', 'assignment-final']);
+  });
+
   it('sanitizes OpenCode delivery retry envelopes from projected task log text', async () => {
     const bridge = {
       getOpenCodeTranscript: vi.fn(async () => ({

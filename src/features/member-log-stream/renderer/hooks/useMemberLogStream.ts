@@ -5,7 +5,7 @@ import {
   type MemberLogStreamResponse,
   normalizeMemberLogStreamResponse,
 } from '../../contracts';
-import { productionMemberLogObservationRendererPorts } from '../adapters/createMemberLogObservationRendererPorts';
+import { memberLogObservationPorts } from '../ports/MemberLogObservationRendererPorts';
 import { normalizeExecutionLogStream } from '../ui/executionLogStreamUtils';
 
 import type { MemberLogObservationRendererPorts } from '../ports/MemberLogObservationRendererPorts';
@@ -36,7 +36,7 @@ export interface UseMemberLogStreamResult {
 
 export function useMemberLogStream(input: UseMemberLogStreamInput): UseMemberLogStreamResult {
   const enabled = input.enabled ?? true;
-  const ports = input.ports ?? productionMemberLogObservationRendererPorts;
+  const ports = input.ports ?? memberLogObservationPorts;
   const [stream, setStream] = useState<MemberLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

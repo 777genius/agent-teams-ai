@@ -47,6 +47,7 @@ import {
   type TeamRuntimeLaunchArgsPlan,
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -112,6 +113,8 @@ export interface RunDeterministicLaunchSpawnFlowInput<
   launchIdentity: ProviderModelLaunchIdentity | null;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Configured settings captured before runtime default materialization. */
+  configuredMemberSpecs: TeamCreateRequest['members'];
   teammateRuntimeDisallowedTools: string;
 }
 
@@ -179,7 +182,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   tryCompleteAfterTimeout(run: TRun): Promise<boolean>;
   killTeamProcessAndWait(child: ChildProcess | null | undefined): Promise<void>;
   cleanupRun(run: TRun): void;
-  handleProcessExit(run: TRun, code: number | null): Promise<void>;
+  handleProcessExit(run: TRun, code: number | null): Promise<void> | void;
 }
 
 export function buildLaunchTeamMetaPayload(input: {
@@ -200,6 +203,7 @@ export function buildLaunchTeamMetaPayload(input: {
     model: syntheticRequest.model,
     effort: syntheticRequest.effort,
     fastMode: syntheticRequest.fastMode,
+    syncModelsWithLead: syntheticRequest.syncModelsWithLead,
     skipPermissions: syntheticRequest.skipPermissions,
     worktree: syntheticRequest.worktree,
     extraCliArgs: syntheticRequest.extraCliArgs,
@@ -217,13 +221,14 @@ export async function persistDeterministicLaunchMetadata<
     syntheticRequest: TeamCreateRequest;
     launchIdentity: ProviderModelLaunchIdentity | null;
     allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    configuredMemberSpecs: TeamCreateRequest['members'];
   },
   ports: Pick<
     RunDeterministicLaunchSpawnFlowPorts<TRun>,
     'teamMetaStore' | 'membersMetaStore' | 'nowMs'
   >
 ): Promise<void> {
-  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs } = input;
+  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs } = input;
   await ports.teamMetaStore.writeMeta(
     request.teamName,
     buildLaunchTeamMetaPayload({
@@ -235,11 +240,27 @@ export async function persistDeterministicLaunchMetadata<
   );
   await ports.membersMetaStore.updateMembers(
     request.teamName,
-    (existingMembers) =>
-      mergeMembersMetaForLaunch(
-        buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+    (existingMembers) => {
+      // Runtime materialization supplies workspaces, but never configured model authority.
+      const configuredByName = new Map(
+        configuredMemberSpecs.map((member) => [member.name.trim().toLowerCase(), member])
+      );
+      const membersForPersistence = allEffectiveMemberSpecs.map((member) => {
+        const configured = configuredByName.get(member.name.trim().toLowerCase());
+        return {
+          ...member,
+          providerId: configured?.providerId,
+          providerBackendId: configured?.providerBackendId,
+          model: configured?.model,
+          effort: configured?.effort,
+          fastMode: configured?.fastMode,
+        };
+      });
+      return mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(membersForPersistence)),
         existingMembers
-      ),
+      );
+    },
     {
       providerBackendId: syntheticRequest.providerBackendId,
     }
@@ -368,6 +389,7 @@ export async function persistDeterministicLaunchMetadataOrCleanup<
     syntheticRequest: TeamCreateRequest;
     launchIdentity: ProviderModelLaunchIdentity | null;
     allEffectiveMemberSpecs: TeamCreateRequest['members'];
+    configuredMemberSpecs: TeamCreateRequest['members'];
     run: TRun;
     runId: string;
     provisioningEnv: DeterministicLaunchSpawnEnvResolution;
@@ -412,66 +434,79 @@ export function registerDeterministicLaunchChildHandlers<
   > & { logger?: RuntimeLaunchLogger }
 ): void {
   const { run, child } = input;
-  run.timeoutHandle = ports.setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete && run.child === child) {
-      run.finalizingByTimeout = true;
-      void (async () => {
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-        if (readyOnTimeout) {
-          return;
-        }
-        if (
-          run.provisioningComplete ||
-          run.cancelRequested ||
-          run.processKilled ||
-          run.child !== child
-        ) {
-          run.finalizingByTimeout = false;
-          return;
-        }
+  scheduleProvisioningRunTimeout(
+    run,
+    getProvisioningRunTimeoutMs(run),
+    () => {
+      if (!run.processKilled && !run.provisioningComplete && run.child === child) {
+        run.finalizingByTimeout = true;
+        void (async () => {
+          if (
+            run.provisioningComplete ||
+            run.cancelRequested ||
+            run.processKilled ||
+            run.processClosed ||
+            run.child !== child
+          ) {
+            run.finalizingByTimeout = false;
+            return;
+          }
 
-        run.processKilled = true;
-        try {
-          await ports.killTeamProcessAndWait(child);
-        } catch {
-          run.finalizingByTimeout = false;
+          run.processKilled = true;
+          try {
+            await ports.killTeamProcessAndWait(child);
+          } catch {
+            if (run.cancelRequested || run.child !== child) return;
+            run.finalizingByTimeout = false;
+            const progress = ports.updateProgress(
+              run,
+              'failed',
+              'Failed to confirm timed-out CLI termination (launch)',
+              {
+                error:
+                  'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+                cliLogsTail: extractCliLogsFromRun(run),
+              }
+            );
+            run.onProgress(progress);
+            return;
+          }
+          if (run.cancelRequested || run.child !== child) return;
+          run.processClosed = true;
+          if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
+            run.finalizingByTimeout = false;
+            const cleanupProgress = ports.updateProgress(
+              run,
+              'failed',
+              'Timed-out launch stopped; helper cleanup will be retried',
+              {
+                error:
+                  'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
+                cliLogsTail: extractCliLogsFromRun(run),
+              }
+            );
+            run.onProgress(cleanupProgress);
+            return;
+          }
+          if (run.cancelRequested || run.child !== child) return;
+          if (await ports.tryCompleteAfterTimeout(run).catch(() => false)) return;
+          if (run.cancelRequested || run.child !== child) return;
           const progress = ports.updateProgress(
             run,
             'failed',
-            'Failed to confirm timed-out CLI termination (launch)',
+            'Timed out waiting for CLI (launch)',
             {
-              error:
-                'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+              error: 'Timed out waiting for CLI during team launch.',
               cliLogsTail: extractCliLogsFromRun(run),
             }
           );
           run.onProgress(progress);
-          return;
-        }
-        const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
-          error: 'Timed out waiting for CLI during team launch.',
-          cliLogsTail: extractCliLogsFromRun(run),
-        });
-        run.onProgress(progress);
-        if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
-          run.finalizingByTimeout = false;
-          const cleanupProgress = ports.updateProgress(
-            run,
-            'failed',
-            'Timed-out launch stopped; helper cleanup will be retried',
-            {
-              error:
-                'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(cleanupProgress);
-          return;
-        }
-        ports.cleanupRun(run);
-      })();
-    }
-  }, getProvisioningRunTimeoutMs(run));
+          ports.cleanupRun(run);
+        })();
+      }
+    },
+    ports
+  );
 
   child.once('error', (error: Error) => {
     const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {
@@ -488,7 +523,9 @@ export function registerDeterministicLaunchChildHandlers<
 
   child.once('close', (code: number | null) => {
     observeTeamProvisioningProcessClose(run, code, {
-      handleProcessExit: ports.handleProcessExit,
+      handleProcessExit: async (closedRun, closedCode) => {
+        await ports.handleProcessExit(closedRun, closedCode);
+      },
       updateProgress: ports.updateProgress,
       extractCliLogsFromRun,
       logger: ports.logger ?? {},
@@ -515,6 +552,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     launchIdentity,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
+    configuredMemberSpecs,
     teammateRuntimeDisallowedTools,
   } = input;
 
@@ -542,6 +580,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         request,
         run,
         effectiveMemberSpecs,
+        allEffectiveMemberSpecs,
         controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
         isValidationCancelled: () =>
           isDeterministicLaunchSpawnCancelled({
@@ -640,6 +679,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       syntheticRequest,
       launchIdentity,
       allEffectiveMemberSpecs,
+      configuredMemberSpecs,
       run,
       runId,
       provisioningEnv,

@@ -18,7 +18,6 @@ import { getConfiguredCliCommandLabel } from '../cliFlavor';
 import {
   createOpenCodePromptDeliveryWatchdogCoordinator,
   type OpenCodePromptDeliveryWatchdogCoordinator,
-  type OpenCodePromptDeliveryWatchdogCoordinatorPorts,
 } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { type OpenCodePromptDeliveryWatchdogScheduler } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 import { openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue } from '../opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
@@ -105,6 +104,10 @@ import {
   type TeamProvisioningMemberMcpLaunchConfigServiceHost,
 } from './TeamProvisioningMemberMcpLaunchConfig';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
+import {
+  createOpenCodeBootstrapWakePorts,
+  type TeamProvisioningOpenCodeDeliveryCompositionPorts,
+} from './TeamProvisioningOpenCodeDeliveryComposition';
 import {
   createOpenCodePromptDeliveryWatchdogSchedulerFromService,
   type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
@@ -212,27 +215,8 @@ export interface RuntimeAdapterRunByTeamEntry {
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
 }
 
-interface ServiceCompositionPorts {
+interface ServiceCompositionPorts extends TeamProvisioningOpenCodeDeliveryCompositionPorts {
   createOpenCodeRuntimeDeliveryBoundaryHost(): TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
-  memberWorkSyncProofBoundary: {
-    hasAcceptedMemberWorkSyncReport: OpenCodePromptDeliveryWatchdogCoordinatorPorts['hasAcceptedMemberWorkSyncReport'];
-  };
-  maybeSyncOpenCodeRuntimePermissionsAfterDelivery: OpenCodePromptDeliveryWatchdogCoordinatorPorts['maybeSyncRuntimePermissionsAfterDelivery'];
-  rememberOpenCodeRuntimePidFromBridge: OpenCodePromptDeliveryWatchdogCoordinatorPorts['rememberRuntimePidFromBridge'];
-  scheduleOpenCodePromptDeliveryWatchdog: NonNullable<
-    OpenCodePromptDeliveryWatchdogCoordinatorPorts['schedulePromptDeliveryWatchdog']
-  >;
-  canDeliverToOpenCodeRuntimeForTeam: OpenCodePromptDeliveryWatchdogCoordinatorPorts['canDeliverToTeamRuntime'];
-  tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog: OpenCodePromptDeliveryWatchdogCoordinatorPorts['recoverRuntimeLanesForWatchdog'];
-  openCodeStoppedLaneCleanup: {
-    stopOpenCodeRuntimeLanesForStoppedTeam: OpenCodePromptDeliveryWatchdogCoordinatorPorts['stopRuntimeLanesForStoppedTeam'];
-  };
-  createOpenCodePromptDeliveryLedger: OpenCodePromptDeliveryWatchdogCoordinatorPorts['createLedger'];
-  openCodeRuntimeRecoveryIdentity: {
-    resolveOpenCodeMembersForRuntimeLane: OpenCodePromptDeliveryWatchdogCoordinatorPorts['resolveMembersForRuntimeLane'];
-    resolveCurrentOpenCodeRuntimeRunId: OpenCodePromptDeliveryWatchdogCoordinatorPorts['resolveCurrentRuntimeRunId'];
-  };
-  logOpenCodePromptDeliveryEvent: OpenCodePromptDeliveryWatchdogCoordinatorPorts['logPromptDeliveryEvent'];
 }
 
 export interface TeamProvisioningServiceComposition {
@@ -692,6 +676,7 @@ export function createTeamProvisioningServiceComposition(
       watchdogScheduler: openCodePromptDeliveryWatchdogScheduler,
       schedulePromptDeliveryWatchdog: (input) =>
         servicePorts.scheduleOpenCodePromptDeliveryWatchdog(input),
+      notifyLeadTurnActivity: (input) => servicePorts.notifyOpenCodeLeadTurnActivity(input),
       canDeliverToTeamRuntime: (teamName) =>
         servicePorts.canDeliverToOpenCodeRuntimeForTeam(teamName),
       recoverRuntimeLanesForWatchdog: (teamName, options) =>
@@ -723,6 +708,9 @@ export function createTeamProvisioningServiceComposition(
           teamName,
           laneId
         ),
+      ...createOpenCodeBootstrapWakePorts(openCodeRuntimeDeliveryBoundaryHost, () =>
+        bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+      ),
       hasStableInboxMessageId,
       logPromptDeliveryEvent: (event, record, extra) =>
         servicePorts.logOpenCodePromptDeliveryEvent(event, record, extra),
@@ -747,6 +735,13 @@ export function createTeamProvisioningServiceComposition(
       getTeamsBasePath,
       nowIso,
       warn: (message) => logger.warn(message),
+      onBootstrapSessionCommitted: (input) => {
+        void openCodePromptDeliveryWatchdogCoordinator
+          .wakeAfterBootstrapCommit(input)
+          .catch((error) =>
+            logger.warn(`OpenCode bootstrap inbox wake failed: ${getErrorMessage(error)}`)
+          );
+      },
     }
   );
   installTarget.bootstrapEvidenceFacade = bootstrapEvidenceFacade;

@@ -127,15 +127,172 @@ function createReadyChatgptSnapshot(): CodexAccountSnapshotDto {
   };
 }
 
+function createDynamicCatalogProvider(): CliProviderStatus {
+  return {
+    ...createBaseCodexProvider(),
+    statusCheckOutcome: 'authoritative',
+    verificationState: 'verified',
+    modelCatalogRefreshState: 'ready',
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'codex',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
+      defaultModelId: 'gpt-5.4',
+      defaultLaunchModel: 'gpt-5.4',
+      models: [
+        {
+          id: 'gpt-5.4',
+          launchModel: 'gpt-5.4',
+          displayName: 'GPT-5.4',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+          defaultReasoningEffort: 'medium',
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        },
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  };
+}
+
+function createAuthoritativeBaseCodexProvider(): CliProviderStatus {
+  return {
+    ...createDynamicCatalogProvider(),
+    authenticated: true,
+    authMethod: 'chatgpt',
+    statusCheckOutcome: 'authoritative',
+    verificationState: 'verified',
+  };
+}
+
 describe('mergeCodexProviderStatusWithSnapshot', () => {
-  it('upgrades stale codex provider auth/runtime state from the live snapshot', () => {
+  it.each([
+    ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
+    [
+      'stale',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, status: 'stale' as const },
+      },
+    ],
+    [
+      'stale',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, status: 'stale' as const },
+        modelCatalogRefreshState: 'error' as const,
+      },
+    ],
+    [
+      'mismatched',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          providerId: 'opencode' as const,
+        },
+      },
+    ],
+    ['loading', { modelCatalogRefreshState: 'loading' as const }],
+    [
+      'invalid',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          fetchedAt: '',
+        },
+      },
+    ],
+  ])(
+    'does not restore launch authority from a ready account snapshot when the dynamic catalog is %s',
+    (_label, overrides) => {
+      const merged = mergeCodexProviderStatusWithSnapshot(
+        { ...createDynamicCatalogProvider(), ...overrides },
+        createReadyChatgptSnapshot()
+      );
+
+      expect(merged).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'verified',
+        capabilities: { teamLaunch: false },
+        connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+      });
+      expect(
+        merged.availableBackends?.find((option) => option.id === 'codex-native')
+      ).toMatchObject({
+        available: true,
+        state: 'ready',
+      });
+    }
+  );
+
+  it('does not restore launch authority from a ready snapshot when exact-ready provider status is non-authoritative', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
-      createBaseCodexProvider(),
+      {
+        ...createDynamicCatalogProvider(),
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        capabilities: {
+          ...createDynamicCatalogProvider().capabilities,
+          teamLaunch: false,
+        },
+      },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+    });
+  });
+
+  it('does not create authentication or team-launch authority from an account snapshot', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      {
+        ...createDynamicCatalogProvider(),
+        authenticated: false,
+        authMethod: null,
+        capabilities: {
+          ...createDynamicCatalogProvider().capabilities,
+          teamLaunch: false,
+        },
+      },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+    });
+  });
+
+  it('preserves authoritative provider auth while merging snapshot display evidence', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      createAuthoritativeBaseCodexProvider(),
       createReadyChatgptSnapshot()
     );
 
     expect(merged.authenticated).toBe(true);
     expect(merged.authMethod).toBe('chatgpt');
+    expect(merged.capabilities.teamLaunch).toBe(true);
     expect(merged.statusMessage).toBe('ChatGPT account ready');
     expect(merged.resolvedBackendId).toBe('codex-native');
     expect(merged.connection?.codex?.managedAccount?.email).toBe('belief@example.com');
@@ -150,7 +307,118 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     });
   });
 
-  it('clears a stale runtime-missing provider once the live snapshot is ready', () => {
+  it('revokes authoritative provider auth and launch when the account snapshot disallows launch', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(createAuthoritativeBaseCodexProvider(), {
+      ...createReadyChatgptSnapshot(),
+      launchAllowed: false,
+      launchIssueMessage: 'The Codex account is no longer authorized.',
+    });
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: false } },
+    });
+  });
+
+  it('preserves a logged-out account catalog only as stale display evidence', () => {
+    const provider = createAuthoritativeBaseCodexProvider();
+    const merged = mergeCodexProviderStatusWithSnapshot(provider, {
+      ...createReadyChatgptSnapshot(),
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+      launchReadinessState: 'missing_auth',
+      managedAccount: null,
+      apiKey: {
+        available: false,
+        source: null,
+        sourceLabel: null,
+      },
+      requiresOpenaiAuth: true,
+      localAccountArtifactsPresent: false,
+      localActiveChatgptAccountPresent: false,
+      rateLimits: null,
+    });
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+      modelCatalog: {
+        ...provider.modelCatalog,
+        status: 'stale',
+      },
+      connection: {
+        codex: {
+          effectiveAuthMode: null,
+          launchAllowed: false,
+          launchReadinessState: 'missing_auth',
+          managedAccount: null,
+        },
+      },
+    });
+    expect(merged.models).toEqual(provider.models);
+    expect(merged.availableBackends?.find((option) => option.id === 'codex-native')).toMatchObject({
+      available: false,
+      state: 'authentication-required',
+    });
+  });
+
+  it.each([
+    ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
+    [
+      'expired',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          staleAt: '2026-08-29T00:00:00.000Z',
+        },
+      },
+    ],
+    [
+      'malformed',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, fetchedAt: '' },
+      },
+    ],
+  ])('preserves authoritative auth but revokes launch when catalog evidence is %s', (_label, overrides) => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      { ...createAuthoritativeBaseCodexProvider(), ...overrides },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      connection: { codex: { launchAllowed: true } },
+    });
+    expect(merged.modelCatalog?.status ?? null).toBe(overrides.modelCatalog === null ? null : 'stale');
+  });
+
+  it('keeps authoritative auth but revokes launch when live capability is disabled', () => {
+    const provider = createAuthoritativeBaseCodexProvider();
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      { ...provider, capabilities: { ...provider.capabilities, teamLaunch: false } },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: true } },
+    });
+  });
+
+  it('keeps a runtime-missing provider fail-closed when the live snapshot is ready', () => {
     const baseProvider = createBaseCodexProvider();
     const baseConnection = baseProvider.connection!;
     const merged = mergeCodexProviderStatusWithSnapshot(
@@ -195,11 +463,12 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     );
 
     expect(merged.supported).toBe(true);
-    expect(merged.authenticated).toBe(true);
-    expect(merged.verificationState).toBe('verified');
+    expect(merged.authenticated).toBe(false);
+    expect(merged.authMethod).toBe(null);
+    expect(merged.verificationState).toBe('error');
     expect(merged.statusMessage).toBe('ChatGPT account ready');
-    expect(merged.capabilities.teamLaunch).toBe(true);
-    expect(merged.capabilities.oneShot).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(false);
+    expect(merged.capabilities.oneShot).toBe(false);
     expect(merged.connection?.codex?.appServerState).toBe('healthy');
     expect(merged.connection?.codex?.launchReadinessState).toBe('ready_chatgpt');
     expect(merged.availableBackends?.find((option) => option.id === 'codex-native')).toMatchObject({
@@ -213,7 +482,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
   it('hydrates codex connection truth even when the stale provider payload had no connection block', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
       {
-        ...createBaseCodexProvider(),
+        ...createAuthoritativeBaseCodexProvider(),
         connection: null,
       },
       createReadyChatgptSnapshot()
@@ -290,7 +559,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
   });
 
   it('preserves an active Codex custom provider endpoint label through snapshot merge', () => {
-    const provider = createBaseCodexProvider();
+    const provider = createAuthoritativeBaseCodexProvider();
     const customProvider = {
       enabled: true,
       active: true,

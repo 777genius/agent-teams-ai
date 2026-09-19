@@ -1,4 +1,3 @@
-import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -28,19 +27,14 @@ import {
   type LocalServerModelMetadata,
 } from './localServerRuntimeApi';
 import {
-  assertOpenCodeInlineConfigOverrideSafe,
   createOpenCodeGlobalConfigEnvironmentResolver,
-  getOpenCodeGlobalConfigOverrideConflict,
-  OPENCODE_GLOBAL_CONFIG_FILENAMES,
-  OPENCODE_PROJECT_CONFIG_CANDIDATES,
-  type OpenCodeInlineConfigWriteContext,
+  readOpenCodeConfigTarget,
 } from './openCodeGlobalConfigOverrides';
 import {
   buildLocalProviderConfigureError,
   buildLocalProviderProbeError,
   createModelRecord,
   hasDuplicateObjectProperties,
-  isPathInside,
   type LocalModelConfigMetadata,
   type LocalProviderConfigWriteInput,
   type LocalProviderConfigWriteResult,
@@ -76,7 +70,6 @@ import type {
   RuntimeLocalProviderProbeResponse,
   RuntimeLocalProviderScanInput,
   RuntimeLocalProviderScanResponse,
-  RuntimeLocalProviderScopeDto,
 } from '../../contracts';
 import type { RuntimeLocalProviderConnectorPort } from '../../core/application';
 
@@ -93,14 +86,6 @@ interface OpenCodeLocalProviderConnectorOptions {
   readonly environment?: NodeJS.ProcessEnv | (() => NodeJS.ProcessEnv);
   readonly now?: () => number;
   readonly privateNetworkApprovalStore?: LocalProviderPrivateNetworkApprovalStore;
-}
-
-interface OpenCodeConfigTarget {
-  readonly scope: RuntimeLocalProviderScopeDto;
-  readonly projectPath?: string;
-  readonly configPath: string;
-  readonly raw: string | null;
-  readonly mode?: number;
 }
 
 interface ModelProbeOutcome {
@@ -143,7 +128,12 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       return this.listError('invalid-input', 'Local provider id is invalid.');
     }
     try {
-      const configTarget = await this.readConfigTarget(input.scope, input.projectPath);
+      const configTarget = await readOpenCodeConfigTarget({
+        scope: input.scope,
+        projectPath: input.projectPath,
+        homePath: this.homePath,
+        getEnvironment: this.getEnvironment,
+      });
       if (!configTarget.raw) {
         return {
           schemaVersion: 1,
@@ -205,6 +195,11 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                       .map(({ key }) => normalizeRuntimeLocalProviderModelId(key))
                       .filter((modelId): modelId is string => Boolean(modelId))
                   : [];
+              const configuredModelReasoningEffort = readConfiguredModelReasoningEffort({
+                configTree,
+                providerId,
+                modelsNode,
+              });
               const routePrefix = `${providerId}/`;
               const isDefault = configuredDefaultModel?.startsWith(routePrefix) ?? false;
               const smallModelId = configuredSmallModel?.startsWith(routePrefix)
@@ -219,6 +214,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                 baseUrl: target.baseUrl,
                 hasConfiguredApiKey,
                 configuredModelIds,
+                configuredModelReasoningEffort,
                 configuredDefaultModelId,
                 isDefault,
                 smallModelId,
@@ -253,6 +249,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                 baseUrl: configured.baseUrl,
                 hasConfiguredApiKey: configured.hasConfiguredApiKey,
                 configuredModelIds: configured.configuredModelIds,
+                configuredModelReasoningEffort: configured.configuredModelReasoningEffort,
                 defaultModelId: configured.configuredDefaultModelId,
                 smallModelId: configured.smallModelId,
                 isDefault: configured.isDefault,
@@ -283,6 +280,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
               baseUrl: configured.baseUrl,
               hasConfiguredApiKey: false,
               configuredModelIds: configured.configuredModelIds,
+              configuredModelReasoningEffort: configured.configuredModelReasoningEffort,
               defaultModelId: liveDefaultStillAvailable
                 ? configured.configuredDefaultModelId
                 : (configured.configuredDefaultModelId ?? probe.models[0]?.id ?? null),
@@ -672,7 +670,14 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private async writeConfigNow(
     input: LocalProviderConfigWriteInput
   ): Promise<LocalProviderConfigWriteResult> {
-    const configTarget = await this.readConfigTarget(input.scope, input.projectPath, true, input);
+    const configTarget = await readOpenCodeConfigTarget({
+      scope: input.scope,
+      projectPath: input.projectPath,
+      homePath: this.homePath,
+      getEnvironment: this.getEnvironment,
+      ensureGlobalDirectory: true,
+      inlineContext: input,
+    });
     const configPath = configTarget.configPath;
     const raw = configTarget.raw ?? '{}\n';
     const isNewConfig = configTarget.raw === null;
@@ -795,191 +800,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     return { configPath, modelIds: persistedModelIds };
   }
 
-  private readConfigTarget(
-    scope: RuntimeLocalProviderScopeDto,
-    projectPath: string | null | undefined,
-    ensureGlobalDirectory = false,
-    inlineContext?: OpenCodeInlineConfigWriteContext
-  ): Promise<OpenCodeConfigTarget> {
-    assertOpenCodeInlineConfigOverrideSafe(this.getEnvironment(), inlineContext);
-    return scope === 'global'
-      ? this.readGlobalConfig(ensureGlobalDirectory)
-      : this.readProjectConfig(projectPath);
-  }
-
-  private async readGlobalConfig(ensureDirectory: boolean): Promise<OpenCodeConfigTarget> {
-    let realHomePath: string;
-    try {
-      const homeStat = await fs.stat(this.homePath);
-      if (!homeStat.isDirectory()) throw new Error('not-directory');
-      realHomePath = await fs.realpath(this.homePath);
-    } catch {
-      throw new LocalProviderOperationError(
-        'config-invalid',
-        'The user home directory is not available for the global OpenCode config.'
-      );
-    }
-
-    const overrideConflict = await getOpenCodeGlobalConfigOverrideConflict(
-      this.getEnvironment(),
-      realHomePath
-    );
-    if (overrideConflict) throw overrideConflict;
-
-    let configDirectory = realHomePath;
-    for (const segment of ['.config', 'opencode']) {
-      configDirectory = path.join(configDirectory, segment);
-      try {
-        const stat = await fs.lstat(configDirectory);
-        if (stat.isSymbolicLink()) {
-          throw new LocalProviderOperationError(
-            'config-conflict',
-            'The global OpenCode config directory is a symbolic link and must be updated manually.'
-          );
-        }
-        if (!stat.isDirectory()) {
-          throw new LocalProviderOperationError(
-            'config-conflict',
-            'The global OpenCode config path is not a directory.'
-          );
-        }
-      } catch (error) {
-        if (error instanceof LocalProviderOperationError) throw error;
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw new LocalProviderOperationError(
-            'config-invalid',
-            'Could not inspect the global OpenCode config directory.'
-          );
-        }
-        if (!ensureDirectory) {
-          return {
-            scope: 'global',
-            configPath: path.join(realHomePath, '.config', 'opencode', 'opencode.json'),
-            raw: null,
-          };
-        }
-        await fs.mkdir(configDirectory, { mode: 0o700 });
-      }
-    }
-
-    const realConfigDirectory = await fs.realpath(configDirectory);
-    if (!isPathInside(realHomePath, realConfigDirectory)) {
-      throw new LocalProviderOperationError(
-        'config-conflict',
-        'The global OpenCode config resolves outside the user home directory.'
-      );
-    }
-
-    const existingConfigs: Array<{ path: string; mode: number }> = [];
-    for (const filename of OPENCODE_GLOBAL_CONFIG_FILENAMES) {
-      const candidate = path.join(realConfigDirectory, filename);
-      try {
-        const stat = await fs.lstat(candidate);
-        if (stat.isSymbolicLink()) {
-          throw new LocalProviderOperationError(
-            'config-conflict',
-            'The global OpenCode config is a symbolic link and must be updated manually.'
-          );
-        }
-        if (stat.isFile()) {
-          existingConfigs.push({ path: candidate, mode: stat.mode & 0o777 });
-        }
-      } catch (error) {
-        if (error instanceof LocalProviderOperationError) throw error;
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw new LocalProviderOperationError(
-            'config-invalid',
-            'Could not inspect the global OpenCode config.'
-          );
-        }
-      }
-    }
-    if (existingConfigs.length > 1) {
-      throw new LocalProviderOperationError(
-        'config-conflict',
-        'Both global opencode.json and opencode.jsonc were found. Keep one config file and retry.'
-      );
-    }
-    const existingConfig = existingConfigs[0];
-    const configPath = existingConfig?.path ?? path.join(realConfigDirectory, 'opencode.json');
-    return {
-      scope: 'global',
-      configPath,
-      raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
-      mode: existingConfig?.mode,
-    };
-  }
-
-  private async readProjectConfig(
-    projectPathInput: string | null | undefined
-  ): Promise<OpenCodeConfigTarget> {
-    const projectPath = projectPathInput?.trim();
-    if (!projectPath) {
-      throw new LocalProviderOperationError(
-        'project-required',
-        'Select a project before loading local providers.'
-      );
-    }
-    let realProjectPath: string;
-    try {
-      const stat = await fs.stat(projectPath);
-      if (!stat.isDirectory()) throw new Error('not-directory');
-      realProjectPath = await fs.realpath(projectPath);
-    } catch {
-      throw new LocalProviderOperationError(
-        'project-required',
-        'The selected project directory is not available.'
-      );
-    }
-
-    const existingConfigs: Array<{ path: string; mode: number }> = [];
-    for (const relativePath of OPENCODE_PROJECT_CONFIG_CANDIDATES) {
-      const candidate = path.join(realProjectPath, relativePath);
-      try {
-        const stat = await fs.lstat(candidate);
-        if (stat.isSymbolicLink()) {
-          throw new LocalProviderOperationError(
-            'config-conflict',
-            'The OpenCode config is a symbolic link and must be updated manually.'
-          );
-        }
-        if (stat.isFile()) {
-          const realConfigPath = await fs.realpath(candidate);
-          if (!isPathInside(realProjectPath, realConfigPath)) {
-            throw new LocalProviderOperationError(
-              'config-conflict',
-              'The OpenCode config resolves outside the selected project and must be updated manually.'
-            );
-          }
-          existingConfigs.push({ path: candidate, mode: stat.mode & 0o777 });
-        }
-      } catch (error) {
-        if (error instanceof LocalProviderOperationError) throw error;
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw new LocalProviderOperationError(
-            'config-invalid',
-            'Could not inspect the OpenCode project config.'
-          );
-        }
-      }
-    }
-    if (existingConfigs.length > 1) {
-      throw new LocalProviderOperationError(
-        'config-conflict',
-        'Multiple OpenCode project configs were found. Keep one config file and retry.'
-      );
-    }
-    const existingConfig = existingConfigs[0];
-    const configPath = existingConfig?.path ?? path.join(realProjectPath, 'opencode.json');
-    return {
-      scope: 'project',
-      projectPath: realProjectPath,
-      configPath,
-      raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
-      mode: existingConfig?.mode,
-    };
-  }
-
   private listError(
     code: RuntimeLocalProviderErrorCodeDto,
     message: string,
@@ -994,6 +814,39 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   ): RuntimeLocalProviderScanResponse {
     return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
   }
+}
+
+/**
+ * Reads `options.reasoningEffort` for every configured model of one provider.
+ * Only models that set it explicitly get an entry; the rest are left to the
+ * server default, which is what OpenCode itself sends them with.
+ */
+function readConfiguredModelReasoningEffort(input: {
+  configTree: JsoncNode;
+  providerId: string;
+  modelsNode: JsoncNode | undefined;
+}): Record<string, string> {
+  // A model id is a config key, so it can be the name of an inherited member.
+  // In a null-prototype record `__proto__` is a stored entry instead of a setter
+  // call, and a lookup for an unconfigured `constructor` stays undefined.
+  const configuredModelReasoningEffort = Object.create(null) as Record<string, string>;
+  if (input.modelsNode?.type !== 'object') return configuredModelReasoningEffort;
+  for (const { key } of readObjectEntries(input.modelsNode)) {
+    const modelId = normalizeRuntimeLocalProviderModelId(key);
+    if (!modelId) continue;
+    const reasoningEffort = readStringNode(
+      findNodeAtLocation(input.configTree, [
+        'provider',
+        input.providerId,
+        'models',
+        key,
+        'options',
+        'reasoningEffort',
+      ])
+    )?.trim();
+    if (reasoningEffort) configuredModelReasoningEffort[modelId] = reasoningEffort;
+  }
+  return configuredModelReasoningEffort;
 }
 
 function parseConfigTree(raw: string): JsoncNode {

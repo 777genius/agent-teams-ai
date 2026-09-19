@@ -1,5 +1,6 @@
 import {
   createTeamProvisioningLaunchSlice,
+  createTeamProvisioningProgressSlice,
   type TeamLaunchParams,
   type TeamProvisioningLaunchMessageEntry,
   type TeamProvisioningLaunchStoreState,
@@ -8,9 +9,11 @@ import {
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamProvisioningProgress } from '@shared/types';
+import type { TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';
 
 type MessageEntry = TeamProvisioningLaunchMessageEntry;
+type TeamLaunchParamsFixture = TeamLaunchParams &
+  Pick<TeamLaunchRequest, keyof TeamLaunchParams>;
 interface AnalyticsContext {
   source: 'create' | 'launch';
 }
@@ -283,53 +286,140 @@ describe('createTeamProvisioningLaunchSlice', () => {
     await launching;
   });
 
-  it('does not roll back newer params or a newer run after an early launch failure', async () => {
-    const deferred = createDeferred<{ runId: string }>();
+  it('does not roll back newer params or report an error after a stale launch rejection', async () => {
+    const older = createDeferred<{ runId: string }>();
+    const newer = createDeferred<{ runId: string }>();
     const previousParams: TeamLaunchParams = {
       providerId: 'anthropic',
       model: 'sonnet',
       limitContext: false,
     };
-    const newerParams: TeamLaunchParams = {
+    const newerParams = {
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'gpt-5.6',
       effort: 'high',
+      fastMode: undefined,
       limitContext: true,
-    };
+    } satisfies TeamLaunchParamsFixture;
     const harness = createHarness(
       createState({
         launchParamsByTeam: { 'sandbox-team': previousParams },
       }),
       {
-        launch: vi.fn(() => deferred.promise),
+        launch: vi
+          .fn()
+          .mockImplementationOnce(() => older.promise)
+          .mockImplementationOnce(() => newer.promise),
       }
     );
 
-    const launching = harness.slice.launchTeam({
+    const olderLaunch = harness.slice.launchTeam({
       teamName: 'sandbox-team',
       cwd: '/Users/test/sandbox-project',
       providerId: 'anthropic',
       model: 'opus',
     });
-    harness.setState({
-      currentProvisioningRunIdByTeam: { 'sandbox-team': 'run-newer' },
-      launchParamsByTeam: { 'sandbox-team': newerParams },
-      provisioningRuns: {
-        ...harness.getState().provisioningRuns,
-        'run-newer': createProgress('run-newer', 'spawning'),
-      },
+    const newerLaunch = harness.slice.launchTeam({
+      teamName: 'sandbox-team',
+      cwd: '/Users/test/sandbox-project',
+      ...newerParams,
     });
+    const newerPendingRunId = harness.getState().currentProvisioningRunIdByTeam['sandbox-team'];
 
     const failure = new Error('launch IPC failed');
-    deferred.reject(failure);
-    await expect(launching).rejects.toBe(failure);
+    older.reject(failure);
+    await expect(olderLaunch).rejects.toBe(failure);
 
-    expect(harness.getState().launchParamsByTeam['sandbox-team']).toBe(newerParams);
-    expect(harness.getState().currentProvisioningRunIdByTeam['sandbox-team']).toBe('run-newer');
-    expect(harness.getState().provisioningRuns['run-newer']).toBeDefined();
-    expect(harness.getState().provisioningErrorByTeam['sandbox-team']).toBe(failure.message);
+    expect(harness.getState().launchParamsByTeam['sandbox-team']).toEqual(newerParams);
+    expect(harness.getState().currentProvisioningRunIdByTeam['sandbox-team']).toBe(
+      newerPendingRunId
+    );
+    expect(harness.getState().provisioningRuns[newerPendingRunId!]).toBeDefined();
+    expect(harness.getState().provisioningErrorByTeam).not.toHaveProperty('sandbox-team');
     expect(harness.analytics.recordIpcFailure).toHaveBeenCalledWith({ source: 'launch' }, failure);
+
+    newer.resolve({ runId: 'run-newer' });
+    await expect(newerLaunch).resolves.toBe('run-newer');
   });
+
+  it(
+    'cleans up a rejected fixed-clock retry after delayed progress replaces its pending run',
+    async () => {
+      const older = createDeferred<{ runId: string }>();
+      const retry = createDeferred<{ runId: string }>();
+      const harness = createHarness(createState(), {
+        launch: vi
+          .fn()
+          .mockImplementationOnce(() => older.promise)
+          .mockImplementationOnce(() => retry.promise),
+      });
+      const progressSlice = createTeamProvisioningProgressSlice({
+        analytics: {
+          noteRefreshFanout: vi.fn(),
+          recordStepTransition: vi.fn(),
+          recordTerminalProgress: vi.fn(),
+        },
+        refresh: {
+          fetchMemberSpawnStatuses: vi.fn().mockResolvedValue(undefined),
+          fetchTeamAgentRuntime: vi.fn().mockResolvedValue(undefined),
+          fetchTeams: vi.fn().mockResolvedValue(undefined),
+          getSurface: vi.fn(() => ({
+            hasSelectedTeamData: false,
+            selected: false,
+            visible: false,
+          })),
+          refreshTeamData: vi.fn().mockResolvedValue(undefined),
+          selectTeam: vi.fn().mockResolvedValue(undefined),
+        },
+        runtime: { clearFreshness: vi.fn() },
+        state: {
+          getState: () => harness.getState(),
+          setState: (update) => {
+            const current = harness.getState();
+            const progressUpdate = typeof update === 'function' ? update(current) : update;
+            harness.setState(
+              progressUpdate as Partial<TeamProvisioningLaunchStoreState<MessageEntry>>
+            );
+          },
+        },
+      });
+
+      const olderLaunch = harness.slice.launchTeam({
+        teamName: 'sandbox-team',
+        cwd: '/Users/test/sandbox-project',
+      });
+      const olderFailure = new Error('older launch failed');
+      older.reject(olderFailure);
+      await expect(olderLaunch).rejects.toBe(olderFailure);
+
+      const retryLaunch = harness.slice.launchTeam({
+        teamName: 'sandbox-team',
+        cwd: '/Users/test/sandbox-project',
+      });
+      const retryPendingRunId = harness.getState().currentProvisioningRunIdByTeam['sandbox-team'];
+      const delayedOlderProgress = createProgress('run-older', 'spawning');
+      expect(delayedOlderProgress.startedAt).toBe(
+        harness.getState().provisioningStartedAtFloorByTeam['sandbox-team']
+      );
+      progressSlice.onProvisioningProgress(delayedOlderProgress);
+
+      expect(harness.getState().currentProvisioningRunIdByTeam['sandbox-team']).toBe('run-older');
+      expect(harness.getState().provisioningRuns).not.toHaveProperty(retryPendingRunId!);
+
+      const retryFailure = new Error('retry launch failed');
+      retry.reject(retryFailure);
+      await expect(retryLaunch).rejects.toBe(retryFailure);
+
+      expect(harness.getState().currentProvisioningRunIdByTeam).not.toHaveProperty('sandbox-team');
+      expect(harness.getState().currentRuntimeRunIdByTeam).not.toHaveProperty('sandbox-team');
+      expect(harness.getState().provisioningRuns).not.toHaveProperty('run-older');
+      expect(harness.getState().ignoredProvisioningRunIds['run-older']).toBe('sandbox-team');
+      expect(harness.getState().provisioningErrorByTeam['sandbox-team']).toBe(
+        retryFailure.message
+      );
+    }
+  );
 
   it('does not overwrite newer launch params when an older launch response arrives late', async () => {
     const older = createDeferred<{ runId: string }>();

@@ -1,5 +1,5 @@
 /** Persisted SQLite format, advanced only by the append-only worker migration ledger. */
-export const INTERNAL_STORAGE_SCHEMA_VERSION = 30;
+export const INTERNAL_STORAGE_SCHEMA_VERSION = 31;
 
 export const INTERNAL_STORAGE_DIRNAME = 'storage';
 export const INTERNAL_STORAGE_DATABASE_FILENAME = 'app.db';
@@ -59,6 +59,17 @@ export interface MemberWorkSyncStatusRecord {
   statusJson: string;
 }
 
+/** Internal worker contract; expected JSON is the exact stored payload, not a normalized DTO. */
+export interface MemberWorkSyncStatusCompareAndWriteInput {
+  expectedStatusJson: string | null;
+  record: MemberWorkSyncStatusRecord;
+  events: MemberWorkSyncMetricEventRecord[];
+}
+
+export type MemberWorkSyncStatusCompareAndWriteResult =
+  | { committed: true; record: MemberWorkSyncStatusRecord }
+  | { committed: false; current: MemberWorkSyncStatusRecord | null };
+
 export interface MemberWorkSyncReportIntentRecord {
   teamName: string;
   id: string;
@@ -70,7 +81,12 @@ export interface MemberWorkSyncReportIntentRecord {
   processedAt: string | null;
   resultCode: string | null;
   requestJson: string;
+  journalJson?: string | null;
 }
+
+export type MemberWorkSyncReportJournalOpResult =
+  | { state: 'present'; record: MemberWorkSyncReportIntentRecord; projectionDegraded: false }
+  | { state: 'absent' | 'conflict' | 'corrupt' | 'write_failed' | 'commit_unknown' };
 
 export interface MemberWorkSyncOutboxItemRecord {
   teamName: string;

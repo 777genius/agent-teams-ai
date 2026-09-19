@@ -3,6 +3,12 @@ import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
+import {
+  isActiveRunOnlyWatermark,
+  resolveActiveRunAuthority,
+  resolveActiveRunWatermark,
+  resolveCommittedBatchAuthority,
+} from './RuntimeStoreManifestAuthority';
 import { VersionedJsonStore, VersionedJsonStoreError } from './VersionedJsonStore';
 
 import type { FileLockOptions } from '../../fileLock';
@@ -128,6 +134,7 @@ export interface RuntimeStoreWriteBatch {
   capabilitySnapshotId: string | null;
   behaviorFingerprint: string | null;
   reason: RuntimeStoreWriteBatchReason;
+  authorityMode?: 'metadata-only';
   startedAt: string;
   completedAt: string | null;
   state: 'preparing' | 'committing' | 'committed' | 'failed';
@@ -280,51 +287,27 @@ export class RuntimeStoreManifestStore {
     runId: string | null;
     capabilitySnapshotId?: string | null;
     behaviorFingerprint?: string | null;
+    expectedRunId?: string;
   }): Promise<RuntimeStoreManifest> {
-    const normalizedRunId = input.runId?.trim() || null;
     const result = await this.store.updateLocked((manifest) => {
-      const normalizedCapabilitySnapshotId =
-        input.capabilitySnapshotId === undefined
-          ? manifest.activeCapabilitySnapshotId
-          : input.capabilitySnapshotId?.trim() || null;
-      const normalizedBehaviorFingerprint =
-        input.behaviorFingerprint === undefined
-          ? manifest.activeBehaviorFingerprint
-          : input.behaviorFingerprint?.trim() || null;
+      const authority = resolveActiveRunAuthority(manifest, input);
       const changed =
-        manifest.activeRunId !== normalizedRunId ||
-        manifest.activeCapabilitySnapshotId !== normalizedCapabilitySnapshotId ||
-        manifest.activeBehaviorFingerprint !== normalizedBehaviorFingerprint ||
-        this.isActiveRunOnlyWatermark(manifest);
+        manifest.activeRunId !== authority.activeRunId ||
+        manifest.activeCapabilitySnapshotId !== authority.activeCapabilitySnapshotId ||
+        manifest.activeBehaviorFingerprint !== authority.activeBehaviorFingerprint ||
+        isActiveRunOnlyWatermark(manifest);
       if (!changed) {
         return manifest;
       }
 
       return {
         ...manifest,
-        activeRunId: normalizedRunId,
-        activeCapabilitySnapshotId: normalizedCapabilitySnapshotId,
-        activeBehaviorFingerprint: normalizedBehaviorFingerprint,
-        highWatermark: this.resolveActiveRunWatermark(manifest),
+        ...authority,
+        highWatermark: resolveActiveRunWatermark(manifest),
         updatedAt: this.clock().toISOString(),
       };
     });
     return result.data;
-  }
-
-  private isActiveRunOnlyWatermark(manifest: RuntimeStoreManifest): boolean {
-    return (
-      manifest.highWatermark > 0 &&
-      manifest.entries.length === 0 &&
-      manifest.lastCommittedBatchId === null
-    );
-  }
-
-  private resolveActiveRunWatermark(manifest: RuntimeStoreManifest): number {
-    if (this.isActiveRunOnlyWatermark(manifest)) {
-      return 0;
-    }
-    return manifest.highWatermark;
   }
 
   async markBatchPreparing(batch: RuntimeStoreWriteBatch): Promise<void> {
@@ -356,9 +339,7 @@ export class RuntimeStoreManifestStore {
 
       return {
         ...manifest,
-        activeRunId: batch.runId,
-        activeCapabilitySnapshotId: batch.capabilitySnapshotId,
-        activeBehaviorFingerprint: batch.behaviorFingerprint,
+        ...resolveCommittedBatchAuthority(manifest, batch),
         highWatermark: manifest.highWatermark + 1,
         lastCommittedBatchId: batch.batchId,
         lastPreparingBatchId:
@@ -456,19 +437,29 @@ export class RuntimeStoreBatchWriter {
     capabilitySnapshotId: string | null;
     behaviorFingerprint: string | null;
     reason: RuntimeStoreWriteBatchReason;
+    authorityMode?: 'metadata-only';
     writes: {
       descriptor: RuntimeStoreDescriptor;
       data: unknown;
     }[];
   }): Promise<RuntimeStoreWriteBatch> {
+    const authority =
+      input.authorityMode === 'metadata-only'
+        ? resolveCommittedBatchAuthority(await this.manifestStore.read(), input)
+        : null;
     const clock = this.options.clock ?? (() => new Date());
     const batch: RuntimeStoreWriteBatch = {
       batchId: this.options.batchIdFactory?.() ?? `opencode-store-batch-${randomUUID()}`,
       teamName: input.teamName,
       runId: input.runId,
-      capabilitySnapshotId: input.capabilitySnapshotId,
-      behaviorFingerprint: input.behaviorFingerprint,
+      capabilitySnapshotId: authority
+        ? authority.activeCapabilitySnapshotId
+        : input.capabilitySnapshotId,
+      behaviorFingerprint: authority
+        ? authority.activeBehaviorFingerprint
+        : input.behaviorFingerprint,
       reason: input.reason,
+      ...(input.authorityMode ? { authorityMode: input.authorityMode } : {}),
       startedAt: clock().toISOString(),
       completedAt: null,
       state: 'preparing',
@@ -1112,6 +1103,7 @@ function isWriteBatch(value: unknown): value is RuntimeStoreWriteBatch {
     isNullableString(value.runId) &&
     isNullableString(value.capabilitySnapshotId) &&
     isNullableString(value.behaviorFingerprint) &&
+    (value.authorityMode === undefined || value.authorityMode === 'metadata-only') &&
     isWriteBatchReason(value.reason) &&
     isNonEmptyString(value.startedAt) &&
     isNullableString(value.completedAt) &&

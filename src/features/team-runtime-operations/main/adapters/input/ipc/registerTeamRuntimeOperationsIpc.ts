@@ -1,5 +1,6 @@
 import {
   TEAM_ALIVE_LIST,
+  TEAM_FORCE_STOP,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
@@ -24,6 +25,7 @@ import type { TeamRuntimeOperationsIpcRegistrar } from '../../../composition/Tea
 
 const TEAM_RUNTIME_OPERATION_CHANNELS = [
   TEAM_ALIVE_LIST,
+  TEAM_FORCE_STOP,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_RUNTIME_LOGS,
   TEAM_GET_LOGS_FOR_TASK,
@@ -62,6 +64,7 @@ export function registerTeamRuntimeOperationsIpc(
   );
   ipcMain.handle(TEAM_SKIP_MEMBER_FOR_LAUNCH, commands.skipMemberForLaunch.bind(commands));
   ipcMain.handle(TEAM_STOP, commands.stopTeam.bind(commands));
+  ipcMain.handle(TEAM_FORCE_STOP, commands.forceStopTeam.bind(commands));
   ipcMain.handle(TEAM_KILL_PROCESS, commands.killProcess.bind(commands));
 }
 

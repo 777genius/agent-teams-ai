@@ -230,6 +230,14 @@ function attachAliveRun(
   (service as unknown as { runs: Map<string, unknown> }).runs.set(runId, {
     runId,
     teamName,
+    progress: {
+      runId,
+      teamName,
+      state: (opts?.provisioningComplete ?? true) ? 'ready' : 'spawning',
+      message: 'Relay fixture runtime',
+      startedAt: '2026-02-23T09:59:00.000Z',
+      updatedAt: '2026-02-23T09:59:00.000Z',
+    },
     request: {
       teamName,
       members: [{ name: 'team-lead', role: 'team-lead' }],
@@ -254,6 +262,7 @@ function attachAliveRun(
     },
     processKilled: false,
     cancelRequested: false,
+    leadActivityState: 'idle',
     provisioningComplete: opts?.provisioningComplete ?? true,
     leadRelayCapture: null,
   });
@@ -506,9 +515,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
         causedByRecoveryMessageId: 'runtime-recovery-2',
       })
     );
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'stream-json result: error'
-    );
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('stream-json result: error');
     vi.mocked(console.warn).mockClear();
   });
 
@@ -1085,9 +1092,11 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('Message kind: member_work_sync_nudge');
     expect(payload).toContain('Work-sync intent: agenda_sync');
     expect(payload).toContain('it is actionable work-sync control traffic');
-    expect(payload).toContain('A member_work_sync_status call alone is incomplete');
     expect(payload).toContain(
-      'Call member_work_sync_status with teamName=\\"my-team\\", memberName=\\"team-lead\\", controlUrl=\\"http://127.0.0.1:43123\\"'
+      'A member_work_sync_status or mcp__agent-teams__member_work_sync_status call alone is incomplete'
+    );
+    expect(payload).toContain(
+      'Call member_work_sync_status or mcp__agent-teams__member_work_sync_status with teamName=\\"my-team\\", memberName=\\"team-lead\\", controlUrl=\\"http://127.0.0.1:43123\\"'
     );
     expect(payload).toContain('call member_work_sync_report');
     expect(payload).toContain('controlUrl=\\"http://127.0.0.1:43123\\"');
@@ -1318,6 +1327,14 @@ Messages:
     (service as unknown as { runs: Map<string, unknown> }).runs.set('run-1', {
       runId: 'run-1',
       teamName,
+      progress: {
+        runId: 'run-1',
+        teamName,
+        state: 'ready',
+        message: 'Relay fixture runtime',
+        startedAt: '2026-02-23T09:59:00.000Z',
+        updatedAt: '2026-02-23T09:59:00.000Z',
+      },
       request: {
         teamName,
         members: [{ name: 'team-lead', role: 'team-lead' }],
@@ -1334,6 +1351,7 @@ Messages:
       child: { stdin: { writable: true, write: writeSpy } },
       processKilled: false,
       cancelRequested: false,
+      leadActivityState: 'idle',
       provisioningComplete: true,
       leadRelayCapture: null,
     });
@@ -2853,7 +2871,7 @@ Messages:
     expect(rows[0].read).toBe(false);
   });
 
-  it('keeps accepted OpenCode prompt rows pending without warning when response proof is terminally absent', async () => {
+  it('reports accepted OpenCode terminal proof failures while preserving the unread inbox row', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     hoisted.files.set(
@@ -2897,7 +2915,7 @@ Messages:
       relayed: 0,
       attempted: 1,
       delivered: 0,
-      failed: 0,
+      failed: 1,
       lastDelivery: {
         delivered: false,
         accepted: true,
@@ -2906,9 +2924,11 @@ Messages:
         reason: 'empty_assistant_turn',
       },
     });
-    expect(vi.mocked(console.warn)).not.toHaveBeenCalledWith(
-      expect.stringContaining('OpenCode inbox relay failed')
+    expect(vi.mocked(console.warn)).toHaveBeenCalledOnce();
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      '[my-team] OpenCode inbox relay failed for jack/opencode-accepted-terminal-empty-1: empty_assistant_turn'
     );
+    vi.mocked(console.warn).mockClear();
     const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
     expect(rows[0].read).toBe(false);
   });
@@ -3068,6 +3088,7 @@ Messages:
       .mockImplementation(() => undefined);
     const records: any[] = [];
     const ledger = {
+      getByInboxMessage: vi.fn(async () => records[0] ?? null),
       getActiveForMember: vi.fn(async () => null),
       ensurePending: vi.fn(async (input: Record<string, unknown>) => {
         const record = {
@@ -3420,7 +3441,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',
@@ -3438,7 +3459,7 @@ Messages:
         semanticallySufficient: true,
       })
     );
-    expect(advisoryInvalidator).toHaveBeenCalledWith(teamName, 'jack');
+    expect(advisoryInvalidator).toHaveBeenCalledWith(teamName, 'jack', undefined);
     expect(teamChangeEmitter).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'member-advisory',
@@ -3517,7 +3538,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',
@@ -4116,7 +4137,7 @@ Messages:
     }
   });
 
-  it('times out a hung existing lead relay in-flight lock', async () => {
+  it('retains a hung lead relay lock after timeout to prevent duplicate delivery', async () => {
     vi.useFakeTimers();
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -4137,7 +4158,7 @@ Messages:
             leadInboxRelayInFlight: Map<string, Promise<number>>;
           }
         ).leadInboxRelayInFlight.has(teamName)
-      ).toBe(false);
+      ).toBe(true);
       expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
         'lead_inbox_relay_timed_out'
       );

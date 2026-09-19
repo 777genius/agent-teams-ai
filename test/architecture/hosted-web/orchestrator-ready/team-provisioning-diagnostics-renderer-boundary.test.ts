@@ -15,6 +15,7 @@ const diagnosticsTransportPath =
 
 const expectedTypeExports = [
   'LeadRuntimeLaunchSettings',
+  'MemberSettingsRelaunchDraft',
   'TeamLaunchAnalyticsCoordinatorDependencies',
   'TeamLaunchAnalyticsContext',
   'TeamLaunchParams',
@@ -78,8 +79,11 @@ const expectedValueExports = [
   'TeamMemberSettingsDialogBridge',
   'TeamRuntimeFreshnessCoordinator',
   'applyLeadRuntimeSettingsToLaunchParams',
+  'applyMemberSettingsRelaunch',
   'areTeamLaunchParamsEqual',
+  'assertMemberSettingsRelaunchRoster',
   'buildLaunchParamsFromRuntimeRequest',
+  'buildMemberSettingsRelaunchIntent',
   'createProductTeamLaunchAnalyticsCoordinator',
   'createTeamListProvisioningPorts',
   'createTeamMemberSettingsRendererApi',
@@ -89,6 +93,7 @@ const expectedValueExports = [
   'createTeamRuntimeObservationSlice',
   'createTeamToolApprovalRendererSlice',
   'extractBaseModel',
+  'filterMemberSettingsRelaunchInputs',
   'loadTeamToolApprovalSettingsIntoRenderer',
   'normalizePersistedTeamLaunchParams',
   'refreshTeamMemberSettings',

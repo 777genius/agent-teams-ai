@@ -64,6 +64,53 @@ describe('TeamProvisioningPromptBuilders', () => {
     );
   });
 
+  it('tells a non-solo lead not to execute the tasks it delegated', () => {
+    const prompt = buildPersistentLeadContext({
+      teamName: 'signal-ops',
+      leadName: 'lead',
+      isSolo: false,
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'tom', role: 'developer' },
+      ] as TeamCreateRequest['members'],
+    });
+
+    expect(prompt).toContain('Delegated work boundary (CRITICAL');
+    expect(prompt).toContain('DELEGATION-FIRST does not end once tasks are created');
+    expect(prompt).toContain('the ONLY work you may do yourself is coordination');
+    // The boundary is about ownership, not about any particular runtime.
+    expect(prompt).not.toMatch(/gpu|local model/i);
+    // The rule keeps its escape hatch: an explicit user instruction or solo mode.
+    expect(prompt).toContain('Exception: the user explicitly tells you to do that work yourself');
+    // The first-move rule names the same two escape hatches, so the two rules cannot disagree.
+    expect(prompt).toContain(
+      'Do NOT start implementing yourself unless the user explicitly tells you to do that work yourself, or the team is truly in SOLO MODE (no teammates).'
+    );
+  });
+
+  it('marks the comment id in the report example as a placeholder in every briefing', () => {
+    const briefings = [
+      buildMemberSpawnPrompt({ name: 'tom', role: 'developer' }, 'Tom', 'signal-ops', 'lead'),
+      buildReconnectMemberSpawnPrompt(
+        { name: 'tom', role: 'developer' },
+        'signal-ops',
+        'lead',
+        true
+      ),
+    ];
+
+    for (const briefing of briefings) {
+      // The example used a made-up eight-character id, and a model that treats
+      // the example as the template sends that literal string to the lead - a
+      // report pointing at a comment that does not exist.
+      expect(briefing).not.toContain('e5f6a7b8');
+      expect(briefing).toContain(
+        'Example visible message (<comment-id> is a placeholder - never send it literally, use the id you saved)'
+      );
+      expect(briefing).toContain('Full details in task comment <comment-id>.');
+    }
+  });
+
   it('allows reconnecting members to self-claim only unassigned tasks', () => {
     const prompt = buildReconnectMemberSpawnPrompt(
       { name: 'tom', role: 'developer' },

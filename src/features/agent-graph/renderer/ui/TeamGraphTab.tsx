@@ -36,6 +36,7 @@ const TeamGraphOverlay = lazy(() =>
 
 export interface TeamGraphTabProps {
   teamName: string;
+  announcementsVisible: boolean;
   isActive?: boolean;
   isPaneFocused?: boolean;
   taskNotificationPort: TeamGraphTaskNotificationPort;
@@ -43,6 +44,7 @@ export interface TeamGraphTabProps {
 
 export const TeamGraphTab = ({
   teamName,
+  announcementsVisible,
   isActive = true,
   isPaneFocused = false,
   taskNotificationPort,
@@ -240,6 +242,7 @@ export const TeamGraphTab = ({
         <Suspense fallback={null}>
           <TeamGraphOverlay
             teamName={teamName}
+            announcementsVisible={announcementsVisible}
             taskNotificationPort={taskNotificationPort}
             onClose={() => setFullscreen(false)}
             sidebarVisible={effectiveSidebarVisible}

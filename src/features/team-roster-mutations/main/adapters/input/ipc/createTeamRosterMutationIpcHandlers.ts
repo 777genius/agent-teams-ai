@@ -57,6 +57,15 @@ export function createTeamRosterMutationIpcHandlers(feature: TeamRosterMutationF
     replaceMembers: async (_event, teamName, request) => {
       const normalized = normalizeReplaceMembersInput(teamName, request);
       if (!normalized.valid) return { success: false, error: normalized.error };
+      if (normalized.value.memberSettingsRelaunch !== undefined) {
+        return execute('replaceMembers', () =>
+          feature.replaceMembersWithSettingsRelaunch(
+            normalized.value.teamName,
+            normalized.value.members,
+            normalized.value.memberSettingsRelaunch
+          )
+        );
+      }
       return execute('replaceMembers', () =>
         feature.replaceMembers.execute(normalized.value.teamName, normalized.value.members)
       );

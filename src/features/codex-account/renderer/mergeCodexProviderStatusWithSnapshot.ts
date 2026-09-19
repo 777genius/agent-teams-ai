@@ -1,3 +1,8 @@
+import {
+  hasAuthoritativeProviderLaunchEvidence,
+  hasAuthoritativeProviderStatusEvidence,
+} from '@shared/utils/providerStatusAuthority';
+
 import type { CodexAccountSnapshotDto } from '../contracts';
 import type { CliProviderStatus } from '@shared/types';
 
@@ -144,21 +149,6 @@ function mergeCodexNativeBackendOption(
   });
 }
 
-function mergeCodexCapabilitiesWithSnapshot(
-  provider: CliProviderStatus,
-  snapshot: CodexAccountSnapshotDto
-): CliProviderStatus['capabilities'] {
-  if (!snapshot.launchAllowed) {
-    return provider.capabilities;
-  }
-
-  return {
-    ...provider.capabilities,
-    teamLaunch: true,
-    oneShot: true,
-  };
-}
-
 export function mergeCodexProviderStatusWithSnapshot(
   provider: CliProviderStatus,
   snapshot: CodexAccountSnapshotDto | null
@@ -184,23 +174,10 @@ export function mergeCodexProviderStatusWithSnapshot(
     codex: null,
   };
 
-  return {
+  const mergedProvider: CliProviderStatus = {
     ...provider,
     supported:
       provider.supported || isCodexBootstrapPlaceholder(provider) || snapshot.launchAllowed,
-    authenticated: snapshot.launchAllowed,
-    capabilities: mergeCodexCapabilitiesWithSnapshot(provider, snapshot),
-    authMethod:
-      snapshot.effectiveAuthMode === 'chatgpt'
-        ? 'chatgpt'
-        : snapshot.effectiveAuthMode === 'api_key'
-          ? 'api_key'
-          : null,
-    verificationState: snapshot.launchAllowed
-      ? 'verified'
-      : snapshot.appServerState === 'runtime-missing' || snapshot.appServerState === 'incompatible'
-        ? 'error'
-        : 'unknown',
     statusMessage: getProviderStatusMessage(snapshot, provider.statusMessage),
     selectedBackendId: CODEX_NATIVE_BACKEND_ID,
     resolvedBackendId: CODEX_NATIVE_BACKEND_ID,
@@ -241,5 +218,27 @@ export function mergeCodexProviderStatusWithSnapshot(
         },
       },
     },
+  };
+
+  const hasStatusAuthority = hasAuthoritativeProviderStatusEvidence(provider);
+  const snapshotRevokesAuthority = snapshot.launchAllowed === false;
+  const preserveProviderAuthentication = !snapshotRevokesAuthority && hasStatusAuthority;
+  if (!snapshotRevokesAuthority && hasAuthoritativeProviderLaunchEvidence(provider)) {
+    return mergedProvider;
+  }
+
+  return {
+    ...mergedProvider,
+    authenticated: preserveProviderAuthentication ? provider.authenticated : false,
+    authMethod: preserveProviderAuthentication ? provider.authMethod : null,
+    verificationState: hasStatusAuthority
+      ? provider.verificationState
+      : provider.verificationState === 'error' || provider.verificationState === 'offline'
+        ? provider.verificationState
+        : 'unknown',
+    capabilities: { ...mergedProvider.capabilities, teamLaunch: false },
+    modelCatalog: mergedProvider.modelCatalog
+      ? { ...mergedProvider.modelCatalog, status: 'stale' }
+      : null,
   };
 }

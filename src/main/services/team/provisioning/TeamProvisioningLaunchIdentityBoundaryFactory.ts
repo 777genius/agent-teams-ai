@@ -1,3 +1,4 @@
+import { createCodexChatGptModelSupportProbe } from './TeamProvisioningCodexChatGptModelGate';
 import {
   type LaunchIdentityResolutionPorts,
   readRuntimeProviderLaunchFacts,
@@ -69,6 +70,9 @@ export function createTeamProvisioningLaunchIdentityBoundary(
         anthropicFastModeDefault: deps.getAnthropicFastModeDefault(),
         getProviderLabel: deps.getProviderLabel,
       }),
+    probeCodexChatGptModelSupport: createCodexChatGptModelSupportProbe({
+      execCli: (binaryPath, args, options) => deps.execCli(binaryPath, args, options),
+    }),
   };
 
   const boundary: TeamProvisioningLaunchIdentityBoundary = {

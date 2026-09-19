@@ -1,6 +1,7 @@
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import { describe, expect, it } from 'vitest';
 
+import { TeamLaunchValidationError } from '../TeamLaunchValidationError';
 import {
   createMixedSecondaryLaneStates,
   planRuntimeLanesOrThrow,
@@ -83,5 +84,35 @@ describe('TeamProvisioningRuntimeBootstrapDelivery', () => {
         member: { name: 'Grace' },
       },
     ]);
+  });
+
+  it('retypes lane-plan rejections as user-facing launch validation errors', () => {
+    const coordinator = createTeamRuntimeLaneCoordinator();
+    const run = () =>
+      planRuntimeLanesOrThrow(coordinator, {
+        leadProviderId: 'opencode',
+        members: [member('Ada', 'anthropic')],
+        hasOpenCodeRuntimeAdapter: true,
+      });
+
+    expect(run).toThrow(TeamLaunchValidationError);
+    expect(run).toThrow('Mixed teams with an OpenCode lead are not supported in this phase');
+  });
+
+  it('does not disguise unexpected coordinator failures as launch validation', () => {
+    const unexpected = new Error('coordinator exploded');
+    const coordinator = {
+      planProvisioningMembers: () => {
+        throw unexpected;
+      },
+    } as Pick<ReturnType<typeof createTeamRuntimeLaneCoordinator>, 'planProvisioningMembers'>;
+
+    expect(() =>
+      planRuntimeLanesOrThrow(coordinator, {
+        leadProviderId: 'codex',
+        members: [member('Ada', 'codex')],
+        hasOpenCodeRuntimeAdapter: true,
+      })
+    ).toThrowError(unexpected);
   });
 });

@@ -5,10 +5,11 @@ import {
 import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
-  createMemberWorkSyncFeature,
+  type MemberWorkSyncFeatureDeps,
 } from '@features/member-work-sync/main';
 import { MemberWorkSyncTeamChangeRouter } from '@features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter';
 import { TeamInboxMemberWorkSyncNudgeSink } from '@features/member-work-sync/main/adapters/output/TeamInboxMemberWorkSyncNudgeSink';
+import { createMemberWorkSyncFeature as createPublicMemberWorkSyncFeature } from '@features/member-work-sync/main/composition/createMemberWorkSyncFeature';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
@@ -19,13 +20,30 @@ import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/
 import { QuiescingMemberWorkSyncAuditJournal } from '@features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import { TeamTaskStallJournalWorkSyncCooldown } from '@main/services/team/TeamTaskStallJournalWorkSyncCooldown';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentity';
+
 const tempRoots: string[] = [];
+
+const noRecentWatchdogNudge = {
+  hasRecentNudge: async () => false,
+};
+
+function createMemberWorkSyncFeature(
+  deps: Omit<MemberWorkSyncFeatureDeps, 'watchdogCooldown'> &
+    Partial<Pick<MemberWorkSyncFeatureDeps, 'watchdogCooldown'>>
+) {
+  return createPublicMemberWorkSyncFeature({
+    watchdogCooldown: noRecentWatchdogNudge,
+    ...deps,
+  });
+}
 
 function createDeferred(): {
   promise: Promise<void>;
@@ -59,6 +77,7 @@ it('resumes a deleted same-name team only after config is materialized again', a
   const teamName = 'recreated-team';
   const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
   const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configReader: { getConfig: vi.fn(async () => null) } as never,
     taskReader: { getTasks: vi.fn(async () => []) } as never,
@@ -84,6 +103,36 @@ it('resumes a deleted same-name team only after config is materialized again', a
   }
 });
 
+it('replays pending reports when a team process or teammate spawn becomes active', async () => {
+  const listPendingReports = vi
+    .spyOn(JsonMemberWorkSyncStore.prototype, 'listPendingReports')
+    .mockResolvedValue([]);
+  const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
+    teamsBasePath: path.join(makeTempRoot(), 'teams'),
+    configReader: { getConfig: vi.fn(async () => null) } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+
+  try {
+    feature.noteTeamChange({ type: 'process', teamName: 'team-a' });
+    await vi.waitFor(() => expect(listPendingReports).toHaveBeenCalledWith('team-a'));
+    listPendingReports.mockClear();
+    feature.noteTeamChange({ type: 'member-spawn', teamName: 'team-b', detail: 'bob' });
+    await vi.waitFor(() => expect(listPendingReports).toHaveBeenCalledWith('team-b'));
+    listPendingReports.mockClear();
+    feature.noteTeamChange({ type: 'task', teamName: 'team-a', taskId: 'task-1' } as never);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(listPendingReports).not.toHaveBeenCalled();
+  } finally {
+    await feature.dispose();
+    listPendingReports.mockRestore();
+  }
+});
+
 it('creates a deleted tombstone when durable recovery completes without local preparation', async () => {
   const teamsBasePath = path.join(makeTempRoot(), 'teams');
   const teamName = 'recovered-team';
@@ -98,6 +147,7 @@ it('creates a deleted tombstone when durable recovery completes without local pr
     'enqueueStartupScan'
   );
   const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configFileAccess: configAccess,
     configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -163,6 +213,7 @@ it('ignores stale config access from an older deleted generation', async () => {
   const configAccess = vi.fn(() => staleConfigAccess.promise);
   const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
   const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configFileAccess: configAccess,
     configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -725,6 +776,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
       });
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: path.join(makeTempRoot(), 'teams'),
       configReader: { getConfig: vi.fn(async () => null) } as never,
       taskReader: { getTasks: vi.fn(async () => []) } as never,
@@ -773,6 +825,70 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('closes operation-gate admission before draining dispose', async () => {
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const close = vi.spyOn(gate, 'close');
+    const awaitIdle = vi.spyOn(gate, 'awaitIdle');
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath: path.join(makeTempRoot(), 'teams'),
+      configReader: { getConfig: vi.fn(async () => null) } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: { getState: vi.fn(async () => null) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      listLifecycleActiveTeamNames: async () => [],
+      operationGate: gate,
+    });
+    try {
+      await feature.dispose();
+      expect(close).toHaveBeenCalledOnce();
+      expect(awaitIdle).toHaveBeenCalledOnce();
+      expect(close.mock.invocationCallOrder[0]!).toBeLessThan(awaitIdle.mock.invocationCallOrder[0]!);
+      await expect(gate.run('team-a', async () => 'late')).rejects.toBeInstanceOf(
+        MemberWorkSyncTeamQuiescedError
+      );
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('retries turn-settled reconcile after backup quiescence instead of dropping it', async () => {
+    const gate = new MemberWorkSyncTeamOperationGate();
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath: path.join(makeTempRoot(), 'teams'),
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          teamName: 'team-a',
+          members: [{ name: 'bob' }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: { getState: vi.fn(async () => null) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      operationGate: gate,
+      queueQuietWindowMs: 1,
+    });
+    try {
+      const closure = gate.beginOwnedTeamQuiesce('team-a');
+      feature.noteTeamChange({
+        type: 'member-turn-settled',
+        teamName: 'team-a',
+        detail: JSON.stringify({ memberName: 'bob' }),
+      });
+      await waitForAssertion(() => {
+        const diagnostics = feature.getQueueDiagnostics();
+        expect(diagnostics.reconciled).toBe(0);
+        expect(diagnostics.failed).toBeGreaterThanOrEqual(1);
+        expect(diagnostics.dropped).toBe(0);
+        expect(diagnostics.queued + diagnostics.running).toBeGreaterThan(0);
+      });
+      closure.release();
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('rejects a late turn-settled enqueue after bounded scheduler disposal', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -793,6 +909,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       .mockResolvedValue(undefined);
     const queueStop = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'stop');
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(async () => null) } as never,
       taskReader: { getTasks: vi.fn(async () => []) } as never,
@@ -871,6 +988,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -923,6 +1041,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -984,6 +1103,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -1023,6 +1143,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -1093,6 +1214,69 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('dispatches a Continue nudge before returning success', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-continue-now';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      await expect(feature.refreshStatus({ teamName, memberName })).resolves.toMatchObject({
+        state: 'needs_sync',
+        shadow: { wouldNudge: true },
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      const continued = await feature.continueManually({
+        teamName,
+        memberName,
+        idempotencyKey: 'continue-now',
+      });
+      const intentId = continued.recoveryHealth?.unresolvedIntentId;
+      expect(intentId).toBeTruthy();
+      await expect(
+        fs.promises.readFile(path.join(teamsBasePath, teamName, 'inboxes', `${memberName}.json`), {
+          encoding: 'utf8',
+        })
+      ).resolves.toContain(intentId);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('keeps alias admission fenced until a destructive purge settles after resume', async () => {
     const teamsBasePath = path.join(makeTempRoot(), 'teams');
     const deletionIdentityId = '11111111-1111-4111-8111-111111111111';
@@ -1106,6 +1290,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       });
     const queueResumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
@@ -1202,6 +1387,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       'enqueueStartupScan'
     );
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
@@ -1300,6 +1486,185 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('releases every quiescence source when an abandoned preparation is aborted', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const abandonedIdentityId = '11111111-1111-4111-8111-111111111111';
+    const retryIdentityId = '33333333-3333-4333-8333-333333333333';
+    // The gate wait is the part with no deadline of its own: one wedged team
+    // operation parks it for good.
+    const gateIdle = createDeferred();
+    const awaitTeamIdle = vi
+      .spyOn(MemberWorkSyncTeamOperationGate.prototype, 'awaitTeamIdle')
+      .mockImplementation(() => gateIdle.promise);
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockResolvedValue(undefined);
+    const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+    const auditResumeTeam = vi.spyOn(QuiescingMemberWorkSyncAuditJournal.prototype, 'resumeTeam');
+    const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    const abandon = new AbortController();
+    let abandoned: Promise<void> | null = null;
+    let retry: Promise<void> | null = null;
+
+    try {
+      abandoned = feature.prepareTeamDeletion(' Team-A ', abandonedIdentityId, {
+        signal: abandon.signal,
+      });
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+
+      abandon.abort();
+      await expect(abandoned).rejects.toThrow('was abandoned before it completed');
+
+      // Everything the preparation quiesced is back before the retry runs.
+      expect(operationResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(auditResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      expect(routerResumeTeam).toHaveBeenCalledWith(' Team-A ');
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+
+      // A retry gets a preparation of its own rather than the abandoned promise,
+      // which may never settle.
+      retry = feature.prepareTeamDeletion(' Team-A ', retryIdentityId);
+      expect(retry).not.toBe(abandoned);
+
+      // Letting the abandoned wait finish must not carry it into the purge: the
+      // team is running again and only the retry owns the deletion now.
+      gateIdle.resolve();
+      await expect(retry).resolves.toBeUndefined();
+      expect(purgeTeam).toHaveBeenCalledOnce();
+      expect(purgeTeam).toHaveBeenCalledWith(' Team-A ', retryIdentityId);
+    } finally {
+      gateIdle.resolve();
+      await abandoned?.catch(() => undefined);
+      await retry?.catch(() => undefined);
+      await feature.dispose();
+      routerResumeTeam.mockRestore();
+      auditResumeTeam.mockRestore();
+      operationResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
+      awaitTeamIdle.mockRestore();
+    }
+  });
+
+  it('refuses a preparation whose signal is already aborted', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const beginTeamQuiesce = vi.spyOn(
+      MemberWorkSyncTeamOperationGate.prototype,
+      'beginTeamQuiesce'
+    );
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+
+    try {
+      // An abort that arrives before the listener exists would be ignored, and
+      // the team would be quiesced with nothing left to release it. Nothing is
+      // quiesced at all instead.
+      await expect(
+        feature.prepareTeamDeletion(' Team-A ', undefined, { signal: AbortSignal.abort() })
+      ).rejects.toThrow('was abandoned before it completed');
+      expect(beginTeamQuiesce).not.toHaveBeenCalled();
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).resolves.toEqual({ scheduled: false, reason: 'invalid' });
+    } finally {
+      await feature.dispose();
+      beginTeamQuiesce.mockRestore();
+    }
+  });
+
+  it('ignores an abort once the preparation has already succeeded', async () => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const deletionIdentityId = '11111111-1111-4111-8111-111111111111';
+    const purgeTeam = vi
+      .spyOn(BackendSelectingMemberWorkSyncStore.prototype, 'purgeTeam')
+      .mockResolvedValue(undefined);
+    const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
+      taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
+      kanbanManager: { getState: vi.fn(() => Promise.resolve(null)) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      internalStorageBackend: {
+        selector: {
+          select: vi.fn((_sqlite: unknown, json: unknown) => Promise.resolve(json)),
+          getBackendInfo: vi.fn(() => null),
+        },
+        gateway: {},
+      } as never,
+    });
+    const abandon = new AbortController();
+
+    try {
+      await expect(
+        feature.prepareTeamDeletion(' Team-A ', deletionIdentityId, { signal: abandon.signal })
+      ).resolves.toBeUndefined();
+
+      // Negative control for the abort above: a late abort of a preparation that
+      // already did its job must not hand the team back. Between prepare and
+      // complete the team is quiesced on purpose, because the destructive half
+      // of the deletion runs there.
+      abandon.abort();
+      expect(operationResumeTeam).not.toHaveBeenCalled();
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName: 'team-a',
+          memberName: '',
+          originalMessageId: '',
+        })
+      ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+      expect(purgeTeam).toHaveBeenCalledOnce();
+    } finally {
+      await feature.dispose();
+      operationResumeTeam.mockRestore();
+      purgeTeam.mockRestore();
+    }
+  });
+
   it('cancels and drains admitted scheduled delivery before purging the team', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -1328,6 +1693,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     vi.useFakeTimers();
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(() =>
@@ -1443,6 +1809,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       };
     });
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig,
@@ -1551,6 +1918,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         return [];
       });
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
       taskReader: { getTasks: vi.fn(() => Promise.resolve([])) } as never,
@@ -1607,6 +1975,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       })),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -1702,6 +2071,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let canDispatchNudges = false;
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -1778,6 +2148,74 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
+  it('observes stale member work before the team is ready for nudge dispatch', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const getTasks = vi.fn(async () => [
+      {
+        id: 'task-1',
+        displayId: '11111111',
+        subject: 'Ship sync',
+        status: 'pending',
+        owner: memberName,
+      },
+    ]);
+    const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks,
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      canDispatchNudges: vi.fn(async () => false),
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      expect(status.state).toBe('needs_sync');
+      const taskReadsAfterRefresh = getTasks.mock.calls.length;
+      const staleEvaluatedAt = new Date(Date.now() - 3 * 60_000).toISOString();
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.write({
+        ...status,
+        evaluatedAt: staleEvaluatedAt,
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 0,
+        delivered: 0,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      expect(getTasks.mock.calls.length).toBeGreaterThan(taskReadsAfterRefresh);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      const observed = await store.read({ teamName, memberName });
+      expect(Date.parse(observed?.evaluatedAt ?? '')).toBeGreaterThan(Date.parse(staleEvaluatedAt));
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('checks nudge dispatch readiness sequentially', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -1785,6 +2223,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     let releaseFirst!: () => void;
     const startedTeams: string[] = [];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async (teamName: string) => ({
@@ -1835,6 +2274,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -1895,6 +2335,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -2001,7 +2442,9 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-codex-status-only-recovery';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      recoveryAllocation: { enabled: true },
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -2137,7 +2580,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   });
 
   it.each(['idle_without_assistant_activity', 'timeout'])(
-    'delivers recovery when a delivered OpenCode nudge settles with prompt-owned %s',
+    'does not enqueue remaining-work when a delivered OpenCode nudge settles with %s',
     async (outcome) => {
       const claudeRoot = makeTempRoot();
       setClaudeBasePathOverride(claudeRoot);
@@ -2145,7 +2588,9 @@ describe('createMemberWorkSyncFeature composition', () => {
       const teamName = `team-opencode-${outcome.replace(/_/g, '-')}-recovery`;
       const memberName = 'bob';
       const feature = createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
+        recoveryAllocation: { enabled: true },
         configReader: {
           getConfig: vi.fn(async () => ({
             name: teamName,
@@ -2229,31 +2674,23 @@ describe('createMemberWorkSyncFeature composition', () => {
         await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
           invalid: 0,
           unresolved: 0,
-          ignored: 0,
+          ignored: 1,
         });
 
-        await waitForAssertion(async () => {
-          const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
-            (message) => message.messageKind === 'member_work_sync_nudge'
-          );
-          expect(nudges).toHaveLength(2);
-          expect(nudges[1]?.messageId).toContain('status-only');
-          expect(nudges[1]?.text).toContain('previous work-sync turn appears to have stopped');
-          const status = await feature.getStatus({ teamName, memberName });
-          expect(status.diagnostics).toEqual(
-            expect.arrayContaining(['runtime_stall:same_agenda_still_needs_sync'])
-          );
-        });
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
 
         const processedMeta = JSON.parse(
           await fs.promises.readFile(
             path.join(spoolRoot!, 'processed', `${eventFileName}.meta.json`),
             'utf8'
           )
-        ) as { outcome?: string; event?: { outcome?: string } };
+        ) as { outcome?: string; reason?: string };
         expect(processedMeta).toMatchObject({
-          outcome: 'enqueued',
-          event: { outcome },
+          outcome: 'ignored',
+          reason: `opencode_non_terminal_outcome:${outcome}`,
         });
       } finally {
         await feature.dispose();
@@ -2279,6 +2716,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const teamName = 'team-opencode-turnid-only-ignored';
       const memberName = 'bob';
       const feature = createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -2401,6 +2839,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -2500,6 +2939,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -2599,7 +3039,9 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      recoveryAllocation: { enabled: true },
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -2720,6 +3162,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -2844,6 +3287,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -2968,6 +3412,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3076,7 +3521,9 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      recoveryAllocation: { enabled: true },
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -3178,6 +3625,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3272,6 +3720,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3366,6 +3815,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3477,6 +3927,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       ),
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3609,6 +4060,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3733,6 +4185,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const safetyMemberName = 'alice';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -3862,6 +4315,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     let canDispatchNudges = false;
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -3962,12 +4416,12 @@ describe('createMemberWorkSyncFeature composition', () => {
       expect(dispatcherBlock).toMatchObject({
         event: 'nudge_skipped',
         diagnostics: expect.arrayContaining([
-          'delivery_readiness:would_nudge_rate_high',
-          'delivery_readiness:fingerprint_churn_high',
-          'delivery_readiness:report_rejection_rate_high',
+          'phase2_readiness:would_nudge_rate_high',
+          'phase2_readiness:fingerprint_churn_high',
+          'phase2_readiness:report_rejection_rate_high',
         ]),
         metadata: expect.objectContaining({
-          deliveryReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
+          phase2ReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
           reportRejectionRate: 1,
           maxReportRejectionRate: 0.2,
         }),
@@ -4031,6 +4485,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [' ', teamName, teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -4110,6 +4565,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         deliveryReadiness: {
@@ -4150,9 +4606,11 @@ describe('createMemberWorkSyncFeature composition', () => {
         memberName,
         metricKinds: ['would_nudge', 'fingerprint_changed'],
       });
+      await feature.dispose();
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         deliveryReadiness: {
@@ -4226,6 +4684,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -4314,6 +4773,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         },
       });
       expect(repairedMetricsFile.recentEvents?.length).toBeGreaterThan(0);
+      feature = createFeature();
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         deliveryReadiness: {
           state: 'collecting_shadow_data',
@@ -4409,6 +4869,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async (teamName: string) => ({
@@ -4599,6 +5060,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -4796,6 +5258,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -4876,9 +5339,13 @@ describe('createMemberWorkSyncFeature composition', () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(disposeSettled).toBe(false);
 
-      expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
-        error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
-      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'member work sync scheduled nudge dispatch failed',
+        expect.objectContaining({
+          teamName,
+          error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
+        })
+      );
       expect(
         Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
       ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
@@ -4988,6 +5455,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -5076,9 +5544,13 @@ describe('createMemberWorkSyncFeature composition', () => {
       await vi.advanceTimersByTimeAsync(120_000);
 
       const dispose = feature.dispose();
-      expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
-        error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
-      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'member work sync scheduled nudge dispatch failed',
+        expect.objectContaining({
+          teamName,
+          error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
+        })
+      );
 
       busyGateControl.release?.();
       busyGateControl.release = null;
@@ -5163,6 +5635,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -5254,6 +5727,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         deliveryReadiness: {
@@ -5360,6 +5834,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -5451,6 +5926,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       feature = createFeature(true);
       await vi.advanceTimersByTimeAsync(60_000);
       await feature.dispose();
+      feature = createFeature();
 
       await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
         deliveryReadiness: {
@@ -5519,6 +5995,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const targetMemberName = 'bob';
     let canDispatchNudges = false;
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -5687,6 +6164,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     };
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async (requestedTeamName: string) => ({
@@ -5804,6 +6282,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
           getConfig: vi.fn(async () => ({
@@ -5917,6 +6396,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6156,6 +6636,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6300,6 +6781,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let teamActive = true;
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6406,6 +6888,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6465,7 +6948,7 @@ describe('createMemberWorkSyncFeature composition', () => {
                 memberName,
                 status: 'pending',
                 reason: 'control_api_unavailable',
-                recordedAt: '2026-05-05T12:00:00.000Z',
+                recordedAt: new Date().toISOString(),
                 request: {
                   teamName,
                   memberName,
@@ -6552,6 +7035,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6698,6 +7182,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6801,6 +7286,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -6942,6 +7428,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7053,6 +7540,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let controlUrl: string | null = null;
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7142,14 +7630,18 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('respects watchdog cooldown and delivers after the retry window is due', async () => {
+  it('uses the injected watchdog cooldown and delivers after the retry window is due', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
     const teamName = 'team-a';
     const memberName = 'bob';
+    const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(teamsBasePath);
+    const getRecentNudgeCooldown = vi.spyOn(watchdogCooldown, 'getRecentNudgeCooldown');
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      watchdogCooldown,
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -7217,6 +7709,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
       });
       await waitForQueueIdle(feature);
+      expect(getRecentNudgeCooldown).toHaveBeenCalled();
 
       await fs.promises.writeFile(
         stallJournalPath,
@@ -7274,7 +7767,9 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
+      watchdogCooldown: new TeamTaskStallJournalWorkSyncCooldown(teamsBasePath),
       configReader: {
         getConfig: vi.fn(async () => ({
           name: teamName,
@@ -7412,6 +7907,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7479,6 +7975,20 @@ describe('createMemberWorkSyncFeature composition', () => {
           reportedAt: expiredReportedAt,
           expiresAt: expiredAt,
         },
+        lastAcceptedReport: {
+          ...acceptedStatus!.lastAcceptedReport!,
+          reportedAt: expiredReportedAt,
+          expiresAt: expiredAt,
+        },
+        ...(acceptedStatus!.pendingReportReceipt
+          ? {
+              pendingReportReceipt: {
+                ...acceptedStatus!.pendingReportReceipt,
+                acceptedAt: expiredReportedAt,
+                originalExpiresAt: expiredAt,
+              },
+            }
+          : {}),
       });
       await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
 
@@ -7502,6 +8012,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7560,6 +8071,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         ...acceptedStatus!,
         evaluatedAt: new Date(Date.now() - 7 * 60_000).toISOString(),
         report: legacyReport,
+        lastAcceptedReport: undefined,
       });
       await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
 
@@ -7583,6 +8095,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7637,7 +8150,8 @@ describe('createMemberWorkSyncFeature composition', () => {
         state: 'caught_up',
         diagnostics: expect.arrayContaining(['agenda_empty']),
       });
-      expect(repaired?.report).toBeUndefined();
+      expect(repaired?.report).toMatchObject({ accepted: true, state: 'still_working' });
+      expect(repaired?.lastAcceptedReport).toEqual(repaired?.report);
       expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toHaveLength(0);
     } finally {
       await feature.dispose();
@@ -7658,6 +8172,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       owner: string;
     }> = [];
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7731,6 +8246,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7787,7 +8303,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('refreshes expired fallback pending report tokens through the real HMAC validator', async () => {
+  it('rejects expired fallback proof through the real HMAC validator without renewing lease', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -7795,6 +8311,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     const storePaths = new MemberWorkSyncStorePaths(teamsBasePath);
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7829,7 +8346,10 @@ describe('createMemberWorkSyncFeature composition', () => {
     try {
       const status = await feature.refreshStatus({ teamName, memberName });
       expect(status.reportToken).toBeTruthy();
-      const expiredToken = await new HmacMemberWorkSyncReportTokenAdapter(storePaths).create({
+      const expiredToken = await new HmacMemberWorkSyncReportTokenAdapter(
+        storePaths,
+        createTestWorkSyncIdentity()
+      ).create({
         teamName,
         memberName,
         agendaFingerprint: status.agenda.fingerprint,
@@ -7851,21 +8371,16 @@ describe('createMemberWorkSyncFeature composition', () => {
 
       await expect(feature.replayPendingReports([teamName])).resolves.toEqual({
         processed: 1,
-        accepted: 1,
-        rejected: 0,
+        accepted: 0,
+        rejected: 1,
         superseded: 0,
       });
 
       const finalStatus = await feature.getStatus({ teamName, memberName });
       expect(finalStatus).toMatchObject({
-        state: 'still_working',
-        report: {
-          accepted: true,
-          state: 'still_working',
-          taskIds: ['task-1'],
-          source: 'mcp',
-        },
+        report: { accepted: false, rejectionCode: 'invalid_report_token' },
       });
+      expect(finalStatus.lastAcceptedReport).toBeUndefined();
       const memberReports = JSON.parse(
         await fs.promises.readFile(
           path.join(
@@ -7886,8 +8401,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       };
       expect(Object.values(memberReports.intents ?? {})).toContainEqual(
         expect.objectContaining({
-          status: 'accepted',
-          resultCode: 'accepted',
+          status: 'rejected',
+          resultCode: 'invalid_report_token',
           request: expect.objectContaining({ reportToken: expiredToken.token }),
         })
       );
@@ -7903,6 +8418,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -7968,6 +8484,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -8041,6 +8558,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let teamActive = true;
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
         getConfig: vi.fn(async () => ({
@@ -8100,6 +8618,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       members: [{ name: 'alice' }],
     }));
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: makeTempRoot(),
       configReader: {
         getConfig,
@@ -8124,6 +8643,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds Claude Stop hook settings with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
       taskReader: {} as never,
@@ -8160,6 +8680,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds Codex turn-settled environment with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
       taskReader: {} as never,
@@ -8183,6 +8704,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds OpenCode turn-settled environment with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
       taskReader: {} as never,
@@ -8218,4 +8740,67 @@ describe('createMemberWorkSyncFeature composition', () => {
       fs.promises.stat(path.join(root, '.member-work-sync/runtime-hooks/incoming'))
     ).resolves.toMatchObject({ mode: expect.any(Number) });
   });
+});
+
+it('uses the preexisting restore admission before its first normal status read', async () => {
+  const claudeRoot = makeTempRoot();
+  setClaudeBasePathOverride(claudeRoot);
+  const gate = new MemberWorkSyncTeamOperationGate();
+  const restore = gate.beginOwnedTeamQuiesce('team-a');
+  const getTasks = vi.fn(async () => []);
+  const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
+    teamsBasePath: getTeamsBasePath(),
+    operationGate: gate,
+    configReader: {
+      getConfig: vi.fn(async () => ({ name: 'team-a', members: [{ name: 'bob' }] })),
+    } as never,
+    taskReader: { getTasks } as never,
+    kanbanManager: {
+      getState: vi.fn(async () => ({ teamName: 'team-a', reviewers: [], tasks: {} })),
+    } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    isTeamActive: () => true,
+  });
+  try {
+    await expect(
+      feature.getStatus({ teamName: 'team-a', memberName: 'bob' })
+    ).rejects.toBeInstanceOf(MemberWorkSyncTeamQuiescedError);
+    expect(getTasks).not.toHaveBeenCalled();
+    restore.release();
+    await expect(
+      feature.getStatus({ teamName: 'team-a', memberName: 'bob' })
+    ).resolves.toMatchObject({ state: 'caught_up' });
+    expect(getTasks).toHaveBeenCalled();
+  } finally {
+    restore.release();
+    await feature.dispose();
+  }
+});
+
+it.each([false, true])('defers scheduler starts and respects disposed=%s', async (disposeFirst) => {
+  const drainStart = vi.spyOn(RuntimeTurnSettledDrainScheduler.prototype, 'start');
+  const dispatchStart = vi.spyOn(MemberWorkSyncNudgeDispatchScheduler.prototype, 'start');
+  const feature = createMemberWorkSyncFeature({
+    lifecycleIdentity: createTestWorkSyncIdentity(),
+    teamsBasePath: makeTempRoot(),
+    startBackground: false,
+    configReader: {} as never,
+    taskReader: {} as never,
+    kanbanManager: {} as never,
+    membersMetaStore: {} as never,
+    isTeamActive: () => false,
+    listLifecycleActiveTeamNames: async () => [],
+  });
+  try {
+    expect(drainStart).not.toHaveBeenCalled();
+    expect(dispatchStart).not.toHaveBeenCalled();
+    if (disposeFirst) await feature.dispose();
+    feature.startBackground();
+    feature.startBackground();
+    expect(drainStart).toHaveBeenCalledTimes(disposeFirst ? 0 : 1);
+    expect(dispatchStart).toHaveBeenCalledTimes(disposeFirst ? 0 : 1);
+  } finally {
+    await feature.dispose();
+  }
 });

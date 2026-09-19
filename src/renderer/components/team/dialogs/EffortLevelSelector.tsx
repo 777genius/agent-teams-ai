@@ -15,6 +15,12 @@ import type { TeamProviderId } from '@shared/types';
 export interface EffortLevelSelectorProps {
   value: string;
   onValueChange: (value: string) => void;
+  /**
+   * Called instead of onValueChange('') when the validation effect clears an effort the
+   * selected model cannot run. Lets the parent distinguish that programmatic reset from
+   * an explicit user choice of the Default option (which also arrives as '').
+   */
+  onAutoReset?: () => void;
   id?: string;
   providerId?: TeamProviderId;
   model?: string;
@@ -24,6 +30,7 @@ export interface EffortLevelSelectorProps {
 export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
   value,
   onValueChange,
+  onAutoReset,
   id,
   providerId,
   model,
@@ -56,8 +63,12 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
     if (!presentation.canValidateValue || !value || validValues.has(value)) {
       return;
     }
-    onValueChange('');
-  }, [onValueChange, presentation.canValidateValue, validValues, value]);
+    if (onAutoReset) {
+      onAutoReset();
+    } else {
+      onValueChange('');
+    }
+  }, [onAutoReset, onValueChange, presentation.canValidateValue, validValues, value]);
 
   return (
     <div className="mb-3">

@@ -5,6 +5,73 @@ import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMembe
 import type { TeamConfig, TeamTask, TeamTaskWithKanban } from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
+  it.each(['inherited', 'explicit', 'config-only', 'unrelated-meta', 'legacy-provider'] as const)(
+    'separates configured authority from effective config (%s)',
+    (kind) => {
+      const effective = {
+        name: 'Alice',
+        providerId: kind === 'legacy-provider' ? undefined : ('codex' as const),
+        provider: 'codex' as const,
+        model: 'effective-model',
+        effort: 'high' as const,
+        providerBackendId: 'codex-native' as const,
+        fastMode: 'on' as const,
+      };
+      const canonical =
+        kind === 'inherited'
+          ? { name: ' alice ' }
+          : {
+              name: ' alice ',
+              providerId: 'anthropic' as const,
+              model: 'saved-model',
+              effort: 'low' as const,
+              providerBackendId: 'auto' as const,
+              fastMode: 'off' as const,
+            };
+      const meta =
+        kind === 'config-only' || kind === 'legacy-provider'
+          ? []
+          : kind === 'unrelated-meta'
+            ? [{ name: 'Other' }]
+            : [canonical];
+      const member = new TeamMemberResolver()
+        .resolveMembers({ name: 'team', members: [effective] }, meta, [], [])
+        .find((member) => member.name === 'Alice')!;
+      expect(member).toMatchObject({
+        providerId: 'codex',
+        model: 'effective-model',
+        effort: 'high',
+        providerBackendId: 'codex-native',
+        selectedFastMode: 'on',
+      });
+      expect(member.configuredRuntimeSettings).toEqual(
+        kind === 'inherited'
+          ? {
+              providerId: undefined,
+              providerBackendId: undefined,
+              model: undefined,
+              effort: undefined,
+              fastMode: undefined,
+            }
+          : kind === 'explicit'
+            ? {
+                providerId: 'anthropic',
+                providerBackendId: 'auto',
+                model: 'saved-model',
+                effort: 'low',
+                fastMode: 'off',
+              }
+            : {
+                providerId: 'codex',
+                providerBackendId: 'codex-native',
+                model: 'effective-model',
+                effort: 'high',
+                fastMode: 'on',
+              }
+      );
+    }
+  );
+
   it('builds roster from config + meta + inbox only', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

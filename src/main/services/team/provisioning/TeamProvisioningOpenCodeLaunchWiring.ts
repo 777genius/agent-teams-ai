@@ -1,4 +1,5 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 
 import {
@@ -13,6 +14,11 @@ import {
   runOpenCodeWorktreeRootAggregateLaunch,
   type RunOpenCodeWorktreeRootAggregateLaunchInput,
 } from './TeamProvisioningOpenCodeAggregateRun';
+import {
+  createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
+  findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence,
+  requireAnsweredOpenCodeCommittedBootstrapSessionEvidence,
+} from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { createOpenCodeLaunchFailureArtifactAdapter } from './TeamProvisioningOpenCodeLaunchFailureArtifact';
 import {
   runOpenCodeTeamRuntimeAdapterLaunch,
@@ -25,6 +31,8 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberSpec,
 } from '../runtime';
+import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
+import type { OpenCodeSharedRuntimeFailureScope } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type {
   MixedSecondaryRuntimeLaneState,
   SecondaryRuntimeRunEntry,
@@ -40,8 +48,46 @@ import type {
 
 export type { OpenCodeAggregateProvisioningRun } from './TeamProvisioningOpenCodeAggregateRun';
 
+const logger = createLogger('Service:TeamProvisioning');
+
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/**
+ * The lead's committed session record, read from disk exactly the way the
+ * delivery path will read it later. This is the launch-time half of the lead
+ * veto; the caller treats a throw as "cannot disprove", never as failure.
+ *
+ * Deliberately NOT `hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence`: that
+ * helper swallows the store read and answers `false`, which the veto reads as
+ * PROOF that no session exists. A concurrent bootstrap check-in holding the
+ * manifest lock - the exact contention this gate races - would then tear a
+ * healthy team down. The read must reject so the caller can map it to "cannot
+ * disprove", which is why an unanswered store is raised here rather than
+ * matched against: the reader reports one as an empty session list.
+ */
+async function hasCommittedOpenCodePrimaryLeadSessionEvidence(input: {
+  teamName: string;
+  runId: string;
+  laneId: string;
+  memberName: string;
+}): Promise<boolean> {
+  const ports = createDefaultOpenCodeRuntimeBootstrapEvidencePorts({
+    teamsBasePath: getTeamsBasePath(),
+    warn: (message) => logger.diagnostic(message),
+  });
+  const evidence = requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+    await ports.readCommittedBootstrapSessionEvidence({
+      teamsBasePath: ports.teamsBasePath,
+      teamName: input.teamName,
+      laneId: input.laneId,
+    })
+  );
+  return (
+    findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence(evidence, input) !=
+    null
+  );
 }
 
 export interface OpenCodeLaunchWiringRuntimeRunEntry {
@@ -53,6 +99,8 @@ export interface OpenCodeLaunchWiringRuntimeRunEntry {
 }
 
 export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
+  beginLaunchPublication(teamName: string, runId: string, members: string[], isAuthorized: () => boolean): Promise<boolean>;
+
   runtimeAdapterRunByTeam: Map<string, OpenCodeLaunchWiringRuntimeRunEntry>;
   provisioningRunByTeam: Map<string, string>;
   runtimeAdapterProgressByRunId: Map<string, TeamProvisioningProgress>;
@@ -122,6 +170,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
   ): Promise<{ result: TeamRuntimeLaunchResult; snapshot?: PersistedTeamLaunchSnapshot }>;
+  deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
   syncOpenCodeRuntimeToolApprovals(input: {
     teamName: string;
     runId: string;
@@ -157,6 +206,9 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   getStopTeamGeneration(teamName: string): number;
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeAdapter'];
+  };
+  defaultLaunchStateStore: {
+    beginLaunch: TeamProvisioningOpenCodeLaunchWiringHost<Run>['beginLaunchPublication'];
   };
   launchStateStore: {
     read: TeamProvisioningOpenCodeLaunchWiringHost<Run>['readLaunchState'];
@@ -194,6 +246,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   syncRunMemberSpawnStatusesFromSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['syncRunMemberSpawnStatusesFromSnapshot'];
   deleteSecondaryRuntimeRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['deleteSecondaryRuntimeRun'];
   persistOpenCodeRuntimeAdapterLaunchResult: TeamProvisioningOpenCodeLaunchWiringHost<Run>['persistOpenCodeRuntimeAdapterLaunchResult'];
+  deliverOpenCodeLaunchPromptToLead: TeamProvisioningOpenCodeLaunchWiringHost<Run>['deliverOpenCodeLaunchPromptToLead'];
 }
 
 function getRequiredOpenCodeRuntimeAdapter(host: {
@@ -238,6 +291,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
       ),
     resetTeamScopedTransientStateForNewRun: (teamName) =>
       service.resetTeamScopedTransientStateForNewRun(teamName),
+    beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+      service.defaultLaunchStateStore.beginLaunch(teamName, runId, members, isAuthorized),
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
     clearPersistedLaunchState: (teamName, options) =>
       options === undefined
@@ -269,6 +324,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     },
     persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
       service.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
+    deliverOpenCodeLaunchPromptToLead: (promptInput) =>
+      service.deliverOpenCodeLaunchPromptToLead(promptInput),
     syncOpenCodeRuntimeToolApprovals: (syncInput) =>
       service.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(syncInput),
     emitTeamChange: (event) => {
@@ -278,8 +335,13 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
 }
 
 export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
-  host: TeamProvisioningOpenCodeLaunchWiringHost<Run>
+  host: TeamProvisioningOpenCodeLaunchWiringHost<Run>,
+  onRuntimeRegistered?: (input: { teamName: string; runId: string }) => void
 ): TeamProvisioningOpenCodeLaunchWiring {
+  // One OpenCode host serves every launch of a project, so the shared-runtime
+  // records outlive a single team launch: a relaunch that hits the same timeout
+  // inside the TTL window must not spend a second retry.
+  const sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope = {};
   const launchFailureArtifacts = createOpenCodeLaunchFailureArtifactAdapter({
     getRuntimeAdapterTraceLines: (runId) =>
       host.runtimeAdapterProgressState.getRuntimeAdapterTraceLines(runId),
@@ -292,6 +354,10 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           randomUUID,
           nowMs: () => Date.now(),
           nowIso,
+          // error, not warn: the default logger hides warn in production, and a
+          // rollback that could not confirm a stop is exactly what a user needs
+          // the cause of.
+          logError: (message) => logger.error(message),
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
           getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
@@ -317,6 +383,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
+          beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+            host.beginLaunchPublication(teamName, runId, members, isAuthorized),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
           clearPersistedLaunchState: (teamName, options) =>
             host.clearPersistedLaunchState(teamName, options),
@@ -344,8 +412,11 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.persistLaunchStateSnapshot(run as Run, launchPhase),
           syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
             host.syncRunMemberSpawnStatusesFromSnapshot(run as Run, snapshot),
+          deliverOpenCodeLaunchPromptToLead: (promptInput) =>
+            host.deliverOpenCodeLaunchPromptToLead(promptInput),
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
+            onRuntimeRegistered?.({ teamName, runId });
           },
           setRuntimeAdapterRun: (teamName, runtimeRun) => {
             host.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
@@ -375,6 +446,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           },
           deleteSecondaryRuntimeRun: (teamName, laneId) =>
             host.deleteSecondaryRuntimeRun(teamName, laneId),
+          hasCommittedOpenCodePrimaryLeadSessionEvidence,
+          logDiagnostic: (message) => logger.diagnostic(message),
         }
       ),
     runOpenCodeTeamRuntimeAdapterLaunch: async (input) =>
@@ -383,7 +456,11 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
         {
           randomUUID,
           nowIso,
+          nowMs: () => Date.now(),
+          sharedRuntimeFailureScope,
+          logWarning: (message) => logger.warn(message),
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
+          getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
           stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
             host.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
@@ -402,6 +479,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
           resetTeamScopedTransientStateForNewRun: (teamName) =>
             host.resetTeamScopedTransientStateForNewRun(teamName),
+          beginLaunchPublication: (teamName, runId, members, isAuthorized) =>
+            host.beginLaunchPublication(teamName, runId, members, isAuthorized),
           readLaunchState: (teamName) => host.readLaunchState(teamName),
           clearPersistedLaunchState: (teamName, options) =>
             options === undefined
@@ -437,6 +516,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           },
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
+            onRuntimeRegistered?.({ teamName, runId });
           },
           invalidateRuntimeSnapshotCaches: (teamName) =>
             host.invalidateRuntimeSnapshotCaches(teamName),

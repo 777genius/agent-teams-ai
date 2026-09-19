@@ -7,6 +7,10 @@ import {
   type TeamProvisioningAuthRetryPorts,
   type TeamProvisioningAuthRetryRun,
 } from '../TeamProvisioningAuthRetryRecovery';
+import {
+  recordProvisioningFirstTurnStart,
+  scheduleProvisioningRunTimeout,
+} from '../TeamProvisioningTimeoutLifecycle';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 import type { ChildProcess } from 'child_process';
@@ -185,6 +189,40 @@ function makePorts(): TeamProvisioningAuthRetryPorts<TeamProvisioningAuthRetryRu
 }
 
 describe('team provisioning auth retry recovery', () => {
+  it('gives a replacement attempt its own first-turn deadline and bootstrap sequence', async () => {
+    vi.useFakeTimers();
+    try {
+      const run = Object.assign(makeRun({ timeoutHandle: null, authRetryInProgress: false }), {
+        requiresFirstRealTurnSuccess: true,
+        lastDeterministicBootstrapSeq: 10,
+        firstRealTurnSucceeded: true,
+      });
+      const ports = makePorts();
+      ports.setTimeout = (callback, ms) => setTimeout(callback, ms);
+      ports.clearTimeout = (timer) => clearTimeout(timer);
+      ports.nowMs = () => Date.now();
+      ports.getProvisioningRunTimeoutMs = () => 300_000;
+      const oldExpire = vi.fn();
+      scheduleProvisioningRunTimeout(run, 300_000, oldExpire);
+      await vi.advanceTimersByTimeAsync(100_000);
+      recordProvisioningFirstTurnStart(run);
+      run.authRetryInProgress = true;
+      await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 2_000 });
+      expect(run.lastDeterministicBootstrapSeq).toBe(0);
+      expect(run.firstRealTurnSucceeded).toBe(false);
+      await vi.advanceTimersByTimeAsync(150_000);
+      recordProvisioningFirstTurnStart(run);
+      await vi.advanceTimersByTimeAsync(150_000);
+      expect(oldExpire).not.toHaveBeenCalled();
+      expect(ports.tryCompleteAfterTimeout).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(150_000);
+      expect(ports.tryCompleteAfterTimeout).toHaveBeenCalledExactlyOnceWith(run);
+      expect(run.processClosed).toBe(true);
+      expect(ports.killTeamProcessAndWait).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('tears down the failed process, regenerates missing bootstrap files, and respawns', async () => {
     const run = makeRun();
     const oldChild = run.child;

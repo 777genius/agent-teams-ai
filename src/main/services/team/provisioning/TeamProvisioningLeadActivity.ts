@@ -6,6 +6,7 @@ export interface LeadActivityRunLike {
   teamName: string;
   runId: string;
   leadActivityState: LeadActivityState;
+  leadActivityPublished?: boolean;
 }
 
 export interface LeadActivityAccessorRunLike extends LeadActivityRunLike {
@@ -40,14 +41,17 @@ export interface LeadTaskActivityIntervalPorts<TRun extends LeadActivityRunLike>
   ): { failed?: boolean };
 }
 
-export interface SetLeadActivityPorts<TRun extends LeadActivityRunLike>
-  extends LeadTaskActivityIntervalPorts<TRun> {
+export interface SetLeadActivityPorts<
+  TRun extends LeadActivityRunLike,
+> extends LeadTaskActivityIntervalPorts<TRun> {
   isCurrentTrackedRun(run: TRun): boolean;
   nowIso(): string;
   emitTeamChange(event: TeamChangeEvent): void;
 }
 
-export function getLeadTaskActivityRunKey(run: Pick<LeadActivityRunLike, 'teamName' | 'runId'>): string {
+export function getLeadTaskActivityRunKey(
+  run: Pick<LeadActivityRunLike, 'teamName' | 'runId'>
+): string {
   return `${run.teamName}\u0000${run.runId}`;
 }
 
@@ -87,7 +91,11 @@ export function syncLeadTaskActivityForState<TRun extends LeadActivityRunLike>(
   const key = getLeadTaskActivityRunKey(run);
   if (state === 'active') {
     if (ports.syncedRunKeys.has(key)) return;
-    const result = ports.resumeActiveIntervalsForMember(run.teamName, ports.getRunLeadName(run), at);
+    const result = ports.resumeActiveIntervalsForMember(
+      run.teamName,
+      ports.getRunLeadName(run),
+      at
+    );
     if (result.failed) return;
     ports.syncedRunKeys.add(key);
     return;
@@ -115,9 +123,10 @@ export function setLeadActivity<TRun extends LeadActivityRunLike>(
   } else {
     ports.syncedRunKeys.delete(getLeadTaskActivityRunKey(run));
   }
-  if (previousState === state) return;
+  if (previousState === state && run.leadActivityPublished) return;
   run.leadActivityState = state;
   if (!isCurrentRun) return;
+  run.leadActivityPublished = true;
   ports.emitTeamChange({
     type: 'lead-activity',
     teamName: run.teamName,

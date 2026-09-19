@@ -4,6 +4,7 @@ import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { applyOpenCodeSecondaryEvidenceOverlay } from '../TeamProvisioningLaunchStateReconciliation';
 import {
   createTeamProvisioningLaunchStateStoreBoundaryFromService,
+  type LaunchStatePublicationOptions,
   TeamProvisioningLaunchStateStoreBoundary,
   type TeamProvisioningLaunchStateStoreBoundaryPorts,
   type TeamProvisioningLaunchStateStoreBoundaryServiceHost,
@@ -131,7 +132,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       membersMetaStore: {
         getMembers: vi.fn(async () => [{ name: 'Builder', joinedAt: 1 }]),
       },
-      getTrackedRunId: vi.fn(() => 'run-1'),
+      getTrackedRunId: vi.fn<() => string | null>(() => 'run-1'),
       applyOpenCodeSecondaryEvidenceOverlay: vi.fn(
         async ({ snapshot: inputSnapshot }) => inputSnapshot
       ),
@@ -149,12 +150,41 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await boundary.writeLaunchStateSnapshotNow('demo', nextSnapshot, { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo');
 
-    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
-    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
-    expect(launchStateStore.clear).toHaveBeenCalledWith('demo');
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo');
+    expect(launchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(nextSnapshot),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
+    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(nextSnapshot),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
+    expect(launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(clearBootstrapState).toHaveBeenCalledWith('demo');
     expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+
+    service.getTrackedRunId.mockReturnValue(null);
+    clearBootstrapState.mockClear();
+    const reopenedBoundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(service, {
+      areSnapshotsSemanticallyEqual: () => false,
+      clearBootstrapState,
+      logDebug: vi.fn(),
+      nowMs: Date.now,
+    });
+    await reopenedBoundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'persisted-run' });
+    expect(launchStateStore.clear).toHaveBeenLastCalledWith(
+      'demo',
+      expect.any(Function),
+      'persisted-run'
+    );
+    expect(defaultLaunchStateStore.clear).toHaveBeenLastCalledWith(
+      'demo',
+      expect.any(Function),
+      'persisted-run'
+    );
+    expect(clearBootstrapState).not.toHaveBeenCalled();
   });
 
   it('notifies readers only after both service stores confirm the publication', async () => {
@@ -198,8 +228,13 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     const publishing = boundary.writeLaunchStateSnapshot('demo', nextSnapshot);
     await defaultWriteStarted.promise;
 
-    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
-    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
+    // The injected view must wait for durable publication.
+    expect(launchStateStore.write).not.toHaveBeenCalled();
+    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(nextSnapshot),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
     expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
 
     defaultWriteGate.resolve();
@@ -250,7 +285,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await expect(boundary.clearPersistedLaunchStateNow('demo')).rejects.toBe(clearError);
 
     expect(clearOrder).toEqual(['injected', 'default']);
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo');
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(clearBootstrapState).not.toHaveBeenCalled();
     expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
@@ -275,7 +310,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
 
-    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
+    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
     expect(ports.clearBootstrapState).not.toHaveBeenCalled();
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
 
@@ -352,8 +387,12 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       metaMembers: [{ name: 'Builder', joinedAt: 1 }],
     });
     expect(ports.applyBootstrapStallOverlay).toHaveBeenCalledWith(evidenceOverlay);
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', stallOverlay);
-    expect(result).toEqual({ snapshot: stallOverlay, wrote: true });
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(stallOverlay),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
+    expect(result).toMatchObject({ snapshot: stallOverlay, wrote: true });
 
     setTrackedRunId('run-2');
     expect(boundary.canClearPersistedLaunchStateForRun('demo', 'run-2')).toBe(false);
@@ -407,7 +446,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       runId: 'run-1',
     });
 
-    expect(result.snapshot).toBe(replacementSnapshot);
+    expect(result.snapshot).toMatchObject(replacementSnapshot);
     expect(result.snapshot.teamLaunchState).toBe('partial_pending');
     expect(result.snapshot.members.Builder).toMatchObject({
       launchState: 'starting',
@@ -416,7 +455,11 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     });
     expect(result.snapshot.members.Builder.runtimeRunId).toBeUndefined();
     expect(result.snapshot.members.Builder.runtimeSessionId).toBeUndefined();
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', replacementSnapshot);
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(replacementSnapshot),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
   });
 
   it.each([
@@ -479,7 +522,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
         }
       );
 
-      expect(overlaid).toBe(stoppedSnapshot);
+      expect(overlaid).toMatchObject(stoppedSnapshot);
       expect(overlaid.teamLaunchState).toBe('partial_pending');
       expect(overlaid.members.Builder).toMatchObject({
         launchState: 'starting',
@@ -507,7 +550,10 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       runId: 'run-1',
     });
 
-    expect(result).toEqual({ snapshot: previous, wrote: false });
+    expect(result).toEqual({
+      snapshot: { ...previous, publicationRunId: 'run-1' },
+      wrote: false,
+    });
     expect(ports.launchStateStore.write).not.toHaveBeenCalled();
   });
 
@@ -528,8 +574,12 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       runId: 'run-1',
     });
 
-    expect(result).toEqual({ snapshot: next, wrote: true });
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
+    expect(result).toMatchObject({ snapshot: next, wrote: true });
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining(next),
+      expect.objectContaining({ isAuthorized: expect.any(Function) })
+    );
   });
 
   it.each([null, undefined])(
@@ -543,8 +593,12 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
         runId: 'run-1',
       });
 
-      expect(result).toEqual({ snapshot: next, wrote: true });
-      expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
+      expect(result).toMatchObject({ snapshot: next, wrote: true });
+      expect(ports.launchStateStore.write).toHaveBeenCalledWith(
+        'demo',
+        expect.objectContaining(next),
+        expect.objectContaining({ isAuthorized: expect.any(Function) })
+      );
       expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
       expect(boundary.getWrittenRunIdByTeam().get('demo')).toBe('run-1');
       expect(ports.logDebug).not.toHaveBeenCalled();
@@ -612,7 +666,10 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       runId: 'run-1',
     });
 
-    expect(result).toEqual({ snapshot: previousSnapshot, wrote: false });
+    expect(result).toEqual({
+      snapshot: { ...previousSnapshot, publicationRunId: 'run-1' },
+      wrote: false,
+    });
     expect(ports.launchStateStore.write).not.toHaveBeenCalled();
     expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
     expect(ports.logDebug).toHaveBeenCalledWith(
@@ -626,11 +683,18 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     let persistedSnapshot: PersistedTeamLaunchSnapshot | null = null;
     const launchStateStore = {
       read: vi.fn(async () => persistedSnapshot),
-      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
-        writeStarted.resolve();
-        await writeGate.promise;
-        persistedSnapshot = nextSnapshot;
-      }),
+      write: vi.fn(
+        async (
+          _teamName: string,
+          nextSnapshot: PersistedTeamLaunchSnapshot,
+          options?: LaunchStatePublicationOptions
+        ) => {
+          writeStarted.resolve();
+          await writeGate.promise;
+          if (options?.isAuthorized?.() === false) return false;
+          persistedSnapshot = nextSnapshot;
+        }
+      ),
       clear: vi.fn(async () => {
         persistedSnapshot = null;
       }),
@@ -644,9 +708,76 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
 
     await expect(writing).resolves.toMatchObject({ wrote: false });
     expect(persistedSnapshot).toBeNull();
-    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
-    expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
     expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+  });
+
+  it('preserves previous truth when the store suppresses a stale publication', async () => {
+    const newerSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:05.000Z' });
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    let persistedSnapshot: PersistedTeamLaunchSnapshot | null = newerSnapshot;
+    const launchStateStore = {
+      read: vi.fn(async () => persistedSnapshot),
+      write: vi.fn(
+        async (
+          _teamName: string,
+          nextSnapshot: PersistedTeamLaunchSnapshot,
+          options?: LaunchStatePublicationOptions
+        ) => {
+          if (nextSnapshot === newerSnapshot) {
+            if (options?.isAuthorized?.() === false) return false;
+            persistedSnapshot = nextSnapshot;
+            return;
+          }
+          writeStarted.resolve();
+          await writeGate.promise;
+          if (options?.isAuthorized?.() === false) return false;
+          persistedSnapshot = nextSnapshot;
+        }
+      ),
+      clear: vi.fn(async () => {
+        persistedSnapshot = null;
+      }),
+    };
+    const { boundary, ports, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId(undefined);
+    writeGate.resolve();
+
+    await expect(writing).resolves.toEqual({ snapshot: newerSnapshot, wrote: false });
+    expect(persistedSnapshot).toEqual(newerSnapshot);
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+    expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+  });
+
+  it('never queues a compensating write over a later stop or successor', async () => {
+    // Store rollback runs within publication serialization; the boundary must not
+    // enqueue a second mutation after another owner or Stop may have committed.
+    const previousSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:05.000Z' });
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    const launchStateStore = {
+      read: vi.fn(async () => previousSnapshot),
+      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
+        if (nextSnapshot === previousSnapshot) return;
+        writeStarted.resolve();
+        await writeGate.promise;
+      }),
+      clear: vi.fn(async () => undefined),
+    };
+    const { boundary, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId(undefined);
+    writeGate.resolve();
+
+    await expect(writing).resolves.toMatchObject({ wrote: false });
+    expect(launchStateStore.write).toHaveBeenCalledTimes(1);
+    expect(launchStateStore.clear).not.toHaveBeenCalled();
   });
 
   it('serializes queued operations and only removes the current queue entry', async () => {

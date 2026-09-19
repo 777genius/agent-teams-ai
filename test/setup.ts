@@ -71,9 +71,21 @@ vi.mock('@sentry/react', () => sentryNoOp);
 // some services persist state in best-effort background writes after a test has
 // already reset path overrides.
 const testHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), TEST_HOME_PREFIX));
-vi.stubEnv('HOME', testHomeDir);
+// getHomeDir() reads HOME before USERPROFILE, and on Windows only USERPROFILE is
+// actually set, so both must point inside the test home. Re-applied before every
+// test: twelve test files call vi.unstubAllEnvs(), after which the rest of that
+// worker resolves ~/.claude to the developer's real home.
+function applyTestHomeEnv(): void {
+  vi.stubEnv('HOME', testHomeDir);
+  vi.stubEnv('USERPROFILE', testHomeDir);
+}
+applyTestHomeEnv();
 let testHomeDirRemoved = false;
 function removeTestHomeDir(): void {
+  if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {
+    console.info(`[vitest setup] preserved test HOME: ${testHomeDir}`);
+    return;
+  }
   if (testHomeDirRemoved) {
     return;
   }
@@ -102,13 +114,23 @@ function formatConsoleCall(args: unknown[]): string {
 }
 
 beforeEach(() => {
+  applyTestHomeEnv();
   errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
+function isLiveSlowConfigReadWarning(text: string): boolean {
+  return (
+    process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&
+    text.includes('[Service:TeamConfigReader] [getConfig] slow read diag=')
+  );
+}
+
 afterEach(() => {
   const unexpectedErrors = errorSpy.mock.calls.map(formatConsoleCall);
-  const unexpectedWarnings = warnSpy.mock.calls.map(formatConsoleCall);
+  const unexpectedWarnings = warnSpy.mock.calls
+    .map(formatConsoleCall)
+    .filter((text) => !isLiveSlowConfigReadWarning(text));
 
   errorSpy.mockRestore();
   warnSpy.mockRestore();

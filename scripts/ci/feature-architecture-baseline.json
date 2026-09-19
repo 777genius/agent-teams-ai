@@ -442,54 +442,6 @@
     },
     {
       "rule": "public-api-implementation-export",
-      "source": "src/features/member-log-stream/main/application/MemberRuntimeLogTailReader.ts",
-      "specifier": "fs",
-      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
-      "exportedName": "createMemberLogStreamFeature",
-      "importedName": "promises"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-log-stream/main/index.ts",
-      "specifier": "./adapters/input/ipc/registerMemberLogStreamIpc",
-      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
-      "exportedName": "registerMemberLogStreamIpc",
-      "importedName": "registerMemberLogStreamIpc"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-log-stream/main/index.ts",
-      "specifier": "./adapters/input/ipc/registerMemberLogStreamIpc",
-      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
-      "exportedName": "removeMemberLogStreamIpc",
-      "importedName": "removeMemberLogStreamIpc"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-log-stream/preload/createMemberLogStreamBridge.ts",
-      "specifier": "electron",
-      "publicEntrypoint": "src/features/member-log-stream/preload/index.ts",
-      "exportedName": "createMemberLogStreamBridge",
-      "importedName": "ipcRenderer"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-log-stream/renderer/index.ts",
-      "specifier": "./adapters/MemberLogStreamSection",
-      "publicEntrypoint": "src/features/member-log-stream/renderer/index.ts",
-      "exportedName": "MemberLogStreamSection",
-      "importedName": "MemberLogStreamSection"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver.ts",
-      "specifier": "path",
-      "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
-      "exportedName": "createMemberWorkSyncFeature",
-      "importedName": "default"
-    },
-    {
-      "rule": "public-api-implementation-export",
       "source": "src/features/member-work-sync/main/index.ts",
       "specifier": "./adapters/input/registerMemberWorkSyncIpc",
       "publicEntrypoint": "src/features/member-work-sync/main/index.ts",
@@ -1311,14 +1263,6 @@
       "publicEntrypoint": "src/features/recent-projects/main/index.ts",
       "exportedName": "createRecentProjectsFeature",
       "importedName": "ServiceContext"
-    },
-    {
-      "rule": "public-api-implementation-export",
-      "source": "src/main/services/team/TeamMembersMetaStore.ts",
-      "specifier": "fs",
-      "publicEntrypoint": "src/features/member-log-stream/main/index.ts",
-      "exportedName": "createMemberLogStreamFeature",
-      "importedName": "*"
     }
   ]
 }

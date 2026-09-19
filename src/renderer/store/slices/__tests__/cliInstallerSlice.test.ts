@@ -65,6 +65,7 @@ describe('reconcileCliStatus', () => {
               authMethod: 'oauth' as const,
               supported: true,
               verificationState: 'verified' as const,
+              statusCheckOutcome: 'authoritative' as const,
               statusMessage: null,
               models: ['model-a', 'model-b'],
             }
@@ -105,6 +106,7 @@ describe('reconcileCliStatus', () => {
       authMethod: 'codex_chatgpt' as const,
       supported: true,
       verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
       statusMessage: null,
       models: ['gpt-5.2'],
       modelAvailability: [
@@ -188,6 +190,162 @@ describe('reconcileCliStatus', () => {
     expect(merged).not.toBe(current);
     expect(merged.providers[1]).not.toBe(current.providers[1]);
     expect(merged.providers[1].availableBackends?.[0].available).toBe(false);
+  });
+
+  it.each([
+    ['stale', 'anthropic'],
+    ['ready', 'codex'],
+  ] as const)(
+    'preserves status authentication but fails launch closed for a %s catalog owned by %s',
+    (catalogStatus, catalogProviderId) => {
+      const incoming = createLoadingMultimodelCliStatus();
+      incoming.authLoggedIn = true;
+      incoming.authMethod = 'oauth';
+      incoming.providers[0] = {
+        ...incoming.providers[0],
+        supported: true,
+        authenticated: true,
+        authMethod: 'oauth',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        capabilities: { ...incoming.providers[0].capabilities, teamLaunch: true },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'runtime' } },
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: catalogProviderId,
+          source: 'app-server',
+          status: catalogStatus,
+          fetchedAt: '2026-08-29T00:00:00.000Z',
+          staleAt: '2026-08-29T00:10:00.000Z',
+          defaultModelId: 'model-a',
+          defaultLaunchModel: 'model-a',
+          models: [],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
+      };
+
+      const merged = reconcileCliStatus(null, incoming);
+
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('oauth');
+      expect(merged.providers[0]).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth',
+        capabilities: { teamLaunch: false },
+        modelCatalog: { providerId: catalogProviderId, status: 'stale' },
+      });
+    }
+  );
+
+  it('retains both model evidence arrays but revokes launch for authoritative exact-empty input', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      providerId: 'codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      models: [],
+      modelAvailability: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2100-01-01T00:00:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale', defaultModelId: null },
+      modelCatalogRefreshState: 'error',
+    });
+  });
+
+  it('retains both model evidence arrays and revokes launch for non-authoritative exact-empty input', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      models: [],
+      modelAvailability: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale' },
+      modelCatalogRefreshState: 'error',
+    });
   });
 });
 
@@ -328,6 +486,162 @@ describe('OpenCode runtime rejection state', () => {
       });
     } finally {
       restoreApi();
+    }
+  });
+});
+
+describe('provider catalog invalidation races', () => {
+  it('clears fenced provider loading without allowing the old request to settle it later', async () => {
+    let resolveStatus!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveStatus = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus: vi.fn(() => pending), verifyProviderModels: vi.fn() },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const request = store.getState().fetchCliProviderStatus('codex');
+      expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
+      store.getState().invalidateCliProviderModelCatalog();
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+      resolveStatus({
+        providerId: 'codex',
+        models: [],
+        supported: true,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+        capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
+      });
+      await request;
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+});
+
+describe('codex catalog watchdog races', () => {
+  it.each([false, true])(
+    'retries a loading catalog with retained cache=%s',
+    async (retainedCache) => {
+      vi.useFakeTimers();
+      const provider = {
+        ...createLoadingMultimodelCliStatus().providers.find(
+          (item) => item.providerId === 'codex'
+        )!,
+        modelCatalog: retainedCache
+          ? {
+              schemaVersion: 1 as const,
+              providerId: 'codex',
+              source: 'app-server' as const,
+              status: 'stale' as const,
+              fetchedAt: '2026-09-01T00:00:00.000Z',
+              staleAt: '2026-09-01T00:05:00.000Z',
+              defaultModelId: null,
+              defaultLaunchModel: null,
+              models: [],
+              diagnostics: {
+                configReadState: 'skipped' as const,
+                appServerState: 'healthy' as const,
+              },
+            }
+          : null,
+        modelCatalogRefreshState: 'loading' as const,
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      };
+      const previousApi = window.electronAPI;
+      const getProviderStatus = vi.fn().mockResolvedValue(provider);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: {
+          cliInstaller: { getProviderStatus, invalidateStatus: vi.fn(async () => undefined) },
+        },
+      });
+      const store = createCliInstallerStore();
+      store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+      try {
+        await store.getState().fetchCliProviderStatus('codex');
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          await vi.advanceTimersByTimeAsync(5_000);
+        }
+        expect(getProviderStatus).toHaveBeenCalledTimes(7);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(getProviderStatus).toHaveBeenCalledTimes(7);
+      } finally {
+        await store.getState().invalidateCliStatus();
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          writable: true,
+          value: previousApi,
+        });
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it('keeps the newer retry timer when an older request rejects', async () => {
+    vi.useFakeTimers();
+    let rejectFirst!: (reason?: unknown) => void;
+    const first = new Promise((_, reject) => {
+      rejectFirst = reject;
+    });
+    let resolveSecond!: (value: unknown) => void;
+    const second = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: {
+          getProviderStatus: vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second),
+        },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const oldRequest = store.getState().fetchCliProviderStatus('codex');
+      store.getState().invalidateCliProviderModelCatalog();
+      const newerRequest = store.getState().fetchCliProviderStatus('codex');
+      const provider = {
+        ...createLoadingMultimodelCliStatus().providers.find(
+          (item) => item.providerId === 'codex'
+        )!,
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading' as const,
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      };
+      resolveSecond(provider);
+      await newerRequest;
+      expect(vi.getTimerCount()).toBe(1);
+      rejectFirst(new Error('superseded'));
+      await oldRequest;
+      vi.mocked(console.error).mockClear();
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+      vi.useRealTimers();
     }
   });
 });

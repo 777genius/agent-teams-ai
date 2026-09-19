@@ -1,9 +1,10 @@
 import { exactRecord, sha256 } from './contracts';
-import { freezeHttpData, httpCheck, httpHex, httpId } from './raw-http';
+import { decodeHttpBase64, freezeHttpData, httpCheck, httpHex, httpId } from './raw-http';
 import type {
   HostedHttpOperation,
   HttpRequestObservation,
   HttpResponseObservation,
+  RetainedHttpBody,
 } from './raw-http-types';
 
 const PROTOCOL = 'agent-teams-hosted-approval-v2';
@@ -215,7 +216,61 @@ export function appliedHttpReceipt(
   }
 }
 
-function permission(value: unknown, sessionId: string): void {
+export type ValidatedRawPermission = Readonly<
+  Record<string, unknown> & {
+    id: string;
+    sessionID: string;
+    permission: string;
+    patterns: readonly string[];
+    metadata: Readonly<Record<string, unknown>>;
+    always: readonly string[];
+    tool?: Readonly<{ callID: string; messageID: string }>;
+  }
+>;
+
+export type ValidatedObservationPermission = Readonly<{
+  runtimeInstanceId: string;
+  configGeneration: string;
+  requestId: string;
+  sessionId: string;
+  sessionIncarnation: string;
+  requestIncarnation: string;
+  permissionDigest: string;
+  rawPermission: ValidatedRawPermission;
+}>;
+
+export type ValidatedObservationResult = Readonly<
+  Record<string, unknown> & {
+    kind: 'observation';
+    schemaVersion: 2;
+    protocol: typeof PROTOCOL;
+    runtimeInstanceId: string;
+    configGeneration: string;
+    sessionId: string;
+    permissions: readonly ValidatedObservationPermission[];
+    responseBody: RetainedHttpBody;
+  }
+>;
+
+export type ValidatedObservationOverflowResult = Readonly<
+  Record<string, unknown> & {
+    kind: 'observation-overflow';
+    _tag: 'InternalServerError';
+  }
+>;
+
+export type ValidatedObservationReadResult =
+  | ValidatedObservationResult
+  | ValidatedObservationOverflowResult;
+
+function permission(
+  value: unknown,
+  expected: Readonly<{
+    runtimeInstanceId: unknown;
+    configGeneration: unknown;
+    sessionId: string;
+  }>
+): ValidatedObservationPermission {
   const item = exactRecord(
     value,
     [
@@ -231,7 +286,7 @@ function permission(value: unknown, sessionId: string): void {
   httpCheck(
     httpId(item.requestId) &&
       item.requestId.startsWith('per') &&
-      item.sessionId === sessionId &&
+      item.sessionId === expected.sessionId &&
       pattern(item.sessionIncarnation, 'session_incarnation') &&
       pattern(item.requestIncarnation, 'request_incarnation') &&
       httpHex(item.permissionDigest) &&
@@ -258,8 +313,8 @@ function permission(value: unknown, sessionId: string): void {
   );
   httpCheck(
     raw.id === item.requestId &&
-      raw.sessionID === sessionId &&
-      sessionId.startsWith('ses') &&
+      raw.sessionID === expected.sessionId &&
+      expected.sessionId.startsWith('ses') &&
       typeof raw.permission === 'string' &&
       raw.metadata !== null &&
       typeof raw.metadata === 'object' &&
@@ -279,8 +334,21 @@ function permission(value: unknown, sessionId: string): void {
       'permission_tool'
     );
   }
+  return Object.freeze({
+    runtimeInstanceId: expected.runtimeInstanceId as string,
+    configGeneration: expected.configGeneration as string,
+    ...item,
+  }) as ValidatedObservationPermission;
 }
 
+export function decodeReadResponse(
+  operation: Extract<HostedHttpOperation, { kind: 'observe' }>,
+  response: HttpResponseObservation
+): ValidatedObservationReadResult;
+export function decodeReadResponse(
+  operation: Exclude<HostedHttpOperation, { kind: 'reply' }>,
+  response: HttpResponseObservation
+): Readonly<Record<string, unknown>>;
 export function decodeReadResponse(
   operation: Exclude<HostedHttpOperation, { kind: 'reply' }>,
   response: HttpResponseObservation
@@ -291,11 +359,18 @@ export function decodeReadResponse(
     'read_response_limit'
   );
   httpCheck(operation.kind === 'capability' || operation.kind === 'observe', 'read_operation');
-  const parsed = parseHttpEntity(Buffer.from(response.body.bodyBase64, 'base64'));
+  const maximum = operation.kind === 'capability' ? 16 * 1024 : 1024 * 1024;
+  const responseBytes = decodeHttpBase64(response.body.bodyBase64, maximum, 'read_response_body');
+  httpCheck(
+    responseBytes.byteLength === response.body.byteLength &&
+      sha256(responseBytes) === response.body.sha256,
+    'read_response_retention'
+  );
+  const parsed = parseHttpEntity(responseBytes);
   if (operation.kind === 'observe' && response.status === 500) {
     const error = exactRecord(parsed, ['_tag'], 'http_observe_overflow');
     httpCheck(error._tag === 'InternalServerError', 'observe_overflow');
-    return error;
+    return Object.freeze({ kind: 'observation-overflow', ...error });
   }
   const body = exactRecord(
     parsed,
@@ -322,7 +397,21 @@ export function decodeReadResponse(
         body.permissions.length <= 256,
       'observe'
     );
-    body.permissions.forEach((item) => permission(item, operation.sessionId));
+    const permissions = Object.freeze(
+      body.permissions.map((item) =>
+        permission(item, {
+          runtimeInstanceId: body.runtimeInstanceId,
+          configGeneration: body.configGeneration,
+          sessionId: operation.sessionId,
+        })
+      )
+    );
+    return Object.freeze({
+      kind: 'observation',
+      ...body,
+      permissions,
+      responseBody: Object.freeze({ ...response.body }),
+    }) as ValidatedObservationResult;
   }
   return body;
 }

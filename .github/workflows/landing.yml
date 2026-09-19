@@ -3,9 +3,9 @@ name: Deploy Landing to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: [landing/**]
+    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
   pull_request:
-    paths: [landing/**]
+    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
   workflow_dispatch:
 
 permissions:
@@ -20,12 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: landing/package-lock.json
+
+      - name: Install announcement parser dependencies
+        run: pnpm install --filter agent-teams-ai --prod --frozen-lockfile --ignore-scripts
 
       - name: Install dependencies
         working-directory: landing

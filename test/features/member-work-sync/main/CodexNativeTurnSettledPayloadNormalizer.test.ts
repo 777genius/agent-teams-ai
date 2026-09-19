@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { CodexNativeTurnSettledPayloadNormalizer } from '@features/member-work-sync/main/infrastructure/CodexNativeTurnSettledPayloadNormalizer';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
+import { describe, expect, it } from 'vitest';
 
 describe('CodexNativeTurnSettledPayloadNormalizer', () => {
   it('normalizes orchestrator-native Codex turn-settled payloads', () => {
@@ -33,7 +32,6 @@ describe('CodexNativeTurnSettledPayloadNormalizer', () => {
         provider: 'codex',
         hookEventName: 'Stop',
         sessionId: 'ses-1',
-        turnId: 'thread-1',
         threadId: 'thread-1',
         teamName: 'team-a',
         memberName: 'jack',

@@ -2,10 +2,10 @@
  * Decides which team artifacts should be file-watched.
  *
  * Team root/task scope is (teams with a live runtime run) + (teams recently
- * engaged in the UI). Inbox scope is stricter: only teams with a live runtime
- * run. That keeps the expensive per-inbox file watchers tied to teams that can
- * actually produce live runtime activity, while opened idle teams still get
- * their root/task artifacts watched for UI refreshes.
+ * engaged in the UI). Inbox scope uses the same bounded set. A newly launched
+ * team can start assigning work before provisioning publishes final `ready`,
+ * so excluding the engaged launch window would lose those inbox events and can
+ * deadlock an OpenCode teammate waiting for its first task.
  *
  * Module-level state mirrors the existing IPC/registry singletons in this layer.
  */
@@ -66,14 +66,13 @@ export function computeTeamWatchScope(nowMs: number = Date.now()): ReadonlySet<s
 }
 
 /**
- * Current set of teams whose inboxes should be watched live. Inbox writes only
- * need immediate watcher delivery while a runtime is alive; otherwise the next
- * launch or explicit team read can catch up from disk without holding one fd per
- * inbox file for every historical team.
+ * Current bounded set of teams whose inboxes should be watched for live
+ * delivery. Recently engaged teams are included because create/launch can
+ * produce actionable inbox messages before the run is promoted to `ready`.
+ * The engagement TTL still keeps historical idle teams out of the watch set.
  */
-export function computeLiveTeamWatchScope(): ReadonlySet<string> | null {
-  const scope = new Set<string>();
-  return collectAliveTeams(scope) ? scope : null;
+export function computeLiveTeamWatchScope(nowMs: number = Date.now()): ReadonlySet<string> | null {
+  return computeTeamWatchScope(nowMs);
 }
 
 /**

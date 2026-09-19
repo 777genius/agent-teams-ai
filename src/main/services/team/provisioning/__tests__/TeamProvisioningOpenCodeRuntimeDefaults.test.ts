@@ -57,6 +57,25 @@ describe('OpenCode runtime defaults', () => {
     expect(ports.resolveProviderDefaultModel).not.toHaveBeenCalled();
   });
 
+  it('keeps OpenCode teammates on the provider default when lead-model sync is disabled', async () => {
+    const ports = createPorts();
+
+    const result = await materializeOpenCodeRuntimeAdapterDefaults(
+      {
+        request: createRequest({
+          model: 'opencode/gpt-5',
+          syncModelsWithLead: false,
+        }),
+        members: [{ name: 'dev', role: 'developer', providerId: 'opencode' }],
+      },
+      ports
+    );
+
+    expect(result.request.model).toBe('opencode/gpt-5');
+    expect(result.members[0]?.model).toBe('opencode/default');
+    expect(ports.resolveProviderDefaultModel).toHaveBeenCalledOnce();
+  });
+
   it('uses one inherited member model as the root model when no root model is selected', async () => {
     const ports = createPorts();
 

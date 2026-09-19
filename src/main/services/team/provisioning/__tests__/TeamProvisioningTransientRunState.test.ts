@@ -63,7 +63,7 @@ function makePorts(
     openCodeMemberInboxRelayInFlight: new Map(),
     openCodeMemberSendInFlightByLane: new Map(),
     openCodePromptDeliveryWatchdogScheduler: { cancelTeam: vi.fn() },
-    openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
+    openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn(), resetTeamForNewRun: vi.fn() },
     relayedMemberInboxMessageIds: new Map(),
     liveLeadProcessMessages: new Map(),
     relayLeadInboxMessages: vi.fn().mockResolvedValue(0),
@@ -109,7 +109,7 @@ describe('TeamProvisioningTransientRunState', () => {
       openCodeMemberInboxRelayInFlight: new Map(),
       openCodeMemberSendInFlightByLane: new Map(),
       openCodePromptDeliveryWatchdogScheduler: { cancelTeam: vi.fn() },
-      openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
+      openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn(), resetTeamForNewRun: vi.fn() },
       relayedMemberInboxMessageIds: new Map(),
       liveLeadProcessMessages: new Map(),
       relayLeadInboxMessages,
@@ -239,7 +239,10 @@ describe('TeamProvisioningTransientRunState', () => {
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('alpha');
     expect(ports.persistedTranscriptClaudeLogs.invalidate).toHaveBeenCalledWith('alpha');
     expect(ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam).toHaveBeenCalledWith('alpha');
-    expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith('alpha');
+    expect(ports.openCodeRuntimeDeliveryAdvisory.resetTeamForNewRun).toHaveBeenCalledWith(
+      'alpha',
+      Date.parse('2026-01-02T03:04:05.000Z')
+    );
     expect(ports.pendingTimeouts.has('same-team-deferred:alpha')).toBe(false);
     expect(ports.pendingTimeouts.has('lead-inbox-follow-up:alpha')).toBe(false);
     expect((ports.successfulLeadRecoveryMessageIds as Map<string, unknown>).has('alpha')).toBe(

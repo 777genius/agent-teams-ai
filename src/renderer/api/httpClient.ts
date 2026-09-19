@@ -5,7 +5,6 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-import { getHostedMutationHeaders } from '@features/hosted-access/renderer';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -33,15 +32,6 @@ import {
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
 import {
-  type CanonicalListTeamLifecycleResult,
-  type ListTeamLifecycleRequest,
-  parseCanonicalListTeamLifecycleResult,
-  parseListTeamLifecycleRequest,
-  TEAM_LIFECYCLE_LIST_ROUTE,
-  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-  type TeamLifecycleReadFailure,
-} from '@features/team-lifecycle/contracts';
-import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_SNAPSHOT_ROUTE,
@@ -50,9 +40,18 @@ import {
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
-import { createSafeAppError } from '@shared/contracts/hosted';
+import {
+  WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
+  WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
+  type WorkspaceTrustElectronApi,
+} from '@features/workspace-trust/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
+import { createBrowserMemberWorkSyncApi } from './browserMemberWorkSyncApi';
+import { createBrowserReviewApi } from './browserReviewApi';
+import { listTeamLifecycleOverHttp } from './browserTeamLifecycleRequest';
+
+import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,
@@ -87,6 +86,7 @@ import type {
   CreateScheduleInput,
   CreateTaskRequest,
   CrossTeamAPI,
+  DiscardQueuedUserMessagesResult,
   ElectronAPI,
   FileChangeEvent,
   GlobalTask,
@@ -99,6 +99,7 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   PaginatedSessionsResult,
   Project,
+  QueuedUserMessagesSnapshot,
   RepositoryGroup,
   Schedule,
   ScheduleRun,
@@ -111,19 +112,18 @@ import type {
   SessionMetrics,
   SessionsByIdsOptions,
   SessionsPaginationOptions,
-  SnippetDiff,
   SshAPI,
   SshConfigHostEntry,
   SshConnectionConfig,
   SshConnectionStatus,
   SshLastConnection,
   SubagentDetail,
-  TaskChangeRequestOptions,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -135,8 +135,6 @@ import type {
   TeamsAPI,
   TeamSummary,
   TeamTask,
-  TeamTaskChangeSummariesResponse,
-  TeamTaskChangeSummaryRequest,
   TeamTaskStatus,
   TeamTaskWithKanban,
   TeamViewSnapshot,
@@ -151,19 +149,10 @@ import type {
   WindowsElevationStatus,
   WslClaudeRootCandidate,
 } from '@shared/types';
-import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
+import type { AgentConfig } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-function teamLifecycleReadFailure(
-  error: TeamLifecycleReadFailure['error']
-): TeamLifecycleReadFailure {
-  return Object.freeze({
-    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-    kind: 'failure',
-    error,
-    retryable: error.code === 'unavailable',
-  });
-}
+
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamName) query.set('teamName', request.teamName);
@@ -181,6 +170,7 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   const suffix = query.toString();
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
+
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -209,18 +199,48 @@ function createBrowserCompanionStatus(
   };
 }
 
-function unsupportedRuntimeProviderResponse(runtimeId: RuntimeProviderManagementRuntimeId) {
+function createBrowserRuntimeProviderError(
+  runtimeId: RuntimeProviderManagementRuntimeId,
+  code: 'runtime-unhealthy' | 'unsupported-action'
+) {
   return {
     schemaVersion: 1 as const,
     runtimeId,
     error: {
-      code: 'unsupported-action' as const,
+      code,
       message: 'Runtime provider management is not available in browser mode.',
       recoverable: true,
     },
   };
 }
+
 export class HttpAPIClient implements ElectronAPI {
+  announcements: AnnouncementsApi = {
+    getSnapshot: async () => this.unavailableAnnouncements(),
+    refresh: async () => this.unavailableAnnouncements(),
+    prepareAuto: async () => null,
+    claimAuto: async () => null,
+    openManual: async () => null,
+    loadCover: async () => null,
+    cancelCover: async () => undefined,
+    loadAsset: async () => null,
+    cancelAsset: async () => undefined,
+    dismiss: async () => ({ saved: false }),
+    onStateChanged: () => () => {},
+  };
+
+  private unavailableAnnouncements(): AnnouncementsSnapshot {
+    return {
+      status: 'unavailable',
+      revision: null,
+      items: [],
+      candidateId: null,
+      checkedAt: null,
+      autoShowEnabled: false,
+    };
+  }
+
+  private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
@@ -241,15 +261,17 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
-  constructor(private baseUrl: string) {
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
     this.initEventSource();
   }
+
   // ---------------------------------------------------------------------------
   // SSE event infrastructure
   // ---------------------------------------------------------------------------
-  private initEventSource(): void {
-    if (typeof EventSource === 'undefined') return;
 
+  private initEventSource(): void {
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
     this.eventSource.onerror = () => {
@@ -257,6 +279,7 @@ export class HttpAPIClient implements ElectronAPI {
       console.warn('[HttpAPIClient] SSE connection error, will reconnect...');
     };
   }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private addEventListener(channel: string, callback: (...args: any[]) => void): () => void {
     if (!this.eventListeners.has(channel)) {
@@ -269,13 +292,12 @@ export class HttpAPIClient implements ElectronAPI {
       }) as EventListener);
     }
     this.eventListeners.get(channel)!.add(callback);
+
     return () => {
       this.eventListeners.get(channel)?.delete(callback);
     };
   }
-  // ---------------------------------------------------------------------------
-  // HTTP helpers
-  // ---------------------------------------------------------------------------
+
   /**
    * JSON reviver that converts ISO 8601 date strings back to Date objects.
    * Electron IPC preserves Date instances via structured clone, but HTTP JSON
@@ -284,6 +306,7 @@ export class HttpAPIClient implements ElectronAPI {
    */
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern with bounded quantifier; no backtracking risk
   private static readonly ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z?$/;
+
   private static reviveDates(_key: string, value: unknown): unknown {
     if (typeof value === 'string' && HttpAPIClient.ISO_DATE_RE.test(value)) {
       const d = new Date(value);
@@ -291,6 +314,7 @@ export class HttpAPIClient implements ElectronAPI {
     }
     return value;
   }
+
   private async parseJson<T>(res: Response): Promise<T> {
     const text = await res.text();
     if (!res.ok) {
@@ -299,6 +323,7 @@ export class HttpAPIClient implements ElectronAPI {
     }
     return JSON.parse(text, (key, value) => HttpAPIClient.reviveDates(key, value)) as T;
   }
+
   private async get<T>(path: string): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
@@ -309,35 +334,14 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
-  async listTeamLifecycle(
-    requestValue: ListTeamLifecycleRequest
-  ): Promise<CanonicalListTeamLifecycleResult> {
-    const request = parseListTeamLifecycleRequest(requestValue);
-    if (!request.ok) {
-      return teamLifecycleReadFailure(request.error as TeamLifecycleReadFailure['error']);
-    }
-    try {
-      const response = await this.post<unknown>(TEAM_LIFECYCLE_LIST_ROUTE, request.value);
-      const parsed = parseCanonicalListTeamLifecycleResult(response);
-      return parsed.ok
-        ? parsed.value
-        : teamLifecycleReadFailure(parsed.error as TeamLifecycleReadFailure['error']);
-    } catch {
-      return teamLifecycleReadFailure(
-        createSafeAppError({
-          code: 'unavailable',
-          reason: 'transport_unavailable',
-        }) as TeamLifecycleReadFailure['error']
-      );
-    }
-  }
+
   private async post<T>(path: string, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
-        headers: getHostedMutationHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -346,13 +350,14 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
+
   private async del<T>(path: string, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'DELETE',
-        headers: getHostedMutationHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -361,13 +366,14 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
+
   private async put<T>(path: string, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'PUT',
-        headers: getHostedMutationHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -376,10 +382,16 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
+
+  listTeamLifecycle: ElectronAPI['listTeamLifecycle'] = (request) =>
+    listTeamLifecycleOverHttp(<T>(path: string, body?: unknown) => this.post<T>(path, body), request);
+
   // ---------------------------------------------------------------------------
   // Core session/project APIs
   // ---------------------------------------------------------------------------
+
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
+
   getWindowsElevationStatus = async (): Promise<WindowsElevationStatus> => ({
     platform: 'browser',
     isWindows: false,
@@ -387,27 +399,40 @@ export class HttpAPIClient implements ElectronAPI {
     checkFailed: false,
     error: null,
   });
+
   getCodexAccountSnapshot = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   refreshCodexAccountSnapshot = (_options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   startCodexChatgptLogin = (
     _options?: CodexStartChatgptLoginOptions
   ): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   cancelCodexChatgptLogin = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   logoutCodexAccount = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
   onCodexAccountSnapshotChanged =
     (_callback: (event: unknown, snapshot: CodexAccountSnapshotDto) => void): (() => void) =>
     () =>
       undefined;
+
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
+
+  workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
+    getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
+    getProjectStatus: (request) => this.post(WORKSPACE_TRUST_PROJECT_STATUS_ROUTE, request),
+  };
+
   organizations: OrganizationsElectronApi = {
     getOrganizationMap: (request?: OrganizationMapRequest): Promise<OrganizationMapPayload> => {
       const query = new URLSearchParams();
@@ -468,6 +493,7 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<OrganizationStructurePayload> =>
       this.del<OrganizationStructurePayload>(ORGANIZATIONS_RELATIONS_ROUTE, request),
   };
+
   memberLogStream: MemberLogStreamApi = {
     getMemberLogStream: async () => {
       console.warn('[HttpAPIClient] getMemberLogStream is not available in browser mode');
@@ -485,6 +511,7 @@ export class HttpAPIClient implements ElectronAPI {
       // Not available in browser mode - no-op.
     },
   };
+
   tokenUsage: TokenUsageElectronApi['tokenUsage'] = {
     getSnapshot: (request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto> =>
       this.get<TokenUsageAnalyticsSnapshotDto>(buildTokenUsageSnapshotRoute(request)),
@@ -502,9 +529,12 @@ export class HttpAPIClient implements ElectronAPI {
       callback: (snapshot: TokenUsageAnalyticsSnapshotDto) => void
     ): (() => void) => this.addEventListener(TOKEN_USAGE_SNAPSHOT_CHANGED, callback),
   };
+
   getProjects = (): Promise<Project[]> => this.get<Project[]>('/api/projects');
+
   getSessions = (projectId: string): Promise<Session[]> =>
     this.get<Session[]>(`/api/projects/${encodeURIComponent(projectId)}/sessions`);
+
   getSessionsPaginated = (
     projectId: string,
     cursor: string | null,
@@ -522,6 +552,7 @@ export class HttpAPIClient implements ElectronAPI {
     const path = `/api/projects/${encodedId}/sessions-paginated`;
     return this.get<PaginatedSessionsResult>(qs ? `${path}?${qs}` : path);
   };
+
   searchSessions = (
     projectId: string,
     query: string,
@@ -533,11 +564,13 @@ export class HttpAPIClient implements ElectronAPI {
       `/api/projects/${encodeURIComponent(projectId)}/search?${params}`
     );
   };
+
   searchAllProjects = (query: string, maxResults?: number): Promise<SearchSessionsResult> => {
     const params = new URLSearchParams({ q: query });
     if (maxResults) params.set('maxResults', String(maxResults));
     return this.get<SearchSessionsResult>(`/api/search?${params}`);
   };
+
   getSessionDetail = (
     projectId: string,
     sessionId: string,
@@ -551,14 +584,17 @@ export class HttpAPIClient implements ElectronAPI {
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}${suffix}`
     );
   };
+
   getSessionMetrics = (projectId: string, sessionId: string): Promise<SessionMetrics | null> =>
     this.get<SessionMetrics | null>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/metrics`
     );
+
   getWaterfallData = (projectId: string, sessionId: string): Promise<WaterfallData | null> =>
     this.get<WaterfallData | null>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/waterfall`
     );
+
   getSubagentDetail = (
     projectId: string,
     sessionId: string,
@@ -573,10 +609,12 @@ export class HttpAPIClient implements ElectronAPI {
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/subagents/${encodeURIComponent(subagentId)}${suffix}`
     );
   };
+
   getSessionGroups = (projectId: string, sessionId: string): Promise<ConversationGroup[]> =>
     this.get<ConversationGroup[]>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/groups`
     );
+
   getSessionsByIds = (
     projectId: string,
     sessionIds: string[],
@@ -586,9 +624,11 @@ export class HttpAPIClient implements ElectronAPI {
       sessionIds,
       metadataLevel: options?.metadataLevel,
     });
+
   // ---------------------------------------------------------------------------
   // Repository grouping
   // ---------------------------------------------------------------------------
+
   getRepositoryGroups = (): Promise<RepositoryGroup[]> =>
     this.get<RepositoryGroup[]>('/api/repository-groups');
 
@@ -1126,6 +1166,17 @@ export class HttpAPIClient implements ElectronAPI {
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
     },
+    forceStop: async (): Promise<TeamForceStopResult> => {
+      throw new Error('Team force stop is not available in browser mode');
+    },
+    // An empty snapshot would read as "this member has nothing queued", which
+    // the discard confirmation acts on. Refuse instead, like the discard does.
+    getQueuedUserMessages: async (): Promise<QueuedUserMessagesSnapshot> => {
+      throw new Error('Listing queued messages is not available in browser mode');
+    },
+    discardQueuedUserMessages: async (): Promise<DiscardQueuedUserMessagesResult> => {
+      throw new Error('Discarding queued messages is not available in browser mode');
+    },
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
     },
@@ -1356,130 +1407,7 @@ export class HttpAPIClient implements ElectronAPI {
   };
 
   // Review API stubs
-  review = {
-    getAgentChanges: async (_teamName: string, _memberName: string): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    getTaskChanges: async (
-      _teamName: string,
-      _taskId: string,
-      _options?: TaskChangeRequestOptions
-    ): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    getTeamTaskChangeSummaries: async (
-      _teamName: string,
-      _requests: TeamTaskChangeSummaryRequest[]
-    ): Promise<TeamTaskChangeSummariesResponse> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    invalidateTaskChangeSummaries: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    getChangeStats: async (_teamName: string, _memberName: string): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    getFileContent: async (
-      _teamName: string,
-      _memberName: string | undefined,
-      _filePath: string,
-      _snippets: SnippetDiff[] = []
-    ): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    applyDecisions: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    executeMutation: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    retryMutationRecovery: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    restoreHistory: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    // Phase 2 stubs
-    checkConflict: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    rejectHunks: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    rejectFile: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    previewReject: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    // Editable diff stubs
-    saveEditedFile: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    deleteEditedFile: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    restoreRejectedRename: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    reapplyRejectedRename: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    watchFiles: async (): Promise<never> => {
-      throw new Error('Review file watching is not available in browser mode');
-    },
-    unwatchFiles: async (): Promise<never> => {
-      throw new Error('Review file watching is not available in browser mode');
-    },
-    onExternalFileChange: (): (() => void) => {
-      return () => {};
-    },
-    // Decision persistence stubs
-    loadDecisions: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    saveDecisions: async (
-      _teamName: string,
-      _scopeKey: string,
-      _scopeToken: string,
-      _hunkDecisions: Record<string, unknown>,
-      _fileDecisions: Record<string, unknown>,
-      _hunkContextHashesByFile?: Record<string, Record<number, string>>
-    ): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    clearDecisions: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    loadDecisionConflictCandidates: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    resolveDecisionConflictCandidate: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    loadDraftHistory: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    saveDraftHistoryEntry: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    clearDraftHistory: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    loadDraftHistoryConflictCandidates: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    resolveDraftHistoryConflictCandidate: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    replaceDraftHistoryConflictCandidate: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-    // Phase 4 stubs
-    getGitFileLog: async (): Promise<never> => {
-      throw new Error('Review is not available in browser mode');
-    },
-  };
+  review = createBrowserReviewApi();
 
   // CLI Installer (not available in browser mode)
   // ---------------------------------------------------------------------------
@@ -1512,7 +1440,6 @@ export class HttpAPIClient implements ElectronAPI {
       return () => {};
     },
   };
-
   openCodeRuntime: OpenCodeRuntimeAPI = {
     getStatus: async () => ({
       installed: false,
@@ -1595,41 +1522,31 @@ export class HttpAPIClient implements ElectronAPI {
     runCompanionAction: async (input: RuntimeProviderCompanionActionInput) =>
       createBrowserCompanionStatus(input, 'action'),
     onCompanionProgress: () => () => {},
-    loadView: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
+    loadView: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    loadProviderDirectory: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    loadSetupForm: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    connectProvider: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    connectWithApiKey: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    forgetCredential: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    loadModels: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    cancelModelLoad: async () => ({
+      ok: false,
+      error: 'Model catalog cancellation requires desktop.',
     }),
-    loadProviderDirectory: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadSetupForm: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    connectProvider: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
-    connectWithApiKey: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
-    forgetCredential: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
-    loadModels: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
-    testModel: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
+    testModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
     cancelModelTest: async () => ({ ok: false, error: 'Model tests require the desktop app.' }),
-    setDefaultModel: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
-    clearProjectDefaultModel: async (input) => unsupportedRuntimeProviderResponse(input.runtimeId),
+    setDefaultModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    clearProjectDefaultModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
@@ -1650,28 +1567,10 @@ export class HttpAPIClient implements ElectronAPI {
     onOAuthProgress: () => () => {},
   };
 
-  memberWorkSync: MemberWorkSyncElectronApi = {
-    getStatus: (request) =>
-      this.get(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}`
-      ),
-    refreshStatus: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}/refresh`,
-        {}
-      ),
-    getMetrics: (request) =>
-      this.get(`/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/metrics`),
-    report: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/report`,
-        request
-      ),
-  };
+  memberWorkSync = createBrowserMemberWorkSyncApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+  });
 
   tmux: TmuxAPI = {
     getStatus: async (): Promise<TmuxStatus> => ({

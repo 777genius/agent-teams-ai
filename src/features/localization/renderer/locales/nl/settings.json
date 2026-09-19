@@ -54,19 +54,25 @@
       "choosingAllProjects": "Kies een model voor projecten zonder overschrijving.",
       "choosingProject": "Kies alleen voor {{project}} een model.",
       "cancelChoosing": "Annuleren",
+      "select": "Selecteren",
+      "selected": "Geselecteerd",
       "testAndUse": "Testen en gebruiken",
       "testAndUseAllProjects": "Testen en gebruiken voor alle projecten",
       "testAndUseProject": "Testen en gebruiken voor dit project"
     },
     "diagnostics": {
+      "previousPage": "Vorige pagina",
+      "nextPage": "Volgende pagina",
       "copied": "Diagnostiek gekopieerd",
       "copiedShort": "Gekopieerd",
       "copy": "Diagnostiek kopiëren",
+      "copyAll": "Alle diagnostiek kopiëren",
       "hints": "Tips",
       "likelyCause": "Waarschijnlijke oorzaak:",
       "windowsSymlinkAdminHint": "Windows: voer Agent Teams AI uit als administrator"
     },
     "models": {
+      "testingElapsed": "Wachten op testresultaat... {{seconds}} s",
       "alreadyDefault": "Dit is al de geselecteerde OpenCode-standaard.",
       "empty": "Geen modellen gevonden.",
       "emptyFree": "Geen gratis modellen gevonden.",

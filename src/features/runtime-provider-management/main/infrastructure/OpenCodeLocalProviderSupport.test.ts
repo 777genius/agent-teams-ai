@@ -53,6 +53,35 @@ describe('OpenCodeLocalProviderSupport', () => {
     });
   });
 
+  it('carries a configured reasoning effort through and stays complete without one', () => {
+    const preset = RUNTIME_LOCAL_PROVIDER_PRESETS.find((candidate) => candidate.id === 'custom');
+    if (!preset) throw new Error('Expected the custom provider preset');
+    const configured = {
+      preset,
+      providerId: 'remote-compatible',
+      baseUrl: 'https://example.com/v1',
+      hasConfiguredApiKey: true,
+      configuredModelIds: ['large-model'],
+      configuredDefaultModelId: 'large-model',
+      isDefault: true,
+    };
+
+    expect(
+      buildDeferredProviderListEntry({
+        ...configured,
+        configuredModelReasoningEffort: { 'large-model': 'high' },
+      })?.configuredModelReasoningEffort
+    ).toEqual({ 'large-model': 'high' });
+    // The field is optional: a snapshot without one still yields a full entry.
+    const withoutReasoningEffort = buildDeferredProviderListEntry(configured);
+    expect(withoutReasoningEffort?.configuredModelReasoningEffort).toBeUndefined();
+    expect(withoutReasoningEffort).toMatchObject({
+      defaultModelId: 'large-model',
+      state: 'available',
+      liveModels: [{ id: 'large-model', displayName: 'large-model' }],
+    });
+  });
+
   it('removes a rotated credential only when its filename proves provider and config ownership', async () => {
     const previousReference = createProviderApiKeyReference({
       configPath,

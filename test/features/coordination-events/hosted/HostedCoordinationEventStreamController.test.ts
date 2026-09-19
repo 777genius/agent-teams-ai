@@ -24,6 +24,9 @@ import type {
   CoordinationReplayBatch,
   ReplayCursor,
 } from '@features/coordination-events/contracts';
+import type {
+  HostedCoordinationEventStreamWriteObservation,
+} from '@features/coordination-events/main/hosted';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
@@ -64,19 +67,29 @@ class ManualScheduler implements HostedCoordinationEventStreamScheduler {
 
 class FakeRawReply extends EventEmitter {
   destroyed = false;
+  headersSent = false;
   writableEnded = false;
   flushes = 0;
   destroyCalls = 0;
   readonly frames: string[] = [];
   readonly headers: Array<{ status: number; headers: Record<string, string> }> = [];
   writeResult = true;
+  writeHeadError?: Error;
+  flushHeadersError?: Error;
+  onFlushHeaders?: () => void;
   onWrite?: (frame: string) => void;
 
   writeHead(status: number, headers: Record<string, string>): void {
+    if (this.writeHeadError) throw this.writeHeadError;
+    if (this.headersSent)
+      throw Object.assign(new Error('headers already sent'), { code: 'ERR_HTTP_HEADERS_SENT' });
+    this.headersSent = true;
     this.headers.push({ status, headers });
   }
 
   flushHeaders(): void {
+    this.onFlushHeaders?.();
+    if (this.flushHeadersError) throw this.flushHeadersError;
     this.flushes += 1;
   }
 
@@ -104,25 +117,38 @@ interface FakeReplyState {
   readonly raw: FakeRawReply;
   readonly hijack: ReturnType<typeof vi.fn>;
   statusCode: number;
+  sent: boolean;
   body: unknown;
 }
 
 function createReply(): FakeReplyState {
   const raw = new FakeRawReply();
+  const hijack = vi.fn();
   const state = {
     raw,
-    hijack: vi.fn(),
+    hijack,
     statusCode: 200,
+    sent: false,
     body: undefined as unknown,
   } as FakeReplyState;
+  hijack.mockImplementation(() => {
+    state.sent = true;
+  });
   const reply = {
     raw,
+    get sent() {
+      return state.sent;
+    },
     hijack: state.hijack,
     code: vi.fn((statusCode: number) => {
       state.statusCode = statusCode;
       return reply;
     }),
     send: vi.fn((body: unknown) => {
+      if (state.sent || raw.headersSent) {
+        throw Object.assign(new Error('headers already sent'), { code: 'ERR_HTTP_HEADERS_SENT' });
+      }
+      state.sent = true;
       state.body = body;
       return reply;
     }),
@@ -532,6 +558,239 @@ describe('HostedCoordinationEventStreamController', () => {
     expect(anonymousReply.raw.headers).toEqual([]);
     expect(replay).not.toHaveBeenCalled();
     expect(wakeups.source.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('does not attempt a duplicate Fastify response after headers were already committed', async () => {
+    const observations: unknown[] = [];
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: vi.fn() },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: vi.fn() },
+      wakeups: createWakeups().source,
+      streamIdentityFactory: { createStreamId: () => 'stream_duplicate-response' },
+      scheduler: new ManualScheduler(),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
+    });
+    const reply = createReply();
+    reply.raw.headersSent = true;
+
+    await registerHandler(controller)(
+      createRequest({ origin: 'https://foreign.test', after: 'cursor-0' }),
+      reply.reply
+    );
+
+    expect(reply.body).toBeUndefined();
+    expect(observations).toEqual([
+      expect.objectContaining({
+        kind: 'response_lifecycle',
+        streamId: 'preauth_origin_invalid',
+        writer: 'fastify_json',
+        disposition: 'attempted',
+        headersSent: true,
+      }),
+      expect.objectContaining({
+        kind: 'response_lifecycle',
+        streamId: 'preauth_origin_invalid',
+        writer: 'fastify_json',
+        disposition: 'skipped_closed',
+        headersSent: true,
+      }),
+    ]);
+  });
+
+  it('bounds rejected-origin diagnostic volume and cardinality without allocating stream IDs', async () => {
+    const observations: Array<{ readonly streamId: string }> = [];
+    const createStreamId = vi.fn(() => 'attacker-controlled-cardinality');
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: vi.fn() },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: vi.fn() },
+      wakeups: createWakeups().source,
+      streamIdentityFactory: { createStreamId },
+      scheduler: new ManualScheduler(),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
+    });
+    const handler = registerHandler(controller);
+
+    for (let request = 0; request < 100; request += 1) {
+      const reply = createReply();
+      await handler(createRequest({ origin: `https://attacker-${request}.test` }), reply.reply);
+      expect(reply.statusCode).toBe(403);
+    }
+
+    expect(observations).toHaveLength(2);
+    expect(new Set(observations.map(({ streamId }) => streamId))).toEqual(
+      new Set(['preauth_origin_invalid'])
+    );
+    expect(createStreamId).not.toHaveBeenCalled();
+  });
+
+  it('bounds same-origin unauthenticated diagnostics without allocating stream IDs', async () => {
+    const observations: Array<{ readonly streamId: string }> = [];
+    const createStreamId = vi.fn(() => 'attacker-controlled-cardinality');
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: vi.fn() },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: vi.fn(async () => null) },
+      wakeups: createWakeups().source,
+      streamIdentityFactory: { createStreamId },
+      scheduler: new ManualScheduler(),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
+    });
+    const handler = registerHandler(controller);
+
+    for (let request = 0; request < 100; request += 1) {
+      const reply = createReply();
+      await handler(createRequest({ origin: 'https://host.test' }), reply.reply);
+      expect(reply.statusCode).toBe(401);
+      expect(reply.body).toEqual({ error: 'authentication_required' });
+    }
+
+    expect(observations).toHaveLength(2);
+    expect(new Set(observations.map(({ streamId }) => streamId))).toEqual(
+      new Set(['preauth_authentication_required'])
+    );
+    expect(createStreamId).not.toHaveBeenCalled();
+  });
+
+  it('bounds same-origin draining diagnostics without allocating stream IDs', async () => {
+    const observations: Array<{ readonly streamId: string }> = [];
+    const createStreamId = vi.fn(() => 'attacker-controlled-cardinality');
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: vi.fn() },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: vi.fn() },
+      wakeups: createWakeups().source,
+      streamIdentityFactory: { createStreamId },
+      scheduler: new ManualScheduler(),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
+    });
+    const releaseDrain = deferred<void>();
+    const draining = controller.runWithStreamsDrained(() => releaseDrain.promise);
+    const handler = registerHandler(controller);
+
+    for (let request = 0; request < 100; request += 1) {
+      const reply = createReply();
+      await handler(createRequest({ origin: 'https://host.test' }), reply.reply);
+      expect(reply.statusCode).toBe(503);
+      expect(reply.body).toEqual({ error: 'event_stream_closed' });
+    }
+
+    expect(observations).toHaveLength(2);
+    expect(new Set(observations.map(({ streamId }) => streamId))).toEqual(
+      new Set(['preauth_event_stream_closed'])
+    );
+    expect(createStreamId).not.toHaveBeenCalled();
+
+    releaseDrain.resolve();
+    await draining;
+  });
+
+  it.each(['writeHead', 'flushHeaders'] as const)(
+    'propagates and fully cleans up a live-transport %s failure after Fastify hijack',
+    async (failurePoint) => {
+      const wakeups = createWakeups();
+      const controller = new HostedCoordinationEventStreamController({
+        replay: {
+          replay: vi.fn(async () =>
+            batch({ from: '', next: '', events: [], hasMore: false })
+          ),
+        },
+        authorizer: {
+          allowedOrigin: 'https://host.test',
+          authorize: vi.fn(async () => ({ isCurrent: vi.fn(() => true), projectEvent: vi.fn() })),
+        },
+        wakeups: wakeups.source,
+        streamIdentityFactory,
+        scheduler: new ManualScheduler(),
+      });
+      const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
+      const reply = createReply();
+      const failure = new Error(`${failurePoint}_failed`);
+      if (failurePoint === 'writeHead') reply.raw.writeHeadError = failure;
+      else reply.raw.flushHeadersError = failure;
+
+      await expect(
+        registerHandler(controller)(request, reply.reply)
+      ).rejects.toBe(failure);
+      expect(reply.sent).toBe(true);
+      expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+      expect((request.raw as unknown as EventEmitter).listenerCount('aborted')).toBe(0);
+      expect((request.raw.socket as unknown as EventEmitter).listenerCount('close')).toBe(0);
+      expect(reply.raw.listenerCount('close')).toBe(0);
+      expect(reply.raw.listenerCount('error')).toBe(0);
+      expect(
+        (controller as unknown as { readonly activeStreams: ReadonlySet<unknown> }).activeStreams
+          .size
+      ).toBe(0);
+      expect(reply.raw.destroyed || reply.raw.writableEnded).toBe(true);
+      expect(reply.raw.writableEnded).toBe(true);
+    }
+  );
+
+  it('suppresses an SSE header failure only when the transport closes during the write', async () => {
+    const observations: Array<{ readonly kind: string; readonly disposition?: string }> = [];
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: vi.fn() },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({ isCurrent: vi.fn(() => true), projectEvent: vi.fn() })),
+      },
+      wakeups: createWakeups().source,
+      streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+      diagnosticObserver: (observation: HostedCoordinationEventStreamWriteObservation) =>
+        observations.push(observation),
+    });
+    const reply = createReply();
+    reply.raw.onFlushHeaders = () => {
+      reply.raw.destroyed = true;
+    };
+    reply.raw.flushHeadersError = new Error('closed_during_flush');
+
+    await expect(
+      registerHandler(controller)(
+        createRequest({ origin: 'https://host.test' }),
+        reply.reply
+      )
+    ).resolves.toBeUndefined();
+    expect(reply.raw.headers).toHaveLength(1);
+    expect(reply.raw.frames).toEqual([]);
+    expect(observations).toContainEqual(
+      expect.objectContaining({ kind: 'response_lifecycle', disposition: 'failed_closed' })
+    );
+  });
+
+  it('does not write SSE headers or frames when shutdown closes deferred authorization', async () => {
+    const pendingAuthorization = deferred<{
+      readonly isCurrent: ReturnType<typeof vi.fn>;
+      readonly projectEvent: ReturnType<typeof vi.fn>;
+    } | null>();
+    const replay = vi.fn();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(() => pendingAuthorization.promise),
+      },
+      wakeups: createWakeups().source,
+      streamIdentityFactory: { createStreamId: () => 'stream_shutdown-race' },
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+    await Promise.resolve();
+
+    controller.close();
+    await handling;
+
+    expect(reply.raw.destroyed).toBe(true);
+    expect(reply.raw.headers).toEqual([]);
+    expect(reply.raw.frames).toEqual([]);
+    expect(replay).not.toHaveBeenCalled();
   });
 
   it('captures abort before deferred authorization and leaves no replay or stream behind', async () => {

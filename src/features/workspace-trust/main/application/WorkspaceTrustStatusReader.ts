@@ -1,11 +1,19 @@
 import { buildWorkspaceTrustPathCandidates } from '../../core/domain';
+import { buildCodexTrustPatches } from '../../core/domain/buildCodexTrustPatches';
 
 import type {
+  LaunchTrustRequest,
+  LaunchTrustResult,
+  ProviderLaunchTrustStatus,
   WorkspaceTrustProjectStatusRequest,
   WorkspaceTrustProjectStatusResult,
 } from '../../contracts';
 import type { ProviderStateProbe } from '../../core/application';
-import type { WorkspaceTrustPathPlatform } from '../../core/domain';
+import type {
+  WorkspaceTrustFeatureFlags,
+  WorkspaceTrustPathPlatform,
+  WorkspaceTrustWorkspace,
+} from '../../core/domain';
 
 export type WorkspaceTrustPathResolution =
   | { status: 'resolved'; realPath: string }
@@ -23,7 +31,7 @@ export interface WorkspaceTrustStatusReaderPorts {
 export class WorkspaceTrustStatusReader {
   constructor(
     private readonly input: {
-      enabled: boolean;
+      featureFlags: WorkspaceTrustFeatureFlags;
       stateProbe: ProviderStateProbe;
       ports: WorkspaceTrustStatusReaderPorts;
     }
@@ -32,17 +40,33 @@ export class WorkspaceTrustStatusReader {
   async read(
     request: WorkspaceTrustProjectStatusRequest
   ): Promise<WorkspaceTrustProjectStatusResult> {
-    if (!this.input.enabled) {
-      return { status: 'disabled' };
-    }
+    const result = await this.readLaunchStatus({ ...request, providerIds: ['anthropic'] });
+    const provider = result.providers[0];
+    return { status: provider?.providerId === 'anthropic' ? provider.status : 'unknown' };
+  }
+
+  async readLaunchStatus(request: LaunchTrustRequest): Promise<LaunchTrustResult> {
+    const providerIds = [...new Set(request.providerIds)].sort((left, right) =>
+      left.localeCompare(right)
+    );
+    const flags = this.input.featureFlags;
+    const isEnabled = (providerId: string): boolean =>
+      flags.enabled && (providerId === 'anthropic' ? flags.claudePty : flags.codexArgs);
+    const fallback = (status: 'unknown' | 'not_applicable'): LaunchTrustResult => ({
+      providers: providerIds.map((providerId) => ({
+        providerId,
+        status: isEnabled(providerId) ? status : 'disabled',
+      })),
+    });
+    if (!providerIds.some(isEnabled)) return fallback('unknown');
 
     try {
       const pathResolution = await this.input.ports.resolvePath(request.projectPath);
       if (pathResolution.status === 'missing') {
-        return { status: 'not_applicable' };
+        return fallback('not_applicable');
       }
       if (pathResolution.status === 'unknown') {
-        return { status: 'unknown' };
+        return fallback('unknown');
       }
       const realCwd = pathResolution.realPath;
 
@@ -59,14 +83,35 @@ export class WorkspaceTrustStatusReader {
         platform: this.input.ports.platform,
       })[0];
 
-      if (!workspace?.persistable) {
-        return { status: 'not_applicable' };
-      }
-
-      const trustState = await this.input.stateProbe.readTrustState(workspace);
-      return { status: trustState.status };
+      if (!workspace) return fallback('unknown');
+      return {
+        providers: await Promise.all(
+          providerIds.map(async (providerId): Promise<ProviderLaunchTrustStatus> => {
+            if (!isEnabled(providerId)) return { providerId, status: 'disabled' };
+            try {
+              if (providerId === 'anthropic')
+                return { providerId, status: await this.readClaude(workspace) };
+              const patches = buildCodexTrustPatches({
+                providers: ['codex'],
+                workspaces: [workspace],
+                featureFlags: flags,
+              });
+              return { providerId, status: patches.length ? 'launch_scoped' : 'unknown' };
+            } catch {
+              return { providerId, status: 'unknown' };
+            }
+          })
+        ),
+      };
     } catch {
-      return { status: 'unknown' };
+      return fallback('unknown');
     }
+  }
+
+  private async readClaude(
+    workspace: WorkspaceTrustWorkspace
+  ): Promise<WorkspaceTrustProjectStatusResult['status']> {
+    if (!workspace.persistable) return 'not_applicable';
+    return (await this.input.stateProbe.readTrustState(workspace)).status;
   }
 }

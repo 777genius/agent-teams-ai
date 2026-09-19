@@ -23,6 +23,18 @@ describe('ProviderModelBadges', () => {
     document.body.innerHTML = '';
   });
 
+  it('renders model names as comma-separated secondary text instead of badges', () => {
+    const host = render(<ProviderModelBadges providerId="codex" models={['gpt-5.4', 'gpt-5.5']} />);
+    const modelItems = Array.from(host.firstElementChild?.children ?? []) as HTMLElement[];
+
+    expect(host.textContent).toBe('5.5,5.4');
+    expect(modelItems).toHaveLength(2);
+    expect(host.firstElementChild?.className).toContain('gap-x-[2ch]');
+    expect(modelItems[0]?.className).toContain('text-[var(--color-text-secondary)]');
+    expect(modelItems[0]?.className).not.toContain('rounded');
+    expect(modelItems[0]?.className).not.toContain('border');
+  });
+
   it('does not render stale availability chips for OpenCode models', () => {
     const host = render(
       <ProviderModelBadges
@@ -169,6 +181,10 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent?.match(/Free/g)).toHaveLength(1);
+    const freeBadge = Array.from(host.querySelectorAll('span')).find(
+      (element) => element.textContent === 'Free'
+    );
+    expect(freeBadge?.className).toContain('rounded');
   });
 
   it('ignores a stale Free badge on a connected OpenCode provider route', () => {
@@ -355,7 +371,7 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent).toContain('Free');
   });
 
-  it('does not duplicate a catalog badge that matches the displayed model label', () => {
+  it('does not render non-Free catalog labels as badges', () => {
     const host = render(
       <ProviderModelBadges
         providerId="anthropic"
@@ -386,7 +402,7 @@ describe('ProviderModelBadges', () => {
                 isDefault: true,
                 upgrade: false,
                 source: 'anthropic-models-api',
-                badgeLabel: 'Opus 4.6',
+                badgeLabel: 'Recommended',
               },
             ],
             diagnostics: {
@@ -399,6 +415,7 @@ describe('ProviderModelBadges', () => {
     );
 
     expect(host.textContent?.match(/Opus 4\.6/g)).toHaveLength(1);
+    expect(host.textContent).not.toContain('Recommended');
   });
 
   it('does not render duplicate Anthropic Opus 4.8 model badges when the runtime reports the opus alias', () => {
@@ -409,6 +426,75 @@ describe('ProviderModelBadges', () => {
 
     expect(renderedModelLabels.filter((label) => label === 'Opus 4.8')).toHaveLength(1);
     expect(renderedModelLabels).toContain('Opus 4.8 (1M)');
+  });
+
+  it('shows newer Anthropic versions first and deduplicates aliases and dated snapshots', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="anthropic"
+        models={[
+          'fable',
+          'claude-fable-5',
+          'claude-fable-5-1',
+          'haiku',
+          'claude-haiku-4-5',
+          'claude-haiku-4-5-20251001',
+          'opus',
+          'claude-opus-4-8',
+          'opus[1m]',
+          'claude-opus-4-8[1m]',
+          'sonnet',
+          'claude-sonnet-4-6',
+          'sonnet[1m]',
+          'claude-sonnet-4-6[1m]',
+        ]}
+        collapseAfter={2}
+      />
+    );
+
+    expect(host.textContent).toBe('Fable 5.1,Fable 5+8 more');
+    act(() => {
+      host.querySelector('button')?.click();
+    });
+    const labels = Array.from(host.firstElementChild?.firstElementChild?.children ?? []).map(
+      (item) => item.firstElementChild?.textContent
+    );
+    expect(labels).toEqual([
+      'Fable 5.1',
+      'Fable 5',
+      'Sonnet 5',
+      'Opus 4.8',
+      'Opus 4.8 (1M)',
+      'Opus 4.7',
+      'Opus 4.7 (1M)',
+      'Sonnet 4.6',
+      'Sonnet 4.6 (1M)',
+      'Haiku 4.5',
+    ]);
+  });
+
+  it('preserves distinct availability information for otherwise identical Anthropic labels', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="anthropic"
+        models={['opus', 'claude-opus-4-8']}
+        modelAvailability={[
+          { modelId: 'opus', status: 'available', checkedAt: '2026-09-04T00:00:00Z' },
+          {
+            modelId: 'claude-opus-4-8',
+            status: 'unavailable',
+            reason: 'Access denied',
+            checkedAt: '2026-09-04T00:00:00Z',
+          },
+        ]}
+      />
+    );
+
+    expect(host.textContent).toContain('Unavailable');
+    const labels = Array.from(host.firstElementChild?.children ?? []).map(
+      (item) => item.firstElementChild?.textContent
+    );
+    expect(labels.filter((label) => label === 'Opus 4.8')).toHaveLength(2);
   });
 
   it('collapses long model lists and expands them inline without an internal scroll area', () => {

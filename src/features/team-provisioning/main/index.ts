@@ -1,4 +1,9 @@
 export {
+  createMemberSettingsRelaunchFeature,
+  type MemberSettingsRelaunchFeature,
+  type MemberSettingsRelaunchFeatureDependencies,
+} from './composition/createMemberSettingsRelaunchFeature';
+export {
   createTeamMemberSettingsFeature,
   type TeamMemberSettingsFeatureApi,
   type TeamMemberSettingsFeatureDependencies,

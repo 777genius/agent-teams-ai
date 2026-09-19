@@ -44,6 +44,7 @@ const EXPECTED_REGISTRATION_ORDER = [
   'registerTeamProvisioningIpc',
   'registerTeamConfigurationIpc',
   'registerTeamMessageDeliveryIpc',
+  'registerTeamQueuedUserMessagesIpc',
   'registerLegacyTeamProcessIpc',
   'registerTeamRosterMutationIpc',
   'registerTeamViewReadModelIpc',
@@ -60,6 +61,7 @@ const EXPECTED_REMOVAL_ORDER = [
   'removeTeamProvisioningIpc',
   'removeTeamConfigurationIpc',
   'removeTeamMessageDeliveryIpc',
+  'removeTeamQueuedUserMessagesIpc',
   'removeLegacyTeamProcessIpc',
   'removeTeamRosterMutationIpc',
   'removeTeamViewReadModelIpc',
@@ -231,8 +233,12 @@ describe('desktop team feature capability freeze boundary', () => {
 
   it('keeps composition on narrow capabilities without activating another runtime owner', () => {
     expect(compositionSource).toContain(
-      'export type DesktopTeamFeatureCompositionDependencies = DesktopTeamLegacyAdapterDependencies;'
+      'export interface DesktopTeamFeatureCompositionDependencies\n  extends DesktopTeamLegacyAdapterDependencies {'
     );
+    expect(compositionSource).toContain(
+      'teamScopedResourceReleaser?: TeamScopedResourceReleaser;'
+    );
+    expect(compositionSource).toContain('dependencies.teamScopedResourceReleaser');
     expect(legacyAdaptersSource).toContain('capabilities: DesktopTeamFeatureCapabilities;');
     expect(compositionSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);
     expect(legacyAdaptersSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);

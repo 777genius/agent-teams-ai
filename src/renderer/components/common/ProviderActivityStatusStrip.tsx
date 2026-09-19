@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import {
-  formatProviderStatusText,
-  shouldMaskCodexNegativeBootstrapState,
-} from '@renderer/components/runtime/providerConnectionUi';
+import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runtime/providerConnectionUi';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
-import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
+import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
+import {
+  hasSettledOpenCodeScopedPreparation,
+  isTeamProviderRuntimeStatusLoading,
+  type OpenCodeScopedPreparationEvidence,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { ProviderBrandLogo } from './ProviderBrandLogo';
@@ -24,20 +26,20 @@ interface ProviderActivityState {
 interface ProviderActivityStatusStripProps {
   readonly cliStatus: CliInstallationStatus | null | undefined;
   readonly sourceCliStatus?: CliInstallationStatus | null;
+  readonly providerStatusOverride?: CliProviderStatus | null;
   readonly cliStatusLoading: boolean;
   readonly cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   readonly multimodelEnabled: boolean;
   readonly codexSnapshotPending?: boolean;
+  readonly openCodePreparationEvidence?: OpenCodeScopedPreparationEvidence;
+  readonly forceLoadingProviderIds?: readonly CliProviderId[];
   readonly providerIds?: readonly CliProviderId[];
   readonly className?: string;
   readonly label?: string | null;
   readonly layout?: 'inline' | 'stacked';
   readonly showReadyProviders?: boolean;
   readonly readyStatusText?: string;
-}
-
-function isProviderCardLoading(provider: CliProviderStatus, providerLoading: boolean): boolean {
-  return providerLoading || isTeamProviderModelVerificationPending(provider.providerId, provider);
+  readonly showDetailMessages?: boolean;
 }
 
 function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
@@ -79,20 +81,26 @@ function areProviderIdListsEqual(nextIds: CliProviderId[], prevIds: CliProviderI
 function useProviderActivityDisplay({
   cliStatus,
   sourceCliStatus,
+  providerStatusOverride,
   cliStatusLoading,
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  openCodePreparationEvidence,
+  forceLoadingProviderIds,
   providerIds,
   showReadyProviders,
 }: Pick<
   ProviderActivityStatusStripProps,
   | 'cliStatus'
   | 'sourceCliStatus'
+  | 'providerStatusOverride'
   | 'cliStatusLoading'
   | 'cliProviderStatusLoading'
   | 'multimodelEnabled'
   | 'codexSnapshotPending'
+  | 'openCodePreparationEvidence'
+  | 'forceLoadingProviderIds'
   | 'providerIds'
   | 'showReadyProviders'
 >): {
@@ -113,6 +121,10 @@ function useProviderActivityDisplay({
     () => (providerIds ? new Set<CliProviderId>(providerIds) : null),
     [providerIds]
   );
+  const forcedLoadingProviderIdSet = useMemo(
+    () => new Set<CliProviderId>(forceLoadingProviderIds ?? []),
+    [forceLoadingProviderIds]
+  );
   const sourceProviderMap = useMemo(
     () =>
       new Map((sourceStatus?.providers ?? []).map((provider) => [provider.providerId, provider])),
@@ -124,27 +136,41 @@ function useProviderActivityDisplay({
       (provider) => !providerIdSet || providerIdSet.has(provider.providerId)
     );
 
-    return visibleProviders.map((provider) => {
+    return visibleProviders.map((globalProvider) => {
+      const overridden = providerStatusOverride?.providerId === globalProvider.providerId;
+      const provider = overridden ? providerStatusOverride : globalProvider;
       const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
       const loading =
-        isProviderCardLoading(provider, cliProviderStatusLoading[provider.providerId] === true) ||
+        forcedLoadingProviderIdSet.has(provider.providerId) ||
+        isTeamProviderRuntimeStatusLoading(
+          provider.providerId,
+          provider,
+          !overridden && cliProviderStatusLoading[provider.providerId] === true,
+          openCodePreparationEvidence
+        ) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
         shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
           providerLoading: cliProviderStatusLoading[provider.providerId] === true,
         });
+      const scopedOpenCodeReady =
+        provider.providerId === 'opencode' &&
+        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence);
 
       return {
         provider,
         loading,
-        error: !loading && provider.verificationState === 'error',
+        error: !loading && !scopedOpenCodeReady && !hasEffectiveProviderLaunchAuthority(provider),
       };
     });
   }, [
     cliProviderStatusLoading,
     codexSnapshotPending,
+    forcedLoadingProviderIdSet,
+    openCodePreparationEvidence,
     providerIdSet,
     renderCliStatus?.providers,
     sourceProviderMap,
+    providerStatusOverride,
   ]);
 
   const visibleProviderIds = useMemo(
@@ -232,26 +258,34 @@ function useProviderActivityDisplay({
 export const ProviderActivityStatusStrip = ({
   cliStatus,
   sourceCliStatus,
+  providerStatusOverride,
   cliStatusLoading,
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  openCodePreparationEvidence,
+  forceLoadingProviderIds,
   providerIds,
   className = '',
   label,
   layout = 'inline',
   showReadyProviders = false,
   readyStatusText,
+  showDetailMessages = false,
 }: ProviderActivityStatusStripProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
+  const { t: teamT } = useAppTranslation('team');
   const effectiveLabel = label ?? t('providerRuntime.connectionUi.status.providerActivity');
   const { displayProviderIds, providerStateMap, shouldRender } = useProviderActivityDisplay({
     cliStatus,
     sourceCliStatus,
+    providerStatusOverride,
     cliStatusLoading,
     cliProviderStatusLoading,
     multimodelEnabled,
     codexSnapshotPending,
+    openCodePreparationEvidence,
+    forceLoadingProviderIds,
     providerIds,
     showReadyProviders,
   });
@@ -268,6 +302,13 @@ export const ProviderActivityStatusStrip = ({
     layout === 'stacked'
       ? 'flex min-w-0 w-full flex-wrap items-center gap-1.5'
       : 'flex min-w-0 flex-1 flex-wrap items-center gap-2';
+  const detailMessages = showDetailMessages
+    ? displayProviderIds.flatMap((providerId) => {
+        const provider = providerStateMap.get(providerId)?.provider;
+        const message = provider?.statusMessage?.trim() || provider?.detailMessage?.trim();
+        return provider && message ? [{ providerId, provider, message }] : [];
+      })
+    : [];
 
   return (
     <div className={rootClassName}>
@@ -296,7 +337,7 @@ export const ProviderActivityStatusStrip = ({
             tone === 'loading'
               ? t('providerRuntime.connectionUi.status.checking')
               : tone === 'error'
-                ? formatProviderStatusText(providerState.provider, t)
+                ? teamT('provisioning.providerStatus.detailSummary.needsAttention')
                 : t('providerRuntime.connectionUi.status.checked');
           const displayStatusText =
             tone === 'checked' && readyStatusText ? readyStatusText : statusText;
@@ -326,17 +367,23 @@ export const ProviderActivityStatusStrip = ({
               <span className="shrink-0 font-medium" style={{ color: styles.textColor }}>
                 {providerState.provider.displayName}
               </span>
-              <span
-                className="max-w-[280px] truncate"
-                style={{ color: styles.statusColor }}
-                title={displayStatusText}
-              >
+              <span className="max-w-[280px] truncate" style={{ color: styles.statusColor }}>
                 {displayStatusText}
               </span>
             </div>
           );
         })}
       </div>
+      {detailMessages.length > 0 ? (
+        <div className="space-y-0.5 text-[10px] leading-relaxed text-[var(--color-text-muted)]">
+          {detailMessages.map(({ providerId, provider, message }) => (
+            <p key={providerId} data-testid={`provider-activity-detail-${providerId}`}>
+              {detailMessages.length > 1 ? `${provider.displayName}: ` : ''}
+              {message}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 };

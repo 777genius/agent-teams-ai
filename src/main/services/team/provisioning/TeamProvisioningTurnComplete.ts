@@ -59,6 +59,7 @@ export interface TeamProvisioningTurnCompleteRun {
   request: TeamCreateRequest;
   detectedSessionId: string | null;
   allEffectiveMembers: TeamCreateRequest['members'];
+  mixedSecondaryRosterPreparation?: Promise<boolean>;
   deterministicBootstrap: boolean;
   pendingGeminiPostLaunchHydration: boolean;
   geminiPostLaunchHydrationInFlight: boolean;
@@ -377,6 +378,11 @@ export async function handleTeamProvisioningTurnComplete<
   run: TRun,
   ports: TeamProvisioningTurnCompletePorts<TRun, TSecondaryLaunchResult>
 ): Promise<void> {
+  // Finish an eager roster write before post-launch metadata reads config.json.
+  // Failed preparation is already reported by the stream handler; completion can retry launch.
+  if (run.mixedSecondaryRosterPreparation) {
+    await run.mixedSecondaryRosterPreparation.catch(() => undefined);
+  }
   if (
     run.provisioningComplete ||
     run.cancelRequested ||

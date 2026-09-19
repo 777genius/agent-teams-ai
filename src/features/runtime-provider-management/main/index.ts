@@ -2,6 +2,17 @@ export {
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
 } from './adapters/input/registerRuntimeProviderManagementIpc';
+export type {
+  OpenCodeVersionCommandOptions,
+  OpenCodeVersionCommandResult,
+  OpenCodeVersionDiagnosticMetadata,
+  OpenCodeVersionDiagnosticPorts,
+} from './application/OpenCodeVersionDiagnosticPorts';
+export {
+  type OpenCodeBinaryCandidateFailure,
+  type OpenCodeBinaryVersionProbe,
+  probeOpenCodeBinaryVersion,
+} from './application/openCodeVersionDiagnostics';
 export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "excludedAdmissionTicketFields": [
+    "workSyncRuntimeTicketId",
+    "workSyncRuntimeGeneration",
+    "workSyncRuntimeInstanceId",
+    "workSyncAdmissionPayloadHash",
+    "workSyncTeamIncarnation"
+  ],
+  "fullEnvelopeHashNotes": "Existing outbox/inbox payloadHash includes ticket fields. It continues to omit workSyncControlRevision so D0 idempotency is unchanged. Admission hash includes control revision and execution fields, and excludes only the listed ticket fields."
+}

@@ -224,6 +224,11 @@ declare module 'agent-teams-controller' {
     buildProcessProtocolText(teamName: string): string;
   }
 
+  /** Context-free text classifiers shared with the MCP server. */
+  export interface TaskTextSignalsApi {
+    isTaskCompletionClaimText(text: string): boolean;
+  }
+
   export type AgentTeamsMcpToolGroupId =
     | 'task'
     | 'lead'
@@ -245,6 +250,8 @@ declare module 'agent-teams-controller' {
   export const agentBlocks: AgentBlocksApi;
 
   export const protocols: ProtocolsApi;
+
+  export const taskTextSignals: TaskTextSignalsApi;
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

@@ -30,4 +30,13 @@ describe('team identifier validation', () => {
       error: 'member name "team-lead" is reserved',
     });
   });
+
+  it('rejects "system" as a member or teammate name', () => {
+    // "system" is used elsewhere (OpenCodeDeliveryReplyContract) as a marker
+    // for an unaddressable sender. A teammate actually named "system" would
+    // have its real messages misclassified as informational notices.
+    expect(validateMemberName('system')).toMatchObject({ valid: false });
+    expect(validateMemberName('System')).toMatchObject({ valid: false });
+    expect(validateTeammateName('system')).toMatchObject({ valid: false });
+  });
 });

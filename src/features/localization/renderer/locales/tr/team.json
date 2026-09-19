@@ -72,7 +72,30 @@
       "externalTeam": "harici ekip",
       "crossTeamAwaitingReply": "Ekipler arası mesaj gönderildi, yanıt bekleniyor",
       "user": "kullanıcı",
-      "awaitingApproval": "onay bekleniyor"
+      "awaitingApproval": "onay bekleniyor",
+      "discardQueued": {
+        "action": "Kuyruktaki mesajları sil",
+        "alreadyDelivered": "Hiçbir şey silinmedi: bu mesajlar \"{{member}}\" üyesine zaten teslim edilmişti.",
+        "cancelLabel": "İptal",
+        "confirmLabel": "Sil",
+        "count": "kuyrukta {{count}}",
+        "count_few": "kuyrukta {{count}}",
+        "count_many": "kuyrukta {{count}}",
+        "count_one": "kuyrukta {{count}}",
+        "count_other": "kuyrukta {{count}}",
+        "failedFallbackMessage": "Beklenmeyen bir hata oluştu",
+        "failedTitle": "Kuyruktaki mesajlar silinemedi",
+        "message": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_few": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_many": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_one": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmedi ve kalıcı olarak kaldırılacak. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_other": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "okLabel": "Tamam",
+        "remaining": "{{discarded}} silindi. Kuyrukta kalan: {{remaining}}.",
+        "resultTitle": "Kuyruktaki mesajlar",
+        "title": "Kuyruktaki mesajları sil",
+        "tooltip": "Bu üyenin kuyruktaki mesajlarını sil"
+      }
     },
     "reply": {
       "replyingTo": "Şuna yanıt veriliyor:",
@@ -312,8 +335,14 @@
       "saved": "Kaydedildi"
     },
     "worktree": {
-      "description": "Bu takım arkadaşını ayrı bir git worktree'de çalıştır. Değişiklikleri uygula/reddet, lider çalışma alanını değil o worktree'yi hedefler.",
-      "label": "Worktree"
+      "description": "İşaretli: gerekirse başlatma sırasında oluşturulan ayrı bir Git worktree'si kullanır. Mevcut worktree'ler geçerli branch'lerini korur. İşaretli değil: paylaşılan proje çalışma alanını kullanır; eski worktree korunur.",
+      "label": "Worktree",
+      "existing": "Son çalışma alanı: {{path}}. Yönetilen worktree varsa yeniden kullanılır; yoksa başlatma sırasında oluşturulur.",
+      "new": "Worktree: varsa yeniden kullanılır; yoksa başlatma sırasında oluşturulur. Branch, başlatmadan sonra gösterilir.",
+      "shared": "Paylaşılan proje çalışma alanı: {{path}}. Projenin branch'ini kullanır.",
+      "sharedPending": "Paylaşılan çalışma alanı: başlatma sırasında lider worktree'siyle birlikte belirlenir. Branch, başlatmadan sonra gösterilir.",
+      "branch": "Worktree branch'i: {{branch}}",
+      "branchUnavailable": "Kullanılamıyor"
     },
     "addMembers": {
       "title": "Üye Ekle",
@@ -333,6 +362,7 @@
       "launch": "Başlat",
       "remove": "Kaldır",
       "stop": "Durdur",
+      "stopping": "Durduruluyor...",
       "task": "Görev",
       "visualize": "Görselleştir",
       "usage": "Kullanım"
@@ -354,6 +384,14 @@
       "member_one": "üye",
       "member_other": "üye",
       "title": "Ekip henüz başlatılmadı"
+    },
+    "stopFailed": {
+      "title": "Ekip durdurulamadı",
+      "message": "Ekip hâlâ çalışıyor. Durumunu kontrol edin ve Durdur düğmesine tekrar basın."
+    },
+    "stopUnknown": {
+      "title": "Durdurma doğrulanamadı",
+      "message": "Çalışma zamanından yanıt alınamadı. Yeniden denemeden önce ekip durumunu yenileyin."
     },
     "invalidTab": "Geçersiz ekip sekmesi",
     "kanbanSafeData": "Kanban tam olarak yüklenemedi. Güvenli veri gösteriliyor.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Ekibi yeniden başlat",
       "relaunching": "Yeniden başlatılıyor...",
       "saveChanges": "Değişiklikleri Kaydet",
-      "saving": "Kaydediliyor..."
+      "saving": "Kaydediliyor...",
+      "skipPreflightAndLaunch": "Ön kontrolü atla ve başlat"
+    },
+    "workspaceTrust": {
+      "description": "Ekip başladığında proje komutları ve MCP sunucuları çalışabilir."
     },
     "billing": {
       "prefix": "15 Haziran 2026'dan itibaren Anthropic",
@@ -1540,6 +1582,11 @@
       "message": "\"{{teamName}}\" ekibi kalıcı olarak silinsin mi? Tüm veriler kaybolacak.",
       "confirmLabel": "Kalıcı olarak sil",
       "cancelLabel": "İptal"
+    },
+    "deleteFailed": {
+      "title": "Ekip silinemedi",
+      "fallbackMessage": "Beklenmeyen bir hata oluştu",
+      "confirmLabel": "Tamam"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Dizin mevcut değilse otomatik olarak oluşturulacaktır."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Takım arkadaşı başlatma tolerans süresi içinde katılmadı."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Üyeler",
       "addMember": "Üye ekle",
       "editAsJson": "JSON olarak düzenle",
-      "runInSeparateWorktrees": "Takım arkadaşlarını ayrı worktree'lerde çalıştır",
+      "runInSeparateWorktrees": "Tüm takım arkadaşları için worktree",
       "agentTeamsMcpOnly": "Yalnızca Agent Teams MCP",
       "removedCount": "Kaldırıldı ({{count}})",
       "removedModelLockReason": "Kaldırılan üyeler yumuşak silme geçmişi için korunur. Ayarları düzenlemek için onları geri yükleyin.",
-      "memberNamesUnique": "Üye adları benzersiz olmalıdır"
+      "memberNamesUnique": "Üye adları benzersiz olmalıdır",
+      "worktreeDescription": "İşaretli: tüm takım arkadaşları için ayrı worktree'ler. Karma: yalnızca seçili takım arkadaşları için. İşaretli değil: paylaşılan proje çalışma alanı. Bu seçenek kapatıldığında mevcut worktree'ler diskte tutulur."
     },
     "stats": {
       "computing": "İstatistikler hesaplanıyor...",
@@ -2393,7 +2444,11 @@
       "yes": "evet",
       "no": "hayır",
       "moreActionableItems": "{{count}} eyleme geçirilebilir öğe daha",
-      "diagnostics": "Tanılamalar: {{diagnostics}}"
+      "diagnostics": "Tanılamalar: {{diagnostics}}",
+      "autoResumeStopped": "Otomatik devam durduruldu.",
+      "continue": "Devam et",
+      "stopAutoResume": "Otomatik devamı durdur",
+      "resumeAutoResume": "Otomatik devamı sürdür"
     },
     "title": "Üye iş senkronizasyonu",
     "loadingDiagnostics": "Üye iş senkronizasyonu tanılamaları yükleniyor.",
@@ -2401,7 +2456,7 @@
   },
   "advancedCli": {
     "title": "Gelişmiş",
-    "useWorktree": "Worktree kullan",
+    "useWorktree": "Lider worktree'si (takım arkadaşlarının worktree'lerinden ayrı)",
     "recent": "Son",
     "commandPreview": "Komut önizlemesi",
     "customArguments": "Özel argümanlar",

@@ -72,7 +72,30 @@
       "externalTeam": "equipo externo",
       "crossTeamAwaitingReply": "Mensaje cruzado enviado, en espera de respuesta",
       "user": "usuario",
-      "awaitingApproval": "en espera de aprobación"
+      "awaitingApproval": "en espera de aprobación",
+      "discardQueued": {
+        "action": "Descartar mensajes en cola",
+        "alreadyDelivered": "No se descartó nada: esos mensajes ya se habían entregado a \"{{member}}\".",
+        "cancelLabel": "Cancelar",
+        "confirmLabel": "Descartar",
+        "count": "{{count}} en cola",
+        "count_few": "{{count}} en cola",
+        "count_many": "{{count}} en cola",
+        "count_one": "{{count}} en cola",
+        "count_other": "{{count}} en cola",
+        "failedFallbackMessage": "Se produjo un error inesperado",
+        "failedTitle": "No se pudieron descartar los mensajes en cola",
+        "message": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_few": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_many": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_one": "¿Descartar {{count}} mensaje en cola para \"{{member}}\"? Todavía no se ha entregado y se eliminará de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_other": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "okLabel": "Aceptar",
+        "remaining": "Se descartaron {{discarded}}. Aún en cola: {{remaining}}.",
+        "resultTitle": "Mensajes en cola",
+        "title": "Descartar mensajes en cola",
+        "tooltip": "Descartar los mensajes en cola de este miembro"
+      }
     },
     "reply": {
       "replyingTo": "Respuesta a",
@@ -312,8 +335,14 @@
       "saved": "Guardado"
     },
     "worktree": {
-      "description": "Ejecute a este compañero en un git worktree separado. Aplicar/rechazar cambios objetivos que worktree, no el espacio de trabajo principal.",
-      "label": "Worktree"
+      "description": "Marcado: usa un worktree de Git independiente, que se crea al iniciar si es necesario. Los worktrees existentes conservan su rama actual. Desmarcado: usa el espacio de trabajo compartido del proyecto; el worktree anterior se conserva.",
+      "label": "Worktree",
+      "existing": "Último espacio de trabajo: {{path}}. El worktree administrado se reutiliza si está disponible; de lo contrario, se crea al iniciar.",
+      "new": "Worktree: se reutiliza si está disponible; de lo contrario, se crea al iniciar. La rama se mostrará después del inicio.",
+      "shared": "Espacio de trabajo compartido del proyecto: {{path}}. Usa la rama del proyecto.",
+      "sharedPending": "Espacio de trabajo compartido: se determina al iniciar junto con el worktree del líder. La rama se mostrará después del inicio.",
+      "branch": "Rama del worktree: {{branch}}",
+      "branchUnavailable": "No disponible"
     },
     "addMembers": {
       "title": "Agregar miembros",
@@ -333,6 +362,7 @@
       "launch": "Lanzamiento",
       "remove": "Retirar",
       "stop": "Para.",
+      "stopping": "Deteniendo...",
       "task": "Tareas",
       "visualize": "Visualize",
       "usage": "Uso"
@@ -354,6 +384,14 @@
       "member_one": "miembro",
       "member_other": "miembros",
       "title": "Equipo aún no lanzado"
+    },
+    "stopFailed": {
+      "title": "No se pudo detener el equipo",
+      "message": "El equipo sigue en ejecución. Comprueba su estado y pulsa Detener de nuevo."
+    },
+    "stopUnknown": {
+      "title": "No se pudo confirmar la detención",
+      "message": "No se recibió respuesta del entorno de ejecución. Actualiza el estado del equipo antes de volver a intentarlo."
     },
     "invalidTab": "Tapa de equipo inválido",
     "kanbanSafeData": "Failed to fully load kanban. Mostrando datos seguros.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Relaunch team",
       "relaunching": "Relanzar...",
       "saveChanges": "Guardar cambios",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "skipPreflightAndLaunch": "Omitir comprobación e iniciar"
+    },
+    "workspaceTrust": {
+      "description": "Al iniciar el equipo, pueden ejecutarse comandos del proyecto y servidores MCP."
     },
     "billing": {
       "prefix": "A partir del 15 de junio de 2026, facturas antropópicas",
@@ -1540,6 +1582,11 @@
       "message": "Eliminar el equipo \"{{teamName}}\" permanentemente? Todos los datos se perderán.",
       "confirmLabel": "Suprimir para siempre",
       "cancelLabel": "Cancelar"
+    },
+    "deleteFailed": {
+      "title": "No se pudo eliminar el equipo",
+      "fallbackMessage": "Un error inesperado ocurrió",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Si el directorio no existe, se creará automáticamente."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "El compañero de equipo no se unió dentro del margen de tiempo del lanzamiento."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Miembros",
       "addMember": "Añadir miembro",
       "editAsJson": "Editar como JSON",
-      "runInSeparateWorktrees": "Corre compañeros de equipo en árboles de trabajo separados",
+      "runInSeparateWorktrees": "Worktree para todos los miembros del equipo",
       "agentTeamsMcpOnly": "Agentes Equipos MCP sólo",
       "removedCount": "Quitado ({{count}})",
       "removedModelLockReason": "Los miembros eliminados se mantienen para la historia de borrado suave. Restaurar los ajustes para editar.",
-      "memberNamesUnique": "Los nombres de los Miembros deben ser únicos"
+      "memberNamesUnique": "Los nombres de los Miembros deben ser únicos",
+      "worktreeDescription": "Marcado: worktrees independientes para todos los miembros. Mixto: solo para los miembros seleccionados. Desmarcado: espacio de trabajo compartido del proyecto. Al desactivarlo, los worktrees existentes se conservan en el disco."
     },
     "stats": {
       "computing": "Estadísticas de computación...",
@@ -2393,7 +2444,11 @@
       "yes": "Sí.",
       "no": "no",
       "moreActionableItems": "{{count}} artículo(s) más accionable(s)",
-      "diagnostics": "Diagnósticos: {{diagnostics}}"
+      "diagnostics": "Diagnósticos: {{diagnostics}}",
+      "autoResumeStopped": "La continuación automática está detenida.",
+      "continue": "Continuar",
+      "stopAutoResume": "Detener reanudación automática",
+      "resumeAutoResume": "Reanudar reanudación automática"
     },
     "title": "Sincronización de la labor de los miembros",
     "loadingDiagnostics": "Carga de trabajo sincronía diagnóstico.",
@@ -2401,7 +2456,7 @@
   },
   "advancedCli": {
     "title": "Avances",
-    "useWorktree": "Use worktree",
+    "useWorktree": "Worktree del líder (separado de los worktrees de los demás miembros)",
     "recent": "Recientes",
     "commandPreview": "Previsualización del comando",
     "customArguments": "Argumentos aduaneros",

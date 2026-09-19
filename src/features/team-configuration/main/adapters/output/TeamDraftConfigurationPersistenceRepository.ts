@@ -1,5 +1,7 @@
+import { fingerprintSavedLaunchSettings } from '@features/team-provisioning';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -25,6 +27,7 @@ interface DraftTeamMetadata {
   model?: string;
   effort?: string;
   fastMode?: TeamFastMode;
+  syncModelsWithLead?: boolean;
   skipPermissions?: boolean;
   worktree?: string;
   extraCliArgs?: string;
@@ -163,6 +166,7 @@ export class TeamDraftConfigurationPersistenceRepository {
       color: meta.color,
       cwd: meta.cwd,
       prompt: meta.prompt,
+      savedSettingsFingerprint: fingerprintSavedLaunchSettings(meta),
       providerId: resolvedProviderId,
       providerBackendId: migrateProviderBackendId(
         resolvedProviderId,
@@ -171,12 +175,13 @@ export class TeamDraftConfigurationPersistenceRepository {
       model: meta.model,
       effort: meta.effort as TeamCreateRequest['effort'],
       fastMode: meta.fastMode,
+      syncModelsWithLead: meta.syncModelsWithLead,
       skipPermissions: meta.skipPermissions,
       worktree: meta.worktree,
       extraCliArgs: meta.extraCliArgs,
       limitContext: meta.limitContext,
       members: members
-        .filter((member) => !member.removedAt)
+        .filter((member) => !member.removedAt && !isCanonicalSettingsLeadMember(member))
         .map((member) => ({
           name: member.name,
           role: member.role,
@@ -237,6 +242,7 @@ export class TeamDraftConfigurationPersistenceRepository {
         model: request.model,
         effort: request.effort,
         fastMode: request.fastMode,
+        syncModelsWithLead: request.syncModelsWithLead,
         skipPermissions: request.skipPermissions,
         worktree: request.worktree,
         extraCliArgs: request.extraCliArgs,

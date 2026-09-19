@@ -72,7 +72,30 @@
       "externalTeam": "외부 팀",
       "crossTeamAwaitingReply": "Cross-team 메시지 전송, 대기 회신",
       "user": "제품정보",
-      "awaitingApproval": "감사의 뜻"
+      "awaitingApproval": "승인 대기 중",
+      "discardQueued": {
+        "action": "대기 중인 메시지 삭제",
+        "alreadyDelivered": "삭제된 항목이 없습니다. 해당 메시지는 이미 \"{{member}}\"에게 전달되었습니다.",
+        "cancelLabel": "취소",
+        "confirmLabel": "삭제",
+        "count": "대기 {{count}}건",
+        "count_few": "대기 {{count}}건",
+        "count_many": "대기 {{count}}건",
+        "count_one": "대기 {{count}}건",
+        "count_other": "대기 {{count}}건",
+        "failedFallbackMessage": "예기치 않은 오류가 발생했습니다",
+        "failedTitle": "대기 중인 메시지를 삭제하지 못했습니다",
+        "message": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_few": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_many": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_one": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_other": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "okLabel": "확인",
+        "remaining": "{{discarded}}건을 삭제했습니다. 아직 대기 중: {{remaining}}건.",
+        "resultTitle": "대기 중인 메시지",
+        "title": "대기 중인 메시지 삭제",
+        "tooltip": "이 멤버의 대기 중인 메시지 삭제"
+      }
     },
     "reply": {
       "replyingTo": "관련 기사",
@@ -312,8 +335,14 @@
       "saved": "지원하다"
     },
     "worktree": {
-      "description": "별도의 git worktree에서 이 팀메이트를 실행하십시오. apply/reject는 worktree가 아닌 리드 워크스페이스가 아닌 대상을 변경합니다.",
-      "label": "워크 트리"
+      "description": "선택: 필요하면 시작할 때 생성되는 별도의 Git worktree를 사용합니다. 기존 worktree는 현재 브랜치를 유지합니다. 선택 해제: 공유 프로젝트 작업 공간을 사용하며, 기존 worktree는 그대로 유지됩니다.",
+      "label": "워크 트리",
+      "existing": "마지막 작업 공간: {{path}}. 관리되는 worktree가 있으면 재사용하고, 없으면 시작할 때 생성합니다.",
+      "new": "Worktree: 있으면 재사용하고, 없으면 시작할 때 생성합니다. 브랜치는 시작 후 표시됩니다.",
+      "shared": "공유 프로젝트 작업 공간: {{path}}. 프로젝트 브랜치를 사용합니다.",
+      "sharedPending": "공유 작업 공간: 시작할 때 리드의 worktree와 함께 결정됩니다. 브랜치는 시작 후 표시됩니다.",
+      "branch": "Worktree 브랜치: {{branch}}",
+      "branchUnavailable": "사용할 수 없음"
     },
     "addMembers": {
       "title": "회원 가입",
@@ -333,6 +362,7 @@
       "launch": "시작하다",
       "remove": "기타 제품",
       "stop": "기타",
+      "stopping": "중지 중...",
       "task": "기타",
       "visualize": "제품 설명",
       "usage": "사용량"
@@ -354,6 +384,14 @@
       "member_one": "이름 *",
       "member_other": "이름 *",
       "title": "아직 출시되지 않은 팀"
+    },
+    "stopFailed": {
+      "title": "팀을 중지할 수 없음",
+      "message": "팀이 아직 실행 중입니다. 상태를 확인한 후 중지를 다시 누르세요."
+    },
+    "stopUnknown": {
+      "title": "중지를 확인할 수 없음",
+      "message": "런타임 응답을 받지 못했습니다. 다시 시도하기 전에 팀 상태를 새로 고치세요."
     },
     "invalidTab": "잘못된 팀 탭",
     "kanbanSafeData": "완전 부하 kanban에 실패. 안전한 자료 표시.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Relaunch 팀",
       "relaunching": "...에",
       "saveChanges": "자주 묻는 질문",
-      "saving": "저장..."
+      "saving": "저장...",
+      "skipPreflightAndLaunch": "사전 검사를 건너뛰고 시작"
+    },
+    "workspaceTrust": {
+      "description": "팀이 시작되면 프로젝트 명령과 MCP 서버가 실행될 수 있습니다."
     },
     "billing": {
       "prefix": "시작 6월 15, 2026, Anthropic 요금",
@@ -1540,6 +1582,11 @@
       "message": "팀 삭제 \"{{teamName}}\" 영구적으로? 모든 데이터는 손실됩니다.",
       "confirmLabel": "자주 묻는 질문",
       "cancelLabel": "이름 *"
+    },
+    "deleteFailed": {
+      "title": "팀 삭제 실패",
+      "fallbackMessage": "예상치 못한 오류가 발생했습니다",
+      "confirmLabel": "확인"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "디렉토리가 존재하지 않으면 자동으로 생성됩니다."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "팀원이 실행 유예 시간 내에 합류하지 않았습니다."
+    },
     "badges": {
       "worktree": "작업 트리"
     },
@@ -1799,11 +1849,12 @@
       "title": "이름 *",
       "addMember": "회원가입",
       "editAsJson": "JSON로 편집",
-      "runInSeparateWorktrees": "별도의 worktrees에서 teammates 실행",
+      "runInSeparateWorktrees": "모든 팀원에 worktree 사용",
       "agentTeamsMcpOnly": "에이전트 팀 MCP 만",
       "removedCount": "제거 ({{count}})",
       "removedModelLockReason": "제거된 회원은 soft delete History에 보관됩니다. 설정을 편집합니다.",
-      "memberNamesUnique": "회원 이름은"
+      "memberNamesUnique": "회원 이름은",
+      "worktreeDescription": "선택: 모든 팀원에게 별도의 worktree를 사용합니다. 일부 선택: 선택한 팀원에게만 사용합니다. 선택 해제: 공유 프로젝트 작업 공간을 사용합니다. 이 옵션을 꺼도 기존 worktree는 디스크에 유지됩니다."
     },
     "stats": {
       "computing": "계산 통계...",
@@ -2393,7 +2444,11 @@
       "yes": "이름 *",
       "no": "없음",
       "moreActionableItems": "{{count}} 액션 아이템(s)",
-      "diagnostics": "진단: {{diagnostics}}"
+      "diagnostics": "진단: {{diagnostics}}",
+      "autoResumeStopped": "자동 이어가기가 중지되었습니다.",
+      "continue": "계속",
+      "stopAutoResume": "자동 재개 중지",
+      "resumeAutoResume": "자동 재개 다시 시작"
     },
     "title": "회원 작업 동기화",
     "loadingDiagnostics": "선적 일원 일 sync 진단.",
@@ -2401,7 +2456,7 @@
   },
   "advancedCli": {
     "title": "지원하다",
-    "useWorktree": "사용 worktree",
+    "useWorktree": "리드 worktree (팀원 worktree와 별도)",
     "recent": "이름 *",
     "commandPreview": "명령 미리보기",
     "customArguments": "사용자 정의",

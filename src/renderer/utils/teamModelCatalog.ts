@@ -7,8 +7,16 @@ import {
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
+import { compareModelReleaseFreshness } from './modelReleaseFreshness';
+import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGate';
+
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
+export {
+  CODEX_CHATGPT_UNSUPPORTED_MODEL_UI_DISABLED_REASON,
+  GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON,
+  isCodexChatGptSubscriptionProviderStatus,
+} from './teamModelCatalogChatGptGate';
 export {
   GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
   GPT_5_2_CODEX_UI_DISABLED_MODEL,
@@ -18,7 +26,7 @@ export {
 type SupportedProviderId = CliProviderId | TeamProviderId;
 type RuntimeAwareProviderStatus = Pick<
   CliProviderStatus,
-  'providerId' | 'authMethod' | 'backend' | 'modelCatalog'
+  'providerId' | 'authMethod' | 'backend' | 'connection' | 'modelCatalog' | 'modelAvailability'
 >;
 type RuntimeModelCatalog = NonNullable<RuntimeAwareProviderStatus['modelCatalog']>;
 type RuntimeCatalogModel = RuntimeModelCatalog['models'][number];
@@ -36,8 +44,6 @@ export interface TeamProviderModelOption {
 export const TEAM_MODEL_UI_DISABLED_BADGE_LABEL = 'Disabled';
 export const GPT_5_1_CODEX_MINI_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model has been less reliable with task and reply tool contracts.';
-export const GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON =
-  'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.';
 export const GPT_5_2_CODEX_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.';
 export const GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON =
@@ -65,28 +71,6 @@ const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
   'claude-opus-4-8[1m]',
   'claude-opus-4-7',
   'claude-opus-4-7[1m]',
-] as const;
-
-const ANTHROPIC_MODEL_ORDER = [
-  'fable',
-  'claude-fable-5',
-  'claude-mythos-5',
-  'haiku',
-  'claude-haiku-4-5-20251001',
-  'claude-haiku-4-5',
-  'opus',
-  'opus[1m]',
-  'claude-opus-4-8',
-  'claude-opus-4-8[1m]',
-  'claude-opus-4-7',
-  'claude-opus-4-7[1m]',
-  'claude-opus-4-6',
-  'claude-opus-4-6[1m]',
-  'claude-sonnet-5',
-  'sonnet',
-  'sonnet[1m]',
-  'claude-sonnet-4-6',
-  'claude-sonnet-4-6[1m]',
 ] as const;
 
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
@@ -176,7 +160,7 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
 type AnthropicAliasFamily = keyof typeof ANTHROPIC_ALIAS_LABELS;
 
 const TEAM_PROVIDER_MODEL_ORDER: Record<SupportedProviderId, Map<string, number>> = {
-  anthropic: new Map(ANTHROPIC_MODEL_ORDER.map((model, index) => [model, index])),
+  anthropic: new Map(),
   codex: new Map(TEAM_PROVIDER_MODEL_OPTIONS.codex.map((option, index) => [option.value, index])),
   gemini: new Map(TEAM_PROVIDER_MODEL_OPTIONS.gemini.map((option, index) => [option.value, index])),
   opencode: new Map(
@@ -252,6 +236,11 @@ function formatParsedClaudeModelLabel(model: string): string | null {
   }
 
   const { baseModel, hasOneMillion } = splitOneMillionContextSuffix(trimmed);
+  const simpleModel = /^claude-([a-z]+)-(\d+(?:\.\d+)?)$/i.exec(baseModel);
+  if (simpleModel) {
+    const family = simpleModel[1].toLowerCase();
+    return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${simpleModel[2]}${hasOneMillion ? ' (1M)' : ''}`;
+  }
   const parsedModel = parseModelString(baseModel);
   if (!parsedModel) {
     return null;
@@ -571,11 +560,24 @@ export function getRuntimeAwareTeamModelBadgeLabel(
 ): string | undefined {
   const trimmed = model?.trim();
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
+  if (providerId === 'opencode') {
+    const runtimeLabel = runtimeModel?.displayName?.trim();
+    return runtimeLabel
+      ? getProviderScopedTeamModelLabel(providerId, runtimeLabel)
+      : getTeamModelBadgeLabel(providerId, trimmed);
+  }
+  if (
+    providerId === 'anthropic' &&
+    providerStatus?.modelCatalog?.source === 'anthropic-compatible-api' &&
+    runtimeModel?.badgeLabel?.trim()
+  ) {
+    return runtimeModel.badgeLabel.trim();
+  }
   const safeAnthropicAliasLabel =
     providerId === 'anthropic'
       ? getRuntimeSafeAnthropicAliasLabel({
           model: trimmed,
-          runtimeLabel: runtimeModel?.badgeLabel?.trim() || runtimeModel?.displayName?.trim(),
+          runtimeLabel: runtimeModel?.displayName?.trim(),
           fallbackLabel: getTeamModelBadgeLabel(providerId, trimmed),
         })
       : null;
@@ -583,7 +585,7 @@ export function getRuntimeAwareTeamModelBadgeLabel(
     return safeAnthropicAliasLabel;
   }
 
-  if (runtimeModel?.badgeLabel?.trim()) {
+  if (providerId === 'codex' && runtimeModel?.badgeLabel?.trim()) {
     return runtimeModel.badgeLabel.trim();
   }
 
@@ -627,10 +629,23 @@ export function sortTeamProviderModels(
     return true;
   });
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
+  const nowMs = Date.now();
 
   const sorted = [...deduped].sort((left, right) => {
-    if (providerId === 'codex') {
-      const versionOrder = compareTeamModelVersionsDescending(left, right);
+    const leftLabel =
+      providerId === 'anthropic' ? (getTeamModelBadgeLabel(providerId, left) ?? left) : left;
+    const rightLabel =
+      providerId === 'anthropic' ? (getTeamModelBadgeLabel(providerId, right) ?? right) : right;
+    if (providerId !== 'opencode') {
+      const releaseDateOrder = compareModelReleaseFreshness(
+        getRuntimeCatalogModel(providerId, left, providerStatus),
+        getRuntimeCatalogModel(providerId, right, providerStatus),
+        nowMs
+      );
+      if (releaseDateOrder !== 0) {
+        return releaseDateOrder;
+      }
+      const versionOrder = compareTeamModelVersionsDescending(leftLabel, rightLabel);
       if (versionOrder !== 0) {
         return versionOrder;
       }
@@ -640,7 +655,7 @@ export function sortTeamProviderModels(
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
     }
-    return left.localeCompare(right);
+    return leftLabel.localeCompare(rightLabel) || left.localeCompare(right);
   });
 
   if (providerId !== 'opencode') {
@@ -660,29 +675,12 @@ export function sortTeamProviderModels(
     .map((entry) => entry.model);
 }
 
-export function isCodexChatGptSubscriptionProviderStatus(
-  providerStatus?: RuntimeAwareProviderStatus | null
-): boolean {
-  if (providerStatus?.providerId !== 'codex') {
-    return false;
-  }
-
-  return (
-    providerStatus.authMethod === 'chatgpt' ||
-    providerStatus.backend?.authMethodDetail === 'chatgpt'
-  );
-}
-
 function isRuntimeHiddenTeamModel(
   providerId: SupportedProviderId,
   model: string,
   providerStatus?: RuntimeAwareProviderStatus | null
 ): boolean {
-  return (
-    providerId === 'codex' &&
-    model === 'gpt-5.1-codex-max' &&
-    isCodexChatGptSubscriptionProviderStatus(providerStatus)
-  );
+  return getCodexChatGptModeUiDisabledReason(providerId, model, providerStatus) !== null;
 }
 
 function getRuntimeCatalogLaunchModels(
@@ -777,15 +775,16 @@ export function getVisibleTeamProviderModels(
 ): string[] {
   const expandOpenCodeSummaryCatalog = options.expandOpenCodeSummaryCatalog ?? true;
   const hasExplicitModels = models.some((model) => model.trim().length > 0);
-  const catalogModels =
-    providerId === 'opencode' ? getRuntimeCatalogLaunchModels(providerId, providerStatus) : null;
+  const catalogModels = getRuntimeCatalogLaunchModels(providerId, providerStatus);
   const sourceModels =
     providerId === 'opencode' &&
     catalogModels &&
     (!hasExplicitModels ||
       (expandOpenCodeSummaryCatalog && isOpenCodeSummaryOnlyModelList(models, providerStatus)))
       ? mergeModelLists(catalogModels, models)
-      : models;
+      : providerId === 'codex' && catalogModels
+        ? mergeModelLists(catalogModels, models)
+        : models;
 
   return sortTeamProviderModels(
     providerId,
@@ -828,9 +827,7 @@ export function getRuntimeAwareTeamModelUiDisabledReason(
     return null;
   }
 
-  return isRuntimeHiddenTeamModel(providerId, trimmed, providerStatus)
-    ? GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON
-    : null;
+  return getCodexChatGptModeUiDisabledReason(providerId, trimmed, providerStatus);
 }
 
 export function isTeamModelUiDisabled(

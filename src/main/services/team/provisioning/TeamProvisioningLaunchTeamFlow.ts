@@ -72,6 +72,7 @@ export interface MaterializeDeterministicLaunchBootstrapFilesInput<
   request: TeamLaunchRequest;
   run: TRun;
   effectiveMemberSpecs: TeamCreateRequest['members'];
+  allEffectiveMemberSpecs: TeamCreateRequest['members'];
   controlApiBaseUrl?: string;
   isValidationCancelled(): boolean;
 }
@@ -158,7 +159,11 @@ export function resolveExistingLaunchRunReuse(input: {
     };
   }
 
-  if (existingRunCwd !== requestedCwd) {
+  // Both sides must be compared in the same shape. Resolving only the request
+  // made a match impossible wherever the recorded cwd was not already resolved
+  // - on Windows "/repo" resolves to "D:\repo", so a legitimate reuse was
+  // refused with a message that named the same directory twice.
+  if (path.resolve(existingRunCwd) !== requestedCwd) {
     return {
       kind: 'blocked',
       message:
@@ -192,6 +197,7 @@ export function buildLaunchSyntheticRequest(input: {
     model: input.request.model,
     effort: input.request.effort,
     fastMode: input.request.fastMode,
+    syncModelsWithLead: input.request.syncModelsWithLead,
     skipPermissions: input.request.skipPermissions,
     worktree: input.request.worktree,
     extraCliArgs: input.request.extraCliArgs,
@@ -401,7 +407,7 @@ export async function materializeDeterministicLaunchBootstrapFiles<
 
   const prompt = ports.buildDeterministicLaunchHydrationPrompt(
     request,
-    effectiveMemberSpecs,
+    input.allEffectiveMemberSpecs,
     existingTasks,
     false
   );

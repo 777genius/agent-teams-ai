@@ -21,17 +21,22 @@ describe('TeamProvisioningDirectRestart', () => {
     expect(shellQuote("worker's path")).toBe("'worker'\\''s path'");
   });
 
-  it('only reuses interactive shells that accept the generated POSIX restart command', () => {
-    expect(isInteractiveShellCommand('/bin/zsh')).toBe(true);
-    expect(isInteractiveShellCommand('  DASH  ')).toBe(true);
-    expect(isInteractiveShellCommand('fish')).toBe(false);
-    expect(isInteractiveShellCommand('nu')).toBe(false);
-    expect(isInteractiveShellCommand('pwsh')).toBe(false);
-    expect(isInteractiveShellCommand('cmd.exe')).toBe(false);
-    expect(isInteractiveShellCommand('node')).toBe(false);
-    expect(isInteractiveShellCommand(undefined)).toBe(false);
-    expect(isInteractiveShellCommand('/bin/bash', 'win32')).toBe(false);
-  });
+  // POSIX-only: isInteractiveShellCommand() returns false on win32 by contract
+  // (tmux runs under WSL there), so no pane is reusable on this platform.
+  it.skipIf(process.platform === 'win32')(
+    'only reuses interactive shells that accept the generated POSIX restart command',
+    () => {
+      expect(isInteractiveShellCommand('/bin/zsh')).toBe(true);
+      expect(isInteractiveShellCommand('  DASH  ')).toBe(true);
+      expect(isInteractiveShellCommand('fish')).toBe(false);
+      expect(isInteractiveShellCommand('nu')).toBe(false);
+      expect(isInteractiveShellCommand('pwsh')).toBe(false);
+      expect(isInteractiveShellCommand('cmd.exe')).toBe(false);
+      expect(isInteractiveShellCommand('node')).toBe(false);
+      expect(isInteractiveShellCommand(undefined)).toBe(false);
+      expect(isInteractiveShellCommand('/bin/bash', 'win32')).toBe(false);
+    }
+  );
 
   it('classifies Anthropic-compatible base URLs without accepting first-party or credential URLs', () => {
     expect(isAnthropicCompatibleBaseUrl('http://localhost:1234')).toBe(true);

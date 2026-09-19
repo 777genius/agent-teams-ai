@@ -407,7 +407,11 @@ describe('toTokenUsageDashboardViewModel', () => {
   });
 
   it('builds numeric chart models with cache tokens when explicitly enabled', () => {
-    const viewModel = toTokenUsageDashboardViewModel(snapshot(), { includeCacheTokens: true });
+    // Pin the locale: the currency assertions below are en-US formatted.
+    const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
+      includeCacheTokens: true,
+      locale: 'en-US',
+    });
 
     expect(viewModel.trendPoints.map((point) => point.heightPercent)).toEqual([
       expect.any(Number),

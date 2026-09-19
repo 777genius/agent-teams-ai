@@ -72,7 +72,30 @@
       "externalTeam": "external team",
       "crossTeamAwaitingReply": "Cross-team message sent, awaiting reply",
       "user": "user",
-      "awaitingApproval": "awaiting approval"
+      "awaitingApproval": "awaiting approval",
+      "discardQueued": {
+        "action": "Discard queued messages",
+        "alreadyDelivered": "Nothing was discarded: those messages had already been delivered to \"{{member}}\".",
+        "cancelLabel": "Cancel",
+        "confirmLabel": "Discard",
+        "count": "{{count}} queued",
+        "count_few": "{{count}} queued",
+        "count_many": "{{count}} queued",
+        "count_one": "{{count}} queued",
+        "count_other": "{{count}} queued",
+        "failedFallbackMessage": "An unexpected error occurred",
+        "failedTitle": "Failed to discard queued messages",
+        "message": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_few": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_many": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_one": "Discard {{count}} queued message for \"{{member}}\"? It has not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_other": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "okLabel": "OK",
+        "remaining": "Discarded {{discarded}}. Still queued: {{remaining}}.",
+        "resultTitle": "Queued messages",
+        "title": "Discard queued messages",
+        "tooltip": "Discard this member's queued messages"
+      }
     },
     "reply": {
       "replyingTo": "Replying to",
@@ -313,8 +336,14 @@
       "saved": "Saved"
     },
     "worktree": {
-      "description": "Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.",
-      "label": "Worktree"
+      "description": "Checked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.",
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch."
     },
     "addMembers": {
       "title": "Add Members",
@@ -334,6 +363,7 @@
       "launch": "Launch",
       "remove": "Remove",
       "stop": "Stop",
+      "stopping": "Stopping...",
       "task": "Task",
       "usage": "Usage",
       "visualize": "Visualize"
@@ -355,6 +385,14 @@
       "member_one": "member",
       "member_other": "members",
       "title": "Team not launched yet"
+    },
+    "stopFailed": {
+      "title": "Unable to stop team",
+      "message": "The team is still running. Check its state and press Stop again."
+    },
+    "stopUnknown": {
+      "title": "Unable to confirm stop",
+      "message": "The runtime response was not received. Refresh the team state before retrying."
     },
     "invalidTab": "Invalid team tab",
     "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
@@ -1359,7 +1397,8 @@
       "relaunchTeam": "Relaunch team",
       "relaunching": "Relaunching...",
       "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "skipPreflightAndLaunch": "Skip preflight and launch"
     },
     "billing": {
       "prefix": "Starting June 15, 2026, Anthropic bills",
@@ -1582,6 +1621,11 @@
       "message": "Delete team \"{{teamName}}\" permanently? All data will be lost.",
       "confirmLabel": "Delete forever",
       "cancelLabel": "Cancel"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1824,6 +1868,9 @@
     "createAutomatically": "If the directory does not exist, it will be created automatically."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teammate did not join within the launch grace window."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1841,11 +1888,12 @@
       "title": "Members",
       "addMember": "Add member",
       "editAsJson": "Edit as JSON",
-      "runInSeparateWorktrees": "Run teammates in separate worktrees",
+      "runInSeparateWorktrees": "Worktree for all teammates",
       "agentTeamsMcpOnly": "Agent Teams MCP only",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "Removed members are kept for soft delete history. Restore them to edit settings.",
-      "memberNamesUnique": "Member names must be unique"
+      "memberNamesUnique": "Member names must be unique",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Computing stats...",
@@ -2440,7 +2488,11 @@
       "yes": "yes",
       "no": "no",
       "moreActionableItems": "{{count}} more actionable item(s)",
-      "diagnostics": "Diagnostics: {{diagnostics}}"
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "Automatic continuation is stopped.",
+      "continue": "Continue",
+      "stopAutoResume": "Stop auto-resume",
+      "resumeAutoResume": "Resume auto-resume"
     },
     "title": "Member work sync",
     "loadingDiagnostics": "Loading member work sync diagnostics.",
@@ -2448,7 +2500,7 @@
   },
   "advancedCli": {
     "title": "Advanced",
-    "useWorktree": "Use worktree",
+    "useWorktree": "Lead worktree (separate from teammate worktrees)",
     "recent": "Recent",
     "commandPreview": "Command preview",
     "customArguments": "Custom arguments",

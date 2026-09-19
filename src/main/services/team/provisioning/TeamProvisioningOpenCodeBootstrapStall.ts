@@ -12,11 +12,8 @@ import {
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 
-import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
-import type {
-  OpenCodeTeamRuntimeMessageResult,
-  TeamRuntimeLaunchResult,
-} from '../runtime';
+import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
+import type { OpenCodeTeamRuntimeMessageResult, TeamRuntimeLaunchResult } from '../runtime';
 import type {
   MemberSpawnStatusEntry,
   TeamAgentRuntimeDiagnosticSeverity,
@@ -241,7 +238,9 @@ export async function buildOpenCodeSecondaryBootstrapStallDiagnostic(
   }
 
   const acceptedAtMs =
-    input.current.firstSpawnAcceptedAt != null ? Date.parse(input.current.firstSpawnAcceptedAt) : NaN;
+    input.current.firstSpawnAcceptedAt != null
+      ? Date.parse(input.current.firstSpawnAcceptedAt)
+      : NaN;
   const transcriptOutcome = await ports.findBootstrapTranscriptOutcome(
     input.run.teamName,
     input.memberName,
@@ -331,7 +330,8 @@ export function setOpenCodeSecondaryBootstrapStalledStatus(
     error: undefined,
     hardFailureReason: undefined,
     livenessSource: undefined,
-    livenessKind: current.livenessKind ?? (runtimeProcessAlive ? 'runtime_process' : 'registered_only'),
+    livenessKind:
+      current.livenessKind ?? (runtimeProcessAlive ? 'runtime_process' : 'registered_only'),
     runtimeDiagnostic,
     runtimeDiagnosticSeverity: 'warning',
     bootstrapStalled: true,
@@ -436,7 +436,9 @@ export async function markOpenCodeSecondaryBootstrapStalled(
   }
   const enriched: MemberSpawnStatusEntry = {
     ...input.current,
-    ...(input.runtimeMetadata?.livenessKind ? { livenessKind: input.runtimeMetadata.livenessKind } : {}),
+    ...(input.runtimeMetadata?.livenessKind
+      ? { livenessKind: input.runtimeMetadata.livenessKind }
+      : {}),
     ...(input.runtimeMetadata?.runtimeDiagnostic
       ? { runtimeDiagnostic: input.runtimeMetadata.runtimeDiagnostic }
       : {}),
@@ -479,10 +481,7 @@ export type OpenCodeBootstrapCheckinRetryPromptPlan =
 export function planOpenCodeSecondaryBootstrapCheckinRetryPrompt(input: {
   run: Pick<
     OpenCodeBootstrapStallRunLike,
-    | 'mixedSecondaryLanes'
-    | 'processKilled'
-    | 'cancelRequested'
-    | 'provisioningOutputParts'
+    'mixedSecondaryLanes' | 'processKilled' | 'cancelRequested' | 'provisioningOutputParts'
   >;
   memberName: string;
   current: MemberSpawnStatusEntry;
@@ -629,10 +628,7 @@ export function scheduleOpenCodeBootstrapStallReevaluation(
   if (!Number.isFinite(acceptedAtMs)) {
     return;
   }
-  const stallDelayMs = Math.max(
-    1_000,
-    acceptedAtMs + MEMBER_BOOTSTRAP_STALL_MS - ports.nowMs()
-  );
+  const stallDelayMs = Math.max(1_000, acceptedAtMs + MEMBER_BOOTSTRAP_STALL_MS - ports.nowMs());
   const stallKey = `${ports.getMemberLaunchGraceKey(run, memberName)}:bootstrap-stall`;
   if (ports.hasPendingTimeout(stallKey)) {
     return;

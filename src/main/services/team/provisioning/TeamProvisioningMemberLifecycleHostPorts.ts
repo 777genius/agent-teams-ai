@@ -54,6 +54,7 @@ export interface TeamMetaLike {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
+  syncModelsWithLead?: boolean;
   limitContext?: boolean;
   skipPermissions?: boolean;
   worktree?: string;
@@ -111,6 +112,7 @@ export interface TeamProvisioningMemberLifecycleMemberSpecPorts {
       providerId: TeamProviderId;
       model?: string;
       effort?: EffortLevel;
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId: TeamProviderId;
     primaryEnv: ProvisioningEnvResolution;

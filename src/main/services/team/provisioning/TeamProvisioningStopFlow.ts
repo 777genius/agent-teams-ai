@@ -2,6 +2,10 @@ import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
+  cancelRunLeadRelayCapture,
+  type LeadRelayCaptureOwner,
+} from './TeamProvisioningLeadRelayCancellation';
 
 import type { SecondaryRuntimeStopFence } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import type { TeamProvisioningProgress } from '@shared/types';
@@ -25,7 +29,8 @@ async function awaitAllOwnedProcessStops(stops: Promise<void>[]): Promise<void> 
   }
 }
 
-export interface TeamProvisioningStopRun extends AnthropicApiKeyHelperRunOwner {
+export interface TeamProvisioningStopRun
+  extends AnthropicApiKeyHelperRunOwner, LeadRelayCaptureOwner {
   runId: string;
   teamName: string;
   processKilled: boolean;
@@ -35,6 +40,7 @@ export interface TeamProvisioningStopRun extends AnthropicApiKeyHelperRunOwner {
 }
 
 export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
+  cancelOpenCodePromptDeliveries(teamName: string): Promise<void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   pauseActiveIntervalsForTeam(teamName: string): void;
   stopPersistentTeamMembers(teamName: string): void;
@@ -177,6 +183,7 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
     }
     return;
   }
+  cancelRunLeadRelayCapture(run);
   if (run.processKilled || run.cancelRequested) {
     await awaitAllOwnedProcessStops([
       ports.killTeamProcessAndWait(run.child),
@@ -206,8 +213,14 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
-  await stopTeamRuntimeFlow(teamName, ports);
-  await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+  // Keep the team lock until both branches settle, including runtime-owned
+  // cleanup on runtime success even when durable cancellation fails.
+  await awaitAllOwnedProcessStops([
+    ports.cancelOpenCodePromptDeliveries(teamName),
+    stopTeamRuntimeFlow(teamName, ports).then(() =>
+      ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName)
+    ),
+  ]);
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

@@ -72,7 +72,30 @@
       "externalTeam": "team esterno",
       "crossTeamAwaitingReply": "Messaggio tra team inviato, in attesa di risposta",
       "user": "utente",
-      "awaitingApproval": "in attesa di approvazione"
+      "awaitingApproval": "in attesa di approvazione",
+      "discardQueued": {
+        "action": "Elimina i messaggi in coda",
+        "alreadyDelivered": "Non è stato eliminato nulla: quei messaggi erano già stati consegnati a \"{{member}}\".",
+        "cancelLabel": "Annulla",
+        "confirmLabel": "Elimina",
+        "count": "{{count}} in coda",
+        "count_few": "{{count}} in coda",
+        "count_many": "{{count}} in coda",
+        "count_one": "{{count}} in coda",
+        "count_other": "{{count}} in coda",
+        "failedFallbackMessage": "Si è verificato un errore imprevisto",
+        "failedTitle": "Impossibile eliminare i messaggi in coda",
+        "message": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_few": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_many": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_one": "Eliminare {{count}} messaggio in coda per \"{{member}}\"? Non è ancora stato consegnato e verrà rimosso definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_other": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "okLabel": "OK",
+        "remaining": "Eliminati {{discarded}}. Ancora in coda: {{remaining}}.",
+        "resultTitle": "Messaggi in coda",
+        "title": "Elimina i messaggi in coda",
+        "tooltip": "Elimina i messaggi in coda di questo membro"
+      }
     },
     "reply": {
       "replyingTo": "In risposta a",
@@ -312,8 +335,14 @@
       "saved": "Salvato"
     },
     "worktree": {
-      "description": "Esegui questo membro del team in un worktree git separato. Applica/rifiuta le modifiche su quel worktree, non sullo spazio di lavoro del lead.",
-      "label": "Worktree"
+      "description": "Selezionato: usa un worktree Git separato, creato all’avvio se necessario. I worktree esistenti mantengono il branch corrente. Deselezionato: usa lo spazio di lavoro condiviso del progetto; il vecchio worktree viene conservato.",
+      "label": "Worktree",
+      "existing": "Ultimo spazio di lavoro: {{path}}. Il worktree gestito viene riutilizzato se disponibile; altrimenti viene creato all’avvio.",
+      "new": "Worktree: viene riutilizzato se disponibile, altrimenti creato all’avvio. Il branch verrà mostrato dopo l’avvio.",
+      "shared": "Spazio di lavoro condiviso del progetto: {{path}}. Usa il branch del progetto.",
+      "sharedPending": "Spazio di lavoro condiviso: viene determinato all’avvio insieme al worktree del lead. Il branch verrà mostrato dopo l’avvio.",
+      "branch": "Branch del worktree: {{branch}}",
+      "branchUnavailable": "Non disponibile"
     },
     "addMembers": {
       "title": "Aggiungi membri",
@@ -333,6 +362,7 @@
       "launch": "Avvia",
       "remove": "Rimuovi",
       "stop": "Ferma",
+      "stopping": "Arresto in corso...",
       "task": "Task",
       "visualize": "Visualizza",
       "usage": "Utilizzo"
@@ -354,6 +384,14 @@
       "member_one": "membro",
       "member_other": "membri",
       "title": "Team non ancora avviato"
+    },
+    "stopFailed": {
+      "title": "Impossibile arrestare il team",
+      "message": "Il team è ancora in esecuzione. Controllane lo stato e premi di nuovo Arresta."
+    },
+    "stopUnknown": {
+      "title": "Impossibile confermare l'arresto",
+      "message": "Non è stata ricevuta una risposta dal runtime. Aggiorna lo stato del team prima di riprovare."
     },
     "invalidTab": "Scheda del team non valida",
     "kanbanSafeData": "Impossibile caricare completamente la kanban. Visualizzazione dei dati sicuri.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Riavvia team",
       "relaunching": "Riavvio in corso...",
       "saveChanges": "Salva modifiche",
-      "saving": "Salvataggio in corso..."
+      "saving": "Salvataggio in corso...",
+      "skipPreflightAndLaunch": "Salta la verifica e avvia"
+    },
+    "workspaceTrust": {
+      "description": "All'avvio del team potrebbero essere eseguiti comandi del progetto e server MCP."
     },
     "billing": {
       "prefix": "A partire dal 15 giugno 2026, Anthropic fattura",
@@ -1540,6 +1582,11 @@
       "message": "Eliminare definitivamente il team \"{{teamName}}\"? Tutti i dati andranno persi.",
       "confirmLabel": "Elimina definitivamente",
       "cancelLabel": "Annulla"
+    },
+    "deleteFailed": {
+      "title": "Impossibile eliminare il team",
+      "fallbackMessage": "Si è verificato un errore imprevisto",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Se la directory non esiste, verrà creata automaticamente."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Il membro del team non si è unito entro il margine di tempo dell'avvio."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Membri",
       "addMember": "Aggiungi membro",
       "editAsJson": "Modifica come JSON",
-      "runInSeparateWorktrees": "Esegui i membri del team in worktree separati",
+      "runInSeparateWorktrees": "Worktree per tutti i membri del team",
       "agentTeamsMcpOnly": "Solo MCP di Agent Teams",
       "removedCount": "Rimossi ({{count}})",
       "removedModelLockReason": "I membri rimossi vengono conservati per la cronologia di soft delete. Ripristinali per modificare le impostazioni.",
-      "memberNamesUnique": "I nomi dei membri devono essere univoci"
+      "memberNamesUnique": "I nomi dei membri devono essere univoci",
+      "worktreeDescription": "Selezionato: worktree separati per tutti i membri. Misto: solo per i membri selezionati. Deselezionato: spazio di lavoro condiviso del progetto. La disattivazione conserva sul disco i worktree esistenti."
     },
     "stats": {
       "computing": "Calcolo delle statistiche...",
@@ -2393,7 +2444,11 @@
       "yes": "sì",
       "no": "no",
       "moreActionableItems": "{{count}} altri elementi su cui agire",
-      "diagnostics": "Diagnostica: {{diagnostics}}"
+      "diagnostics": "Diagnostica: {{diagnostics}}",
+      "autoResumeStopped": "La continuazione automatica è interrotta.",
+      "continue": "Continua",
+      "stopAutoResume": "Interrompi ripresa automatica",
+      "resumeAutoResume": "Riprendi ripresa automatica"
     },
     "title": "Sincronizzazione del lavoro del membro",
     "loadingDiagnostics": "Caricamento della diagnostica di sincronizzazione del lavoro del membro.",
@@ -2401,7 +2456,7 @@
   },
   "advancedCli": {
     "title": "Avanzate",
-    "useWorktree": "Usa worktree",
+    "useWorktree": "Worktree del lead (separato dai worktree degli altri membri)",
     "recent": "Recenti",
     "commandPreview": "Anteprima del comando",
     "customArguments": "Argomenti personalizzati",

@@ -390,6 +390,27 @@ describe('GraphView pan interactions', () => {
     expect((hoisted.graphControlsProps?.filters as { paused: boolean }).paused).toBe(true);
   });
 
+  it('ignores Escape already consumed by a nested dialog', async () => {
+    const onRequestClose = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: { teamName: 'demo-team', nodes: [], edges: [], particles: [] },
+          config: { animationEnabled: false },
+          onRequestClose,
+        })
+      );
+    });
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    });
+    event.preventDefault();
+    await act(async () => window.dispatchEvent(event));
+    expect(onRequestClose).not.toHaveBeenCalled();
+  });
+
   it('does not steal Space from terminal command inputs mounted in shadow DOM', async () => {
     await act(async () => {
       root.render(

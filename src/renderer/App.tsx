@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
+import { AnnouncementHost } from '@features/announcements/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -12,6 +13,9 @@ import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useThemeController } from './hooks/useTheme';
 import { api } from './api';
 import { useStore } from './store';
+
+const openExternal = (url: string): Promise<{ success: boolean; error?: string }> =>
+  api.openExternal(url);
 
 declare global {
   interface Window {
@@ -32,6 +36,7 @@ const SPLASH_AVATAR_READY_MAX_WAIT_MS = 900;
 const SPLASH_REDUCED_AVATAR_READY_MAX_WAIT_MS = 160;
 
 export const App = (): React.JSX.Element => {
+  const [newsReady, setNewsReady] = useState(() => !document.getElementById('splash'));
   // Initialize theme on app load
   useThemeController();
   const appConfig = useStore((s) => s.appConfig);
@@ -71,6 +76,7 @@ export const App = (): React.JSX.Element => {
           window.__claudeTeamsSplashEnhancedStartedAt = undefined;
           window.__claudeTeamsSplashEnhancedDisabled = undefined;
           splash.remove();
+          setNewsReady(true);
         }, fadeDuration);
       };
 
@@ -113,6 +119,11 @@ export const App = (): React.JSX.Element => {
           <TabbedLayout />
           <ConfirmDialog />
           <ToolApprovalSheet />
+          <AnnouncementHost
+            client={api.announcements}
+            openExternal={openExternal}
+            ready={newsReady}
+          />
         </TooltipProvider>
       </ErrorBoundary>
     </LocalizationProvider>

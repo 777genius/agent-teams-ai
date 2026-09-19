@@ -6,6 +6,9 @@ import type { RuntimeLocalProviderListEntryDto } from '../../contracts';
 
 const COORDINATION_PROBE_TIMEOUT_MS = 90_000;
 const MAX_RESPONSE_BYTES = 1_048_576;
+const MAX_TOKENS = 1_024;
+/** Reasoning tokens count against the limit; a thinking model needs headroom. */
+const THINKING_MAX_TOKENS = 4_096;
 const PROBE_TEAM_NAME = 'agent-teams-local-probe';
 const PROBE_MEMBER_NAME = 'probe-member';
 const PROBE_RECIPIENT = 'probe-lead';
@@ -264,14 +267,23 @@ async function requestProbeCompletion(input: {
 > {
   const url = buildOpenAiChatCompletionsUrl(input.provider.baseUrl);
   const useOllamaStreaming = input.provider.preset.id === 'ollama';
+  // Probe the mode OpenCode will run the model in by mirroring the configured
+  // `options.reasoningEffort` (the connector writes `none` for the models it
+  // registers itself). A model left thinking at runtime has to be probed
+  // thinking - its tool-argument fidelity differs between the two modes - and
+  // needs room for the reasoning tokens that come before the tool call.
+  const reasoningEffort = useOllamaStreaming
+    ? resolveConfiguredReasoningEffort(input.provider, input.modelId)
+    : null;
+  const thinking = useOllamaStreaming && reasoningEffort !== 'none';
   const body = {
     model: input.modelId,
     messages: input.messages,
     tools: input.tools,
     stream: useOllamaStreaming,
     temperature: 0,
-    max_tokens: 1_024,
-    ...(useOllamaStreaming ? { reasoning_effort: 'none' } : {}),
+    max_tokens: thinking ? THINKING_MAX_TOKENS : MAX_TOKENS,
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
   };
   const response = await input.fetchImpl(url, {
     method: 'POST',
@@ -589,6 +601,15 @@ function buildToolResultMessage(call: ToolCall, nonce: string): Record<string, u
     tool_call_id: call.id ?? 'agent-teams-probe-call-1',
     content,
   };
+}
+
+/** The model's configured `options.reasoningEffort`, or null when the runtime leaves it to the server default. */
+function resolveConfiguredReasoningEffort(
+  provider: RuntimeLocalProviderListEntryDto,
+  modelId: string
+): string | null {
+  const configured = provider.configuredModelReasoningEffort?.[modelId]?.trim();
+  return configured ? configured : null;
 }
 
 function buildOpenAiChatCompletionsUrl(baseUrl: string): string {

@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, relative, resolve, sep } from 'node:path';
 
 import { format, type Options as PrettierOptions } from 'prettier';
 import ts from 'typescript';
@@ -31,6 +31,9 @@ const TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_PATH = resolve(
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'assessLeadRuntimeRestart',
   'createTeam',
+  // The launch prompt reaches the lead through the inbox rather than the
+  // orchestrator leadPrompt, and the launch flow drives it from outside.
+  'deliverOpenCodeLaunchPromptToLead',
   'launchTeam',
   'restartLeadRuntime',
   'setRuntimeRecoveryFailureObserver',
@@ -47,6 +50,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'cleanupPrelaunchBackup',
   'clearPendingCrossTeamReplyExpectation',
   'createTeam',
+  'deliverOpenCodeLaunchPromptToLead',
   'deliverOpenCodeMemberMessage',
   'deliverOpenCodeRuntimeMessage',
   'detachLiveRosterMember',
@@ -65,6 +69,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getLiveLeadProcessMessages',
   'getMemberToolApprovalBusyStatus',
   'getMemberSpawnStatuses',
+  'getMemberSpawnStatusesReadOnly',
   'getOpenCodeMemberDeliveryBusyStatus',
   'getOpenCodeRuntimeAdapter',
   'getOpenCodeRuntimeDeliveryStatus',
@@ -73,6 +78,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getProvisioningStatus',
   'getRuntimeState',
   'getTeamAgentRuntimeSnapshot',
+  'getTeamAgentRuntimeSnapshotReadOnly',
   'hasActiveTeamRuntimes',
   'hasProvisioningRun',
   'initializeToolApprovalSettingsForLaunch',
@@ -84,6 +90,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'prepareLiveMemberMcpLaunchConfig',
   'pushLiveLeadProcessMessage',
   'reattachOpenCodeOwnedMemberLane',
+  'rebootstrapOpenCodeAggregatePrimaryLane',
   'recordOpenCodeRuntimeBootstrapCheckin',
   'recordOpenCodeRuntimeHeartbeat',
   'recordOpenCodeRuntimeTaskEvent',
@@ -366,7 +373,9 @@ function getEffectivePublicServiceInstanceMemberNames(): string[] {
 }
 
 function projectRelativePath(filePath: string): string {
-  return relative(process.cwd(), filePath);
+  // Guarded paths are compared against slash-separated literals, so they must
+  // not carry the host separator.
+  return relative(process.cwd(), filePath).split(sep).join('/');
 }
 
 function readGuardedFacadeSource(filePath: string): GuardedFacadeSource {

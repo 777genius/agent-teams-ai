@@ -49,6 +49,42 @@ describe('TeamTaskStallJournal', () => {
     expect(secondReady).toEqual([evaluation]);
   });
 
+  it('persists a pending pickup epoch across scans instead of dropping it on read', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
+
+    const journal = new TeamTaskStallJournal();
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-pickup',
+      memberName: 'Scout',
+      branch: 'work',
+      signal: 'pending_pickup_after_unblock',
+      epochKey: 'task-pickup:work:pending_pickup_after_unblock:Scout:2026-04-19T12:00:00.000Z',
+      reason: 'Potential pickup stall',
+    } as const;
+
+    // A signal the journal sanitizer does not know is dropped on every read, so
+    // consecutiveScans would never reach 2 and the branch would never alert.
+    await expect(
+      journal.reconcileScan({
+        teamName: 'demo',
+        evaluations: [evaluation],
+        activeTaskIds: ['task-pickup'],
+        now: '2026-04-19T12:10:00.000Z',
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      journal.reconcileScan({
+        teamName: 'demo',
+        evaluations: [evaluation],
+        activeTaskIds: ['task-pickup'],
+        now: '2026-04-19T12:10:30.000Z',
+      })
+    ).resolves.toEqual([evaluation]);
+  });
+
   it('allows the same stalled epoch to alert again after the cooldown expires', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
     setClaudeBasePathOverride(tmpDir);
@@ -95,7 +131,87 @@ describe('TeamTaskStallJournal', () => {
         activeTaskIds: ['task-a'],
         now: '2026-04-19T12:12:00.000Z',
       })
-    ).resolves.toEqual([evaluation]);
+    ).resolves.toEqual([{ ...evaluation, priorAlertCount: 1 }]);
+  });
+
+  it('counts every dispatched alert for an epoch so an escalation ladder can be bounded', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
+
+    const journal = new TeamTaskStallJournal({ alertCooldownMs: 1 });
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-pickup',
+      memberName: 'Scout',
+      branch: 'work',
+      signal: 'pending_pickup_after_unblock',
+      epochKey: 'task-pickup:work:pending_pickup_after_unblock:Scout:2026-04-19T12:00:00.000Z',
+      reason: 'Potential pickup stall',
+    } as const;
+    const reconcile = (now: string) =>
+      journal.reconcileScan({
+        teamName: 'demo',
+        evaluations: [evaluation],
+        activeTaskIds: ['task-pickup'],
+        now,
+      });
+
+    await reconcile('2026-04-19T12:10:00.000Z');
+    await expect(reconcile('2026-04-19T12:10:30.000Z')).resolves.toEqual([evaluation]);
+    await journal.markAlerted('demo', evaluation.epochKey, '2026-04-19T12:10:30.000Z');
+    await expect(reconcile('2026-04-19T12:11:00.000Z')).resolves.toEqual([
+      { ...evaluation, priorAlertCount: 1 },
+    ]);
+    await journal.markAlerted('demo', evaluation.epochKey, '2026-04-19T12:11:00.000Z');
+    await expect(reconcile('2026-04-19T12:11:30.000Z')).resolves.toEqual([
+      { ...evaluation, priorAlertCount: 2 },
+    ]);
+  });
+
+  it('keeps a persisted alert count across a journal reload', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    const teamDir = path.join(tmpDir, 'teams', 'demo');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'stall-monitor-journal.json'),
+      JSON.stringify([
+        {
+          epochKey: 'task-a:epoch-1',
+          teamName: 'demo',
+          taskId: 'task-a',
+          branch: 'work',
+          signal: 'turn_ended_after_touch',
+          state: 'alerted',
+          consecutiveScans: 3,
+          createdAt: '2026-04-19T12:00:00.000Z',
+          updatedAt: '2026-04-19T12:01:00.000Z',
+          alertedAt: '2026-04-19T12:01:00.000Z',
+          alertCount: 2,
+        },
+      ]),
+      'utf8'
+    );
+
+    const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch-1',
+      reason: 'Potential work stall',
+    } as const;
+
+    await expect(
+      journal.reconcileScan({
+        teamName: 'demo',
+        evaluations: [evaluation],
+        activeTaskIds: ['task-a'],
+        now: '2026-04-19T12:20:00.000Z',
+      })
+    ).resolves.toEqual([{ ...evaluation, priorAlertCount: 2 }]);
   });
 
   it('does not suppress a stalled epoch forever when alertedAt is in the future', async () => {

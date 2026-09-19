@@ -271,6 +271,49 @@ describe('MemberWorkSyncTeamChangeRouter', () => {
     expect(queue.resumeTeam).toHaveBeenCalledWith('team-a');
   });
 
+  it('does not re-suspend the queue when the team is resumed during the quiesce wait', async () => {
+    let releaseRoster!: () => void;
+    const suspendedTeams = new Set<string>();
+    const queue = {
+      enqueue: vi.fn(),
+      dropTeam: vi.fn(),
+      quiesceTeam: vi.fn((teamName: string) => {
+        suspendedTeams.add(teamName);
+        return Promise.resolve();
+      }),
+      resumeTeam: vi.fn((teamName: string) => {
+        suspendedTeams.delete(teamName);
+      }),
+    };
+    const router = new MemberWorkSyncTeamChangeRouter(
+      {
+        loadActiveMemberNames: () =>
+          new Promise<string[]>((resolve) => {
+            releaseRoster = () => resolve(['alice']);
+          }),
+      },
+      queue as never
+    );
+
+    // Routing work the quiesce has to wait for, with no deadline of its own.
+    router.noteTeamChange({ type: 'lead-activity', teamName: 'team-a', detail: 'offline' });
+    await Promise.resolve();
+    const quiesce = router.quiesceTeam('team-a');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(queue.quiesceTeam).toHaveBeenCalledTimes(1);
+
+    // The caller that owns the deadline gives up on the wait and hands the team
+    // back while this quiesce is still parked in it.
+    router.resumeTeam('team-a');
+    releaseRoster();
+    await quiesce;
+
+    // A late quiesce would suspend the queue again with nothing left to lift it.
+    expect(queue.quiesceTeam).toHaveBeenCalledTimes(1);
+    expect(suspendedTeams.has('team-a')).toBe(false);
+  });
+
   it('routes member-turn-settled events to one member reconcile', () => {
     const { queue, router } = createRouter();
 

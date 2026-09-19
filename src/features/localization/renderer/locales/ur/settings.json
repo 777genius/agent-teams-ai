@@ -54,19 +54,25 @@
       "choosingAllProjects": "اوور رائیڈ کے بغیر پروجیکٹس کے لیے ماڈل منتخب کریں۔",
       "choosingProject": "صرف {{project}} کے لیے ماڈل منتخب کریں۔",
       "cancelChoosing": "منسوخ کریں",
+      "select": "منتخب کریں",
+      "selected": "منتخب",
       "testAndUse": "جانچیں اور استعمال کریں",
       "testAndUseAllProjects": "تمام پروجیکٹس کے لیے جانچیں اور استعمال کریں",
       "testAndUseProject": "اس پروجیکٹ کے لیے جانچیں اور استعمال کریں"
     },
     "diagnostics": {
+      "previousPage": "پچھلا صفحہ",
+      "nextPage": "اگلا صفحہ",
       "copied": "روزنامہیات نقل کرتے ہیں۔",
       "copiedShort": "کوس",
       "copy": "نقل و حمل",
+      "copyAll": "سب کاپی کریں",
       "hints": "حساب",
       "likelyCause": "غالباً وجہ:",
       "windowsSymlinkAdminHint": "Windows: Agent Teams AI کو Administrator کے طور پر چلائیں"
     },
     "models": {
+      "testingElapsed": "ٹیسٹ کے نتیجے کا انتظار... {{seconds}} سیکنڈ",
       "alreadyDefault": "یہ پہلے سے ہی منتخب اوپن سی ڈی کوڈ ہے.",
       "empty": "کوئی ماڈل نہیں ملا.",
       "emptyFree": "کوئی مفت ماڈل نہیں ملا.",

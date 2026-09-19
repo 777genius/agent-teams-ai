@@ -80,3 +80,7 @@ remotion/*
 /.remote-agent-runtime-staging/
 /.remote-profile-spike-staging/
 /_remote_profile_spike_stage/
+
+# Deterministic announcement build output (edit landing/content/announcements).
+/landing/public/announcements/
+/landing/public/announcements.tmp-*/

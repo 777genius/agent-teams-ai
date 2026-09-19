@@ -6,7 +6,7 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   type OpenCodeMemberDirectory,
   type OpenCodeMemberIdentityResolution,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import {
   type OpenCodeCommittedBootstrapSessionEvidence,
   type OpenCodeCommittedBootstrapSessionRecord,

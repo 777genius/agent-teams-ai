@@ -16,6 +16,9 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) => {} }));
+type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
+  Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
   state: {
     teamName: 'team-alpha',
@@ -64,7 +67,7 @@ const createTeamDraftMock = vi.hoisted(() => ({
 
 const storeState = {
   appConfig: { general: { multimodelEnabled: true } },
-  cliStatus: { providers: [] },
+  cliStatus: { providers: [] } as TestCliStatus,
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
   cliProviderStatusByScope: {} as Record<string, any>,
@@ -73,6 +76,8 @@ const storeState = {
   createSchedule,
   updateSchedule,
   repositoryGroups: [],
+  branchByPath: { '/tmp/project': 'main', '/tmp/project/.worktrees/jack': 'feature/current-work' },
+  fetchBranches: vi.fn(async () => {}),
   selectedTeamName: 'team-alpha',
   launchParamsByTeam: {},
   teamByName: {},
@@ -83,6 +88,12 @@ const storeState = {
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
+    runtimeProviderManagement: {
+      loadModels: vi.fn(),
+      loadProviderDirectory: vi.fn(),
+      cancelModelLoad: vi.fn(async () => ({ ok: true })),
+    },
+    workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
     onCodexAccountSnapshotChanged: vi.fn(() => () => {}),
@@ -107,6 +118,7 @@ vi.mock('@renderer/api', () => ({
       ),
     },
     teams: {
+      createConfig: vi.fn(async () => {}),
       getSavedRequest: vi.fn(async () => null),
       replaceMembers: vi.fn(async () => {}),
       prepareProvisioning: vi.fn(async () => ({})),
@@ -220,7 +232,14 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     effort: member.effort,
     fastMode: member.fastMode,
   }),
-  clearMemberModelOverrides: (member: unknown) => member,
+  clearMemberModelOverrides: (member: any) => ({
+    ...member,
+    providerId: undefined,
+    providerBackendId: undefined,
+    model: '',
+    effort: undefined,
+    fastMode: undefined,
+  }),
   createMemberDraftsFromInputs: (
     members: Array<{
       name: string;
@@ -290,8 +309,16 @@ vi.mock('@renderer/components/team/dialogs/OptionalSettingsSection', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
-  ProjectPathSelector: ({ selectedProjectPath }: { selectedProjectPath: string }) =>
-    React.createElement('div', { 'data-testid': 'project-path' }, selectedProjectPath),
+  ProjectPathSelector: ({
+    selectedProjectPath,
+    onSelectedProjectPathChange,
+  }: {
+    selectedProjectPath: string;
+    onSelectedProjectPathChange: (path: string) => void;
+  }) => {
+    projectPathSelectorMock.onSelect = onSelectedProjectPathChange;
+    return React.createElement('div', { 'data-testid': 'project-path' }, selectedProjectPath);
+  },
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -301,16 +328,24 @@ vi.mock('@renderer/components/ui/button', () => ({
     type,
     disabled,
     className,
+    'aria-describedby': ariaDescribedBy,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     className?: string;
+    'aria-describedby'?: string;
   }) =>
     React.createElement(
       'button',
-      { type: type ?? 'button', onClick, disabled, className },
+      {
+        type: type ?? 'button',
+        onClick,
+        disabled,
+        className,
+        'aria-describedby': ariaDescribedBy,
+      },
       children
     ),
 }));
@@ -342,8 +377,27 @@ vi.mock('@renderer/components/ui/combobox', () => ({
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? React.createElement('div', null, children) : null,
+  Dialog: ({
+    open,
+    children,
+    onOpenChange,
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
+  }) =>
+    open
+      ? React.createElement(
+          'div',
+          null,
+          children,
+          React.createElement(
+            'button',
+            { 'data-testid': 'dismiss-dialog', onClick: () => onOpenChange?.(false) },
+            'Close'
+          )
+        )
+      : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
@@ -441,8 +495,14 @@ vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
   isTeamProviderModelVerificationPending: vi.fn(() => false),
-  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
   normalizeExplicitTeamModelForUi: vi.fn((_providerId: string, model: string) => model),
+}));
+
+vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/utils/teamProviderRuntimeStatusLoading')>()),
+  getOpenCodeScopedPreparationFailure: vi.fn(() => null),
+  hasSettledOpenCodeScopedPreparation: vi.fn(() => false),
+  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
 vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
@@ -469,7 +529,17 @@ vi.mock('@renderer/components/team/dialogs/provisioningModelIssues', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () => ({
-  ProvisioningProviderStatusList: () => React.createElement('div', null, 'provider-status-list'),
+  ProvisioningProviderStatusList: ({
+    checks,
+  }: {
+    checks: Array<{ providerId: string; details: string[] }>;
+  }) =>
+    React.createElement(
+      'div',
+      null,
+      'provider-status-list ',
+      checks.flatMap((check) => check.details).join(' ')
+    ),
   deriveEffectiveProvisioningPrepareState: ({
     state,
     message,
@@ -569,12 +639,21 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
     ),
 }));
 
+import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
-import { isTeamModelAvailableForUi } from '@renderer/utils/teamModelAvailability';
+import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
+import {
+  isTeamModelAvailableForUi,
+  isTeamProviderModelVerificationPending,
+} from '@renderer/utils/teamModelAvailability';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+
+import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -582,8 +661,571 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
+async function confirmLaunchPreflight(
+  host: HTMLElement,
+  label: 'Launch team' | 'Relaunch team' = 'Launch team'
+): Promise<HTMLButtonElement> {
+  const button = Array.from(host.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent === label
+  ) as HTMLButtonElement | undefined;
+  if (!button) {
+    throw new Error(`Expected "${label}" button.`);
+  }
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
+    });
+  }
+  return button;
+}
+
+function createAuthoritativeProviderStatus(
+  providerId: CliProviderId,
+  models: string[]
+): CliProviderStatus {
+  return {
+    providerId,
+    displayName: providerId,
+    supported: true,
+    authenticated: true,
+    authMethod: 'test',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    models,
+    modelAvailability: [],
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-07-20T00:00:00.000Z',
+      staleAt: '2099-07-20T00:10:00.000Z',
+      defaultModelId: models[0] ?? null,
+      defaultLaunchModel: models[0] ?? null,
+      models: models.map((model) => ({
+        id: model,
+        launchModel: model,
+        displayName: model,
+        hidden: false,
+        supportedReasoningEfforts: [],
+        defaultReasoningEffort: null,
+        inputModalities: ['text'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+      })),
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+    canLoginFromUi: false,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+  };
+}
+
 describe('LaunchTeamDialog', () => {
+  it.each([
+    ['create', 'pending-codex'],
+    ['launch', 'pending-codex'],
+    ['create', 'refreshing-anthropic'],
+    ['launch', 'refreshing-anthropic'],
+    ['create', 'refreshing-codex'],
+    ['launch', 'refreshing-codex'],
+  ] as const)(
+    'enables %s skip during %s without repeating completed deep checks',
+    async (mode, scenario) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const modelAvailability = await vi.importActual<
+        typeof import('@renderer/utils/teamModelAvailability')
+      >('@renderer/utils/teamModelAvailability');
+      const runtimeLoading = await vi.importActual<
+        typeof import('@renderer/utils/teamProviderRuntimeStatusLoading')
+      >('@renderer/utils/teamProviderRuntimeStatusLoading');
+      vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(
+        modelAvailability.isTeamProviderModelVerificationPending
+      );
+      vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+        runtimeLoading.isTeamProviderRuntimeStatusLoading
+      );
+      const refreshing = scenario !== 'pending-codex';
+      const refreshProviderId = scenario === 'refreshing-anthropic' ? 'anthropic' : 'codex';
+      if (scenario === 'refreshing-codex') {
+        vi.mocked(api.getCodexAccountSnapshot).mockResolvedValueOnce({
+          preferredAuthMode: 'chatgpt',
+          effectiveAuthMode: 'chatgpt',
+          launchAllowed: true,
+          launchIssueMessage: null,
+          launchReadinessState: 'ready_chatgpt',
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          managedAccount: { type: 'chatgpt', email: null, planType: 'pro' },
+          apiKey: { available: false, source: null, sourceLabel: null },
+          requiresOpenaiAuth: false,
+          login: { status: 'idle', error: null, startedAt: null },
+          rateLimits: null,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      localStorage.setItem('team:lastSelectedProvider', refreshProviderId);
+      localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.4');
+      localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
+      createTeamDraftMock.state.soloTeam = true;
+      const codex = storeState.cliStatus.providers.find(
+        (provider) => provider.providerId === 'codex'
+      )!;
+      if (!refreshing)
+        Object.assign(codex, {
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'pending',
+          statusCheckErrorCode: 'partial_response',
+          modelCatalog: {
+            ...codex.modelCatalog,
+            source: 'static-fallback',
+            status: 'stale',
+            diagnostics: {
+              appServerState: 'degraded',
+              message: 'JSON-RPC request timed out: initialize',
+            },
+          },
+          modelVerificationState: 'idle',
+          modelCatalogRefreshState: 'loading',
+        });
+      const submit = vi.fn(async () => {});
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const renderDialog = () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: submit,
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: submit,
+              })
+        );
+      };
+      await act(async () => {
+        renderDialog();
+        await flush();
+      });
+      const settle = async () => {
+        for (let i = 0; i < 5; i++)
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+      };
+      await settle();
+      const completedChecks = vi.mocked(runProviderPrepareDiagnostics).mock.calls.length;
+      if (refreshing) {
+        expect(completedChecks).toBeGreaterThan(0);
+        storeState.cliStatus = {
+          ...storeState.cliStatus,
+          providers: storeState.cliStatus.providers.map((provider) =>
+            provider.providerId === refreshProviderId
+              ? reconcileCliProviderSnapshot(
+                  provider,
+                  sanitizeProviderStatusAuthority({
+                    ...provider,
+                    modelCatalogRefreshState: 'loading',
+                    modelCatalog: null,
+                    runtimeCapabilities: { modelCatalog: { dynamic: true } },
+                  })
+                )
+              : provider
+          ),
+        };
+        expect(
+          storeState.cliStatus.providers.find(
+            (provider) => provider.providerId === refreshProviderId
+          )
+        ).toMatchObject({
+          capabilities: { teamLaunch: false },
+          teamLaunchAuthorityRestriction: 'catalog-refresh',
+        });
+        await act(async () => {
+          renderDialog();
+          await flush();
+        });
+        await settle();
+        expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(completedChecks);
+      }
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (candidate) => candidate.textContent === `Skip preflight and ${mode}`
+      );
+      expect(button, host.textContent ?? '').toBeDefined();
+      expect(button?.disabled).toBe(false);
+      await act(async () => {
+        button!.click();
+        await flush();
+      });
+      expect(submit).toHaveBeenCalledOnce();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
+    ['create', 'anthropic', 'codex', false, ['anthropic', 'codex']],
+    ['launch', 'anthropic', 'codex', false, ['anthropic', 'codex']],
+    ['create', 'codex', 'anthropic', false, ['anthropic', 'codex']],
+    ['launch', 'codex', 'anthropic', false, ['anthropic', 'codex']],
+    ['create', 'codex', 'anthropic', true, ['codex']],
+    ['launch', 'codex', 'anthropic', true, ['codex']],
+    ['create', 'anthropic', 'codex', true, ['anthropic']],
+    ['launch', 'anthropic', 'codex', true, ['anthropic']],
+  ] as const)(
+    'projects trust in mounted %s with %s lead, %s member (removed=%s)',
+    async (mode, lead, memberProvider, removed, expectedProviders) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      localStorage.setItem('team:lastSelectedProvider', lead);
+      localStorage.setItem(`team:lastSelectedModel:${lead}`, lead === 'codex' ? 'gpt-5.4' : 'opus');
+      for (const provider of storeState.cliStatus.providers ?? []) {
+        storeState.cliProviderStatusByScope[
+          getCliProviderStatusScopeKey(provider.providerId, '/tmp/project')
+        ] = provider;
+      }
+      if (mode === 'create') {
+        Object.assign(createTeamDraftMock.state.members[0], {
+          providerId: lead,
+          model: lead === 'codex' ? 'gpt-5.4' : 'opus',
+        });
+        Object.assign(createTeamDraftMock.state.members[1], {
+          providerId: memberProvider,
+          model: memberProvider === 'codex' ? 'gpt-5.4' : 'opus',
+          removedAt: removed ? 1 : undefined,
+        });
+      }
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      let resolveTrust!: (value: any) => void;
+      vi.mocked(api.workspaceTrust!.getLaunchStatus!).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveTrust = resolve;
+          })
+      );
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: vi.fn(async () => {}),
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: vi.fn(async () => {}),
+              })
+        );
+        await flush();
+      });
+      await act(async () => {
+        teamRosterEditorSectionMock.lastProps.onProviderChange(lead);
+        teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(false);
+        teamRosterEditorSectionMock.lastProps.onMembersChange([
+          {
+            id: 'trust-test-member',
+            name: 'tester',
+            originalName: 'tester',
+            roleSelection: '',
+            customRole: 'Developer',
+            workflow: '',
+            providerId: memberProvider,
+            model: memberProvider === 'codex' ? 'gpt-5.4' : 'opus',
+            removedAt: removed ? 1 : undefined,
+          },
+        ]);
+        await flush();
+      });
+      expect(host.querySelectorAll('[role="note"]')).toHaveLength(0);
+      // Readiness intentionally publishes its clock from a zero-delay timer.
+      // Settle that independent gate without reaching the 120ms trust debounce.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      const submitLabel = mode === 'create' ? 'Create' : 'Launch team';
+      const submit = () =>
+        Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent === submitLabel
+        );
+      expect(submit()?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120);
+      });
+      expect(api.workspaceTrust!.getLaunchStatus).toHaveBeenLastCalledWith({
+        projectPath: '/tmp/project',
+        providerIds: expectedProviders,
+      });
+      expect(submit()?.disabled).toBe(false);
+      await act(async () => {
+        resolveTrust({
+          providers: expectedProviders.map((providerId) => ({
+            providerId,
+            status: providerId === 'codex' ? 'launch_scoped' : 'trusted',
+          })),
+        });
+      });
+      expect(host.querySelectorAll('[role="note"]')).toHaveLength(0);
+      expect(host.textContent).not.toContain('First launch');
+      expect(host.textContent).not.toContain('Project status unknown');
+      expect(submit()?.disabled).toBe(false);
+      expect(
+        new Set(
+          vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
+        )
+      ).toEqual(new Set(expectedProviders));
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each(['create-only', 'schedule', 'closed'] as const)(
+    'does not read trust for mounted %s',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      createTeamDraftMock.state.launchTeam = false;
+      const root = createRoot(document.createElement('div'));
+      await act(async () => {
+        root.render(
+          mode === 'create-only'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: vi.fn(async () => {}),
+                onOpenTeam: vi.fn(),
+              })
+            : mode === 'schedule'
+              ? React.createElement(LaunchTeamDialog, {
+                  mode: 'schedule',
+                  open: true,
+                  onClose: vi.fn(),
+                })
+              : React.createElement(LaunchTeamDialog, {
+                  mode: 'launch',
+                  open: mode !== 'closed',
+                  teamName: 'team-alpha',
+                  members: [],
+                  defaultProjectPath: '/tmp/project',
+                  provisioningError: null,
+                  clearProvisioningError: vi.fn(),
+                  activeTeams: [],
+                  onClose: vi.fn(),
+                  onLaunch: vi.fn(async () => {}),
+                })
+        );
+        await flush();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_500);
+      });
+      expect(api.workspaceTrust!.getLaunchStatus).not.toHaveBeenCalled();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
+    ['create', 'failed', 'anthropic'],
+    ['launch', 'failed', 'anthropic'],
+    ['create', 'ready', 'anthropic'],
+    ['launch', 'ready', 'anthropic'],
+    ['create', 'ready', 'opencode'],
+    ['launch', 'ready', 'opencode'],
+  ] as const)(
+    'optional skip %s with %s %s completion fences duplicates and resumes after rejection without repeating successful diagnostics',
+    async (mode, completion, selectedProvider) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      localStorage.setItem('team:lastSelectedProvider', selectedProvider);
+      localStorage.setItem(
+        `team:lastSelectedModel:${selectedProvider}`,
+        selectedProvider === 'opencode' ? 'opencode/big-pickle' : 'opus'
+      );
+      createTeamDraftMock.state.soloTeam = mode !== 'create';
+      if (mode === 'create') createTeamDraftMock.state.members[1].providerId = selectedProvider;
+      const pending: ((value: any) => void)[] = [];
+      vi.mocked(runProviderPrepareDiagnostics).mockImplementation(({ providerId }) =>
+        providerId === selectedProvider
+          ? new Promise((resolve) => pending.push(resolve))
+          : Promise.resolve({ status: 'ready', details: [], warnings: [], modelResultsById: {} })
+      );
+      let rejectSubmit!: (error: Error) => void;
+      const submit = vi.fn(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectSubmit = reject;
+          })
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: submit,
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: submit,
+              })
+        );
+        await flush();
+      });
+      const settle = async () => {
+        for (let i = 0; i < 5; i++)
+          await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+            await flush();
+          });
+      };
+      await settle();
+      const findButton = (label: string) =>
+        Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === label
+        )!;
+      const skipLabel =
+        mode === 'create' ? 'Skip preflight and create' : 'Skip preflight and launch';
+      const skip = findButton(skipLabel);
+      expect(skip, host.textContent ?? '').toBeDefined();
+      expect(skip.disabled).toBe(false);
+      expect(pending).toHaveLength(1);
+      const base = Date.now();
+      const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2100-01-01T00:00:00.000Z'));
+      await act(async () => {
+        skip.click();
+        await flush();
+      });
+      expect(submit).not.toHaveBeenCalled();
+      now.mockReturnValue(base);
+      const attempt = vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.find(([input]) => input.providerId === selectedProvider)![0];
+      await act(async () => {
+        attempt.onModelProgress?.({
+          status: 'failed',
+          details: ['REQUIRED FAILURE'],
+          completedCount: 0,
+          totalCount: 1,
+        });
+        skip.click();
+        await flush();
+      });
+      expect(submit).not.toHaveBeenCalled();
+      await act(async () => {
+        attempt.onModelProgress?.({
+          status: 'checking',
+          details: [],
+          completedCount: 0,
+          totalCount: 1,
+        });
+        await flush();
+      });
+      await act(async () => {
+        skip.click();
+        skip.click();
+        await flush();
+      });
+      expect(submit).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        pending[0]({
+          status: completion,
+          details: ['FENCED OPTIONAL RESULT'],
+          warnings: [],
+          modelResultsById: {},
+        });
+        await flush();
+      });
+      expect(host.textContent).not.toContain('FENCED OPTIONAL RESULT');
+      await act(async () => {
+        rejectSubmit(new Error('submit rejected'));
+        await flush();
+      });
+      await settle();
+      expect(pending).toHaveLength(completion === 'ready' ? 1 : 2);
+      expect(
+        findButton(
+          completion === 'ready' ? (mode === 'create' ? 'Create' : 'Launch team') : skipLabel
+        ).disabled
+      ).toBe(false);
+      expect(submit).toHaveBeenCalledTimes(1);
+      await act(async () => root.unmount());
+    }
+  );
+
   beforeEach(() => {
+    vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(() => false);
+    vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(() => false);
+    vi.mocked(api.workspaceTrust!.getLaunchStatus!)
+      .mockReset()
+      .mockResolvedValue({ providers: [] });
     vi.mocked(runProviderPrepareDiagnostics).mockReset();
     vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
       status: 'ready',
@@ -591,6 +1233,15 @@ describe('LaunchTeamDialog', () => {
       details: [],
       modelResultsById: {},
     });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        createAuthoritativeProviderStatus('anthropic', ['opus', 'sonnet']),
+        createAuthoritativeProviderStatus('codex', ['gpt-5.4']),
+        createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
+      ],
+    };
+    storeState.cliProviderStatusLoading = {};
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
       if (providerId !== 'opencode' || !options?.projectPath) {
@@ -617,6 +1268,11 @@ describe('LaunchTeamDialog', () => {
             verificationState: 'verified',
             capabilities: { teamLaunch: true, oneShot: false },
           }),
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: undefined,
+          capabilities: { teamLaunch: true, oneShot: true },
           models,
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
@@ -628,7 +1284,11 @@ describe('LaunchTeamDialog', () => {
             staleAt: '2099-07-20T00:10:00.000Z',
             defaultModelId: models[0] ?? null,
             defaultLaunchModel: models[0] ?? null,
-            models: [],
+            models: models.map((model: string) => ({
+              id: model,
+              launchModel: model,
+              displayName: model,
+            })),
             diagnostics: {
               configReadState: 'ready',
               appServerState: 'healthy',
@@ -641,19 +1301,241 @@ describe('LaunchTeamDialog', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = '';
     localStorage.clear();
     vi.useRealTimers();
     vi.clearAllMocks();
+    createTeamDraftMock.state.setCwdMode.mockReset();
     storeState.cliStatus = { providers: [] };
     storeState.cliProviderStatusByScope = {};
+    storeState.cliProviderStatusLoading = {};
     storeState.launchParamsByTeam = {};
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
+    createTeamDraftMock.state.members[0].providerId = 'opencode';
+    delete (createTeamDraftMock.state.members[0] as any).removedAt;
+    createTeamDraftMock.state.members[1].providerId = 'codex';
+    createTeamDraftMock.state.members[1].model = 'gpt-5.5';
+    delete (createTeamDraftMock.state.members[1] as any).removedAt;
     createTeamDraftMock.state.cwdMode = 'project';
     createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
     createTeamDraftMock.state.customCwd = '';
+    createTeamDraftMock.state.soloTeam = false;
+    createTeamDraftMock.state.launchTeam = true;
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(() => true);
     teamRosterEditorSectionMock.lastProps = null;
+  });
+
+  it('fail-closes both real launch submit paths when Anthropic authority expires', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const baseTime = Date.parse('2026-08-29T00:00:00.000Z');
+    vi.setSystemTime(baseTime);
+    localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+    localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'api_key',
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          models: ['opus'],
+          modelAvailability: [{ modelId: 'opus', status: 'available' }],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'anthropic-models-api',
+            status: 'ready',
+            fetchedAt: new Date(baseTime).toISOString(),
+            staleAt: new Date(baseTime + 100).toISOString(),
+            defaultModelId: 'opus',
+            defaultLaunchModel: 'opus',
+            models: [
+              {
+                id: 'opus',
+                launchModel: 'opus',
+                displayName: 'Opus',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'anthropic-models-api',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+        },
+      ],
+    } as any;
+    const launchHost = document.createElement('div');
+    document.body.appendChild(launchHost);
+    const launchDialogRoot = createRoot(launchHost);
+    const onLaunch = vi.fn(async () => {});
+    await act(async () => {
+      launchDialogRoot.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      await flush();
+    });
+    const launchButton = Array.from(launchHost.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(launchButton?.disabled).toBe(false);
+
+    vi.setSystemTime(baseTime + 100);
+    await act(async () => {
+      launchButton?.click();
+      await flush();
+    });
+    expect(onLaunch).not.toHaveBeenCalled();
+    await act(async () => vi.runOnlyPendingTimersAsync());
+    expect(launchButton?.disabled).toBe(true);
+    expect(launchHost.textContent).not.toContain('All selected providers are ready.');
+    expect(launchHost.textContent).toContain('Runtime environment is not available');
+    expect(launchHost.textContent).toContain('verified model catalog is unavailable or stale');
+    expect(launchButton?.getAttribute('aria-describedby')).toBe(
+      'launch-team-launch-authority-blocker'
+    );
+    await act(async () => launchDialogRoot.unmount());
+
+    vi.setSystemTime(baseTime);
+    createTeamDraftMock.state.soloTeam = true;
+    const createHost = document.createElement('div');
+    document.body.appendChild(createHost);
+    const createDialogRoot = createRoot(createHost);
+    const onCreate = vi.fn(async () => {});
+    await act(async () => {
+      createDialogRoot.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      await flush();
+    });
+    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
+      button.textContent?.toLowerCase().includes('create')
+    );
+    expect(createButton?.disabled).toBe(false);
+
+    vi.setSystemTime(baseTime + 100);
+    await act(async () => {
+      createButton?.click();
+      await flush();
+    });
+    expect(onCreate).not.toHaveBeenCalled();
+    await act(async () => vi.runOnlyPendingTimersAsync());
+    expect(createButton?.disabled).toBe(true);
+    await act(async () => createDialogRoot.unmount());
+  });
+
+  it('shows the Codex account/runtime launch mismatch when Create is disabled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('team:lastSelectedProvider', 'codex');
+    localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.5');
+    createTeamDraftMock.state.soloTeam = true;
+    const readyCodex = createAuthoritativeProviderStatus('codex', ['gpt-5.5']);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...readyCodex,
+          authenticated: false,
+          authMethod: null,
+          statusMessage: 'Codex native runtime unavailable',
+          detailMessage: 'Codex native runtime requires CODEX_API_KEY or OPENAI_API_KEY.',
+          capabilities: { ...readyCodex.capabilities, teamLaunch: false },
+          connection: {
+            codex: {
+              effectiveAuthMode: 'chatgpt',
+              launchAllowed: true,
+              launchIssueMessage: null,
+              launchReadinessState: 'ready_chatgpt',
+            },
+          },
+        },
+      ],
+    } as any;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    for (
+      let attempt = 0;
+      attempt < 10 && !host.textContent?.includes('runtime has not confirmed launch readiness');
+      attempt += 1
+    ) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const createButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-describedby="create-team-launch-authority-blocker"]'
+    );
+    expect(createButton?.disabled).toBe(true);
+    expect(host.textContent).toContain('Runtime environment is not available - launch is blocked');
+    expect(host.textContent).toContain(
+      'ChatGPT account is connected, but the Codex runtime has not confirmed launch readiness'
+    );
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    expect(host.textContent).not.toContain('CODEX_API_KEY');
+
+    await act(async () => root.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {
@@ -729,8 +1611,24 @@ describe('LaunchTeamDialog', () => {
 
     expect(teamRosterEditorSectionMock.lastProps?.memberInfoById).toEqual({
       'draft-0':
-        'This teammate will continue from its existing worktree: /tmp/project/.worktrees/jack',
+        'Worktree branch: feature/current-work\nLast workspace: /tmp/project/.worktrees/jack. Managed worktree reused if available; otherwise created on launch.',
     });
+
+    const isolatedMembers = teamRosterEditorSectionMock.lastProps.members;
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onMembersChange(
+        isolatedMembers.map((member: any) => ({ ...member, isolation: undefined }))
+      );
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.memberInfoById).toEqual({});
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onMembersChange(isolatedMembers);
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.memberInfoById['draft-0']).toContain(
+      'Worktree branch: feature/current-work'
+    );
 
     await act(async () => {
       root.unmount();
@@ -740,7 +1638,12 @@ describe('LaunchTeamDialog', () => {
 
   it('hydrates existing teammate models before a slow saved-request lookup completes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(new Promise(() => {}));
+    let resolveSavedRequest!: (value: any) => void;
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      })
+    );
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
@@ -816,6 +1719,8 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
+    await confirmLaunchPreflight(host);
+
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({
         name: 'alice',
@@ -823,16 +1728,796 @@ describe('LaunchTeamDialog', () => {
         model: localModel,
       }),
     ]);
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveSavedRequest(null);
+      await flush();
+    });
+    await confirmLaunchPreflight(host);
     expect(
       vi
         .mocked(runProviderPrepareDiagnostics)
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]?.selectedModelChecks
-    ).toEqual([
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: 'opencode',
+          model: localModel,
+        }),
+      ])
+    );
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('invalidates ready checks and blocks launch while project selection is unresolved', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    const submit = () =>
+      Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Launch team'
+      )!;
+    expect(submit().disabled).toBe(false);
+    expect(host.textContent).toContain('All selected providers are ready.');
+    await act(async () => {
+      projectPathSelectorMock.onSelect('/tmp/unresolved-project');
+      await flush();
+    });
+    expect(submit().disabled).toBe(true);
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(onLaunch).not.toHaveBeenCalled();
+    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    await act(async () => {
+      projectPathSelectorMock.onSelect('/tmp/project');
+      await flush();
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(submit().disabled).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('starts preflight with user choices when a roster refresh cancels pending hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(new Promise(() => {}));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+    await act(async () => {
+      render();
+      await flush();
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.syncModelsWithTeammates).toBe(true);
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/tmp/project' })
+    );
+    expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+  });
+
+  it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    localStorage.setItem('team:lastSelectedEffort', 'xhigh');
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // EffortLevelSelector clears an effort the selected model cannot run through the
+    // dedicated auto-reset callback. That is not a user edit.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortAutoReset();
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+    // The auto reset kept the form pristine, so the saved request fields still hydrate.
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalledWith(
       expect.objectContaining({
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        selectedModelIds: expect.arrayContaining(['gpt-5.5']),
+      })
+    );
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('still lets a user effort choice during hydration win over the saved request fields', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortChange('high');
+      await flush();
+    });
+
+    const providerBeforeSavedRequest = teamRosterEditorSectionMock.lastProps?.providerId;
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    // The controls the user touched keep their values...
+    expect(providerBeforeSavedRequest).not.toBe('codex');
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe(providerBeforeSavedRequest);
+    // ...while the roster the user never touched still hydrates from the saved request.
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('lets an explicit Default effort choice during hydration win over the saved request', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // The user explicitly picks Default (''), which is indistinguishable from the
+    // programmatic clear by value alone — but it arrives through onEffortChange.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortChange('');
+      await flush();
+    });
+
+    const providerBeforeSavedRequest = teamRosterEditorSectionMock.lastProps?.providerId;
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(providerBeforeSavedRequest).not.toBe('codex');
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe(providerBeforeSavedRequest);
+    expect(teamRosterEditorSectionMock.lastProps?.effort).toBeUndefined();
+    // The roster the user never touched still hydrates from the saved request.
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a sync-models toggle made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
+
+    // The saved roster members carry their own models, so re-deriving the toggle from
+    // them would flip it back to false.
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer', model: 'gpt-5.5' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(true);
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('uses effective synchronized teammates when selecting providers for prepare', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      syncModelsWithLead: true,
+      members: [
+        {
+          name: 'jack',
+          role: 'developer',
+          providerId: 'opencode',
+          model: 'openrouter/auto',
+        },
+      ],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+      await flush();
+    });
+
+    vi.mocked(runProviderPrepareDiagnostics).mockClear();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
+    await confirmLaunchPreflight(host);
+
+    const preparedProviderIds = vi
+      .mocked(runProviderPrepareDiagnostics)
+      .mock.calls.map((call) => call[0].providerId);
+    expect(preparedProviderIds).toContain('anthropic');
+    expect(preparedProviderIds).not.toContain('opencode');
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({
+        name: 'jack',
         providerId: 'opencode',
-        model: localModel,
+        model: 'openrouter/auto',
       }),
     ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('restores an explicit sync-off preference for teammates using provider defaults', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      syncModelsWithLead: false,
+      members: [{ name: 'jack', role: 'developer' }],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('infers legacy sync-off from teammate backend and fast-mode overrides', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      members: [
+        {
+          name: 'jack',
+          role: 'developer',
+          providerBackendId: 'codex-native',
+          fastMode: 'on',
+        },
+      ],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a teammate worktree toggle made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.teammateWorktreeDefault).toBe(false);
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onTeammateWorktreeDefaultChange(true);
+      await flush();
+    });
+
+    // The saved roster members have no worktree settings, so re-deriving the toggle
+    // from them would flip it back to false.
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.teammateWorktreeDefault).toBe(true);
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('fills the saved roster when an unrelated control is toggled during hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // A draft team has no live members, so the saved request is the only roster source.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onLimitContextChange(true);
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+    expect(teamRosterEditorSectionMock.lastProps?.limitContext).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a roster edit made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onMembersChange([
+        {
+          id: 'draft-0',
+          name: 'nina',
+          roleSelection: '',
+          customRole: 'Developer',
+          workflow: '',
+        },
+      ]);
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'nina' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('completes hydration when the saved request carries a malformed backend id', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      // Legacy/hand-edited persisted config: not a string.
+      providerBackendId: 42,
+      model: 'gpt-5.5',
+      members: [{ name: 'jack', role: 'developer' }],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
 
     await act(async () => {
       root.unmount();
@@ -843,9 +2528,13 @@ describe('LaunchTeamDialog', () => {
   it('uses the project-scoped OpenCode teammate model in Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
+    localStorage.setItem('team:lastSelectedProvider', 'opencode');
+    localStorage.setItem('team:lastSelectedModel:opencode', 'opencode/big-pickle');
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     const originalModel = createTeamDraftMock.state.members[0].model;
     createTeamDraftMock.state.members[0].model = localModel;
+    createTeamDraftMock.state.members[1].providerId = 'opencode';
+    createTeamDraftMock.state.members[1].model = 'opencode/big-pickle';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
     );
@@ -866,25 +2555,19 @@ describe('LaunchTeamDialog', () => {
           capabilities: { teamLaunch: true, oneShot: false },
           backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
         },
-        {
-          providerId: 'codex',
-          supported: true,
-          authenticated: true,
-          authMethod: 'oauth',
-          verificationState: 'verified',
-          modelVerificationState: 'idle',
-          modelCatalogRefreshState: 'ready',
-          statusMessage: null,
-          models: ['gpt-5.5'],
-          modelAvailability: [],
-          capabilities: { teamLaunch: true, oneShot: true },
-          backend: { kind: 'codex-native', label: 'Codex native' },
-        },
+        createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
       ],
     } as any;
     storeState.cliProviderStatusByScope = {
       [getCliProviderStatusScopeKey('opencode', '/tmp/project')]: {
         ...(storeState.cliStatus as any).providers[0],
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusCheckErrorCode: 'partial_response',
+        capabilities: { teamLaunch: false, oneShot: false },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
         models: [localModel],
         modelCatalogRefreshState: 'ready',
         modelCatalog: {
@@ -896,7 +2579,21 @@ describe('LaunchTeamDialog', () => {
           staleAt: '2099-07-20T00:10:00.000Z',
           defaultModelId: localModel,
           defaultLaunchModel: localModel,
-          models: [],
+          models: [
+            {
+              id: localModel,
+              launchModel: localModel,
+              displayName: localModel,
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
           diagnostics: {
             configReadState: 'ready',
             appServerState: 'healthy',
@@ -936,12 +2633,14 @@ describe('LaunchTeamDialog', () => {
       vi
         .mocked(runProviderPrepareDiagnostics)
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]?.selectedModelChecks
-    ).toEqual([
-      expect.objectContaining({
-        providerId: 'opencode',
-        model: localModel,
-      }),
-    ]);
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: 'opencode',
+          model: localModel,
+        }),
+      ])
+    );
 
     createTeamDraftMock.state.members[0].model = originalModel;
     await act(async () => {
@@ -953,11 +2652,15 @@ describe('LaunchTeamDialog', () => {
   it('uses one custom cwd for the scoped OpenCode catalog and Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
+    localStorage.setItem('team:lastSelectedProvider', 'opencode');
+    localStorage.setItem('team:lastSelectedModel:opencode', 'opencode/big-pickle');
     const customCwd = '/tmp/custom-catalog-project';
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     createTeamDraftMock.state.cwdMode = 'custom';
     createTeamDraftMock.state.customCwd = customCwd;
     createTeamDraftMock.state.members[0].model = localModel;
+    createTeamDraftMock.state.members[1].providerId = 'opencode';
+    createTeamDraftMock.state.members[1].model = 'opencode/big-pickle';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
     );
@@ -977,11 +2680,18 @@ describe('LaunchTeamDialog', () => {
     };
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
-      providers: [globalProvider],
+      providers: [globalProvider, createAuthoritativeProviderStatus('codex', ['gpt-5.5'])],
     } as any;
     storeState.cliProviderStatusByScope = {
       [getCliProviderStatusScopeKey('opencode', customCwd)]: {
         ...globalProvider,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusCheckErrorCode: 'partial_response',
+        capabilities: { teamLaunch: false, oneShot: false },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
         models: [localModel],
         modelCatalog: {
           schemaVersion: 1,
@@ -992,7 +2702,21 @@ describe('LaunchTeamDialog', () => {
           staleAt: '2099-07-20T00:10:00.000Z',
           defaultModelId: localModel,
           defaultLaunchModel: localModel,
-          models: [],
+          models: [
+            {
+              id: localModel,
+              launchModel: localModel,
+              displayName: localModel,
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
           diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
         },
       },
@@ -1035,10 +2759,56 @@ describe('LaunchTeamDialog', () => {
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]
     ).toMatchObject({
       cwd: customCwd,
-      selectedModelChecks: [expect.objectContaining({ model: localModel })],
+      selectedModelChecks: expect.arrayContaining([expect.objectContaining({ model: localModel })]),
     });
 
     await act(async () => root.unmount());
+  });
+
+  it('opens a brand-new team with the lead only and no pre-stuffed teammates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const savedMembers = createTeamDraftMock.state.members;
+    createTeamDraftMock.state.members = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            clearProvisioningError: vi.fn(),
+            existingTeamNames: [],
+            provisioningTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onCreate: vi.fn(async () => {}),
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      });
+
+      // The open effect must not invent teammates (previously alice/tom/bob/jack).
+      const rosterWrites = createTeamDraftMock.state.setMembers.mock.calls.map(([next]: any[]) =>
+        typeof next === 'function' ? next([]) : next
+      );
+      expect(rosterWrites.flatMap((roster: any[]) => roster.map((member) => member.name))).toEqual(
+        []
+      );
+      expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([]);
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+      createTeamDraftMock.state.members = savedMembers;
+    }
   });
 
   it('forces navigation project mode once and then allows a custom path', async () => {
@@ -1136,7 +2906,7 @@ describe('LaunchTeamDialog', () => {
 
     expect(teamRosterEditorSectionMock.lastProps?.memberInfoById).toEqual({
       'draft-0':
-        'This teammate will continue from its existing worktree: /tmp/project/.worktrees/jack',
+        'Worktree branch: feature/current-work\nLast workspace: /tmp/project/.worktrees/jack. Managed worktree reused if available; otherwise created on launch.',
     });
 
     await act(async () => {
@@ -1194,6 +2964,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -1228,6 +2999,7 @@ describe('LaunchTeamDialog', () => {
       flavor: 'agent_teams_orchestrator',
       providers: [
         {
+          ...createAuthoritativeProviderStatus('codex', ['gpt-5.4']),
           providerId: 'codex',
           supported: true,
           authenticated: true,
@@ -1238,6 +3010,7 @@ describe('LaunchTeamDialog', () => {
           capabilities: { teamLaunch: true, oneShot: true },
         },
         {
+          ...createAuthoritativeProviderStatus('anthropic', ['sonnet']),
           providerId: 'anthropic',
           supported: true,
           authenticated: true,
@@ -1313,6 +3086,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -1499,9 +3273,118 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it.each(['member', 'lead'] as const)(
+    'carries a %s model draft into relaunch and discards it on cancel',
+    async (targetKind) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const onRelaunch = vi.fn(async () => {});
+      const onClose = vi.fn();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const target = {
+        name: targetKind === 'lead' ? 'team-lead' : 'alice',
+        agentType: targetKind === 'lead' ? 'team-lead' : 'general-purpose',
+        agentId: 'original',
+        providerId: 'opencode',
+        model: 'observed-runtime-model',
+        configuredRuntimeSettings: { providerId: 'opencode', model: 'glm-5.3' },
+      };
+      const members = [
+        target,
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'observed-sibling-model',
+          configuredRuntimeSettings: {},
+        },
+      ];
+      const saved = {
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'opencode',
+        model: 'glm-5.3',
+        syncModelsWithLead: true,
+        members: [],
+      };
+      const render = async (withDraft: boolean): Promise<void> => {
+        vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce(saved as any);
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'relaunch',
+              open: true,
+              teamName: 'team-alpha',
+              members: members as any,
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              onClose,
+              onRelaunch,
+              memberSettingsDraft: withDraft
+                ? {
+                    teamName: 'team-alpha',
+                    memberName: target.name,
+                    targetKind,
+                    expectedFingerprint: 'editor-fingerprint',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+                    settings: {
+                      role: null,
+                      workflow: null,
+                      isolation: null,
+                      providerId: 'opencode',
+                      providerBackendId: null,
+                      model: 'glm-5.3-flash',
+                      effort: null,
+                      fastMode: null,
+                      mcpPolicy: null,
+                    },
+                  }
+                : undefined,
+            })
+          );
+          await flush();
+        });
+      };
+      await render(true);
+      const editor = teamRosterEditorSectionMock.lastProps;
+      if (targetKind === 'lead') expect(editor.model).toBe('glm-5.3-flash');
+      else
+        expect(editor.members.find((row: any) => row.name === 'alice').model).toBe('glm-5.3-flash');
+      expect(editor.members.find((row: any) => row.name === 'bob').model).toBe('');
+      expect(editor.syncModelsWithTeammates).toBe(false);
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onRelaunch).not.toHaveBeenCalled();
+      await act(async () => {
+        const cancel = host.querySelector<HTMLButtonElement>('[data-testid="dismiss-dialog"]');
+        expect(cancel).toBeTruthy();
+        cancel?.click();
+        await flush();
+      });
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onRelaunch).not.toHaveBeenCalled();
+      await act(async () => {
+        root.render(null);
+        await flush();
+      });
+      await render(false);
+      expect(host.textContent).not.toContain('glm-5.3-flash');
+      expect(target.configuredRuntimeSettings.model).toBe('glm-5.3');
+      await act(async () => root.unmount());
+    }
+  );
+
   it('submits relaunch through onRelaunch without replacing members in-dialog', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      syncModelsWithLead: true,
+      members: [],
+    });
     const onRelaunch = vi.fn(async () => {});
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1518,10 +3401,28 @@ describe('LaunchTeamDialog', () => {
               name: 'alice',
               role: 'Reviewer',
               providerId: 'codex',
-              model: 'gpt-5.4',
+              model: 'gpt-5.3',
               effort: 'medium',
             },
           ] as any,
+          memberSettingsDraft: {
+            teamName: 'team-alpha',
+            memberName: 'alice',
+            targetKind: 'member',
+            expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+            settings: {
+              role: 'Reviewer',
+              workflow: null,
+              isolation: null,
+              providerId: 'codex',
+              providerBackendId: null,
+              model: 'gpt-5.4',
+              effort: 'medium',
+              fastMode: null,
+              mcpPolicy: null,
+            },
+          },
           defaultProjectPath: '/tmp/project',
           provisioningError: null,
           clearProvisioningError: vi.fn(),
@@ -1538,6 +3439,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host, 'Relaunch team');
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -1547,7 +3449,13 @@ describe('LaunchTeamDialog', () => {
     expect(vi.mocked(api.teams.replaceMembers)).not.toHaveBeenCalled();
 
     const [request, members] = onRelaunch.mock.calls[0] as unknown as [
-      { teamName: string; cwd: string; providerId?: string; model?: string },
+      {
+        teamName: string;
+        cwd: string;
+        providerId?: string;
+        model?: string;
+        syncModelsWithLead?: boolean;
+      },
       Array<{ name: string; providerId?: string; model?: string }>,
     ];
 
@@ -1555,6 +3463,13 @@ describe('LaunchTeamDialog', () => {
     expect(request.cwd).toBe('/tmp/project');
     expect(request.providerId).toBe('anthropic');
     expect(request.model).toBe('opus');
+    expect(request.syncModelsWithLead).toBe(true);
+    expect((onRelaunch.mock.calls[0] as unknown[])[2]).toMatchObject({
+      memberName: 'alice', targetKind: 'member', expectedFingerprint: 'original',
+    expectedTeamSettingsFingerprint: 'editor-team-baseline',
+      model: 'gpt-5.4', effort: 'medium',
+      baseline: [{ memberName: 'alice', expectedFingerprint: expect.any(String) }],
+    });
     expect(members).toEqual([
       {
         name: 'alice',
@@ -1642,6 +3557,8 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
     }
+
+    await confirmLaunchPreflight(host);
 
     const opencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
@@ -1821,6 +3738,7 @@ describe('LaunchTeamDialog', () => {
     expect(submitButton).toBeTruthy();
     expect(submitButton?.hasAttribute('disabled')).toBe(false);
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -2398,6 +4316,17 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+    const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    expect(initialLaunchButton?.hasAttribute('disabled')).toBe(true);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2439,7 +4368,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('keeps the in-flight OpenCode preflight result when live catalog expands during rerender', async () => {
+  it('keeps one OpenCode preflight when the same selected catalog becomes authoritative', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2450,22 +4379,43 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
-          statusMessage: 'warming up',
-          detailMessage: 'catalog still loading',
+          statusMessage: 'healthy',
+          detailMessage: 'catalog snapshot ready',
           models: ['opencode/minimax-m2.5-free'],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
-            source: 'live',
-            status: 'checking',
-            models: [{ id: 'opencode/minimax-m2.5-free' }],
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'opencode/minimax-m2.5-free',
+            defaultLaunchModel: 'opencode/minimax-m2.5-free',
+            models: [
+              {
+                id: 'opencode/minimax-m2.5-free',
+                launchModel: 'opencode/minimax-m2.5-free',
+                displayName: 'minimax-m2.5-free',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['opus']),
       ],
     } as any;
+    const projectScopeKey = getCliProviderStatusScopeKey('opencode', '/tmp/project');
+    storeState.cliProviderStatusByScope[projectScopeKey] = (
+      storeState.cliStatus as any
+    ).providers[0];
+    fetchCliProviderStatus.mockResolvedValue(true);
 
     let resolvePrepare!: (value: {
       status: 'ready';
@@ -2516,8 +4466,17 @@ describe('LaunchTeamDialog', () => {
       await renderDialog();
     });
 
-    const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
+    const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
+    );
+    await act(async () => {
+      initialLaunchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
+    });
+
+    const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Skip preflight and launch'
     );
     expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(false);
 
@@ -2530,6 +4489,7 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
           statusMessage: 'healthy',
           detailMessage: 'catalog ready',
@@ -2538,25 +4498,53 @@ describe('LaunchTeamDialog', () => {
             'opencode/qwen3.6-plus-free',
             'openrouter/google/gemma-4-26b-a4b-it',
           ],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
-            source: 'live',
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
             status: 'ready',
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'opencode/minimax-m2.5-free',
+            defaultLaunchModel: 'opencode/minimax-m2.5-free',
             models: [
-              { id: 'opencode/minimax-m2.5-free' },
-              { id: 'opencode/qwen3.6-plus-free' },
-              { id: 'openrouter/google/gemma-4-26b-a4b-it' },
+              {
+                id: 'opencode/minimax-m2.5-free',
+                launchModel: 'opencode/minimax-m2.5-free',
+                displayName: 'minimax-m2.5-free',
+              },
+              {
+                id: 'opencode/qwen3.6-plus-free',
+                launchModel: 'opencode/qwen3.6-plus-free',
+                displayName: 'qwen3.6-plus-free',
+              },
+              {
+                id: 'openrouter/google/gemma-4-26b-a4b-it',
+                launchModel: 'openrouter/google/gemma-4-26b-a4b-it',
+                displayName: 'gemma-4-26b-a4b-it',
+              },
             ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['opus']),
       ],
     } as any;
+    storeState.cliProviderStatusByScope[projectScopeKey] = (
+      storeState.cliStatus as any
+    ).providers[0];
 
     await act(async () => {
       await renderDialog();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
     });
 
     await act(async () => {
@@ -2593,22 +4581,46 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
           models: ['ollama/llama3.2:latest', 'ollama/qwen2.5:latest'],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
             source: 'app-server',
             status: 'ready',
-            models: [{ id: 'ollama/llama3.2:latest' }, { id: 'ollama/qwen2.5:latest' }],
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'ollama/llama3.2:latest',
+            defaultLaunchModel: 'ollama/llama3.2:latest',
+            models: [
+              {
+                id: 'ollama/llama3.2:latest',
+                launchModel: 'ollama/llama3.2:latest',
+                displayName: 'llama3.2:latest',
+              },
+              {
+                id: 'ollama/qwen2.5:latest',
+                launchModel: 'ollama/qwen2.5:latest',
+                displayName: 'qwen2.5:latest',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['sonnet']),
       ],
     } as any;
+    storeState.cliProviderStatusByScope[getCliProviderStatusScopeKey('opencode', '/tmp/project')] =
+      (storeState.cliStatus as any).providers[0];
+    fetchCliProviderStatus.mockResolvedValue(true);
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'anthropic',
@@ -2663,13 +4675,14 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
+    await confirmLaunchPreflight(host);
     for (
       let attempt = 0;
       attempt < 10 && !host.textContent?.includes('Runtime environment is not available');
       attempt += 1
     ) {
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 25));
         await flush();
       });
     }
@@ -2739,98 +4752,14 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('keeps create-team preflight alive across same-signature rerenders', async () => {
+  it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
-    storeState.cliStatus = {
-      flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          providerId: 'anthropic',
-          supported: true,
-          authenticated: true,
-          authMethod: 'api_key',
-          verificationState: 'verified',
-          modelVerificationState: 'verified',
-          statusMessage: null,
-          detailMessage: null,
-          models: ['haiku'],
-          modelCatalog: {
-            source: 'live',
-            status: 'ready',
-            models: [{ id: 'haiku' }],
-          },
-          capabilities: {
-            teamLaunch: true,
-            oneShot: true,
-          },
-        },
-        {
-          providerId: 'codex',
-          supported: true,
-          authenticated: true,
-          authMethod: 'chatgpt',
-          verificationState: 'verified',
-          modelVerificationState: 'verified',
-          statusMessage: null,
-          detailMessage: null,
-          selectedBackendId: 'codex-native',
-          resolvedBackendId: 'codex-native',
-          models: ['gpt-5.5'],
-          modelCatalog: {
-            source: 'app-server',
-            status: 'ready',
-            models: [{ id: 'gpt-5.5' }],
-          },
-          capabilities: {
-            teamLaunch: true,
-            oneShot: true,
-          },
-        },
-        {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
-          authMethod: 'opencode_managed',
-          verificationState: 'verified',
-          modelVerificationState: 'verified',
-          statusMessage: 'warming up',
-          detailMessage: 'first render',
-          models: ['opencode/big-pickle'],
-          modelCatalog: {
-            source: 'app-server',
-            status: 'ready',
-            models: [{ id: 'opencode/big-pickle' }],
-          },
-          capabilities: {
-            teamLaunch: true,
-            oneShot: false,
-          },
-        },
-      ],
-    } as any;
-
-    let resolvePrepare!: (value: {
-      status: 'ready';
-      warnings: [];
-      details: [];
-      modelResultsById: {};
-    }) => void;
-    const preparePromise = new Promise<{
-      status: 'ready';
-      warnings: [];
-      details: [];
-      modelResultsById: {};
-    }>((resolve) => {
-      resolvePrepare = resolve;
-    });
-    vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(preparePromise as any);
-
+    const onCreate = vi.fn(async () => {});
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-
-    const renderDialog = async (): Promise<void> => {
+    const render = () =>
       root.render(
         React.createElement(CreateTeamDialog, {
           open: true,
@@ -2842,57 +4771,210 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate,
           onOpenTeam: vi.fn(),
         })
       );
-      await flush();
+    const settle = async () => {
+      for (let attempt = 0; attempt < 4; attempt++)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100);
+          await flush();
+        });
     };
-
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
     await act(async () => {
-      await renderDialog();
+      render();
       await flush();
     });
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await flush();
-    });
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await flush();
-    });
-
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalled();
-
-    await act(async () => {
-      await renderDialog();
-      await flush();
-    });
-
-    const callsAfterSameSignatureRerender = vi.mocked(runProviderPrepareDiagnostics).mock.calls
-      .length;
-
-    await act(async () => {
-      resolvePrepare({
-        status: 'ready',
-        warnings: [],
-        details: [],
-        modelResultsById: {},
-      });
-      await flush();
-      await flush();
-    });
-
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
-      callsAfterSameSignatureRerender
-    );
+    await settle();
+    expect(submit()).not.toBeNull();
+    expect(submit().disabled).toBe(false);
     expect(host.textContent).toContain('All selected providers are ready.');
-
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/unresolved-project';
     await act(async () => {
-      root.unmount();
+      render();
       await flush();
     });
+    expect(submit().disabled).toBe(true);
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(onCreate).not.toHaveBeenCalled();
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await settle();
+    expect(submit().disabled).toBe(false);
+    expect(host.textContent).toContain('All selected providers are ready.');
+    createTeamDraftMock.state.selectedProjectPath = '';
+    createTeamDraftMock.state.launchTeam = false;
+    await act(async () => {
+      render();
+      await flush();
+    });
+    expect(submit().disabled).toBe(false);
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(api.teams.createConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: undefined })
+    );
+    expect(onCreate).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
   });
+
+  it.each(['project', 'custom'] as const)(
+    'starts detailed create-team preflight only after the current project selection settles from %s mode',
+    async (initialCwdMode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            ...createAuthoritativeProviderStatus('anthropic', ['haiku']),
+            modelVerificationState: 'verified',
+          },
+          {
+            ...createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
+            authMethod: 'chatgpt',
+            modelVerificationState: 'verified',
+            selectedBackendId: 'codex-native',
+            resolvedBackendId: 'codex-native',
+          },
+          {
+            ...createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
+            authMethod: 'opencode_managed',
+            modelVerificationState: 'verified',
+            statusMessage: 'warming up',
+            detailMessage: 'first render',
+            capabilities: {
+              teamLaunch: true,
+              oneShot: false,
+              extensions: createDefaultCliExtensionCapabilities(),
+            },
+          },
+        ],
+      } as any;
+      await fetchCliProviderStatus('opencode', {
+        silent: true,
+        checkReason: 'launch_preflight',
+        projectPath: '/tmp/project',
+      });
+      fetchCliProviderStatus.mockClear();
+      let resolvePrepare!: (value: {
+        status: 'ready';
+        warnings: [];
+        details: [];
+        modelResultsById: {};
+      }) => void;
+      const preparePromise = new Promise<{
+        status: 'ready';
+        warnings: [];
+        details: [];
+        modelResultsById: {};
+      }>((resolve) => {
+        resolvePrepare = resolve;
+      });
+      vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(preparePromise as any);
+
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      createTeamDraftMock.state.selectedProjectPath = '/tmp/stale-real-project';
+      createTeamDraftMock.state.cwdMode = initialCwdMode;
+      createTeamDraftMock.state.customCwd = '/tmp/stale-custom-project';
+      createTeamDraftMock.state.setCwdMode.mockImplementation((mode) => {
+        createTeamDraftMock.state.cwdMode = mode;
+      });
+      const renderDialog = async (): Promise<void> => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            clearProvisioningError: vi.fn(),
+            existingTeamNames: [],
+            provisioningTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            forceDefaultProjectSelection: true,
+            onClose: vi.fn(),
+            onCreate: vi.fn(async () => {}),
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      };
+
+      await act(async () => {
+        await renderDialog();
+        await flush();
+      });
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+
+      expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+      expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+
+      createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
+      await act(async () => {
+        await renderDialog();
+        await flush();
+      });
+
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+
+      expect(
+        new Set(
+          vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
+        )
+      ).toEqual(new Set(['anthropic', 'codex', 'opencode']));
+      expect(
+        vi
+          .mocked(runProviderPrepareDiagnostics)
+          .mock.calls.every(([input]) => input.cwd === '/tmp/project')
+      ).toBe(true);
+      expect(
+        vi
+          .mocked(runProviderPrepareDiagnostics)
+          .mock.calls.flatMap(([input]) => input.selectedModelIds)
+      ).toEqual(expect.arrayContaining(['gpt-5.5', 'opencode/big-pickle']));
+
+      await act(async () => {
+        resolvePrepare({
+          status: 'ready',
+          warnings: [],
+          details: [],
+          modelResultsById: {},
+        });
+        await flush();
+        await flush();
+      });
+      expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(3);
+
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+    }
+  );
 
   it('does not report the submitted team name as a duplicate while creation is in flight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -2944,6 +5026,18 @@ describe('LaunchTeamDialog', () => {
       submitButton?.click();
       await flush();
     });
+    // The first click explicitly authorizes the bounded provider preflight when
+    // the project-scoped OpenCode authority is still unresolved.
+    if (!onCreate.mock.calls.length) {
+      await act(async () => {
+        await flush();
+      });
+      const retrySubmitButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Create'
+      );
+      retrySubmitButton?.click();
+      await flush();
+    }
     expect(onCreate).toHaveBeenCalledOnce();
 
     await act(async () => {
@@ -2967,4 +5061,77 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
   });
+
+it('submits a role-only legacy lead separately from the settings teammate roster', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+    teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus', members: [],
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onRelaunch = vi.fn(async () => {});
+  await act(async () => {
+    root.render(React.createElement(LaunchTeamDialog, {
+      mode: 'relaunch', open: true, teamName: 'team-alpha', defaultProjectPath: '/tmp/project',
+      members: [{ name: 'lead', role: 'Lead', model: 'opus' }, { name: 'alice', role: 'Reviewer' }] as any,
+      memberSettingsDraft: { teamName: 'team-alpha', memberName: 'lead', targetKind: 'lead',
+        expectedFingerprint: 'legacy-lead', expectedTeamSettingsFingerprint: 'editor-defaults',
+        settings: { role: 'Lead', workflow: null, isolation: null, providerId: null, providerBackendId: null,
+          model: 'sonnet', effort: null, fastMode: null, mcpPolicy: null } },
+      provisioningError: null, clearProvisioningError: vi.fn(), activeTeams: [], onClose: vi.fn(), onRelaunch,
+    }));
+    await flush();
+  });
+  expect(teamRosterEditorSectionMock.lastProps.members.map((member: any) => member.name)).toEqual(['alice']);
+  await confirmLaunchPreflight(host, 'Relaunch team');
+  await act(async () => {
+    Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Relaunch team')!.click();
+    await flush();
+  });
+  expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ model: 'sonnet' }),
+    [expect.objectContaining({ name: 'alice' })], expect.objectContaining({ memberName: 'lead', targetKind: 'lead', expectedTeamSettingsFingerprint: 'editor-defaults' }));
+  await act(async () => root.unmount());
+});
+
+it.each([true, false])('reopens configured member intent without promoting runtime models (sync %s)', async (syncModelsWithLead) => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+    teamName: 'team-alpha', cwd: '/tmp/project', providerId: 'anthropic', model: 'opus',
+    syncModelsWithLead, members: [{ name: 'inherited' }, { name: 'explicit', model: 'opus' }],
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onRelaunch = vi.fn(async () => {});
+  try {
+    await act(async () => {
+      root.render(React.createElement(LaunchTeamDialog, {
+        mode: 'relaunch', open: true, teamName: 'team-alpha', defaultProjectPath: '/tmp/project',
+        members: [
+          { name: 'inherited', model: 'sonnet', configuredRuntimeSettings: {} },
+          { name: 'explicit', model: 'sonnet', configuredRuntimeSettings: { model: 'opus' } },
+        ] as any,
+        provisioningError: null, clearProvisioningError: vi.fn(), activeTeams: [], onClose: vi.fn(), onRelaunch,
+      }));
+      await flush();
+    });
+    const rows = teamRosterEditorSectionMock.lastProps.members;
+    expect(rows.find((row: any) => row.name === 'inherited').model || undefined).toBeUndefined();
+    expect(rows.find((row: any) => row.name === 'explicit').model).toBe('opus');
+    await confirmLaunchPreflight(host, 'Relaunch team');
+    await act(async () => {
+      Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Relaunch team')!.click();
+      await flush();
+    });
+    expect(onRelaunch).toHaveBeenCalledWith(expect.objectContaining({ syncModelsWithLead }), [
+      expect.objectContaining({ name: 'inherited', model: '' }),
+      expect.objectContaining({ name: 'explicit', model: 'opus' }),
+    ], undefined);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 });

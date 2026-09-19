@@ -1,5 +1,6 @@
 import {
   buildMemberWorkSyncNudgePayload,
+  buildMemberWorkSyncNudgePayloadHash,
   buildMemberWorkSyncOutboxEnsureInput,
 } from '@features/member-work-sync/core/domain';
 import { describe, expect, it } from 'vitest';
@@ -183,5 +184,52 @@ describe('MemberWorkSyncNudge', () => {
     );
     expect(payload.text).toContain('do not duplicate it');
     expect(outboxInput?.id).toBe('member-work-sync:sable-ops:bob:proof-missing:message-1');
+  });
+
+  it('binds payloads to the current recovery control revision without changing the hash', () => {
+    const hash = { sha256Hex: (value: string) => `hash:${value}` };
+    const withoutHealth = buildMemberWorkSyncNudgePayload(makeStatus());
+    const withHealth = buildMemberWorkSyncNudgePayload(
+      makeStatus({
+        recoveryHealth: {
+          schemaVersion: 1,
+          episodes: [],
+          controlRevision: 4,
+        },
+      })
+    );
+
+    expect(withoutHealth.workSyncControlRevision).toBe(0);
+    expect(withHealth.workSyncControlRevision).toBe(4);
+    expect(buildMemberWorkSyncNudgePayloadHash(hash, withoutHealth)).toBe(
+      buildMemberWorkSyncNudgePayloadHash(hash, withHealth)
+    );
+  });
+
+  it('tells the member to finish remaining work after a previous still_working report', () => {
+    expect(
+      buildMemberWorkSyncNudgePayload(
+        makeStatus({
+          lastAcceptedReport: {
+            teamName: 'sable-ops',
+            memberName: 'team-lead',
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:test',
+            reportedAt: '2026-05-13T13:02:44.291Z',
+            expiresAt: '2026-05-13T13:17:44.291Z',
+            accepted: true,
+          },
+        })
+      ).text
+    ).toContain('finish the remaining work now; do not only re-report still_working');
+  });
+
+  it('keeps the first-turn still_working report instruction when no working lease exists', () => {
+    expect(buildMemberWorkSyncNudgePayload(makeStatus()).text).toContain(
+      'If you are still working, report state "still_working"'
+    );
+    expect(buildMemberWorkSyncNudgePayload(makeStatus()).text).not.toContain(
+      'finish the remaining work now'
+    );
   });
 });

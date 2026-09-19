@@ -1,7 +1,8 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
+import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
-import type { EnhancedChunk } from '@main/types';
 
+export type * from './teamBoardTask';
 export type * from './teamProvisioning';
 
 export interface TeamMember {
@@ -194,230 +195,6 @@ export type TaskHistoryEvent =
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
-
-export interface TaskRef {
-  taskId: string;
-  displayId: string;
-  teamName: string;
-}
-
-export type BoardTaskRefKind = 'canonical' | 'display' | 'unknown';
-export type BoardTaskResolution = 'resolved' | 'deleted' | 'unresolved' | 'ambiguous';
-export type BoardTaskActivityLinkKind = 'execution' | 'lifecycle' | 'board_action';
-export type BoardTaskActivityTargetRole = 'subject' | 'related';
-export type BoardTaskActivityPhase = 'work' | 'review';
-export type BoardTaskActorRelation = 'same_task' | 'other_active_task' | 'idle' | 'ambiguous';
-export type BoardTaskActivityStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
-export type BoardTaskActivityRelationship = 'blocked-by' | 'blocks' | 'related';
-export type BoardTaskActivityCategory =
-  | 'status'
-  | 'review'
-  | 'comment'
-  | 'assignment'
-  | 'read'
-  | 'attachment'
-  | 'relationship'
-  | 'clarification'
-  | 'other';
-export type BoardTaskRelationshipPerspective = 'outgoing' | 'incoming' | 'symmetric';
-
-export interface BoardTaskLocator {
-  ref: string;
-  refKind: BoardTaskRefKind;
-  canonicalId?: string;
-}
-
-export interface BoardTaskActivityTaskRef {
-  locator: BoardTaskLocator;
-  resolution: BoardTaskResolution;
-  taskRef?: TaskRef;
-}
-
-export interface BoardTaskActivityActor {
-  memberName?: string;
-  role: 'member' | 'lead' | 'unknown';
-  sessionId: string;
-  agentId?: string;
-  isSidechain: boolean;
-}
-
-export interface BoardTaskActivityAction {
-  canonicalToolName?: string;
-  toolUseId?: string;
-  category: BoardTaskActivityCategory;
-  peerTask?: BoardTaskActivityTaskRef;
-  relationshipPerspective?: BoardTaskRelationshipPerspective;
-  details?: {
-    status?: BoardTaskActivityStatus;
-    owner?: string | null;
-    clarification?: 'lead' | 'user' | null;
-    reviewer?: string;
-    relationship?: BoardTaskActivityRelationship;
-    commentId?: string;
-    attachmentId?: string;
-    filename?: string;
-  };
-}
-
-export interface BoardTaskActivityActorContext {
-  relation: BoardTaskActorRelation;
-  activeTask?: BoardTaskActivityTaskRef;
-  activePhase?: BoardTaskActivityPhase;
-  activeExecutionSeq?: number;
-}
-
-export interface BoardTaskActivityEntry {
-  id: string;
-  timestamp: string;
-  task: BoardTaskActivityTaskRef;
-  linkKind: BoardTaskActivityLinkKind;
-  targetRole: BoardTaskActivityTargetRole;
-  actor: BoardTaskActivityActor;
-  actorContext: BoardTaskActivityActorContext;
-  action?: BoardTaskActivityAction;
-  source: {
-    messageUuid: string;
-    filePath: string;
-    toolUseId?: string;
-    sourceOrder: number;
-  };
-}
-
-export interface BoardTaskActivityDetailMetadataRow {
-  label: string;
-  value: string;
-}
-
-export interface BoardTaskActivityDetail {
-  entryId: string;
-  summaryLabel: string;
-  actorLabel: string;
-  timestamp: string;
-  contextLines: string[];
-  metadataRows: BoardTaskActivityDetailMetadataRow[];
-  logDetail?: BoardTaskExactLogDetail;
-}
-
-export type BoardTaskActivityDetailResult =
-  | {
-      status: 'ok';
-      detail: BoardTaskActivityDetail;
-    }
-  | {
-      status: 'missing';
-    };
-
-export interface BoardTaskExactLogActor {
-  memberName?: string;
-  role: 'member' | 'lead' | 'unknown';
-  sessionId: string;
-  agentId?: string;
-  isSidechain: boolean;
-}
-
-export interface BoardTaskExactLogSource {
-  filePath: string;
-  messageUuid: string;
-  toolUseId?: string;
-  sourceOrder: number;
-}
-
-interface BoardTaskExactLogSummaryBase {
-  id: string;
-  timestamp: string;
-  actor: BoardTaskExactLogActor;
-  source: BoardTaskExactLogSource;
-  anchorKind: 'tool' | 'message';
-  actionLabel: string;
-  actionCategory?: BoardTaskActivityCategory;
-  canonicalToolName?: string;
-  linkKinds: BoardTaskActivityLinkKind[];
-}
-
-export type BoardTaskExactLogSummary =
-  | (BoardTaskExactLogSummaryBase & {
-      canLoadDetail: true;
-      sourceGeneration: string;
-    })
-  | (BoardTaskExactLogSummaryBase & {
-      canLoadDetail: false;
-    });
-
-export interface BoardTaskExactLogDetail {
-  id: string;
-  chunks: EnhancedChunk[];
-}
-
-export interface BoardTaskExactLogSummariesResponse {
-  items: BoardTaskExactLogSummary[];
-}
-
-export type BoardTaskExactLogDetailResult =
-  | { status: 'ok'; detail: BoardTaskExactLogDetail }
-  | { status: 'stale' }
-  | { status: 'missing' };
-
-export interface BoardTaskLogActor {
-  memberName?: string;
-  role: 'member' | 'lead' | 'unknown';
-  sessionId: string;
-  agentId?: string;
-  isSidechain: boolean;
-}
-
-export interface BoardTaskLogParticipant {
-  key: string;
-  label: string;
-  role: 'member' | 'lead' | 'unknown';
-  isLead: boolean;
-  isSidechain: boolean;
-}
-
-export interface BoardTaskLogSegment {
-  id: string;
-  participantKey: string;
-  actor: BoardTaskLogActor;
-  startTimestamp: string;
-  endTimestamp: string;
-  chunks: EnhancedChunk[];
-}
-
-export interface BoardTaskLogStreamRuntimeProjection {
-  provider: 'opencode' | 'codex_native';
-  mode: 'attribution' | 'heuristic' | 'trace';
-  attributionRecordCount: number;
-  projectedMessageCount: number;
-  boardMcpToolCount?: number;
-  nativeToolCount?: number;
-  fallbackReason?:
-    | 'no_attribution_records'
-    | 'attribution_no_projected_messages'
-    | 'task_tool_markers'
-    | 'codex_native_trace';
-  markerMatchCount?: number;
-  markerSpanCount?: number;
-  traceFileCount?: number;
-  traceRunCount?: number;
-  dedupedNativeToolCount?: number;
-}
-
-export interface BoardTaskLogStreamResponse {
-  participants: BoardTaskLogParticipant[];
-  defaultFilter: 'all' | string;
-  segments: BoardTaskLogSegment[];
-  source?:
-    | 'transcript'
-    | 'opencode_runtime_fallback'
-    | 'opencode_runtime_attribution'
-    | 'codex_native_trace_fallback'
-    | 'mixed_transcript_codex_native_trace'
-    | 'mixed_transcript_opencode_runtime';
-  runtimeProjection?: BoardTaskLogStreamRuntimeProjection;
-}
-
-export interface BoardTaskLogStreamSummary {
-  segmentCount: number;
-}
 
 export interface TaskComment {
   id: string;
@@ -680,7 +457,49 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface MemberWorkSyncMessageMetadata {
+  /** Structured member-work-sync intent for runtime delivery and audit. */
+  workSyncIntent?: 'agenda_sync' | 'review_pickup';
+  /** Stable intent key, e.g. one review request event or a small review-request group. */
+  workSyncIntentKey?: string;
+  /** Concrete review_requested event IDs covered by this nudge. */
+  workSyncReviewRequestEventIds?: string[];
+  /** Protocol-2 early-continuation ticket identity. */
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
+  workSyncRuntimeInstanceId?: string;
+  workSyncAdmissionPayloadHash?: string;
+  workSyncTeamIncarnation?: string;
+  /** Recovery control revision that bound this protocol-1/2 inbox nudge. */
+  workSyncControlRevision?: number;
+  /** Durable hash for idempotent hidden member-work-sync automation rows. */
+  workSyncPayloadHash?: string;
+}
+
+export interface TeamMessageContextMetadata extends MemberWorkSyncMessageMetadata {
+  /** Lead session ID that produced this message (for session boundary detection). */
+  leadSessionId?: string;
+  /** Stable cross-team thread ID shared across request/reply turns. */
+  conversationId?: string;
+  /** Explicit parent conversation/message reference for replies. */
+  replyToConversationId?: string;
+  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
+  toolSummary?: string;
+  /** Structured tool call details for tooltip display. */
+  toolCalls?: ToolCallMeta[];
+  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
+  messageKind?: InboxMessageKind;
+  /** Structured terminal runtime failure emitted by a teammate runtime. */
+  agentError?: AgentErrorMetadataV1;
+  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
+  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
+  /** Structured slash-command metadata for sent command rows. */
+  slashCommand?: SlashCommandMeta;
+  /** Structured command-output metadata for session-derived result rows. */
+  commandOutput?: CommandOutputMeta;
+}
+
+export interface InboxMessage extends TeamMessageContextMetadata {
   from: string;
   to?: string;
   text: string;
@@ -706,34 +525,6 @@ export interface InboxMessage {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
-  /** Lead session ID that produced this message (for session boundary detection). */
-  leadSessionId?: string;
-  /** Stable cross-team thread ID shared across request/reply turns. */
-  conversationId?: string;
-  /** Explicit parent conversation/message reference for replies. */
-  replyToConversationId?: string;
-  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
-  toolSummary?: string;
-  /** Structured tool call details for tooltip display. */
-  toolCalls?: ToolCallMeta[];
-  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
-  messageKind?: InboxMessageKind;
-  /** Structured terminal runtime failure emitted by a teammate runtime. */
-  agentError?: AgentErrorMetadataV1;
-  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  /** Structured member-work-sync intent for runtime delivery and audit. */
-  workSyncIntent?: 'agenda_sync' | 'review_pickup';
-  /** Stable intent key, e.g. one review request event or a small review-request group. */
-  workSyncIntentKey?: string;
-  /** Concrete review_requested event IDs covered by this nudge. */
-  workSyncReviewRequestEventIds?: string[];
-  /** Durable hash for idempotent hidden member-work-sync automation rows. */
-  workSyncPayloadHash?: string;
-  /** Structured slash-command metadata for sent command rows. */
-  slashCommand?: SlashCommandMeta;
-  /** Structured command-output metadata for session-derived result rows. */
-  commandOutput?: CommandOutputMeta;
 }
 
 /** Cursor-based paginated messages response. */
@@ -742,16 +533,13 @@ export interface MessagesPage {
   /** Opaque cursor string for fetching older messages. Null when no more pages. */
   nextCursor: string | null;
   hasMore: boolean;
-  /**
-   * Content-stable revision of the full normalized feed that produced this page.
-   * Changes only when the semantic message feed changes.
-   */
+  /** Stable full-feed revision; changes only when the semantic message feed changes. */
   feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends TeamMessageContextMetadata {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -767,21 +555,6 @@ export interface SendMessageRequest {
   color?: string;
   attachments?: AttachmentPayload[];
   source?: InboxMessage['source'];
-  /** Lead session ID for session boundary detection. */
-  leadSessionId?: string;
-  conversationId?: string;
-  replyToConversationId?: string;
-  toolSummary?: string;
-  toolCalls?: ToolCallMeta[];
-  messageKind?: InboxMessageKind;
-  agentError?: AgentErrorMetadataV1;
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  workSyncIntent?: InboxMessage['workSyncIntent'];
-  workSyncIntentKey?: string;
-  workSyncReviewRequestEventIds?: string[];
-  workSyncPayloadHash?: string;
-  slashCommand?: SlashCommandMeta;
-  commandOutput?: CommandOutputMeta;
 }
 
 export interface SendMessageResult {
@@ -837,6 +610,40 @@ export interface SendMessageResult {
 export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runtimeDelivery']> & {
   messageId: string;
 };
+
+export interface TeamForceStopResult {
+  /**
+   * Outcome of the bounded regular stop attempt.
+   * `runtime_already_down`: the recorded runtime hosts exited before the
+   * orchestrator acknowledged, so waiting for the ack was pointless.
+   */
+  stopOutcome: 'stopped' | 'stop_failed' | 'timed_out' | 'runtime_already_down';
+  /** Incomplete includes unsupported or unconfirmed runtime cleanup. */
+  cleanupOutcome: 'completed' | 'incomplete';
+  /** PIDs of retained runtime processes that were killed (process trees on Windows). */
+  killedRuntimePids: number[];
+  /** Number of pending OpenCode prompt delivery ledger records cancelled. */
+  clearedPendingDeliveries: number;
+  diagnostics: string[];
+}
+
+/** Undelivered user message (read: false, from: "user") persisted in a member inbox file. */
+export interface QueuedUserMessageSummary {
+  messageId: string;
+  text: string;
+  timestamp: string;
+  summary?: string;
+}
+
+export interface QueuedUserMessagesSnapshot {
+  member: string;
+  messages: QueuedUserMessageSummary[];
+}
+
+export interface DiscardQueuedUserMessagesResult {
+  discarded: number;
+  remainingQueued: number;
+}
 
 export interface AddTaskCommentRequest {
   text: string;
@@ -1068,8 +875,8 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** Legacy flag retained for compatibility. Deterministic bootstrap launches fresh today. */
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
@@ -1230,6 +1037,8 @@ export interface PersistedTeamLaunchSummary {
 }
 
 export interface PersistedTeamLaunchSnapshot {
+  /** App publication authority; independent of per-lane runtime run IDs. */
+  publicationRunId?: string;
   version: 2;
   teamName: string;
   updatedAt: string;
@@ -1503,6 +1312,8 @@ export interface TeamWorktreeGitStatus {
 }
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** Read-only saved defaults token returned by getSavedRequest. */
+  savedSettingsFingerprint?: string;
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1515,8 +1326,8 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
@@ -1538,8 +1349,8 @@ export interface TeamCreateConfigRequest {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
@@ -1776,6 +1587,16 @@ export interface UpdateMemberRoleRequest {
 
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
+  /** Optional compare-and-swap intent from the member settings relaunch dialog. */
+  memberSettingsRelaunch?: {
+    memberName: string;
+    targetKind: 'lead' | 'member';
+    expectedFingerprint: string;
+    expectedTeamSettingsFingerprint: string;
+    baseline: { memberName: string; expectedFingerprint: string }[];
+    model: string | null;
+    effort: EffortLevel | null;
+  };
 }
 
 /** Data sent from renderer to main for native OS team message notification. */

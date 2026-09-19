@@ -12,6 +12,8 @@ export const useDownloadStore = defineStore("download", {
   state: () => ({
     os: "unknown" as DownloadOs | "unknown",
     arch: "unknown" as DownloadArch | "unknown",
+    macArchSelection: "unknown" as "arm64" | "x64" | "unknown",
+    windowsArchSelection: "x64" as "arm64" | "x64",
     archSource: "auto" as "auto" | "manual",
     initialized: false,
     selectionSource: "auto" as "auto" | "manual",
@@ -22,11 +24,11 @@ export const useDownloadStore = defineStore("download", {
     selectedAsset(state) {
       return downloadAssets.find((asset) => asset.id === state.selectedId);
     },
-    isMacOs(state): boolean {
-      return state.os === "macos";
-    },
     macArch(state): "arm64" | "x64" | "unknown" {
-      return state.arch === "arm64" || state.arch === "x64" ? state.arch : "unknown";
+      return state.macArchSelection;
+    },
+    windowsArch(state): "arm64" | "x64" {
+      return state.windowsArchSelection;
     }
   },
   actions: {
@@ -42,18 +44,20 @@ export const useDownloadStore = defineStore("download", {
         const detectedArch = await detectMacArchFromNavigator(navigator);
         if (this.archSource === "auto" && this.os === "macos") {
           this.arch = detectedArch === "arm64" || detectedArch === "x64" ? detectedArch : "unknown";
+          this.macArchSelection = this.arch;
         }
       } else if (this.os === "windows") {
         const detectedArch = await detectArchFromNavigator(navigator);
         if (this.archSource === "auto" && this.os === "windows") {
           this.arch = detectedArch === "arm64" ? "arm64" : "x64";
+          this.windowsArchSelection = this.arch;
         }
       } else if (this.os === "linux") {
         this.arch = "x64";
       }
 
       if (this.selectionSource === "auto") {
-        this.selectedId = selectDetectedDownloadAssetId(this.os, this.arch);
+        this.selectedId = selectDetectedDownloadAssetId(this.os);
       }
     },
     setSelected(id: string) {
@@ -63,9 +67,18 @@ export const useDownloadStore = defineStore("download", {
     setMacArch(arch: "arm64" | "x64") {
       this.os = "macos";
       this.arch = arch;
+      this.macArchSelection = arch;
       this.archSource = "manual";
       this.selectionSource = "manual";
       this.selectedId = "macos";
+    },
+    setWindowsArch(arch: "arm64" | "x64") {
+      this.os = "windows";
+      this.arch = arch;
+      this.windowsArchSelection = arch;
+      this.archSource = "manual";
+      this.selectionSource = "manual";
+      this.selectedId = "windows";
     }
   }
 });

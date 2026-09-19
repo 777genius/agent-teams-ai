@@ -12,7 +12,10 @@ import { dirname, join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { withFileLock } from '../../fileLock';
 import {
+  clearOpenCodeRuntimeLaneStorage,
+  getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeTeamRuntimeLaneDirectory,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
@@ -30,6 +33,7 @@ import {
   tryStopPersistedOpenCodeRuntimePidForStoppedLane,
 } from '../TeamProvisioningOpenCodeRuntimeLaneCleanup';
 
+import type { ClearOpenCodeRuntimeLaneStorageResult } from '../../opencode/store/OpenCodeBootstrapSessionNormalization';
 import type { TeamRuntimeStopInput } from '../../runtime';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
 
@@ -779,4 +783,101 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }
   });
+
+  it.each(['opencode-delivery-journal.json', 'opencode-run-tombstones.json'])(
+    'waits for the live %s owner before clearing lane storage',
+    async (barrierFileName) => {
+      const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-store-lock-'));
+      const teamName = 'team';
+      const laneId = 'primary';
+      const runId = 'run-locked';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+      const durableContents = new Map([
+        ['opencode-delivery-journal.json', 'journal'],
+        ['opencode-run-tombstones.json', 'tombstones'],
+        ['opencode-prompt-delivery-ledger.json', 'ledger'],
+      ]);
+      let signalLockHeld!: () => void;
+      let releaseLock!: () => void;
+      let lockOwner: Promise<void> | null = null;
+      let cleanup: Promise<ClearOpenCodeRuntimeLaneStorageResult> | null = null;
+      const lockHeld = new Promise<void>((resolve) => {
+        signalLockHeld = resolve;
+      });
+      const lockRelease = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+
+      try {
+        await writeOpenCodeRuntimeLaneIndex(teamsBasePath, teamName, {
+          version: 1,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          lanes: {
+            [laneId]: {
+              laneId,
+              runId,
+              state: 'active',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          },
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath,
+          teamName,
+          laneId,
+          runId,
+        });
+        for (const [fileName, contents] of durableContents) {
+          await fs.writeFile(join(laneDirectory, fileName), contents, 'utf8');
+        }
+        await fs.writeFile(join(laneDirectory, 'ephemeral.json'), 'remove', 'utf8');
+
+        const barrierPath = getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath,
+          teamName,
+          laneId,
+          fileName: barrierFileName,
+        });
+        lockOwner = withFileLock(barrierPath, async () => {
+          signalLockHeld();
+          await lockRelease;
+        });
+        await lockHeld;
+
+        const cleanupPromise = clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath,
+          teamName,
+          laneId,
+          expectedRunId: runId,
+        });
+        cleanup = cleanupPromise;
+        await expect(
+          Promise.race([
+            cleanupPromise.then(() => 'settled'),
+            new Promise<'waiting'>((resolve) => setTimeout(() => resolve('waiting'), 50)),
+          ])
+        ).resolves.toBe('waiting');
+
+        releaseLock();
+        await lockOwner;
+        await expect(cleanupPromise).resolves.toBe('cleared');
+        await expect(fs.stat(join(laneDirectory, 'ephemeral.json'))).rejects.toMatchObject({
+          code: 'ENOENT',
+        });
+        for (const [fileName, contents] of durableContents) {
+          await expect(fs.readFile(join(laneDirectory, fileName), 'utf8')).resolves.toBe(contents);
+          await expect(fs.stat(join(laneDirectory, `${fileName}.lock`))).rejects.toMatchObject({
+            code: 'ENOENT',
+          });
+        }
+        expect((await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName)).lanes[laneId]).toBe(
+          undefined
+        );
+      } finally {
+        releaseLock();
+        await Promise.allSettled([lockOwner, cleanup].filter((pending) => pending !== null));
+        rmSync(teamsBasePath, { recursive: true, force: true });
+      }
+    }
+  );
 });

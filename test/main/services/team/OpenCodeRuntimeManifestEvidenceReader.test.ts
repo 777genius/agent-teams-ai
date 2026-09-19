@@ -1,11 +1,17 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
+import * as syncFs from 'fs';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { stableHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  createStopTarget,
+  runtimeStopRequest,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeRuntimeStopRecovery';
 import { createRuntimeDeliveryJournalStore } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
 import {
   clearOpenCodeRuntimeLaneStorage,
@@ -26,6 +32,7 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { createRuntimeRunTombstoneStore } from '../../../../src/main/services/team/opencode/store/RuntimeRunTombstoneStore';
+import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
 import {
   createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
@@ -82,6 +89,132 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       writes: [{ descriptor, data: { sessions: input.sessions } }],
     });
   }
+
+  it('binds Stop only to active-run sessions while retaining historical rows on disk', async () => {
+    const teamName = 'stop-history-test';
+    const laneId = 'primary';
+    const runId = 'runtime-run-1';
+    const capabilitySnapshotId = `opencode:${'a'.repeat(32)}`;
+    const behaviorFingerprint = 'b'.repeat(64);
+    const sessions = ['previous-run-1', 'previous-run-2', runId].flatMap((id) =>
+      ['lead', 'worker'].map((memberName) => ({
+        id: `${id}-${memberName}`,
+        teamName,
+        laneId,
+        runId: id,
+        memberName,
+      }))
+    );
+    await writeCommittedSessionStore({ teamName, laneId, sessions });
+    const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
+    await createRuntimeStoreManifestStore({ filePath: manifestPath, teamName }).setActiveRun({
+      runId,
+      capabilitySnapshotId,
+      behaviorFingerprint,
+    });
+    const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+    const manifest = await reader.read(teamName, laneId, true);
+    const current = sessions.filter((session) => session.runId === runId);
+    expect(manifest.stopSessions).toEqual(
+      current.map(({ id, ...session }) => ({ ...session, sessionId: id }))
+    );
+    expect(manifest.sessionIdentityHash).toBe(
+      stableHash(
+        current
+          .map((s) => [s.teamName, s.laneId, s.runId, s.memberName, s.id])
+          .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+      )
+    );
+    const target = createStopTarget(
+      {
+        teamName,
+        laneId,
+        runId,
+        capabilitySnapshotId,
+        behaviorFingerprint: null,
+        cwd: tempDir,
+        body: {},
+      },
+      manifest
+    );
+    expect(
+      runtimeStopRequest({ requestId: 'stop-current', idempotencyKey: 'stop-current' }, target)
+        .target.members
+    ).toEqual(current.map((s) => ({ memberName: s.memberName, sessionId: s.id })));
+    const stored = JSON.parse(
+      await fs.readFile(path.join(path.dirname(manifestPath), 'opencode-sessions.json'), 'utf8')
+    );
+    expect(stored.data.sessions).toEqual(sessions);
+  });
+
+  it.each([
+    { teamName: 'foreign-team' },
+    { laneId: 'foreign-lane' },
+    { runId: null },
+    { runId: '' },
+  ])('rejects ambiguous Stop session scope %j', async (override) => {
+    const teamName = 'stop-scope-test';
+    const laneId = 'primary';
+    await writeCommittedSessionStore({
+      teamName,
+      laneId,
+      sessions: [
+        {
+          id: 'session',
+          teamName,
+          laneId,
+          runId: 'runtime-run-1',
+          memberName: 'lead',
+          ...override,
+        },
+      ],
+    });
+    const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+    await expect(reader.read(teamName, laneId, true)).rejects.toThrow(
+      'exact OpenCode Stop session scope'
+    );
+  });
+
+  it.each([{ runs: [] }, { runs: ['previous-run'] }])(
+    'does not invent a Stop target without current sessions %j',
+    async ({ runs }) => {
+      const teamName = 'stop-missing-current-test';
+      const laneId = 'primary';
+      const runId = 'runtime-run-1';
+      const capabilitySnapshotId = `opencode:${'a'.repeat(32)}`;
+      await writeCommittedSessionStore({
+        teamName,
+        laneId,
+        sessions: runs.map((runId) => ({
+          id: 'old-session',
+          teamName,
+          laneId,
+          runId,
+          memberName: 'lead',
+        })),
+      });
+      await createRuntimeStoreManifestStore({
+        filePath: getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId),
+        teamName,
+      }).setActiveRun({ runId, capabilitySnapshotId, behaviorFingerprint: 'b'.repeat(64) });
+      const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir });
+      const target = createStopTarget(
+        {
+          teamName,
+          laneId,
+          runId,
+          capabilitySnapshotId,
+          behaviorFingerprint: null,
+          cwd: tempDir,
+          body: {},
+        },
+        await reader.read(teamName, laneId, true)
+      );
+      expect(() =>
+        runtimeStopRequest({ requestId: 'stop', idempotencyKey: 'stop' }, target)
+      ).toThrow('incomplete original session target');
+    }
+  );
 
   it('reads only committed OpenCode bootstrap check-in session evidence', async () => {
     const teamName = 'team-committed-session';
@@ -337,6 +470,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
 
     await expect(reader.read(teamName, laneId)).resolves.toEqual({
+      behaviorFingerprint: null,
       highWatermark: 0,
       activeRunId: null,
       capabilitySnapshotId: null,
@@ -373,6 +507,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     );
 
     await expect(reader.read(teamName, laneId)).resolves.toEqual({
+      behaviorFingerprint: null,
       highWatermark: 11,
       activeRunId: 'legacy-run',
       capabilitySnapshotId: 'cap-1',
@@ -1695,6 +1830,121 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     }
   );
 
+  it('serializes cleanup with concurrent prompt-ledger writers without stale overwrite', async () => {
+    const teamName = 'team-prompt-ledger-cleanup-lock';
+    const laneId = 'secondary:opencode:prompt-ledger-cleanup-lock';
+    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(tempDir, teamName, laneId);
+    const ledgerPath = path.join(laneDirectory, 'opencode-prompt-delivery-ledger.json');
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-prompt-ledger-lock',
+      state: 'active',
+    });
+    await setOpenCodeRuntimeActiveRunManifest({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      runId: 'run-prompt-ledger-lock',
+      clock: () => now,
+    });
+    const createLedgerPersistence = () =>
+      new VersionedJsonStore<string[]>({
+        filePath: ledgerPath,
+        schemaVersion: 1,
+        defaultData: () => [],
+        validate(value) {
+          if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+            throw new Error('invalid prompt-ledger concurrency fixture');
+          }
+          return value;
+        },
+      });
+    const writeRecord = (record: string) =>
+      createLedgerPersistence().updateLocked((current) => [...current, record]);
+    let releaseFirstWriter!: () => void;
+    const firstWriterRelease = new Promise<void>((resolve) => {
+      releaseFirstWriter = resolve;
+    });
+    let signalFirstWriterStaged!: () => void;
+    const firstWriterStaged = new Promise<void>((resolve) => {
+      signalFirstWriterStaged = resolve;
+    });
+    const originalRename = fs.rename.bind(fs);
+    let pausedFirstWriter = false;
+    const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (source, destination) => {
+      if (
+        !pausedFirstWriter &&
+        destination.toString() === ledgerPath &&
+        path.basename(source.toString()).startsWith('.tmp.')
+      ) {
+        pausedFirstWriter = true;
+        signalFirstWriterStaged();
+        await firstWriterRelease;
+      }
+      return originalRename(source, destination);
+    });
+
+    const firstWriter = writeRecord('acceptance-evidence');
+    await firstWriterStaged;
+    const lstatSyncSpy = vi.spyOn(syncFs, 'lstatSync');
+    let cleanupSettled = false;
+    const cleanup = clearOpenCodeRuntimeLaneStorage({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+      expectedRunId: 'run-prompt-ledger-lock',
+    }).finally(() => {
+      cleanupSettled = true;
+    });
+
+    try {
+      await expect(fs.readFile(`${ledgerPath}.lock`, 'utf8')).resolves.toContain(
+        `${process.pid}\n`
+      );
+      await vi.waitFor(() => {
+        const attempted = lstatSyncSpy.mock.calls.some(([target]) => {
+          const targetPath = target.toString();
+          return process.platform === 'linux'
+            ? /^\/proc\/self\/fd\/\d+\/opencode-prompt-delivery-ledger\.json\.lock$/.test(
+                targetPath
+              )
+            : targetPath === `${ledgerPath}.lock`;
+        });
+        expect(attempted).toBe(true);
+      });
+      await vi.waitFor(async () => {
+        await expect(
+          fs.readFile(
+            `${getOpenCodeRuntimeLaneLifecycleLockTargetPath(tempDir, teamName, laneId)}.lock`,
+            'utf8'
+          )
+        ).resolves.toContain(`${process.pid}\n`);
+        await expect(
+          fs.readFile(`${getOpenCodeRuntimeLaneIndexPath(tempDir, teamName)}.lock`, 'utf8')
+        ).resolves.toContain(`${process.pid}\n`);
+      });
+      expect(cleanupSettled).toBe(false);
+      releaseFirstWriter();
+      await expect(firstWriter).resolves.toMatchObject({ data: ['acceptance-evidence'] });
+      await expect(cleanup).resolves.toBe('cleared');
+      await expect(writeRecord('cancellation-evidence')).resolves.toMatchObject({
+        data: ['acceptance-evidence', 'cancellation-evidence'],
+      });
+      await expect(createLedgerPersistence().read()).resolves.toMatchObject({
+        ok: true,
+        data: ['acceptance-evidence', 'cancellation-evidence'],
+      });
+    } finally {
+      releaseFirstWriter();
+      await firstWriter.catch(() => undefined);
+      await cleanup.catch(() => undefined);
+      lstatSyncSpy.mockRestore();
+      renameSpy.mockRestore();
+    }
+  });
+
   it('clears a matching durable owner atomically and is idempotent for that owner', async () => {
     const teamName = 'team-cas-idempotent';
     const laneId = 'secondary:opencode:idempotent';
@@ -1750,7 +2000,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
   });
 
-  it('updates raw legacy runtime manifests without dropping existing capability metadata', async () => {
+  it('updates raw legacy runtime manifests while clearing stale launch authority metadata', async () => {
     const teamName = 'team-iota';
     const laneId = 'secondary:opencode:alice';
     const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
@@ -1776,7 +2026,8 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir }).read(teamName, laneId)
     ).resolves.toMatchObject({
       activeRunId: 'run-new',
-      capabilitySnapshotId: 'cap-existing',
+      capabilitySnapshotId: null,
+      behaviorFingerprint: null,
       highWatermark: 0,
     });
   });

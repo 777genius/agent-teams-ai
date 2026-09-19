@@ -273,7 +273,7 @@ describe('RuntimeDeliveryService stale run guard', () => {
     },
   ])(
     'classifies a destination conflict reported by error $field as terminal',
-    async ({ error }) => {
+    async ({ error }: { error: Error }) => {
       const location: RuntimeDeliveryLocation = {
         kind: 'cross_team_outbox',
         fromTeamName: 'Team',
@@ -471,11 +471,13 @@ describe('RuntimeDeliveryService concurrent idempotency', () => {
       destinationWritten = true;
       return location;
     });
-    destination.verify.mockImplementation(async (_input) => ({
-      found: destinationWritten,
-      location: destinationWritten ? location : null,
-      diagnostics: [],
-    }));
+    destination.verify.mockImplementation(
+      async (_input: Parameters<RuntimeDeliveryDestinationPort['verify']>[0]) => ({
+        found: destinationWritten,
+        location: destinationWritten ? location : null,
+        diagnostics: [],
+      })
+    );
     const runState = createRunState(['run-1']).runState;
     const firstService = createService({ runState, journal, port: destination.port });
     const secondService = createService({ runState, journal, port: destination.port });

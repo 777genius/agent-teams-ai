@@ -98,7 +98,7 @@ describe('TeamProvisioningOpenCodeRuntimePidBridge', () => {
         read: vi.fn(async () => snapshot),
       },
       enqueueLaunchStateStoreOperation: vi.fn(async (_teamName, operation) => operation()),
-      writeLaunchStateSnapshotNow: vi.fn(async () => undefined),
+      writeLaunchStateSnapshotNow: vi.fn(async () => ({ snapshot, wrote: true })),
       invalidateRuntimeSnapshotCaches: vi.fn(),
       teamChangeEmitter: vi.fn(),
     };
@@ -122,7 +122,7 @@ describe('TeamProvisioningOpenCodeRuntimePidBridge', () => {
       'team-a',
       expect.any(Function)
     );
-    expect(service.writeLaunchStateSnapshotNow).toHaveBeenCalledWith('team-a', snapshot);
+    expect(service.writeLaunchStateSnapshotNow).toHaveBeenCalledWith('team-a', snapshot, undefined);
     expect(service.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('team-a');
     expect(service.teamChangeEmitter).toHaveBeenCalledWith({
       type: 'member-spawn',

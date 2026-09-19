@@ -50,16 +50,23 @@ export type HostedCoordinationEventStreamWriteObservation = Readonly<
       kind: 'terminal';
       streamId: string;
       timeoutMs: number;
-      disposition: Exclude<
-        HostedCoordinationEventStreamWriteDisposition,
-        'immediate' | 'drained'
-      >;
+      disposition: Exclude<HostedCoordinationEventStreamWriteDisposition, 'immediate' | 'drained'>;
       transportTermination:
         | 'aborted'
         | 'already_closed'
         | 'hard_destroyed'
         | 'destroy_failed'
         | 'none';
+    }
+  | {
+      kind: 'response_lifecycle';
+      streamId: string;
+      writer: 'fastify_json' | 'sse_headers' | 'sse_close';
+      disposition: 'attempted' | 'committed' | 'skipped_closed' | 'failed_closed';
+      replySent: boolean;
+      headersSent: boolean;
+      destroyed: boolean;
+      writableEnded: boolean;
     }
 >;
 

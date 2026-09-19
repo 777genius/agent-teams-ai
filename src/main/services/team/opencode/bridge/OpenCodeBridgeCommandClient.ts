@@ -1,6 +1,11 @@
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
+import {
+  ensureOpenCodeProfileNodeModulesJunction,
+  extractProfileIdFromSymlinkError,
+  isOpenCodeNodeModulesSymlinkError,
+} from '@main/utils/openCodeNodeModulesJunction';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -18,6 +23,10 @@ import {
   parseSingleBridgeJsonResult,
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
+import {
+  isStartupCleanupData,
+  type OpenCodeStartupCleanupData,
+} from './OpenCodeStartupCleanupBridge';
 
 export interface OpenCodeBridgeProcessRunInput {
   binaryPath: string;
@@ -64,6 +73,8 @@ export interface OpenCodeBridgeCommandClientOptions {
   env?: NodeJS.ProcessEnv;
   envProvider?: () => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
   keepInputFile?: boolean;
+  /** Test seam; defaults to the real Windows profile junction repair. */
+  ensureWindowsNodeModulesJunction?: (profileId: string, errorMessage: string) => boolean;
 }
 
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
@@ -170,6 +181,14 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
 }
 
 export class OpenCodeBridgeCommandClient {
+  private readonly startupObservations = new Map<
+    string,
+    {
+      envelope: OpenCodeBridgeCommandEnvelope<unknown>;
+      inputPath: string;
+      outputPath: string;
+    }
+  >();
   private readonly binaryPath: string;
   private readonly tempDirectory: string;
   private readonly processRunner: OpenCodeBridgeProcessRunner;
@@ -180,6 +199,10 @@ export class OpenCodeBridgeCommandClient {
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
   private readonly keepInputFile: boolean;
+  private readonly ensureWindowsNodeModulesJunction: (
+    profileId: string,
+    errorMessage: string
+  ) => boolean;
 
   constructor(options: OpenCodeBridgeCommandClientOptions) {
     this.binaryPath = options.binaryPath;
@@ -193,6 +216,49 @@ export class OpenCodeBridgeCommandClient {
     this.env = applyOpenCodeAutoUpdatePolicy(options.env ?? process.env);
     this.envProvider = options.envProvider ?? null;
     this.keepInputFile = options.keepInputFile ?? false;
+    this.ensureWindowsNodeModulesJunction =
+      options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
+  }
+
+  /** Read only the original request's retained response; never launch another CLI. */
+  async observeStartupCleanup(
+    requestId: string
+  ): Promise<OpenCodeBridgeResult<OpenCodeStartupCleanupData> | null> {
+    const observation = this.startupObservations.get(requestId);
+    if (!observation) return null;
+    for (const candidate of [
+      observation.outputPath,
+      `${observation.inputPath}.observed-output.json`,
+    ]) {
+      const output = await this.readBridgeOutput('', candidate);
+      const parsed = parseSingleBridgeJsonResult<OpenCodeStartupCleanupData>(output.content);
+      if (!parsed.ok || !validateBridgeResultEnvelope(parsed.value, observation.envelope).ok)
+        continue;
+      const result = parsed.value;
+      const terminal = result.ok
+        ? isStartupCleanupData(result.data) && result.data.startupCleanup.completion === 'drained'
+        : ['unsupported_command', 'unsupported_schema', 'invalid_input'].includes(
+            result.error.kind
+          );
+      if (!terminal) continue;
+      // Only request-correlated terminal evidence acknowledges drainage. An
+      // absent/unknown response or launcher exit leaves this observation intact.
+      this.startupObservations.delete(requestId);
+      if (!this.keepInputFile) await fs.unlink(observation.inputPath).catch(() => undefined);
+      await fs.unlink(observation.outputPath).catch(() => undefined);
+      await fs.unlink(`${observation.inputPath}.observed-output.json`).catch(() => undefined);
+      return result;
+    }
+    return null;
+  }
+
+  /** Replacement-sensitive identity without launching the runtime or reading binary contents. */
+  async getRuntimeIdentity(): Promise<string | null> {
+    const metadata = await fs.stat(this.binaryPath).catch(() => null);
+    return JSON.stringify([
+      this.binaryPath,
+      metadata && [metadata.dev, metadata.ino, metadata.size, metadata.mtimeMs, metadata.ctimeMs],
+    ]);
   }
 
   async execute<TBody, TData>(
@@ -202,6 +268,69 @@ export class OpenCodeBridgeCommandClient {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
+      stdoutLimitBytes?: number;
+      stderrLimitBytes?: number;
+    }
+  ): Promise<OpenCodeBridgeResult<TData>> {
+    // A recovery retry is the same logical mutating request. Generate the
+    // request id once so the bridge can deduplicate it after an ambiguous
+    // first outcome.
+    const requestId = options.requestId ?? this.requestIdFactory();
+    const requestOptions = { ...options, requestId };
+    const result = await this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
+    if (
+      result.ok ||
+      command === 'opencode.cleanupStartupHosts' ||
+      command === 'opencode.reapUnleasedCursorAgentTrees' ||
+      !(await this.tryRecoverWindowsNodeModulesJunction(result))
+    ) {
+      return result;
+    }
+    return this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
+  }
+
+  /**
+   * opencode recreates the profile node_modules symlink on every launch; on
+   * Windows without Developer Mode that fails with EPERM before the runtime
+   * does any work (the failure surfaces either as a bridge failure envelope or
+   * as a non-zero exit with the EPERM on stderr). Repairing the profile with a
+   * junction and retrying once is safe because the runtime never started.
+   */
+  private async tryRecoverWindowsNodeModulesJunction(
+    failure: OpenCodeBridgeFailure
+  ): Promise<boolean> {
+    const failureText = collectBridgeFailureText(failure);
+    if (!isOpenCodeNodeModulesSymlinkError(failureText)) {
+      return false;
+    }
+    const profileId = extractProfileIdFromSymlinkError(failureText);
+    if (!profileId || !this.ensureWindowsNodeModulesJunction(profileId, failureText)) {
+      return false;
+    }
+    await this.diagnostics
+      ?.append({
+        id: this.diagnosticIdFactory(),
+        type: 'opencode_bridge_windows_node_modules_junction_recovery',
+        providerId: 'opencode',
+        severity: 'warning',
+        message:
+          'Recreated the OpenCode profile node_modules junction after a Windows symlink EPERM; retrying the bridge command once.',
+        data: { command: failure.command, requestId: failure.requestId, profileId },
+        createdAt: this.clock().toISOString(),
+      })
+      .catch(() => undefined);
+    return true;
+  }
+
+  private async executeBridgeCommand<TBody, TData>(
+    command: OpenCodeBridgeCommandName,
+    body: TBody,
+    options: {
+      cwd: string;
+      timeoutMs: number;
+      requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -215,8 +344,25 @@ export class OpenCodeBridgeCommandClient {
       timeoutMs: options.timeoutMs,
       body,
     };
-    const inputPath = await this.writeInputFile(envelope);
+    let inputPath: string;
+    try {
+      inputPath = await this.writeInputFile(envelope);
+    } catch (error) {
+      if (command !== 'opencode.cleanupStartupHosts') throw error;
+      return this.contractFailure(
+        envelope,
+        'invalid_input',
+        'Startup cleanup input preparation failed before dispatch',
+        false,
+        {
+          mutationStarted: false,
+          preparationError: getBridgeOutputReadError(error),
+        }
+      );
+    }
     const outputPath = `${inputPath}.output.json`;
+    let retainStartupEvidence = command === 'opencode.cleanupStartupHosts';
+    let dispatched = false;
 
     try {
       const maxAttempts = isReadOnlyRetryableBridgeCommand(command)
@@ -232,6 +378,18 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
+        const env = await this.resolveEnv();
+        if (options.canDispatch?.() === false) {
+          retainStartupEvidence = false;
+          return this.contractFailure(
+            envelope,
+            'invalid_input',
+            'Startup cleanup admission closed before dispatch',
+            false,
+            {}
+          );
+        }
+        dispatched = true;
         const processResult = await this.processRunner.run({
           binaryPath: this.binaryPath,
           args: bridgeArgs,
@@ -239,10 +397,27 @@ export class OpenCodeBridgeCommandClient {
           timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-          env: await this.resolveEnv(),
+          env,
         });
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
+        let observedOutputWriteError: string | null = null;
+        if (retainStartupEvidence && bridgeOutput.content) {
+          // Snapshot separately: a late runtime writer may still publish to outputPath.
+          await atomicWriteAsync(`${inputPath}.observed-output.json`, bridgeOutput.content, {
+            mode: 0o600,
+          }).catch((error: unknown) => {
+            observedOutputWriteError = getBridgeOutputReadError(error);
+          });
+        }
         const processDetails = {
+          ...(retainStartupEvidence
+            ? {
+                inputPath,
+                outputPath,
+                observedOutputWriteError,
+                observedOutputPath: `${inputPath}.observed-output.json`,
+              }
+            : {}),
           exitCode: processResult.exitCode,
           timedOut: processResult.timedOut,
           stdoutBytes: bridgeOutput.stdoutBytes,
@@ -252,6 +427,20 @@ export class OpenCodeBridgeCommandClient {
           outputReadError: bridgeOutput.outputReadError,
         };
 
+        if (command === 'opencode.cleanupStartupHosts') {
+          const evidence = parseSingleBridgeJsonResult<TData>(bridgeOutput.content);
+          if (
+            evidence.ok &&
+            validateBridgeResultEnvelope(evidence.value, envelope).ok &&
+            !evidence.value.ok &&
+            ['unsupported_command', 'unsupported_schema', 'invalid_input'].includes(
+              evidence.value.error.kind
+            )
+          ) {
+            retainStartupEvidence = false;
+            return evidence.value;
+          }
+        }
         if (processResult.timedOut) {
           const unknownOutcomeMessage =
             processResult.outcomeUnknownReason === 'output_limit'
@@ -314,6 +503,14 @@ export class OpenCodeBridgeCommandClient {
           });
         }
 
+        if (
+          command === 'opencode.cleanupStartupHosts' &&
+          parsed.value.ok &&
+          isStartupCleanupData(parsed.value.data) &&
+          parsed.value.data.startupCleanup.completion === 'drained'
+        ) {
+          retainStartupEvidence = false;
+        }
         return parsed.value;
       }
 
@@ -324,11 +521,30 @@ export class OpenCodeBridgeCommandClient {
         false,
         { attempts: maxAttempts }
       );
+    } catch (error) {
+      if (command !== 'opencode.cleanupStartupHosts' || dispatched) throw error;
+      retainStartupEvidence = false;
+      return this.contractFailure(
+        envelope,
+        'invalid_input',
+        'Startup cleanup preparation failed before dispatch',
+        false,
+        {
+          mutationStarted: false,
+          preparationError: getBridgeOutputReadError(error),
+        }
+      );
     } finally {
-      if (!this.keepInputFile) {
+      if (retainStartupEvidence)
+        this.startupObservations.set(envelope.requestId, { envelope, inputPath, outputPath });
+      if (!this.keepInputFile && !retainStartupEvidence) {
         await fs.unlink(inputPath).catch(() => undefined);
       }
-      await fs.unlink(outputPath).catch(() => undefined);
+      if (!retainStartupEvidence) {
+        await fs.unlink(outputPath).catch(() => undefined);
+        if (command === 'opencode.cleanupStartupHosts')
+          await fs.unlink(`${inputPath}.observed-output.json`).catch(() => undefined);
+      }
     }
   }
 
@@ -389,6 +605,8 @@ export class OpenCodeBridgeCommandClient {
     if (!this.envProvider) {
       return this.env;
     }
+    // Host publication is authoritative, including removal. A cached URL can name
+    // a retired server and must never override the current transport selection.
     return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
   }
 
@@ -448,6 +666,23 @@ export class OpenCodeBridgeCommandClient {
       diagnostics: [diagnostic],
     };
   }
+}
+
+/**
+ * The symlink EPERM can arrive as the failure envelope message (orchestrator
+ * caught it) or only inside stderr/preview details (process exited non-zero),
+ * so junction recovery inspects every failure text surface at once.
+ */
+function collectBridgeFailureText(failure: OpenCodeBridgeFailure): string {
+  const details: Record<string, unknown> = failure.error.details ?? {};
+  const detailTexts = ['stderr', 'stderrPreview', 'stdoutPreview']
+    .map((key) => details[key])
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  return [
+    failure.error.message,
+    ...detailTexts,
+    ...failure.diagnostics.map((event) => event.message),
+  ].join('\n');
 }
 
 export function redactBridgeDiagnosticText(value: string): string {

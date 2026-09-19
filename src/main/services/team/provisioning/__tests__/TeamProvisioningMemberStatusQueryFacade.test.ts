@@ -83,6 +83,7 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   protected readonly memberSpawnStatusAuditPorts = {} as never;
   protected readonly runtimeSnapshotFacade = {
     getTeamAgentRuntimeSnapshot: this.getTeamAgentRuntimeSnapshotMock,
+    getTeamAgentRuntimeSnapshotReadOnly: this.getTeamAgentRuntimeSnapshotMock,
   };
   protected readonly reevaluateMemberLaunchStatusBoundary = {
     createPorts: vi.fn(),
@@ -192,6 +193,18 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
 
     expect(result).toBe(promise);
     await expect(result).resolves.toBe(snapshot);
+  });
+
+  it('forwards runtime snapshot rejection without wrapping its promise', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const error = new Error('snapshot failed');
+    const promise = Promise.reject<TeamAgentRuntimeSnapshot>(error);
+    facade.getTeamAgentRuntimeSnapshotMock.mockReturnValueOnce(promise);
+
+    const result = facade.getTeamAgentRuntimeSnapshot('alpha');
+
+    expect(result).toBe(promise);
+    await expect(result).rejects.toBe(error);
   });
 
   it('keeps member launch grace timers scoped to member status handling', () => {

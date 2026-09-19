@@ -10,6 +10,7 @@ import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementCancelModelLoadInput,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementClearProjectDefaultInput,
@@ -83,6 +84,9 @@ export interface RuntimeProviderManagementApi {
   loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse>;
+  cancelModelLoad(
+    input: RuntimeProviderManagementCancelModelLoadInput
+  ): Promise<RuntimeProviderManagementModelTestControlResponse>;
   testModel(
     input: RuntimeProviderManagementTestModelInput
   ): Promise<RuntimeProviderManagementModelTestResponse>;

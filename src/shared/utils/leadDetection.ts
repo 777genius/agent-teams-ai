@@ -52,3 +52,12 @@ export function isLeadMember(member: {
   const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
   return name === 'team-lead';
 }
+
+/** Canonical settings identity also recognizes legacy role-only leads. */
+export function isCanonicalSettingsLeadMember(member: { name?: unknown; agentType?: unknown; role?: unknown }): boolean {
+  if (isLeadMember(member)) return true;
+  if (typeof member.agentType === 'string' && member.agentType.trim()) return false;
+  const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
+  const role = typeof member.role === 'string' ? normalizeTeamMemberRole(member.role) : '';
+  return isReservedLeadRole(role) && (role !== 'lead' || name === 'lead');
+}

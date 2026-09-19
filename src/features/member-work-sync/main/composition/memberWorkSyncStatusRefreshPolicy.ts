@@ -1,3 +1,5 @@
+import { getMemberWorkSyncAcceptedReport } from '../../core/domain/MemberWorkSyncAcceptedReport';
+
 import type { MemberWorkSyncStatus } from '../../contracts';
 
 const STALE_STATUS_MAX_AGE_MS = 2 * 60_000;
@@ -5,7 +7,7 @@ const CAUGHT_UP_STATUS_MAX_AGE_MS = 5 * 60_000;
 
 function isAcceptedWorkLeaseStatus(status: MemberWorkSyncStatus): boolean {
   return (
-    status.report?.accepted === true &&
+    getMemberWorkSyncAcceptedReport(status) !== null &&
     (status.state === 'still_working' || status.state === 'blocked')
   );
 }
@@ -18,7 +20,7 @@ export function getAcceptedWorkLeaseStaleness(
     return null;
   }
 
-  const reportExpiresAtMs = Date.parse(status.report?.expiresAt ?? '');
+  const reportExpiresAtMs = Date.parse(getMemberWorkSyncAcceptedReport(status)?.expiresAt ?? '');
   if (!Number.isFinite(reportExpiresAtMs) || !Number.isFinite(nowMs)) {
     return 'missing';
   }

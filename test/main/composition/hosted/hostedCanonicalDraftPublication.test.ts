@@ -839,7 +839,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     expect(response.statusCode).toBe(503);
     expect(await f.identities.listTeamIdentities()).toEqual([]);
   });
-  it('admits the current v30 writer with live WAL and observes later commits through read-only snapshots', async () => {
+  it('admits the current v31 writer with live WAL and observes later commits through read-only snapshots', async () => {
     const f = await setup();
     expect(await fs.stat(`${f.databasePath}-wal`)).toMatchObject({});
     expect(
@@ -847,7 +847,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     ).toBeNull();
     const db = new Database(f.databasePath, { readonly: true, fileMustExist: true });
     try {
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
       const raw = db.serialize();
       expect([...raw.subarray(18, 20)]).toEqual([2, 2]);
@@ -862,19 +862,22 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
         expect(snapshot.memory).toBe(true);
         expect(snapshot.pragma('quick_check')).toEqual([{ quick_check: 'ok' }]);
         const objects = snapshot
-          .prepare(
+          .prepare<[], Parameters<typeof normalizeCurrentTeamIdentitySchema>[0][number]>(
             `SELECT type, name, tbl_name, sql FROM sqlite_schema
           WHERE tbl_name IN ('legacy_team_key_reservations', 'team_adoption_intents',
             'team_identity_records', 'team_identity_storage_metadata') ORDER BY type, name, tbl_name`
           )
           .all();
         const projection = normalizeCurrentTeamIdentitySchema(
-          objects as Parameters<typeof normalizeCurrentTeamIdentitySchema>[0],
+          objects,
           snapshot.pragma('user_version', { simple: true })
         );
         expect(projection).toHaveLength(23);
         expect(createHash('sha256').update(JSON.stringify(projection)).digest('hex')).toBe(
           '570be2f0773d8768848f2bef11c3cd70129199ac86730b055980fc46b90fdf36'
+        );
+        expect(() => normalizeCurrentTeamIdentitySchema(objects, 32)).toThrow(
+          'canonical-team-identity-schema-version-unsupported'
         );
       } finally {
         snapshot.close();

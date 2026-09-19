@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { OverlayOccupancyMarker } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { X } from 'lucide-react';
 
@@ -28,16 +29,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   closeDisabled?: boolean;
+  blocksAnnouncements?: boolean;
 };
 
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, closeDisabled = false, ...props }, ref) => {
+>(({ className, children, closeDisabled = false, blocksAnnouncements = true, ...props }, ref) => {
   const { t } = useAppTranslation('common');
 
   return (
-    <DialogPortal>
+    <DialogPortal forceMount={props.forceMount}>
       <DialogOverlay />
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="pointer-events-auto relative w-full max-w-full">
@@ -51,6 +53,7 @@ const DialogContent = React.forwardRef<
             )}
             {...props}
           >
+            <OverlayOccupancyMarker active={blocksAnnouncements} />
             <DialogPrimitive.Close
               disabled={closeDisabled}
               aria-disabled={closeDisabled}

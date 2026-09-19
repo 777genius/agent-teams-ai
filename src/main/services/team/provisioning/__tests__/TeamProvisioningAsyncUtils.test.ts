@@ -23,12 +23,12 @@ describe('TeamProvisioningAsyncUtils', () => {
       }
     });
 
-    it('creates a missing directory recursively', async () => {
+    it('rejects a missing directory without creating it', async () => {
       const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ensure-cwd-'));
       created.push(base);
       const nested = path.join(base, 'a', 'b', 'c');
-      await ensureCwdExists(nested);
-      expect(fs.statSync(nested).isDirectory()).toBe(true);
+      await expect(ensureCwdExists(nested)).rejects.toThrow();
+      expect(fs.existsSync(nested)).toBe(false);
     });
 
     it('is a no-op when the directory already exists', async () => {

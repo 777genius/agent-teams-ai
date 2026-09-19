@@ -74,7 +74,7 @@ describe('TeamProvisioningService OpenCode support diagnostics', () => {
     ]);
   });
 
-  it('uses bridge no-output diagnostics as the model-less prepare failure message', async () => {
+  it('defers model-less prepare without invoking the runtime bridge', async () => {
     const supportDiagnostic = {
       id: 'diag-empty-stdout',
       providerId: 'opencode' as const,
@@ -111,9 +111,11 @@ describe('TeamProvisioningService OpenCode support diagnostics', () => {
       forceFresh: true,
     });
 
-    expect(result.ready).toBe(false);
-    expect(result.message).toBe('OpenCode runtime check returned no output.');
-    expect(result.details).toEqual(['OpenCode runtime check returned no output.']);
-    expect(result.supportDiagnostics).toEqual([supportDiagnostic]);
+    expect(result.ready).toBe(true);
+    expect(result.details).toContain(
+      'OpenCode readiness is deferred until launch has a selected model.'
+    );
+    expect(result.supportDiagnostics).toBeUndefined();
+    expect(prepare).not.toHaveBeenCalled();
   });
 });

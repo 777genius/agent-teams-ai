@@ -1,5 +1,6 @@
 import { createLogger } from '@shared/utils/logger';
 
+import { renameDraftTeamDirectory } from './draftTeamRename';
 import {
   TeamDataServiceLegacyCompatibilityComposition,
   type TeamDataServiceLegacyCompatibilityCompositionDependencies,
@@ -26,6 +27,8 @@ export class TeamDataService {
 
   private readonly processCompatibilityService: TeamDataServiceLegacyCompatibilityComposition['processCompatibilityService'];
   private readonly viewReadModelService: TeamDataServiceLegacyCompatibilityComposition['viewReadModelService'];
+
+  readonly renameDraftTeam = renameDraftTeamDirectory;
 
   constructor(
     configReader?: LegacyDependencies['configReader'],
@@ -88,8 +91,8 @@ export class TeamDataService {
     this.legacy.invalidateMemberRuntimeAdvisory(teamName, memberName);
   }
 
-  invalidateTeamRuntimeAdvisories(teamName: string): void {
-    this.legacy.invalidateTeamRuntimeAdvisories(teamName);
+  invalidateTeamRuntimeAdvisories(teamName: string, runStartedAtMs?: number): void {
+    this.legacy.invalidateTeamRuntimeAdvisories(teamName, runStartedAtMs);
   }
 
   async getTask(teamName: string, taskId: string): Promise<Team.TeamTaskWithKanban | null> {

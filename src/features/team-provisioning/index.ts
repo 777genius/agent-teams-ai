@@ -17,6 +17,7 @@ export type {
   RuntimeMessageDeliveryAckState,
 } from './contracts/runtime-delivery';
 export type { TeamProvisioningRuntimeSnapshotApi } from './contracts/runtime-snapshot';
+export { fingerprintSavedLaunchSettings } from './contracts/savedLaunchSettings';
 export type {
   RespondToToolApprovalCommand,
   TeamProvisioningToolApprovalApi,

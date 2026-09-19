@@ -72,7 +72,30 @@
       "externalTeam": "extern team",
       "crossTeamAwaitingReply": "Bericht tussen teams verzonden, wachten op antwoord",
       "user": "gebruiker",
-      "awaitingApproval": "wachten op goedkeuring"
+      "awaitingApproval": "wachten op goedkeuring",
+      "discardQueued": {
+        "action": "Wachtende berichten verwijderen",
+        "alreadyDelivered": "Er is niets verwijderd: die berichten waren al bezorgd bij \"{{member}}\".",
+        "cancelLabel": "Annuleren",
+        "confirmLabel": "Verwijderen",
+        "count": "{{count}} in wachtrij",
+        "count_few": "{{count}} in wachtrij",
+        "count_many": "{{count}} in wachtrij",
+        "count_one": "{{count}} in wachtrij",
+        "count_other": "{{count}} in wachtrij",
+        "failedFallbackMessage": "Er is een onverwachte fout opgetreden",
+        "failedTitle": "Wachtende berichten konden niet worden verwijderd",
+        "message": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_few": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_many": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_one": "{{count}} wachtend bericht voor \"{{member}}\" verwijderen? Het is nog niet bezorgd en wordt definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_other": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} verwijderd. Nog in wachtrij: {{remaining}}.",
+        "resultTitle": "Wachtende berichten",
+        "title": "Wachtende berichten verwijderen",
+        "tooltip": "Wachtende berichten van dit lid verwijderen"
+      }
     },
     "reply": {
       "replyingTo": "Reageert op",
@@ -312,8 +335,14 @@
       "saved": "Opgeslagen"
     },
     "worktree": {
-      "description": "Voer dit teamlid uit in een aparte git-worktree. Wijzigingen toepassen/afwijzen richt zich op die worktree, niet op de lead-werkruimte.",
-      "label": "Worktree"
+      "description": "Aangevinkt: gebruik een aparte Git-worktree, die indien nodig bij het starten wordt aangemaakt. Bestaande worktrees behouden hun huidige branch. Niet aangevinkt: gebruik de gedeelde projectwerkruimte; de oude worktree blijft behouden.",
+      "label": "Worktree",
+      "existing": "Laatste werkruimte: {{path}}. De beheerde worktree wordt indien beschikbaar hergebruikt; anders wordt deze bij het starten aangemaakt.",
+      "new": "Worktree: wordt indien beschikbaar hergebruikt, anders bij het starten aangemaakt. De branch wordt na het starten weergegeven.",
+      "shared": "Gedeelde projectwerkruimte: {{path}}. Gebruikt de branch van het project.",
+      "sharedPending": "Gedeelde werkruimte: wordt bij het starten samen met de worktree van de teamleider bepaald. De branch wordt na het starten weergegeven.",
+      "branch": "Worktree-branch: {{branch}}",
+      "branchUnavailable": "Niet beschikbaar"
     },
     "addMembers": {
       "title": "Leden toevoegen",
@@ -333,6 +362,7 @@
       "launch": "Starten",
       "remove": "Verwijderen",
       "stop": "Stoppen",
+      "stopping": "Bezig met stoppen...",
       "task": "Taak",
       "visualize": "Visualiseren",
       "usage": "Gebruik"
@@ -354,6 +384,14 @@
       "member_one": "lid",
       "member_other": "leden",
       "title": "Team nog niet gestart"
+    },
+    "stopFailed": {
+      "title": "Team kan niet worden gestopt",
+      "message": "Het team is nog actief. Controleer de status en druk opnieuw op Stoppen."
+    },
+    "stopUnknown": {
+      "title": "Stoppen kan niet worden bevestigd",
+      "message": "Er is geen antwoord van de runtime ontvangen. Vernieuw de teamstatus voordat u het opnieuw probeert."
     },
     "invalidTab": "Ongeldig teamtabblad",
     "kanbanSafeData": "Kon Kanban niet volledig laden. Veilige gegevens worden weergegeven.",
@@ -1323,7 +1361,11 @@
       "relaunchTeam": "Team opnieuw starten",
       "relaunching": "Opnieuw starten...",
       "saveChanges": "Wijzigingen opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "skipPreflightAndLaunch": "Voorcontrole overslaan en starten"
+    },
+    "workspaceTrust": {
+      "description": "Projectopdrachten en MCP-servers kunnen worden uitgevoerd wanneer het team start."
     },
     "billing": {
       "prefix": "Vanaf 15 juni 2026 factureert Anthropic",
@@ -1540,6 +1582,11 @@
       "message": "Team \"{{teamName}}\" permanent verwijderen? Alle gegevens gaan verloren.",
       "confirmLabel": "Definitief verwijderen",
       "cancelLabel": "Annuleren"
+    },
+    "deleteFailed": {
+      "title": "Kon team niet verwijderen",
+      "fallbackMessage": "Er is een onverwachte fout opgetreden",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
@@ -1782,6 +1829,9 @@
     "createAutomatically": "Als de directory niet bestaat, wordt deze automatisch aangemaakt."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teamlid heeft zich niet binnen de coulanceperiode van de start aangesloten."
+    },
     "badges": {
       "worktree": "worktree"
     },
@@ -1799,11 +1849,12 @@
       "title": "Leden",
       "addMember": "Lid toevoegen",
       "editAsJson": "Bewerken als JSON",
-      "runInSeparateWorktrees": "Teamleden in aparte worktrees uitvoeren",
+      "runInSeparateWorktrees": "Worktree voor alle teamleden",
       "agentTeamsMcpOnly": "Alleen Agent Teams MCP",
       "removedCount": "Verwijderd ({{count}})",
       "removedModelLockReason": "Verwijderde leden worden bewaard voor de soft-delete-geschiedenis. Herstel ze om instellingen te bewerken.",
-      "memberNamesUnique": "Ledennamen moeten uniek zijn"
+      "memberNamesUnique": "Ledennamen moeten uniek zijn",
+      "worktreeDescription": "Aangevinkt: aparte worktrees voor alle teamleden. Gemengd: alleen voor geselecteerde teamleden. Niet aangevinkt: gedeelde projectwerkruimte. Bij uitschakelen blijven bestaande worktrees op de schijf staan."
     },
     "stats": {
       "computing": "Statistieken berekenen...",
@@ -2393,7 +2444,11 @@
       "yes": "ja",
       "no": "nee",
       "moreActionableItems": "{{count}} extra actiepunt(en)",
-      "diagnostics": "Diagnostiek: {{diagnostics}}"
+      "diagnostics": "Diagnostiek: {{diagnostics}}",
+      "autoResumeStopped": "Automatische voortzetting is gestopt.",
+      "continue": "Doorgaan",
+      "stopAutoResume": "Automatisch hervatten stoppen",
+      "resumeAutoResume": "Automatisch hervatten"
     },
     "title": "Werksynchronisatie lid",
     "loadingDiagnostics": "Diagnostiek werksynchronisatie lid laden.",
@@ -2401,7 +2456,7 @@
   },
   "advancedCli": {
     "title": "Geavanceerd",
-    "useWorktree": "Worktree gebruiken",
+    "useWorktree": "Worktree van de teamleider (apart van de worktrees van teamleden)",
     "recent": "Recent",
     "commandPreview": "Commandovoorbeeld",
     "customArguments": "Aangepaste argumenten",

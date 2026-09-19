@@ -1,9 +1,15 @@
+import {
+  hasSettledOpenCodeScopedPreparation,
+  isTeamProviderRuntimeStatusLoading,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { describe, expect, it } from 'vitest';
 
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
+  resolveProviderScopedMemberModel,
 } from './memberModelScope';
+import { canResolveOpenCodeLaunchBlockers, createLaunchGuard } from './providerLaunchAuthority';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -77,6 +83,30 @@ const providerStatusById = new Map<TeamProviderId, CliProviderStatus>([
 const providerLoadingById = new Map<TeamProviderId, boolean>();
 
 describe('getDialogTeamModelValidationError', () => {
+  it.each(['cursor-acp/auto', 'kiro/auto'])(
+    'blocks unsupported extension-bound model %s without scheduling it for preflight',
+    (modelId) => {
+      expect(
+        getDialogTeamModelValidationError({
+          selectedProviderId: 'opencode',
+          selectedModel: modelId,
+          members: [],
+          validateMembers: true,
+          runtimeProviderStatusById: new Map(),
+          runtimeProviderLoadingById: providerLoadingById,
+        })
+      ).toContain('not supported by the current Agent Teams launch runtime');
+      expect(
+        resolveProviderScopedMemberModel({
+          selectedProviderId: 'codex',
+          memberProviderId: 'opencode',
+          memberModel: modelId,
+          runtimeProviderStatusById: new Map(),
+        })
+      ).toEqual({ providerId: 'opencode', model: '' });
+    }
+  );
+
   it('allows a built-in Ollama lead route outside the general OpenCode catalog', () => {
     expect(
       getDialogTeamModelValidationError({
@@ -149,5 +179,260 @@ describe('getDialogTeamModelValidationError', () => {
         openCodeLocalProviderLookupAuthoritative: true,
       })
     ).toContain('bob: Model "unknown-route/team-model" is not available');
+  });
+
+  it('preserves an inherited OpenCode model until empty-catalog verification is terminal', () => {
+    const savedMember = member({ model: 'openrouter/auto' });
+    const pending = {
+      ...createOpenCodeProviderStatus(),
+      models: [],
+      verificationState: 'unknown' as const,
+      statusCheckOutcome: 'pending' as const,
+      modelCatalogRefreshState: 'loading' as const,
+      modelCatalog: {
+        ...createOpenCodeProviderStatus().modelCatalog!,
+        status: 'degraded' as const,
+        models: [],
+        defaultModelId: null,
+        defaultLaunchModel: null,
+      },
+    };
+    const authoritative = {
+      ...pending,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      modelCatalogRefreshState: 'ready' as const,
+      modelCatalog: {
+        ...pending.modelCatalog,
+        status: 'ready' as const,
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        staleAt: '2099-01-01T00:10:00.000Z',
+      },
+    };
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', pending]]),
+      })
+    ).toEqual({ members: [savedMember], changed: false });
+
+    const scoped = createOpenCodeProviderStatus();
+    scoped.modelCatalogRefreshState = 'ready';
+    scoped.modelCatalog = {
+      ...scoped.modelCatalog!,
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:10:00.000Z',
+    };
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', pending]]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scoped]]),
+      })
+    ).toEqual({ members: [savedMember], changed: false });
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', authoritative]]),
+      })
+    ).toEqual({ members: [{ ...savedMember, model: '' }], changed: true });
+  });
+
+  it('settles non-authoritative OpenCode preparation only with every selected scoped catalog fresh', () => {
+    const passive = {
+      ...createOpenCodeProviderStatus(),
+      models: [],
+      statusCheckOutcome: 'model_only' as const,
+      verificationState: 'unknown' as const,
+      modelCatalogRefreshState: 'loading' as const,
+      backend: { kind: 'opencode-cli', label: 'OpenCode' },
+      statusMessage: 'Checking...',
+      modelCatalog: {
+        ...createOpenCodeProviderStatus().modelCatalog!,
+        status: 'degraded' as const,
+        models: [],
+        defaultModelId: null,
+        defaultLaunchModel: null,
+      },
+    };
+    const scoped = createOpenCodeProviderStatus();
+    scoped.modelCatalogRefreshState = 'ready';
+    scoped.modelCatalog = {
+      ...scoped.modelCatalog!,
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:10:00.000Z',
+    };
+    const evidence = {
+      selectedModels: ['openrouter/auto'],
+      scopedStatusBySourceId: new Map([['openrouter', scoped]]),
+    };
+
+    expect(hasSettledOpenCodeScopedPreparation(passive, evidence)).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: ['openrouter/auto', 'anthropic/claude-sonnet'],
+      })
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, evidence, Date.parse('2100-01-01T00:00:00.000Z'))
+    ).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, evidence)).toBe(false);
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true)
+    ).toBe(false);
+
+    const authoritativeRefresh = {
+      ...passive,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    };
+    expect(hasSettledOpenCodeScopedPreparation(authoritativeRefresh, evidence)).toBe(true);
+    expect(
+      isTeamProviderRuntimeStatusLoading('opencode', authoritativeRefresh, false, evidence)
+    ).toBe(false);
+    expect(
+      createLaunchGuard(
+        ['opencode'],
+        new Map([['opencode', authoritativeRefresh]]),
+        evidence
+      ).blocked(true)
+    ).toBe(false);
+
+    for (const fallback of [
+      {
+        statusCheckOutcome: 'pending' as const,
+        statusCheckErrorCode: 'partial_response' as const,
+      },
+      {
+        statusCheckOutcome: 'transient_error' as const,
+        statusCheckErrorCode: 'runtime_missing' as const,
+      },
+    ]) {
+      const fallbackStatus = { ...passive, ...fallback };
+      expect(hasSettledOpenCodeScopedPreparation(fallbackStatus, evidence)).toBe(true);
+      expect(isTeamProviderRuntimeStatusLoading('opencode', fallbackStatus, false, evidence)).toBe(
+        false
+      );
+      expect(
+        createLaunchGuard(['opencode'], new Map([['opencode', fallbackStatus]]), evidence).blocked(
+          true
+        )
+      ).toBe(false);
+      expect(
+        canResolveOpenCodeLaunchBlockers([
+          {
+            providerId: 'opencode',
+            providerStatus: fallbackStatus,
+            detail: 'Passive status is still settling.',
+          },
+        ])
+      ).toBe(true);
+    }
+
+    const timedOut = {
+      ...passive,
+      statusCheckOutcome: 'transient_error' as const,
+      statusCheckErrorCode: 'timeout' as const,
+    };
+    expect(hasSettledOpenCodeScopedPreparation(timedOut, evidence)).toBe(false);
+    expect(
+      canResolveOpenCodeLaunchBlockers([
+        {
+          providerId: 'opencode',
+          providerStatus: timedOut,
+          detail: 'Provider status timed out.',
+        },
+      ])
+    ).toBe(false);
+
+    const failedScoped = {
+      ...scoped,
+      modelCatalogRefreshState: 'error' as const,
+      modelCatalog: {
+        ...scoped.modelCatalog,
+        status: 'stale' as const,
+        diagnostics: {
+          ...scoped.modelCatalog.diagnostics,
+          message: 'Provider catalog refresh failed.',
+        },
+      },
+    };
+    const failedEvidence = {
+      ...evidence,
+      scopedStatusBySourceId: new Map([['openrouter', failedScoped]]),
+    };
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, failedEvidence)).toBe(
+      false
+    );
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), failedEvidence).blockers(
+        true
+      )
+    ).toEqual([
+      expect.objectContaining({
+        providerId: 'opencode',
+        providerStatus: failedScoped,
+        detail: 'Provider catalog refresh failed.',
+      }),
+    ]);
+
+    const missingEvidence = { ...evidence, scopedStatusBySourceId: new Map() };
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, missingEvidence)).toBe(
+      true
+    );
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), missingEvidence).blocked(
+        true
+      )
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: ['unqualified-model'],
+      })
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: [],
+      })
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['ollama/local-model'],
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['local-lab/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: true,
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['local-lab/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: false,
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['unknown-local/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: true,
+      })
+    ).toBe(false);
   });
 });

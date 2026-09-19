@@ -170,12 +170,12 @@ export function createLaunchStateSummary(
   const persistedMemberNames = getPersistedLaunchMemberNames(snapshot);
   const projectedMembers = buildProjectedMembersForSummary(snapshot, options.bootstrapSnapshot);
   const members = projectedMembers ?? snapshot.members;
-  const summary = projectedMembers
-    ? summarizePersistedLaunchMembers(snapshot.expectedMembers, projectedMembers)
-    : snapshot.summary;
-  const teamLaunchState = projectedMembers
-    ? deriveTeamLaunchAggregateState(summary)
-    : snapshot.teamLaunchState;
+  // The persisted summary is a denormalized cache and can lag one heartbeat
+  // behind the durable per-member state (this used to surface e.g. `2/3`
+  // after all members had already confirmed). Recompute it from the roster on
+  // every projection so lifecycle diagnostics have one authoritative source.
+  const summary = summarizePersistedLaunchMembers(snapshot.expectedMembers, members);
+  const teamLaunchState = deriveTeamLaunchAggregateState(summary);
   const missingMembers = persistedMemberNames.filter((name) => {
     const member = members[name];
     return member?.launchState === 'failed_to_start';
@@ -343,10 +343,11 @@ function shouldIgnoreStalePendingLaunchSnapshotSummary(
   snapshot: PersistedTeamLaunchSnapshot,
   nowMs: number = Date.now()
 ): boolean {
-  if (snapshot.teamLaunchState !== 'partial_pending') {
+  const summary = summarizePersistedLaunchMembers(snapshot.expectedMembers, snapshot.members);
+  if (deriveTeamLaunchAggregateState(summary) !== 'partial_pending') {
     return false;
   }
-  if ((snapshot.summary.permissionPendingCount ?? 0) > 0) {
+  if ((summary.permissionPendingCount ?? 0) > 0) {
     return false;
   }
 

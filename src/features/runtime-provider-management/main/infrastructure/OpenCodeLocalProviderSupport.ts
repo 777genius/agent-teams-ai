@@ -34,6 +34,7 @@ interface ConfiguredProviderSnapshot {
   readonly baseUrl: string;
   readonly hasConfiguredApiKey: boolean;
   readonly configuredModelIds: readonly string[];
+  readonly configuredModelReasoningEffort?: Readonly<Record<string, string>>;
   readonly configuredDefaultModelId: string | null;
   readonly smallModelId?: string | null;
   readonly isDefault: boolean;
@@ -93,6 +94,7 @@ export function buildDeferredProviderListEntry(
     baseUrl: configured.baseUrl,
     hasConfiguredApiKey: configured.hasConfiguredApiKey,
     configuredModelIds: configured.configuredModelIds,
+    configuredModelReasoningEffort: configured.configuredModelReasoningEffort,
     defaultModelId: configured.configuredDefaultModelId ?? configured.configuredModelIds[0] ?? null,
     smallModelId: configured.smallModelId,
     isDefault: configured.isDefault,

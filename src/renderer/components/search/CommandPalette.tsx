@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import { formatModifierShortcut } from '@renderer/utils/keyboardUtils';
@@ -188,7 +189,6 @@ export const CommandPalette = (): React.JSX.Element | null => {
   const [searchIsPartial, setSearchIsPartial] = useState(false);
   const [globalSearchEnabled, setGlobalSearchEnabled] = useState(false);
   const [browsingProjects, setBrowsingProjects] = useState(false);
-  const latestSearchRequestRef = useRef(0);
 
   // Determine search mode based on whether a project is selected OR global search is enabled
   // browsingProjects overrides back to project selection
@@ -235,44 +235,46 @@ export const CommandPalette = (): React.JSX.Element | null => {
     fetchRepositoryGroups,
   ]);
 
+  const resetSessionSearchState = useCallback(() => {
+    setSessionResults([]);
+    setTotalMatches(0);
+    setSearchIsPartial(false);
+  }, []);
+
   // Focus input when palette opens
   useEffect(() => {
     if (commandPaletteOpen && inputRef.current) {
       inputRef.current.focus();
       setQuery('');
-      setSessionResults([]);
+      resetSessionSearchState();
       setSelectedIndex(0);
-      setTotalMatches(0);
-      setSearchIsPartial(false);
       setGlobalSearchEnabled(false);
       setBrowsingProjects(false);
     }
-  }, [commandPaletteOpen]);
+  }, [commandPaletteOpen, resetSessionSearchState]);
 
   // Search sessions with debounce (only in session mode)
   useEffect(() => {
-    // Only clear results when query is too short or palette is closed
-    if (!commandPaletteOpen || query.trim().length < 2) {
-      setSessionResults([]);
-      setTotalMatches(0);
-      setSearchIsPartial(false);
+    // Results and loading belong to this query, scope, and palette lifetime.
+    resetSessionSearchState();
+    if (
+      !commandPaletteOpen ||
+      query.trim().length < 2 ||
+      searchMode !== 'sessions' ||
+      (!globalSearchEnabled && !selectedProjectId)
+    ) {
+      setLoading(false);
       return;
     }
 
-    // Early return without clearing if we're not in the right mode
-    if (searchMode !== 'sessions' || (!globalSearchEnabled && !selectedProjectId)) {
-      return;
-    }
-
+    let cancelled = false;
+    setLoading(true);
     const timeoutId = setTimeout(async () => {
-      const requestId = latestSearchRequestRef.current + 1;
-      latestSearchRequestRef.current = requestId;
-      setLoading(true);
       try {
         const searchResult = globalSearchEnabled
           ? await api.searchAllProjects(query.trim(), 50)
           : await api.searchSessions(selectedProjectId!, query.trim(), 50);
-        if (latestSearchRequestRef.current !== requestId) {
+        if (cancelled) {
           return;
         }
         setSessionResults(searchResult.results);
@@ -280,22 +282,30 @@ export const CommandPalette = (): React.JSX.Element | null => {
         setSearchIsPartial(!!searchResult.isPartial);
         setSelectedIndex(0);
       } catch (error) {
-        if (latestSearchRequestRef.current !== requestId) {
+        if (cancelled) {
           return;
         }
         logger.error('Search error:', error);
-        setSessionResults([]);
-        setTotalMatches(0);
-        setSearchIsPartial(false);
+        resetSessionSearchState();
       } finally {
-        if (latestSearchRequestRef.current === requestId) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
     }, 400);
 
-    return () => clearTimeout(timeoutId);
-  }, [query, selectedProjectId, commandPaletteOpen, searchMode, globalSearchEnabled]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    query,
+    selectedProjectId,
+    commandPaletteOpen,
+    searchMode,
+    globalSearchEnabled,
+    resetSessionSearchState,
+  ]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -308,25 +318,21 @@ export const CommandPalette = (): React.JSX.Element | null => {
       selectRepository(repo.id);
       setBrowsingProjects(false);
       setQuery('');
-      setSessionResults([]);
+      resetSessionSearchState();
       setSelectedIndex(0);
-      setTotalMatches(0);
-      setSearchIsPartial(false);
       inputRef.current?.focus();
     },
-    [selectRepository]
+    [resetSessionSearchState, selectRepository]
   );
 
   // Handle clearing project filter — go back to project browsing
   const handleClearProject = useCallback(() => {
     setBrowsingProjects(true);
     setQuery('');
-    setSessionResults([]);
+    resetSessionSearchState();
     setSelectedIndex(0);
-    setTotalMatches(0);
-    setSearchIsPartial(false);
     inputRef.current?.focus();
-  }, []);
+  }, [resetSessionSearchState]);
 
   // Handle session result click
   const handleSessionResultClick = useCallback(
@@ -444,6 +450,8 @@ export const CommandPalette = (): React.JSX.Element | null => {
       </>
     );
   }, []);
+
+  useOverlayOccupancy(commandPaletteOpen);
 
   if (!commandPaletteOpen) {
     return null;
