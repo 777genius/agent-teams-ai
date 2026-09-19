@@ -63,6 +63,7 @@ describe('RuntimeProviderManagementPanel', () => {
       {
         cancelConnect: vi.fn(),
         refreshDirectory: vi.fn(),
+        hydrateDirectory: vi.fn(),
       },
     ]);
   });
@@ -128,10 +129,124 @@ describe('RuntimeProviderManagementPanel', () => {
     ).toBe(true);
     expect(latestManagementOptions?.enabled).toBe(true);
     expect(latestManagementOptions?.preserveViewRequestOnDisable).toBe(false);
+    expect(latestManagementOptions?.directorySummaryOnEnable).toBe(true);
+    expect(latestManagementOptions?.reuseCachedFullDirectory).toBe(true);
     expect(latestManagementOptions?.projectPath).toBeNull();
     expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
     expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(false);
     expect(mocks.viewProps.at(-1)?.projectPath).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it('hydrates the live catalog after the browse-all summary without a refresh', async () => {
+    const hydrateDirectory = vi.fn(async () => true);
+    const refreshDirectory = vi.fn(async () => undefined);
+    mocks.useRuntimeProviderManagement.mockImplementation((options: { enabled?: boolean }) => [
+      {
+        setupForm: null,
+        selectedAuthOptionId: null,
+        savingProviderId: null,
+        directoryLoaded: options.enabled === true,
+        directorySummary: options.enabled === true,
+        directoryLoading: false,
+        directoryRefreshing: false,
+        directoryError: null,
+      },
+      {
+        cancelConnect: vi.fn(),
+        refreshDirectory,
+        hydrateDirectory,
+      },
+    ]);
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          React.StrictMode,
+          null,
+          React.createElement(RuntimeProviderManagementPanel, {
+            runtimeId: 'opencode',
+            open: true,
+          })
+        )
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(hydrateDirectory).toHaveBeenCalledTimes(1));
+    });
+
+    const latestManagementOptions = mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0];
+    expect(latestManagementOptions?.directorySummaryOnEnable).toBe(true);
+    expect(latestManagementOptions?.reuseCachedFullDirectory).toBe(true);
+    expect(latestManagementOptions?.searchDirectoryOnQueryChange).toBe(false);
+    expect(refreshDirectory).not.toHaveBeenCalled();
+
+    await act(async () => root.unmount());
+  });
+
+  it('skips the summary catalog for OpenRouter deep links', async () => {
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanel, {
+          runtimeId: 'opencode',
+          open: true,
+          initialProviderId: 'openrouter',
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(
+        () => mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]?.enabled === true
+      );
+    });
+
+    const latestManagementOptions = mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0];
+    expect(latestManagementOptions?.directorySummaryOnEnable).toBe(false);
+    expect(latestManagementOptions?.reuseCachedFullDirectory).toBe(false);
+    expect(latestManagementOptions?.searchDirectoryOnQueryChange).toBe(true);
+
+    await act(async () => root.unmount());
+  });
+
+  it('skips the summary catalog for Vercel deep links', async () => {
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanel, {
+          runtimeId: 'opencode',
+          open: true,
+          initialProviderId: 'vercel',
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(
+        () => mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]?.enabled === true
+      );
+    });
+
+    const latestManagementOptions = mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0];
+    expect(latestManagementOptions?.directorySummaryOnEnable).toBe(false);
+    expect(latestManagementOptions?.reuseCachedFullDirectory).toBe(false);
+    expect(latestManagementOptions?.searchDirectoryOnQueryChange).toBe(true);
 
     await act(async () => root.unmount());
   });

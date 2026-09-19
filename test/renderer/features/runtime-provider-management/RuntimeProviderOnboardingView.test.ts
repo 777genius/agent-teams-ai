@@ -79,6 +79,7 @@ function managementActions(): RuntimeProviderManagementActions {
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(async () => undefined),
     refreshDirectory: vi.fn(async () => undefined),
+    hydrateDirectory: vi.fn(async () => true),
     selectDirectoryProvider: vi.fn(),
     searchAllProviders: vi.fn(),
     startConnect: vi.fn(),

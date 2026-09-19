@@ -110,9 +110,12 @@
     "providers": {
       "catalog": "OpenCode வழங்குநர் catalog",
       "countFallback": "OpenCode வழங்குநர்கள்",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. இணைக்கப்பட்ட மற்றும் பரிந்துரைக்கப்பட்ட வழங்குநர்கள் முதலில் காட்டப்படுகின்றன.",
       "loadMore": "மேலும் வழங்குநர்களை ஏற்று",
       "loading": "OpenCode வழங்குநர்களை ஏற்றுகிறது",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "அந்தத் தேடலுக்குப் பொருந்தும் வழங்குநர்கள் இல்லை.",
       "noneReported": "managed runtime ஆல் OpenCode வழங்குநர்கள் எதுவும் புகாரளிக்கப்படவில்லை.",
       "recommended": "பரிந்துரைக்கப்பட்டது",

@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode উপলব্ধকারী ক্যাটালগ",
       "countFallback": "OpenCode উপলব্ধকারী",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}..cits এবং প্রস্তাবিত সেবা প্রদানকারী প্রথমে প্রদর্শন করা হয়.",
       "loadMore": "অতিরিক্ত উপলব্ধকারী লোড করুন",
       "loading": "লোড করা অনুমোদন করো",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "কোন প্রোভাইডার এই সার্চের সাথে মেলে না।",
       "noneReported": "কোন ওপেনকাডে সেবা প্রদানকারী প্রতিষ্ঠান এই কর প্রদান করেছে।",
       "recommended": "প্রস্তাবিত",

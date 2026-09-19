@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode sağlayıcı kataloğu",
       "countFallback": "OpenCode sağlayıcıları",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
       "loadMore": "Daha fazla sağlayıcı yükle",
       "loading": "OpenCode sağlayıcıları yükleniyor",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Bu aramayla eşleşen sağlayıcı yok.",
       "noneReported": "Yönetilen çalışma zamanı tarafından bildirilen OpenCode sağlayıcısı yok.",
       "recommended": "Önerilen",

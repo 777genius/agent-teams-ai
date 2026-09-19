@@ -6,6 +6,8 @@ export interface RuntimeProviderDirectoryCacheSnapshot {
   entries: readonly RuntimeProviderDirectoryEntryDto[];
   fetchedAt: string;
   authoritative: boolean;
+  totalCount?: number | null;
+  nextCursor?: string | null;
 }
 
 interface PublishRuntimeProviderDirectoryCacheInput {
@@ -13,6 +15,8 @@ interface PublishRuntimeProviderDirectoryCacheInput {
   entries: readonly RuntimeProviderDirectoryEntryDto[];
   fetchedAt: string;
   authoritative: boolean;
+  totalCount?: number | null;
+  nextCursor?: string | null;
 }
 
 const GLOBAL_SCOPE_KEY = '\u0000global';
@@ -145,14 +149,17 @@ function getSnapshotWithGlobalFallback(
     return projectSnapshot;
   }
 
+  const entries = Array.from(entryByProviderId.values());
   const snapshot: RuntimeProviderDirectoryCacheSnapshot = {
-    entries: Array.from(entryByProviderId.values()),
+    entries,
     fetchedAt:
       getFetchedAtTimestamp(projectSnapshot.fetchedAt) >=
       getFetchedAtTimestamp(globalSnapshot.fetchedAt)
         ? projectSnapshot.fetchedAt
         : globalSnapshot.fetchedAt,
     authoritative: projectSnapshot.authoritative && globalSnapshot.authoritative,
+    totalCount: projectSnapshot.totalCount ?? entries.length,
+    nextCursor: projectSnapshot.nextCursor ?? null,
   };
   mergedFallbackByScope.set(scopeKey, {
     projectSource: projectSnapshot,
@@ -179,6 +186,8 @@ export function publishRuntimeProviderDirectoryCache({
   entries,
   fetchedAt,
   authoritative,
+  totalCount,
+  nextCursor,
 }: PublishRuntimeProviderDirectoryCacheInput): void {
   const scopeKey = getScopeKey(projectPath);
   const current = snapshotsByScope.get(scopeKey);
@@ -197,6 +206,8 @@ export function publishRuntimeProviderDirectoryCache({
     entries,
     fetchedAt,
     authoritative,
+    ...(totalCount !== undefined ? { totalCount } : {}),
+    ...(nextCursor !== undefined ? { nextCursor } : {}),
   };
   if (scopeKey === GLOBAL_SCOPE_KEY) {
     mergedFallbackByScope.clear();

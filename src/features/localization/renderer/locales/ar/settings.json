@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "مُقدِّم الخدمات المفتوحة",
       "countFallback": "مقدمو الخدمات المفتوحة",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا.",
       "loadMore": "زيادة عدد مقدمي الخدمات",
       "loading": "تحديد أماكن مقدمي الخدمات المفتوحة",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "لا يوجد مُقدّمون يطابقون ذلك البحث",
       "noneReported": "No OpenCode providers reported by the managed runtime.",
       "recommended": "الموصى بها",
