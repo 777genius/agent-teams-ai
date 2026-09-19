@@ -26,6 +26,7 @@ Before publishing:
 - Read the introduction and every bullet independently. Each must be clear without repository context.
 - Remove any bullet that does not change what a user can do, see, or rely on.
 - Confirm version numbers, runtime gates, asset names, and download links.
+- Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
 ## Draft: v2.15.0 (2026-09-19)
@@ -1535,16 +1536,18 @@ The draft workflow:
 After the workflow completes, edit the release notes:
 
 ```bash
-gh release edit v<VERSION> --repo 777genius/agent-teams-ai --notes "$(cat <<'EOF'
+gh release edit v<VERSION> --repo 777genius/agent-teams-ai --title "v<VERSION>" --notes "$(cat <<'EOF'
 <paste release notes here>
 EOF
 )"
 ```
 
+The GitHub release title must be exactly the tag, for example `v2.15.0`. Do not use `Agent Teams v<VERSION>`, `Agent Teams AI v<VERSION>`, or any other prefix. `release.yml` already creates the draft with `--title "$TAG"`. When editing notes, pass `--title "v<VERSION>"` or omit `--title`; never replace it with a longer name.
+
 Public release notes must follow this standard every time:
 
 - Start with a short user-facing summary. Explain what changed and why users should care.
-- Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body; the GitHub release title already shows the version.
+- Keep the GitHub release title equal to the tag (`v<VERSION>`). Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body.
 - Do not start with a template sentence like `Agent Teams AI <VERSION> is...`; start with the concrete user impact.
 - Use the sections `What's New`, `Improvements`, and `Bug Fixes`; omit a section only if it would be empty.
 - Keep internal-only CI, lint, dependency, and refactor work out of public notes unless it directly explains a user-visible fix.
@@ -1560,7 +1563,7 @@ Draft releases must be treated as review artifacts:
 
 - There must be at most one draft release in `777genius/agent-teams-ai` at any time. Before creating a new draft, check existing drafts with `gh release list --repo 777genius/agent-teams-ai --limit 20`. If any draft already exists, stop and resolve it first by publishing it or by explicitly deleting it after a direct user command.
 - Do not hand off a draft release for review while it still has generated notes, stale notes from an earlier run, or a `Full Changelog`-only body.
-- Before telling the user a draft is ready, always edit the draft body with the current release notes template and then re-check it with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json body,assets,isDraft,isPrerelease,targetCommitish`.
+- Before telling the user a draft is ready, always edit the draft body with the current release notes template and then re-check it with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json name,body,assets,isDraft,isPrerelease,targetCommitish`. Confirm `name` equals `v<VERSION>`.
 - Confirm the draft targets the intended commit with `targetCommitish`; do not put the raw commit SHA in the release body.
 - If a draft already exists when starting or retrying a release, do not delete it automatically. Ask for explicit permission to delete, replace, or reuse it.
 - Never delete a draft release just because the user said to "make a release" or "redo the release". Deleting a draft requires a separate explicit command such as "delete the draft release".
@@ -1650,12 +1653,13 @@ Do not publish or call a release finished until this is true:
 - `runtime.lock.json` points at the runtime tag intended for this app release.
 - `gh release view "$(node scripts/runtime-lock.mjs release-tag)" --repo "$(node scripts/runtime-lock.mjs release-repository)" --json assets -q '.assets[].name'` includes every file from `node scripts/runtime-lock.mjs asset-list`.
 - `git -C /Users/belief/dev/projects/claude/agent_teams_orchestrator log --oneline "$(node scripts/runtime-lock.mjs source-ref)"..origin/main` has been reviewed. If it is non-empty, the skipped runtime commits are explicitly known to be irrelevant to the packaged app.
+- The GitHub release title (`name`) is exactly the tag, for example `v2.15.0`, not `Agent Teams v2.15.0`.
 - The GitHub release body is not just auto-generated `Full Changelog`.
 - The release body starts with short user-facing notes: what changed, why users care, and the most important fixes.
 - The `Downloads` table from the template is present and every link points to the current `v<VERSION>` assets.
 - The asset names in the notes match the assets uploaded by `release.yml`.
-- For a draft handoff, `gh release view v<VERSION> --json body,assets,isDraft,isPrerelease,targetCommitish` confirms the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
-- For final publication, `gh release view v<VERSION> --json body,assets,isDraft,isPrerelease,targetCommitish` confirms the release is public, has current notes, targets the intended commit, and has the expected installer assets.
+- For a draft handoff, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
+- For final publication, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is public, has current notes, targets the intended commit, and has the expected installer assets.
 - The successful final `release.yml` run used `publish_release=true`, including a successful `upload-stable-links` job.
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 
