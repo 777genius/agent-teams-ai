@@ -114,7 +114,7 @@ export const screenshots: Screenshot[] = [
     previewPath: 'screenshots/previews/12.webp',
     alt: 'Organization structure map with team and task details',
     ruAlt: 'Карта структуры организации с командами и деталями задач',
-    width: 2560,
-    height: 1608,
+    width: 1024,
+    height: 638,
   },
 ];
