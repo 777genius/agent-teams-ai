@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { type ButtonHTMLAttributes, forwardRef, type MouseEvent } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { formatActivityTimestamp } from '@renderer/components/team/activity/activityTimestamp';
@@ -15,7 +15,8 @@ import { GroupChatAvatar } from './GroupChatAvatar';
 import type { ConversationScope } from '../../core/domain/conversationScope';
 import type { ChatListViewItem } from '../view-models/chatListViewModel';
 
-interface ChatListRowProps {
+interface ChatListRowProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'children'> {
   item: ChatListViewItem;
   teamName: string;
   pinned?: boolean;
@@ -23,7 +24,7 @@ interface ChatListRowProps {
 }
 
 export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
-  ({ item, teamName, pinned = false, onOpen }, ref) => {
+  ({ item, teamName, pinned = false, onOpen, className, onClick, ...props }, ref) => {
     const { t } = useAppTranslation('team');
     const preview = item.previewText || t('messages.chats.emptyPreview');
     const time = item.previewTimestamp ? formatActivityTimestamp(item.previewTimestamp) : '';
@@ -45,11 +46,18 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
 
     return (
       <button
-        ref={ref}
         type="button"
-        className="flex w-full items-start gap-2.5 overflow-visible rounded-md px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+        {...props}
+        ref={ref}
+        className={`flex w-full items-start gap-2.5 overflow-visible rounded-md px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)]${className ? ` ${className}` : ''}`}
         aria-label={ariaLabel}
-        onClick={() => onOpen(item.scope)}
+        onClick={(event: MouseEvent<HTMLButtonElement>) => {
+          onClick?.(event);
+          if (event.defaultPrevented) {
+            return;
+          }
+          onOpen(item.scope);
+        }}
       >
         <span className="mt-0.5 shrink-0">
           {item.scope.kind === 'team-feed' ? (
