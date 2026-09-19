@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "Katalog pembekal OpenCode",
       "countFallback": "Pembekal OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
       "loadMore": "Muat lebih banyak pembekal",
       "loading": "Memuatkan pembekal OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Tiada pembekal yang sepadan dengan carian itu.",
       "noneReported": "Tiada pembekal OpenCode dilaporkan oleh runtime terurus.",
       "recommended": "Disyorkan",

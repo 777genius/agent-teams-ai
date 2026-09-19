@@ -115,6 +115,7 @@ function createActions(): RuntimeProviderManagementActions {
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(() => Promise.resolve()),
     refreshDirectory: vi.fn(() => Promise.resolve()),
+    hydrateDirectory: vi.fn(() => Promise.resolve(true)),
     selectDirectoryProvider: vi.fn(),
     searchAllProviders: vi.fn(),
     startConnect: vi.fn(),
@@ -2952,6 +2953,67 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(actions.startConnect).toHaveBeenCalledWith('cloudflare-workers-ai');
     expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
+  });
+
+  it('tells the user the summary catalog is still loading the rest', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directorySummary: true,
+            directoryRefreshing: true,
+            directoryTotalCount: 16,
+            directoryEntries: [
+              {
+                providerId: 'openai',
+                displayName: 'OpenAI',
+                state: 'connected',
+                setupKind: 'connected',
+                ownership: ['managed'],
+                recommended: true,
+                modelCount: 13,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [],
+                sources: ['inventory'],
+                sourceLabel: 'OpenCode',
+                providerSource: null,
+                detail: null,
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: true,
+                  configuredAuthless: false,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Showing 16 · loading full catalog');
+    expect(host.textContent).toContain('Loading the rest of the catalog…');
+    expect(host.textContent).toContain('16+');
+    expect(host.querySelector('[data-testid="runtime-provider-catalog-hydrating"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-openai"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.getAttribute('aria-busy')
+    ).toBe('true');
+
+    await act(async () => root.unmount());
   });
 
   it('shows an explicit zero-provider catalog count', async () => {

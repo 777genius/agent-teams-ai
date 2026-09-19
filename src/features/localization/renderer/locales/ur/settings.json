@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "کھولیں",
       "countFallback": "کھولیں",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. . . .",
       "loadMore": "مزید فراہم کُنندہ خرچ کریں",
       "loading": "OpenCode فراہم کار",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "کوئی فراہم کنندہ وہ تلاش کرتا ہے.",
       "noneReported": "کوئی اوپنCode فراہم کنندگان کو انتظامیہ وقت کی طرف سے رپورٹ نہیں کرتا.",
       "recommended": "بند",

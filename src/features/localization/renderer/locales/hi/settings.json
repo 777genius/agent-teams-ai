@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "ओपनकोड प्रदाता सूची",
       "countFallback": "ओपनकोड प्रदाता",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।",
       "loadMore": "अधिक प्रदाता लोड करें",
       "loading": "ओपनकोड प्रदाता लोड हो रहा है",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "कोई प्रदाता उस खोज से मेल खाता नहीं है।",
       "noneReported": "प्रबंधित रनटाइम द्वारा रिपोर्ट किए गए कोई ओपनकोड प्रदाता नहीं।",
       "recommended": "अनुशंसित",

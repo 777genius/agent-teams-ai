@@ -18,6 +18,10 @@ import {
   useRuntimeProviderManagement,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
+  getRuntimeProviderDirectoryCacheSnapshot,
+  resetRuntimeProviderDirectoryCacheForTests,
+} from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
+import {
   getStoredCreateTeamModel,
   getStoredCreateTeamProvider,
 } from '../../../../src/renderer/services/createTeamPreferences';
@@ -166,6 +170,7 @@ describe('useRuntimeProviderManagement', () => {
     enabled: boolean;
     directoryPageSize?: number;
     directorySummaryOnEnable?: boolean;
+    reuseCachedFullDirectory?: boolean;
     projectPath?: string | null;
     loadViewOnEnable?: boolean;
     preserveViewRequestOnDisable?: boolean;
@@ -182,6 +187,7 @@ describe('useRuntimeProviderManagement', () => {
       enabled: props.enabled,
       directoryPageSize: props.directoryPageSize,
       directorySummaryOnEnable: props.directorySummaryOnEnable,
+      reuseCachedFullDirectory: props.reuseCachedFullDirectory,
       projectPath: props.projectPath,
       loadViewOnEnable: props.loadViewOnEnable,
       preserveViewRequestOnDisable: props.preserveViewRequestOnDisable,
@@ -198,6 +204,23 @@ describe('useRuntimeProviderManagement', () => {
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    if (typeof window.localStorage?.clear !== 'function') {
+      const memory = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        get length() {
+          return memory.size;
+        },
+        clear: () => memory.clear(),
+        getItem: (key: string) => memory.get(key) ?? null,
+        key: (index: number) => [...memory.keys()][index] ?? null,
+        removeItem: (key: string) => {
+          memory.delete(key);
+        },
+        setItem: (key: string, value: string) => {
+          memory.set(key, value);
+        },
+      });
+    }
     host = document.createElement('div');
     document.body.appendChild(host);
     window.localStorage.clear();
@@ -215,6 +238,7 @@ describe('useRuntimeProviderManagement', () => {
 
     Reflect.deleteProperty(window, 'electronAPI');
     document.body.innerHTML = '';
+    resetRuntimeProviderDirectoryCacheForTests();
     vi.unstubAllGlobals();
   });
 
@@ -649,6 +673,356 @@ describe('useRuntimeProviderManagement', () => {
     });
     expect(state?.activeFormProviderId).toBe('xai');
     expect(state?.setupForm?.defaultAuthOptionId).toBe('oauth:0');
+    await act(async () => root.unmount());
+  });
+
+  it('hydrates the full provider directory without a catalog refresh', async () => {
+    const summaryEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'xai',
+      displayName: 'xAI',
+    };
+    const extraEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'openrouter',
+      displayName: 'OpenRouter',
+    };
+    let resolveFull: ((response: RuntimeProviderManagementDirectoryResponse) => void) | null = null;
+    const loadProviderDirectory = vi.fn((input: { summary?: boolean; refresh?: boolean }) => {
+      if (input.summary === true) {
+        return Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          directory: {
+            runtimeId: 'opencode' as const,
+            totalCount: 1,
+            returnedCount: 1,
+            query: null,
+            filter: 'all' as const,
+            limit: 50,
+            cursor: null,
+            nextCursor: null,
+            entries: [summaryEntry],
+            diagnostics: [],
+            fetchedAt: '2026-07-10T00:00:00.000Z',
+          },
+        });
+      }
+      return new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        resolveFull = resolve;
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadProviderDirectory },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+
+    expect(loadProviderDirectory).toHaveBeenCalledWith(expect.objectContaining({ summary: true }));
+    expect(state?.directoryLoaded).toBe(true);
+    expect(state?.directorySummary).toBe(true);
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai']);
+    expect(state?.directoryLoading).toBe(false);
+
+    let hydratePromise: Promise<void> | null = null;
+    await act(async () => {
+      hydratePromise = actions?.hydrateDirectory() ?? null;
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(2));
+    });
+
+    expect(state?.directoryRefreshing).toBe(true);
+    expect(state?.directoryLoading).toBe(false);
+    expect(loadProviderDirectory).toHaveBeenLastCalledWith(
+      expect.objectContaining({ runtimeId: 'opencode', refresh: false })
+    );
+    expect(loadProviderDirectory.mock.calls[1]?.[0]).not.toMatchObject({ summary: true });
+
+    await act(async () => {
+      resolveFull?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 2,
+          returnedCount: 2,
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [summaryEntry, extraEntry],
+          diagnostics: [],
+          fetchedAt: '2026-07-10T00:00:01.000Z',
+        },
+      });
+      await hydratePromise;
+    });
+
+    expect(state?.directorySummary).toBe(false);
+    expect(state?.directoryRefreshing).toBe(false);
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai', 'openrouter']);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.totalCount).toBe(2);
+    expect(
+      getRuntimeProviderDirectoryCacheSnapshot(null)?.entries.map((entry) => entry.providerId)
+    ).toEqual(['xai', 'openrouter']);
+
+    await act(async () => {
+      await actions?.hydrateDirectory();
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    await act(async () => root.unmount());
+  });
+
+  it('reopens a cached full catalog without flashing the 16-provider summary', async () => {
+    const summaryEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'xai',
+      displayName: 'xAI',
+    };
+    const extraEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'openrouter',
+      displayName: 'OpenRouter',
+    };
+    const loadProviderDirectory = vi.fn((input: { summary?: boolean; refresh?: boolean }) => {
+      if (input.summary === true) {
+        return Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          directory: {
+            runtimeId: 'opencode' as const,
+            totalCount: 1,
+            returnedCount: 1,
+            query: null,
+            filter: 'all' as const,
+            limit: 50,
+            cursor: null,
+            nextCursor: null,
+            entries: [summaryEntry],
+            diagnostics: [],
+            fetchedAt: '2026-07-10T00:00:00.000Z',
+          },
+        });
+      }
+      return Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        directory: {
+          runtimeId: 'opencode' as const,
+          totalCount: 2,
+          returnedCount: 2,
+          query: null,
+          filter: 'all' as const,
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [summaryEntry, extraEntry],
+          diagnostics: [],
+          fetchedAt: '2026-07-10T00:00:01.000Z',
+        },
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadProviderDirectory },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    await act(async () => {
+      await actions?.hydrateDirectory();
+    });
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai', 'openrouter']);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
+          'xai',
+          'openrouter',
+        ])
+      );
+    });
+    expect(state?.directorySummary).toBe(false);
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(loadProviderDirectory).toHaveBeenCalledWith(
+          expect.objectContaining({ refresh: false })
+        )
+      );
+    });
+    const reopenCalls = loadProviderDirectory.mock.calls.slice(2);
+    expect(reopenCalls.some((call) => call[0]?.summary === true)).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('does not replace the cached full catalog with search results', async () => {
+    const summaryEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'xai',
+      displayName: 'xAI',
+    };
+    const extraEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'openrouter',
+      displayName: 'OpenRouter',
+    };
+    const loadProviderDirectory = vi.fn((input: { summary?: boolean; query?: string | null }) => {
+      if (input.query?.trim()) {
+        return Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          directory: {
+            runtimeId: 'opencode' as const,
+            totalCount: 1,
+            returnedCount: 1,
+            query: input.query,
+            filter: 'all' as const,
+            limit: 50,
+            cursor: null,
+            nextCursor: null,
+            entries: [extraEntry],
+            diagnostics: [],
+            fetchedAt: '2026-07-10T00:00:02.000Z',
+          },
+        });
+      }
+      if (input.summary === true) {
+        return Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          directory: {
+            runtimeId: 'opencode' as const,
+            totalCount: 1,
+            returnedCount: 1,
+            query: null,
+            filter: 'all' as const,
+            limit: 50,
+            cursor: null,
+            nextCursor: null,
+            entries: [summaryEntry],
+            diagnostics: [],
+            fetchedAt: '2026-07-10T00:00:00.000Z',
+          },
+        });
+      }
+      return Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        directory: {
+          runtimeId: 'opencode' as const,
+          totalCount: 2,
+          returnedCount: 2,
+          query: null,
+          filter: 'all' as const,
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [summaryEntry, extraEntry],
+          diagnostics: [],
+          fetchedAt: '2026-07-10T00:00:01.000Z',
+        },
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadProviderDirectory },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    await act(async () => {
+      await actions?.hydrateDirectory();
+    });
+    expect(
+      getRuntimeProviderDirectoryCacheSnapshot(null)?.entries.map((entry) => entry.providerId)
+    ).toEqual(['xai', 'openrouter']);
+
+    act(() => {
+      actions?.searchAllProviders('openrouter');
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(3));
+    });
+    expect(loadProviderDirectory).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: 'openrouter' })
+    );
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['openrouter']);
+    expect(
+      getRuntimeProviderDirectoryCacheSnapshot(null)?.entries.map((entry) => entry.providerId)
+    ).toEqual(['xai', 'openrouter']);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.totalCount).toBe(2);
     await act(async () => root.unmount());
   });
 

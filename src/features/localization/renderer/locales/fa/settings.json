@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "کاتالوگ ارائه‌دهندگان OpenCode",
       "countFallback": "ارائه‌دهندگان OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. ارائه‌دهندگان متصل و توصیه‌شده ابتدا نمایش داده می‌شوند.",
       "loadMore": "بارگذاری ارائه‌دهندگان بیشتر",
       "loading": "در حال بارگذاری ارائه‌دهندگان OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "هیچ ارائه‌دهنده‌ای با آن جستجو منطبق نیست.",
       "noneReported": "هیچ ارائه‌دهنده OpenCode توسط زمان اجرای مدیریت‌شده گزارش نشده است.",
       "recommended": "توصیه‌شده",

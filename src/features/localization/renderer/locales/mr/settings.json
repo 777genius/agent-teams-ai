@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode प्रोव्हायडर कॅटलॉग",
       "countFallback": "OpenCode प्रोव्हायडर्स",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. कनेक्ट केलेले आणि शिफारस केलेले प्रोव्हायडर्स प्रथम दाखवले जातात.",
       "loadMore": "अधिक प्रोव्हायडर्स लोड करा",
       "loading": "OpenCode प्रोव्हायडर्स लोड होत आहेत",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "त्या शोधाशी कोणतेही प्रोव्हायडर्स जुळत नाहीत.",
       "noneReported": "व्यवस्थापित रनटाइमने कोणतेही OpenCode प्रोव्हायडर्स नोंदवले नाहीत.",
       "recommended": "शिफारस केलेले",

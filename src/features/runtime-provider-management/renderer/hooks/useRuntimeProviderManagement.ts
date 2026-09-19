@@ -16,6 +16,10 @@ import {
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
 import {
+  getRuntimeProviderDirectoryCacheSnapshot,
+  publishRuntimeProviderDirectoryCache,
+} from '../runtimeProviderDirectoryCache';
+import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
@@ -67,6 +71,7 @@ interface UseRuntimeProviderManagementOptions {
   enabled: boolean;
   directoryPageSize?: number;
   directorySummaryOnEnable?: boolean;
+  reuseCachedFullDirectory?: boolean;
   loadViewOnEnable?: boolean;
   preserveViewRequestOnDisable?: boolean;
   searchDirectoryOnQueryChange?: boolean;
@@ -168,6 +173,7 @@ export interface RuntimeProviderManagementActions {
   setProviderQuery: (value: string) => void;
   loadMoreDirectory: () => Promise<void>;
   refreshDirectory: () => Promise<void>;
+  hydrateDirectory: () => Promise<boolean>;
   selectDirectoryProvider: (providerId: string) => void;
   searchAllProviders: (query: string) => void;
   startConnect: (providerId: string) => void;
@@ -592,15 +598,21 @@ export function useRuntimeProviderManagement(
       const filter = input.filter ?? DEFAULT_DIRECTORY_FILTER;
       const cursor = input.cursor ?? null;
       const summary = input.summary ?? directorySummary;
+      // Keep already-visible rows on screen while summary is replaced, a cached
+      // full catalog is revalidated, or the user explicitly refreshes.
+      const replacingSummary = directorySummary && summary === false && !append;
+      const keepVisibleRows =
+        !append &&
+        (replacingSummary ||
+          refreshDirectoryData ||
+          (summary === false && directoryEntries.length > 0));
       const projectContext = getProjectContextSnapshot();
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
         directoryRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);
 
-      if (append) {
-        setDirectoryRefreshing(true);
-      } else if (refreshDirectoryData) {
+      if (keepVisibleRows) {
         setDirectoryRefreshing(true);
       } else {
         setDirectoryLoading(true);
@@ -643,11 +655,24 @@ export function useRuntimeProviderManagement(
         setDirectorySummary(summary);
         setDirectoryTotalCount(directory.totalCount);
         setDirectoryNextCursor(directory.nextCursor);
-        setDirectoryEntries((current) =>
-          append
-            ? [...current, ...directory.entries.map(presentDirectoryEntry)]
-            : directory.entries.map(presentDirectoryEntry)
-        );
+        const nextEntries = directory.entries.map(presentDirectoryEntry);
+        setDirectoryEntries((current) => (append ? [...current, ...nextEntries] : nextEntries));
+        const isDefaultFullCatalogPage =
+          !summary &&
+          !append &&
+          !query.trim() &&
+          (filter === DEFAULT_DIRECTORY_FILTER || filter == null) &&
+          !cursor;
+        if (isDefaultFullCatalogPage) {
+          publishRuntimeProviderDirectoryCache({
+            projectPath: projectContext.path,
+            entries: nextEntries,
+            fetchedAt: directory.fetchedAt,
+            authoritative: true,
+            totalCount: directory.totalCount,
+            nextCursor: directory.nextCursor,
+          });
+        }
         return true;
       } catch (loadError) {
         if (requestIsCurrent()) {
@@ -665,6 +690,7 @@ export function useRuntimeProviderManagement(
       }
     },
     [
+      directoryEntries.length,
       directoryQuery,
       directorySummary,
       directorySupported,
@@ -758,6 +784,25 @@ export function useRuntimeProviderManagement(
     if (!options.enabled || !directorySupported) {
       return;
     }
+    const cached =
+      options.reuseCachedFullDirectory === true && !directoryQuery
+        ? getRuntimeProviderDirectoryCacheSnapshot(currentProjectPath)
+        : null;
+    if (cached?.authoritative && cached.entries.length > 0) {
+      setDirectoryEntries(cached.entries);
+      setDirectoryLoaded(true);
+      setDirectorySummary(false);
+      setDirectoryTotalCount(cached.totalCount ?? cached.entries.length);
+      setDirectoryNextCursor(cached.nextCursor ?? null);
+      setDirectoryError(null);
+      setDirectoryErrorDiagnostics(null);
+      void loadDirectoryPageRef.current({
+        summary: false,
+        refresh: false,
+        cursor: null,
+      });
+      return;
+    }
     const timeout = window.setTimeout(
       () => {
         void loadDirectoryPageRef.current({
@@ -771,7 +816,13 @@ export function useRuntimeProviderManagement(
     );
 
     return () => window.clearTimeout(timeout);
-  }, [currentProjectPath, directoryQuery, directorySupported, options.enabled]);
+  }, [
+    currentProjectPath,
+    directoryQuery,
+    directorySupported,
+    options.enabled,
+    options.reuseCachedFullDirectory,
+  ]);
 
   useEffect(() => {
     if (!options.enabled || !modelPickerProviderId) {
@@ -977,6 +1028,17 @@ export function useRuntimeProviderManagement(
       await loadModelsPage();
     }
   }, [loadDirectoryPage, loadModelsPage, modelPickerProviderId, refresh]);
+
+  const hydrateDirectory = useCallback(async (): Promise<boolean> => {
+    if (!options.enabled || !directorySupported || !directorySummary) {
+      return false;
+    }
+    return loadDirectoryPage({
+      summary: false,
+      refresh: false,
+      cursor: null,
+    });
+  }, [directorySummary, directorySupported, loadDirectoryPage, options.enabled]);
 
   const selectDirectoryProvider = useCallback(
     (providerId: string): void => {
@@ -2038,6 +2100,7 @@ export function useRuntimeProviderManagement(
       setProviderQuery: updateProviderQuery,
       loadMoreDirectory,
       refreshDirectory,
+      hydrateDirectory,
       selectDirectoryProvider,
       searchAllProviders,
       startConnect,
@@ -2067,6 +2130,7 @@ export function useRuntimeProviderManagement(
       cancelConnect,
       closeModelPicker,
       forgetProvider,
+      hydrateDirectory,
       loadMoreDirectory,
       loadMoreModels,
       openProviderCredentialPage,

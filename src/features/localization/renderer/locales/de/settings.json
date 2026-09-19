@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode Anbieter Katalog",
       "countFallback": "OpenCode Anbieter",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Vernetzte und empfohlene Anbieter werden zuerst angezeigt.",
       "loadMore": "Weitere Anbieter",
       "loading": "OpenCode Anbieter laden",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Keine Anbieter passen zu dieser Suche.",
       "noneReported": "Keine OpenCode-Anbieter von der verwalteten Laufzeit gemeldet.",
       "recommended": "Empfohlen",

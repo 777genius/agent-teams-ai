@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode provider catalog",
       "countFallback": "Mga OpenCode provider",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
       "loadMore": "Mag-load pa ng mga provider",
       "loading": "Niloload ang mga OpenCode provider",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Walang provider na tumutugma sa paghahanap na iyon.",
       "noneReported": "Walang OpenCode provider na naiulat ng managed runtime.",
       "recommended": "Inirerekomenda",

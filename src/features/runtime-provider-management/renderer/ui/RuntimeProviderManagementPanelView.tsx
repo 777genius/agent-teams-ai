@@ -2162,8 +2162,12 @@ export const RuntimeProviderManagementPanelView = ({
   const visibleDirectoryRows = state.directoryEntries.filter((provider) =>
     directoryEntryMatchesQuery(provider, providerQuery)
   );
+  const catalogHydrating = state.directorySummary && state.directoryRefreshing;
+  const shownProviderCount = state.directoryTotalCount ?? visibleDirectoryRows.length;
   const providerCountLabel = state.directorySummary
-    ? t('runtimeProvider.providers.countFallback')
+    ? catalogHydrating
+      ? t('runtimeProvider.providers.countSummaryLoading', { count: shownProviderCount })
+      : t('runtimeProvider.providers.countSummary', { count: shownProviderCount })
     : state.directoryTotalCount !== null
       ? formatOpenCodeProviderCount(state.directoryTotalCount)
       : state.directorySupported
@@ -2297,9 +2301,14 @@ export const RuntimeProviderManagementPanelView = ({
               className="rounded-b-none data-[state=active]:bg-[var(--color-surface)]"
             >
               {t('runtimeProvider.tabs.providers')}
+              {catalogHydrating ? (
+                <Loader2 className="ml-2 size-3 animate-spin" aria-hidden="true" />
+              ) : null}
               {state.directoryTotalCount !== null ? (
                 <span className="ml-2 rounded-full bg-white/10 px-1.5 py-0 text-[10px]">
-                  {state.directoryTotalCount}
+                  {state.directorySummary
+                    ? `${state.directoryTotalCount}+`
+                    : state.directoryTotalCount}
                 </span>
               ) : null}
             </TabsTrigger>
@@ -2433,6 +2442,7 @@ export const RuntimeProviderManagementPanelView = ({
 
           <div
             data-testid="runtime-provider-catalog-list"
+            aria-busy={catalogHydrating}
             className="max-h-[min(52vh,640px)] overflow-y-auto border-y"
             style={{ borderColor: 'var(--color-border-subtle)' }}
           >
@@ -2457,6 +2467,17 @@ export const RuntimeProviderManagementPanelView = ({
                     actions={actions}
                   />
                 ))}
+                {catalogHydrating ? (
+                  <div
+                    data-testid="runtime-provider-catalog-hydrating"
+                    className="flex items-center gap-2 px-3 py-2.5 text-xs"
+                    style={{ color: 'var(--color-text-muted)' }}
+                    aria-live="polite"
+                  >
+                    <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden="true" />
+                    <span>{t('runtimeProvider.providers.loadingFullCatalog')}</span>
+                  </div>
+                ) : null}
                 {state.directoryNextCursor ? (
                   <div className="flex justify-center py-1">
                     <Button

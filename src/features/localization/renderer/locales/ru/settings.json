@@ -110,6 +110,8 @@
     "providers": {
       "catalog": "OpenCode provider catalog",
       "countFallback": "OpenCode providers",
+      "countSummary": "Показано {{count}}",
+      "countSummaryLoading": "Показано {{count}} · загружается полный каталог",
       "description": "{{count}}. Connected и recommended providers показаны первыми.",
       "description_few": "{{count}}. Connected и recommended providers показаны первыми.",
       "description_many": "{{count}}. Connected и recommended providers показаны первыми.",
@@ -117,6 +119,7 @@
       "description_other": "{{count}}. Connected и recommended providers показаны первыми.",
       "loadMore": "Загрузить ещё providers",
       "loading": "Загрузка OpenCode providers",
+      "loadingFullCatalog": "Загружаются остальные провайдеры…",
       "noMatches": "Providers не найдены по поиску.",
       "noneReported": "Managed runtime не сообщил OpenCode providers.",
       "recommended": "Recommended",

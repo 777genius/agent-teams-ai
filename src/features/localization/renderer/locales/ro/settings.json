@@ -110,9 +110,12 @@
     "providers": {
       "catalog": "Catalog de furnizori OpenCode",
       "countFallback": "Furnizori OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
       "loadMore": "Încarcă mai mulți furnizori",
       "loading": "Se încarcă furnizorii OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Niciun furnizor nu corespunde acelei căutări.",
       "noneReported": "Niciun furnizor OpenCode raportat de runtime-ul gestionat.",
       "recommended": "Recomandat",
