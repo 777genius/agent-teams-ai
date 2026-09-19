@@ -3142,7 +3142,7 @@ describe('TeamDataService', () => {
     await service.requestReview('my-team', 'task-1');
 
     expect(requestReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       leadSessionId: 'lead-1',
     });
   });
@@ -3797,17 +3797,17 @@ describe('TeamDataService', () => {
     });
 
     expect(requestReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       leadSessionId: 'lead-2',
     });
     expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
     expect(requestChangesMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });

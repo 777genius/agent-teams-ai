@@ -32,15 +32,9 @@ import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /**
- * A single visual row in the timeline. The render phase maps 1:1 from this
- * list into JSX, which is the shape a windowing library (e.g.
- * `@tanstack/react-virtual`) expects. Grouping happens earlier, in
- * `groupTimelineItems`; this layer flattens groups/separators/dividers into
- * atomic rows so each one can be measured and rendered independently.
- *
- * The `itemIndex` fields point back into `timelineItems` so per-item state
- * (collapse mode, zebra shading, "is new" flag, session anchor) can still be
- * resolved without threading it through every row entry.
+ * Flattened timeline rows. `groupTimelineItems` groups first; this layer
+ * maps 1:1 into JSX for `@tanstack/react-virtual`. `itemIndex` points back
+ * into `timelineItems` for collapse, zebra, and session-anchor state.
  */
 type TimelineRow =
   | { kind: 'session-separator'; key: string }
