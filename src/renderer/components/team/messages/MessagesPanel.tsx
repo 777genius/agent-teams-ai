@@ -351,9 +351,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
-  // Bottom-sheet scroller; react-modal-sheet merges this with its internal ref.
   const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
-
   // Resolve the active scroll owner for the current layout. This is the
   // ref that ActivityTimeline's IntersectionObserver will use as its root,
   // so visibility is measured against the real scroll container rather
@@ -1462,35 +1460,37 @@ export const MessagesPanel = memo(function MessagesPanel({
           </Sheet.Header>
           {!isBottomSheetCollapsed && (
             <Sheet.Content
-              className="min-h-0 bg-[var(--color-surface-sidebar)]"
-              scrollClassName="flex min-h-full flex-col"
-              scrollRef={bottomSheetScrollRef}
-              disableDrag={(state) => state.scrollPosition !== 'top'}
+              className="flex min-h-0 flex-1 overflow-hidden bg-[var(--color-surface-sidebar)]"
+              scrollClassName="flex h-full min-h-0 flex-col overflow-hidden"
+              disableDrag
+              disableScroll
             >
               <div
-                ref={bottomSheetStickyTopRef}
-                className="sticky top-0 z-[1] shrink-0 border-b border-[var(--color-border)] backdrop-blur"
-                style={{
-                  backgroundColor: 'var(--color-surface-sidebar)',
-                }}
+                ref={bottomSheetScrollRef}
+                className="flex h-full min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain"
               >
-                {messagesSearchBarVisible && renderSurface === 'thread' && (
-                  <div className="border-b border-[var(--color-border)] px-3 py-2">
-                    {renderSearchAndFilterControls()}
-                  </div>
+                <div
+                  ref={bottomSheetStickyTopRef}
+                  className="sticky top-0 z-[1] shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] backdrop-blur"
+                >
+                  {messagesSearchBarVisible && renderSurface === 'thread' && (
+                    <div className="border-b border-[var(--color-border)] px-3 py-2">
+                      {renderSearchAndFilterControls()}
+                    </div>
+                  )}
+                  {renderSurface === 'thread' ? (
+                    <div className="p-3">{renderCompactComposerSection()}</div>
+                  ) : null}
+                </div>
+                {renderSurface === 'list' ? (
+                  <ChatList items={chatListItems} teamName={teamName} onOpen={openChat} />
+                ) : (
+                  <>
+                    <div className="shrink-0 px-3 pt-2">{renderInlineStatusSection()}</div>
+                    <div className="mr-8 flex-1 px-3 pb-4 pt-2">{renderTimelineSection()}</div>
+                  </>
                 )}
-                {renderSurface === 'thread' ? (
-                  <div className="p-3">{renderCompactComposerSection()}</div>
-                ) : null}
               </div>
-              {renderSurface === 'list' ? (
-                <ChatList items={chatListItems} teamName={teamName} onOpen={openChat} />
-              ) : (
-                <>
-                  <div className="shrink-0 px-3 pt-2">{renderInlineStatusSection()}</div>
-                  <div className="flex-1 px-3 pb-4 pt-2">{renderTimelineSection()}</div>
-                </>
-              )}
             </Sheet.Content>
           )}
         </Sheet.Container>
