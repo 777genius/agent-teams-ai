@@ -28,7 +28,7 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.15.0 (2026-09-18)
+## Draft: v2.15.0 (2026-09-19)
 
 Target branch: `main`.
 
@@ -40,24 +40,24 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.15.0 -->
-Recover stalled teammate work from the team page, chat 1:1 in Messages, keep local OpenCode models visible, and block local teammates that cannot call tools.
+Recover stalled teammate work from the team page, chat 1:1 in Messages, use extra local catalog models, and keep Cursor CLI detection honest.
 
 ### What's New
 
 - Continue stalled agent work from the team page instead of leaving it hanging.
 - Chat with teammates in WhatsApp-style Messages, including 1:1 threads.
+- Use extra local catalog models from Provider Settings and when launching a team.
 - Test local Ollama models from Provider Settings without picking a project.
 - See full model names in teammate tooltips.
-- Pin a project folder in the sidebar from its context menu.
 
 ### Fixes
 
 - Keep Ollama, LM Studio, llama.cpp, and experimental local models visible after refresh and mixed relaunch.
 - Show why SuperGrok or other OpenCode models failed to load, and keep Test results after search.
+- Stop Provider Settings from saying Cursor CLI is missing when cursor-agent is installed.
 - Block local OpenCode teammates that cannot actually call tools.
 - Stop leftover remaining work from resuming after you stop a mixed Claude, Codex, or OpenCode team.
 - Start without restoring backups for healthy teams, and stop recovered comments from replaying as toasts.
-- Keep team trash, messages, and pane selection from mixing when you switch teams.
 
 ### Downloads
 

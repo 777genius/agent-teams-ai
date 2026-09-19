@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CURSOR_AGENT_COMPANION_DEFINITION } from './cli-companion/definitions/CursorAgentCompanionDefinition';
-import { selectRuntimeProviderCompanionBinary } from './cli-companion/RuntimeProviderCliCompanionService';
+import { selectRuntimeProviderCompanionBinary } from './cli-companion/selectRuntimeProviderCompanionBinary';
 import { CursorAgentCompanionService } from './CursorAgentCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/usr/bin/env bash

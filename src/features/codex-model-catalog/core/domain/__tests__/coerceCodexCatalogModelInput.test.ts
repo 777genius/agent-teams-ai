@@ -113,9 +113,9 @@ describe('parseCodexModelCatalogJsonPathFromToml', () => {
   it('reads the first model_catalog_json assignment', () => {
     expect(
       parseCodexModelCatalogJsonPathFromToml(
-        '# comment\nmodel = "auto"\nmodel_catalog_json = "/tmp/mixin-models.json"\n'
+        '# comment\nmodel = "auto"\nmodel_catalog_json = "/Users/example/.codex/mixin-models.json"\n'
       )
-    ).toBe('/tmp/mixin-models.json');
+    ).toBe('/Users/example/.codex/mixin-models.json');
   });
 });
 

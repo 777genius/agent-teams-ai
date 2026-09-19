@@ -92,8 +92,10 @@ export function extractCodexCatalogModelRecords(payload: unknown): unknown[] {
   return [];
 }
 
+const MODEL_CATALOG_JSON_ASSIGNMENT = /^\s*model_catalog_json\s*=\s*(?:"([^"]+)"|'([^']+)')/m;
+
 export function parseCodexModelCatalogJsonPathFromToml(toml: string): string | null {
-  const match = toml.match(/^\s*model_catalog_json\s*=\s*(?:"([^"]+)"|'([^']+)')/m);
+  const match = MODEL_CATALOG_JSON_ASSIGNMENT.exec(toml);
   const configured = match?.[1] ?? match?.[2] ?? null;
   return configured?.trim() || null;
 }
