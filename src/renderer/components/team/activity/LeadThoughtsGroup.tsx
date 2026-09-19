@@ -22,7 +22,7 @@ import {
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 import {
   areStringArraysEqual,
   areStringMapsEqual,
@@ -592,7 +592,7 @@ const LeadThoughtsGroupRowComponent = ({
   // thoughts is newest-first; first=newest, last=oldest
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
-  const leadName = newest.from;
+  const leadName = displayMemberName('team-lead');
 
   // Aggregate tool usage across all thoughts in this group
   const totalToolSummary = useMemo(() => {

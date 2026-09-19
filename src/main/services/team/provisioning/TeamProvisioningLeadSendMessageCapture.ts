@@ -6,6 +6,7 @@ import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
 import {
   isCrossTeamToolRecipientName,
   parseCrossTeamRecipient,
+  resolveCrossTeamLeadName,
   resolveSingleActiveCrossTeamReplyHint,
 } from './TeamProvisioningCrossTeamRelayHelpers';
 import {
@@ -127,8 +128,7 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
     if (msgContent.trim().length === 0) continue;
 
     const summary = typeof inp.summary === 'string' ? inp.summary : '';
-    const leadName =
-      run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
+    const leadName = resolveCrossTeamLeadName(run.request.members);
 
     const cleanContent = stripAgentBlocks(msgContent);
     if (cleanContent.trim().length === 0) continue;

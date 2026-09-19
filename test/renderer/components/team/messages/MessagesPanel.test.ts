@@ -1104,6 +1104,26 @@ describe('MessagesPanel idle summary invariants', () => {
     expect(reconcilePendingRepliesByMember({ lead: pendingSentAtMs }, messages)).toEqual({});
   });
 
+  it('does not treat a teammate-stamped lead thought as a reply from that teammate', () => {
+    const pendingSentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
+    const thought = makeMessage({
+      messageId: 'lead-thought-from-max',
+      from: 'max',
+      to: undefined,
+      source: 'lead_process',
+      timestamp: '2026-04-08T12:00:05.000Z',
+      text: 'Lead is thinking.',
+    });
+
+    expect(
+      reconcilePendingRepliesByMember({ max: pendingSentAtMs }, [thought])
+    ).toEqual({ max: pendingSentAtMs });
+    expect(reconcilePendingRepliesByMember({ lead: pendingSentAtMs }, [thought])).toEqual({});
+    expect(
+      reconcilePendingRepliesByMember({ 'team-lead': pendingSentAtMs }, [thought])
+    ).toEqual({});
+  });
+
   it('keeps pending replies when the lead thought is older than the user message', () => {
     const pendingSentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
     const pending = { lead: pendingSentAtMs };

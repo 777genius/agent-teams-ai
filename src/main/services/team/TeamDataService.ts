@@ -8,7 +8,12 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { isCanonicalSettingsLeadMember, isLeadMember } from '@shared/utils/leadDetection';
+import {
+  isCanonicalSettingsLeadMember,
+  isConversationLeadAlias,
+  isLeadMember,
+  resolveRuntimeLeadName,
+} from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
@@ -345,35 +350,23 @@ function createUiSnapshotProjectResolver(
   });
 }
 
-function isExplicitLeadRole(role: string | undefined): boolean {
-  const normalized = role?.trim().toLowerCase();
-  return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
+function isVisibleRuntimeLeadMember(member: {
+  name?: unknown;
+  agentType?: unknown;
+  role?: unknown;
+}): boolean {
+  if (isLeadMember(member)) {
+    return true;
+  }
+  return isConversationLeadAlias(typeof member.name === 'string' ? member.name : undefined);
 }
 
 function hasVisibleLeadMember(members: readonly TeamMemberSnapshot[]): boolean {
-  return members.some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name.trim().toLowerCase();
-    if (normalizedName === 'lead') {
-      return true;
-    }
-    return isExplicitLeadRole(member.role);
-  });
+  return members.some(isVisibleRuntimeLeadMember);
 }
 
 function hasExplicitLeadInConfig(config: TeamConfig): boolean {
-  return (config.members ?? []).some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name?.trim().toLowerCase() ?? '';
-    if (normalizedName === 'lead') {
-      return true;
-    }
-    return isExplicitLeadRole(member.role);
-  });
+  return (config.members ?? []).some(isVisibleRuntimeLeadMember);
 }
 
 function toProvisioningMemberShape(
@@ -2612,13 +2605,7 @@ export class TeamDataService {
   }
 
   private resolveLeadNameFromConfig(config: TeamConfig | null): string {
-    if (!config) return 'team-lead';
-    const members = config.members ?? [];
-    const lead =
-      members.find((member) => isLeadMember(member)) ??
-      members.find((member) => member.name?.trim().toLowerCase() === 'lead') ??
-      members.find((member) => isExplicitLeadRole(member.role));
-    return lead?.name ?? config.members?.[0]?.name ?? 'team-lead';
+    return resolveRuntimeLeadName(config?.members);
   }
 
   private async resolveLeadName(teamName: string): Promise<string> {
@@ -3917,8 +3904,7 @@ export class TeamDataService {
       return [];
     }
 
-    const leadName =
-      transcriptContext.config.members?.find((m) => isLeadMember(m))?.name ?? 'team-lead';
+    const leadName = resolveRuntimeLeadName(transcriptContext.config.members);
     const texts: InboxMessage[] = [];
     for (const sessionId of sessionIds) {
       if (texts.length >= MAX_LEAD_TEXTS) break;

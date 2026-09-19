@@ -683,7 +683,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       case 'lead-thought-group': {
         const { group, itemIndex, isPinned, key } = row;
         const firstThought = group.thoughts[0];
-        const info = memberInfo.get(firstThought.from);
+        const info =
+          memberInfo.get('team-lead') ??
+          memberInfo.get('lead') ??
+          memberInfo.get(firstThought.from);
         const collapseProps = getItemCollapseProps(key, itemIndex);
         const pinnedCanBeLive = isPinned
           ? currentLeadSessionId

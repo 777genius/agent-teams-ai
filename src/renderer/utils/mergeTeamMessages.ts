@@ -1,3 +1,5 @@
+import { LEAD_THOUGHT_SPEAKER_NAME } from '@shared/utils/leadDetection';
+
 import { toMessageKey } from './teamMessageKey';
 
 import type { InboxMessage } from '@shared/types';
@@ -24,9 +26,6 @@ function isLeadThoughtFragmentCandidate(message: InboxMessage): boolean {
 
 function canJoinLeadThoughtFragments(older: InboxMessage, newer: InboxMessage): boolean {
   if (!isLeadThoughtFragmentCandidate(older) || !isLeadThoughtFragmentCandidate(newer)) {
-    return false;
-  }
-  if (older.from !== newer.from) {
     return false;
   }
   if ((older.leadSessionId ?? null) !== (newer.leadSessionId ?? null)) {
@@ -76,6 +75,7 @@ function coalesceLeadThoughtRun(runNewestFirst: InboxMessage[]): InboxMessage[] 
   return [
     {
       ...newest,
+      from: LEAD_THOUGHT_SPEAKER_NAME,
       text: combinedText,
       summary: combinedText.length > 60 ? `${combinedText.slice(0, 57)}...` : combinedText,
       messageId: `lead-thought-coalesced-${toMessageKey(oldest)}-${runNewestFirst.length}`,

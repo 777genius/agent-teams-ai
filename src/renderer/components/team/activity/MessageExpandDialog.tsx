@@ -10,7 +10,12 @@ import {
 } from '@renderer/components/ui/dialog';
 import { CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  displayMemberName,
+} from '@renderer/utils/memberHelpers';
+import { LEAD_THOUGHT_SPEAKER_NAME } from '@shared/utils/leadDetection';
 
 import { MemberBadge } from '../MemberBadge';
 
@@ -54,6 +59,7 @@ const DialogThoughtsContent = ({
   const { thoughts } = group;
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
+  const leadName = displayMemberName(LEAD_THOUGHT_SPEAKER_NAME);
   const colors = getTeamColorSet(memberColor ?? '');
   const avatarMap = useMemo(() => buildMemberAvatarMap(members ?? []), [members]);
   const chronological = useMemo(() => [...thoughts].reverse(), [thoughts]);
@@ -63,12 +69,15 @@ const DialogThoughtsContent = ({
       {/* Header */}
       <div className="flex items-center gap-2 pb-3">
         <img
-          src={avatarMap.get(newest.from) ?? agentAvatarUrl(newest.from, 32)}
+          src={
+            avatarMap.get(LEAD_THOUGHT_SPEAKER_NAME) ??
+            agentAvatarUrl(LEAD_THOUGHT_SPEAKER_NAME, 32)
+          }
           alt=""
           className="size-6 rounded-full bg-[var(--color-surface-raised)]"
           loading="lazy"
         />
-        <MemberBadge name={newest.from} color={memberColor} hideAvatar variant="text" />
+        <MemberBadge name={leadName} color={memberColor} hideAvatar variant="text" />
         <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
           {t('activity.thoughts.count', { count: thoughts.length })}
         </span>
@@ -162,14 +171,18 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
 
   const thoughtMemberColor =
     displayItem?.type === 'lead-thoughts'
-      ? ctx.memberInfo.get(displayItem.group.thoughts[0].from)?.color
+      ? (ctx.memberInfo.get('team-lead')?.color ??
+        ctx.memberInfo.get('lead')?.color ??
+        ctx.memberInfo.get(displayItem.group.thoughts[0].from)?.color)
       : undefined;
 
   const headerTitle =
     displayItem?.type === 'message'
       ? displayItem.message.from
       : displayItem?.type === 'lead-thoughts'
-        ? t('activity.thoughts.titleForMember', { name: displayItem.group.thoughts[0].from })
+        ? t('activity.thoughts.titleForMember', {
+            name: displayMemberName(LEAD_THOUGHT_SPEAKER_NAME),
+          })
         : '';
 
   return (

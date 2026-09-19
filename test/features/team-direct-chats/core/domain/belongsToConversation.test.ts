@@ -66,6 +66,24 @@ describe('belongsToConversation', () => {
     );
   });
 
+  it('does not put mis-stamped lead thoughts on the teammate named in from', () => {
+    const thought = msg({
+      from: 'max',
+      text: 'LEAD_THOUGHT_PROOF',
+      source: 'lead_process',
+    });
+    expect(belongsToConversation(thought, { kind: 'direct', participant: 'max' }, leadNames)).toBe(
+      false
+    );
+    expect(belongsToConversation(thought, { kind: 'direct', participant: 'oscar' }, leadNames)).toBe(
+      true
+    );
+    expect(belongsToConversation(thought, { kind: 'direct', participant: 'lead' }, ['team-lead'])).toBe(
+      true
+    );
+    expect(belongsToConversation(thought, { kind: 'direct', participant: 'max' }, [])).toBe(false);
+  });
+
   it('includes user→lead in the lead chat', () => {
     const outgoing = msg({ from: 'user', to: 'oscar', text: 'lead hi', source: 'user_sent' });
     const toAlias = msg({ from: 'user', to: 'lead', text: 'lead hi', source: 'user_sent' });

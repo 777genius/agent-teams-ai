@@ -77,7 +77,7 @@ describe('teammate permission responses', () => {
       'alpha',
       'worker',
       expect.objectContaining({
-        from: 'Lead',
+        from: 'team-lead',
         to: 'worker',
         timestamp: '2026-01-01T00:00:00.000Z',
         read: false,
@@ -185,7 +185,9 @@ describe('teammate permission responses', () => {
 
   it('sends success without writing settings when project cwd is missing', async () => {
     const ports = createPorts({
-      readConfigForStrictDecision: vi.fn().mockResolvedValue({ members: [] } as unknown as TeamConfig),
+      readConfigForStrictDecision: vi
+        .fn()
+        .mockResolvedValue({ members: [] } as unknown as TeamConfig),
     });
 
     await respondToTeammatePermission(

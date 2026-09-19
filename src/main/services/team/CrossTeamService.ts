@@ -1,6 +1,6 @@
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember, resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
@@ -45,8 +45,7 @@ function resolveCrossTeamFromMember(config: TeamConfig, rawFromMember: string): 
     return direct.name.trim();
   }
 
-  const lead = members.find((member) => isLeadMember(member)) ?? members[0];
-  const leadName = lead?.name?.trim();
+  const leadName = resolveRuntimeLeadName(members);
   const leadKey = normalizeMemberKey(leadName);
   if (leadName && (rawKey === 'lead' || rawKey === 'team-lead' || rawKey === leadKey)) {
     return leadName;
@@ -376,12 +375,17 @@ export class CrossTeamService {
           team.leadName || team.leadColor
             ? { name: team.leadName, color: team.leadColor }
             : team.members?.find((member) => isLeadMember(member));
+        const leadName =
+          summaryLead?.name?.trim() ||
+          (team.members && team.members.length > 0
+            ? resolveRuntimeLeadName(team.members)
+            : undefined);
         return {
           teamName: team.teamName,
           displayName: team.displayName || team.teamName,
           description: team.description,
           color: team.color,
-          ...(summaryLead?.name ? { leadName: summaryLead.name } : {}),
+          ...(leadName ? { leadName } : {}),
           ...(summaryLead?.color ? { leadColor: summaryLead.color } : {}),
           isOnline: this.messaging?.isTeamAlive(team.teamName) ?? false,
         };

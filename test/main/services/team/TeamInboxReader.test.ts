@@ -135,6 +135,77 @@ describe('TeamInboxReader', () => {
     expect(merged[1].text).toBe('older');
   });
 
+  it('does not stamp lead thoughts in user.json as DMs to the user', async () => {
+    hoisted.dirs.set(inboxDir, ['user.json', 'max.json']);
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/user.json',
+      JSON.stringify([
+        {
+          from: 'max',
+          text: 'LEAD_THOUGHT_PROOF: delegating the next sandbox slice.',
+          timestamp: '2026-09-19T10:00:00.000Z',
+          read: true,
+          messageId: 'thought-1',
+          source: 'lead_process',
+          leadSessionId: 'lead-session-1',
+        },
+        {
+          from: 'max',
+          text: 'hey user',
+          timestamp: '2026-09-19T09:00:00.000Z',
+          read: false,
+          messageId: 'dm-1',
+        },
+      ])
+    );
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/max.json',
+      JSON.stringify([
+        {
+          from: 'user',
+          text: 'hello max',
+          timestamp: '2026-09-19T08:00:00.000Z',
+          read: true,
+          messageId: 'out-1',
+        },
+      ])
+    );
+
+    const merged = await reader.getMessages('my-team');
+    const thought = merged.find((message) => message.messageId === 'thought-1');
+    const dm = merged.find((message) => message.messageId === 'dm-1');
+    const outgoing = merged.find((message) => message.messageId === 'out-1');
+
+    expect(thought?.to).toBeUndefined();
+    expect(thought?.source).toBe('lead_process');
+    expect(dm?.to).toBe('user');
+    expect(outgoing?.to).toBe('max');
+  });
+
+  it('getMessagesWindow also keeps unaddressed lead thoughts without an implied recipient', async () => {
+    hoisted.dirs.set(inboxDir, ['user.json']);
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/user.json',
+      JSON.stringify([
+        {
+          from: 'max',
+          text: 'LEAD_THOUGHT_PROOF: window path.',
+          timestamp: '2026-09-19T10:00:00.000Z',
+          read: true,
+          messageId: 'thought-window-1',
+          source: 'lead_session',
+          leadSessionId: 'lead-session-1',
+        },
+      ])
+    );
+
+    const window = await reader.getMessagesWindow('my-team', { limit: 10 });
+    const thought = window.messages.find((message) => message.messageId === 'thought-window-1');
+
+    expect(thought?.to).toBeUndefined();
+    expect(thought?.source).toBe('lead_session');
+  });
+
   it('getMessagesWindow keeps a bounded newest window while revision tracks older source changes', async () => {
     hoisted.dirs.set(inboxDir, ['alice.json', 'bob.json']);
     const writeAlice = (olderText: string) => {

@@ -1,3 +1,5 @@
+import { resolveCrossTeamLeadName } from './TeamProvisioningCrossTeamRelayHelpers';
+
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
 import type { TeamCreateRequest, TeamTask } from '@shared/types';
 
@@ -82,7 +84,7 @@ function buildUserPayload(message: string): string {
 }
 
 function getLaunchLeadName(members: TeamCreateRequest['members']): string {
-  return members.find((m) => m.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
+  return resolveCrossTeamLeadName(members);
 }
 
 export async function injectPostCompactReminder<

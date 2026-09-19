@@ -441,6 +441,21 @@ describe('buildMemberBootstrapPrompt', () => {
     // cannot yet reflect any work of its own.
     expect(prompt).not.toContain('REPLAY GUARD');
   });
+
+  it('does not treat a reserved-role teammate as the OpenCode team lead', () => {
+    const input = launchInput();
+    const max = {
+      ...input.expectedMembers[0],
+      name: 'max',
+      role: 'Team Lead',
+    };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, max));
+
+    expect(briefing).toContain('You are max, a Team Lead on team "team-launch".');
+    expect(briefing).not.toContain('the team lead for team');
+    expect(briefing).toContain('Always set from="max"');
+  });
 });
 
 function createHarness() {

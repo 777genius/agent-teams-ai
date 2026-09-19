@@ -121,7 +121,7 @@ describe('TeamDataService stall-monitor helpers', () => {
     expect(sendMessageSpy).toHaveBeenCalledWith(
       'demo',
       expect.objectContaining({
-        member: 'lead',
+        member: 'team-lead',
         from: 'system',
         summary: 'Potential stalled tasks detected',
         text: 'Task #1 looks stalled.',

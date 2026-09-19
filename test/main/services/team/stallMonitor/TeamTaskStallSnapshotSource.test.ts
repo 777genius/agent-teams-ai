@@ -24,6 +24,45 @@ describe('TeamTaskStallSnapshotSource', () => {
     await expect(source.getSnapshot('demo')).resolves.toBeNull();
   });
 
+  it('does not treat a reserved-role teammate as the stall-monitor lead', async () => {
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: {
+        getContext: vi.fn(async () => ({
+          projectDir: '/tmp/project',
+          projectId: 'project-id',
+          config: {
+            members: [
+              { name: 'max', role: 'Team Lead', providerId: 'codex' },
+              { name: 'alice', role: 'Frontend lead', providerId: 'opencode' },
+            ],
+          },
+          sessionIds: [],
+          transcriptFiles: [],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => []),
+        getDeletedTasks: vi.fn(async () => []),
+      } as never,
+      kanbanManager: { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
+      transcriptReader: { readFiles: vi.fn(async () => []) } as never,
+      activityBatchIndexer: { buildIndex: vi.fn(() => new Map()) } as never,
+      freshnessReader: { readSignals: vi.fn(async () => new Map()) } as never,
+      exactRowReader: { parseFiles: vi.fn(async () => new Map()) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      openCodeEvidenceSource: {
+        readEvidence: vi.fn(async () => ({
+          recordsByTaskId: new Map(),
+          exactRowsByFilePath: new Map(),
+        })),
+      } as never,
+    });
+
+    const snapshot = await source.getSnapshot('demo');
+
+    expect(snapshot?.leadName).toBe('team-lead');
+  });
+
   it('builds one batched snapshot and narrows exact/freshness reads to work and started-review candidates', async () => {
     const activeTasks = [
       { id: 'task-a', subject: 'A', status: 'in_progress' },

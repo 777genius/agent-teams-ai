@@ -103,6 +103,49 @@ describe('mergeTeamMessages', () => {
     expect(merged[0].messageId).toMatch(/^lead-thought-coalesced-/);
   });
 
+  it('coalesces lead thought fragments even when live overlay stamps a teammate from', () => {
+    const messages = [
+      makeMessage({
+        from: 'max',
+        text: 'ложу',
+        timestamp: '2026-01-01T00:00:00.060Z',
+        messageId: 'chunk-4',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'max',
+        text: ' раз',
+        timestamp: '2026-01-01T00:00:00.040Z',
+        messageId: 'chunk-3',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: ':',
+        timestamp: '2026-01-01T00:00:00.030Z',
+        messageId: 'chunk-2',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: 'Принял',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        messageId: 'chunk-1',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+    ];
+
+    const merged = mergeTeamMessages(messages);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].from).toBe('team-lead');
+    expect(merged[0].text).toBe('Принял: разложу');
+  });
+
   it('does not coalesce separate short lead thoughts across a large gap', () => {
     const messages = [
       makeMessage({

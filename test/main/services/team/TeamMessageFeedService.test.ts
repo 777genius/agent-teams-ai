@@ -145,6 +145,70 @@ describe('TeamMessageFeedService', () => {
     expect(feed.messages[0].text).toContain('member_briefing');
   });
 
+  it('does not treat a reserved-role teammate as the bootstrap lead speaker', async () => {
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => ({
+        name: 'mixed-rel',
+        members: [
+          { name: 'max', role: 'Team Lead' },
+          { name: 'ora', role: 'Developer' },
+        ],
+      })),
+      getInboxMessages: vi.fn(async () => []),
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const feed = await service.getFeed('mixed-rel');
+
+    expect(feed.messages.map((message) => message.from)).toEqual(['team-lead', 'team-lead']);
+    expect(feed.messages.map((message) => message.to).sort()).toEqual(['max', 'ora']);
+  });
+
+  it('dedupes inbox lead_process thoughts against durable lead_session thoughts when from differs', async () => {
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => ({
+        name: 'mixed-rel',
+        members: [
+          { name: 'max', role: 'Team Lead' },
+          { name: 'ora', role: 'Developer' },
+        ],
+      })),
+      getInboxMessages: vi.fn(async () => [
+        makeMessage({
+          from: 'max',
+          to: undefined,
+          text: 'Delegating the next slice.',
+          source: 'lead_process',
+          messageId: 'live-thought',
+          leadSessionId: 'lead-session-1',
+          timestamp: '2026-09-19T10:00:00.000Z',
+        }),
+      ]),
+      getLeadSessionMessages: vi.fn(async () => [
+        makeMessage({
+          from: 'team-lead',
+          to: undefined,
+          text: 'Delegating the next slice.',
+          source: 'lead_session',
+          messageId: 'durable-thought',
+          leadSessionId: 'lead-session-1',
+          timestamp: '2026-09-19T10:00:00.000Z',
+        }),
+      ]),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const feed = await service.getFeed('mixed-rel');
+    const thoughts = feed.messages.filter(
+      (message) => message.source === 'lead_session' || message.source === 'lead_process'
+    );
+
+    expect(thoughts).toHaveLength(1);
+    expect(thoughts[0]?.from).toBe('team-lead');
+    expect(thoughts[0]?.messageId).toBe('durable-thought');
+  });
+
   it('does not stamp synthetic bootstrap prompts with Unix epoch when config has no join time', async () => {
     const service = new TeamMessageFeedService({
       getConfig: vi.fn(async () => ({

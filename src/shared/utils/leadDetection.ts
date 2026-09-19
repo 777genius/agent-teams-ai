@@ -85,6 +85,36 @@ export function isLeadMember(member: {
   return name === 'team-lead';
 }
 
+/** Inbox speaker identity for lead process/session thoughts. */
+export const LEAD_THOUGHT_SPEAKER_NAME = 'team-lead';
+
+/**
+ * True for lead process/session thoughts that are not addressed to a recipient.
+ * `from` is not part of this check: live overlays may stamp a teammate name.
+ */
+export function isLeadThoughtSourceMessage(message: { source?: unknown; to?: unknown }): boolean {
+  if (typeof message.to === 'string' && message.to.trim().length > 0) {
+    return false;
+  }
+  return message.source === 'lead_session' || message.source === 'lead_process';
+}
+
+/**
+ * Runtime speaker / inbox identity for the orchestrator process.
+ * Reserved teammate roles such as "Team Lead" must not win this lookup.
+ */
+export function resolveRuntimeLeadName(
+  members: readonly { name?: unknown; role?: unknown; agentType?: unknown }[] | null | undefined
+): string {
+  const list = Array.isArray(members) ? members : [];
+  for (const member of list) {
+    if (!isLeadMember(member)) continue;
+    const name = typeof member.name === 'string' ? member.name.trim() : '';
+    if (name) return name;
+  }
+  return 'team-lead';
+}
+
 /** Canonical settings identity also recognizes legacy role-only leads. */
 export function isCanonicalSettingsLeadMember(member: {
   name?: unknown;
