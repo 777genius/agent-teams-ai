@@ -793,6 +793,82 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps summary providers when the full catalog comes back empty', async () => {
+    const summaryEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'xai',
+      displayName: 'xAI',
+    };
+    const loadProviderDirectory = vi.fn((input: { summary?: boolean }) => {
+      if (input.summary === true) {
+        return Promise.resolve({
+          schemaVersion: 1 as const,
+          runtimeId: 'opencode' as const,
+          directory: {
+            runtimeId: 'opencode' as const,
+            totalCount: 1,
+            returnedCount: 1,
+            query: null,
+            filter: 'all' as const,
+            limit: 50,
+            cursor: null,
+            nextCursor: null,
+            entries: [summaryEntry],
+            diagnostics: [],
+            fetchedAt: '2026-07-10T00:00:00.000Z',
+          },
+        });
+      }
+      return Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        directory: {
+          runtimeId: 'opencode' as const,
+          totalCount: 0,
+          returnedCount: 0,
+          query: null,
+          filter: 'all' as const,
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [],
+          diagnostics: [],
+          fetchedAt: '2026-07-10T00:00:02.000Z',
+        },
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadProviderDirectory },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    await act(async () => {
+      await actions?.hydrateDirectory();
+    });
+
+    expect(state?.directorySummary).toBe(true);
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai']);
+    expect(state?.warningMessage).toContain('full OpenCode catalog came back empty');
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).not.toBe(true);
+    await act(async () => root.unmount());
+  });
+
   it('reopens a cached full catalog without flashing the 16-provider summary', async () => {
     const summaryEntry = {
       ...createOpenAiLocalDirectoryEntry(),

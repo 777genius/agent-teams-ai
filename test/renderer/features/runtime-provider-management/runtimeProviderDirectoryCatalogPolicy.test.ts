@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   getAuthoritativeCachedFullDirectory,
   isDefaultFullCatalogPage,
+  publishDefaultFullCatalogPage,
   shouldKeepVisibleDirectoryRows,
+  shouldRetainVisibleDirectoryEntries,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy';
 import {
   publishRuntimeProviderDirectoryCache,
@@ -64,6 +66,43 @@ describe('runtimeProviderDirectoryCatalogPolicy', () => {
         cursor: null,
       })
     ).toBe(false);
+  });
+
+  it('does not replace a visible catalog with an empty page', () => {
+    expect(
+      shouldRetainVisibleDirectoryEntries({
+        append: false,
+        visibleEntryCount: 16,
+        nextEntryCount: 0,
+      })
+    ).toBe(true);
+    expect(
+      shouldRetainVisibleDirectoryEntries({
+        append: false,
+        visibleEntryCount: 0,
+        nextEntryCount: 0,
+      })
+    ).toBe(false);
+  });
+
+  it('does not publish an empty full catalog as authoritative', () => {
+    publishDefaultFullCatalogPage({
+      summary: false,
+      append: false,
+      query: '',
+      filter: 'all',
+      cursor: null,
+      projectPath: null,
+      entries: [],
+      fetchedAt: '2026-07-20T10:00:02.000Z',
+      totalCount: 0,
+      nextCursor: null,
+    });
+    expect(getAuthoritativeCachedFullDirectory({
+      reuseCachedFullDirectory: true,
+      directoryQuery: '',
+      projectPath: null,
+    })).toBeNull();
   });
 
   it('reuses only an authoritative cached full catalog', () => {

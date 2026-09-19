@@ -15,7 +15,6 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { publishRuntimeProviderDirectoryCache } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -26,9 +25,10 @@ import {
   normalizeGitHubDeviceAuthorizationUrl,
 } from './runtimeProviderConnectionUi';
 import {
+  commitDirectoryPageLoad,
   DEFAULT_DIRECTORY_FILTER,
+  EMPTY_FULL_CATALOG_WARNING,
   getAuthoritativeCachedFullDirectory,
-  isDefaultFullCatalogPage,
   shouldKeepVisibleDirectoryRows,
 } from './runtimeProviderDirectoryCatalogPolicy';
 import {
@@ -538,7 +538,7 @@ export function useRuntimeProviderManagement(
         directorySummary,
         requestedSummary: summary,
         refreshDirectoryData,
-        visibleEntryCount: directoryEntries.length,
+        visibleEntryCount: directoryEntriesRef.current.length,
       });
       const projectContext = getProjectContextSnapshot();
       const requestSeq = directoryRequestSeq.current + 1;
@@ -585,30 +585,28 @@ export function useRuntimeProviderManagement(
           setDirectoryErrorDiagnostics(null);
           return false;
         }
-        setDirectoryLoaded(true);
-        setDirectorySummary(summary);
-        setDirectoryTotalCount(directory.totalCount);
-        setDirectoryNextCursor(directory.nextCursor);
-        const nextEntries = directory.entries.map(presentDirectoryEntry);
-        setDirectoryEntries((current) => (append ? [...current, ...nextEntries] : nextEntries));
-        if (
-          isDefaultFullCatalogPage({
-            summary,
-            append,
-            query,
-            filter,
-            cursor,
-          })
-        ) {
-          publishRuntimeProviderDirectoryCache({
-            projectPath: projectContext.path,
-            entries: nextEntries,
-            fetchedAt: directory.fetchedAt,
-            authoritative: true,
-            totalCount: directory.totalCount,
-            nextCursor: directory.nextCursor,
-          });
+        const commit = commitDirectoryPageLoad({
+          append,
+          summary,
+          query,
+          filter,
+          cursor,
+          projectPath: projectContext.path,
+          visibleEntryCount: directoryEntriesRef.current.length,
+          directory,
+          presentEntry: presentDirectoryEntry,
+        });
+        if (commit.action === 'retain') {
+          setWarningMessage(EMPTY_FULL_CATALOG_WARNING);
+          return true;
         }
+        setDirectoryLoaded(true);
+        setDirectorySummary(commit.summary);
+        setDirectoryTotalCount(commit.totalCount);
+        setDirectoryNextCursor(commit.nextCursor);
+        setDirectoryEntries((current) =>
+          append ? [...current, ...commit.nextEntries] : commit.nextEntries
+        );
         return true;
       } catch (loadError) {
         if (requestIsCurrent()) {
@@ -626,7 +624,6 @@ export function useRuntimeProviderManagement(
       }
     },
     [
-      directoryEntries.length,
       directoryQuery,
       directorySummary,
       directorySupported,
@@ -726,6 +723,7 @@ export function useRuntimeProviderManagement(
       projectPath: currentProjectPath,
     });
     if (cached) {
+      directoryEntriesRef.current = cached.entries;
       setDirectoryEntries(cached.entries);
       setDirectoryLoaded(true);
       setDirectorySummary(false);
