@@ -351,10 +351,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
-  // Bottom-sheet scroller. It is intentionally owned by this panel instead of
-  // react-modal-sheet so the sheet's drag gesture cannot capture message scrolling.
   const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
-
   // Resolve the active scroll owner for the current layout. This is the
   // ref that ActivityTimeline's IntersectionObserver will use as its root,
   // so visibility is measured against the real scroll container rather
@@ -1474,10 +1471,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               >
                 <div
                   ref={bottomSheetStickyTopRef}
-                  className="sticky top-0 z-[1] shrink-0 border-b border-[var(--color-border)] backdrop-blur"
-                  style={{
-                    backgroundColor: 'var(--color-surface-sidebar)',
-                  }}
+                  className="sticky top-0 z-[1] shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] backdrop-blur"
                 >
                   {messagesSearchBarVisible && renderSurface === 'thread' && (
                     <div className="border-b border-[var(--color-border)] px-3 py-2">
