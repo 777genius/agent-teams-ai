@@ -3299,6 +3299,8 @@ export default interface Resources {
       providers: {
         catalog: 'OpenCode provider catalog';
         countFallback: 'OpenCode providers';
+        countSummary: 'Showing {{count}}';
+        countSummaryLoading: 'Showing {{count}} · loading full catalog';
         description: '{{count}}. Connected and recommended providers are shown first.';
         description_few: '{{count}}. Connected and recommended providers are shown first.';
         description_many: '{{count}}. Connected and recommended providers are shown first.';
@@ -3306,6 +3308,7 @@ export default interface Resources {
         description_other: '{{count}}. Connected and recommended providers are shown first.';
         loadMore: 'Load more providers';
         loading: 'Loading OpenCode providers';
+        loadingFullCatalog: 'Loading the rest of the catalog…';
         noMatches: 'No providers match that search.';
         noneReported: 'No OpenCode providers reported by the managed runtime.';
         ownership: {

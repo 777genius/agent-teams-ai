@@ -740,7 +740,7 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai']);
     expect(state?.directoryLoading).toBe(false);
 
-    let hydratePromise: Promise<void> | null = null;
+    let hydratePromise: Promise<boolean> | null = null;
     await act(async () => {
       hydratePromise = actions?.hydrateDirectory() ?? null;
       await Promise.resolve();
