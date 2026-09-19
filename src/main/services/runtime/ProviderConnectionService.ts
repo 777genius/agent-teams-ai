@@ -2,6 +2,10 @@ import crypto from 'node:crypto';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
 import {
+  type CodexModelCatalogDto,
+  mergeConfiguredCodexCatalogExtras,
+} from '@features/codex-model-catalog';
+import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
 } from '@main/utils/anthropicApiKeyVerification';
@@ -32,7 +36,6 @@ import type {
   CodexAccountSnapshotDto,
 } from '@features/codex-account/contracts';
 import type { CodexAccountFeatureFacade } from '@features/codex-account/main';
-import type { CodexModelCatalogDto } from '@features/codex-model-catalog';
 import type {
   CodexModelCatalogFeatureFacade,
   CodexModelCatalogRequest,
@@ -1217,14 +1220,30 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
+      const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
+        env: { ...process.env, ...getCachedShellEnv() },
+      });
+      const catalogWithExtras =
+        extras.models === catalog.models && !extras.diagnostic
+          ? catalog
+          : {
+              ...catalog,
+              models: extras.models,
+              diagnostics: {
+                ...catalog.diagnostics,
+                message: extras.diagnostic
+                  ? [catalog.diagnostics.message, extras.diagnostic].filter(Boolean).join(' ')
+                  : catalog.diagnostics.message,
+              },
+            };
       const catalogDisplay = mergeProviderCatalogDisplayAuthority(
         withConnection,
-        catalog,
-        catalog.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
+        catalogWithExtras,
+        catalogWithExtras.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
       );
       const reasoningEfforts = Array.from(
         new Set(
-          catalog.models.flatMap<CliProviderReasoningEffort>(
+          catalogWithExtras.models.flatMap<CliProviderReasoningEffort>(
             (model) => model.supportedReasoningEfforts
           )
         )

@@ -520,6 +520,11 @@ describe('TeamLaunchFailureArtifactPack', () => {
       text: 'OpenCode API error. non_visible_tool_without_task_progress',
       code: 'opencode_protocol',
     },
+    {
+      name: 'Codex ChatGPT usage limit',
+      text: "Codex native error: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits.",
+      code: 'provider_quota',
+    },
   ])('classifies production-like failure string: $name', ({ text, code }) => {
     expect(
       classifyLaunchFailureArtifact({
@@ -528,5 +533,27 @@ describe('TeamLaunchFailureArtifactPack', () => {
         reason: text,
       }).code
     ).toBe(code);
+  });
+
+  it('does not treat MCP tool catalogs as OpenCode protocol failures', () => {
+    expect(
+      classifyLaunchFailureArtifact({
+        teamName: 'artifact-team',
+        runId: 'run-mcp-catalog',
+        reason:
+          '"tools":["Task","mcp__agent-teams__runtime_bootstrap_checkin","mcp__agent-teams__member_briefing"]',
+      }).code
+    ).toBe('unknown');
+  });
+
+  it('prefers Codex usage-limit evidence over MCP tool names in the same log dump', () => {
+    expect(
+      classifyLaunchFailureArtifact({
+        teamName: 'artifact-team',
+        runId: 'run-quota-over-mcp',
+        reason:
+          'mcp__agent-teams__runtime_bootstrap_checkin\nCodex native error: You\'ve hit your usage limit.',
+      }).code
+    ).toBe('provider_quota');
   });
 });

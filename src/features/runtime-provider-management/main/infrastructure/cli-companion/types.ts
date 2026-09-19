@@ -63,6 +63,12 @@ export interface RuntimeProviderCliCompanionDefinition {
     executableNames(platform: NodeJS.Platform): readonly string[];
     extraCandidates(platform: NodeJS.Platform, homeDir: string): readonly string[];
     versionArgs: readonly string[];
+    /**
+     * Basenames that can collide with another product CLI. Only these
+     * candidates need a version probe when `matchesVersionOutput` is set.
+     */
+    ambiguousExecutableNames?: readonly string[];
+    matchesVersionOutput?(output: string): boolean;
   };
   auth: {
     loginArgs: readonly string[];

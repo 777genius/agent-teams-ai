@@ -25,7 +25,12 @@ import {
 } from '@main/services/runtime/CliProviderModelAvailabilityService';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-function createContext(models: string[]): ProviderModelAvailabilityContext {
+import type { CliProviderStatus } from '@shared/types';
+
+function createContext(
+  models: string[],
+  modelCatalog: CliProviderStatus['modelCatalog'] = null
+): ProviderModelAvailabilityContext {
   return {
     binaryPath: '/usr/local/bin/claude',
     installedVersion: '2.3.4',
@@ -47,7 +52,46 @@ function createContext(models: string[]): ProviderModelAvailabilityContext {
         label: 'OpenAI',
         endpointLabel: 'chatgpt.com/backend-api/codex/responses',
       },
+      modelCatalog,
     },
+  };
+}
+
+function catalogModel(
+  id: string,
+  overrides: Partial<NonNullable<CliProviderStatus['modelCatalog']>['models'][number]> = {}
+): NonNullable<CliProviderStatus['modelCatalog']>['models'][number] {
+  return {
+    id,
+    launchModel: id,
+    displayName: id,
+    hidden: false,
+    supportedReasoningEfforts: ['medium'],
+    defaultReasoningEffort: 'medium',
+    inputModalities: ['text'],
+    supportsPersonality: false,
+    isDefault: false,
+    upgrade: false,
+    source: 'app-server',
+    ...overrides,
+  };
+}
+
+function createCodexCatalog(
+  models: NonNullable<CliProviderStatus['modelCatalog']>['models']
+): NonNullable<CliProviderStatus['modelCatalog']> {
+  return {
+    schemaVersion: 1,
+    providerId: 'codex',
+    source: 'app-server',
+    status: 'ready',
+    fetchedAt: '2026-09-19T00:00:00.000Z',
+    staleAt: '2026-09-19T00:10:00.000Z',
+    defaultModelId: models.find((model) => model.isDefault)?.id ?? models[0]?.id ?? null,
+    defaultLaunchModel:
+      models.find((model) => model.isDefault)?.launchModel ?? models[0]?.launchModel ?? null,
+    models,
+    diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
   };
 }
 
@@ -251,5 +295,104 @@ describe('CliProviderModelAvailabilityService', () => {
         })
       );
     });
+  });
+
+  it('treats local extra-catalog models as available without a vendor probe', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      connectionIssues: {},
+    });
+    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+
+    const service = new CliProviderModelAvailabilityService();
+    const context = createContext(
+      ['composer-2.5-fast-cursor', 'gpt-5.4'],
+      createCodexCatalog([
+        catalogModel('gpt-5.4', { displayName: 'GPT-5.4', isDefault: true }),
+        catalogModel('composer-2.5-fast-cursor', {
+          displayName: 'Composer 2.5 Fast · Cursor',
+          metadata: { configuredFromLocalCatalog: true },
+        }),
+      ])
+    );
+    service.getSnapshot(context);
+
+    await vi.waitFor(() => {
+      expect(
+        service.getSnapshot(context).modelAvailability.find((item) => item.modelId === 'gpt-5.4')
+          ?.status
+      ).not.toBe('checking');
+    });
+
+    expect(service.getSnapshot(context).modelAvailability).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: 'composer-2.5-fast-cursor',
+          status: 'available',
+        }),
+        expect.objectContaining({ modelId: 'gpt-5.4' }),
+      ])
+    );
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(execCliMock.mock.calls[0]?.[1]).toEqual(expect.arrayContaining(['--model', 'gpt-5.4']));
+  });
+
+  it('does not keep a vendor-probe miss after extra-catalog tags arrive', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      connectionIssues: {},
+    });
+    execCliMock.mockImplementation(async (_binary: string, args: string[]) => {
+      if (args.includes('local-proxy-qwen3')) {
+        throw new Error('The requested model is not available for your account.');
+      }
+      return { stdout: 'PONG', stderr: '' };
+    });
+
+    const service = new CliProviderModelAvailabilityService();
+    const models = ['local-proxy-qwen3', 'gpt-5.4'];
+    service.getSnapshot(createContext(models));
+
+    await vi.waitFor(() => {
+      expect(
+        service
+          .getSnapshot(createContext(models))
+          .modelAvailability.find((item) => item.modelId === 'local-proxy-qwen3')?.status
+      ).toBe('unavailable');
+    });
+
+    const tagged = createContext(
+      models,
+      createCodexCatalog([
+        catalogModel('gpt-5.4', { isDefault: true }),
+        catalogModel('local-proxy-qwen3', {
+          metadata: { configuredFromLocalCatalog: true },
+        }),
+      ])
+    );
+    expect(
+      service.getSnapshot(tagged).modelAvailability.find((item) => item.modelId === 'local-proxy-qwen3')
+    ).toMatchObject({ status: 'available' });
+  });
+
+  it('marks a catalog of only extra models verified without probing', () => {
+    const service = new CliProviderModelAvailabilityService();
+    const snapshot = service.getSnapshot(
+      createContext(
+        ['local-proxy-qwen3'],
+        createCodexCatalog([
+          catalogModel('local-proxy-qwen3', {
+            isDefault: true,
+            metadata: { configuredFromLocalCatalog: true },
+          }),
+        ])
+      )
+    );
+
+    expect(snapshot.modelVerificationState).toBe('verified');
+    expect(snapshot.modelAvailability).toEqual([
+      expect.objectContaining({ modelId: 'local-proxy-qwen3', status: 'available' }),
+    ]);
+    expect(execCliMock).not.toHaveBeenCalled();
   });
 });

@@ -486,6 +486,7 @@ function mapRuntimeProviderModelMetadata(
     free: metadata.free === true,
     releaseDate: typeof releaseDate === 'string' ? releaseDate : null,
     recentlyReleased: metadata.recentlyReleased === true,
+    ...(metadata.configuredFromLocalCatalog === true ? { configuredFromLocalCatalog: true } : {}),
     ...(opencode ? { opencode } : {}),
   };
 }

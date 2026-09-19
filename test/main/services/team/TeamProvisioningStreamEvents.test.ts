@@ -1,5 +1,6 @@
 import { setMemberSpawnStatusForRun } from '@main/services/team/provisioning/TeamProvisioningMemberSpawnSnapshots';
 import {
+  extractProvisioningStreamError,
   extractStreamContentBlocks,
   extractStreamUserText,
   getStableLeadThoughtMessageId,
@@ -595,6 +596,47 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
       clearExpectedWarnings();
     });
   }
+
+  it('surfaces Codex usage-limit errors from result.errors instead of unknown', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
+    const ports = makeResultPorts();
+    const usageLimit =
+      "Codex native exec exited with code 1: Codex native error: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 19th, 2026 7:40 PM.";
+
+    handleTeamProvisioningStreamJsonMessage(
+      run,
+      {
+        type: 'result',
+        subtype: 'error_during_execution',
+        errors: [usageLimit],
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: usageLimit }],
+        },
+      },
+      ports
+    );
+
+    expect(run.progress.state).toBe('failed');
+    expect(run.progress.error).toBe(usageLimit);
+    expect(extractProvisioningStreamError({ type: 'result', errors: [usageLimit] })).toBe(
+      usageLimit
+    );
+    expect(extractProvisioningStreamError({ type: 'result', subtype: 'error_during_execution' })).toBe(
+      'unknown'
+    );
+    expect(
+      extractProvisioningStreamError({
+        type: 'result',
+        subtype: 'error_during_execution',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'x'.repeat(600) }],
+        },
+      })
+    ).toBe(`${'x'.repeat(500)}…`);
+    clearExpectedWarnings();
+  });
 
   it('does not fail the run for result subtype "success"', () => {
     const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });

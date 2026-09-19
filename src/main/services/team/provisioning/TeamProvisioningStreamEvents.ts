@@ -9,6 +9,10 @@ import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
 import { isWorkspaceTrustLaunchFailureText } from '../TeamLaunchFailureArtifactPack';
 
 import {
+  extractProvisioningStreamError,
+  extractStreamUserText,
+} from './extractProvisioningStreamError';
+import {
   appendLeadRelayCaptureAssistantText,
   isSyntheticLeadTextChunk,
   type LeadRelayCaptureStreamState,
@@ -263,44 +267,7 @@ export function classifyDeterministicBootstrapFailure(reason: string): {
   };
 }
 
-export function extractStreamUserText(msg: Record<string, unknown>): string | null {
-  const topLevelContent = msg.content;
-  if (typeof topLevelContent === 'string') {
-    return topLevelContent;
-  }
-  if (Array.isArray(topLevelContent)) {
-    const text = topLevelContent
-      .filter(
-        (part): part is Record<string, unknown> =>
-          !!part &&
-          typeof part === 'object' &&
-          part.type === 'text' &&
-          typeof part.text === 'string'
-      )
-      .map((part) => part.text as string)
-      .join('\n')
-      .trim();
-    if (text.length > 0) return text;
-  }
-
-  const message = msg.message;
-  if (!message || typeof message !== 'object') return null;
-  const innerContent = (message as Record<string, unknown>).content;
-  if (typeof innerContent === 'string') {
-    const trimmed = innerContent.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-  if (!Array.isArray(innerContent)) return null;
-  const text = innerContent
-    .filter(
-      (part): part is Record<string, unknown> =>
-        !!part && typeof part === 'object' && part.type === 'text' && typeof part.text === 'string'
-    )
-    .map((part) => part.text as string)
-    .join('\n')
-    .trim();
-  return text.length > 0 ? text : null;
-}
+export { extractProvisioningStreamError, extractStreamUserText };
 
 export function extractStreamContentBlocks(
   msg: Record<string, unknown>
@@ -1016,8 +983,7 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
 ): void {
-  const errorMsg =
-    typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
+  const errorMsg = extractProvisioningStreamError(msg);
   logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
   const causedByRecoveryMessageId = run.leadRelayCapture?.recoveryMessageId;
   if (run.leadRelayCapture) {

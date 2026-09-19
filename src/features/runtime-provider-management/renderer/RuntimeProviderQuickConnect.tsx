@@ -454,7 +454,7 @@ export const RuntimeProviderQuickConnect = ({
           typeof status?.percent === 'number'
             ? { percent: status.percent, detail: status.detail }
             : null;
-        if (!status || companion.loading) {
+        if (!status || companion.loading || status.phase === 'checking') {
           return {
             id: plan.id,
             providerId: plan.providerId,

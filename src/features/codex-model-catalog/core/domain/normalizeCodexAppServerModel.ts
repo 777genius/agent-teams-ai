@@ -1,4 +1,5 @@
 import { CODEX_REASONING_EFFORTS, normalizeCodexReasoningEffort } from './codexReasoningEffort';
+import { coerceCodexCatalogModelInput } from './coerceCodexCatalogModelInput';
 
 import type { CliProviderModelCatalogItem, CliProviderReasoningEffort } from '@shared/types';
 
@@ -36,8 +37,12 @@ function normalizeEffortOption(option: unknown): CliProviderReasoningEffort | nu
     return normalizeCodexReasoningEffort(option);
   }
 
-  if (option && typeof option === 'object' && 'reasoningEffort' in option) {
-    return normalizeCodexReasoningEffort((option as { reasoningEffort?: unknown }).reasoningEffort);
+  if (option && typeof option === 'object') {
+    const record = option as { reasoningEffort?: unknown; effort?: unknown };
+    return (
+      normalizeCodexReasoningEffort(record.reasoningEffort) ??
+      normalizeCodexReasoningEffort(record.effort)
+    );
   }
 
   return null;
@@ -156,7 +161,7 @@ function normalizeAvailabilityNuxMessage(value: unknown): string | null {
 }
 
 export function normalizeCodexAppServerModels(
-  models: readonly CodexAppServerModelLike[] | undefined,
+  models: readonly unknown[] | undefined,
   options: {
     includeHidden?: boolean;
   } = {}
@@ -166,7 +171,8 @@ export function normalizeCodexAppServerModels(
   const seenLaunchModels = new Set<string>();
   const normalizedModels: CliProviderModelCatalogItem[] = [];
 
-  for (const model of models ?? []) {
+  for (const raw of models ?? []) {
+    const model = coerceCodexCatalogModelInput(raw) ?? (raw as CodexAppServerModelLike);
     const id = normalizeModelId(model);
     if (!id) {
       diagnostics.push('model/list returned a model without id/model.');
