@@ -33,6 +33,7 @@ vi.mock('../../../../../src/renderer/components/team/activity/ThoughtBodyContent
 }));
 vi.mock('@renderer/utils/memberHelpers', () => ({
   agentAvatarUrl: () => '/avatar.png',
+  displayMemberName: (name: string) => (name === 'team-lead' ? 'lead' : name),
 }));
 
 import {
@@ -394,6 +395,43 @@ System-level bootstrap rules:
     expect(previewNode?.textContent).toContain('**Важно**');
     expect(previewNode?.textContent).toContain('[#task123](task://task123)');
     expect(previewNode?.textContent).toContain('mention://blue/alice');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('labels live lead thoughts as lead even when from is a teammate name', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const thought = makeLeadSessionMsg('Delegating the next slice.', {
+      from: 'max',
+      source: 'lead_process',
+      messageId: 'thought-misattributed',
+      leadSessionId: 'lead-session-max',
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(LeadThoughtsGroupRow, {
+          group: { type: 'lead-thoughts', thoughts: [thought] },
+          collapseMode: 'managed',
+          isCollapsed: false,
+          canToggleCollapse: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('lead');
+    expect(
+      [...host.querySelectorAll('span')].map((node) => node.textContent)
+    ).toContain('lead');
+    expect(
+      [...host.querySelectorAll('span')].some((node) => node.textContent === 'max')
+    ).toBe(false);
 
     await act(async () => {
       root.unmount();

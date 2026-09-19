@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isLeadThoughtSourceMessage } from '@shared/utils/leadDetection';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -78,6 +79,16 @@ function requireInboxMessageId(message: InboxMessage): string {
     return messageId;
   }
   return getEffectiveInboxMessageId(message) ?? '';
+}
+
+function assignImpliedInboxRecipient(message: InboxMessage, member: string): void {
+  if (message.to) {
+    return;
+  }
+  if (isLeadThoughtSourceMessage(message)) {
+    return;
+  }
+  message.to = member;
 }
 
 function compareNewestFirst(left: InboxMessage, right: InboxMessage): number {
@@ -581,9 +592,7 @@ export class TeamInboxReader {
       try {
         const msgs = await this.getMessagesFor(teamName, member);
         for (const msg of msgs) {
-          if (!msg.to) {
-            msg.to = member;
-          }
+          assignImpliedInboxRecipient(msg, member);
         }
         return msgs;
       } catch {
@@ -664,9 +673,7 @@ export class TeamInboxReader {
       if (!message) {
         return;
       }
-      if (!message.to) {
-        message.to = member;
-      }
+      assignImpliedInboxRecipient(message, member);
       sourceMessageCount += 1;
       if (!isTeamInternalControlMessageEnvelope(message)) {
         sourceRevisionEntries.push(buildInboxSourceRevisionEntry(message));
@@ -719,9 +726,7 @@ export class TeamInboxReader {
     let windowMessages: InboxMessage[] = [];
 
     for (const message of messages) {
-      if (!message.to) {
-        message.to = member;
-      }
+      assignImpliedInboxRecipient(message, member);
       if (!isTeamInternalControlMessageEnvelope(message)) {
         sourceRevisionEntries.push(buildInboxSourceRevisionEntry(message));
       }

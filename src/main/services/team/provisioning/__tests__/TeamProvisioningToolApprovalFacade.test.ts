@@ -203,7 +203,7 @@ describe('TeamProvisioningToolApprovalFacade', () => {
 
     expect(persistedMessages).toHaveLength(1);
     expect(persistedMessages[0]).toMatchObject({
-      from: 'Lead',
+      from: 'team-lead',
       to: 'Worker',
       summary: 'Approved AskUserQuestion request',
       source: 'lead_process',

@@ -52,15 +52,20 @@ describe('getTeammateRosterMembers', () => {
     ]);
   });
 
-  it('still excludes the lead by reserved role or canonical name', () => {
+  it('still excludes the canonical lead, but keeps spawned teammates with reserved roles', () => {
     const roster: TeamCreateRequest['members'] = [
       { name: 'ana', role: 'Frontend lead' },
       { name: 'team-lead', role: 'Frontend lead' },
       { name: 'orchestra', role: 'orchestrator' },
       { name: 'boss', role: 'Team Lead' },
+      { name: 'lead', role: 'Team Lead' },
     ];
 
-    expect(getTeammateRosterMembers(roster).map((member) => member.name)).toEqual(['ana']);
+    expect(getTeammateRosterMembers(roster).map((member) => member.name)).toEqual([
+      'ana',
+      'orchestra',
+      'boss',
+    ]);
   });
 });
 
@@ -245,5 +250,22 @@ describe('lead launch prompts include the teammate roster rules', () => {
     });
 
     expect(context).not.toContain('Teammate roster rules');
+  });
+
+  it('does not treat a reserved-role teammate as the launch lead identity', () => {
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      { teamName: 'mixed-rel', cwd: '/sandbox', prompt: 'delegate the work' },
+      [
+        { name: 'max', role: 'Team Lead' },
+        { name: 'ora', role: 'Developer' },
+      ],
+      [],
+      false
+    );
+
+    expect(prompt).toContain('You are "team-lead", the team lead.');
+    expect(prompt).not.toContain('You are "max", the team lead.');
+    expect(prompt).toContain('- max (role: Team Lead)');
+    expect(prompt).toContain('Your teammates are EXACTLY: max, ora. No other teammate exists.');
   });
 });

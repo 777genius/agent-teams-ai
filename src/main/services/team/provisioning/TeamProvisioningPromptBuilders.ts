@@ -20,6 +20,7 @@ import { buildActionModeProtocol } from '../actionModeInstructions';
 import { normalizeLaunchFailureReasonText } from '../TeamLaunchStateEvaluator';
 
 import { getAgentLanguageInstruction } from './TeamProvisioningAgentLanguage';
+import { resolveCrossTeamLeadName } from './TeamProvisioningCrossTeamRelayHelpers';
 import {
   buildCompactMembersRoster,
   buildLeadRosterIntegrityRules,
@@ -1034,8 +1035,7 @@ export function buildDeterministicLaunchHydrationPrompt(
   tasks: TeamTask[],
   isResume: boolean
 ): string {
-  const leadName =
-    members.find((member) => member.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
+  const leadName = resolveCrossTeamLeadName(members);
   const isSolo = members.length === 0;
   const projectName = path.basename(request.cwd);
   const startLabel = isResume ? 'Team Start (resume)' : 'Team Start';

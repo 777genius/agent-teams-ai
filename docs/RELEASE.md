@@ -58,6 +58,7 @@ Recover stalled teammate work from the team page, chat 1:1 in Messages, use extr
 - Block local OpenCode teammates that cannot actually call tools.
 - Stop leftover remaining work from resuming after you stop a mixed Claude, Codex, or OpenCode team.
 - Start without restoring backups for healthy teams, and stop recovered comments from replaying as toasts.
+- Show lead thoughts as lead, even when a teammate has a Team Lead role.
 
 ### Downloads
 

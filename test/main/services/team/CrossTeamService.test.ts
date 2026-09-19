@@ -1,6 +1,6 @@
 import {
-  CrossTeamService,
   type CrossTeamRecipientMetadataReader,
+  CrossTeamService,
 } from '@main/services/team/CrossTeamService';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -904,6 +904,51 @@ describe('CrossTeamService', () => {
       expect(req.member).toBe('team-lead');
       expect(recipientMetadataReader.getMembers).toHaveBeenCalledWith('team-b');
       expect(dataService.getLeadMemberName).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a reserved-role teammate as the cross-team lead', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(
+          teamName === 'team-b'
+            ? makeConfig({
+                members: [
+                  { name: 'max', role: 'Team Lead' },
+                  { name: 'ora', role: 'developer' },
+                ],
+              })
+            : makeConfig()
+        )
+      );
+      recipientMetadataReader.getMembers.mockResolvedValue([
+        { name: 'max', role: 'Team Lead' },
+        { name: 'ora', role: 'developer' },
+      ]);
+
+      await service.send(makeRequest());
+
+      const [, req] = inboxWriter.sendMessage.mock.calls[0];
+      expect(req.member).toBe('team-lead');
+    });
+
+    it('does not send as a reserved-role teammate when fromMember is lead', async () => {
+      configReader.getConfig.mockImplementation((teamName: string) =>
+        Promise.resolve(
+          teamName === 'team-a'
+            ? makeConfig({
+                name: 'team-a',
+                members: [
+                  { name: 'max', role: 'Team Lead' },
+                  { name: 'ora', role: 'developer' },
+                ],
+              })
+            : makeConfig()
+        )
+      );
+
+      await service.send(makeRequest({ fromTeam: 'team-a', fromMember: 'lead' }));
+
+      const [, req] = inboxWriter.sendMessage.mock.calls[0];
+      expect(req.from).toBe('team-a.team-lead');
     });
 
     it('uses from format "team.member"', async () => {

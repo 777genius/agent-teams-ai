@@ -2,7 +2,10 @@ import {
   isConversationLeadAlias,
   isLeadMember,
   isLeadNameAlias,
+  isLeadThoughtSourceMessage,
   isReservedLeadRole,
+  LEAD_THOUGHT_SPEAKER_NAME,
+  resolveRuntimeLeadName,
 } from '@shared/utils/leadDetection';
 import { describe, expect, it } from 'vitest';
 
@@ -46,5 +49,48 @@ describe('isConversationLeadAlias', () => {
     expect(isConversationLeadAlias('team-leader')).toBe(true);
     expect(isConversationLeadAlias('orchestrator')).toBe(false);
     expect(isConversationLeadAlias('oscar')).toBe(false);
+  });
+});
+
+describe('resolveRuntimeLeadName', () => {
+  it('uses canonical lead identity and ignores reserved teammate roles', () => {
+    expect(
+      resolveRuntimeLeadName([
+        { name: 'max', role: 'Team Lead' },
+        { name: 'ora', role: 'Developer' },
+      ])
+    ).toBe('team-lead');
+    expect(
+      resolveRuntimeLeadName([
+        { name: ' Lead ', role: 'Lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('team-lead');
+    expect(
+      resolveRuntimeLeadName([
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('team-lead');
+    expect(
+      resolveRuntimeLeadName([
+        { name: 'alice', agentType: 'team-lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('alice');
+    expect(resolveRuntimeLeadName([{ name: 'worker-1', role: 'worker' }])).toBe('team-lead');
+    expect(resolveRuntimeLeadName([{ name: '', role: 'lead' }])).toBe('team-lead');
+    expect(resolveRuntimeLeadName(null)).toBe('team-lead');
+    expect(resolveRuntimeLeadName(undefined)).toBe('team-lead');
+  });
+});
+
+describe('isLeadThoughtSourceMessage', () => {
+  it('matches unaddressed lead process/session rows regardless of from', () => {
+    expect(isLeadThoughtSourceMessage({ source: 'lead_process' })).toBe(true);
+    expect(isLeadThoughtSourceMessage({ source: 'lead_session' })).toBe(true);
+    expect(isLeadThoughtSourceMessage({ source: 'lead_process', to: 'ora' })).toBe(false);
+    expect(isLeadThoughtSourceMessage({ source: 'inbox' })).toBe(false);
+    expect(LEAD_THOUGHT_SPEAKER_NAME).toBe('team-lead');
   });
 });

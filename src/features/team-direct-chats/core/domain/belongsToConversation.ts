@@ -1,5 +1,5 @@
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
-import { isConversationLeadAlias } from '@shared/utils/leadDetection';
+import { isConversationLeadAlias, isLeadThoughtSourceMessage } from '@shared/utils/leadDetection';
 
 import { type ConversationScope, normalizeConversationParticipant } from './conversationScope';
 
@@ -88,13 +88,10 @@ function isLeadThoughtForLead(
   participant: string,
   leadNames: Iterable<string>
 ): boolean {
-  if (!isLeadConversationParticipant(participant, leadNames)) {
+  if (!isLeadThoughtSourceMessage(message)) {
     return false;
   }
-  if (typeof message.to === 'string' && message.to.trim().length > 0) {
-    return false;
-  }
-  return message.source === 'lead_session' || message.source === 'lead_process';
+  return isLeadConversationParticipant(participant, leadNames);
 }
 
 export function belongsToConversation(
@@ -115,6 +112,9 @@ export function belongsToConversation(
   const leadNameList = [...leadNames];
   const from = normalizeConversationParticipant(message.from);
   const to = normalizeConversationParticipant(message.to);
+  if (isLeadThoughtSourceMessage(message)) {
+    return isLeadThoughtForLead(message, participant, leadNameList);
+  }
   if (isDirectPair(from, to, participant)) {
     return true;
   }
@@ -124,5 +124,5 @@ export function belongsToConversation(
   if (isLeadBootstrapToParticipant(from, to, participant, leadNameList)) {
     return true;
   }
-  return isLeadThoughtForLead(message, participant, leadNameList);
+  return false;
 }

@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { buildChatListView } from '@features/team-direct-chats/renderer/view-models/chatListViewModel';
+import { describe, expect, it } from 'vitest';
 
 import { msg, toTestKey } from '../core/domain/fixtures';
 
@@ -102,5 +101,45 @@ describe('buildChatListView preview attribution', () => {
     });
     expect(rows[0]?.previewFrom).toBeNull();
     expect(rows[0]?.previewText).toBe('No messages yet');
+  });
+
+  it('attributes lead thought previews to lead even when from is a teammate', () => {
+    const rows = buildChatListView({
+      members: [
+        { name: 'max', role: 'Team Lead', agentType: 'developer' },
+        { name: 'ora', role: 'Developer' },
+      ],
+      messages: [
+        msg({
+          from: 'max',
+          text: 'LEAD_THOUGHT_PROOF: delegating the next sandbox slice.',
+          source: 'lead_process',
+          messageId: 'thought',
+          timestamp: '2026-09-19T10:00:00.000Z',
+        }),
+        msg({
+          from: 'team-lead',
+          to: 'ora',
+          text: 'Starting ora',
+          messageId: 'boot',
+          timestamp: '2026-09-19T09:00:00.000Z',
+        }),
+      ],
+      readSet: new Set(),
+      toKey: toTestKey,
+      teamFeedLabel: 'Group chat',
+      emptyPreview: 'No messages yet',
+      leadNames: ['team-lead'],
+    });
+
+    const group = rows.find((row) => row.displayName === 'Group chat');
+    const maxRow = rows.find((row) => row.displayName === 'max');
+    const oraRow = rows.find((row) => row.displayName === 'ora');
+
+    expect(group?.previewFrom).toBe('team-lead');
+    expect(group?.previewText).toContain('LEAD_THOUGHT_PROOF');
+    expect(maxRow?.previewFrom).toBeNull();
+    expect(maxRow?.previewText).toBe('No messages yet');
+    expect(oraRow?.previewFrom).toBe('team-lead');
   });
 });

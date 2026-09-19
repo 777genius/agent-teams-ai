@@ -2,6 +2,7 @@ import {
   getSanitizedInboxMessageSummary,
   getSanitizedInboxMessageText,
 } from '@renderer/utils/bootstrapPromptSanitizer';
+import { isLeadThoughtSourceMessage, LEAD_THOUGHT_SPEAKER_NAME } from '@shared/utils/leadDetection';
 
 import {
   buildChatList,
@@ -38,7 +39,10 @@ function previewCopy(
   return {
     previewText:
       text.length > PREVIEW_MAX_LENGTH ? `${text.slice(0, PREVIEW_MAX_LENGTH - 1)}…` : text,
-    previewFrom: message.from,
+    previewFrom:
+      isLeadThoughtSourceMessage(message) && message.from !== 'system' && message.from !== 'user'
+        ? LEAD_THOUGHT_SPEAKER_NAME
+        : message.from,
   };
 }
 

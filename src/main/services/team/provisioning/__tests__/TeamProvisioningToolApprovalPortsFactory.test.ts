@@ -64,7 +64,7 @@ describe('team provisioning tool approval ports factory', () => {
       'alpha',
       'Worker',
       expect.objectContaining({
-        from: 'Lead',
+        from: 'team-lead',
         to: 'Worker',
         summary: 'Denied Bash request',
         source: 'lead_process',
