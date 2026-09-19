@@ -161,7 +161,7 @@ function normalizeAvailabilityNuxMessage(value: unknown): string | null {
 }
 
 export function normalizeCodexAppServerModels(
-  models: readonly CodexAppServerModelLike[] | undefined,
+  models: readonly unknown[] | undefined,
   options: {
     includeHidden?: boolean;
   } = {}
@@ -172,7 +172,7 @@ export function normalizeCodexAppServerModels(
   const normalizedModels: CliProviderModelCatalogItem[] = [];
 
   for (const raw of models ?? []) {
-    const model = coerceCodexCatalogModelInput(raw) ?? raw;
+    const model = coerceCodexCatalogModelInput(raw) ?? (raw as CodexAppServerModelLike);
     const id = normalizeModelId(model);
     if (!id) {
       diagnostics.push('model/list returned a model without id/model.');

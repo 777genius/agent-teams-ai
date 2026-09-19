@@ -10,7 +10,10 @@ import { normalizeCodexAppServerModels } from '../normalizeCodexAppServerModel';
 
 import type { CliProviderModelCatalogItem } from '@shared/types';
 
-function catalogItem(id: string, overrides: Partial<CliProviderModelCatalogItem> = {}) {
+function catalogItem(
+  id: string,
+  overrides: Partial<CliProviderModelCatalogItem> = {}
+): CliProviderModelCatalogItem {
   return {
     id,
     launchModel: id,

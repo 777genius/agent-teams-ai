@@ -1223,15 +1223,19 @@ export class ProviderConnectionService {
       const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
         env: { ...process.env, ...getCachedShellEnv() },
       });
-      const catalogWithExtras = {
-        ...catalog,
-        models: extras.models,
-        diagnostics: {
-          ...catalog.diagnostics,
-          message:
-            [catalog.diagnostics.message, extras.diagnostic].filter(Boolean).join(' ') || null,
-        },
-      };
+      const catalogWithExtras =
+        extras.models === catalog.models && !extras.diagnostic
+          ? catalog
+          : {
+              ...catalog,
+              models: extras.models,
+              diagnostics: {
+                ...catalog.diagnostics,
+                message: extras.diagnostic
+                  ? [catalog.diagnostics.message, extras.diagnostic].filter(Boolean).join(' ')
+                  : catalog.diagnostics.message,
+              },
+            };
       const catalogDisplay = mergeProviderCatalogDisplayAuthority(
         withConnection,
         catalogWithExtras,

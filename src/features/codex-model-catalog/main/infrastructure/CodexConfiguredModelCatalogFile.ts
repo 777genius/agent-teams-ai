@@ -94,6 +94,12 @@ export async function mergeConfiguredCodexCatalogExtras(
   diagnostic: string | null;
 }> {
   const extras = await loadConfiguredCodexCatalogExtras(options);
+  if (extras.models.length === 0) {
+    return {
+      models: primary as CliProviderModelCatalogItem[],
+      diagnostic: extras.diagnostic,
+    };
+  }
   return {
     models: mergeCodexCatalogModels(primary, extras.models),
     diagnostic: extras.diagnostic,
