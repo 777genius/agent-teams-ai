@@ -65,6 +65,7 @@ const readHookState = {
 };
 const activityTimelineRenderSpy = vi.hoisted(() => vi.fn());
 const statusBlockRenderSpy = vi.hoisted(() => vi.fn());
+const sheetContentRenderSpy = vi.hoisted(() => vi.fn());
 
 const expandedHookState = {
   expandedSet: new Set<string>(),
@@ -253,8 +254,26 @@ vi.mock('react-modal-sheet', () => ({
       Header: ({ children }: { children?: React.ReactNode }) =>
         React.createElement('div', null, children),
       DragIndicator: () => React.createElement('div', null, 'drag-indicator'),
-      Content: ({ children }: { children: React.ReactNode }) =>
-        React.createElement('div', null, children),
+      Content: ({
+        children,
+        className,
+        scrollClassName,
+        disableDrag,
+        disableScroll,
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        scrollClassName?: string;
+        disableDrag?: boolean;
+        disableScroll?: boolean;
+      }) => {
+        sheetContentRenderSpy({ className, scrollClassName, disableDrag, disableScroll });
+        return React.createElement(
+          'div',
+          { className },
+          React.createElement('div', { className: scrollClassName }, children)
+        );
+      },
     }
   ),
 }));
@@ -1684,6 +1703,18 @@ describe('MessagesPanel idle summary invariants', () => {
     const text = host.textContent ?? '';
     expect(text.indexOf('composer')).toBeGreaterThan(-1);
     expect(text.indexOf('status-block')).toBeGreaterThan(text.indexOf('composer'));
+    expect(sheetContentRenderSpy).toHaveBeenCalledWith({
+      className: 'flex min-h-0 flex-1 overflow-hidden bg-[var(--color-surface-sidebar)]',
+      scrollClassName: 'flex h-full min-h-0 flex-col overflow-hidden',
+      disableDrag: true,
+      disableScroll: true,
+    });
+
+    const timeline = host.querySelector('[data-testid="activity-timeline"]');
+    const scrollOwner = timeline?.closest('.overflow-y-auto');
+    expect(scrollOwner).not.toBeNull();
+    expect(scrollOwner?.className).toContain('touch-pan-y');
+    expect(timeline?.parentElement?.className).toContain('mr-8');
 
     await act(async () => {
       root.unmount();
