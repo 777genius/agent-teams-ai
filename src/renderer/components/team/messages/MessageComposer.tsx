@@ -239,6 +239,12 @@ export const MessageComposer = ({
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
   const selectedTargetMembers = selectedTarget?.members ?? [];
   const crossTeamHintText = isCrossTeam ? t('messageComposer.crossTeam.hint') : undefined;
+  const groupChatRecipient =
+    members.find((member) => isLeadMember(member))?.name ?? members[0]?.name ?? '';
+  const selectLocalGroupChat = useCallback(() => {
+    setRecipient(groupChatRecipient);
+    setGroupChatSelected(true);
+  }, [groupChatRecipient]);
   const previousLockedRecipientRef = useRef(lockedRecipient);
 
   useEffect(() => {
@@ -249,7 +255,7 @@ export const MessageComposer = ({
       queueMicrotask(() => {
         setSelectedTeam(null);
         setCrossTeamRecipient(null);
-        setGroupChatSelected(true);
+        selectLocalGroupChat();
       });
       return;
     }
@@ -258,7 +264,7 @@ export const MessageComposer = ({
       setRecipient(lockedRecipient);
       setGroupChatSelected(false);
     });
-  }, [groupChatSelected, lockedRecipient, recipient]);
+  }, [groupChatSelected, lockedRecipient, recipient, selectLocalGroupChat]);
 
   // Members load async with team data; keep recipient stable if valid, otherwise default to lead/first.
   useEffect(() => {
@@ -363,7 +369,8 @@ export const MessageComposer = ({
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
   const standaloneSlashCommand = useMemo(() => parseStandaloneSlashCommand(trimmed), [trimmed]);
 
-  const effectiveRecipient = lockedRecipient ?? recipient;
+  const effectiveRecipient =
+    lockedRecipient ?? (groupChatSelected ? groupChatRecipient : recipient);
   const selectedMember = members.find((m) => m.name === effectiveRecipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
   const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
@@ -394,6 +401,7 @@ export const MessageComposer = ({
     appliedRevisionRequestIdRef.current = revisionRequest.requestId;
     setSelectedTeam(null);
     setRecipient(revisionRequest.recipient);
+    setGroupChatSelected(false);
     draft.restoreDraft({
       text: revisionRequest.originalText,
       chips: [],
@@ -975,7 +983,7 @@ export const MessageComposer = ({
                   onSelectCurrent={() => {
                     setSelectedTeam(null);
                     setCrossTeamRecipient(null);
-                    setGroupChatSelected(true);
+                    selectLocalGroupChat();
                     setTeamSelectorOpen(false);
                     focusComposerTextarea();
                   }}
@@ -1069,7 +1077,7 @@ export const MessageComposer = ({
                           if (isCrossTeam) {
                             setCrossTeamRecipient(null);
                           } else {
-                            setGroupChatSelected(true);
+                            selectLocalGroupChat();
                           }
                           setRecipientOpen(false);
                           setRecipientSearch('');

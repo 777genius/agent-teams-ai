@@ -1402,7 +1402,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     window.addEventListener('toggle-team-graph', handler);
     return () => window.removeEventListener('toggle-team-graph', handler);
   }, [handleOpenGraphTab, teamName]);
-
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);

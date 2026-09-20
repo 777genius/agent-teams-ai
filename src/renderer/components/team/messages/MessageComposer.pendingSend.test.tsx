@@ -458,7 +458,7 @@ describe('MessageComposer pending send lifecycle', () => {
   });
 
   it('returns to the current team group chat after leaving a locked direct chat', async () => {
-    const { host, render, root } = renderComposer({ lockedRecipient: 'bob' });
+    const { host, onSend, render, root } = renderComposer({ lockedRecipient: 'bob' });
 
     expect(host.querySelector('.message-composer-target-selectors')?.textContent).toContain('bob');
     render({ lockedRecipient: undefined });
@@ -471,6 +471,47 @@ describe('MessageComposer pending send lifecycle', () => {
       'team-alpha',
       'Group chat',
     ]);
+    act(() => {
+      getSendButton(host).click();
+    });
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      []
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('sends to the lead after switching from a teammate back to the group chat', () => {
+    const { host, onSend, root } = renderComposer();
+
+    act(() => {
+      getButtonContainingText(host, 'bob').click();
+    });
+    const groupChatOptions = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).filter(
+      (button) => button.textContent?.trim() === 'Group chat'
+    );
+    act(() => {
+      groupChatOptions.at(-1)?.click();
+    });
+    act(() => {
+      getSendButton(host).click();
+    });
+
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      []
+    );
 
     act(() => {
       root.unmount();

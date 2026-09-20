@@ -1,5 +1,6 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -65,9 +66,12 @@ export const MessageComposerTeamSelector = ({
             aria-hidden="true"
           />
           {isCrossTeam ? (
-            <span className="min-w-0 truncate" title={targetDisplayName ?? undefined}>
-              {targetDisplayName}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="min-w-0 truncate">{targetDisplayName}</span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{targetDisplayName}</TooltipContent>
+            </Tooltip>
           ) : (
             <span className="min-w-0 truncate text-[var(--color-text-secondary)]">
               {currentTeamDisplayName}
@@ -115,24 +119,28 @@ export const MessageComposerTeamSelector = ({
                     )}
                     onClick={() => onSelectTarget(target.teamName)}
                   >
-                    <span
-                      className={cn(
-                        'inline-block size-2 shrink-0 rounded-full',
-                        target.isOnline && 'animate-pulse'
-                      )}
-                      style={{
-                        backgroundColor: target.isOnline
-                          ? '#22c55e'
-                          : target.color
-                            ? getTeamColorSet(target.color).border
-                            : nameColorSet(target.displayName).border,
-                      }}
-                      title={
-                        target.isOnline
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            'inline-block size-2 shrink-0 rounded-full',
+                            target.isOnline && 'animate-pulse'
+                          )}
+                          style={{
+                            backgroundColor: target.isOnline
+                              ? '#22c55e'
+                              : target.color
+                                ? getTeamColorSet(target.color).border
+                                : nameColorSet(target.displayName).border,
+                          }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {target.isOnline
                           ? t('messageComposer.teamSelector.onlineTitle')
-                          : t('messageComposer.teamSelector.offlineTitle')
-                      }
-                    />
+                          : t('messageComposer.teamSelector.offlineTitle')}
+                      </TooltipContent>
+                    </Tooltip>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <div className="truncate text-[var(--color-text)]">

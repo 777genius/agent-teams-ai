@@ -59,8 +59,21 @@ export const MessagesThreadPlacement = ({
     } catch (error) {
       console.warn('[MessagesThreadPlacement] Failed to move live thread', error);
       if (sidebarTarget?.isConnected && container.parentNode !== sidebarTarget) {
-        if (supportsStatePreservingMove(sidebarTarget)) {
-          sidebarTarget.moveBefore(container, null);
+        try {
+          const restoreTarget = sidebarTarget as HTMLElement & {
+            moveBefore?: (node: Node, child: Node | null) => void;
+          };
+          if (typeof restoreTarget.moveBefore === 'function') {
+            try {
+              restoreTarget.moveBefore(container, null);
+            } catch {
+              restoreTarget.appendChild(container);
+            }
+          } else {
+            restoreTarget.appendChild(container);
+          }
+        } catch (fallbackError) {
+          console.warn('[MessagesThreadPlacement] Failed to restore sidebar thread', fallbackError);
         }
       }
       expandedHost?.onExpandedChange(false);
