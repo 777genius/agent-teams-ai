@@ -158,7 +158,8 @@ describe('selected controller input source integration', () => {
   it.each([
     [
       'stale controller nonce',
-      (v: ReturnType<typeof fixture>) => (v.mutableNamespace.controllerNonce = '0'.repeat(64)),
+      (v: ReturnType<typeof fixture>): string =>
+        (v.mutableNamespace.controllerNonce = '0'.repeat(64)),
     ],
     [
       'stale run id',
@@ -171,7 +172,8 @@ describe('selected controller input source integration', () => {
     ],
     [
       'mismatched bootstrap',
-      (v: ReturnType<typeof fixture>) => (v.mutableIssuance.serializedProductBootstrap = '{}'),
+      (v: ReturnType<typeof fixture>): string =>
+        (v.mutableIssuance.serializedProductBootstrap = '{}'),
     ],
     [
       'mismatched artifact',
@@ -191,7 +193,7 @@ describe('selected controller input source integration', () => {
     ],
     [
       'substituted descriptor',
-      (v: ReturnType<typeof fixture>) =>
+      (v: ReturnType<typeof fixture>): string =>
         (((v.mutableIssuance.native as Record<string, unknown>).controllerDescriptor as string) =
           '{"fixture":"substituted"}'),
     ],
@@ -220,7 +222,7 @@ describe('selected controller input source integration', () => {
   it.each([
     [
       'missing observation authority',
-      (v: ReturnType<typeof fixture>) =>
+      (v: ReturnType<typeof fixture>): undefined =>
         ((v.mutableIssuance.native as Record<string, unknown>).observations = undefined),
     ],
     [
