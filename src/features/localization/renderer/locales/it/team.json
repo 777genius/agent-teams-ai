@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "Schermo intero",
+      "teamOnly": "Lo schermo intero è disponibile nella schermata del team"
     },
     "panelMode": "Modalità del pannello dei messaggi",
     "title": "Messaggi",

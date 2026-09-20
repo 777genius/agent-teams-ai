@@ -1580,6 +1580,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   });
   const {
     expanded: expandedChat,
+    ownsNativeSidebar,
     host: expandedChatHost,
     collapse: collapseExpandedChat,
     setTarget: setExpandedChatTarget,
@@ -2752,7 +2753,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
-      isActive: isThisTabActive,
+      isActive: isThisTabActive || ownsNativeSidebar,
       teamName,
       onPositionChange: changeMessagesPanelMode,
       mountPoint: messagesPanelMountPoint,
@@ -2787,6 +2788,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       timeWindow,
       changeMessagesPanelMode,
       isThisTabActive,
+      ownsNativeSidebar,
     ]
   );
 

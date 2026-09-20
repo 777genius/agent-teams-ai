@@ -177,8 +177,7 @@ export function useConversationViewport(options: Options): {
         publish(false);
         const target = latest.current.virtualizer.getOffsetForIndex(index, 'start');
         if (target) {
-          const scrollMargin = latest.current.virtualizer.options.scrollMargin ?? 0;
-          write(target[0] + scrollMargin - anchor.offset);
+          write(target[0] - anchor.offset);
         }
       }
     };

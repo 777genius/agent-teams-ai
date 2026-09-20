@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "Skrin penuh",
+      "teamOnly": "Skrin penuh tersedia pada skrin pasukan"
     },
     "panelMode": "Mod panel mesej",
     "title": "Mesej",

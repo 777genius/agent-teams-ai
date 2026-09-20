@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "पूर्ण स्क्रीन",
+      "teamOnly": "पूर्ण स्क्रीन टीम स्क्रीन पर उपलब्ध है"
     },
     "panelMode": "संदेश पैनल मोड",
     "title": "संदेश",

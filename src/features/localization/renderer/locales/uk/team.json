@@ -778,8 +778,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "На весь екран",
+      "teamOnly": "Режим на весь екран доступний на екрані команди"
     },
     "panelMode": "Режим панелі повідомлень",
     "title": "Повідомлення",

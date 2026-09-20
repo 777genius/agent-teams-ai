@@ -259,12 +259,28 @@ export const MessageComposer = ({
       });
       return;
     }
-    if (lockedRecipient === recipient && !groupChatSelected) return;
+    if (
+      lockedRecipient === recipient &&
+      !groupChatSelected &&
+      selectedTeam === null &&
+      crossTeamRecipient === null
+    ) {
+      return;
+    }
     queueMicrotask(() => {
+      setSelectedTeam(null);
+      setCrossTeamRecipient(null);
       setRecipient(lockedRecipient);
       setGroupChatSelected(false);
     });
-  }, [groupChatSelected, lockedRecipient, recipient, selectLocalGroupChat]);
+  }, [
+    crossTeamRecipient,
+    groupChatSelected,
+    lockedRecipient,
+    recipient,
+    selectLocalGroupChat,
+    selectedTeam,
+  ]);
 
   // Members load async with team data; keep recipient stable if valid, otherwise default to lead/first.
   useEffect(() => {

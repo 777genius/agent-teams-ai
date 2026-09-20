@@ -267,7 +267,7 @@ describe('conversation viewport owner', () => {
     expect(scroll.scrollTop).toBe(1600);
     flush(); expect(state.observationEnabled).toBe(true);
   });
-  it('keeps off-range seek observation closed through its programmatic scroll event', () => {
+  it('keeps off-range seek observation closed without adding scroll margin twice', () => {
     const row = document.createElement('div'); row.dataset.timelineRowKey = 'anchor'; content.append(row);
     row.getBoundingClientRect = () => ({ top: 350 - scroll.scrollTop, bottom: 650 - scroll.scrollTop, height: 300 } as DOMRect);
     props.rows = [{ kind: 'message-row', key: 'anchor', itemIndex: 0 } as TimelineRow];
@@ -279,7 +279,7 @@ describe('conversation viewport owner', () => {
     };
     props = { ...props, virtual: true, rows: [...props.rows] }; render();
     expect(state.observationEnabled).toBe(false);
-    expect(scroll.scrollTop).toBe(415);
+    expect(scroll.scrollTop).toBe(350);
     act(() => scroll.dispatchEvent(new Event('scroll')));
     expect(state.observationEnabled).toBe(false);
     flush(); expect(state.observationEnabled).toBe(true);

@@ -90,6 +90,16 @@ const patchChecks = [
       'useComposedRefs)(forwardedRef, setBubbleInput)',
     ],
   },
+  {
+    packageName: '@radix-ui/react-switch',
+    requiredMarkers: ['useGuardedNodeSetter', 'setControlRef', 'setBubbleInputRef'],
+    forbiddenSnippets: [
+      'useComposedRefs(forwardedRef, setControl)',
+      'useComposedRefs(forwardedRef, setBubbleInput)',
+      'useComposedRefs)(forwardedRef, setControl)',
+      'useComposedRefs)(forwardedRef, setBubbleInput)',
+    ],
+  },
 ];
 
 function resolvePackageRoot({ packageName, resolverFromPackage }) {

@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "முழுத் திரை",
+      "teamOnly": "முழுத் திரை குழுத் திரையில் கிடைக்கும்"
     },
     "panelMode": "செய்தி panel பயன்முறை",
     "title": "செய்திகள்",

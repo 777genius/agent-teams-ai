@@ -965,6 +965,31 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
+  it('clears cross-team routing state when a local direct chat is locked', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, render, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    expect(getTextarea(host).placeholder).toContain('Beta Team');
+
+    render({ lockedRecipient: 'bob' });
+    await act(async () => undefined);
+
+    expect(getTextarea(host).placeholder).not.toContain('Beta Team');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('defers expensive mention data until the matching trigger is typed', () => {
     draftHarness.state.text = '';
     const { host, render, root } = renderComposer();

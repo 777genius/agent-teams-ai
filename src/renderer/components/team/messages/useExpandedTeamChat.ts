@@ -25,6 +25,7 @@ interface UseExpandedTeamChatArgs {
 
 interface ExpandedTeamChatController {
   expanded: boolean;
+  ownsNativeSidebar: boolean;
   host: ExpandedChatHost;
   collapse: () => void;
   setTarget: Dispatch<SetStateAction<HTMLDivElement | null>>;
@@ -119,5 +120,5 @@ export function useExpandedTeamChat({
     [expanded, graphOpen, isActive, messagesPanelMode, onExpandedChange, ownsNativeSidebar, target]
   );
 
-  return { expanded, host, collapse, setTarget, onNativeOwnershipChange };
+  return { expanded, ownsNativeSidebar, host, collapse, setTarget, onNativeOwnershipChange };
 }

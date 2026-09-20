@@ -800,6 +800,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   if (messages.length === 0) {
     return (
       <div ref={rootRef} className="flex flex-col">
+        {conversation && history}
         {loading ? (
           <TimelineLoadingState />
         ) : (

@@ -6,12 +6,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Controller = ReturnType<typeof useExpandedTeamChat>;
 
-function Harness({ onController }: { onController: (controller: Controller) => void }) {
+function Harness({
+  isActive = true,
+  onController,
+}: {
+  isActive?: boolean;
+  onController: (controller: Controller) => void;
+}) {
   const contentRef = useRef<HTMLDivElement>(null);
   const controller = useExpandedTeamChat({
     teamName: 'atlas-hq',
     messagesPanelMode: 'sidebar',
-    isActive: true,
+    isActive,
     graphOpen: false,
     editorOpen: false,
     contentRef,
@@ -71,6 +77,28 @@ describe('useExpandedTeamChat', () => {
     await act(async () => getController().onNativeOwnershipChange(false));
     expect(getController().expanded).toBe(false);
     expect(host.querySelector('[data-testid="content"]')?.hasAttribute('inert')).toBe(false);
+
+    await act(async () => root.unmount());
+  });
+
+  it('reports native sidebar ownership while its source tab is inactive', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let controller: Controller | null = null;
+    const getController = (): Controller => {
+      if (!controller) throw new Error('controller was not captured');
+      return controller;
+    };
+
+    await act(async () => {
+      root.render(
+        <Harness isActive={false} onController={(next) => (controller = next)} />
+      );
+    });
+
+    expect(getController().ownsNativeSidebar).toBe(true);
+    expect(getController().host.available).toBe(false);
 
     await act(async () => root.unmount());
   });

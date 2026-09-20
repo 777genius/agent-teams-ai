@@ -63,6 +63,27 @@ beforeEach(() => {
 });
 
 describe('ActivityTimeline new message highlight', () => {
+  it('keeps conversation history controls available when the result is empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages: [],
+          teamName: 'demo-team',
+          presentation: 'conversation',
+          historyControl: () => React.createElement('button', null, 'Load older'),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Load older');
+    await act(async () => root.unmount());
+  });
+
   it('retains expanded conversation history while appending fresh head and keeps activity newest first', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

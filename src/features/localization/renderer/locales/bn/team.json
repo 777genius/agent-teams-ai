@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "পূর্ণ পর্দা",
+      "teamOnly": "পূর্ণ পর্দা টিম স্ক্রিনে উপলভ্য"
     },
     "panelMode": "বার্তার মোড",
     "title": "বার্তা",

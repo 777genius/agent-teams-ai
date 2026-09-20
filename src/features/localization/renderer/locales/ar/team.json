@@ -776,8 +776,8 @@
       }
     },
     "fullScreen": {
-      "label": "Full Screen",
-      "teamOnly": "Full Screen is available on the team screen"
+      "label": "ملء الشاشة",
+      "teamOnly": "يتوفر ملء الشاشة في شاشة الفريق"
     },
     "panelMode": "طريقة لوحة الرسائل",
     "title": "الرسائل",
