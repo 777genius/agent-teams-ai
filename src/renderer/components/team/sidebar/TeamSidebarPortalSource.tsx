@@ -16,6 +16,7 @@ interface TeamSidebarPortalSourceProps {
   isActive: boolean;
   isFocused: boolean;
   onNativeOwnershipChange?: (ownsNativeSidebar: boolean) => void;
+  onRenderedSidebarChange?: (rendersSidebar: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -24,12 +25,14 @@ export const TeamSidebarPortalSource = ({
   isActive,
   isFocused,
   onNativeOwnershipChange,
+  onRenderedSidebarChange,
   children,
 }: TeamSidebarPortalSourceProps): React.JSX.Element | null => {
   const sourceId = useId();
   const hostId = useTeamSidebarHostId();
   const messagesPanelMode = useStore((s) => s.messagesPanelMode);
   const snapshot = useTeamSidebarPortalSnapshot();
+  const activeHostId = snapshot.activeHostIdByTeam[teamName];
 
   useLayoutEffect(() => {
     upsertTeamSidebarSource(sourceId, {
@@ -45,12 +48,21 @@ export const TeamSidebarPortalSource = ({
   const ownsNativeSidebar =
     messagesPanelMode === 'sidebar' &&
     snapshot.activeSourceIdByTeam[teamName] === sourceId &&
-    snapshot.activeHostIdByTeam[teamName] === hostId;
+    activeHostId === hostId;
+  const rendersSidebar =
+    messagesPanelMode === 'sidebar' &&
+    snapshot.activeSourceIdByTeam[teamName] === sourceId &&
+    Boolean(activeHostId && getTeamSidebarHostElement(activeHostId));
 
   useLayoutEffect(() => {
     onNativeOwnershipChange?.(ownsNativeSidebar);
     return () => onNativeOwnershipChange?.(false);
   }, [onNativeOwnershipChange, ownsNativeSidebar]);
+
+  useLayoutEffect(() => {
+    onRenderedSidebarChange?.(rendersSidebar);
+    return () => onRenderedSidebarChange?.(false);
+  }, [onRenderedSidebarChange, rendersSidebar]);
 
   if (!hostId || messagesPanelMode !== 'sidebar') {
     return null;
@@ -60,7 +72,6 @@ export const TeamSidebarPortalSource = ({
     return null;
   }
 
-  const activeHostId = snapshot.activeHostIdByTeam[teamName];
   if (!activeHostId) {
     return null;
   }

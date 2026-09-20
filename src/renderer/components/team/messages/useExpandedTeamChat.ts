@@ -26,10 +26,12 @@ interface UseExpandedTeamChatArgs {
 interface ExpandedTeamChatController {
   expanded: boolean;
   ownsNativeSidebar: boolean;
+  rendersSidebar: boolean;
   host: ExpandedChatHost;
   collapse: () => void;
   setTarget: Dispatch<SetStateAction<HTMLDivElement | null>>;
   onNativeOwnershipChange: (ownsNativeSidebar: boolean) => void;
+  onRenderedSidebarChange: (rendersSidebar: boolean) => void;
 }
 
 export function useExpandedTeamChat({
@@ -42,6 +44,7 @@ export function useExpandedTeamChat({
 }: UseExpandedTeamChatArgs): ExpandedTeamChatController {
   const [expandedTeamName, setExpandedTeamName] = useState<string | null>(null);
   const [ownsNativeSidebar, setOwnsNativeSidebar] = useState(false);
+  const [rendersSidebar, setRendersSidebar] = useState(false);
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
   const pendingSectionNavigationRef = useRef<HTMLElement | null>(null);
   const expanded = expandedTeamName === teamName;
@@ -56,6 +59,9 @@ export function useExpandedTeamChat({
   const onNativeOwnershipChange = useCallback((ownsSidebar: boolean): void => {
     setOwnsNativeSidebar(ownsSidebar);
     if (!ownsSidebar) setExpandedTeamName(null);
+  }, []);
+  const onRenderedSidebarChange = useCallback((renders: boolean): void => {
+    setRendersSidebar(renders);
   }, []);
 
   useLayoutEffect(() => {
@@ -120,5 +126,14 @@ export function useExpandedTeamChat({
     [expanded, graphOpen, isActive, messagesPanelMode, onExpandedChange, ownsNativeSidebar, target]
   );
 
-  return { expanded, ownsNativeSidebar, host, collapse, setTarget, onNativeOwnershipChange };
+  return {
+    expanded,
+    ownsNativeSidebar,
+    rendersSidebar,
+    host,
+    collapse,
+    setTarget,
+    onNativeOwnershipChange,
+    onRenderedSidebarChange,
+  };
 }

@@ -16,6 +16,7 @@ vi.mock('@renderer/store', () => ({
 
 import { TeamSidebarHost } from './TeamSidebarHost';
 import { resetTeamSidebarPortalManagerForTests } from './TeamSidebarPortalManager';
+import { TeamSidebarPortalSource } from './TeamSidebarPortalSource';
 
 const mountedRoots: Root[] = [];
 
@@ -73,5 +74,39 @@ describe('TeamSidebarHost', () => {
 
     expect(host.style.width).toBe('0px');
     expect(host.style.minWidth).toBe('0');
+  });
+
+  it('reports ownership when an inactive team source portals into an active graph host', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    const onNativeOwnershipChange = vi.fn();
+    const onRenderedSidebarChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <>
+          <TeamSidebarHost teamName="alpha" surface="team" isActive={false} isFocused={false}>
+            <TeamSidebarPortalSource
+              teamName="alpha"
+              isActive={false}
+              isFocused={false}
+              onNativeOwnershipChange={onNativeOwnershipChange}
+              onRenderedSidebarChange={onRenderedSidebarChange}
+            >
+              <div data-testid="live-thread" />
+            </TeamSidebarPortalSource>
+          </TeamSidebarHost>
+          <TeamSidebarHost teamName="alpha" surface="graph-tab" isActive isFocused />
+        </>
+      );
+      await Promise.resolve();
+    });
+
+    const graphHost = container.querySelector('[data-team-sidebar-host="graph-tab"]');
+    expect(graphHost?.querySelector('[data-testid="live-thread"]')).not.toBeNull();
+    expect(onNativeOwnershipChange).toHaveBeenLastCalledWith(false);
+    expect(onRenderedSidebarChange).toHaveBeenLastCalledWith(true);
   });
 });

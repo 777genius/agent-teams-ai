@@ -175,7 +175,7 @@ export const MessageComposer = ({
   const [crossTeamRecipient, setCrossTeamRecipient] = useState<string | null>(null);
   const [teamSelectorOpen, setTeamSelectorOpen] = useState(false);
   const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
-  const crossTeamTargetsFetchedRef = useRef(false);
+  const crossTeamTargetsFetchPendingRef = useRef(false);
   const allCrossTeamTargets = useStore(useShallow((s) => s.crossTeamTargets));
   const fetchCrossTeamTargets = useStore((s) => s.fetchCrossTeamTargets);
 
@@ -189,21 +189,13 @@ export const MessageComposer = ({
   }, []);
 
   useEffect(() => {
-    if (!teamSelectorOpen) return;
-    if (!crossTeamTargetsFetchedRef.current) {
-      // Set the guard synchronously to dedupe concurrent fetches, but clear it if the fetch
-      // fails so a later open retries instead of leaving cross-team targets permanently empty.
-      crossTeamTargetsFetchedRef.current = true;
-      void fetchCrossTeamTargets()
-        .then((ok) => {
-          if (!ok) {
-            crossTeamTargetsFetchedRef.current = false;
-          }
-        })
-        .catch(() => {
-          crossTeamTargetsFetchedRef.current = false;
-        });
-    }
+    if (!teamSelectorOpen || crossTeamTargetsFetchPendingRef.current) return;
+    crossTeamTargetsFetchPendingRef.current = true;
+    void fetchCrossTeamTargets()
+      .catch(() => false)
+      .finally(() => {
+        crossTeamTargetsFetchPendingRef.current = false;
+      });
     void refreshAliveTeams();
   }, [fetchCrossTeamTargets, refreshAliveTeams, teamSelectorOpen]);
 
@@ -237,7 +229,11 @@ export const MessageComposer = ({
   const isCrossTeam = selectedTeam !== null;
   const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
-  const selectedTargetMembers = selectedTarget?.members ?? [];
+  const selectedTargetMembers = useMemo(() => selectedTarget?.members ?? [], [selectedTarget]);
+  useEffect(() => {
+    if (crossTeamRecipient && !selectedTargetMembers.some((m) => m.name === crossTeamRecipient))
+      queueMicrotask(() => setCrossTeamRecipient(null));
+  }, [crossTeamRecipient, selectedTargetMembers]);
   const crossTeamHintText = isCrossTeam ? t('messageComposer.crossTeam.hint') : undefined;
   const groupChatRecipient =
     members.find((member) => isLeadMember(member))?.name ?? members[0]?.name ?? '';
@@ -398,8 +394,8 @@ export const MessageComposer = ({
     : null;
   const attachmentInputAccept = getAttachmentInputAcceptForMember(selectedMember);
   const hasTeammates = members.length > 1;
-  const canDelegate = hasTeammates && (isCrossTeam || isLeadRecipient);
-  const shouldAutoDelegate = isLeadRecipient && canDelegate;
+  const canDelegate = isCrossTeam ? crossTeamRecipient === null : hasTeammates && isLeadRecipient;
+  const shouldAutoDelegate = canDelegate && (isCrossTeam || isLeadRecipient);
 
   const { actionMode, setActionMode, isLoaded: draftLoaded } = draft;
 

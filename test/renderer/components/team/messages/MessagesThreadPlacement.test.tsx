@@ -5,6 +5,7 @@ import {
   type ExpandedChatHost,
   MessagesThreadPlacement,
 } from '@renderer/components/team/messages/MessagesThreadPlacement';
+import { Switch } from '@renderer/components/ui/switch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('MessagesThreadPlacement', () => {
@@ -73,6 +74,42 @@ describe('MessagesThreadPlacement', () => {
 
     await act(async () => root.unmount());
     expect(unmounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a live Radix switch while moving the thread between hosts', async () => {
+    const rootNode = document.createElement('div');
+    const sidebar = document.createElement('div');
+    const main = document.createElement('div');
+    document.body.append(rootNode, sidebar, main);
+    const root = createRoot(rootNode);
+
+    const render = async (expanded: boolean): Promise<void> => {
+      await act(async () => {
+        root.render(
+          <MessagesThreadPlacement
+            sidebarTarget={sidebar}
+            expandedHost={{ target: main, available: true, expanded, onExpandedChange: vi.fn() }}
+          >
+            <Switch aria-label="Keep feed visible" />
+          </MessagesThreadPlacement>
+        );
+      });
+    };
+
+    await render(false);
+    const toggle = sidebar.querySelector<HTMLButtonElement>('[aria-label="Keep feed visible"]');
+    expect(toggle?.dataset.state).toBe('unchecked');
+    act(() => toggle?.click());
+    expect(toggle?.dataset.state).toBe('checked');
+
+    await render(true);
+    expect(main.querySelector('[aria-label="Keep feed visible"]')).toBe(toggle);
+    expect(toggle?.dataset.state).toBe('checked');
+
+    await render(false);
+    expect(sidebar.querySelector('[aria-label="Keep feed visible"]')).toBe(toggle);
+    expect(toggle?.dataset.state).toBe('checked');
+    await act(async () => root.unmount());
   });
 
   it('restores the live thread when both the expanded move and sidebar move fail', async () => {

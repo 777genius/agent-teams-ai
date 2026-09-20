@@ -1580,11 +1580,12 @@ export const TeamDetailView = memo(function TeamDetailView({
   });
   const {
     expanded: expandedChat,
-    ownsNativeSidebar,
+    rendersSidebar,
     host: expandedChatHost,
     collapse: collapseExpandedChat,
     setTarget: setExpandedChatTarget,
     onNativeOwnershipChange: handleNativeSidebarOwnershipChange,
+    onRenderedSidebarChange: handleRenderedSidebarChange,
   } = expandedChatController;
   const interactiveTeamRef = useRef<string | null>(null);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
@@ -2752,7 +2753,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
-      isActive: isThisTabActive || ownsNativeSidebar,
+      isActive: isThisTabActive || rendersSidebar,
       teamName,
       onPositionChange: changeMessagesPanelMode,
       mountPoint: messagesPanelMountPoint,
@@ -2787,7 +2788,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       timeWindow,
       changeMessagesPanelMode,
       isThisTabActive,
-      ownsNativeSidebar,
+      rendersSidebar,
     ]
   );
   const renderTeamActionButtons = (pinned: boolean): React.JSX.Element => (
@@ -2959,7 +2960,6 @@ export const TeamDetailView = memo(function TeamDetailView({
             isThisTabActive={isThisTabActive}
           />
 
-          {/* Messages sidebar (left, after context panel) */}
           <TeamSidebarHost
             teamName={teamName}
             surface="team"
@@ -2971,6 +2971,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               isActive={isThisTabActive}
               isFocused={isPaneFocused}
               onNativeOwnershipChange={handleNativeSidebarOwnershipChange}
+              onRenderedSidebarChange={handleRenderedSidebarChange}
             >
               <TeamSidebarRailBridge
                 teamName={teamName}
@@ -3794,9 +3795,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     );
   };
 
-  // The launch dialog renders outside renderBody's branches so a branch change
-  // (e.g. draft view → provisioning view after Launch) does not unmount it and
-  // discard in-progress user edits. The draft view has no resolved members yet.
+  // Keep the launch dialog outside renderBody so branch changes preserve in-progress edits.
   const isDraftTeamView = error === 'TEAM_DRAFT';
   const launchDialogDefaultProjectPath = isDraftTeamView
     ? useStore.getState().teamByName[teamName]?.projectPath
