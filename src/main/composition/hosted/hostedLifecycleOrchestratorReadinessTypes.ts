@@ -58,11 +58,11 @@ export interface OrchestratorLifecycleBootstrapBinding {
   readonly proofKeyId: string;
 }
 
-function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
+export function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string[]): boolean {
+export function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string[]): boolean {
   const actual = Reflect.ownKeys(value);
   return (
     actual.length === keys.length &&

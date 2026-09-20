@@ -10,6 +10,8 @@ import { createLogger } from '@shared/utils/logger';
 import {
   createOrchestratorLifecycleReadinessProof,
   createOrchestratorLifecycleReadinessRequestProof,
+  hasExactKeys,
+  isRecord,
   ownerProofMatches,
   parseOrchestratorLifecycleOwnerBinding,
   sameOrchestratorLifecycleOwnerBinding,
@@ -32,14 +34,12 @@ export {
   parseOrchestratorLifecycleOwnerProofKey,
   sameOrchestratorLifecycleOwnerBinding,
   sameOrchestratorSocketIdentity,
-} from './hostedLifecycleOrchestratorReadinessTypes';
-export type {
-  HostedLifecycleReadinessDiagnostic,
-  HostedLifecycleReadinessFailure,
-  OrchestratorLifecycleBootstrapBinding,
-  OrchestratorLifecycleOwnerBinding,
-  OrchestratorLifecycleOwnerProofKey,
-  OrchestratorSocketIdentity,
+  type HostedLifecycleReadinessDiagnostic,
+  type HostedLifecycleReadinessFailure,
+  type OrchestratorLifecycleBootstrapBinding,
+  type OrchestratorLifecycleOwnerBinding,
+  type OrchestratorLifecycleOwnerProofKey,
+  type OrchestratorSocketIdentity,
 } from './hostedLifecycleOrchestratorReadinessTypes';
 const HANDSHAKE_SCHEMA_VERSION = 2;
 const HANDSHAKE_CAPABILITY = 'hosted-lifecycle-command';
