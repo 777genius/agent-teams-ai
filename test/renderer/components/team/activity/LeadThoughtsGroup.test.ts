@@ -69,15 +69,15 @@ describe('LeadThoughtsGroup', () => {
     vi.stubGlobal(
       'IntersectionObserver',
       class {
-        observe() {}
-        disconnect() {}
+        observe = vi.fn();
+        disconnect = vi.fn();
       }
     );
     vi.stubGlobal(
       'ResizeObserver',
       class {
-        observe() {}
-        disconnect() {}
+        observe = vi.fn();
+        disconnect = vi.fn();
       }
     );
   });
@@ -271,8 +271,8 @@ System-level bootstrap rules:
         constructor(callback: IntersectionObserverCallback) {
           observerCallbacks.push(callback);
         }
-        observe() {}
-        disconnect() {}
+        observe = vi.fn();
+        disconnect = vi.fn();
       }
     );
     const host = document.createElement('div');
@@ -295,7 +295,7 @@ System-level bootstrap rules:
       );
       await Promise.resolve();
     });
-    await act(async () => {
+    act(() => {
       observerCallbacks.at(-1)?.(
         [{ isIntersecting: true } as IntersectionObserverEntry],
         {} as IntersectionObserver
@@ -319,7 +319,7 @@ System-level bootstrap rules:
       );
       await Promise.resolve();
     });
-    await act(async () => {
+    act(() => {
       observerCallbacks.at(-1)?.(
         [{ isIntersecting: true } as IntersectionObserverEntry],
         {} as IntersectionObserver
