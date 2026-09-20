@@ -288,17 +288,19 @@ export function assertNativeSemanticCrossJoin(
       throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
     };
     if (timeline.length !== 1 || effects.length !== 1) fail('stream_isolation');
-    const facts = [
-      ...timeline[0]!.records.slice(1, -1),
-      ...effects[0]!.records.slice(1, -1),
-    ];
     if (
       timeline[0]!.records.some((record) => record.stream !== 'openCodeTimeline') ||
       effects[0]!.records.some((record) => record.stream !== 'protectedEffectLedger')
     )
       fail('stream_isolation');
-    const capability = facts.filter((record) => record.recordType === 'hosted-capability');
-    if (capability.length !== 1 || timeline[0]!.records[1] !== capability[0]) fail('capability');
+    const timelineFacts = timeline[0]!.records.slice(1, -1);
+    const effectFacts = effects[0]!.records.slice(1, -1);
+    const [bootstrapCapability, ...timelineMappedFacts] = timelineFacts;
+    if (
+      bootstrapCapability?.recordType !== 'hosted-capability' ||
+      timelineMappedFacts.some((record) => record.recordType === 'hosted-capability') ||
+      effectFacts.some((record) => record.recordType === 'hosted-capability')
+    ) fail('capability');
 
     const candidates = parseRawOrigin(raw.opencode, 'opencode', controllerNonce)
       .filter(isLegacyRecord)
@@ -312,7 +314,11 @@ export function assertNativeSemanticCrossJoin(
         const rightNs = BigInt(right.monotonicNs);
         return leftNs === rightNs ? 0 : leftNs < rightNs ? -1 : 1;
       });
-    const mappedFacts = facts.filter((record) => record.recordType !== 'hosted-capability');
+    // This first parser-validated native fact is bootstrap evidence, not a raw semantic event.
+    const mappedFacts = [...timelineMappedFacts, ...effectFacts];
+    if (mappedFacts.some(({ operationNonce }) =>
+      operationNonce === bootstrapCapability.operationNonce
+    )) fail('capability');
     const used = new Set<NativeCaptureRecord>();
     const identityFields = [
       'runtimeInstanceId', 'configGeneration', 'sessionId', 'requestId',
@@ -337,6 +343,8 @@ export function assertNativeSemanticCrossJoin(
               : fail('direction');
       const request = validateRedactedStructure(transport.request, 'opencode_request');
       const response = validateRedactedStructure(transport.response, 'opencode_response');
+      const requestSha256 = sha256(request.bytes);
+      const responseSha256 = sha256(response.bytes);
       const decision = rawRecord.semanticIdentity.decision;
       if (decision === 'none' && recordType !== 'hosted-observe') fail('decision');
       const expectedDecision = decision === 'allow'
@@ -350,11 +358,16 @@ export function assertNativeSemanticCrossJoin(
         if (boundOperation !== undefined && record.operationNonce !== boundOperation) return false;
         const native = record.native;
         if (recordType === 'hosted-reply-raw')
-          return native.requestBodySha256 === request.sha256 && native.responseSha256 === response.sha256;
+          return native.requestBodySha256 === requestSha256 &&
+            native.responseSha256 === responseSha256 && native.status === transport.status &&
+            native.outcome === 'applied';
         if (recordType === 'hosted-reply')
-          return native.responseSha256 === response.sha256 && native.decision === expectedDecision;
-        if (recordType === 'conditional-reply-effect') return native.decision === expectedDecision;
-        return native.responseSha256 === response.sha256;
+          return native.responseSha256 === responseSha256 && native.status === transport.status &&
+            native.outcome === 'applied' && native.decision === expectedDecision;
+        if (recordType === 'conditional-reply-effect')
+          return native.outcome === 'applied' && native.decision === expectedDecision;
+        return native.responseSha256 === responseSha256 && native.status === transport.status &&
+          native.outcome === 'ok';
       });
       if (matches.length !== 1) fail(matches.length === 0 ? 'unmatched_native' : 'duplicate');
       const selected = matches[0]!;
@@ -404,7 +417,7 @@ export function assertNativeSemanticCrossJoin(
       previewRef: identity.previewRef,
     });
     const replySessionBySemanticIdentity = new Map<string, string>();
-    const capabilityNative = capability[0]!.native;
+    const capabilityNative = bootstrapCapability.native;
     const runtimeInstanceId = capabilityNative.runtimeInstanceId;
     const configGeneration = capabilityNative.configGeneration;
     if (

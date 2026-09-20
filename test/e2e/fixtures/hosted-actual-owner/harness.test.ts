@@ -3766,8 +3766,13 @@ function openCodeCrossJoinFixture(options: {
   readonly omitCapability?: boolean;
   readonly duplicateCapability?: boolean;
   readonly lateCapability?: boolean;
+  readonly capabilitySharesReplyOperation?: boolean;
   readonly omitEffect?: boolean;
   readonly effectSessionId?: string;
+  readonly effectRequestId?: string;
+  readonly effectDecision?: 'once' | 'reject';
+  readonly requestBodySha256?: string;
+  readonly responseSha256?: string;
   readonly capabilityRuntimeInstanceId?: string;
   readonly capabilityConfigGeneration?: string;
   readonly observationRuntimeInstanceId?: string;
@@ -3865,8 +3870,12 @@ function openCodeCrossJoinFixture(options: {
     return value.transport as Record<string, Record<string, string>>;
   });
   const transportByEvent = new Map(records.map((record, index) => [record.event, semantic[index]!]));
-  const responseHash = (event: string) => transportByEvent.get(event)!.response.sha256;
-  const requestHash = (event: string) => transportByEvent.get(event)!.request.sha256;
+  const retainedHash = (event: string, direction: 'request' | 'response') => {
+    const retained = transportByEvent.get(event)![direction];
+    return sha256(Buffer.from(retained.bodyBase64, 'base64'));
+  };
+  const responseHash = (event: string) => retainedHash(event, 'response');
+  const requestHash = (event: string) => retainedHash(event, 'request');
   const sessionId = 'session_open_code_test';
   const requestId = 'request_open_code_test';
   const common = {
@@ -3883,7 +3892,9 @@ function openCodeCrossJoinFixture(options: {
     requestIncarnation: 'request_incarnation_test_second',
   };
   const observationBinding = options.observationUsesSecondBinding ? second : common;
-  const capability = { recordType: 'hosted-capability', operationNonce: digest('oc-capability'), native: {
+  const capability = { recordType: 'hosted-capability', operationNonce: digest(
+    options.capabilitySharesReplyOperation ? 'oc-reply' : 'oc-capability'
+  ), native: {
     configGeneration: options.capabilityConfigGeneration ?? common.configGeneration,
     outcome: 'ok', responseSha256: digest('capability-response'),
     runtimeInstanceId: options.capabilityRuntimeInstanceId ?? common.runtimeInstanceId, status: 200,
@@ -3892,8 +3903,10 @@ function openCodeCrossJoinFixture(options: {
     ...(options.omitCapability ? [] : [capability]),
     ...(options.duplicateCapability ? [{ ...capability, operationNonce: digest('oc-capability-2') }] : []),
     { recordType: 'hosted-reply-raw', operationNonce: digest('oc-reply'), native: {
-      ...common, outcome: 'applied', requestBodySha256: requestHash('allow_conditional_request'),
-      responseSha256: responseHash('allow_conditional_request'), status: 200,
+      ...common, outcome: 'applied', requestBodySha256:
+        options.requestBodySha256 ?? requestHash('allow_conditional_request'),
+      responseSha256: options.responseSha256 ?? responseHash('allow_conditional_request'),
+      status: 200,
     } },
     { recordType: 'hosted-reply', operationNonce: digest('oc-reply'), native: {
       ...common, decision: options.replyDecision ?? 'allow_once', outcome: 'applied',
@@ -3926,7 +3939,9 @@ function openCodeCrossJoinFixture(options: {
   if (options.lateCapability && !options.omitCapability) timelineFacts.push(timelineFacts.shift()!);
   const effectFacts = options.omitEffect ? [] : [{
     recordType: 'conditional-reply-effect', operationNonce: digest('oc-reply'), native: {
-      ...common, sessionId: options.effectSessionId ?? sessionId, decision: 'once',
+      ...common, sessionId: options.effectSessionId ?? sessionId,
+      requestId: options.effectRequestId ?? requestId,
+      decision: options.effectDecision ?? 'once',
       outcome: 'applied', permissionDigest: digest('permission'),
     },
   }, {
@@ -3963,9 +3978,7 @@ function openCodeCrossJoinFixture(options: {
       previousRecordSha256: sha256(`${canonicalJson(rows.at(-1))}\n`),
       emissionNonce: digest(`${name}:close`), operationNonce: null, native: {} });
     const bytes = Buffer.from(`${rows.map(canonicalJson).join('\n')}\n`);
-    return { bytes, parsed: parseNativeRuntimeCapture(
-      name, bytes, source.controllerNonce, source.outcome.runId
-    ) };
+    return { bytes };
   };
   const timeline = capture('openCodeTimelinePath', timelineFacts);
   const effects = capture('protectedEffectLedgerPath', effectFacts);
@@ -3973,6 +3986,22 @@ function openCodeCrossJoinFixture(options: {
     producerStartToken: source.outcome.starts.find(({ role }) => role === 'opencode')!.startToken,
   }] };
   return { source, raw, timeline, effects, expected };
+}
+
+function parseOpenCodeCrossJoinCaptures(
+  fixture: ReturnType<typeof openCodeCrossJoinFixture>
+) {
+  const runNonces = new Set<string>();
+  return {
+    timeline: parseNativeRuntimeCapture(
+      'openCodeTimelinePath', fixture.timeline.bytes,
+      fixture.source.controllerNonce, fixture.source.outcome.runId, runNonces
+    ),
+    effects: parseNativeRuntimeCapture(
+      'protectedEffectLedgerPath', fixture.effects.bytes,
+      fixture.source.controllerNonce, fixture.source.outcome.runId, runNonces
+    ),
+  };
 }
 
 describe('nonAuthoritative native capture parser goldens', () => {
@@ -4448,9 +4477,10 @@ describe('nonAuthoritative native capture parser goldens', () => {
 
   it('cross-joins multiple parser-validated OpenCode reply groups under one capability', () => {
     const fixture = openCodeCrossJoinFixture({ secondSessionId: 'session_open_code_second' });
+    const parsed = parseOpenCodeCrossJoinCaptures(fixture);
     for (const [name, primary, peer] of [
-      ['openCodeTimelinePath', fixture.timeline.parsed, fixture.effects.parsed],
-      ['protectedEffectLedgerPath', fixture.effects.parsed, fixture.timeline.parsed],
+      ['openCodeTimelinePath', parsed.timeline, parsed.effects],
+      ['protectedEffectLedgerPath', parsed.effects, parsed.timeline],
     ] as const) {
       expect(() => assertNativeSemanticCrossJoin(
         name, [primary], fixture.raw, fixture.source.controllerNonce, fixture.expected, [peer]
@@ -4460,14 +4490,19 @@ describe('nonAuthoritative native capture parser goldens', () => {
 
   it.each([
     ['identity mismatch', { effectSessionId: 'session_attacker' }],
+    ['request identity mismatch', { effectRequestId: 'request_attacker' }],
     ['missing effect', { omitEffect: true }],
     ['incorrect decision', { replyDecision: 'reject' as const }],
+    ['incorrect effect decision', { effectDecision: 'reject' as const }],
+    ['fabricated request hash', { requestBodySha256: digest('attacker-request') }],
+    ['fabricated response hash', { responseSha256: digest('attacker-response') }],
     ['permission identity mismatch', { replyPermissionDigest: digest('attacker-permission') }],
     ['reordered records', { reorderTimeline: true }],
     ['duplicate records', { duplicateRaw: true }],
     ['missing capability', { omitCapability: true }],
     ['duplicate capability', { duplicateCapability: true }],
     ['late capability', { lateCapability: true }],
+    ['capability operation collision', { capabilitySharesReplyOperation: true }],
     ['capability runtime substitution', {
       capabilityRuntimeInstanceId: 'runtime_open_code_attacker',
     }],
@@ -4488,9 +4523,10 @@ describe('nonAuthoritative native capture parser goldens', () => {
     }],
   ])('rejects OpenCode %s after native parsing', (_label, options) => {
     const fixture = openCodeCrossJoinFixture(options);
+    const parsed = parseOpenCodeCrossJoinCaptures(fixture);
     expect(() => assertNativeSemanticCrossJoin(
-      'openCodeTimelinePath', [fixture.timeline.parsed], fixture.raw,
-      fixture.source.controllerNonce, fixture.expected, [fixture.effects.parsed]
+      'openCodeTimelinePath', [parsed.timeline], fixture.raw,
+      fixture.source.controllerNonce, fixture.expected, [parsed.effects]
     )).toThrow(/p3c_runtime_capture_semantic_/u);
   });
 
@@ -4499,25 +4535,28 @@ describe('nonAuthoritative native capture parser goldens', () => {
       secondSessionId: 'session_open_code_second',
       observationUsesSecondBinding: true,
     });
+    const parsed = parseOpenCodeCrossJoinCaptures(fixture);
     expect(() => assertNativeSemanticCrossJoin(
-      'openCodeTimelinePath', [fixture.timeline.parsed], fixture.raw,
-      fixture.source.controllerNonce, fixture.expected, [fixture.effects.parsed]
+      'openCodeTimelinePath', [parsed.timeline], fixture.raw,
+      fixture.source.controllerNonce, fixture.expected, [parsed.effects]
     )).toThrow('p3c_runtime_capture_semantic_observe_identity:openCodeTimelinePath');
   });
 
   it('rejects distinct semantic identities sharing one OpenCode operation nonce', () => {
     const fixture = openCodeCrossJoinFixture({ shareObservationOperationNonce: true });
+    const parsed = parseOpenCodeCrossJoinCaptures(fixture);
     expect(() => assertNativeSemanticCrossJoin(
-      'openCodeTimelinePath', [fixture.timeline.parsed], fixture.raw,
-      fixture.source.controllerNonce, fixture.expected, [fixture.effects.parsed]
+      'openCodeTimelinePath', [parsed.timeline], fixture.raw,
+      fixture.source.controllerNonce, fixture.expected, [parsed.effects]
     )).toThrow('p3c_runtime_capture_semantic_identity:openCodeTimelinePath');
   });
 
   it('rejects OpenCode cross-stream substitution', () => {
     const fixture = openCodeCrossJoinFixture();
+    const parsed = parseOpenCodeCrossJoinCaptures(fixture);
     expect(() => assertNativeSemanticCrossJoin(
-      'openCodeTimelinePath', [fixture.timeline.parsed], fixture.raw,
-      fixture.source.controllerNonce, fixture.expected, [fixture.timeline.parsed]
+      'openCodeTimelinePath', [parsed.timeline], fixture.raw,
+      fixture.source.controllerNonce, fixture.expected, [parsed.timeline]
     )).toThrow('p3c_runtime_capture_semantic_stream_isolation:openCodeTimelinePath');
   });
 
@@ -4539,6 +4578,23 @@ describe('nonAuthoritative native capture parser goldens', () => {
         name, Buffer.from(`${rows.map(canonicalJson).join('\n')}\n`),
         fixture.source.controllerNonce, fixture.source.outcome.runId
       )).toThrow(/p3c_(?:runtime_capture|native_capture)/u);
+  });
+
+  it.each([
+    ['timeline session identity', 'timeline', 2, 'sessionId'],
+    ['timeline request identity', 'timeline', 2, 'requestId'],
+    ['effect session identity', 'effects', 1, 'sessionId'],
+    ['effect request identity', 'effects', 1, 'requestId'],
+  ] as const)('rejects a null OpenCode %s in the parser', (_label, capture, index, field) => {
+    const fixture = openCodeCrossJoinFixture();
+    const name = capture === 'timeline' ? 'openCodeTimelinePath' : 'protectedEffectLedgerPath';
+    const rows = fixture[capture].bytes.toString('utf8').trimEnd().split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    (rows[index]!.native as Record<string, unknown>)[field] = null;
+    expect(() => parseNativeRuntimeCapture(
+      name, Buffer.from(`${rows.map(canonicalJson).join('\n')}\n`),
+      fixture.source.controllerNonce, fixture.source.outcome.runId
+    )).toThrow(/p3c_(?:runtime_capture_native_schema|native_capture)/u);
   });
 
   it('rejects cross-owner mixing between ordered owner-generation shards', () => {
