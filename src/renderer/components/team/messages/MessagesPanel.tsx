@@ -134,17 +134,11 @@ interface MessagesPanelProps {
   position: TeamMessagesPanelMode;
   onPositionChange: (position: TeamMessagesPanelMode) => void;
   mountPoint?: Element | null;
-  /** Active (non-removed) members. */
   members: ResolvedTeamMember[];
-  /** All team tasks. */
   tasks: TeamTaskWithKanban[];
-  /** Whether the team is alive. */
   isTeamAlive?: boolean;
-  /** Live lead activity status for the current team. */
   leadActivity?: string;
-  /** Latest lead context timestamp for the current team. */
   leadContextUpdatedAt?: string;
-  /** Time window for filtering. */
   timeWindow: TimeWindow | null;
   /** Current lead session ID. */
   currentLeadSessionId?: string;
