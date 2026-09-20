@@ -21,6 +21,7 @@ import { type P1LaunchSelection, snapshotP1LaunchSelection } from './p1-admissio
 import { selectedOwnerImages } from './owner-recipe';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
+import { authenticateSelectedControllerInputs } from './selected-controller-inputs';
 import { readStable, verifyClosure, type WrittenFileEvidence } from './secure-files';
 import type { SelectedControllerExecutionInputs } from './supervisor/selected-controller-execution';
 
@@ -35,6 +36,29 @@ export interface DriverResult {
   readonly outcome: SupervisorOutcome;
   readonly raw: Readonly<Record<RawOrigin, Buffer>>;
   readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
+}
+
+export interface PreparedDriverExecution {
+  readonly selectedLaunch: P1LaunchSelection;
+  readonly selectedInputs: SelectedControllerExecutionInputs | undefined;
+}
+
+/**
+ * Bind and authenticate controller-owned inputs to the admitted sandbox before
+ * the caller spends its one-run authorization. The authenticated value is a
+ * controller-owned snapshot, so later caller mutation cannot substitute input.
+ */
+export function prepareDriverExecution(
+  admission: PreflightAdmission,
+  sandbox: DisposableSandbox,
+  selectedInputs?: SelectedControllerExecutionInputs
+): PreparedDriverExecution {
+  const plan = buildSupervisorPlan(admission, sandbox);
+  const selectedLaunch = snapshotP1LaunchSelection(plan);
+  const authenticatedInputs = admission.ownerLaunch
+    ? authenticateSelectedControllerInputs(plan, selectedInputs)
+    : selectedInputs;
+  return Object.freeze({ selectedLaunch, selectedInputs: authenticatedInputs });
 }
 
 async function readSandboxEvidenceFile(
@@ -74,7 +98,9 @@ async function readSandboxEvidenceFile(
       if (
         !before.isFile() ||
         before.nlink !== 1n ||
-        ('seal' in expected ? liveMode !== expected.seal.mode : ![0o400, 0o600].includes(liveMode)) ||
+        ('seal' in expected
+          ? liveMode !== expected.seal.mode
+          : ![0o400, 0o600].includes(liveMode)) ||
         expectedUid === undefined ||
         before.uid !== BigInt(expectedUid) ||
         String(before.dev) !== sandbox.device ||
@@ -121,7 +147,9 @@ export async function revalidateBeforeExecution(
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
-    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper].map(assertFileCurrent) : []),
+    ...(admission.ownerLaunch
+      ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper].map(assertFileCurrent)
+      : []),
   ]);
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
   const freshlyRehashedOpenCode = sha256(await readStable(admission.execution.openCode));
@@ -136,8 +164,11 @@ export async function revalidateBeforeExecution(
     verifyClosure(admission.roots.toolchain, admission.descriptor.toolchain.closure),
     verifyClosure(admission.roots.productRuntime, admission.descriptor.product.runtimeClosure),
     verifyClosure(admission.roots.browserBundle, admission.descriptor.product.browserBundle),
-    verifyClosure(admission.roots.p3b2, admission.descriptor.p3b2.closure,
-      selectedOwnerImages(admission.ownerLaunch?.selection)),
+    verifyClosure(
+      admission.roots.p3b2,
+      admission.descriptor.p3b2.closure,
+      selectedOwnerImages(admission.ownerLaunch?.selection)
+    ),
   ]);
   if (
     harness.merkleRoot !== admission.closures.harness.merkleRoot ||
@@ -153,11 +184,16 @@ export async function runDriver(
   admission: PreflightAdmission,
   sandbox: DisposableSandbox,
   consumedAttempt: WrittenFileEvidence,
-  selectedInputs?: SelectedControllerExecutionInputs,
+  prepared?: PreparedDriverExecution
 ): Promise<DriverResult> {
   await revalidateBeforeExecution(admission, sandbox, consumedAttempt);
-  const selectedLaunch = snapshotP1LaunchSelection(buildSupervisorPlan(admission, sandbox));
-  const outcome = await executeSupervisor(admission, sandbox, consumedAttempt, selectedInputs);
+  const execution = prepared ?? prepareDriverExecution(admission, sandbox);
+  const outcome = await executeSupervisor(
+    admission,
+    sandbox,
+    consumedAttempt,
+    execution.selectedInputs
+  );
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_driver_owned_survivors');
   const raw = {} as Record<RawOrigin, Buffer>;
   for (const origin of RAW_ORIGINS)
@@ -184,7 +220,7 @@ export async function runDriver(
     );
   }
   return Object.freeze({
-    selectedLaunch,
+    selectedLaunch: execution.selectedLaunch,
     outcome,
     raw: Object.freeze(raw),
     captures: Object.freeze(captures),

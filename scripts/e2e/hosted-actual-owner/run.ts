@@ -1,7 +1,7 @@
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { parseRunArguments } from './contracts';
-import { runDriver } from './driver';
+import { prepareDriverExecution, runDriver, type PreparedDriverExecution } from './driver';
 import { prepareEvidence, retainFailureEvidence } from './evidence';
 import {
   admitIntegration,
@@ -11,24 +11,46 @@ import {
   type PreflightAdmission,
 } from './preflight';
 import { cleanupSandbox, createSandbox, type DisposableSandbox } from './sandbox';
+import { assertSelectedControllerInputPresence } from './selected-controller-inputs';
+import type { SelectedControllerExecutionInputs } from './supervisor/selected-controller-execution';
 
 export interface RunResult {
   readonly terminalState: 'HOLD';
   readonly evidenceDigest: string;
 }
 
-export async function run(arguments_: readonly string[]): Promise<RunResult> {
+export async function run(
+  arguments_: readonly string[],
+  selectedInputs?: SelectedControllerExecutionInputs
+): Promise<RunResult> {
   parseRunArguments(arguments_);
   const descriptor = await readIntegrationDescriptor();
   let admission: PreflightAdmission | undefined;
   let sandbox: DisposableSandbox | undefined;
   let zeroOwnedSurvivors = false;
   let sandboxRemoved = false;
+  let authorizationConsumed = false;
   try {
     admission = await admitIntegration(descriptor, fileURLToPath(import.meta.url));
-    const consumedAttempt = await consumeOneRunAuthorization(admission);
-    sandbox = await createSandbox(admission.roots.sandboxParent, descriptor.controllerNonce);
-    const driver = await runDriver(admission, sandbox, consumedAttempt);
+    let preparedExecution: PreparedDriverExecution | undefined;
+    let consumedAttempt: Awaited<ReturnType<typeof consumeOneRunAuthorization>>;
+    if (admission.ownerLaunch) {
+      assertSelectedControllerInputPresence(true, selectedInputs);
+      sandbox = await createSandbox(admission.roots.sandboxParent, descriptor.controllerNonce);
+      preparedExecution = prepareDriverExecution(admission, sandbox, selectedInputs);
+      // Authentication is the destructive-cleanup boundary: authorization consumption may
+      // durably write before a later synchronization or validation failure is reported.
+      authorizationConsumed = true;
+      consumedAttempt = await consumeOneRunAuthorization(admission);
+    } else {
+      // Preserve the legacy ordering: spend authorization before sandbox
+      // creation or supervisor planning.
+      consumedAttempt = await consumeOneRunAuthorization(admission);
+      authorizationConsumed = true;
+      assertSelectedControllerInputPresence(false, selectedInputs);
+      sandbox = await createSandbox(admission.roots.sandboxParent, descriptor.controllerNonce);
+    }
+    const driver = await runDriver(admission, sandbox, consumedAttempt, preparedExecution);
     zeroOwnedSurvivors = driver.outcome.zeroOwnedSurvivors;
     const prepared = prepareEvidence({
       ...driver,
@@ -45,7 +67,10 @@ export async function run(arguments_: readonly string[]): Promise<RunResult> {
     });
   } catch (error) {
     if (admission) {
-      if (sandbox && !sandboxRemoved) await cleanupSandbox(sandbox, false);
+      if (sandbox && !sandboxRemoved) {
+        const cleanup = await cleanupSandbox(sandbox, !authorizationConsumed);
+        sandboxRemoved = cleanup.disposition === 'removed';
+      }
       await retainFailureEvidence(
         admission.roots.evidenceRoot,
         descriptor.controllerNonce,
