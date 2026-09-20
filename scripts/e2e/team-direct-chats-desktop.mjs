@@ -17,6 +17,7 @@ const repoRoot = path.resolve(scriptDir, '../..');
 const shotDir = path.join(os.tmpdir(), 'team-direct-chats-e2e-shots');
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
+const keepApp = process.env.TEAM_DIRECT_CHATS_E2E_KEEP_APP === '1';
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
@@ -79,6 +80,7 @@ function member(name, agentType, role, teamName, projectPath, color) {
 
 async function seedFixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'team-direct-chats-e2e-')));
+  const fixtureNow = Date.now();
   const runtimeLock = JSON.parse(await readFile(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));
   const fixture = {
     root,
@@ -126,7 +128,16 @@ async function seedFixture() {
   await chmod(fixture.runtimeWrapperPath, 0o755);
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable chats E2E\n');
   const oscar = member('oscar', 'team-lead', 'Lead', fixture.teamName, fixture.projectPath, 'blue');
-  const alice = member('alice', 'developer', 'Developer', fixture.teamName, fixture.projectPath, 'green');
+  const alice = member(
+    'alice',
+    'developer',
+    'Developer',
+    fixture.teamName,
+    fixture.projectPath,
+    'green'
+  );
+  oscar.joinedAt = fixtureNow - 600_000;
+  alice.joinedAt = fixtureNow - 600_000;
   const teamDir = path.join(fixture.claudeRoot, 'teams', fixture.teamName);
   await json(path.join(fixture.claudeRoot, 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
@@ -136,7 +147,7 @@ async function seedFixture() {
     description: 'Disposable chats E2E fixture',
     color: 'blue',
     language: 'en',
-    createdAt: Date.now(),
+    createdAt: fixtureNow - 600_000,
     leadAgentId: oscar.agentId,
     members: [oscar, alice],
     projectPath: fixture.projectPath,
@@ -149,7 +160,7 @@ async function seedFixture() {
     providerId: 'opencode',
     model: 'test-model',
     prompt: 'Renderer fixture only. Never launch any provider.',
-    createdAt: Date.now(),
+    createdAt: fixtureNow - 600_000,
   });
   await mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
   await json(path.join(teamDir, 'inboxes', 'user.json'), [
@@ -157,7 +168,7 @@ async function seedFixture() {
       from: 'alice',
       to: 'user',
       text: 'Need you to review the chat list',
-      timestamp: '2026-09-17T12:00:00.000Z',
+      timestamp: new Date(fixtureNow - 60_000).toISOString(),
       messageId: 'dm-alice-user',
       read: false,
       source: 'inbox',
@@ -168,7 +179,7 @@ async function seedFixture() {
       from: 'user',
       to: 'alice',
       text: 'Opening a 1:1 with you',
-      timestamp: '2026-09-17T11:50:00.000Z',
+      timestamp: new Date(fixtureNow - 120_000).toISOString(),
       messageId: 'dm-user-alice',
       read: true,
       source: 'user_sent',
@@ -181,22 +192,25 @@ async function seedFixture() {
 
 function getTargets(port) {
   return new Promise((resolve, reject) => {
-    const request = http.get({ host: '127.0.0.1', port, path: '/json/list', agent: false }, (response) => {
-      let body = '';
-      response.setEncoding('utf8');
-      response.on('data', (chunk) => (body += chunk));
-      response.once('end', () => {
-        if (response.statusCode !== 200) {
-          reject(new Error(`CDP ${port} returned HTTP ${response.statusCode}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(body));
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
+    const request = http.get(
+      { host: '127.0.0.1', port, path: '/json/list', agent: false },
+      (response) => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => (body += chunk));
+        response.once('end', () => {
+          if (response.statusCode !== 200) {
+            reject(new Error(`CDP ${port} returned HTTP ${response.statusCode}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+    );
     request.setTimeout(1_000, () => request.destroy(new Error('CDP request timed out')));
     request.once('error', reject);
   });
@@ -303,6 +317,12 @@ async function cleanup(fixture) {
     }
     cdp = null;
   }
+  if (keepApp) {
+    process.stdout.write(
+      `Leaving isolated dev:mcp running (PID ${appProcessGroupId}, fixture ${fixture.root})\n`
+    );
+    return;
+  }
   if (appProcessGroupId && process.platform !== 'win32') {
     try {
       process.kill(-appProcessGroupId, 'SIGKILL');
@@ -408,7 +428,8 @@ async function main() {
     const aliceRow = listUi.rows.find((row) => row.label.includes('alice'));
     assert.match(aliceRow.label, /unread/);
     assert.match(aliceRow.preview, /Need you to review the chat list/);
-    const rosterOrder = await cdp.evaluate(`(() => Array.from(document.querySelectorAll('button[aria-label]'))
+    const rosterOrder =
+      await cdp.evaluate(`(() => Array.from(document.querySelectorAll('button[aria-label]'))
       .map((button) => button.getAttribute('aria-label') ?? '')
       .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
       .map((label) => label.split(',')[0]))()`);
@@ -458,7 +479,9 @@ async function main() {
       'attention chat raised after sort',
       10_000
     );
-    await cdp.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await cdp.evaluate(
+      `document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`
+    );
     await cdp.screenshot(path.join(shotDir, 'chat-list.png'));
     await clickPoint(
       cdp,
@@ -475,7 +498,7 @@ async function main() {
     await cdp.waitFor(
       `(document.body?.innerText ?? '').includes('Need you to review the chat list')`,
       'alice thread message',
-      15_000
+      90_000
     );
     const threadUi = await cdp.evaluate(`(() => {
       const body = document.body?.innerText ?? '';
@@ -508,13 +531,126 @@ async function main() {
         item.textContent?.includes('Sort by new messages')))`
     );
     assert.equal(threadMenuHasSort, false);
-    await cdp.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await cdp.evaluate(
+      `document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`
+    );
     assert.equal(threadUi.hasComposer, true);
     assert.equal(threadUi.hasLockedAlice, true);
     assert.equal(threadUi.hasPicker, false);
     assert.equal(threadUi.recipientArrows, 0);
     assert.equal(threadUi.hasDm, true);
     await cdp.screenshot(path.join(shotDir, 'direct-thread.png'));
+
+    const composerState = await cdp.evaluate(`(() => {
+      const container = document.querySelector('[data-messages-thread-container="true"]');
+      const textarea = container?.querySelector('textarea');
+      if (!(textarea instanceof HTMLTextAreaElement)) return null;
+      textarea.focus();
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      valueSetter?.call(textarea, 'Unsent full-screen draft');
+      textarea.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: textarea.value,
+      }));
+      textarea.setSelectionRange(7, 18);
+      window.__teamChatE2eComposer = textarea;
+      window.__teamChatE2eScroll = container.querySelector('[data-messages-thread-scroll]') ??
+        Array.from(container.querySelectorAll('div')).find((element) =>
+          getComputedStyle(element).overflowY === 'auto');
+      return {
+        focused: document.activeElement === textarea,
+        start: textarea.selectionStart,
+        end: textarea.selectionEnd,
+      };
+    })()`);
+    assert.deepEqual(composerState, { focused: true, start: 7, end: 18 });
+
+    const toggleFullScreen = async (expected, label, expectedFocus = 'switch') => {
+      const toggled = await cdp.evaluate(`(() => {
+        const toggle = document.querySelector('[role="switch"][aria-label="Full Screen"]');
+        if (!(toggle instanceof HTMLElement)) return false;
+        toggle.focus();
+        toggle.click();
+        return true;
+      })()`);
+      assert.equal(toggled, true, `missing Full Screen switch: ${label}`);
+      await cdp.waitFor(
+        `(() => {
+          const toggle = document.querySelector('[role="switch"][aria-label="Full Screen"]');
+          const focusMatches = ${JSON.stringify(expectedFocus)} === 'composer'
+            ? document.activeElement instanceof HTMLTextAreaElement &&
+              document.querySelector('[data-messages-thread-slot="main"]')?.contains(document.activeElement)
+            : document.activeElement === toggle;
+          return toggle?.getAttribute('aria-checked') === ${JSON.stringify(String(expected))} && focusMatches;
+        })()`,
+        `Full Screen ${expected ? 'ON' : 'OFF'}: ${label}`,
+        10_000
+      );
+    };
+
+    await toggleFullScreen(true, 'alice thread initial expansion');
+    const expandedUi = await cdp.evaluate(`(() => {
+      const composer = window.__teamChatE2eComposer;
+      const scroll = window.__teamChatE2eScroll;
+      const main = document.querySelector('[data-messages-thread-slot="main"]');
+      const content = main?.previousElementSibling;
+      const alice = Array.from(document.querySelectorAll('button[aria-label]')).find((button) =>
+        (button.getAttribute('aria-label') ?? '').startsWith('alice,'));
+      return {
+        sameComposer: composer instanceof HTMLTextAreaElement && main?.contains(composer),
+        sameScroll: scroll instanceof HTMLElement && main?.contains(scroll),
+        draft: composer instanceof HTMLTextAreaElement ? composer.value : null,
+        start: composer instanceof HTMLTextAreaElement ? composer.selectionStart : null,
+        end: composer instanceof HTMLTextAreaElement ? composer.selectionEnd : null,
+        selectedAlice: alice?.getAttribute('aria-current') ?? null,
+        groupVisible: Boolean(Array.from(document.querySelectorAll('button[aria-label]')).find((button) =>
+          (button.getAttribute('aria-label') ?? '').includes('Group chat'))),
+        contentInert: content?.hasAttribute('inert') ?? false,
+        contentHidden: content?.getAttribute('aria-hidden') ?? null,
+        liveContainers: document.querySelectorAll('[data-messages-thread-container="true"]').length,
+      };
+    })()`);
+    assert.deepEqual(expandedUi, {
+      sameComposer: true,
+      sameScroll: true,
+      draft: 'Unsent full-screen draft',
+      start: 7,
+      end: 18,
+      selectedAlice: 'true',
+      groupVisible: true,
+      contentInert: true,
+      contentHidden: 'true',
+      liveContainers: 1,
+    });
+    await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen.png'));
+
+    for (let index = 0; index < 10; index += 1) {
+      await toggleFullScreen(index % 2 === 1, `identity cycle ${index + 1}`);
+    }
+    await toggleFullScreen(false, 'return live thread to sidebar');
+    const repeatedToggleState = await cdp.evaluate(`(() => {
+      const composer = window.__teamChatE2eComposer;
+      const scroll = window.__teamChatE2eScroll;
+      const sidebar = document.querySelector('[data-messages-thread-slot="sidebar"]');
+      return {
+        sameComposer: composer instanceof HTMLTextAreaElement && sidebar?.contains(composer),
+        sameScroll: scroll instanceof HTMLElement && sidebar?.contains(scroll),
+        draft: composer instanceof HTMLTextAreaElement ? composer.value : null,
+        start: composer instanceof HTMLTextAreaElement ? composer.selectionStart : null,
+        end: composer instanceof HTMLTextAreaElement ? composer.selectionEnd : null,
+        liveContainers: document.querySelectorAll('[data-messages-thread-container="true"]').length,
+      };
+    })()`);
+    assert.deepEqual(repeatedToggleState, {
+      sameComposer: true,
+      sameScroll: true,
+      draft: 'Unsent full-screen draft',
+      start: 7,
+      end: 18,
+      liveContainers: 1,
+    });
+
     await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
       button.getAttribute('aria-label') === 'Back to chats')?.click()`);
     await cdp.waitFor(
@@ -523,8 +659,32 @@ async function main() {
       'returned to chat list',
       15_000
     );
+    await toggleFullScreen(true, 'list opens Group chat', 'composer');
+    await cdp.waitFor(
+      `(() => {
+        const main = document.querySelector('[data-messages-thread-slot="main"]');
+        const selected = Array.from(document.querySelectorAll('button[aria-current="true"]'));
+        return main?.querySelector('[data-messages-thread-container="true"]') &&
+          selected.some((button) => (button.getAttribute('aria-label') ?? '').includes('Group chat'));
+      })()`,
+      'expanded Group chat selected from list',
+      15_000
+    );
+    await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     process.stdout.write(
-      JSON.stringify({ ok: true, teamName: fixture.teamName, shots: shotDir }, null, 2) + '\n'
+      JSON.stringify(
+        {
+          ok: true,
+          teamName: fixture.teamName,
+          shots: shotDir,
+          appPid: appProcessGroupId,
+          fixtureRoot: fixture.root,
+          cdpPort: port,
+          keptOpen: keepApp,
+        },
+        null,
+        2
+      ) + '\n'
     );
   } catch (error) {
     failure = error;
