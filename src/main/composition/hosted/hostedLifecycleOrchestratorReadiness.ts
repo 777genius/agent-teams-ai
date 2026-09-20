@@ -11,17 +11,17 @@ import {
   createOrchestratorLifecycleReadinessProof,
   createOrchestratorLifecycleReadinessRequestProof,
   hasExactKeys,
-  isRecord,
-  ownerProofMatches,
-  parseOrchestratorLifecycleOwnerBinding,
-  sameOrchestratorLifecycleOwnerBinding,
-  sameOrchestratorSocketIdentity,
   type HostedLifecycleReadinessDiagnostic,
   type HostedLifecycleReadinessFailure,
+  isRecord,
   type OrchestratorLifecycleBootstrapBinding,
   type OrchestratorLifecycleOwnerBinding,
   type OrchestratorLifecycleOwnerProofKey,
   type OrchestratorSocketIdentity,
+  ownerProofMatches,
+  parseOrchestratorLifecycleOwnerBinding,
+  sameOrchestratorLifecycleOwnerBinding,
+  sameOrchestratorSocketIdentity,
 } from './hostedLifecycleOrchestratorReadinessTypes';
 import {
   advanceHostedLifecycleOwnerHighWater,
@@ -30,16 +30,16 @@ import {
 } from './hostedLifecycleOwnerHighWater';
 export {
   createOrchestratorLifecycleReadinessRequestProof,
-  parseOrchestratorLifecycleOwnerBinding,
-  parseOrchestratorLifecycleOwnerProofKey,
-  sameOrchestratorLifecycleOwnerBinding,
-  sameOrchestratorSocketIdentity,
   type HostedLifecycleReadinessDiagnostic,
   type HostedLifecycleReadinessFailure,
   type OrchestratorLifecycleBootstrapBinding,
   type OrchestratorLifecycleOwnerBinding,
   type OrchestratorLifecycleOwnerProofKey,
   type OrchestratorSocketIdentity,
+  parseOrchestratorLifecycleOwnerBinding,
+  parseOrchestratorLifecycleOwnerProofKey,
+  sameOrchestratorLifecycleOwnerBinding,
+  sameOrchestratorSocketIdentity,
 } from './hostedLifecycleOrchestratorReadinessTypes';
 const HANDSHAKE_SCHEMA_VERSION = 2;
 const HANDSHAKE_CAPABILITY = 'hosted-lifecycle-command';
