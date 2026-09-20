@@ -108,6 +108,7 @@ const storeHarness = vi.hoisted(() => {
       color?: string;
       leadName?: string;
       leadColor?: string;
+      members?: { name: string; role?: string; color?: string }[];
       isOnline?: boolean;
     }[],
   };
@@ -417,7 +418,7 @@ describe('MessageComposer pending send lifecycle', () => {
     const body = layout?.querySelector('.message-composer-flat-body');
     const footer = layout?.querySelector('.message-composer-flat-footer');
     const sendButton = getSendButton(host);
-    const teamSelector = getButtonContainingText(host, 'Group chat');
+    const teamSelector = getButtonContainingText(host, 'team-alpha');
     const recipientSelector = host.querySelector('.message-composer-recipient-selector');
     const targetSelectors = host.querySelector('.message-composer-target-selectors');
 
@@ -435,7 +436,7 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(recipientSelector?.className).not.toContain('flex-1');
     expect(recipientSelector?.className).not.toContain('shrink-0');
     expect(toolbar?.textContent).toContain('Group chat');
-    expect(toolbar?.textContent).toContain('alice');
+    expect(toolbar?.textContent).toContain('Group chat');
 
     act(() => {
       root.unmount();
@@ -446,9 +447,30 @@ describe('MessageComposer pending send lifecycle', () => {
     const { host, root } = renderComposer({ isTeamAlive: false });
     const toolbar = host.querySelector('.message-composer-flat-toolbar');
 
+    expect(toolbar?.textContent).toContain('team-alpha');
     expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent?.toLowerCase()).not.toContain('offline');
     expect(toolbar?.className).toContain('grid-cols-[32px_minmax(0,1fr)]');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns to the current team group chat after leaving a locked direct chat', async () => {
+    const { host, render, root } = renderComposer({ lockedRecipient: 'bob' });
+
+    expect(host.querySelector('.message-composer-target-selectors')?.textContent).toContain('bob');
+    render({ lockedRecipient: undefined });
+    await act(async () => undefined);
+
+    const selectors = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('.message-composer-target-selectors > button')
+    );
+    expect(selectors.map((button) => button.textContent?.trim())).toEqual([
+      'team-alpha',
+      'Group chat',
+    ]);
 
     act(() => {
       root.unmount();
@@ -839,6 +861,7 @@ describe('MessageComposer pending send lifecycle', () => {
       {
         teamName: 'team-beta',
         displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
       },
     ];
     const { host, root } = renderComposer({ onCrossTeamSend: vi.fn() });
@@ -853,6 +876,48 @@ describe('MessageComposer pending send lifecycle', () => {
     });
 
     expect(document.activeElement).toBe(textarea);
+
+    const carolButton = getButtonContainingText(host, 'carol');
+    act(() => {
+      carolButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('sends to the selected teammate of another team', () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const onCrossTeamSend = vi.fn();
+    const { host, root } = renderComposer({ onCrossTeamSend });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    act(() => {
+      getButtonContainingText(host, 'carol').click();
+    });
+    act(() => {
+      getSendButton(host).click();
+    });
+
+    expect(onCrossTeamSend).toHaveBeenCalledWith(
+      'team-beta',
+      'hello teammate',
+      'hello teammate',
+      'do',
+      [],
+      'carol'
+    );
 
     act(() => {
       root.unmount();

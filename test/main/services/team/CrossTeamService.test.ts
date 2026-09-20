@@ -1349,6 +1349,7 @@ describe('CrossTeamService', () => {
           color: 'blue',
           leadName: 'captain',
           leadColor: '#123456',
+          members: [{ name: 'alice', color: '#abcdef' }],
           isOnline: true,
         },
       ]);

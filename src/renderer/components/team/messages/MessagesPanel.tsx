@@ -963,12 +963,14 @@ export const MessagesPanel = memo(function MessagesPanel({
       text: string,
       summary?: string,
       actionMode?: ActionMode,
-      taskRefs?: TaskRef[]
+      taskRefs?: TaskRef[],
+      toMember?: string
     ) => {
       void sendCrossTeamMessage({
         fromTeam: teamName,
         fromMember: 'user',
         toTeam,
+        ...(toMember ? { toMember } : {}),
         text,
         taskRefs,
         actionMode,

@@ -23,6 +23,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTarget,
   TeamConfig,
   TeamMember,
 } from '@shared/types';
@@ -52,16 +53,6 @@ function resolveCrossTeamFromMember(config: TeamConfig, rawFromMember: string): 
   }
 
   throw new Error(`Unknown fromMember: ${rawFromMember}. Use a configured team member name.`);
-}
-
-export interface CrossTeamTarget {
-  teamName: string;
-  displayName: string;
-  description?: string;
-  color?: string;
-  leadName?: string;
-  leadColor?: string;
-  isOnline?: boolean;
 }
 
 export interface CrossTeamRecipientMetadataReader {
@@ -387,6 +378,11 @@ export class CrossTeamService {
           color: team.color,
           ...(leadName ? { leadName } : {}),
           ...(summaryLead?.color ? { leadColor: summaryLead.color } : {}),
+          members: team.members?.map((member) => ({
+            name: member.name,
+            ...(member.role ? { role: member.role } : {}),
+            ...(member.color ? { color: member.color } : {}),
+          })),
           isOnline: this.messaging?.isTeamAlive(team.teamName) ?? false,
         };
       });

@@ -1665,6 +1665,23 @@ export interface CrossTeamMessage {
   timestamp: string;
 }
 
+export interface CrossTeamTargetMember {
+  name: string;
+  role?: string;
+  color?: string;
+}
+
+export interface CrossTeamTarget {
+  teamName: string;
+  displayName: string;
+  description?: string;
+  color?: string;
+  leadName?: string;
+  leadColor?: string;
+  members?: CrossTeamTargetMember[];
+  isOnline?: boolean;
+}
+
 export interface CrossTeamSendRequest {
   fromTeam: string;
   fromMember: string;
