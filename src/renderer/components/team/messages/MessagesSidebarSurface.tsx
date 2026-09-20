@@ -105,6 +105,7 @@ export const MessagesSidebarSurface = ({
       </div>
       <div
         ref={listScrollRef}
+        data-messages-chat-list-scroll="sidebar"
         className={showChatList ? 'min-h-0 flex-1 overflow-y-auto pt-2' : 'hidden'}
         onScroll={onListScroll}
       >

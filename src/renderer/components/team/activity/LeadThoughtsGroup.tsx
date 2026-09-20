@@ -631,7 +631,7 @@ const LeadThoughtsGroupRowComponent = ({
   const shouldAnimateLatestThought =
     animateLatestThought && canBeLive !== false && isRecentTimestamp(newest.timestamp);
 
-  const reportedCountRef = useRef(0);
+  const reportedThoughtKeysRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!onVisible || !observationEnabled) return;
@@ -642,12 +642,12 @@ const LeadThoughtsGroupRowComponent = ({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!observing || !observationEnabled || !entry?.isIntersecting) return;
-        const alreadyReported = reportedCountRef.current;
-        if (alreadyReported >= thoughts.length) return;
-        for (let i = alreadyReported; i < thoughts.length; i++) {
-          onVisible(thoughts[i]);
+        for (const thought of thoughts) {
+          const thoughtKey = toMessageKey(thought);
+          if (reportedThoughtKeysRef.current.has(thoughtKey)) continue;
+          onVisible(thought);
+          reportedThoughtKeysRef.current.add(thoughtKey);
         }
-        reportedCountRef.current = thoughts.length;
       },
       { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );

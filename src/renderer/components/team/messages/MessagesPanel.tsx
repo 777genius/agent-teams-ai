@@ -570,12 +570,11 @@ export const MessagesPanel = memo(function MessagesPanel({
   ]);
 
   useLayoutEffect(() => {
-    if (position !== 'sidebar') return;
+    if (position !== 'sidebar' || !showChatList) return;
     const el = listScrollRef.current;
     if (!el) return;
     el.scrollTop = Math.min(listScrollTop, Math.max(0, el.scrollHeight - el.clientHeight));
-  }, [listScrollTop, position]);
-
+  }, [listScrollTop, position, showChatList]);
   useResetScrollOnConversationChange({
     enabled: !isConversation,
     teamName,
@@ -1217,6 +1216,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       unavailableLabel={t('messages.fullScreen.teamOnly')}
       available={expandedChatHost?.available === true}
       expanded={expanded}
+      restoreFocusAfterChange={navigationSurface !== 'list'}
       onExpandedChange={handleExpandedChange}
     />
   );

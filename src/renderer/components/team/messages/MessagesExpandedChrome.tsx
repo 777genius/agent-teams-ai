@@ -18,6 +18,7 @@ interface FullScreenControlProps {
   unavailableLabel: string;
   available: boolean;
   expanded: boolean;
+  restoreFocusAfterChange?: boolean;
   onExpandedChange: (expanded: boolean) => void;
 }
 
@@ -26,6 +27,7 @@ export const FullScreenControl = ({
   unavailableLabel,
   available,
   expanded,
+  restoreFocusAfterChange = true,
   onExpandedChange,
 }: FullScreenControlProps): React.JSX.Element => {
   const switchRef = useRef<HTMLButtonElement>(null);
@@ -53,7 +55,8 @@ export const FullScreenControl = ({
         disabled={!available && !expanded}
         aria-label={label}
         onCheckedChange={(nextExpanded) => {
-          restoreSwitchFocusRef.current = document.activeElement === switchRef.current;
+          restoreSwitchFocusRef.current =
+            restoreFocusAfterChange && document.activeElement === switchRef.current;
           onExpandedChange(nextExpanded);
         }}
       />

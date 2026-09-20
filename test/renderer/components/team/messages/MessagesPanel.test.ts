@@ -140,20 +140,30 @@ vi.mock('@renderer/components/ui/context-menu', () => ({
 }));
 
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
-  MessageComposer: ({
+  MessageComposer: function MockMessageComposer({
     autoFocusKey,
     revisionRequest,
-  }: {
+  }: Readonly<{
     autoFocusKey?: number;
     revisionRequest?: { originalMessageId: string; originalText: string } | null;
-  }) =>
-    React.createElement(
-      'div',
-      { 'data-testid': 'composer', 'data-auto-focus-key': String(autoFocusKey ?? 0) },
+  }>) {
+    const composerRef = React.useRef<HTMLButtonElement>(null);
+    React.useLayoutEffect(() => {
+      if ((autoFocusKey ?? 0) > 0) composerRef.current?.focus();
+    }, [autoFocusKey]);
+    return React.createElement(
+      'button',
+      {
+        ref: composerRef,
+        type: 'button',
+        'data-testid': 'composer',
+        'data-auto-focus-key': String(autoFocusKey ?? 0),
+      },
       revisionRequest
         ? `composer revision:${revisionRequest.originalMessageId}:${revisionRequest.originalText}`
         : 'composer'
-    ),
+    );
+  },
 }));
 
 vi.mock('@renderer/components/team/messages/MessagesFilterPopover', () => ({
@@ -327,6 +337,7 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.messagesSearchBarVisible = false;
     sidebarUiState.expandedItemKey = null;
     sidebarUiState.messagesScrollTop = 0;
+    sidebarUiState.listScrollTop = 0;
     sidebarUiState.bottomSheetSnapIndex = 2;
     sidebarUiState.conversationSurface = 'thread';
     sidebarUiState.conversationScope = { kind: 'team-feed' };
@@ -1988,8 +1999,77 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
+  it('restores the saved chat-list scroll only after the hidden list becomes visible', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.listScrollTop = 420;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'group-message', text: 'team update' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-list-scroll',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const listScroll = host.querySelector<HTMLDivElement>(
+      '[data-messages-chat-list-scroll="sidebar"]'
+    );
+    expect(listScroll).toBeTruthy();
+    Object.defineProperties(listScroll!, {
+      scrollHeight: { configurable: true, value: 1000 },
+      clientHeight: { configurable: true, value: 300 },
+    });
+
+    const backButton = host.querySelector<HTMLButtonElement>('[aria-label="Back to chats"]');
+    expect(backButton).toBeTruthy();
+    await act(async () => {
+      backButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(listScroll?.className).toContain('overflow-y-auto');
+    expect(listScroll?.scrollTop).toBe(420);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('opens the Group chat scope before requesting Full Screen from the chat list', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const animationFrames: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        animationFrames.push(callback);
+        return animationFrames.length;
+      })
+    );
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
     sidebarUiState.conversationSurface = 'list';
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -2034,6 +2114,7 @@ describe('MessagesPanel idle summary invariants', () => {
       '[role="switch"][aria-label="Full Screen"]'
     );
     expect(fullScreenSwitch?.disabled).toBe(false);
+    fullScreenSwitch?.focus();
 
     await act(async () => {
       fullScreenSwitch?.click();
@@ -2045,6 +2126,18 @@ describe('MessagesPanel idle summary invariants', () => {
     expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
       expect.arrayContaining([expect.objectContaining({ messageId: 'group-message' })])
     );
+    const composer = host.querySelector<HTMLButtonElement>('[data-testid="composer"]');
+    expect(document.activeElement).toBe(composer);
+
+    await act(async () => {
+      for (let cycle = 0; cycle < 3; cycle += 1) {
+        const pendingFrames = animationFrames.splice(0);
+        pendingFrames.forEach((callback) => callback(performance.now()));
+      }
+      await Promise.resolve();
+    });
+
+    expect(document.activeElement).toBe(composer);
 
     await act(async () => {
       root.unmount();
