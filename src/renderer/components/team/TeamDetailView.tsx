@@ -2811,15 +2811,18 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Button
             variant="ghost"
             size="sm"
+            aria-label={t('detail.actions.visualize')}
+            data-visualize-button={pinned ? 'pinned' : 'header'}
             className={cn(
               TEAM_HEADER_NAV_ACTION_CLASS,
-              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95'
+              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95',
+              pinned && 'w-8 px-0'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
           >
             <Network size={13} className="shrink-0" />
-            {t('detail.actions.visualize')}
+            {pinned ? null : t('detail.actions.visualize')}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
