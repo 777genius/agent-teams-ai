@@ -522,6 +522,53 @@ describe('ActivityTimeline viewport observerRoot', () => {
     });
   });
 
+  it('pauses row visibility observers during a layout transition and resumes them afterward', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'msg-gated',
+        text: 'temporarily gated',
+        from: 'alice',
+        source: 'inbox',
+      }),
+      makeMessage({
+        messageId: 'thought-gated',
+        text: 'thought is gated too',
+        from: 'oscar',
+        source: 'lead_session',
+        leadSessionId: 'lead-session-gated',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages,
+          teamName: 'demo-team',
+          onMessageVisible: () => {},
+          observationEnabled: false,
+        })
+      );
+    });
+    expect(capturedRoots).toHaveLength(0);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages,
+          teamName: 'demo-team',
+          onMessageVisible: () => {},
+          observationEnabled: true,
+        })
+      );
+    });
+    expect(capturedRoots.length).toBeGreaterThanOrEqual(2);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('creates IntersectionObservers with the provided root when viewport.observerRoot is set', async () => {
     const scrollHost = document.createElement('div');
     document.body.appendChild(scrollHost);

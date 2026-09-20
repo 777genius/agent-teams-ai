@@ -19,9 +19,15 @@ interface ChatListProps {
   items: readonly ChatListViewItem[];
   teamName: string;
   onOpen: (scope: ConversationScope) => void;
+  selectedScope?: ConversationScope;
 }
 
-export const ChatList = ({ items, teamName, onOpen }: ChatListProps): JSX.Element => {
+export const ChatList = ({
+  items,
+  teamName,
+  onOpen,
+  selectedScope,
+}: ChatListProps): JSX.Element => {
   const { t } = useAppTranslation('team');
   const { pinnedKeys, togglePin, reorderPinned } = usePinnedChats(teamName);
   const pinnedSet = useMemo(() => new Set(pinnedKeys), [pinnedKeys]);
@@ -81,6 +87,10 @@ export const ChatList = ({ items, teamName, onOpen }: ChatListProps): JSX.Elemen
                   item={item}
                   teamName={teamName}
                   pinned={pinned}
+                  selected={
+                    selectedScope !== undefined &&
+                    conversationScopeKey(selectedScope) === conversationScopeKey(item.scope)
+                  }
                   onOpen={onOpen}
                   onTogglePin={handleTogglePin}
                 />

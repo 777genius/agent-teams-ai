@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "بند بند"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "پیام پینل موڈ",
     "title": "پیغامات",
     "unread": {

@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "مرئية"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "طريقة لوحة الرسائل",
     "title": "الرسائل",
     "unread": {

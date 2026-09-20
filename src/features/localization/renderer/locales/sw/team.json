@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "Hali ya paneli ya ujumbe",
     "title": "Ujumbe",
     "unread": {

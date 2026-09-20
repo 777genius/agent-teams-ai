@@ -170,6 +170,7 @@ interface LeadThoughtsGroupRowProps {
   memberColor?: string;
   isNew?: boolean;
   onVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   /**
    * Root element for IntersectionObserver-based visibility tracking. When
    * omitted, the observer falls back to the document viewport — correct for
@@ -178,11 +179,8 @@ interface LeadThoughtsGroupRowProps {
    * viewport still contains it.
    */
   observerRoot?: RefObject<HTMLElement | null>;
-  /** When false, the live indicator is always off (for historical thought groups). */
   canBeLive?: boolean;
-  /** Whether the owning team is currently alive. */
   isTeamAlive?: boolean;
-  /** Current lead activity status for the owning team. */
   leadActivity?: string;
   /** Latest lead context timestamp for the owning team. */
   leadContextUpdatedAt?: string;
@@ -556,6 +554,7 @@ const LeadThoughtsGroupRowComponent = ({
   memberColor,
   isNew,
   onVisible,
+  observationEnabled = true,
   observerRoot,
   canBeLive,
   isTeamAlive,
@@ -673,7 +672,7 @@ const LeadThoughtsGroupRowComponent = ({
   const reportedCountRef = useRef(0);
 
   useEffect(() => {
-    if (!onVisible) return;
+    if (!onVisible || !observationEnabled) return;
     const el = ref.current;
     if (!el) return;
     // Resolve observer root at effect-time. Falls back to the document
@@ -681,7 +680,7 @@ const LeadThoughtsGroupRowComponent = ({
     const root = observerRoot?.current ?? null;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!observationEnabled || !entry?.isIntersecting) return;
         const alreadyReported = reportedCountRef.current;
         if (alreadyReported >= thoughts.length) return;
         for (let i = alreadyReported; i < thoughts.length; i++) {
@@ -693,7 +692,7 @@ const LeadThoughtsGroupRowComponent = ({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onVisible, observerRoot, thoughts]);
+  }, [observationEnabled, onVisible, observerRoot, thoughts]);
 
   const clearPendingScrollSync = useCallback(() => {
     if (scrollSyncFrameRef.current !== null) {
@@ -1161,6 +1160,7 @@ export const LeadThoughtsGroupRow = memo(
     prev.memberColor === next.memberColor &&
     prev.isNew === next.isNew &&
     prev.onVisible === next.onVisible &&
+    prev.observationEnabled === next.observationEnabled &&
     prev.canBeLive === next.canBeLive &&
     prev.isTeamAlive === next.isTeamAlive &&
     prev.leadActivity === next.leadActivity &&

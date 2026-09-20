@@ -80,6 +80,7 @@ const sidebarUiState = {
   messagesSearchBarVisible: false,
   expandedItemKey: null as string | null,
   messagesScrollTop: 0,
+  listScrollTop: 0,
   bottomSheetSnapIndex: 2,
   conversationSurface: 'thread' as ConversationSurface,
   conversationScope: { kind: 'team-feed' } as ConversationScope,
@@ -134,13 +135,8 @@ vi.mock('@renderer/components/ui/context-menu', () => ({
     React.createElement(React.Fragment, null, children),
   ContextMenuContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
-  ContextMenuItem: ({
-    children,
-    onSelect,
-  }: {
-    children: React.ReactNode;
-    onSelect?: () => void;
-  }) => React.createElement('button', { type: 'button', onClick: onSelect }, children),
+  ContextMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) =>
+    React.createElement('button', { type: 'button', onClick: onSelect }, children),
 }));
 
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
@@ -184,6 +180,7 @@ vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
     messagesSearchBarVisible: sidebarUiState.messagesSearchBarVisible,
     expandedItemKey: sidebarUiState.expandedItemKey,
     messagesScrollTop: sidebarUiState.messagesScrollTop,
+    listScrollTop: sidebarUiState.listScrollTop,
     bottomSheetSnapIndex: sidebarUiState.bottomSheetSnapIndex,
     conversationSurface: sidebarUiState.conversationSurface,
     conversationScope: sidebarUiState.conversationScope,
@@ -1134,13 +1131,13 @@ describe('MessagesPanel idle summary invariants', () => {
       text: 'Lead is thinking.',
     });
 
-    expect(
-      reconcilePendingRepliesByMember({ max: pendingSentAtMs }, [thought])
-    ).toEqual({ max: pendingSentAtMs });
+    expect(reconcilePendingRepliesByMember({ max: pendingSentAtMs }, [thought])).toEqual({
+      max: pendingSentAtMs,
+    });
     expect(reconcilePendingRepliesByMember({ lead: pendingSentAtMs }, [thought])).toEqual({});
-    expect(
-      reconcilePendingRepliesByMember({ 'team-lead': pendingSentAtMs }, [thought])
-    ).toEqual({});
+    expect(reconcilePendingRepliesByMember({ 'team-lead': pendingSentAtMs }, [thought])).toEqual(
+      {}
+    );
   });
 
   it('keeps pending replies when the lead thought is older than the user message', () => {
@@ -1964,6 +1961,70 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
     expect(host.textContent).toContain('Group chat');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('opens the Group chat scope before requesting Full Screen from the chat list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'list';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onExpandedChange = vi.fn();
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'group-message', text: 'team update' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-list-full-screen',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+          expandedChatHost: {
+            target: document.createElement('div'),
+            available: true,
+            expanded: false,
+            onExpandedChange,
+          },
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+    const fullScreenSwitch = host.querySelector<HTMLButtonElement>(
+      '[role="switch"][aria-label="Full Screen"]'
+    );
+    expect(fullScreenSwitch?.disabled).toBe(false);
+
+    await act(async () => {
+      fullScreenSwitch?.click();
+      await Promise.resolve();
+    });
+
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(host.querySelector('[data-testid="activity-timeline"]')).not.toBeNull();
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'group-message' })])
+    );
 
     await act(async () => {
       root.unmount();

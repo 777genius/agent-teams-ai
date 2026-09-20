@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "可視返信メッセージId"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "メッセージパネルモード",
     "title": "メッセージ",
     "unread": {

@@ -92,8 +92,8 @@ interface ActivityTimelineProps {
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  /** Called when a message enters the viewport (for marking as read). */
   onMessageVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   /** Called when a task ID link (e.g. #10) is clicked in message text. */
   onTaskIdClick?: (taskId: string) => void;
   /** Called when the user clicks "Restart team" on an auth error message. */
@@ -301,6 +301,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onReviseMessage,
   onMemberClick,
   onMessageVisible,
+  observationEnabled = true,
   onTaskIdClick,
   onRestartTeam,
   allCollapsed,
@@ -599,16 +600,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     scrollMargin: measuredScrollMargin,
   });
 
-  // Determine the index of the "newest" non-thought timeline item (for auto-expand).
   const newestMessageIndex = useMemo(() => {
     return findNewestMessageIndex(timelineItems);
   }, [timelineItems]);
 
-  /**
-   * Compute the externally managed collapse state for an item in the timeline.
-   * In collapsed mode we always keep the newest real message open, keep the pinned
-   * thought group open, and let localStorage overrides reopen older items.
-   */
   const getItemCollapseProps = useCallback(
     (stableKey: string, itemIndex: number): ItemCollapseProps => {
       const collapseState = resolveTimelineCollapseState({
@@ -698,6 +693,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             leadContextUpdatedAt={pinnedCanBeLive ? leadContextUpdatedAt : undefined}
             isNew={!suppressEntry && newItemKeys.has(key)}
             onVisible={onMessageVisible}
+            observationEnabled={observationEnabled}
             observerRoot={observerRoot}
             zebraShade={zebraShadeSet.has(itemIndex)}
             collapseMode={collapseProps.collapseMode}
@@ -746,6 +742,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             revisionMessageId={revisionMessageId}
             onRevise={onReviseMessage}
             onVisible={onMessageVisible}
+            observationEnabled={observationEnabled}
             onTaskIdClick={onTaskIdClick}
             onRestartTeam={onRestartTeam}
             collapseMode={collapseProps.collapseMode}
@@ -806,6 +803,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 // needed here.
                 ref={rowVirtualizer.measureElement}
                 data-index={virtualRow.index}
+                data-timeline-row-key={row.key}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -827,7 +825,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           })}
         </div>
       ) : (
-        renderRows.map((row, index) => renderTimelineRow(row, { rowIndex: index }))
+        renderRows.map((row, index) => (
+          <div key={row.key} data-timeline-row-key={row.key}>
+            {renderTimelineRow(row, { rowIndex: index })}
+          </div>
+        ))
       )}
       {hiddenCount > 0 && (
         <div className="relative flex justify-center pb-3 pt-1">

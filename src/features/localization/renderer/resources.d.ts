@@ -4870,6 +4870,10 @@ export default interface Resources {
         to: 'To';
         tooltip: 'Filter messages';
       };
+      fullScreen: {
+        label: 'Full Screen';
+        teamOnly: 'Full Screen is available on the team screen';
+      };
       panelMode: 'Message panel mode';
       search: {
         placeholder: 'Search...';

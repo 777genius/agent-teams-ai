@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "可见回复消息 ID"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "消息面板模式",
     "title": "消息",
     "unread": {

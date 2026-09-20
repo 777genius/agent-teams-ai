@@ -170,6 +170,8 @@ const ChangeReviewDialog = lazy(() =>
 );
 import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
+import { type ExpandedChatHost } from './messages/MessagesThreadPlacement';
+import { useExpandedTeamChat } from './messages/useExpandedTeamChat';
 import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
@@ -547,6 +549,7 @@ type TeamSidebarRailBridgeProps = Omit<
   'messagesPanelProps'
 > & {
   messagesPanelProps: SharedTeamMessagesPanelProps;
+  expandedChatHost: ExpandedChatHost;
 };
 interface LeadLoadBridgeProps {
   teamName: string;
@@ -1084,6 +1087,7 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
 
 const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
   messagesPanelProps,
+  expandedChatHost,
   ...props
 }: TeamSidebarRailBridgeProps): React.JSX.Element {
   const teamName = messagesPanelProps.teamName;
@@ -1130,6 +1134,7 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       pendingRepliesByMember,
       onPendingReplyChange: handlePendingReplyChange,
+      expandedChatHost,
     }),
     [
       handlePendingReplyChange,
@@ -1137,6 +1142,7 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       messagesPanelProps,
       pendingRepliesByMember,
+      expandedChatHost,
     ]
   );
 
@@ -1387,16 +1393,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     [isLight]
   );
   useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    if (editorOpen || graphOpen) {
-      el.setAttribute('inert', '');
-    } else {
-      el.removeAttribute('inert');
-    }
-  }, [editorOpen, graphOpen]);
-
-  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.teamName === teamName) {
@@ -1575,6 +1571,21 @@ export const TeamDetailView = memo(function TeamDetailView({
     [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
   );
   const isThisTabActive = isActive;
+  const expandedChatController = useExpandedTeamChat({
+    teamName,
+    messagesPanelMode,
+    isActive: isThisTabActive,
+    graphOpen,
+    editorOpen,
+    contentRef,
+  });
+  const {
+    expanded: expandedChat,
+    host: expandedChatHost,
+    collapse: collapseExpandedChat,
+    setTarget: setExpandedChatTarget,
+    onNativeOwnershipChange: handleNativeSidebarOwnershipChange,
+  } = expandedChatController;
   const interactiveTeamRef = useRef<string | null>(null);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
   const loadingHeaderColorSet = useMemo(
@@ -1604,9 +1615,10 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const changeMessagesPanelMode = useCallback(
     (mode: TeamMessagesPanelMode) => {
+      collapseExpandedChat();
       setMessagesPanelMode(mode);
     },
-    [setMessagesPanelMode]
+    [collapseExpandedChat, setMessagesPanelMode]
   );
   useEffect(() => {
     if (tabId) {
@@ -2418,7 +2430,14 @@ export const TeamDetailView = memo(function TeamDetailView({
           : pendingTeamSectionFocus.section;
 
     if (sectionId === 'overview') {
-      contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const revealOverview = (): void =>
+        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (expandedChat) {
+        collapseExpandedChat();
+        window.requestAnimationFrame(revealOverview);
+      } else {
+        revealOverview();
+      }
       clearTeamSectionFocus();
       return;
     }
@@ -2429,7 +2448,15 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (!section) return;
     section.dispatchEvent(new CustomEvent('team-section-navigate'));
     clearTeamSectionFocus();
-  }, [pendingTeamSectionFocus, clearTeamSectionFocus, isThisTabActive, teamName, data]);
+  }, [
+    pendingTeamSectionFocus,
+    clearTeamSectionFocus,
+    isThisTabActive,
+    teamName,
+    data,
+    expandedChat,
+    collapseExpandedChat,
+  ]);
 
   // Pick up pending member profile request from MemberHoverCard
   const pendingMemberProfile = useStore((s) => s.pendingMemberProfile);
@@ -2647,17 +2674,28 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, updateKanbanColumnOrder]
   );
 
-  const handleScrollToTask = useCallback((taskId: string) => {
-    const el = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    el.classList.remove('kanban-card-focus-pulse');
-    void (el as HTMLElement).offsetWidth;
-    el.classList.add('kanban-card-focus-pulse');
-    el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
-      once: true,
-    });
-  }, []);
+  const handleScrollToTask = useCallback(
+    (taskId: string) => {
+      const reveal = (): void => {
+        const el = contentRef.current?.querySelector(`[data-task-id="${taskId}"]`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.classList.remove('kanban-card-focus-pulse');
+        void (el as HTMLElement).offsetWidth;
+        el.classList.add('kanban-card-focus-pulse');
+        el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
+          once: true,
+        });
+      };
+      if (expandedChat) {
+        collapseExpandedChat();
+        window.requestAnimationFrame(reveal);
+        return;
+      }
+      reveal();
+    },
+    [collapseExpandedChat, expandedChat]
+  );
 
   const handleAddTask = useCallback(
     (startImmediately: boolean) => {
@@ -2905,7 +2943,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
     return (
       <>
-        {pinnedVisualizeButtonPosition ? renderTeamActionButtons(true) : null}
+        {pinnedVisualizeButtonPosition && !expandedChat ? renderTeamActionButtons(true) : null}
         <div className="relative flex size-full overflow-hidden">
           <LeadLoadBridge
             teamName={teamName}
@@ -2928,10 +2966,12 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               isActive={isThisTabActive}
               isFocused={isPaneFocused}
+              onNativeOwnershipChange={handleNativeSidebarOwnershipChange}
             >
               <TeamSidebarRailBridge
                 teamName={teamName}
                 messagesPanelProps={sharedMessagesPanelProps}
+                expandedChatHost={expandedChatHost}
                 isResizing={isMessagesPanelResizing}
                 onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
                 logsHeight={sidebarLogsHeight}
@@ -2946,7 +2986,10 @@ export const TeamDetailView = memo(function TeamDetailView({
           <div className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={contentRef}
-              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0"
+              className={cn(
+                'size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0',
+                expandedChat && 'invisible'
+              )}
               style={{ paddingBottom: floatingComposerScrollReserve }}
               data-team-name={teamName}
             >
@@ -3673,6 +3716,16 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </Suspense>
               )}
             </div>
+            <div
+              ref={setExpandedChatTarget}
+              className={cn(
+                'absolute inset-0 z-10 min-h-0 min-w-0 overflow-hidden',
+                expandedChat ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
+              )}
+              aria-hidden={!expandedChat || editorOpen || graphOpen ? 'true' : undefined}
+              inert={editorOpen || graphOpen ? true : undefined}
+              data-messages-thread-slot="main"
+            />
             <div
               ref={setMessagesPanelMountPoint}
               className="pointer-events-none absolute inset-0 z-30"

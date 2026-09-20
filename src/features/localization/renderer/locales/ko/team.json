@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "현재 위치"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "Message 패널 모드",
     "title": "이름 *",
     "unread": {

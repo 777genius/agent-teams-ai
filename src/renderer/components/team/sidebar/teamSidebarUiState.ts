@@ -12,6 +12,7 @@ export interface TeamMessagesSidebarUiState {
   messagesSearchBarVisible: boolean;
   expandedItemKey: string | null;
   messagesScrollTop: number;
+  listScrollTop: number;
   bottomSheetSnapIndex: number;
   conversationSurface: ConversationSurface;
   conversationScope: ConversationScope;
@@ -66,6 +67,7 @@ export function createDefaultMessagesSidebarUiState(): TeamMessagesSidebarUiStat
     messagesSearchBarVisible: false,
     expandedItemKey: null,
     messagesScrollTop: 0,
+    listScrollTop: 0,
     bottomSheetSnapIndex: 2,
     conversationSurface: 'list',
     conversationScope: { kind: 'team-feed' },

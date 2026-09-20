@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "উত্তর-প্রাপক বার্তা প্রদর্শিত হবে"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "বার্তার মোড",
     "title": "বার্তা",
     "unread": {

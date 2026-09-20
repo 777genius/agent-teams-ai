@@ -15,6 +15,7 @@ interface TeamSidebarPortalSourceProps {
   teamName: string;
   isActive: boolean;
   isFocused: boolean;
+  onNativeOwnershipChange?: (ownsNativeSidebar: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ export const TeamSidebarPortalSource = ({
   teamName,
   isActive,
   isFocused,
+  onNativeOwnershipChange,
   children,
 }: TeamSidebarPortalSourceProps): React.JSX.Element | null => {
   const sourceId = useId();
@@ -39,6 +41,16 @@ export const TeamSidebarPortalSource = ({
       removeTeamSidebarSource(sourceId);
     };
   }, [isActive, isFocused, sourceId, teamName]);
+
+  const ownsNativeSidebar =
+    messagesPanelMode === 'sidebar' &&
+    snapshot.activeSourceIdByTeam[teamName] === sourceId &&
+    snapshot.activeHostIdByTeam[teamName] === hostId;
+
+  useLayoutEffect(() => {
+    onNativeOwnershipChange?.(ownsNativeSidebar);
+    return () => onNativeOwnershipChange?.(false);
+  }, [onNativeOwnershipChange, ownsNativeSidebar]);
 
   if (!hostId || messagesPanelMode !== 'sidebar') {
     return null;

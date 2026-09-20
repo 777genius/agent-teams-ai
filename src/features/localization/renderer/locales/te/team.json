@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "సందేశ ప్యానెల్ మోడ్",
     "title": "సందేశాలు",
     "unread": {

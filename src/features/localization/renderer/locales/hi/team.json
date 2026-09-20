@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "दृश्यमानReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "संदेश पैनल मोड",
     "title": "संदेश",
     "unread": {

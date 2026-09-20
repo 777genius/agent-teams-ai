@@ -774,6 +774,10 @@
         "visibleReplyMessageId": "visibleRépondreMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "panelMode": "Mode panneau de message",
     "title": "Messages",
     "unread": {
