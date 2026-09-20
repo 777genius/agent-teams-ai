@@ -9,10 +9,10 @@ type Controller = ReturnType<typeof useExpandedTeamChat>;
 function Harness({
   isActive = true,
   onController,
-}: {
+}: Readonly<{
   isActive?: boolean;
   onController: (controller: Controller) => void;
-}) {
+}>) {
   const contentRef = useRef<HTMLDivElement>(null);
   const controller = useExpandedTeamChat({
     teamName: 'atlas-hq',
@@ -92,9 +92,7 @@ describe('useExpandedTeamChat', () => {
     };
 
     await act(async () => {
-      root.render(
-        <Harness isActive={false} onController={(next) => (controller = next)} />
-      );
+      root.render(<Harness isActive={false} onController={(next) => (controller = next)} />);
     });
 
     expect(getController().ownsNativeSidebar).toBe(true);
