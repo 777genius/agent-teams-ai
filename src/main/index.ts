@@ -3387,7 +3387,6 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-    mainWindow.webContents.openDevTools();
   } else {
     void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
       logger.error('Failed to load renderer entry HTML:', error);
