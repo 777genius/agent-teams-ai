@@ -2750,7 +2750,6 @@ export const TeamDetailView = memo(function TeamDetailView({
   };
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
-
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
       isActive: isThisTabActive || ownsNativeSidebar,
@@ -2791,7 +2790,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       ownsNativeSidebar,
     ]
   );
-
   const renderTeamActionButtons = (pinned: boolean): React.JSX.Element => (
     <div
       className={cn(

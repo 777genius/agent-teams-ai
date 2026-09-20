@@ -246,7 +246,6 @@ export const MessageComposer = ({
     setGroupChatSelected(true);
   }, [groupChatRecipient]);
   const previousLockedRecipientRef = useRef(lockedRecipient);
-
   useEffect(() => {
     const previousLockedRecipient = previousLockedRecipientRef.current;
     previousLockedRecipientRef.current = lockedRecipient;
@@ -281,7 +280,6 @@ export const MessageComposer = ({
     selectLocalGroupChat,
     selectedTeam,
   ]);
-
   // Members load async with team data; keep recipient stable if valid, otherwise default to lead/first.
   useEffect(() => {
     if (lockedRecipient) return;
