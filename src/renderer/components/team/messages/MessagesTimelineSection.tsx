@@ -27,23 +27,28 @@ export const MessagesTimelineSection = memo(function MessagesTimelineSection({
   ...timelineProps
 }: MessagesTimelineSectionProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
+  const history = (prepare?: () => void): React.ReactNode =>
+    hasMore ? (
+      <div className="flex justify-center py-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs text-text-muted"
+          aria-busy={loadingOlderMessages}
+          disabled={loadingOlderMessages}
+          onClick={() => {
+            prepare?.();
+            onLoadOlderMessages();
+          }}
+        >
+          {t('messages.actions.loadOlder')}
+        </Button>
+      </div>
+    ) : null;
   return (
     <>
-      <ActivityTimeline {...timelineProps} />
-      {hasMore ? (
-        <div className="flex justify-center py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-text-muted"
-            aria-busy={loadingOlderMessages}
-            disabled={loadingOlderMessages}
-            onClick={onLoadOlderMessages}
-          >
-            {t('messages.actions.loadOlder')}
-          </Button>
-        </div>
-      ) : null}
+      <ActivityTimeline {...timelineProps} historyControl={history} />
+      {timelineProps.presentation !== 'conversation' && history()}
       <MessageExpandDialog
         expandedItem={expandedItem}
         open={expandedItemKey !== null}

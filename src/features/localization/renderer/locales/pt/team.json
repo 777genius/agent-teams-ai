@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Ir para as últimas",
       "bottomSheetActions": "Acções da folha inferior da mensagem",
       "collapseAll": "Recolher todas as mensagens",
       "collapseSheet": "Folha de colapso",

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "最新へ",
       "bottomSheetActions": "メッセージの一番下のシートアクション",
       "collapseAll": "すべてのメッセージを閉じる",
       "collapseSheet": "崩壊シート",

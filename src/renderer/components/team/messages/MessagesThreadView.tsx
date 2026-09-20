@@ -9,6 +9,8 @@ interface MessagesThreadViewProps {
   timeline: React.ReactNode;
   scrollRef: React.Ref<HTMLDivElement>;
   composerRef?: React.Ref<HTMLDivElement>;
+  searchRef?: React.Ref<HTMLDivElement>;
+  latestControl?: React.ReactNode;
   onScroll?: React.UIEventHandler<HTMLDivElement>;
 }
 
@@ -22,6 +24,8 @@ export const MessagesThreadView = ({
   timeline,
   scrollRef,
   composerRef,
+  searchRef,
+  latestControl,
   onScroll,
 }: Readonly<MessagesThreadViewProps>): React.JSX.Element => {
   const wide = variant === 'wide';
@@ -37,30 +41,29 @@ export const MessagesThreadView = ({
         <div className="shrink-0 border-b border-[var(--color-border)] px-4 py-2.5">{header}</div>
       ) : null}
       {search ? (
-        <div className="shrink-0 border-b border-[var(--color-border)] px-3 py-1.5">{search}</div>
+        <div ref={searchRef} className="shrink-0 border-b border-[var(--color-border)] px-3 py-1.5">
+          {search}
+        </div>
       ) : null}
       <div
         ref={scrollRef}
         className={cn(
           'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden',
-          wide ? 'touch-pan-y overscroll-contain px-4 pb-4' : 'pb-14 pr-3 pt-2'
+          wide ? 'touch-pan-y overscroll-contain px-4 py-2' : 'px-3 py-2'
         )}
         onScroll={onScroll}
         data-messages-thread-scroll="true"
       >
-        <div
-          ref={composerRef}
-          className={cn(
-            'shrink-0',
-            wide
-              ? 'sticky top-0 z-[1] -mx-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 backdrop-blur'
-              : 'pl-3'
-          )}
-        >
-          {composer}
-          {status}
-        </div>
-        <div className={cn('min-w-0', wide && 'mr-8 flex-1 px-3 pb-4 pt-2')}>{timeline}</div>
+        {status}
+        <div className="min-w-0">{timeline}</div>
+      </div>
+      <div
+        ref={composerRef}
+        data-messages-thread-footer="true"
+        className="max-h-full min-h-0 overflow-y-auto border-t border-[var(--color-border)] px-3 py-2"
+      >
+        {latestControl}
+        <div data-messages-composer-content="true">{composer}</div>
       </div>
     </div>
   );

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "رفتن به جدیدترین",
       "bottomSheetActions": "اقدامات برگه پایینی پیام",
       "collapseAll": "جمع کردن همه پیام‌ها",
       "collapseSheet": "جمع کردن برگه",

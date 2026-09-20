@@ -80,6 +80,7 @@ interface MessageComposerProps {
   lockedRecipient?: string;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
+  suggestionPlacement?: 'above';
   /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
   autoFocusKey?: number;
   onSend: (
@@ -140,6 +141,7 @@ export const MessageComposer = ({
   revisionRequest,
   cornerActionPrefix,
   textareaRef: externalTextareaRef,
+  suggestionPlacement,
   lockedRecipient,
   autoFocusKey,
   onSend,
@@ -1209,6 +1211,7 @@ export const MessageComposer = ({
           rejectionReason={attachmentRestrictionReason}
         />
         <ComposerTextarea
+          suggestionPlacement={suggestionPlacement}
           ref={textareaRef}
           connectedToHeader
           id={`compose-${teamName}`}

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "跳至最新",
       "bottomSheetActions": "消息底部工作表操作",
       "collapseAll": "折叠所有消息",
       "collapseSheet": "折叠表",

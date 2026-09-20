@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "최신으로",
       "bottomSheetActions": "메시지 하단 시트 작업",
       "collapseAll": "모든 메시지",
       "collapseSheet": "연락처",

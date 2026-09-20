@@ -733,6 +733,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "До останніх",
       "bottomSheetActions": "Дії нижнього аркуша повідомлень",
       "collapseAll": "Згорнути всі повідомлення",
       "collapseSheet": "Згорнути аркуш",

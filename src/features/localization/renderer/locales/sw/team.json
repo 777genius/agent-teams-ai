@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Nenda kwa za karibuni",
       "bottomSheetActions": "Vitendo vya karatasi ya chini ya ujumbe",
       "collapseAll": "Kunja ujumbe wote",
       "collapseSheet": "Kunja karatasi",

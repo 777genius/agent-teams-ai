@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "En son mesajlara",
       "bottomSheetActions": "Mesaj alt sayfa eylemleri",
       "collapseAll": "Tüm mesajları daralt",
       "collapseSheet": "Sayfayı daralt",

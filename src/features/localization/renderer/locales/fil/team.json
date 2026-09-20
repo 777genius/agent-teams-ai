@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Sa pinakabago",
       "bottomSheetActions": "Mga aksyon ng message bottom sheet",
       "collapseAll": "I-collapse lahat ng mensahe",
       "collapseSheet": "I-collapse ang sheet",

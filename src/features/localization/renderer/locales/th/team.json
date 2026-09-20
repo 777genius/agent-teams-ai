@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "ไปข้อความล่าสุด",
       "bottomSheetActions": "การดำเนินการชีตด้านล่างของข้อความ",
       "collapseAll": "ยุบข้อความทั้งหมด",
       "collapseSheet": "ยุบชีต",

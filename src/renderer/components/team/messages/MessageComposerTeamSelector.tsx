@@ -38,13 +38,11 @@ export const MessageComposerTeamSelector = ({
 }: MessageComposerTeamSelectorProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const selectedTeamColor = isCrossTeam
-    ? selectedTarget?.isOnline
-      ? '#22c55e'
-      : selectedTarget?.color
-        ? getTeamColorSet(selectedTarget.color).border
-        : selectedTarget
-          ? nameColorSet(selectedTarget.displayName).border
-          : undefined
+    ? selectedTarget?.color
+      ? getTeamColorSet(selectedTarget.color).border
+      : selectedTarget
+        ? nameColorSet(selectedTarget.displayName).border
+        : undefined
     : currentTeamColor;
 
   return (
@@ -62,7 +60,7 @@ export const MessageComposerTeamSelector = ({
         >
           <UsersRound
             size={13}
-            className={cn('shrink-0', selectedTarget?.isOnline && 'animate-pulse')}
+            className="shrink-0"
             style={{ color: selectedTeamColor }}
             aria-hidden="true"
           />

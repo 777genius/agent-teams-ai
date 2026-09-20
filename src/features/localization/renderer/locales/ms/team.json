@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Ke mesej terkini",
       "bottomSheetActions": "Tindakan helaian bawah mesej",
       "collapseAll": "Runtuhkan semua mesej",
       "collapseSheet": "Runtuhkan helaian",

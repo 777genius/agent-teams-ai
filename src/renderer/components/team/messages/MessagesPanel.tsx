@@ -95,15 +95,16 @@ import { MessagesThreadView } from './MessagesThreadView';
 import { MessagesTimelineSection } from './MessagesTimelineSection';
 import { StatusBlock } from './StatusBlock';
 import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
+import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
   useTeamChatListItems,
   useThreadUnreadSnapshot,
 } from './useMessagesPanelChats';
-import { useThreadLayoutAnchor } from './useThreadLayoutAnchor';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
+import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
@@ -123,12 +124,12 @@ interface TimeWindow {
 const BOTTOM_SHEET_HEADER_HEIGHT = 40;
 const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
 const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
-const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
 
 interface MessagesPanelProps {
+  isActive?: boolean;
   teamName: string;
   position: TeamMessagesPanelMode;
   onPositionChange: (position: TeamMessagesPanelMode) => void;
@@ -165,12 +166,7 @@ interface MessagesPanelProps {
   onTaskIdClick?: (taskId: string) => void;
   /** Reports the rendered floating composer height so the parent can reserve scroll space. */
   onFloatingComposerHeightChange?: (height: number) => void;
-  /**
-   * Scroll container owned by the parent view when `position === 'inline'`.
-   * MessagesPanel does not own this element — the viewport lives in
-   * TeamDetailView's content scroll area. Plumbed for future viewport
-   * consumers (virtualization); unused in this release.
-   */
+  /** Parent-owned scroll viewport for the unchanged inline activity presentation. */
   inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
   /** Visual treatment for the inline section header. */
   sectionVariant?: CollapsibleTeamSectionVariant;
@@ -182,6 +178,7 @@ const MessagesComposerSection = memo(MessageComposer);
 const MessagesStatusSection = memo(StatusBlock);
 
 export const MessagesPanel = memo(function MessagesPanel({
+  isActive = true,
   teamName,
   position,
   onPositionChange,
@@ -297,10 +294,21 @@ export const MessagesPanel = memo(function MessagesPanel({
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const floatingComposerMeasureRef = useRef<HTMLDivElement | null>(null);
   const threadScrollRef = useRef<HTMLDivElement | null>(null);
+  const [threadScrollElement, setThreadScrollElement] = useState<HTMLDivElement | null>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
-  const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
+  const [bottomSheetScrollElement, setBottomSheetScrollElement] = useState<HTMLDivElement | null>(
+    null
+  );
+  const setThreadScrollNode = useCallback((node: HTMLDivElement | null) => {
+    threadScrollRef.current = node;
+    setThreadScrollElement(node);
+  }, []);
+  const setBottomSheetScrollNode = useCallback((node: HTMLDivElement | null) => {
+    bottomSheetScrollRef.current = node;
+    setBottomSheetScrollElement(node);
+  }, []);
   // ActivityTimeline observes and virtualizes against the active scroll owner.
   const activeScrollContainerRef =
     position === 'inline'
@@ -308,20 +316,24 @@ export const MessagesPanel = memo(function MessagesPanel({
       : position === 'sidebar'
         ? threadScrollRef
         : bottomSheetScrollRef;
+  const activeScrollElement =
+    position === 'inline'
+      ? (inlineScrollContainerRef?.current ?? null)
+      : position === 'sidebar'
+        ? threadScrollElement
+        : bottomSheetScrollElement;
 
   const activityTimelineViewport = useMemo<TimelineViewport | undefined>(() => {
     if (!activeScrollContainerRef) return undefined;
     return {
       scrollElementRef: activeScrollContainerRef,
+      scrollElement: activeScrollElement,
       observerRoot: activeScrollContainerRef,
       scrollMargin: 0,
-      // Opt into virtualization; ActivityTimeline keeps the direct render
-      // path for short lists and only switches to the windowed path once
-      // the row count crosses its internal threshold.
       virtualizationEnabled: true,
       virtualizationRowThreshold: position === 'sidebar' ? 48 : undefined,
     };
-  }, [activeScrollContainerRef, position]);
+  }, [activeScrollContainerRef, activeScrollElement, position]);
   const handleExpandContent = useCallback(() => {
     // no-op: user is reading expanded content, not composing
   }, []);
@@ -352,7 +364,9 @@ export const MessagesPanel = memo(function MessagesPanel({
   const messagesScrollTopRef = useRef(initialSidebarStateRef.current.messagesScrollTop);
   const messagesScrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesScrollPersistTeamRef = useRef(teamName);
-  const layoutTransitionActiveRef = useRef(false);
+  const conversationHandleRef = useRef<ConversationViewportHandle | null>(null);
+  const [latestAvailable, setLatestAvailable] = useState(false);
+  const isConversation = position === 'sidebar' || position === 'bottom-sheet';
   const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
     initialSidebarStateRef.current.bottomSheetSnapIndex
   );
@@ -369,16 +383,32 @@ export const MessagesPanel = memo(function MessagesPanel({
   });
   const { renderSurface, navigationSurface, scope, openChat, backToList, threadOpenedAt } =
     conversation;
+  const {
+    footerHeight: bottomSheetStickyTopHeight,
+    footerRef: bottomSheetStickyTopRef,
+    headerHeight: bottomSheetHeaderHeight,
+    headerRef: bottomSheetHeaderRef,
+    mountHeight: bottomSheetMountHeight,
+    searchRef: bottomSheetSearchRef,
+  } = useBottomSheetLayout({
+    active: position === 'bottom-sheet',
+    fallbackHeaderHeight: BOTTOM_SHEET_HEADER_HEIGHT,
+    mountPoint,
+    refreshKey: `${messagesSearchBarVisible}:${renderSurface}:${bottomSheetSnapIndex}`,
+  });
   const scopeKey = conversationScopeKey(scope);
   const expanded = position === 'sidebar' && expandedChatHost?.expanded === true;
   const showChatList = navigationSurface === 'list' || expanded;
-  const { beginLayoutTransition, observationEnabled } = useThreadLayoutAnchor(
-    threadScrollRef,
-    `${teamName}:${scopeKey}`
-  );
-  const [bottomSheetStickyTopHeight, setBottomSheetStickyTopHeight] = useState(196);
-  const [bottomSheetMountHeight, setBottomSheetMountHeight] = useState(0);
-
+  const conversationIdentity = JSON.stringify([
+    teamName,
+    scopeKey,
+    threadOpenedAt,
+    messagesSearchQuery.trim().toLowerCase(),
+    [...messagesFilter.from].sort(),
+    [...messagesFilter.to].sort(),
+    messagesFilter.showNoise,
+    timeWindow,
+  ]);
   const handleOpenChat = useCallback(
     (nextScope: typeof scope): void => {
       if (
@@ -398,20 +428,14 @@ export const MessagesPanel = memo(function MessagesPanel({
       if (!expandedChatHost || nextExpanded === expandedChatHost.expanded) return;
       if (nextExpanded && !expandedChatHost.available) return;
       if (navigationSurface === 'thread') {
-        if (messagesScrollPersistTimerRef.current) {
-          clearTimeout(messagesScrollPersistTimerRef.current);
-          messagesScrollPersistTimerRef.current = null;
-        }
-        messagesScrollTopRef.current = threadScrollRef.current?.scrollTop ?? 0;
-        layoutTransitionActiveRef.current = true;
-        beginLayoutTransition();
+        conversationHandleRef.current?.prepareLayoutChange();
       }
       if (nextExpanded && navigationSurface === 'list') {
         openChat(TEAM_FEED_SCOPE);
       }
       expandedChatHost.onExpandedChange(nextExpanded);
     },
-    [beginLayoutTransition, expandedChatHost, navigationSurface, openChat]
+    [expandedChatHost, navigationSurface, openChat]
   );
 
   useLayoutEffect(() => {
@@ -474,20 +498,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     }, MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS);
   }, []);
 
-  const handleSidebarScroll = useCallback(
-    (event: React.UIEvent<HTMLDivElement>): void => {
-      if (!observationEnabled) return;
-      persistMessagesScrollTop(event.currentTarget.scrollTop);
-    },
-    [observationEnabled, persistMessagesScrollTop]
-  );
-
   useEffect(() => {
-    if (!observationEnabled || !layoutTransitionActiveRef.current) return;
-    layoutTransitionActiveRef.current = false;
-    const scroll = threadScrollRef.current;
-    if (scroll) persistMessagesScrollTop(scroll.scrollTop);
-  }, [observationEnabled, persistMessagesScrollTop]);
+    if (isConversation && messagesScrollPersistTimerRef.current) {
+      clearTimeout(messagesScrollPersistTimerRef.current);
+      messagesScrollPersistTimerRef.current = null;
+    }
+  }, [isConversation]);
 
   const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>): void => {
     setListScrollTop(event.currentTarget.scrollTop);
@@ -561,59 +577,19 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   useLayoutEffect(() => {
     if (position !== 'sidebar') return;
-    const el = threadScrollRef.current;
-    if (!el) return;
-    el.scrollTop = messagesScrollTop;
-  }, [position, messagesScrollTop]);
-
-  useLayoutEffect(() => {
-    if (position !== 'sidebar') return;
     const el = listScrollRef.current;
     if (!el) return;
     el.scrollTop = Math.min(listScrollTop, Math.max(0, el.scrollHeight - el.clientHeight));
   }, [listScrollTop, position]);
 
   useResetScrollOnConversationChange({
+    enabled: !isConversation,
     teamName,
     scopeKey,
     navigationSurface,
     persistScrollTop: persistMessagesScrollTop,
     scrollElementRef: activeScrollContainerRef ?? threadScrollRef,
   });
-
-  useLayoutEffect(() => {
-    if (position !== 'bottom-sheet' || typeof ResizeObserver === 'undefined') return;
-
-    const mountPointElement = mountPoint instanceof HTMLElement ? mountPoint : null;
-    const observedEntries: [Element | null, (height: number) => void][] = [
-      [bottomSheetStickyTopRef.current, setBottomSheetStickyTopHeight],
-      [mountPointElement, setBottomSheetMountHeight],
-    ];
-    const observers: ResizeObserver[] = [];
-
-    for (const [element, setHeight] of observedEntries) {
-      if (!element) continue;
-
-      const updateHeight = (): void => {
-        const nextHeight = Math.ceil(element.getBoundingClientRect().height);
-        if (nextHeight > 0) {
-          setHeight(nextHeight);
-        }
-      };
-
-      updateHeight();
-
-      const observer = new ResizeObserver(() => {
-        updateHeight();
-      });
-      observer.observe(element);
-      observers.push(observer);
-    }
-
-    return () => {
-      observers.forEach((observer) => observer.disconnect());
-    };
-  }, [position, mountPoint]);
 
   const leadNames = useMemo(
     () => members.filter((member) => isLeadMember(member)).map((member) => member.name),
@@ -933,6 +909,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       actionMode?: ActionMode,
       taskRefs?: TaskRef[]
     ) => {
+      conversationHandleRef.current?.revealLatest();
       const sentAtMs = Date.now();
       onPendingReplyChange((prev) => ({ ...prev, [member]: sentAtMs }));
       void sendTeamMessage(teamName, {
@@ -973,6 +950,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       taskRefs?: TaskRef[],
       toMember?: string
     ) => {
+      conversationHandleRef.current?.revealLatest();
       void sendCrossTeamMessage({
         fromTeam: teamName,
         fromMember: 'user',
@@ -1044,33 +1022,25 @@ export const MessagesPanel = memo(function MessagesPanel({
     snapBottomSheetTo(BOTTOM_SHEET_COLLAPSED_SNAP_INDEX);
   }, [bottomSheetSnapIndex, snapBottomSheetTo]);
 
-  const bottomSheetSnapPoints = useMemo(() => {
-    const maxOpenHeight =
-      bottomSheetMountHeight > 0
-        ? Math.max(bottomSheetMountHeight - 1, 96)
-        : Number.POSITIVE_INFINITY;
-    const collapsedHeight = Math.min(BOTTOM_SHEET_HEADER_HEIGHT, maxOpenHeight);
-    const composerHeight = Math.min(
-      Math.max(collapsedHeight + bottomSheetStickyTopHeight, collapsedHeight + 120),
-      maxOpenHeight
-    );
-    const centeredHeight = Math.min(
-      Math.max(
-        bottomSheetMountHeight > 0 ? Math.round(bottomSheetMountHeight * 0.58) : 520,
-        composerHeight + 140
-      ),
-      maxOpenHeight
-    );
-
-    return [0, collapsedHeight, composerHeight, centeredHeight, 1];
-  }, [bottomSheetMountHeight, bottomSheetStickyTopHeight]);
-
-  const normalizedBottomSheetSnapIndex = useMemo(() => {
-    return Math.min(
-      Math.max(bottomSheetSnapIndex, BOTTOM_SHEET_COLLAPSED_SNAP_INDEX),
-      BOTTOM_SHEET_FULL_SNAP_INDEX
-    );
-  }, [bottomSheetSnapIndex]);
+  const {
+    contentHeight: bottomSheetContentHeight,
+    normalizedSnapIndex: normalizedBottomSheetSnapIndex,
+    snapPoints: bottomSheetSnapPoints,
+  } = useMemo(
+    () =>
+      calculateBottomSheetGeometry({
+        footerHeight: bottomSheetStickyTopHeight,
+        headerHeight: bottomSheetHeaderHeight,
+        mountHeight: bottomSheetMountHeight,
+        snapIndex: bottomSheetSnapIndex,
+      }),
+    [
+      bottomSheetHeaderHeight,
+      bottomSheetMountHeight,
+      bottomSheetSnapIndex,
+      bottomSheetStickyTopHeight,
+    ]
+  );
 
   const sharedComposerProps = {
     teamName,
@@ -1083,6 +1053,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     lastResult: lastSendMessageResult,
     revisionRequest,
     textareaRef: composerTextareaRef,
+    suggestionPlacement: isConversation ? ('above' as const) : undefined,
     lockedRecipient,
     autoFocusKey: threadOpenedAt,
     onSend: handleSend,
@@ -1196,7 +1167,11 @@ export const MessagesPanel = memo(function MessagesPanel({
       revisionMessageId={revisionMessageId}
       onReviseMessage={handleReviseMessage}
       onMessageVisible={handleMessageVisible}
-      observationEnabled={observationEnabled}
+      presentation={isConversation ? 'conversation' : 'activity'}
+      observationEnabled={!isConversation || isActive}
+      conversationIdentity={conversationIdentity}
+      conversationHandleRef={conversationHandleRef}
+      onLatestAvailable={setLatestAvailable}
       directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
       unreadSnapshot={unreadSnapshot}
       emptyLabel={t('messages.chats.emptyThread')}
@@ -1271,16 +1246,28 @@ export const MessagesPanel = memo(function MessagesPanel({
   const renderSharedThreadView = (variant: 'sidebar' | 'wide'): React.JSX.Element => (
     <MessagesThreadView
       variant={variant}
-      header={variant === 'wide' ? wideThreadHeader : undefined}
+      header={variant === 'wide' && position !== 'bottom-sheet' ? wideThreadHeader : undefined}
       search={messagesSearchBarVisible ? renderSearchAndFilterControls() : undefined}
       composer={
         variant === 'wide' ? renderCompactComposerSection() : renderDefaultComposerSection()
       }
       status={variant === 'wide' ? renderInlineStatusSection() : renderSidebarStatusSection()}
       timeline={renderTimelineSection()}
-      scrollRef={position === 'bottom-sheet' ? bottomSheetScrollRef : threadScrollRef}
+      scrollRef={position === 'bottom-sheet' ? setBottomSheetScrollNode : setThreadScrollNode}
       composerRef={position === 'bottom-sheet' ? bottomSheetStickyTopRef : undefined}
-      onScroll={position === 'sidebar' ? handleSidebarScroll : undefined}
+      searchRef={bottomSheetSearchRef}
+      latestControl={
+        latestAvailable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            data-conversation-latest="true"
+            onClick={() => conversationHandleRef.current?.revealLatest()}
+          >
+            {t('messages.actions.toLatest')}
+          </Button>
+        ) : undefined
+      }
     />
   );
 
@@ -1401,6 +1388,7 @@ export const MessagesPanel = memo(function MessagesPanel({
           className="flex max-h-full w-full flex-col overflow-hidden rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] shadow-[0_-18px_48px_rgba(0,0,0,0.35)]"
         >
           <Sheet.Header
+            ref={bottomSheetHeaderRef}
             unstyled
             className="shrink-0 cursor-grab select-none border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] active:cursor-grabbing"
           >
@@ -1480,8 +1468,9 @@ export const MessagesPanel = memo(function MessagesPanel({
           </Sheet.Header>
           {!isBottomSheetCollapsed && (
             <Sheet.Content
-              className="flex min-h-0 flex-1 overflow-hidden bg-[var(--color-surface-sidebar)]"
+              className="flex min-h-0 !shrink-0 !grow-0 overflow-hidden bg-[var(--color-surface-sidebar)]"
               scrollClassName="flex h-full min-h-0 flex-col overflow-hidden"
+              style={{ height: bottomSheetContentHeight }}
               disableDrag
               disableScroll
             >

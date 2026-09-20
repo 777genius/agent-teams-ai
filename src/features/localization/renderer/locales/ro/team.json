@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "La cele mai recente",
       "bottomSheetActions": "Acțiuni panou inferior pentru mesaje",
       "collapseAll": "Restrânge toate mesajele",
       "collapseSheet": "Restrânge panoul",

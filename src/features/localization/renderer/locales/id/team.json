@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Ke pesan terbaru",
       "bottomSheetActions": "Aksi lembar bawah pesan",
       "collapseAll": "Kecilkan semua pesan",
       "collapseSheet": "Lipat lembar",

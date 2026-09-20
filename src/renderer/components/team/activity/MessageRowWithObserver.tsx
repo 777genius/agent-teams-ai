@@ -132,9 +132,10 @@ const MessageRowWithObserver = ({
     const el = ref.current;
     if (!el) return;
     const root = observerRoot?.current ?? null;
+    let observing = true;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!observationEnabled || !entry?.isIntersecting) return;
+        if (!observing || !observationEnabled || !entry?.isIntersecting) return;
         if (reportedRef.current) return;
         const cb = onVisibleRef.current;
         const msg = messageRef.current;
@@ -145,7 +146,10 @@ const MessageRowWithObserver = ({
       { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observing = false;
+      observer.disconnect();
+    };
   }, [observationEnabled, onVisible, observerRoot]);
 
   return (

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Zu den neuesten",
       "bottomSheetActions": "Nachrichten unten Blatt Aktionen",
       "collapseAll": "Alle Nachrichten abbrechen",
       "collapseSheet": "Verfallsbogen",

@@ -2753,6 +2753,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
+      isActive: isThisTabActive,
       teamName,
       onPositionChange: changeMessagesPanelMode,
       mountPoint: messagesPanelMountPoint,
@@ -2786,6 +2787,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       teamName,
       timeWindow,
       changeMessagesPanelMode,
+      isThisTabActive,
     ]
   );
 
@@ -3746,7 +3748,12 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               bottomOffset={Math.max(floatingComposerHeight + 18, 18)}
               buttonTestId="open-terminal-floating-button"
-              enabled={isThisTabActive && !graphOpen}
+              enabled={
+                isThisTabActive &&
+                !graphOpen &&
+                !expandedChat &&
+                messagesPanelMode !== 'bottom-sheet'
+              }
             />
           </div>
         </div>

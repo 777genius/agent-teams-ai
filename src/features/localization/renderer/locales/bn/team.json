@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "সাম্প্রতিক বার্তায়",
       "bottomSheetActions": "বার্তার প্রধান অংশ",
       "collapseAll": "সমস্ত বার্তার থ্রেড সংকুচিত করা হবে",
       "collapseSheet": "টালি",
