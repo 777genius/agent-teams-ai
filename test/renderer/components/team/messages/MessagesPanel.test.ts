@@ -1719,7 +1719,7 @@ describe('MessagesPanel idle summary invariants', () => {
       expect(snaps[2]).toBe(Math.min(160, mountHeight - 1));
       expect(sheetContentRenderSpy).toHaveBeenCalledWith({
         className:
-          'flex min-h-0 !grow-0 !shrink-0 overflow-hidden bg-[var(--color-surface-sidebar)]',
+          'flex min-h-0 !shrink-0 !grow-0 overflow-hidden bg-[var(--color-surface-sidebar)]',
         scrollClassName: 'flex h-full min-h-0 flex-col overflow-hidden',
         style: { height: Math.max(0, Math.min(160, mountHeight - 1) - 40) },
         disableDrag: true,
