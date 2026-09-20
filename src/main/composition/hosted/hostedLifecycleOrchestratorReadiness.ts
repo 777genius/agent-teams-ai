@@ -2,9 +2,11 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import { lstat } from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { isAbsolute, normalize, resolve } from 'node:path';
+
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only hosted lifecycle wire parser.
 import { parseStrictOrchestratorSignedJsonFrame } from '@features/team-lifecycle/main/hosted';
 import { createLogger } from '@shared/utils/logger';
+
 import {
   advanceHostedLifecycleOwnerHighWater,
   HostedLifecycleOwnerBindingConsumedError,
