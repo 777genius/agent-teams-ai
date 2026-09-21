@@ -1025,8 +1025,8 @@ async function main() {
       if (!(article instanceof HTMLElement)) return null;
       const rect = article.getBoundingClientRect();
       const row = article.closest('[data-timeline-row-key]');
-      const preHoverTime = article.querySelector('[data-wide-chat-inline-time="true"]');
-      if (!(row instanceof HTMLElement) || !(preHoverTime instanceof HTMLElement)) return null;
+      const preHoverFooter = document.querySelector('[data-wide-chat-message-footer="true"]');
+      if (!(row instanceof HTMLElement)) return null;
       for (const type of ['pointerover', 'pointerenter', 'pointermove']) {
         article.dispatchEvent(new PointerEvent(type, {
           bubbles: true,
@@ -1040,7 +1040,7 @@ async function main() {
         rowKey: row.dataset.timelineRowKey,
         rowHeight: row.getBoundingClientRect().height,
         articleHeight: rect.height,
-        timeHidden: getComputedStyle(preHoverTime).opacity === '0',
+        timeHidden: preHoverFooter === null,
       };
     })()`);
     assert(hoverPoint, 'missing ordinary agent row for wide-chat hover verification');
@@ -1057,7 +1057,7 @@ async function main() {
       );
       const body = article?.querySelector('.wide-chat-message-body');
       const footer = document.querySelector('[data-wide-chat-message-footer="true"]');
-      const timestamp = article?.querySelector('[data-wide-chat-inline-time="true"]');
+      const timestamp = footer?.querySelector('[data-wide-chat-hover-time="true"]');
       const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
       const row = document.querySelector(
         '[data-timeline-row-key="' + CSS.escape(${JSON.stringify(hoverPoint.rowKey)}) + '"]'
@@ -1079,7 +1079,10 @@ async function main() {
         rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
         articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
         timeBelowBubble:
-          timestampRect.right <= articleRect.right && timestampRect.top >= articleRect.bottom,
+          timestampRect.right <= footerRect.right && timestampRect.top >= articleRect.bottom - 3,
+        timeReadable:
+          getComputedStyle(timestamp).visibility === 'visible' &&
+          getComputedStyle(timestamp).color !== getComputedStyle(timestamp).backgroundColor,
         timeVisible: getComputedStyle(timestamp).opacity === '1',
         interactive: footerHitTarget instanceof Element && footer.contains(footerHitTarget),
         side: footer.getAttribute('data-side'),
@@ -1092,6 +1095,7 @@ async function main() {
       rowStable: true,
       articleStable: true,
       timeBelowBubble: true,
+      timeReadable: true,
       timeVisible: true,
       interactive: true,
       side: 'bottom',
@@ -1282,6 +1286,9 @@ async function main() {
         height: Math.round(avatarRect.height),
         leftOfMessage: avatarRect.right <= bodyRect.left + bodyPadding,
         avatarTailGap: Math.round(articleRect.left + tailLeft - avatarRect.right),
+        tailJoinsBubble:
+          Math.abs(articleRect.left + tailLeft + Number.parseFloat(tailStyle.width) -
+            bodyRect.left) <= 1,
         tailSize: [tailStyle.width, tailStyle.height],
         compactPadding: [
           bodyStyle.paddingBlockStart,
@@ -1295,8 +1302,9 @@ async function main() {
       width: 32,
       height: 32,
       leftOfMessage: true,
-      avatarTailGap: 2,
-      tailSize: ['14px', '14px'],
+      avatarTailGap: 1,
+      tailJoinsBubble: true,
+      tailSize: ['12px', '13px'],
       compactPadding: ['2px', '8px', '7px', '8px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(`(() => {

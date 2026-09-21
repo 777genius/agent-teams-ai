@@ -192,13 +192,14 @@ describe('ActivityItem compact header preview', () => {
     expect(article?.textContent).not.toContain('alice');
     const footer = host.querySelector('[data-wide-chat-message-footer="true"]');
     const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
-    expect(article?.querySelector('[data-wide-chat-inline-time="true"]')?.textContent).toMatch(
+    expect(footer?.querySelector('[data-wide-chat-hover-time="true"]')?.textContent).toMatch(
       /\d{2}:\d{2}/
     );
     expect(toolbar?.getAttribute('data-orientation')).toBe('horizontal');
     expect(footer?.getAttribute('data-side')).toBe('bottom');
     expect(footer?.getAttribute('data-avoid-collisions')).toBe('true');
     expect(article?.contains(toolbar ?? null)).toBe(false);
+    expect(article?.querySelector('[data-wide-chat-hover-time="true"]')).toBeNull();
 
     await act(async () => {
       root.render(
