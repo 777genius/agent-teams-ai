@@ -1660,7 +1660,6 @@ export const ActivityItem = memo(
             ) : null}
           </div>
         ) : null}
-        {isWideOrdinary ? <span data-wide-chat-inline-time="true">{timestamp}</span> : null}
       </article>
     );
     /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
@@ -1671,6 +1670,7 @@ export const ActivityItem = memo(
         showToolbar={showHoverToolbar}
         canRevise={Boolean(canRevise && onRevise)}
         appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+        timestamp={isWideOrdinary ? timestamp : undefined}
         onRevise={onRevise ? () => onRevise(message) : undefined}
         onReply={onReply ? () => onReply(message) : undefined}
         onCreateTask={onCreateTask ? handleCreateTask : undefined}

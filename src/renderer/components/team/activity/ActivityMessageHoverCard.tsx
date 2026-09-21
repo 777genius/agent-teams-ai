@@ -19,6 +19,7 @@ interface ActivityMessageHoverCardProps {
   showToolbar: boolean;
   canRevise: boolean;
   appearance?: 'compact' | 'wide-chat';
+  timestamp?: string;
   onRevise?: () => void;
   onReply?: () => void;
   onCreateTask?: () => void;
@@ -30,6 +31,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   showToolbar,
   canRevise,
   appearance = 'compact',
+  timestamp,
   onRevise,
   onReply,
   onCreateTask,
@@ -97,6 +99,14 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
             onCreateTask={onCreateTask}
             orientation={isWide ? 'horizontal' : 'vertical'}
           />
+          {isWide && timestamp ? (
+            <span
+              data-wide-chat-hover-time="true"
+              className="ml-0.5 border-l border-[var(--color-border)] px-1.5 text-[10px] font-medium leading-5 text-[var(--color-text-secondary)]"
+            >
+              {timestamp}
+            </span>
+          ) : null}
         </HoverCardContent>
       ) : null}
     </HoverCard>
