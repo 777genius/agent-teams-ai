@@ -129,3 +129,7 @@ export {
   buildMemberSettingsRelaunchIntent,
 } from './utils/memberSettingsRelaunch';
 export { filterMemberSettingsRelaunchInputs } from './utils/memberSettingsRelaunch';
+export {
+  validateMemberSettingsRelaunchFreshRoster,
+  type TeamMemberSettingsRelaunchRosterReadPort,
+} from './utils/validateMemberSettingsRelaunchFreshRoster';

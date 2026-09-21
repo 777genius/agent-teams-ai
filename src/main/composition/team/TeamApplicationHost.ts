@@ -72,12 +72,25 @@ export class TeamApplicationHost {
   ): Promise<TeamApplicationLaunchResult> {
     const savedRequest = await this.findDraftSavedRequest(teamName);
     const provisioning = this.requireProvisioningStart();
-    const response = savedRequest
-      ? await provisioning.createTeam(requests.createFromDraft(savedRequest), noProgress)
-      : await provisioning.launchTeam(requests.resumeExisting(), noProgress);
-
+    let response: TeamApplicationLaunchResult;
+    let launchedDraftTeamName: string | null = null;
     if (savedRequest) {
-      this.ports.resume?.resumeTeam(teamName);
+      const createRequest = requests.createFromDraft(savedRequest);
+      if (createRequest.teamName !== teamName) {
+        const renameDraftTeam = this.requireData().renameDraftTeam;
+        if (!renameDraftTeam) {
+          throw new TeamApplicationUnavailableError('Team draft rename control is not available');
+        }
+        await renameDraftTeam(teamName, createRequest.teamName);
+      }
+      response = await provisioning.createTeam(createRequest, noProgress);
+      launchedDraftTeamName = createRequest.teamName;
+    } else {
+      response = await provisioning.launchTeam(requests.resumeExisting(), noProgress);
+    }
+
+    if (launchedDraftTeamName) {
+      this.ports.resume?.resumeTeam(launchedDraftTeamName);
     }
     this.ports.listInvalidation.invalidate();
     return response;

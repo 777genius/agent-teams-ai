@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RefreshTeamDataOptions } from '@features/team-view-read-model/renderer';
+import type { TeamGetDataOptions } from '@shared/types';
+
 import {
   getFullTeamDataRequestKey,
   getTeamDataRequestKey,
@@ -54,5 +57,16 @@ describe('teamDataRequestKeys', () => {
     expect(isTeamDataRequestKeyForTeam('my-team\u0000mode:full', 'my-team')).toBe(true);
     expect(isTeamDataRequestKeyForTeam('my-team-extra\u0000mode:full', 'my-team')).toBe(false);
     expect(isTeamDataRequestKeyForTeam('my-team', 'my-team')).toBe(false);
+  });
+
+  it('keeps branch projection on the read contract, not the refresh contract', () => {
+    const readOptions: TeamGetDataOptions = { includeMemberBranches: false };
+    const refreshOptions: RefreshTeamDataOptions = { withDedup: false };
+    // @ts-expect-error Branch projection controls getData snapshots only.
+    const invalidRefreshOptions: RefreshTeamDataOptions = { includeMemberBranches: false };
+
+    expect(readOptions).toEqual({ includeMemberBranches: false });
+    expect(refreshOptions).toEqual({ withDedup: false });
+    void invalidRefreshOptions;
   });
 });

@@ -41,7 +41,8 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
-import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import { createTeamApplicationHost } from '../../../../src/main/composition/team/createTeamApplicationHost';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '../../../../src/main/services/team/contracts/TeamRuntimeApiBinder';
 import { createOpenCodeBridgeHandshakeIdentityHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -2894,7 +2895,13 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([stopFixture.adapter]));
       const app = Fastify();
       registerTeamRoutes(app, {
-        teamApis: bindTeamHttpHandlerApis(svc),
+        teamApplicationHost: createTeamApplicationHost({
+          provisioningStart: svc,
+          provisioningStatus: svc,
+          runtime: svc,
+          runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(svc),
+          taskActivity: svc,
+        }),
       } as HttpServices);
 
       try {

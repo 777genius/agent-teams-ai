@@ -13,11 +13,33 @@ import {
   ProvisioningProviderStatusList,
   updateProviderCheck,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
+import { alignProvisioningChecks } from '@renderer/components/team/dialogs/provisioningProviderChecks';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('ProvisioningProviderStatusList', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('retains completed checks while adding pending checks for a fresh provider selection', () => {
+    const existing = [
+      {
+        providerId: 'anthropic' as const,
+        status: 'ready' as const,
+        backendSummary: 'Anthropic API',
+        details: ['Selected model verified'],
+      },
+    ];
+
+    expect(alignProvisioningChecks(existing, ['anthropic', 'codex'])).toEqual([
+      existing[0],
+      {
+        providerId: 'codex',
+        status: 'pending',
+        backendSummary: null,
+        details: [],
+      },
+    ]);
   });
 
   it('clears stale experimental override evidence when a new provider state is applied', () => {

@@ -25,7 +25,9 @@ import type {
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 
 export interface TeamApplicationHostSources {
-  readonly data?: TeamApplicationDataApi;
+  readonly data?: TeamApplicationDataApi & {
+    renameDraftTeam?(oldTeamName: string, newTeamName: string): Promise<void>;
+  };
   readonly provisioningStart?: TeamApplicationProvisioningStartApi;
   readonly provisioningStatus?: TeamApplicationProvisioningStatusApi;
   readonly runtime?: TeamApplicationRuntimeApi;
@@ -50,7 +52,14 @@ async function hasTeamConfig(teamName: string): Promise<boolean> {
 export function createTeamApplicationHost(
   sources: TeamApplicationHostSources
 ): TeamApplicationHost {
-  const data = sources.data ? bindTeamApplicationDataApi(sources.data) : undefined;
+  const boundData = sources.data ? bindTeamApplicationDataApi(sources.data) : undefined;
+  const data =
+    boundData && sources.data?.renameDraftTeam
+      ? {
+          ...boundData,
+          renameDraftTeam: sources.data.renameDraftTeam.bind(sources.data),
+        }
+      : boundData;
   const provisioningStart = sources.provisioningStart
     ? bindTeamApplicationProvisioningStartApi(sources.provisioningStart)
     : undefined;

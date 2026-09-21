@@ -15,7 +15,14 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types/team';
 
-export type TeamApplicationDataPort = TeamApplicationDataApi;
+/**
+ * Draft renaming is a persistence concern used only while promoting an
+ * already-saved draft. It remains optional so the provider-neutral data
+ * capability stays usable by hosted/read-only compositions.
+ */
+export type TeamApplicationDataPort = TeamApplicationDataApi & {
+  renameDraftTeam?(oldTeamName: string, newTeamName: string): Promise<void>;
+};
 
 export interface TeamConfigPresencePort {
   hasConfig(teamName: string): Promise<boolean>;

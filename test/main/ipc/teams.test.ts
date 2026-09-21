@@ -268,7 +268,6 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
 
-import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
 import type { TeamPermanentDeletionIntent } from '../../../src/main/services/team/TeamBackupService';
 
 type CreateTeamMock = (
@@ -763,7 +762,7 @@ describe('ipc teams handlers', () => {
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
-  } satisfies TeamIpcHandlerApis;
+  };
   const boardTaskActivityService = {
     getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(() => resolved([])),
   };

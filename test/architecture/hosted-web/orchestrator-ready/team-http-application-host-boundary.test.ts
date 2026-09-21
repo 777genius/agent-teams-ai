@@ -9,6 +9,7 @@ const PORTS_PATH = 'src/main/composition/team/TeamApplicationHostPorts.ts';
 const FACTORY_PATH = 'src/main/composition/team/createTeamApplicationHost.ts';
 const HTTP_PATH = 'src/main/http/teams.ts';
 const RUNTIME_COMPATIBILITY_HTTP_PATH = 'src/main/http/teamRuntimeCompatibilityRoutes.ts';
+const LIFECYCLE_ROUTES_PATH = 'src/main/http/teams/teamLifecycleRoutes.ts';
 
 const EXPECTED_HOST_PORTS = [
   'configPresence',
@@ -35,6 +36,20 @@ const EXPECTED_HOST_METHODS = [
   'recordRuntimeHeartbeat',
   'recordRuntimeTaskEvent',
   'stopTeam',
+] as const;
+
+// Runtime lifecycle routes retain the stop-escalation flow and their direct
+// runtime-control ownership. The remaining team routes use the application host.
+const EXPECTED_APPLICATION_HOST_HTTP_METHODS = [
+  'createTeamDraft',
+  'deliverRuntimeMessage',
+  'getProvisioningStatus',
+  'getTeam',
+  'launchTeam',
+  'listTeams',
+  'recordRuntimeBootstrapCheckin',
+  'recordRuntimeHeartbeat',
+  'recordRuntimeTaskEvent',
 ] as const;
 
 const MIGRATED_CAPABILITY_METHODS = new Set([
@@ -196,7 +211,7 @@ describe('team HTTP application-host boundary', () => {
 
     expect(
       [...applicationHostCalls(http), ...applicationHostCalls(runtimeCompatibilityHttp)].sort()
-    ).toEqual(EXPECTED_HOST_METHODS);
+    ).toEqual(EXPECTED_APPLICATION_HOST_HTTP_METHODS);
     expect(migratedCallsOutsideHost(http)).toEqual([]);
     expect(migratedCallsOutsideHost(runtimeCompatibilityHttp)).toEqual([]);
     expect(importedModules(http)).not.toEqual(
@@ -210,7 +225,7 @@ describe('team HTTP application-host boundary', () => {
     );
     expect(http.text).toContain('registerTeamRuntimeCompatibilityRoutes(app, applicationHost)');
     expect(http.text).toContain('registerMemberWorkSyncHttp(');
-    expect(http.text).toContain('teamLifecycleReadHost.listTeamLifecycle(');
+    expect(http.text).toContain('host.listTeamLifecycle(');
     expect(runtimeCompatibilityHttp.text).toContain('withRuntimeTeamName');
     expect(runtimeCompatibilityHttp.text).not.toContain('services.');
     expect(runtimeCompatibilityHttp.text).toContain('OpenCode runtime payload invalid observedAt');
@@ -220,6 +235,17 @@ describe('team HTTP application-host boundary', () => {
     expect(runtimeCompatibilityHttp.text).toContain('applicationHost.deliverRuntimeMessage');
     expect(runtimeCompatibilityHttp.text).toContain('applicationHost.recordRuntimeTaskEvent');
     expect(runtimeCompatibilityHttp.text).toContain('applicationHost.recordRuntimeHeartbeat');
+  });
+
+  it('keeps runtime lifecycle control outside the application host so stop escalation remains intact', () => {
+    const lifecycleRoutes = parse(LIFECYCLE_ROUTES_PATH);
+
+    expect(lifecycleRoutes.text).toContain('stopTeamWithEscalation(teamName, {');
+    expect(lifecycleRoutes.text).toContain('runTeamForceStopFlow(teamName, {');
+    expect(lifecycleRoutes.text).toContain('stopTeam: (name) => teamRuntimeApi.stopTeam(name)');
+    expect(lifecycleRoutes.text).toContain('teamRuntimeApi.getRuntimeState(teamName)');
+    expect(lifecycleRoutes.text).toContain('teamRuntimeApi.getAliveTeams().map(');
+    expect(lifecycleRoutes.text).not.toContain('applicationHost.');
   });
 
   it('detects direct service bypasses instead of relying on production source strings', () => {

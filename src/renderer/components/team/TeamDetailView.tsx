@@ -1,24 +1,12 @@
-import {
-  forwardRef,
-  lazy,
-  memo,
-  Suspense,
-  useCallback,
-  useEffect,
-  useId,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  assertMemberSettingsRelaunchRoster,
   createTeamMemberSettingsRendererApi,
   type MemberSettingsRelaunchDraft,
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
+  validateMemberSettingsRelaunchFreshRoster,
 } from '@features/team-provisioning/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -102,6 +90,11 @@ import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { ReviewDialog } from './dialogs/ReviewDialog';
+import {
+  preloadTaskDetailDialog,
+  TaskDetailDialogHost,
+  type TaskDetailDialogHostHandle,
+} from './dialogs/TaskDetailDialogHost';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
@@ -114,6 +107,8 @@ import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
+import { useTeamRendererPorts } from './useTeamRendererPorts';
+import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -130,6 +125,7 @@ const LaunchTeamDialog = lazy(() =>
 // every render and retrigger LaunchTeamDialog's hydration effect.
 const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
 const teamMemberSettingsApi = createTeamMemberSettingsRendererApi(api);
+const detailTaskPorts = createTeamTaskDetailTransport(api);
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
@@ -138,25 +134,6 @@ const TeamGraphOverlay = lazy(() =>
     default: m.TeamGraphOverlay,
   }))
 );
-type TaskDetailDialogComponent = typeof import('./dialogs/TaskDetailDialog').TaskDetailDialog;
-let loadedTaskDetailDialogComponent: TaskDetailDialogComponent | null = null;
-let taskDetailDialogImportPromise: Promise<{ default: TaskDetailDialogComponent }> | null = null;
-function loadTaskDetailDialog(): Promise<{ default: TaskDetailDialogComponent }> {
-  taskDetailDialogImportPromise ??= import('./dialogs/TaskDetailDialog')
-    .then((m) => {
-      loadedTaskDetailDialogComponent = m.TaskDetailDialog;
-      return { default: m.TaskDetailDialog };
-    })
-    .catch((error) => {
-      taskDetailDialogImportPromise = null;
-      throw error;
-    });
-  return taskDetailDialogImportPromise;
-}
-function preloadTaskDetailDialog(): void {
-  void loadTaskDetailDialog().catch(() => undefined);
-}
-const LazyTaskDetailDialog = lazy(loadTaskDetailDialog);
 const SendMessageDialog = lazy(() =>
   import('./dialogs/SendMessageDialog').then((m) => ({ default: m.SendMessageDialog }))
 );
@@ -210,138 +187,6 @@ import type {
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
-interface TaskDetailDialogHostHandle {
-  openTask: (task: TeamTaskWithKanban) => void;
-  close: () => void;
-}
-
-interface TaskDetailDialogHostProps {
-  teamName: string;
-  kanbanTaskStateByTaskId: Record<string, KanbanTaskState>;
-  taskMap: Map<string, TeamTaskWithKanban>;
-  members: ResolvedTeamMember[];
-  onOwnerChange: (taskId: string, owner: string | null) => void;
-  onViewChanges: (taskId: string, filePath?: string) => void;
-  onOpenInEditor: (filePath: string) => void;
-  onDeleteTask: (taskId: string) => void;
-}
-
-const TaskDetailDialogHost = memo(
-  forwardRef<TaskDetailDialogHostHandle, TaskDetailDialogHostProps>(function TaskDetailDialogHost(
-    {
-      teamName,
-      kanbanTaskStateByTaskId,
-      taskMap,
-      members,
-      onOwnerChange,
-      onViewChanges,
-      onOpenInEditor,
-      onDeleteTask,
-    },
-    ref
-  ) {
-    const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
-    const [loadedTask, setLoadedTask] = useState<TeamTaskWithKanban | null>(null);
-    const selectedTaskId = selectedTask?.id ?? null;
-    const selectedTaskSnapshot =
-      selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
-    const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
-    const dialogTaskMap = useMemo(() => {
-      if (!currentTask) {
-        return taskMap;
-      }
-      const next = new Map(taskMap);
-      next.set(currentTask.id, currentTask);
-      return next;
-    }, [currentTask, taskMap]);
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        openTask: (task) => {
-          setLoadedTask(null);
-          setSelectedTask(task);
-        },
-        close: () => {
-          setLoadedTask(null);
-          setSelectedTask(null);
-        },
-      }),
-      []
-    );
-
-    useEffect(() => {
-      if (!selectedTaskId) {
-        setLoadedTask(null);
-        return undefined;
-      }
-
-      let cancelled = false;
-      setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
-        .then((task) => {
-          if (!cancelled && task?.id === selectedTaskId) {
-            setLoadedTask(task);
-          }
-        })
-        .catch(() => undefined);
-
-      return () => {
-        cancelled = true;
-      };
-    }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
-
-    const handleScrollToTask = useCallback((taskId: string) => {
-      setSelectedTask(null);
-      setLoadedTask(null);
-      const el = document.querySelector(`[data-task-id="${taskId}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        el.classList.remove('kanban-card-focus-pulse');
-        void (el as HTMLElement).offsetWidth;
-        el.classList.add('kanban-card-focus-pulse');
-        el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
-          once: true,
-        });
-      }
-    }, []);
-
-    if (currentTask === null) {
-      return null;
-    }
-
-    const DialogComponent = loadedTaskDetailDialogComponent ?? LazyTaskDetailDialog;
-    const dialog = (
-      <DialogComponent
-        open
-        task={currentTask}
-        teamName={teamName}
-        kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
-        taskMap={dialogTaskMap}
-        members={members}
-        onClose={() => {
-          setLoadedTask(null);
-          setSelectedTask(null);
-        }}
-        onScrollToTask={handleScrollToTask}
-        onOwnerChange={onOwnerChange}
-        onViewChanges={onViewChanges}
-        onOpenInEditor={onOpenInEditor}
-        onDeleteTask={onDeleteTask}
-      />
-    );
-
-    if (loadedTaskDetailDialogComponent) {
-      return dialog;
-    }
-
-    return <Suspense fallback={null}>{dialog}</Suspense>;
-  })
-);
-TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
 interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
@@ -1289,7 +1134,18 @@ export const TeamDetailView = memo(function TeamDetailView({
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
-  const teamStopControl = useTeamStopControl();
+  const launchTeamFromStore = useCallback(
+    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request), []);
+  const {
+    lifecycle: detailLifecyclePorts,
+    provisioning: provisioningPorts,
+    read: detailReadPorts,
+    roster: detailRosterPorts,
+    stopRunningTeam,
+  } = useTeamRendererPorts(api, launchTeamFromStore);
+  const teamStopControl = useTeamStopControl({
+    stopRunningTeam,
+  });
   const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
@@ -1459,7 +1315,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     skipMemberForLaunch,
     removeMember,
     restoreMember,
-    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1508,7 +1363,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
-      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -1725,7 +1579,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
-        const aliveList = await api.teams.aliveList();
+        const aliveList = await detailLifecyclePorts.listAliveTeams();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
         const refs = teamsSnapshot
@@ -1743,7 +1597,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     return () => {
       cancelled = true;
     };
-  }, [isThisTabActive, launchDialogOpen]);
+  }, [detailLifecyclePorts, isThisTabActive, launchDialogOpen]);
 
   useEffect(() => {
     if (kanbanFilterQuery) {
@@ -2125,22 +1979,21 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
+      await provisioningPorts.launchTeam(request);
     },
-    [launchTeam]
+    [provisioningPorts]
   );
 
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
     if (!memberSettingsDraft || !baselineMembers) return;
-    const current = await api.teams.getData(teamName, { includeMemberBranches: false });
-    assertMemberSettingsRelaunchRoster(
-      current.teamName,
-      current.members,
+    await validateMemberSettingsRelaunchFreshRoster({
+      teamName,
       baselineMembers,
-      memberSettingsDraft
-    );
-  }, [launchDialogState, teamName]);
+      draft: memberSettingsDraft,
+      rosterRead: detailReadPorts,
+    });
+  }, [detailReadPorts, launchDialogState, teamName]);
 
   const handleRelaunchDialogSubmit = useCallback(
     async (
@@ -2156,7 +2009,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
-            await api.teams.stop(nextTeamName);
+            await detailLifecyclePorts.stopRunningTeam(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
               success: true,
@@ -2180,11 +2033,20 @@ export const TeamDetailView = memo(function TeamDetailView({
           }
         },
         replaceMembers: (nextTeamName, nextRequest) =>
-          api.teams.replaceMembers(nextTeamName, nextRequest),
-        launchTeam,
+          detailRosterPorts.replaceRoster(nextTeamName, nextRequest),
+        launchTeam: provisioningPorts.launchTeam,
       });
     },
-    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName, validateMemberSettingsRelaunch]
+    [
+      data?.isAlive,
+      data?.members,
+      data?.tasks,
+      detailLifecyclePorts,
+      detailRosterPorts,
+      provisioningPorts,
+      teamName,
+      validateMemberSettingsRelaunch,
+    ]
   );
 
   const handleChangeLeadRuntime = useCallback(
@@ -2509,7 +2371,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             const task = taskMapRef.current.get(taskId);
             try {
               if (result.notifiedOwner && task?.owner) {
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                 );
@@ -2517,7 +2379,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 const desc = task?.description?.trim()
                   ? `\nDescription: ${task.description.trim()}`
                   : '';
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                 );
@@ -2557,7 +2419,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           // Notify assignee directly via inbox - they'll see it immediately
           if (task?.owner) {
             try {
-              await api.teams.sendMessage(teamName, {
+              await useStore.getState().sendTeamMessage(teamName, {
                 member: task.owner,
                 text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
                 summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
@@ -2571,7 +2433,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await api.teams.processSend(
+              await detailTaskPorts.notifyTaskLead(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -2650,7 +2512,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
         const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
         try {
-          await api.teams.processSend(teamName, msg);
+          await detailTaskPorts.notifyTaskLead(teamName, msg);
         } catch {
           // best-effort
         }
@@ -2811,7 +2673,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <button
                   className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
                   onClick={() => {
-                    void api.teams.deleteDraft(teamName).catch(() => {});
+                    void provisioningPorts.deleteDraft(teamName).catch(() => {});
                   }}
                 >
                   {t('detail.actions.delete')}
@@ -3440,7 +3302,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
-                  getSavedRequest={api.teams.getSavedRequest}
+                  getSavedRequest={provisioningPorts.readDraft}
                   updateMemberSettings={teamMemberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
                   onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
@@ -3570,6 +3432,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               <TaskDetailDialogHost
                 ref={taskDetailDialogRef}
                 teamName={teamName}
+                taskPorts={detailTaskPorts}
                 kanbanTaskStateByTaskId={data.kanbanState.tasks}
                 taskMap={taskMap}
                 members={activeMembers}

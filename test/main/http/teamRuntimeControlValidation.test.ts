@@ -1,4 +1,6 @@
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -16,6 +18,25 @@ function unexpectedTeamApiCall(): never {
 function createHttpServices(
   teamRuntimeControlApi: TeamRuntimeControlCompatibilityApi
 ): HttpServices {
+  const teamApis = {
+    provisioningStart: {
+      createTeam: unexpectedTeamApiCall,
+      launchTeam: unexpectedTeamApiCall,
+    },
+    provisioningStatus: {
+      getProvisioningStatus: unexpectedTeamApiCall,
+    },
+    taskActivity: {
+      repairStaleTaskActivityIntervalsBeforeSnapshot: unexpectedTeamApiCall,
+    },
+    runtime: {
+      getRuntimeState: unexpectedTeamApiCall,
+      stopTeam: unexpectedTeamApiCall,
+      getAliveTeams: unexpectedTeamApiCall,
+    },
+    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
+  } satisfies TeamHttpHandlerApis;
+
   return {
     projectScanner: {} as HttpServices['projectScanner'],
     sessionParser: {} as HttpServices['sessionParser'],
@@ -24,28 +45,16 @@ function createHttpServices(
     dataCache: {} as HttpServices['dataCache'],
     updaterService: {} as HttpServices['updaterService'],
     sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-    teamApis: {
-      provisioningStart: {
-        createTeam: unexpectedTeamApiCall,
-        launchTeam: unexpectedTeamApiCall,
-      },
-      provisioningStatus: {
-        getProvisioningStatus: unexpectedTeamApiCall,
-      },
-      taskActivity: {
-        repairStaleTaskActivityIntervalsBeforeSnapshot: unexpectedTeamApiCall,
-      },
-      runtime: {
-        getRuntimeState: unexpectedTeamApiCall,
-        stopTeam: unexpectedTeamApiCall,
-        getAliveTeams: unexpectedTeamApiCall,
-      },
-      runtimeControl: teamRuntimeControlApi,
-      memberDiagnostics: {
-        getMemberSpawnStatusesReadOnly: unexpectedTeamApiCall,
-        getTeamAgentRuntimeSnapshotReadOnly: unexpectedTeamApiCall,
-      },
-    } satisfies TeamHttpHandlerApis,
+    teamApis,
+    teamApplicationHost: new TeamApplicationHost({
+      configPresence: { hasConfig: () => Promise.resolve(true) },
+      listInvalidation: { invalidate: () => undefined },
+      provisioningStart: teamApis.provisioningStart,
+      provisioningStatus: teamApis.provisioningStatus,
+      runtime: teamApis.runtime,
+      runtimeIngress: teamApis.runtimeIngress,
+      taskActivity: teamApis.taskActivity,
+    }),
   };
 }
 

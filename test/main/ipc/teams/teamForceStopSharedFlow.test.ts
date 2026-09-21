@@ -42,6 +42,7 @@ const forceStopFlowMocks = vi.hoisted(() => ({
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', () => forceStopFlowMocks);
 
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import Fastify from 'fastify';
 
 import {
@@ -98,6 +99,11 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
     const app = Fastify();
     const services = {
       teamApis: { runtime: { stopTeam, getAliveTeams, getRuntimeState: vi.fn() } },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+        runtime: { stopTeam, getAliveTeams, getRuntimeState: vi.fn() },
+      }),
     } as unknown as HttpServices;
     registerTeamRoutes(app, services);
     await app.ready();

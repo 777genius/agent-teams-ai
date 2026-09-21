@@ -6,7 +6,7 @@ import { withTimeoutValue } from './withTimeoutValue';
 import type {
   TeamMessagingApi,
   TeamOpenCodeMemberInboxRelayResult,
-} from '../../services/team/contracts/TeamProvisioningApis';
+} from '../../services/team/contracts/TeamProvisioningMessagingApis';
 import type { OpenCodeRuntimeDeliveryStatus } from '@shared/types';
 
 const logger = createLogger('IPC:teams');

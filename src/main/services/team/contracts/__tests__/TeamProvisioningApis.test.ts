@@ -513,13 +513,11 @@ describe('TeamProvisioning API binders', () => {
     interface TeamDataSource extends TeamHttpDataApi {
       readonly suffix: string;
       createdTeamName: string | null;
-      renamedDraft: string | null;
     }
 
     const source: TeamDataSource = {
       suffix: 'bound',
       createdTeamName: null,
-      renamedDraft: null,
       listTeams(this: TeamDataSource): Promise<TeamSummary[]> {
         return Promise.resolve([
           {
@@ -548,14 +546,6 @@ describe('TeamProvisioning API binders', () => {
         this.createdTeamName = request.teamName;
         return Promise.resolve();
       },
-      renameDraftTeam(
-        this: TeamDataSource,
-        oldTeamName: string,
-        newTeamName: string
-      ): Promise<void> {
-        this.renamedDraft = `${oldTeamName}->${newTeamName}-${this.suffix}`;
-        return Promise.resolve();
-      },
     };
 
     const api = bindTeamHttpDataApi(source);
@@ -578,9 +568,6 @@ describe('TeamProvisioning API binders', () => {
       members: [],
     } as TeamCreateConfigRequest);
     expect(source.createdTeamName).toBe('created-team');
-    const renameDraftTeam = api.renameDraftTeam.bind(undefined);
-    await renameDraftTeam('old-draft', 'new-draft');
-    expect(source.renamedDraft).toBe('old-draft->new-draft-bound');
   });
 
   it('groups HTTP route controls behind narrow facade ports', async () => {
@@ -655,27 +642,25 @@ describe('TeamProvisioning API binders', () => {
     const provisioningStart = api.provisioningStart;
     const provisioningStatus = api.provisioningStatus;
     const runtime = api.runtime;
-    const runtimeControl = api.runtimeControl;
+    const runtimeIngress = api.runtimeIngress;
     const createTeam = provisioningStart.createTeam.bind(undefined);
     const launchTeam = provisioningStart.launchTeam.bind(undefined);
     const getRuntimeState = runtime.getRuntimeState.bind(undefined);
-    const deliverOpenCodeRuntimeMessage = runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
+    const deliverRuntimeMessage = runtimeIngress.deliverRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
-      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeControl',
+      'runtimeIngress',
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
-    // Contract lock: the HTTP member diagnostics facade exposes the write-free
-    // reads and nothing else, so quietly re-pointing it at the mutating getters
-    // is a CI failure rather than a silent behaviour change.
-    expect(Object.keys(api.memberDiagnostics).sort()).toEqual([
-      'getMemberSpawnStatusesReadOnly',
-      'getTeamAgentRuntimeSnapshotReadOnly',
+    expect(Object.keys(runtimeIngress).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
     ]);
     expect((runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
     expect((runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
@@ -690,7 +675,7 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-http',
     });
     await expect(getRuntimeState('team-http')).resolves.toMatchObject({ runId: 'run-http' });
-    await expect(deliverOpenCodeRuntimeMessage({} as never)).resolves.toMatchObject({
+    await expect(deliverRuntimeMessage({})).resolves.toMatchObject({
       runId: 'run-http',
       state: 'delivered',
     });

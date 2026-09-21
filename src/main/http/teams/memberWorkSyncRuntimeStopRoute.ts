@@ -1,5 +1,6 @@
 import { normalizeMemberWorkSyncRuntimeControlReason } from '@features/member-work-sync';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import { HttpBadRequestError } from '../teamRouteParsers';
@@ -36,7 +37,6 @@ function getRuntimeStopStatusCode(
 
 export interface MemberWorkSyncRuntimeStopRouteDependencies {
   getFeature: () => MemberWorkSyncRuntimeStopFeature;
-  getTeamsBasePath: () => string;
   readCurrentNativeRuntimeInstanceId: (input: {
     teamsBasePath: string;
     teamName: string;
@@ -143,7 +143,7 @@ export function registerMemberWorkSyncRuntimeStopRoute(
       let currentRuntimeInstanceId: string | null = null;
       try {
         currentRuntimeInstanceId = await dependencies.readCurrentNativeRuntimeInstanceId({
-          teamsBasePath: dependencies.getTeamsBasePath(),
+          teamsBasePath: getTeamsBasePath(),
           teamName,
           memberName: validatedMemberName,
         });

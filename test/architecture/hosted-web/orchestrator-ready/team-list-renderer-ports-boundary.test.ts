@@ -5,10 +5,13 @@ import { describe, expect, it } from 'vitest';
 
 const detailViewPath = 'src/renderer/components/team/TeamDetailView.tsx';
 const listViewPath = 'src/renderer/components/team/TeamListView.tsx';
+const rendererPortsHookPath = 'src/renderer/components/team/useTeamRendererPorts.ts';
+const teamStopControlHookPath = 'src/renderer/components/team/useTeamStopControl.ts';
 const taskDetailFeatureEntryPath = 'src/features/team-task-board/renderer/index.ts';
 const taskDetailPortPath =
   'src/features/team-task-board/renderer/ports/TeamTaskDetailRendererPorts.ts';
 const taskDetailTransportPath = 'src/renderer/composition/team/createTeamTaskDetailTransport.ts';
+const taskDetailHostPath = 'src/renderer/components/team/dialogs/TaskDetailDialogHost.tsx';
 const features = [
   {
     name: 'team-view-read-model',
@@ -51,23 +54,30 @@ function featurePath(feature: (typeof features)[number], suffix: string): string
 describe('orchestrator-ready team renderer port boundary', () => {
   it('ratchets production TeamListView to zero direct api.teams access', () => {
     const view = source(listViewPath);
+    const portsHook = source(rendererPortsHookPath);
+    const stopControlHook = source(teamStopControlHookPath);
 
     expect(view.match(/\bapi\.teams\b/g) ?? []).toHaveLength(0);
     expect(view).toContain('productionTeamListLifecyclePorts.listAliveTeams()');
     expect(view).toContain('productionTeamListProvisioningPorts.deleteDraft(teamName)');
     expect(view).toContain('.readDraft(teamName)');
     expect(view.match(/productionTeamListReadPorts\.readTeamData\(/g)).toHaveLength(2);
-    expect(view.match(/productionTeamListLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(2);
+    expect(view.match(/productionTeamListLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(1);
+    expect(view).toContain("from './useTeamStopControl'");
+    expect(view).toContain('useTeamStopControl({');
+    expect(view).toContain('teamStopControl.stopTeam(teamName, {');
+    expect(portsHook).toContain('lifecycle.stopRunningTeam(teamName)');
+    expect(stopControlHook).toContain('dependencies?.stopRunningTeam?.(name)');
     expect(view).toContain('productionTeamListRosterPorts.replaceRoster(');
     expect(view.match(/productionTeamListProvisioningPorts\.launchTeam/g)).toHaveLength(2);
   });
 
   it('requires TeamListView to consume every feature through its renderer public entrypoint', () => {
-    const view = source(listViewPath);
+    const portsHook = source(rendererPortsHookPath);
 
     for (const feature of features) {
-      expect(view).toContain(`from '@features/${feature.name}/renderer'`);
-      expect(view).not.toMatch(
+      expect(portsHook).toContain(`from '@features/${feature.name}/renderer'`);
+      expect(portsHook).not.toMatch(
         new RegExp(`@features/${feature.name}/renderer/(?:ports|composition|adapters)/`)
       );
 
@@ -101,18 +111,25 @@ describe('orchestrator-ready team renderer port boundary', () => {
     expect(combined.match(/\blegacyApi\.teams\b/g)).toHaveLength(6);
     expect(provisioning).not.toContain('legacyApi.teams.launchTeam');
     expect(provisioning).toContain('launch.launchTeam(request)');
-    expect(source(listViewPath).match(/createTeamList\w+Ports\(api/g)).toHaveLength(4);
+    expect(source(rendererPortsHookPath).match(/createTeamList\w+Ports\(legacyApi/g)).toHaveLength(4);
     expect(source(listViewPath)).toContain('useStore.getState().launchTeam(request)');
   });
 
   it('routes TeamDetail stop, roster replacement, and launch through the existing public ports', () => {
     const detailView = source(detailViewPath);
+    const portsHook = source(rendererPortsHookPath);
+    const stopControlHook = source(teamStopControlHookPath);
     const relaunchStart = detailView.indexOf('const handleRelaunchDialogSubmit');
     const relaunchEnd = detailView.indexOf('const handleChangeLeadRuntime', relaunchStart);
     const relaunch = detailView.slice(relaunchStart, relaunchEnd);
 
     expect(detailView).not.toMatch(/\bapi\.teams\.(?:replaceMembers|stop)\b/);
-    expect(detailView.match(/detailLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(2);
+    expect(detailView.match(/detailLifecyclePorts\.stopRunningTeam\(/g)).toHaveLength(1);
+    expect(detailView).toContain("from './useTeamStopControl'");
+    expect(detailView).toContain('useTeamStopControl({');
+    expect(detailView).toContain('teamStopControl.stopTeam(teamName, {');
+    expect(portsHook).toContain('lifecycle.stopRunningTeam(teamName)');
+    expect(stopControlHook).toContain('dependencies?.stopRunningTeam?.(name)');
     expect(detailView).toContain('detailRosterPorts.replaceRoster(');
     expect(detailView.match(/provisioningPorts\.launchTeam/g)).toHaveLength(2);
     expect(relaunchStart).toBeGreaterThan(-1);
@@ -121,23 +138,25 @@ describe('orchestrator-ready team renderer port boundary', () => {
     expect(relaunch.indexOf('replaceRoster')).toBeLessThan(relaunch.indexOf('launchTeam'));
 
     for (const featureName of ['team-lifecycle', 'team-provisioning', 'team-roster-mutations']) {
-      expect(detailView).toContain(`from '@features/${featureName}/renderer'`);
-      expect(detailView).not.toMatch(
+      expect(portsHook).toContain(`from '@features/${featureName}/renderer'`);
+      expect(portsHook).not.toMatch(
         new RegExp(`@features/${featureName}/renderer/(?:ports|composition|adapters)/`)
       );
     }
 
-    expect(detailView.match(/createTeamList\w+Ports\(api/g)).toHaveLength(3);
+    expect(detailView).toContain("from './useTeamRendererPorts'");
     expect(detailView).toContain('useStore.getState().launchTeam(request)');
     expect(detailView).not.toContain('launchTeam: s.launchTeam');
   });
 
   it('ratchets TeamDetailView to zero direct api.teams access', () => {
     const detailView = source(detailViewPath);
+    const taskDetailHost = source(taskDetailHostPath);
 
     expect(detailView.match(/\bapi\.teams\b/g) ?? []).toHaveLength(0);
     expect(detailView.match(/\bwindow\.electronAPI\.teams\b/g) ?? []).toHaveLength(0);
-    expect(detailView).toMatch(/detailTaskPorts\s*\.readTask\(teamName, selectedTaskId\)/);
+    expect(detailView).toContain("from './dialogs/TaskDetailDialogHost'");
+    expect(taskDetailHost).toMatch(/taskPorts\s*\.readTask\(teamName, selectedTaskId\)/);
     expect(detailView.match(/detailTaskPorts\.notifyTaskLead\(/g) ?? []).toHaveLength(4);
   });
 
@@ -175,8 +194,9 @@ describe('orchestrator-ready team renderer port boundary', () => {
     const detailView = source(detailViewPath);
     const featureEntry = source(taskDetailFeatureEntryPath);
     const port = source(taskDetailPortPath);
+    const taskDetailHost = source(taskDetailHostPath);
     const transport = source(taskDetailTransportPath);
-    const nonAdapterBoundary = [detailView, featureEntry, port].join('\n');
+    const nonAdapterBoundary = [detailView, taskDetailHost, featureEntry, port].join('\n');
 
     expect(transport).toContain("from '@renderer/api'");
     expect(transport.match(/\bapi\.teams\b/g) ?? []).toHaveLength(2);

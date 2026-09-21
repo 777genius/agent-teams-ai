@@ -121,6 +121,7 @@ function createHarness() {
   const repairStaleTaskActivityIntervalsBeforeSnapshot = vi.fn((_teamName: string) =>
     Promise.resolve()
   );
+  const renameDraftTeam = vi.fn((_oldTeamName: string, _newTeamName: string) => Promise.resolve());
   const resumeTeam = vi.fn();
 
   const ports = {
@@ -131,6 +132,7 @@ function createHarness() {
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      renameDraftTeam,
     },
     provisioningStart: {
       createTeam,
@@ -167,6 +169,7 @@ function createHarness() {
     getTeamData,
     getSavedRequest,
     createTeamConfig,
+    renameDraftTeam,
     createTeam,
     launchTeam,
     getProvisioningStatus,
@@ -271,6 +274,34 @@ describe('TeamApplicationHost', () => {
     expect(launchTeam).not.toHaveBeenCalled();
     expect(resumeTeam).toHaveBeenCalledWith('draft-team');
     expect(invalidate).toHaveBeenCalledOnce();
+    expect(createTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      resumeTeam.mock.invocationCallOrder[0]
+    );
+    expect(resumeTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      invalidate.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('resumes renamed drafts with the final launched team name', async () => {
+    const { host, hasConfig, getSavedRequest, renameDraftTeam, createTeam, resumeTeam, invalidate } =
+      createHarness();
+    const renamedRequest = { ...draftRequest, teamName: 'launched-team' };
+    hasConfig.mockResolvedValue(false);
+    getSavedRequest.mockResolvedValue(draftRequest);
+
+    await expect(
+      host.launchTeam('draft-team', {
+        createFromDraft: () => renamedRequest,
+        resumeExisting: vi.fn<() => TeamLaunchRequest>(),
+      })
+    ).resolves.toEqual({ runId: 'run-created' });
+
+    expect(renameDraftTeam).toHaveBeenCalledWith('draft-team', 'launched-team');
+    expect(createTeam).toHaveBeenCalledWith(renamedRequest, expect.any(Function));
+    expect(resumeTeam).toHaveBeenCalledWith('launched-team');
+    expect(renameDraftTeam.mock.invocationCallOrder[0]).toBeLessThan(
+      createTeam.mock.invocationCallOrder[0]
+    );
     expect(createTeam.mock.invocationCallOrder[0]).toBeLessThan(
       resumeTeam.mock.invocationCallOrder[0]
     );

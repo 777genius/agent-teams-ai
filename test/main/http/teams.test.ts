@@ -1,4 +1,6 @@
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -7,13 +9,13 @@ import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
   TeamHttpHandlerApis,
-  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
   TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamHttpMemberDiagnosticsApi } from '@main/services/team/contracts/TeamHttpMemberDiagnosticsApi';
 import type {
   MemberSpawnStatusesSnapshot,
   TeamAgentRuntimeSnapshot,
@@ -30,6 +32,13 @@ import type {
 } from '@shared/types/team';
 
 describe('HTTP team runtime routes', () => {
+  function createUnavailableApplicationHost(): TeamApplicationHost {
+    return new TeamApplicationHost({
+      configPresence: { hasConfig: () => Promise.resolve(true) },
+      listInvalidation: { invalidate: () => undefined },
+    });
+  }
+
   function createServicesMock() {
     const launchTeam =
       vi.fn<
@@ -122,16 +131,26 @@ describe('HTTP team runtime routes', () => {
       renameDraftTeam,
     } as Pick<
       TeamHttpDataApi,
-      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig' | 'renameDraftTeam'
-    > as HttpServices['teamDataApi'];
+      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
+    > as TeamHttpDataApi;
     const teamApis = {
       provisioningStart: teamProvisioningStartApi,
       provisioningStatus: teamProvisioningStatusApi,
       taskActivity: teamTaskActivityRepairApi,
       runtime: teamRuntimeApi,
-      runtimeControl: teamRuntimeControlApi,
-      memberDiagnostics: teamMemberDiagnosticsApi,
+      runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
     } satisfies TeamHttpHandlerApis;
+    const teamApplicationHost = new TeamApplicationHost({
+      configPresence: { hasConfig: () => Promise.resolve(false) },
+      listInvalidation: { invalidate: vi.fn() },
+      data: { ...teamDataApi, renameDraftTeam },
+      provisioningStart: teamApis.provisioningStart,
+      provisioningStatus: teamApis.provisioningStatus,
+      runtime: teamApis.runtime,
+      runtimeIngress: teamApis.runtimeIngress,
+      taskActivity: teamApis.taskActivity,
+      resume: { resumeTeam },
+    });
 
     const services = {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -143,6 +162,8 @@ describe('HTTP team runtime routes', () => {
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataApi,
       teamApis,
+      teamApplicationHost,
+      teamMemberDiagnosticsApi,
       memberWorkSyncFeature: {
         resumeTeam,
       } as unknown as HttpServices['memberWorkSyncFeature'],
@@ -438,12 +459,12 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for launch without the optional team HTTP aggregate', async () => {
+  it('returns 501 for launch without the application launch port', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamApis: undefined,
+      teamApplicationHost: createUnavailableApplicationHost(),
     });
     await app.ready();
 
@@ -1233,12 +1254,30 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for provisioning status without the optional team HTTP aggregate', async () => {
+  it('maps a missing provisioning run to 404 so polling can clear stale state', async () => {
+    const { app, getProvisioningStatus } = await createApp();
+    getProvisioningStatus.mockRejectedValue(new Error('Unknown runId'));
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/provisioning/missing-run',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({ error: 'Unknown runId' });
+      expect(getProvisioningStatus).toHaveBeenCalledWith('missing-run');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for provisioning status without the application status port', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamApis: undefined,
+      teamApplicationHost: createUnavailableApplicationHost(),
     });
     await app.ready();
 
@@ -1304,12 +1343,12 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for OpenCode runtime callbacks without the optional team HTTP aggregate', async () => {
+  it('returns 501 for runtime callbacks without the application ingress port', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamApis: undefined,
+      teamApplicationHost: createUnavailableApplicationHost(),
     });
     await app.ready();
 
@@ -1325,7 +1364,7 @@ describe('HTTP team runtime routes', () => {
 
       expect(response.statusCode).toBe(501);
       expect(response.json()).toEqual({
-        error: 'Team runtime callbacks are not available in this mode',
+        error: 'Team runtime ingress is not available in this mode',
       });
       expect(mocks.recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
@@ -1720,12 +1759,12 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for member diagnostics when the team apis are not bound in this mode', async () => {
+  it('returns 501 for member diagnostics when its read port is not bound in this mode', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamApis: undefined,
+      teamMemberDiagnosticsApi: undefined,
     });
     await app.ready();
 

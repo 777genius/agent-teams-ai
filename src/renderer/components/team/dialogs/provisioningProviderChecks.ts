@@ -12,6 +12,25 @@ export interface ProvisioningProviderCheck {
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
+/** Preserves resolved checks while adding pending entries for a changed provider selection. */
+export function alignProvisioningChecks(
+  existingChecks: ProvisioningProviderCheck[],
+  providerIds: TeamProviderId[]
+): ProvisioningProviderCheck[] {
+  const existingByProviderId = new Map(
+    existingChecks.map((check) => [check.providerId, check] as const)
+  );
+  return providerIds.map(
+    (providerId) =>
+      existingByProviderId.get(providerId) ?? {
+        providerId,
+        status: 'pending',
+        backendSummary: null,
+        details: [],
+      }
+  );
+}
+
 export function updateProviderCheck(
   checks: ProvisioningProviderCheck[],
   providerId: TeamProviderId,

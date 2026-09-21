@@ -43,7 +43,6 @@ import {
   normalizePath,
   type TaskStatusCounts,
 } from '@renderer/utils/pathNormalize';
-import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
@@ -68,6 +67,7 @@ import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadi
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
+import { formatTeamProjectPathName, resolveLaunchDialogMembers } from './teamListPresentation';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 import {
@@ -80,6 +80,7 @@ import {
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 import { useTeamStopControl } from './useTeamStopControl';
+import { useTeamRendererPorts } from './useTeamRendererPorts';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -90,7 +91,6 @@ import type {
   ResolvedTeamMember,
   TeamCreateRequest,
   TeamLaunchRequest,
-  TeamMemberSnapshot,
   TeamSummary,
   TeamSummaryMember,
 } from '@shared/types';
@@ -166,21 +166,6 @@ function getRecentProjects(team: TeamSummary): string[] {
   return history.slice(-3).reverse();
 }
 
-function folderName(fullPath: string): string {
-  return getBaseName(fullPath) || fullPath;
-}
-
-function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): ResolvedTeamMember[] {
-  return members.map((member) => {
-    return {
-      ...member,
-      status: member.currentTaskId ? 'active' : 'idle',
-      messageCount: 0,
-      lastActiveAt: null,
-    };
-  });
-}
-
 function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
   const teamColorMap = buildMemberColorMap(members);
   return (
@@ -230,7 +215,7 @@ function renderTeamRecentPaths(
           <FolderOpen size={12} className="shrink-0" />
           {visibleRecentPaths.map((p, i) => (
             <span key={p} title={p}>
-              {folderName(p)}
+              {formatTeamProjectPathName(p)}
               {i < visibleRecentPaths.length - 1 ? ', ' : ''}
             </span>
           ))}
@@ -242,9 +227,9 @@ function renderTeamRecentPaths(
             {visibleRecentPaths.map((p, i) => (
               <span key={p} title={p}>
                 {i === 0 && (status === 'active' || status === 'idle') ? (
-                  <span className="text-emerald-400">{folderName(p)}</span>
+                  <span className="text-emerald-400">{formatTeamProjectPathName(p)}</span>
                 ) : (
-                  folderName(p)
+                  formatTeamProjectPathName(p)
                 )}
                 {i < visibleRecentPaths.length - 1 ? ', ' : ''}
               </span>
@@ -475,8 +460,19 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
+  const launchTeamFromStore = useCallback(
+    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request), []);
+  const {
+    read: productionTeamListReadPorts,
+    lifecycle: productionTeamListLifecyclePorts,
+    provisioning: productionTeamListProvisioningPorts,
+    roster: productionTeamListRosterPorts,
+    stopRunningTeam,
+  } = useTeamRendererPorts(api, launchTeamFromStore);
+  const teamStopControl = useTeamStopControl({
+    stopRunningTeam,
+  });
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
@@ -533,7 +529,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const {
     connectionMode,
     createTeam,
-    launchTeam,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
@@ -544,7 +539,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     useShallow((s) => ({
       connectionMode: s.connectionMode,
       createTeam: s.createTeam,
-      launchTeam: s.launchTeam,
       provisioningErrorByTeam: s.provisioningErrorByTeam,
       clearProvisioningError: s.clearProvisioningError,
       provisioningRuns: s.provisioningRuns,
@@ -578,11 +572,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
     if (!electronMode) return null;
     try {
-      return await api.teams.aliveList();
+      return await productionTeamListLifecyclePorts.listAliveTeams();
     } catch {
       return null;
     }
-  }, [electronMode]);
+  }, [electronMode, productionTeamListLifecyclePorts]);
 
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
@@ -793,7 +787,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             variant: 'danger',
           });
           if (confirmed) {
-            void api.teams.deleteDraft(teamName).catch(() => {});
+            void productionTeamListProvisioningPorts.deleteDraft(teamName).catch(() => {});
           }
           return;
         }
@@ -809,7 +803,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [deleteTeam, t]
+    [deleteTeam, productionTeamListProvisioningPorts, t]
   );
 
   const handleRestoreTeam = useCallback(
@@ -854,7 +848,9 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         try {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
-          const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
+          const savedRequest = await productionTeamListProvisioningPorts
+            .readDraft(teamName)
+            .catch(() => null);
           if (savedRequest) {
             setCopyData({
               teamName: uniqueName,
@@ -875,7 +871,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             return;
           }
 
-          const data = await api.teams.getData(teamName, {
+          const data = await productionTeamListReadPorts.readTeamData(teamName, {
             includeMemberBranches: false,
           });
           setCopyData({
@@ -891,7 +887,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [teams]
+    [productionTeamListProvisioningPorts, productionTeamListReadPorts, teams]
   );
 
   const handleStopTeam = useCallback(
@@ -934,7 +930,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       e.stopPropagation();
       if (!projectPath) return;
       try {
-        const data = await api.teams.getData(teamName, {
+        const data = await productionTeamListReadPorts.readTeamData(teamName, {
           includeMemberBranches: false,
         });
         setLaunchDialogMode(mode);
@@ -955,14 +951,14 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchDialogOpen(true);
       }
     },
-    []
+    [productionTeamListReadPorts]
   );
 
   const handleLaunchSubmit = useCallback(
     async (request: TeamLaunchRequest) => {
       setLaunchingTeamName(request.teamName);
       try {
-        await launchTeam(request);
+        await productionTeamListProvisioningPorts.launchTeam(request);
       } catch (err) {
         console.error('Failed to launch team:', err);
         throw err;
@@ -970,7 +966,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [productionTeamListProvisioningPorts]
   );
 
   const handleRelaunchSubmit = useCallback(
@@ -984,7 +980,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await api.teams.stop(nextTeamName);
+              await productionTeamListLifecyclePorts.stopRunningTeam(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
                 success: true,
@@ -1002,8 +998,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             }
           },
           replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
-          launchTeam,
+            productionTeamListRosterPorts.replaceRoster(nextTeamName, nextRequest),
+          launchTeam: productionTeamListProvisioningPorts.launchTeam,
         });
       } catch (err) {
         console.error('Failed to relaunch team:', err);
@@ -1012,7 +1008,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [productionTeamListLifecyclePorts, productionTeamListProvisioningPorts, productionTeamListRosterPorts]
   );
 
   useEffect(() => {
@@ -1287,7 +1283,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           {
             key: selectedProjectSectionKey,
             title: t('list.sections.projectTeams', {
-              project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
+              project: formatTeamProjectPathName(currentProjectPath) || t('list.sections.selectedProject'),
             }),
             teams: activeFiltered.filter((team) =>
               teamMatchesProjectSelection(team, currentProjectPath)

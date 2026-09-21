@@ -36,11 +36,110 @@ function validatePrepareModelIndexes(opts?: TeamProvisioningPrepareOptions): voi
 }
 
 export function bindTeamProvisioningStartApi(
-  source: TeamProvisioningStartApi
+  source: TeamProvisioningStartApi & { getAliveTeams?: () => string[] },
+  options: {
+    beforeStart?: (input: {
+      teamName: string;
+      request: Parameters<TeamProvisioningStartApi['createTeam']>[0] | Parameters<TeamProvisioningStartApi['launchTeam']>[0];
+      onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
+    }) => Promise<void>;
+  } = {}
 ): TeamProvisioningStartApi {
+  const beforeStart = options.beforeStart ?? bindOpenCodeStartPreparation(source);
+
   return {
-    createTeam: source.createTeam.bind(source),
-    launchTeam: source.launchTeam.bind(source),
+    async createTeam(request, onProgress) {
+      await runBeforeStart(beforeStart, { teamName: request.teamName, request, onProgress });
+      return source.createTeam.call(source, request, onProgress);
+    },
+    async launchTeam(request, onProgress) {
+      await runBeforeStart(beforeStart, { teamName: request.teamName, request, onProgress });
+      return source.launchTeam.call(source, request, onProgress);
+    },
+  };
+}
+
+async function runBeforeStart(
+  beforeStart: (input: {
+    teamName: string;
+    request: Parameters<TeamProvisioningStartApi['createTeam']>[0] | Parameters<TeamProvisioningStartApi['launchTeam']>[0];
+    onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
+  }) => Promise<void>,
+  input: {
+    teamName: string;
+    request: Parameters<TeamProvisioningStartApi['createTeam']>[0] | Parameters<TeamProvisioningStartApi['launchTeam']>[0];
+    onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
+  }
+): Promise<void> {
+  try {
+    await beforeStart(input);
+  } catch (error) {
+    const { OpenCodeStartupCleanupBusyError } = await import(
+      '../opencode/bridge/OpenCodeStartupSweepGate'
+    );
+    if (error instanceof OpenCodeStartupCleanupBusyError) {
+      throw error;
+    }
+    const { createLogger } = await import('@shared/utils/logger');
+    createLogger('Service:TeamProvisioningStart').diagnostic(
+      `opencode_pre_start_preparation_failed team=${input.teamName} reason=${JSON.stringify(
+        error instanceof Error ? error.message : String(error)
+      )}`
+    );
+  }
+}
+
+function startRequestMayRaceOpenCodeStartupSweep(
+  request: Parameters<TeamProvisioningStartApi['createTeam']>[0] | Parameters<TeamProvisioningStartApi['launchTeam']>[0]
+): boolean {
+  if (request.providerId === undefined || request.providerId === 'opencode') {
+    return true;
+  }
+  const members = 'members' in request ? request.members : undefined;
+  return (
+    (process.platform === 'win32' && members === undefined) ||
+    members?.some((member) => member.providerId === 'opencode') === true
+  );
+}
+
+function bindOpenCodeStartPreparation(source: {
+  getAliveTeams?: () => string[];
+}): (input: {
+  teamName: string;
+  request: Parameters<TeamProvisioningStartApi['createTeam']>[0] | Parameters<TeamProvisioningStartApi['launchTeam']>[0];
+  onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
+}) => Promise<void> {
+  return async ({ teamName, request, onProgress }) => {
+    const [{ purgeStaleOpenCodeHostStartupLocksBeforeLaunch }, startupSweepGate, { createLogger }] =
+      await Promise.all([
+        import('../opencode/bridge/OpenCodeHostStartupLockCleanup'),
+        import('../opencode/bridge/OpenCodeStartupSweepGate'),
+        import('@shared/utils/logger'),
+      ]);
+    const logger = createLogger('Service:TeamProvisioningStart');
+
+    if (startRequestMayRaceOpenCodeStartupSweep(request)) {
+      await startupSweepGate.whenOpenCodeStartupRuntimeSweepSettled({
+        logWaited: (message) => logger.diagnostic(message),
+        onWaitStart: () => {
+          const observedAt = new Date().toISOString();
+          onProgress({
+            runId: `pending:${teamName}:opencode-startup-sweep`,
+            teamName,
+            state: 'validating',
+            message: 'Waiting for the startup runtime host cleanup to finish...',
+            startedAt: observedAt,
+            updatedAt: observedAt,
+          });
+        },
+      });
+    }
+    await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName,
+      aliveTeams: source.getAliveTeams?.() ?? [],
+      logRemoved: (message) => logger.diagnostic(message),
+      logWarning: (message) => logger.warn(message),
+    });
   };
 }
 

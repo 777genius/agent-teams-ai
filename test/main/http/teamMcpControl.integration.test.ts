@@ -1,10 +1,12 @@
 // @vitest-environment node
 
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { TeamDataService } from '@main/services/team/TeamDataService';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -14,13 +16,13 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
-  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
   TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamHttpMemberDiagnosticsApi } from '@main/services/team/contracts/TeamHttpMemberDiagnosticsApi';
 import type {
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -61,6 +63,34 @@ async function fetchJson(
   status: number;
 }> {
   const response = await fetch(`${baseUrl}${pathname}`);
+  const teamApis = {
+    provisioningStart: teamProvisioningStartApi,
+    provisioningStatus: teamProvisioningStatusApi,
+    taskActivity: teamTaskActivityRepairApi,
+    runtime: teamRuntimeApi,
+    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
+  } satisfies TeamHttpHandlerApis;
+  const teamApplicationHost = new TeamApplicationHost({
+    configPresence: {
+      hasConfig: async (teamName) => {
+        try {
+          await access(path.join(claudeRoot, 'teams', teamName, 'config.json'));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    },
+    listInvalidation: { invalidate: () => undefined },
+    data: teamDataService,
+    provisioningStart: teamApis.provisioningStart,
+    provisioningStatus: teamApis.provisioningStatus,
+    runtime: teamApis.runtime,
+    runtimeIngress: teamApis.runtimeIngress,
+    taskActivity: teamApis.taskActivity,
+    resume: { resumeTeam: (teamName) => resumeTeamCalls.push(teamName) },
+  });
+
   return {
     status: response.status,
     body: await response.json(),
@@ -334,14 +364,9 @@ function createServices(claudeRoot: string): {
         },
       } as unknown as HttpServices['memberWorkSyncFeature'],
       teamDataApi: teamDataService,
-      teamApis: {
-        provisioningStart: teamProvisioningStartApi,
-        provisioningStatus: teamProvisioningStatusApi,
-        taskActivity: teamTaskActivityRepairApi,
-        runtime: teamRuntimeApi,
-        runtimeControl: teamRuntimeControlApi,
-        memberDiagnostics: teamMemberDiagnosticsApi,
-      } satisfies TeamHttpHandlerApis,
+      teamApis,
+      teamApplicationHost,
+      teamMemberDiagnosticsApi,
     },
   };
 }

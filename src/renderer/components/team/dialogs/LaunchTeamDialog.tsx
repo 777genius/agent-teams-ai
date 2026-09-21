@@ -20,7 +20,9 @@ import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterM
 import {
   WorkspaceTrustLaunchControl,
 } from '@features/workspace-trust/renderer';
-import { api } from '@renderer/api';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
@@ -86,6 +88,10 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { CronScheduleInput } from '../schedule/CronScheduleInput';
 
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
+const teamRosterMutationTransport = createTeamRosterMutationTransport();
+
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
@@ -140,6 +146,7 @@ import {
   getShortLivedProviderPrepareModelIssueReasons,
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
@@ -196,24 +203,6 @@ import type {
   UpdateSchedulePatch,
 } from '@shared/types';
 
-function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
-}
-
 // Props — discriminated union
 
 interface LaunchDialogBase {
@@ -267,6 +256,7 @@ const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
 
 // Component
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
+  const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
   const { open, onClose } = props;
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
@@ -944,7 +934,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       let savedRequest = null;
       try {
         savedRequest = effectiveTeamName
-          ? await api.teams.getSavedRequest(effectiveTeamName)
+          ? await teamConfigurationTransport.getSavedRequest(effectiveTeamName)
           : null;
       } catch {
         savedRequest = null;
@@ -1650,7 +1640,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    if (typeof prepareProvisioning !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1792,7 +1782,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: api.teams.prepareProvisioning,
+              prepareProvisioning,
               limitContext: effectiveAnthropicRuntimeLimitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
               onModelProgress: ({ status, details }) => {
@@ -2355,7 +2345,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             await props.onRelaunch(launchRequest, nextMembers, intent);
           } else {
             await props.validateMemberSettings?.();
-            await api.teams.replaceMembers(effectiveTeamName, {
+            await teamRosterMutationTransport.replace(effectiveTeamName, {
               members: nextMembers, memberSettingsRelaunch: intent,
             });
             await props.onLaunch(launchRequest);

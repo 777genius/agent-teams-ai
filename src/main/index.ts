@@ -155,15 +155,12 @@ import {
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
-import {
-  bindTeamCrossTeamMessagingApi,
-  bindTeamHttpDataApi,
-  bindTeamHttpHandlerApis,
-  bindTeamIpcHandlerApis,
-  type TeamDiagnosticsApi,
-  type TeamHttpHandlerApis,
-  type TeamIpcHandlerApis,
-} from '@main/services/team/contracts/TeamProvisioningApis';
+import { bindTeamCrossTeamMessagingApi } from '@main/services/team/contracts/TeamMessagingApiBinder';
+import { bindTeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
+import { bindTeamHttpDataApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApiBinder';
+import { createDesktopTeamApplicationHost, createTeamHttpMemberDiagnosticsApi } from '@main/composition/team/createDesktopTeamApplicationHost';
+import type { TeamDiagnosticsApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApis';
+import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -2030,7 +2027,6 @@ async function initializeServices(): Promise<void> {
   const teamProduct = createProductTeamProvisioning();
   teamProvisioningService = teamProduct.service;
   const teamFeatureCapabilitySources = teamProduct.capabilities;
-  const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
   const teamMessagingApi = teamFeatureCapabilitySources.messaging;
   const teamMemberSettingsFeature = createDesktopTeamMemberSettingsFeature({
@@ -2592,8 +2588,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamIpcHandlerApis.runtime.isTeamAlive(teamName) ||
-      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2601,7 +2597,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamIpcHandlerApis.runtime.isTeamAlive(teamName);
+    return teamFeatureCapabilitySources.runtime.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2612,8 +2608,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamIpcHandlerApis.runtime.isTeamAlive(input.teamName) ||
-      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(input.teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(input.teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2633,8 +2629,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamIpcHandlerApis.runtime.isTeamAlive(team.teamName) ||
-            teamIpcHandlerApis.provisioningRun.hasProvisioningRun(team.teamName)
+            teamFeatureCapabilitySources.runtime.isTeamAlive(team.teamName) ||
+            teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }
@@ -3011,6 +3007,7 @@ async function startHttpServer(
     if (!teamHttpHandlerApis) {
       throw new Error('Team HTTP APIs are not initialized');
     }
+    const teamApplicationHost = createDesktopTeamApplicationHost(teamDataService, teamHttpHandlerApis, memberWorkSyncFeature);
     const port = await httpServer.start(
       {
         projectScanner: activeContext.projectScanner,
@@ -3027,6 +3024,8 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        teamApplicationHost,
+        teamMemberDiagnosticsApi: createTeamHttpMemberDiagnosticsApi(teamProvisioningService),
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

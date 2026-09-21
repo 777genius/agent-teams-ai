@@ -45,7 +45,9 @@ function releaseTeamStop(teamName: string): void {
   stoppingTeamListeners.forEach((listener) => listener());
 }
 
-export function useTeamStopControl(): TeamStopControl {
+export function useTeamStopControl(dependencies?: {
+  stopRunningTeam?(teamName: string): Promise<void>;
+}): TeamStopControl {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const stoppingTeams = useSyncExternalStore(
@@ -61,7 +63,7 @@ export function useTeamStopControl(): TeamStopControl {
       try {
         const outcome = await runTeamStopAction({
           teamName,
-          stop: (name) => api.teams.stop(name),
+          stop: (name) => dependencies?.stopRunningTeam?.(name) ?? api.teams.stop(name),
           processAlive: (name) => api.teams.processAlive(name),
           refresh: options.refresh,
           setBusy: () => undefined,
@@ -87,7 +89,7 @@ export function useTeamStopControl(): TeamStopControl {
         releaseTeamStop(teamName);
       }
     },
-    [t, tCommon]
+    [dependencies, t, tCommon]
   );
 
   return {

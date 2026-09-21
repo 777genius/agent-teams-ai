@@ -33,6 +33,7 @@ import {
   createDesktopTeamFeatureComposition,
   removeDesktopTeamFeatureComposition,
 } from '@main/ipc/teamFeatureComposition';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { readTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
@@ -126,7 +127,17 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
       return;
     }
     const app = Fastify();
-    registerTeamRoutes(app, { teamApis: { runtime } } as unknown as HttpServices);
+    registerTeamRoutes(
+      app,
+      {
+        teamApis: { runtime },
+        teamApplicationHost: new TeamApplicationHost({
+          configPresence: { hasConfig: () => Promise.resolve(true) },
+          listInvalidation: { invalidate: () => undefined },
+          runtime,
+        }),
+      } as unknown as HttpServices
+    );
     try {
       const response = await app.inject({
         method: 'POST',

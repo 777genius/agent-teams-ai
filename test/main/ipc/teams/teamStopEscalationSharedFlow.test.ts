@@ -81,6 +81,7 @@ vi.mock('@main/services/team/TeamLaunchStateStore', async (importOriginal) => ({
 }));
 
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import Fastify from 'fastify';
 
 import {
@@ -146,6 +147,15 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
           getRuntimeState: vi.fn(() => Promise.resolve({ state: 'stopped' })),
         },
       },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+        runtime: {
+          stopTeam,
+          getAliveTeams,
+          getRuntimeState: vi.fn(() => Promise.resolve({ state: 'stopped' })),
+        },
+      }),
     } as unknown as HttpServices;
     registerTeamRoutes(app, services);
     await app.ready();
