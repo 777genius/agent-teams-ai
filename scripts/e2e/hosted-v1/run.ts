@@ -1,5 +1,5 @@
-import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { execFile, spawn } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   access,
   chmod,
@@ -14,7 +14,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -1047,7 +1047,7 @@ function boundHostedV1EvidenceDocument(
 
 export function redactEvidence(
   value: string,
-  sandbox: HostedV1Sandbox,
+  sandbox: Pick<HostedV1Sandbox, 'root' | 'lifecycleTrustAnchor'>,
   pairingCode: string | null,
   maximumBytes = HOSTED_V1_EVIDENCE_TEXT_MAX_BYTES
 ): string {
@@ -1113,14 +1113,15 @@ export function redactEvidence(
         '$1<authorization>'
       )
       .replace(
-        /((?:^|\s)--?(?:api[_-]?key|[^\s]*(?:token|secret|password|passwd|passphrase|credential|private[_-]?key|trust[_-]?anchor)[^\s]*)\s+)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/gimu,
+        /((?:^|\s)--?(?:api[_-]?key|[^\s]{0,128}(?:token|secret|password|passwd|passphrase|credential|private[_-]?key|trust[_-]?anchor)[^\s]{0,128})\s+)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/gimu,
         '$1<sensitive-value>'
       )
       .replace(
-        /(["']?(?:api[_-]?key|[^\s"':=,;]*(?:token|secret|password|passwd|passphrase|credential|private[_-]?key|trust[_-]?anchor)[^\s"':=,;]*)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/giu,
-        (_match, prefix: string) => {
+        /((["']?)([^\s"':=,;]{1,256})\2\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/giu,
+        (match: string, prefix: string) => {
           const key = /["']?([^\s"':=]+)["']?\s*[:=]\s*$/u.exec(prefix)?.[1] ?? '';
-          return `${prefix}${placeholderForKey(key) ?? '<sensitive-value>'}`;
+          const placeholder = placeholderForKey(key);
+          return placeholder === null ? match : `${prefix}${placeholder}`;
         }
       )
       .replace(/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/gu, '<jwt>');
@@ -1161,6 +1162,96 @@ export async function sanitizePlaywrightEvidence(
   pairingCode: string | null
 ): Promise<void> {
   let retainedBytes = 0;
+  const assertNoSymlinkPath = async (target: string): Promise<void> => {
+    const absolute = resolve(target);
+    const root = parse(absolute).root;
+    let current = root;
+    for (const component of absolute.slice(root.length).split(sep).filter(Boolean)) {
+      current = join(current, component);
+      try {
+        if ((await lstat(current)).isSymbolicLink()) {
+          throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+        throw error;
+      }
+    }
+  };
+  await assertNoSymlinkPath(directory);
+  // A canonical commit and its interrupted private receipt can both name the
+  // same immutable payload. Count payload identity, rather than commit-file
+  // paths, so final processing makes the same retention decision as writer
+  // admission.
+  const retainedPayloadIdentities = new Set<string>();
+  // The atomic attachment writer publishes immutable payload bytes plus a
+  // digest-bearing commit record.  Post-processing may redact ordinary
+  // Playwright output, but it must never rewrite either side of a valid
+  // publication or it would make the evidence commit self-invalidating.
+  const committedArtifactPaths = new Set<string>();
+  const collectCommittedArtifacts = async (current: string): Promise<void> => {
+    const entries = (await readdir(current, { withFileTypes: true })).toSorted((left, right) =>
+      left.name.localeCompare(right.name)
+    );
+    for (const entry of entries) {
+      const path = join(current, entry.name);
+      if (entry.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+      if (entry.isDirectory()) {
+        await assertNoSymlinkPath(path);
+        await collectCommittedArtifacts(path);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      let commit: unknown;
+      try {
+        await assertNoSymlinkPath(path);
+        commit = JSON.parse(await readFile(path, 'utf8'));
+      } catch (error) {
+        if (error instanceof SyntaxError) continue;
+        throw error;
+      }
+      if (
+        commit === null ||
+        typeof commit !== 'object' ||
+        (commit as { schemaVersion?: unknown }).schemaVersion !== 1 ||
+        (commit as { kind?: unknown }).kind !== 'hosted-v1-artifact-commit' ||
+        typeof (commit as { payload?: unknown }).payload !== 'string' ||
+        !Number.isSafeInteger((commit as { byteLength?: unknown }).byteLength) ||
+        (commit as { byteLength: number }).byteLength < 0 ||
+        typeof (commit as { sha256?: unknown }).sha256 !== 'string' ||
+        !/^[0-9a-f]{64}$/u.test((commit as { sha256: string }).sha256)
+      ) continue;
+      const payload = (commit as { payload: string }).payload;
+      if (basename(payload) !== payload || !payload.endsWith('.payload')) continue;
+      const payloadPath = join(dirname(path), payload);
+      let bytes: Buffer;
+      try {
+        await assertNoSymlinkPath(payloadPath);
+        bytes = await readFile(payloadPath);
+        if (
+          bytes.byteLength !== (commit as { byteLength: number }).byteLength ||
+          createHash('sha256').update(bytes).digest('hex') !== (commit as { sha256: string }).sha256
+        ) continue;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        throw error;
+      }
+      const identity = `${resolve(payloadPath)}\u0000${bytes.byteLength}\u0000${(commit as { sha256: string }).sha256}`;
+      if (!retainedPayloadIdentities.has(identity)) {
+        if (
+          bytes.byteLength > PLAYWRIGHT_ARTIFACT_FILE_MAX_BYTES ||
+          retainedBytes + bytes.byteLength > PLAYWRIGHT_ARTIFACT_TOTAL_MAX_BYTES
+        ) {
+          throw new Error('hosted_e2e_playwright_committed_artifact_retention_budget_exceeded');
+        }
+        retainedPayloadIdentities.add(identity);
+        retainedBytes += bytes.byteLength;
+      }
+      committedArtifactPaths.add(path);
+      committedArtifactPaths.add(payloadPath);
+    }
+  };
+  await collectCommittedArtifacts(directory);
   const visit = async (current: string): Promise<void> => {
     const entries = (await readdir(current, { withFileTypes: true })).toSorted((left, right) =>
       left.name.localeCompare(right.name)
@@ -1170,10 +1261,13 @@ export async function sanitizePlaywrightEvidence(
       if (entry.isSymbolicLink())
         throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
       if (entry.isDirectory()) {
+        await assertNoSymlinkPath(path);
         await visit(path);
         continue;
       }
       if (!entry.isFile()) throw new Error('hosted_e2e_playwright_artifact_type_forbidden');
+      await assertNoSymlinkPath(path);
+      if (committedArtifactPaths.has(path)) continue;
       if (PLAYWRIGHT_BINARY_ARTIFACT.test(entry.name)) {
         await rm(path);
         continue;
@@ -1593,6 +1687,1996 @@ export function networkAddresses(marker: string): {
     oidc: `${prefix}.4`,
     subnet: `${prefix}.0/28`,
   });
+}
+
+export function createHostedV1ExternalCoordinationReplayBudget(input: {
+  readonly handoffBudgetMs: number;
+  readonly heartbeatIntervalMs: number;
+  readonly marginMs: number;
+}): {
+  readonly handoffBudgetMs: number;
+  readonly heartbeatIntervalMs: number;
+  readonly replayBudgetMs: number;
+  deadlinesFrom(originMs: number): {
+    readonly handoffDeadlineMs: number;
+    readonly replayDeadlineMs: number;
+  };
+  requireRemainingAt(deadlineMs: number, observedAtMs: number): number;
+} {
+  const values = [input.handoffBudgetMs, input.heartbeatIntervalMs, input.marginMs];
+  if (values.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+    throw new Error('hosted_e2e_external_replay_budget_invalid');
+  }
+  const handoffBudgetMs = input.handoffBudgetMs;
+  // The controller emits a heartbeat before replay.  A resumed reader must
+  // therefore observe that heartbeat *and the following one* with a stable
+  // durable cursor before replay is considered complete.
+  const replayBudgetMs = (input.heartbeatIntervalMs * 2) + input.marginMs;
+  return Object.freeze({
+    handoffBudgetMs,
+    heartbeatIntervalMs: input.heartbeatIntervalMs,
+    replayBudgetMs,
+    deadlinesFrom: (originMs: number) => {
+      if (!Number.isFinite(originMs)) {
+        throw new Error('hosted_e2e_external_replay_origin_invalid');
+      }
+      return Object.freeze({
+        handoffDeadlineMs: originMs + handoffBudgetMs,
+        replayDeadlineMs: originMs + handoffBudgetMs + replayBudgetMs,
+      });
+    },
+    requireRemainingAt: (deadlineMs: number, observedAtMs: number) => {
+      if (!Number.isFinite(deadlineMs) || !Number.isFinite(observedAtMs)) {
+        throw new Error('hosted_e2e_external_replay_clock_invalid');
+      }
+      const remainingMs = Math.floor(deadlineMs - observedAtMs);
+      if (remainingMs <= 0) {
+        throw new Error('hosted_e2e_external_replay_deadline_exhausted');
+      }
+      return remainingMs;
+    },
+  });
+}
+
+/** Diagnostics are evidence-only: their failure must never replace proof failures. */
+export async function runHostedV1BestEffortDiagnostic<T>(input: {
+  readonly failures: string[];
+  readonly name: string;
+  /** The operation must honour this signal so a timeout reaps real work. */
+  readonly operation: (signal: AbortSignal) => Promise<T>;
+  /** Lets a scenario finalizer cancel diagnostics which are still in flight. */
+  readonly signal?: AbortSignal;
+  readonly timeoutMs?: number;
+  /** Publication workers must be killed and reaped before this callback returns. */
+  readonly awaitAbortReap?: boolean;
+}): Promise<T | null> {
+  const timeoutMs = input.timeoutMs ?? 1_000;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error('hosted_e2e_diagnostic_timeout_invalid');
+  }
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(input.signal?.reason);
+  if (input.signal?.aborted) abortFromParent();
+  else input.signal?.addEventListener('abort', abortFromParent, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+  try {
+    if (controller.signal.aborted) {
+      throw Object.assign(new Error('hosted_e2e_diagnostic_aborted'), { name: 'AbortError' });
+    }
+    // Invoke only inside the boundary.  Racing a timer alone leaves a live
+    // attachment behind; timeout and scenario finalization abort the actual
+    // operation and then reap it before this diagnostic is considered done.
+    const operation = Promise.resolve().then(() => {
+      if (controller.signal.aborted) {
+        throw Object.assign(new Error('hosted_e2e_diagnostic_aborted'), { name: 'AbortError' });
+      }
+      return input.operation(controller.signal);
+    });
+    const settled = operation.then(
+      (value) => ({ kind: 'value' as const, value }),
+      (error: unknown) => ({ kind: 'error' as const, error })
+    );
+    const timeout = new Promise<{ kind: 'timeout' }>((resolve) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort(new Error('hosted_e2e_diagnostic_timeout'));
+        resolve({ kind: 'timeout' });
+      }, timeoutMs);
+    });
+    const aborted = new Promise<{ kind: 'aborted' }>((resolve) => {
+      controller.signal.addEventListener('abort', () => resolve({ kind: 'aborted' }), { once: true });
+    });
+    const result = await Promise.race([settled, timeout, aborted]);
+    if (result.kind === 'value') return result.value;
+    if (result.kind === 'error') throw result.error;
+    // A publication worker is deliberately different from an arbitrary
+    // preparation callback: it is killable, so wait for its child reaper.
+    // This prevents finalization from racing a renamed artifact.
+    if (input.awaitAbortReap) await settled;
+    if (result.kind === 'aborted' && !timedOut) {
+      const abortError = new Error('hosted_e2e_diagnostic_aborted');
+      abortError.name = 'AbortError';
+      throw abortError;
+    }
+    // A diagnostic is strictly best effort.  Never let a non-cooperative API
+    // (for example a Playwright call which has already entered native code)
+    // turn its one-second evidence budget into an unbounded wait.  The
+    // controller makes cooperative work stop; consumers must use their own
+    // admission guard before publishing a late result.
+    const timeoutError = new Error('hosted_e2e_diagnostic_timeout');
+    timeoutError.name = 'TimeoutError';
+    throw timeoutError;
+  } catch (error) {
+    input.failures.push(
+      error instanceof HostedV1ArtifactPersistenceError
+        ? `${input.name}:${error.classification}:${error.path}`
+        : `${input.name}:${error instanceof Error ? error.name : 'unknown_error'}`
+    );
+    return null;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    input.signal?.removeEventListener('abort', abortFromParent);
+  }
+}
+
+/**
+ * Evidence must not retain the mutable collector used while attachments are
+ * still being attempted.  Callers can safely serialize this snapshot even as
+ * later best-effort operations continue to add failures to their collector.
+ */
+export function freezeHostedV1DiagnosticFailures(
+  failures: readonly string[]
+): readonly string[] {
+  return Object.freeze([...failures]);
+}
+
+/**
+ * An evidence file is a publication, not a best-effort callback. The writer
+ * lives in its own process so a hard deadline can actually stop an fsync or a
+ * stalled filesystem. Its public destination is a durable commit record; the
+ * payload remains a random transaction-private pathname until that record is
+ * linked and its directory is synced.
+ */
+export class HostedV1ArtifactPersistenceError extends Error {
+  readonly classification: 'aborted' | 'deadline_exceeded' | 'preparation_failed' | 'writer_failed';
+  readonly path: string;
+
+  constructor(
+    classification: 'aborted' | 'deadline_exceeded' | 'preparation_failed' | 'writer_failed',
+    path: string,
+    options?: ErrorOptions
+  ) {
+    super(`hosted_e2e_artifact_persistence_${classification}:${path}`, options);
+    this.name = 'HostedV1ArtifactPersistenceError';
+    this.classification = classification;
+    this.path = path;
+  }
+}
+
+// Child stdout is a deliberately tiny newline-delimited protocol.  It must
+// remain separate from stderr so the parent can make cleanup decisions from
+// acknowledgements, not from a child exit code or arbitrary diagnostic text.
+const hostedV1ArtifactProtocolPrefix = 'hosted-v1-artifact-v1:';
+const hostedV1ArtifactProtocolRecords = {
+  preparationFailed: 'preparation-failed',
+  writerPreflight: 'writer-preflight',
+  transactionPrepared: 'transaction-prepared',
+  canonicalDirectorySynced: 'canonical-directory-synced',
+  destinationOwned: 'destination-owned',
+  cleanerAbsent: 'cleaner-absent',
+  publicDestinationObserved: 'public-destination-observed',
+  canonicalAbsent: 'canonical-absent',
+  canonicalOwned: 'canonical-owned',
+  canonicalCompeting: 'canonical-competing',
+} as const;
+type HostedV1ArtifactProtocolRecord =
+  (typeof hostedV1ArtifactProtocolRecords)[keyof typeof hostedV1ArtifactProtocolRecords];
+
+interface HostedV1ArtifactPreparedPayload {
+  readonly byteLength: number;
+  readonly sha256: string;
+}
+
+function parseHostedV1ArtifactProtocolRecords(input: {
+  readonly buffer: string;
+  readonly chunk: string;
+}): {
+  readonly buffer: string;
+  readonly records: readonly HostedV1ArtifactProtocolRecord[];
+  readonly payloads: readonly HostedV1ArtifactPreparedPayload[];
+  readonly invalid: boolean;
+} {
+  const lines = `${input.buffer}${input.chunk}`.split('\n');
+  const buffer = lines.pop() ?? '';
+  let invalid = false;
+  const records: HostedV1ArtifactProtocolRecord[] = [];
+  const payloads: HostedV1ArtifactPreparedPayload[] = [];
+  for (const line of lines) {
+    if (!line.startsWith(hostedV1ArtifactProtocolPrefix)) {
+      invalid = true;
+      continue;
+    }
+    const record = line.slice(hostedV1ArtifactProtocolPrefix.length);
+    const payload = /^payload-prepared:([0-9]+):([0-9a-f]{64})$/u.exec(record);
+    if (payload) {
+      const byteLength = Number(payload[1]);
+      if (!Number.isSafeInteger(byteLength)) invalid = true;
+      else payloads.push({ byteLength, sha256: payload[2] });
+      continue;
+    }
+    if (
+      record !== hostedV1ArtifactProtocolRecords.preparationFailed &&
+      record !== hostedV1ArtifactProtocolRecords.writerPreflight &&
+      record !== hostedV1ArtifactProtocolRecords.transactionPrepared &&
+      record !== hostedV1ArtifactProtocolRecords.canonicalDirectorySynced &&
+      record !== hostedV1ArtifactProtocolRecords.destinationOwned &&
+      record !== hostedV1ArtifactProtocolRecords.cleanerAbsent &&
+      record !== hostedV1ArtifactProtocolRecords.publicDestinationObserved &&
+      record !== hostedV1ArtifactProtocolRecords.canonicalAbsent &&
+      record !== hostedV1ArtifactProtocolRecords.canonicalOwned &&
+      record !== hostedV1ArtifactProtocolRecords.canonicalCompeting
+    ) {
+      invalid = true;
+      continue;
+    }
+    records.push(record);
+  }
+  return { buffer, records, payloads, invalid };
+}
+
+const hostedV1AtomicArtifactWriterProgram = String.raw`
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const crypto = require('node:crypto');
+  // destination is the canonical commit record. temporary is an opaque,
+  // transaction-private payload name and receipt is an opaque commit temp.
+  // Neither private pathname is ever used as a public success signal.
+  const [destination, temporary, receipt, capability, testPreparationStall, sourcePath, sourceRedactionJson, testInterruptAfterCanonicalLink, retentionBudgetJson, testRetentionProtocolJson] = process.argv.slice(1);
+  const fail = (message) => { process.stderr.write(message); process.exitCode = 1; };
+  const emit = (record) => process.stdout.write('hosted-v1-artifact-v1:' + record + '\n');
+  let chunks = [];
+  let body;
+  const boundEvidenceUtf8 = (value, maximumBytes) => {
+    const encoded = Buffer.from(value, 'utf8');
+    if (encoded.byteLength <= maximumBytes) return value;
+    return new TextDecoder('utf-8').decode(encoded.subarray(0, maximumBytes), { stream: true });
+  };
+  const boundEvidenceDocument = (value, kind, maximumBytes) => {
+    const fullRedactedBytes = Buffer.byteLength(value);
+    if (fullRedactedBytes <= maximumBytes) return value;
+    const fullRedactedSha256 = crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+    let preview = boundEvidenceUtf8(value, Math.max(0, Math.floor(maximumBytes / 2)));
+    for (;;) {
+      const envelope = JSON.stringify({ schemaVersion: 1, kind, fullRedactedBytes, fullRedactedSha256, truncated: true, preview });
+      if (Buffer.byteLength(envelope) <= maximumBytes) return envelope;
+      if (preview.length === 0) throw new Error('hosted_e2e_evidence_bound_too_small');
+      preview = boundEvidenceUtf8(preview, Math.floor(Buffer.byteLength(preview) / 2));
+    }
+  };
+  const retentionBudget = retentionBudgetJson ? JSON.parse(retentionBudgetJson) : null;
+  const testRetentionProtocol = testRetentionProtocolJson ? JSON.parse(testRetentionProtocolJson) : null;
+  // Test-only pause points are deliberately in the real writer process.  They
+  // let the harness prove a filesystem interleaving without replacing any
+  // production operation with a mock.
+  const completedRetentionPauses = new Set();
+  const pauseRetentionProtocol = (phase) => {
+    const pause = testRetentionProtocol && testRetentionProtocol[phase];
+    if (!pause || completedRetentionPauses.has(phase)) return;
+    completedRetentionPauses.add(phase);
+    fs.writeFileSync(pause.readyPath, '', { flag: 'wx', mode: 0o600 });
+    while (!fs.existsSync(pause.resumePath)) waitForRetentionChange();
+  };
+  // lstat every extant component.  This is deliberately lexical: resolving
+  // first would follow a symlink before we had a chance to reject it.
+  const assertNoSymlinkPath = (target) => {
+    const absolute = path.resolve(target);
+    const parsed = path.parse(absolute);
+    let current = parsed.root;
+    for (const component of absolute.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
+      current = path.join(current, component);
+      let stat;
+      try { stat = fs.lstatSync(current); }
+      catch (error) {
+        if (error && error.code === 'ENOENT') return;
+        throw error;
+      }
+      if (stat.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+    }
+  };
+  const retainedCommittedPayloadBytes = (root) => {
+    assertNoSymlinkPath(root);
+    let retained = 0;
+    const payloadIdentities = new Set();
+    const visit = (current) => {
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const entryPath = path.join(current, entry.name);
+        if (entry.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+        if (entry.isDirectory()) { visit(entryPath); continue; }
+        if (!entry.isFile()) continue;
+        let commit;
+        try {
+          assertNoSymlinkPath(entryPath);
+          commit = JSON.parse(fs.readFileSync(entryPath, 'utf8'));
+        } catch (error) {
+          if (error && error.code === 'ENOENT') continue;
+          if (error instanceof SyntaxError) continue;
+          throw error;
+        }
+        if (!commit || commit.schemaVersion !== 1 || commit.kind !== 'hosted-v1-artifact-commit' ||
+            typeof commit.payload !== 'string' || !Number.isSafeInteger(commit.byteLength) ||
+            typeof commit.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(commit.sha256) ||
+            path.basename(commit.payload) !== commit.payload || !commit.payload.endsWith('.payload')) continue;
+        let payload;
+        const payloadPath = path.join(path.dirname(entryPath), commit.payload);
+        try {
+          assertNoSymlinkPath(payloadPath);
+          payload = fs.readFileSync(payloadPath);
+        }
+        catch (error) {
+          if (error && error.code === 'ENOENT') continue;
+          throw error;
+        }
+        if (payload.byteLength !== commit.byteLength ||
+            crypto.createHash('sha256').update(payload).digest('hex') !== commit.sha256) continue;
+        // An interrupted publication leaves both its canonical link and
+        // private receipt. They retain one payload, not two budgets. A valid
+        // record which already exceeds policy is not corrupt evidence: it is
+        // an admission failure and must propagate to every later writer.
+        const identity = path.resolve(path.dirname(entryPath), commit.payload) + '\\0' +
+          payload.byteLength + '\\0' + commit.sha256;
+        if (!payloadIdentities.has(identity)) {
+          if (payload.byteLength > retentionBudget.maximumFileBytes ||
+              retained + payload.byteLength > retentionBudget.maximumTotalBytes) {
+            throw new Error('hosted_e2e_playwright_committed_artifact_retention_budget_exceeded');
+          }
+          payloadIdentities.add(identity);
+          retained += payload.byteLength;
+        }
+      }
+    };
+    try { visit(root); } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+    return retained;
+  };
+  const availableRetentionBytes = () => {
+    if (!retentionBudget) return null;
+    const retained = retainedCommittedPayloadBytes(retentionBudget.root);
+    return Math.max(0, Math.min(retentionBudget.maximumFileBytes, retentionBudget.maximumTotalBytes - retained));
+  };
+  const retentionLockPath = () => path.join(retentionBudget.root, '.hosted-v1-artifact-retention.lock');
+  const retentionRecoveryPath = () => retentionLockPath() + '.recovery';
+  // A pid alone is not a lease identity: it can name an unrelated process
+  // after reuse.  Linux exposes the kernel start tick in /proc/<pid>/stat;
+  // record and compare it for every protocol owner.  On platforms without an
+  // equivalent exact identity, uncertainty is deliberately treated as live.
+  // That can leave a stale foreign-platform claim for manual recovery, but it
+  // can never let a reclaimer steal a live writer merely because its pid was
+  // recycled.
+  const processIncarnation = (pid) => {
+    if (process.platform !== 'linux') return { kind: 'unknown' };
+    try {
+      const stat = fs.readFileSync('/proc/' + pid + '/stat', 'utf8');
+      const close = stat.lastIndexOf(')');
+      const fields = close < 0 ? [] : stat.slice(close + 2).trim().split(/\s+/);
+      const startTime = fields[19]; // field 22; fields begin at state (3).
+      if (!/^\d+$/u.test(startTime || '')) return { kind: 'unknown' };
+      return { kind: 'exact', value: 'linux-proc-start:' + startTime };
+    } catch (error) {
+      if (error && error.code === 'ENOENT') return { kind: 'missing' };
+      return { kind: 'unknown' };
+    }
+  };
+  const localIncarnation = processIncarnation(process.pid);
+  const protocolOwner = (role, fields = {}) => ({
+    ...fields,
+    pid: process.pid,
+    processIncarnation: localIncarnation.kind === 'exact' ? localIncarnation.value : null,
+    retentionOwnerSchema: 'hosted-v1-retention-owner-v1',
+    retentionOwnerRole: role,
+  });
+  const ownerIsLive = (owner) => {
+    if (!Number.isSafeInteger(owner && owner.pid) || owner.pid < 1) return false;
+    const observed = processIncarnation(owner.pid);
+    if (observed.kind === 'missing') return false;
+    // An absent or unobservable incarnation is never evidence that a process
+    // is dead. This is intentionally stricter than kill(pid, 0).
+    return observed.kind !== 'exact' ||
+      typeof owner.processIncarnation !== 'string' ||
+      observed.value === owner.processIncarnation;
+  };
+  const lockIdentity = (file) => {
+    const stat = fs.lstatSync(file, { bigint: true });
+    if (stat.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+    return stat.dev + ':' + stat.ino;
+  };
+  const readLockOwner = (file) => {
+    assertNoSymlinkPath(file);
+    const owner = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!owner || !Number.isSafeInteger(owner.pid) || owner.pid < 1 || typeof owner.token !== 'string' || owner.token.length < 1) {
+      throw new Error('hosted_e2e_artifact_retention_lock_owner_invalid');
+    }
+    return owner;
+  };
+  const isProtocolOwner = (owner, role) =>
+    owner && owner.retentionOwnerSchema === 'hosted-v1-retention-owner-v1' &&
+    ['retention-lock', 'recovery-gate', 'publisher', 'reclaimer'].includes(role) &&
+    owner.retentionOwnerRole === role &&
+    typeof owner.token === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(owner.token) &&
+    (typeof owner.processIncarnation === 'string' || owner.processIncarnation === null);
+  // A lock or recovery gate is published as a fully-written inode and linked
+  // into its public name.  In particular, no contender can observe a newly
+  // created, ownerless public gate between mkdir/open and its owner write.
+  const publishOwnerFile = (target, owner) => {
+    const candidate = target + '.candidate-' + crypto.randomUUID();
+    const handle = fs.openSync(candidate, 'wx', 0o600);
+    try {
+      fs.writeFileSync(handle, JSON.stringify(owner), 'utf8');
+      fs.fsyncSync(handle);
+    } finally { fs.closeSync(handle); }
+    try {
+      fs.linkSync(candidate, target);
+      if (lockIdentity(candidate) !== lockIdentity(target)) {
+        throw new Error('hosted_e2e_artifact_retention_owner_publish_cas_failed');
+      }
+      return lockIdentity(candidate);
+    } finally { try { fs.unlinkSync(candidate); } catch (_) {} }
+  };
+  const waitForRetentionChange = () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+  // Claims live under a fixed-size, directory-local namespace.  In
+  // particular, neither a long evidence filename nor a succession of dead
+  // reclaimers can grow a basename past NAME_MAX.  The UUID is folded into a
+  // digest so every attempted claimant gets a name that is never reused.
+  const recoveryClaimPrefix = '.hosted-v1-reclaim-';
+  const legacyOwnerlessMarker = (file, tokenPrefix) => {
+    assertNoSymlinkPath(file);
+    const stat = fs.lstatSync(file, { bigint: true });
+    // The pre-atomic protocol could leave only its known, zero-byte marker
+    // between open and owner publication. Do not turn an arbitrary regular
+    // file (including a commit record) into recovery residue merely because
+    // it is old and does not parse as a current owner.
+    if (stat.isSymbolicLink() || !stat.isFile() || stat.size !== 0n) return null;
+    if (fs.readFileSync(file).byteLength !== 0) return null;
+    const identity = stat.dev + ':' + stat.ino;
+    return { identity, owner: { pid: 0, token: tokenPrefix + identity } };
+  };
+  const recoveryClaimGateKey = (gate) => crypto.createHash('sha256').update(gate).digest('hex');
+  const recoveryClaimPath = (gate, role, identity, token) => path.join(
+    path.dirname(gate),
+    recoveryClaimPrefix + crypto.createHash('sha256')
+      .update(recoveryClaimGateKey(gate) + '\0' + role + '\0' + identity + '\0' + token).digest('hex')
+  );
+  const recoveryClaimsForGate = (gate) => {
+    const gateKey = recoveryClaimGateKey(gate);
+    const claims = [];
+    for (const entry of fs.readdirSync(path.dirname(gate), { withFileTypes: true })) {
+      if (!entry.name.startsWith(recoveryClaimPrefix)) continue;
+      if (entry.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+      if (!entry.isFile()) continue;
+      const claim = path.join(path.dirname(gate), entry.name);
+      let owner;
+      let claimIdentity;
+      try { owner = readLockOwner(claim); claimIdentity = lockIdentity(claim); }
+      catch (error) {
+        if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+        continue;
+      }
+      if (owner.recoveryGateKey === gateKey && typeof owner.recoveryGateIdentity === 'string' &&
+          (owner.recoveryGateRole === 'publisher' || owner.recoveryGateRole === 'reclaimer') &&
+          isProtocolOwner(owner, owner.recoveryGateRole)) {
+        const role = owner.recoveryGateRole;
+        claims.push({ claim, owner, identity: claimIdentity, role });
+      }
+    }
+    return claims;
+  };
+  const publisherClaimsForGate = (gate) =>
+    recoveryClaimsForGate(gate).filter((claim) => claim.role === 'publisher');
+  // Tombstones never share a namespace with user artifacts.  This makes
+  // recovery a closed protocol directory rather than a substring search over
+  // evidence filenames.
+  const tombstoneDirectory = () => path.join(retentionBudget.root, '.hosted-v1-retention-tombstones');
+  const ensureTombstoneDirectory = () => {
+    const directory = tombstoneDirectory();
+    try { fs.mkdirSync(directory, { recursive: false, mode: 0o700 }); }
+    catch (error) { if (!error || error.code !== 'EEXIST') throw error; }
+    const stat = fs.lstatSync(directory);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+    }
+    return directory;
+  };
+  const tombstoneName = (owner, identity) =>
+    'v1-' + crypto.createHash('sha256').update(owner.token + '\0' + identity).digest('hex') + '.tombstone';
+  const removalTombstonePath = (_file, owner, identity) => path.join(
+    ensureTombstoneDirectory(), tombstoneName(owner, identity)
+  );
+  const isProtocolTombstoneName = (name) => /^v1-[0-9a-f]{64}\.tombstone$/u.test(name);
+  const exactOwnerGeneration = (file, owner, identity) => {
+    try { if (lockIdentity(file) !== identity) return false; }
+    catch (error) { if (error && error.code === 'ENOENT') return false; throw error; }
+    // Ownerless files are compatibility residue only when they exactly match
+    // the old protocol's zero-byte marker. Their gate claim has already
+    // excluded a replacement, but that does not authorize removing an
+    // arbitrary nonempty artifact-like file at a reserved pathname.
+    if (owner.pid === 0) {
+      const prefix = owner.token.startsWith('legacy-ownerless-')
+        ? 'legacy-ownerless-'
+        : 'legacy-unpublished-';
+      const legacy = legacyOwnerlessMarker(file, prefix);
+      return legacy !== null && legacy.identity === identity && legacy.owner.token === owner.token;
+    }
+    try {
+      const current = readLockOwner(file);
+      return current.token === owner.token && current.pid === owner.pid &&
+        current.processIncarnation === owner.processIncarnation;
+    } catch (error) { if (error && error.code === 'ENOENT') return false; throw error; }
+  };
+  // A pathname cannot be unlinked conditionally on its inode.  The owner
+  // protocol instead reserves the public name until this atomic promotion:
+  // rename moves the inspected generation to its generation-specific
+  // tombstone, making a later replacement visible at the public name rather
+  // than deleting it.  A crash after rename leaves only that inert tombstone.
+  const promoteExactOwnerFile = (file, owner, identity) => {
+    if (!exactOwnerGeneration(file, owner, identity)) return null;
+    const tombstone = removalTombstonePath(file, owner, identity);
+    try { fs.lstatSync(tombstone); return null; }
+    catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+    try { fs.renameSync(file, tombstone); }
+    catch (error) { if (error && (error.code === 'ENOENT' || error.code === 'EEXIST')) return null; throw error; }
+    // Another cleaner may have discarded this now-private inode.  Its
+    // disappearance/replacement is a failed CAS, never a writer failure.
+    return exactOwnerGeneration(tombstone, owner, identity) ? tombstone : null;
+  };
+  const discardPromotedOwnerFile = (tombstone, identity) => {
+    try {
+      if (lockIdentity(tombstone) !== identity) return false;
+      fs.unlinkSync(tombstone);
+      return true;
+    } catch (error) { if (error && error.code === 'ENOENT') return false; throw error; }
+  };
+  const recoverAbandonedTombstones = () => {
+    // Promotion can survive a kill between rename and discard. Tombstone
+    // names are generation-specific and are never publication targets, so a
+    // dead tombstone can be retired without touching any successor's public
+    // pathname. A live promoter is left alone.
+    let directory;
+    try {
+      directory = tombstoneDirectory();
+      const directoryStat = fs.lstatSync(directory);
+      if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+        throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+      }
+    }
+    catch (error) { if (error && error.code === 'ENOENT') return; throw error; }
+    let entries;
+    try { entries = fs.readdirSync(directory, { withFileTypes: true }); }
+    catch (error) { if (error && error.code === 'ENOENT') return; throw error; }
+    for (const entry of entries) {
+      if (!isProtocolTombstoneName(entry.name)) continue;
+      const tombstone = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+      if (!entry.isFile()) continue;
+      let owner;
+      let identity;
+      try { owner = readLockOwner(tombstone); identity = lockIdentity(tombstone); }
+      catch (error) {
+        if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+        // The private namespace may contain debris from an interrupted older
+        // version. It is not a protocol claim unless its complete schema is
+        // readable, so leave it untouched and let a later valid writer retry.
+        continue;
+      }
+      if (!isProtocolOwner(owner, owner.retentionOwnerRole) ||
+          entry.name !== tombstoneName(owner, identity) || ownerIsLive(owner)) continue;
+      if (!exactOwnerGeneration(tombstone, owner, identity)) continue;
+      discardPromotedOwnerFile(tombstone, identity);
+    }
+  };
+  const releaseOwnerFile = (claim, token, identity) => {
+    try {
+      const owner = readLockOwner(claim);
+      if (owner.token !== token || owner.pid !== process.pid ||
+          owner.processIncarnation !== (localIncarnation.kind === 'exact' ? localIncarnation.value : null) ||
+          lockIdentity(claim) !== identity) return false;
+      const tombstone = promoteExactOwnerFile(claim, owner, identity);
+      return tombstone !== null && discardPromotedOwnerFile(tombstone, identity);
+    } catch (error) {
+      // A concurrent recovery/replacement wins this generation. Releasing a
+      // private claim is best-effort and must not abort an otherwise valid
+      // publisher after its artifact has already been committed.
+      if (error && error.code === 'ENOENT') return false;
+      if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+      return false;
+    }
+  };
+  const recoverAbandonedRecoveryClaim = (claim) => {
+    let owner;
+    let identity;
+    try { owner = readLockOwner(claim); identity = lockIdentity(claim); }
+    catch (error) {
+      if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+      return Boolean(error && error.code === 'ENOENT');
+    }
+    // A claim is a lease held by its exact published owner. Never take it
+    // from a live process; a dead claimant has no remaining operation to
+    // serialize, so remove only the generation we just re-read.
+    if (ownerIsLive(owner)) return false;
+    try {
+      const current = readLockOwner(claim);
+      if (current.token !== owner.token || current.pid !== owner.pid ||
+          current.processIncarnation !== owner.processIncarnation || lockIdentity(claim) !== identity ||
+          ownerIsLive(current)) return false;
+      const tombstone = promoteExactOwnerFile(claim, owner, identity);
+      return tombstone !== null && discardPromotedOwnerFile(tombstone, identity);
+    } catch (error) { return Boolean(error && error.code === 'ENOENT'); }
+  };
+  const reclaimDeadClaims = (claims) => {
+    for (const claim of claims) {
+      if (ownerIsLive(claim.owner)) return false;
+      if (!recoverAbandonedRecoveryClaim(claim.claim)) return false;
+    }
+    return true;
+  };
+  // A public gate can be retired only by a reclaimer claim, and it can be
+  // created only while a publisher claim is live.  These are one shared
+  // barrier protocol, not independent validate-then-rename checks:
+  //
+  // * a publisher advertises before its final no-gate observation;
+  // * a reclaimer advertises before its final old-generation observation;
+  // * either side which sees the other backs out and retries.
+  //
+  // Consequently, a reclaimer that could still rename the public name always
+  // has a visible claim while a replacement is being considered.  Conversely,
+  // a publisher which can create a replacement prevents any later reclaimer
+  // from reaching promotion.  The link operation remains create-only; neither operation
+  // uses a replacing rename at the public pathname.
+  const publishAfterReclaimerBarrier = (gate, publish) => {
+    const token = crypto.randomUUID();
+    const claim = recoveryClaimPath(gate, 'publisher', 'publication', token);
+    let identity;
+    try {
+      identity = publishOwnerFile(claim, protocolOwner('publisher', {
+        token,
+        recoveryGateKey: recoveryClaimGateKey(gate),
+        recoveryGateIdentity: 'publication',
+        recoveryGateRole: 'publisher',
+      }));
+      pauseRetentionProtocol('afterPublisherClaim');
+      // A publisher that died before linking a public inode leaves only this
+      // private, fixed-size claim. Clear exact dead generations here as well
+      // as during reclamation so crash recovery cannot accumulate barriers.
+      if (!reclaimDeadClaims(publisherClaimsForGate(gate).filter((entry) => entry.claim !== claim))) return null;
+      const reclaimers = recoveryClaimsForGate(gate).filter((entry) => entry.role === 'reclaimer');
+      if (!reclaimDeadClaims(reclaimers)) {
+        pauseRetentionProtocol('afterPublisherReclaimerBarrierEncountered');
+        return null;
+      }
+      // A second scan closes the cleanup-to-publication seam. A reclaimer
+      // which appears after this scan sees our publisher claim before it can
+      // promote, so it cannot touch the generation created by publish.
+      if (recoveryClaimsForGate(gate).some((entry) => entry.role === 'reclaimer')) {
+        pauseRetentionProtocol('afterPublisherReclaimerBarrierEncountered');
+        return null;
+      }
+      return publish();
+    } finally {
+      if (identity !== undefined) releaseOwnerFile(claim, token, identity);
+    }
+  };
+  const recoverAbandonedRecoveryGate = () => {
+    const gate = retentionRecoveryPath();
+    let owner;
+    let identity;
+    try { owner = readLockOwner(gate); identity = lockIdentity(gate); }
+    catch (error) {
+      if (error && error.code === 'ENOENT') return true;
+      if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+      // Only the old protocol's exact zero-byte marker can reach here.
+      // Current publication is owner-bearing and atomic, so ageing that
+      // narrow compatibility residue cannot steal a live current setup.
+      try {
+        const stat = fs.lstatSync(gate);
+        if (stat.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+        if (Date.now() - stat.mtimeMs <= 250) return false;
+        const legacy = legacyOwnerlessMarker(gate, 'legacy-ownerless-');
+        if (legacy === null) return false;
+        ({ identity, owner } = legacy);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+        return false;
+      }
+    }
+    if (ownerIsLive(owner)) return false;
+    // The reclaimer claim is published before the final exact-generation
+    // observation. Publishers use the complementary claim above, so they
+    // cannot replace this pathname until this claim is gone.
+    const claimToken = crypto.randomUUID();
+    const claim = recoveryClaimPath(gate, 'reclaimer', identity, claimToken);
+    let claimIdentity;
+    try {
+      try {
+        claimIdentity = publishOwnerFile(claim, protocolOwner('reclaimer', {
+          token: claimToken,
+          recoveryGateKey: recoveryClaimGateKey(gate),
+          recoveryGateIdentity: identity,
+          recoveryGateRole: 'reclaimer',
+        }));
+      }
+      catch (error) { if (error && error.code !== 'EEXIST') throw error; return false; }
+      pauseRetentionProtocol('afterReclaimerClaim');
+      // A publisher which arrived before this check must finish (or crash and
+      // be recovered) before this reclaimer can rename the public gate.
+      if (!reclaimDeadClaims(publisherClaimsForGate(gate))) return false;
+      if (publisherClaimsForGate(gate).length > 0) return false;
+      let current;
+      let currentIdentity;
+      try { current = readLockOwner(gate); currentIdentity = lockIdentity(gate); }
+      catch (_) {
+        const legacy = legacyOwnerlessMarker(gate, 'legacy-ownerless-');
+        if (legacy === null) return false;
+        current = legacy.owner;
+        currentIdentity = legacy.identity;
+      }
+      if (current.token !== owner.token || current.pid !== owner.pid ||
+          current.processIncarnation !== owner.processIncarnation ||
+          currentIdentity !== identity || ownerIsLive(current)) return false;
+      const tombstone = promoteExactOwnerFile(gate, owner, identity);
+      if (tombstone !== null) pauseRetentionProtocol('afterRecoveryGateRetired');
+      return tombstone !== null && discardPromotedOwnerFile(tombstone, identity);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+      return Boolean(error && error.code === 'ENOENT');
+    }
+    finally {
+      if (claimIdentity !== undefined) {
+        pauseRetentionProtocol('beforeReclaimerClaimReleased');
+        releaseOwnerFile(claim, claimToken, claimIdentity);
+        pauseRetentionProtocol('afterReclaimerClaimReleased');
+      }
+    }
+  };
+  const recoverRetentionLock = (lock) => {
+    const gate = retentionRecoveryPath();
+    const token = crypto.randomUUID();
+    let owner;
+    let identity;
+    try { owner = readLockOwner(lock); identity = lockIdentity(lock); }
+    catch (error) {
+      if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+      // A legacy zero-byte lock marker must age before recovery. Atomic file
+      // publication below never creates this state, so a live writer can
+      // never be mistaken for this compatibility case.
+      try {
+        const stat = fs.lstatSync(lock);
+        if (stat.isSymbolicLink()) throw new Error('hosted_e2e_playwright_artifact_symlink_forbidden');
+        // Do not reclaim a directory with no owner. That is exactly the old
+        // mkdir-to-owner publication gap; treating it as stale can delete a
+        // writer that has already acquired the directory but not published.
+        if (Date.now() - stat.mtimeMs <= 250) return false;
+        const legacy = legacyOwnerlessMarker(lock, 'legacy-unpublished-');
+        if (legacy === null) return false;
+        ({ identity } = legacy);
+        owner = legacy.owner;
+      }
+      catch (error) {
+        if (error instanceof Error && error.message === 'hosted_e2e_playwright_artifact_symlink_forbidden') throw error;
+        return false;
+      }
+    }
+    if (owner.pid > 0 && ownerIsLive(owner)) return false;
+    let gateIdentity;
+    try {
+      gateIdentity = publishAfterReclaimerBarrier(gate, () =>
+        publishOwnerFile(gate, protocolOwner('recovery-gate', { token }))
+      );
+      if (gateIdentity === null) return false;
+      pauseRetentionProtocol('afterRecoveryGatePublished');
+    } catch (error) {
+      if (error && error.code === 'EEXIST') return false;
+      throw error;
+    }
+    try {
+      // The gate serializes recovery with every compliant acquirer. Re-read
+      // the immutable owner after claiming it; never unlink a generation we
+      // did not inspect and prove dead.
+      let current;
+      let currentIdentity;
+      try { current = readLockOwner(lock); currentIdentity = lockIdentity(lock); }
+      catch (_) {
+        const legacy = legacyOwnerlessMarker(lock, 'legacy-unpublished-');
+        if (legacy === null) return false;
+        current = legacy.owner;
+        currentIdentity = legacy.identity;
+      }
+      if (current.token !== owner.token || current.pid !== owner.pid ||
+          current.processIncarnation !== owner.processIncarnation ||
+          currentIdentity !== identity ||
+          (current.pid > 0 && ownerIsLive(current))) return false;
+      const tombstone = promoteExactOwnerFile(lock, owner, identity);
+      return tombstone !== null && discardPromotedOwnerFile(tombstone, identity);
+    } catch (error) {
+      if (error && error.code === 'ENOENT') return true;
+      throw error;
+    } finally { if (gateIdentity !== undefined) releaseOwnerFile(gate, token, gateIdentity); }
+  };
+  const acquireRetentionLock = () => {
+    if (!retentionBudget) return null;
+    const lock = retentionLockPath();
+    const token = crypto.randomUUID();
+    const deadline = Date.now() + 2_000;
+    for (;;) {
+        if (Date.now() >= deadline) throw new Error('hosted_e2e_artifact_retention_lock_timeout');
+        recoverAbandonedTombstones();
+        try {
+          fs.lstatSync(retentionRecoveryPath());
+          if (!recoverAbandonedRecoveryGate()) waitForRetentionChange();
+          continue;
+        }
+        catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+        try {
+          // The lock publication participates in the same recovery-gate
+          // barrier. The gate may be created concurrently, but its owner will
+          // then re-read this immutable, live lock and cannot retire it.
+          const identity = publishAfterReclaimerBarrier(retentionRecoveryPath(), () =>
+            publishOwnerFile(lock, protocolOwner('retention-lock', { token }))
+          );
+          if (identity === null) {
+            waitForRetentionChange();
+            continue;
+          }
+          pauseRetentionProtocol('afterLockPublished');
+          return { lock, token, identity };
+        } catch (error) {
+          if (!error || error.code !== 'EEXIST') throw error;
+        }
+        if (!recoverRetentionLock(lock)) waitForRetentionChange();
+      }
+  };
+  const releaseRetentionLock = (lock) => {
+    if (lock === null) return;
+    releaseOwnerFile(lock.lock, lock.token, lock.identity);
+  };
+  const boundToRetention = (value, kind, maximumBytes) => {
+    try { return boundEvidenceDocument(value, kind, maximumBytes); }
+    catch (error) {
+      if (error instanceof Error && error.message === 'hosted_e2e_evidence_bound_too_small') return '';
+      throw error;
+    }
+  };
+  const boundCommittedBody = (value, maximumBytes) => {
+    if (maximumBytes === null || Buffer.byteLength(value, 'utf8') <= maximumBytes) return value;
+    if (maximumBytes === 0) return '';
+    try { JSON.parse(value); return boundToRetention(value, 'json', maximumBytes); }
+    catch (_) { return boundToRetention(value, 'text', maximumBytes); }
+  };
+  const sanitizeSourceBody = (value, maximumBytes = null) => {
+    if (!sourceRedactionJson) return value;
+    const config = JSON.parse(sourceRedactionJson);
+    if (!config || !Array.isArray(config.replacements) ||
+        !Number.isSafeInteger(config.maximumBytes) || config.maximumBytes < 1) {
+      throw new Error('source_redaction_invalid');
+    }
+    const boundedMaximumBytes = maximumBytes === null
+      ? config.maximumBytes
+      : Math.min(config.maximumBytes, maximumBytes);
+    if (boundedMaximumBytes === 0) return '';
+    const placeholderForKey = (key) => {
+      const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (normalized === 'authorization' || normalized === 'proxyauthorization') return '<authorization>';
+      if (normalized === 'xagentteamscsrf' || normalized === 'xcsrftoken' || normalized === 'csrf' || normalized.includes('csrftoken')) return '<csrf-token>';
+      if (normalized === 'cookie' || normalized === 'setcookie') return '<cookie>';
+      if (normalized === 'code' || normalized === 'state') return '<oidc-value>';
+      if (normalized.includes('trustanchor')) return '<trust-anchor>';
+      if (normalized.includes('password') || normalized.includes('passwd') || normalized.includes('passphrase')) return '<password>';
+      if (normalized.includes('secret') || normalized.includes('credential') || normalized.includes('privatekey')) return '<secret>';
+      if (normalized.includes('token') || normalized.includes('apikey')) return '<token>';
+      return null;
+    };
+    const redactText = (text) => {
+      for (const replacement of config.replacements) {
+        if (!replacement || typeof replacement.value !== 'string' || typeof replacement.placeholder !== 'string') {
+          throw new Error('source_redaction_replacement_invalid');
+        }
+        text = text.replaceAll(replacement.value, replacement.placeholder);
+      }
+      return text
+        .replace(/(^|[\r\n]\s*)((?:set-cookie|cookie)\s*[:=]\s*)[^\r\n]+/gimu, '$1$2<cookie>')
+        .replace(/(__Host-agent-teams-[A-Za-z0-9_-]+["':=\s]+)[^;,\s"']+/gu, '$1<cookie>')
+        .replace(/([?&](?:code|state)=)[^&\s"']+/giu, '$1<oidc-value>')
+        .replace(/([?&](?:api[_-]?key|[^&=]*(?:token|secret|password|passwd|passphrase|credential|private[_-]?key|trust[_-]?anchor)[^&=]*)=)[^&\s"'#]*/giu, '$1<sensitive-value>')
+        .replace(/(["']?(?:code|state)["']?\s*[:=]\s*["']?)[A-Za-z0-9._-]{16,}/giu, '$1<oidc-value>')
+        .replace(/((?:x-agent-teams-csrf|csrf[_-]?token|csrfToken)["':=\s]+)[A-Za-z0-9_-]{32,}/giu, '$1<csrf-token>')
+        .replace(/((?:authorization|proxy[_-]?authorization)["':=\s]+)(?:bearer\s+)?[^\r\n,;]+/giu, '$1<authorization>')
+        .replace(/((?:^|\s)--?(?:api[_-]?key|[^\s]{0,128}(?:token|secret|password|passwd|passphrase|credential|private[_-]?key|trust[_-]?anchor)[^\s]{0,128})\s+)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/gimu, '$1<sensitive-value>')
+        .replace(/((["']?)([^\s"':=,;]{1,256})\2\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;]+)/giu, (match, prefix) => {
+          const key = /["']?([^\s"':=]+)["']?\s*[:=]\s*$/u.exec(prefix)?.[1] || '';
+          const placeholder = placeholderForKey(key);
+          return placeholder === null ? match : prefix + placeholder;
+        })
+        .replace(/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g, '<jwt>');
+    };
+    const redactJson = (input, key = '') => {
+      const placeholder = placeholderForKey(key);
+      if (placeholder !== null) {
+        if (typeof input === 'string') return placeholder;
+        if (Array.isArray(input)) return input.map(() => placeholder);
+        if (input !== null) return placeholder;
+      }
+      if (typeof input === 'string') return redactText(input);
+      if (Array.isArray(input)) return input.map((item) => redactJson(item));
+      if (typeof input === 'object' && input !== null) {
+        return Object.fromEntries(Object.entries(input).map(([key, item]) => [key, redactJson(item, key)]));
+      }
+      return input;
+    };
+    let redacted;
+    let kind;
+    try {
+      redacted = JSON.stringify(redactJson(JSON.parse(value)));
+      kind = 'json';
+    } catch (_) {
+      redacted = redactText(value);
+      kind = 'text';
+    }
+    return boundToRetention(redacted, kind, boundedMaximumBytes);
+  };
+  process.stdin.on('data', (chunk) => chunks.push(chunk));
+  process.stdin.on('error', (error) => fail(error && error.name || 'stdin_error'));
+  process.stdin.on('end', () => {
+    let canonicalLinked = false;
+    try {
+      // Directory creation is part of the transaction, not a Playwright-side
+      // convenience.  mkdir can block just like fsync, so it must run in this
+      // killable writer under the persistence deadline.
+      try {
+        // Harness-only seam for proving a stalled preparation cannot hang the
+        // parent. Production never supplies this argument.
+        if (testPreparationStall === 'stall') {
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60_000);
+        }
+        const outputDirectory = path.dirname(destination);
+        assertNoSymlinkPath(outputDirectory);
+        assertNoSymlinkPath(destination);
+        assertNoSymlinkPath(temporary);
+        assertNoSymlinkPath(receipt);
+        if (retentionBudget !== null) assertNoSymlinkPath(retentionBudget.root);
+        fs.mkdirSync(outputDirectory, { recursive: true, mode: 0o700 });
+        const outputDirectoryStat = fs.lstatSync(outputDirectory);
+        if (outputDirectoryStat.isSymbolicLink() || !outputDirectoryStat.isDirectory()) {
+          throw new Error('artifact_output_directory_not_directory');
+        }
+        // Re-check destination and all transaction aliases after mkdir, before
+        // any retry validation or retention accounting can read them.
+        assertNoSymlinkPath(destination);
+        assertNoSymlinkPath(temporary);
+        assertNoSymlinkPath(receipt);
+        if (retentionBudget !== null) assertNoSymlinkPath(retentionBudget.root);
+        // A path-backed Playwright attachment is also preparation. Reading it
+        // here keeps even an unhealthy evidence source out of the parent.
+        body = sourcePath ? fs.readFileSync(sourcePath) : Buffer.concat(chunks);
+        // First derive a stable per-file candidate. Its identity is checked
+        // against a committed retry before aggregate capacity is consulted.
+        const maximumBytes = retentionBudget === null ? null : retentionBudget.maximumFileBytes;
+        if (sourcePath && sourceRedactionJson) {
+          body = Buffer.from(
+            sanitizeSourceBody(new TextDecoder('utf-8', { fatal: true }).decode(body), maximumBytes),
+            'utf8'
+          );
+        } else if (maximumBytes !== null) {
+          body = Buffer.from(
+            boundCommittedBody(new TextDecoder('utf-8', { fatal: true }).decode(body), maximumBytes),
+            'utf8'
+          );
+        }
+      } catch (error) {
+        emit('preparation-failed');
+        fail('preparation_failed:' + (error instanceof Error ? error.message : 'preparation_error'));
+        return;
+      }
+      const expectedPayload = path.basename(temporary);
+      const candidateBody = body;
+      const committedBodyForCandidate = (commitPath, expectedBody) => {
+        assertNoSymlinkPath(commitPath);
+        const expectedByteLength = expectedBody.byteLength;
+        const expectedSha256 = crypto.createHash('sha256').update(expectedBody).digest('hex');
+        let commit;
+        try { commit = JSON.parse(fs.readFileSync(commitPath, 'utf8')); } catch (_) { return null; }
+        if (!commit || commit.schemaVersion !== 1 || commit.kind !== 'hosted-v1-artifact-commit' ||
+            typeof commit.payload !== 'string' || !Number.isSafeInteger(commit.byteLength) ||
+            typeof commit.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(commit.sha256) ||
+            path.basename(commit.payload) !== commit.payload) return null;
+        const destinationName = path.basename(commitPath);
+        const artifactNameId = Buffer.byteLength(destinationName, 'utf8') <= 180
+          ? destinationName
+          : 'id-' + crypto.createHash('sha256').update(destinationName, 'utf8').digest('hex');
+        const expectedPrefix = '.' + artifactNameId + '.';
+        if (!commit.payload.startsWith(expectedPrefix) ||
+            commit.payload.length !== expectedPrefix.length + 64 + '.payload'.length ||
+            !/^[0-9a-f]{64}$/.test(commit.payload.slice(expectedPrefix.length, -'.payload'.length)) ||
+            !commit.payload.endsWith('.payload')) return null;
+        let payload;
+        const payloadPath = path.join(path.dirname(commitPath), commit.payload);
+        try {
+          assertNoSymlinkPath(payloadPath);
+          payload = fs.readFileSync(payloadPath);
+        } catch (error) {
+          if (error && error.code === 'ENOENT') return null;
+          throw error;
+        }
+        if (payload.byteLength !== commit.byteLength ||
+            crypto.createHash('sha256').update(payload).digest('hex') !== commit.sha256) return null;
+        // Aggregate admission may have truncated this candidate. Persisting
+        // the pre-aggregate candidate identity lets a retry prove it is the
+        // same request before today's unrelated admissions are considered.
+        // Older commit records did not carry that identity, so retain their
+        // conservative exact-payload comparison rather than widening retry.
+        const candidateMatches =
+          Number.isSafeInteger(commit.candidateByteLength) &&
+          typeof commit.candidateSha256 === 'string' &&
+          /^[0-9a-f]{64}$/.test(commit.candidateSha256)
+            ? commit.candidateByteLength === expectedByteLength && commit.candidateSha256 === expectedSha256
+            : commit.byteLength === expectedByteLength && commit.sha256 === expectedSha256;
+        if (!candidateMatches) return null;
+        // Candidate metadata identifies the request, but is not itself a
+        // binding to retained bytes. Require new records to prove that their
+        // payload is the deterministic bounded representation of that exact
+        // candidate. Thus changing both payload and candidate metadata cannot
+        // turn B into a retry of A within this commit-file trust boundary.
+        if (Object.hasOwn(commit, 'candidateByteLength') || Object.hasOwn(commit, 'candidateSha256')) {
+          if (!Number.isSafeInteger(commit.retainedMaximumBytes) || commit.retainedMaximumBytes < 0) return null;
+          let expectedPayload;
+          try {
+            expectedPayload = Buffer.from(
+              boundCommittedBody(new TextDecoder('utf-8', { fatal: true }).decode(expectedBody), commit.retainedMaximumBytes),
+              'utf8'
+            );
+          } catch (_) { return null; }
+          if (!payload.equals(expectedPayload)) return null;
+        }
+        return payload;
+      };
+      const confirmExistingDestination = () => {
+        fs.lstatSync(destination);
+        // Keep the strict retained-artifact audit: a retry may bypass only
+        // fresh capacity selection, never validation of the other committed
+        // evidence already under this budget.
+        if (retentionBudget !== null) retainedCommittedPayloadBytes(retentionBudget.root);
+        const committedBody = committedBodyForCandidate(destination, candidateBody);
+        if (committedBody === null) throw new Error('destination_exists');
+        emit('payload-prepared:' + committedBody.byteLength + ':' +
+          crypto.createHash('sha256').update(committedBody).digest('hex'));
+        emit('writer-preflight');
+        emit('transaction-prepared');
+        const retryDirectory = fs.openSync(path.dirname(destination), 'r');
+        try { fs.fsyncSync(retryDirectory); } finally { fs.closeSync(retryDirectory); }
+        emit('canonical-directory-synced');
+        emit('destination-owned');
+      };
+      // A previous writer can die after linking the canonical commit and
+      // before acknowledgement. Check that immutable record before taking
+      // aggregate capacity; a full budget cannot reject the same-body retry.
+      try {
+        confirmExistingDestination();
+        return;
+      } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+      // The lock covers retained-byte observation through commit publication.
+      // Two production writers therefore cannot reserve the same remaining
+      // aggregate bytes. Recheck destination after acquiring it: another
+      // writer may have committed the same body between the optimistic read
+      // above and this serialized admission point.
+      const retentionLock = acquireRetentionLock();
+      try {
+        try {
+          confirmExistingDestination();
+          return;
+        } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+        // Even without a retention policy, record the exact deterministic
+        // bound which leaves an inline candidate unchanged.
+        let retainedMaximumBytes = candidateBody.byteLength;
+        if (retentionBudget !== null) {
+          const maximumBytes = availableRetentionBytes();
+          retainedMaximumBytes = maximumBytes;
+          body = Buffer.from(
+            boundCommittedBody(new TextDecoder('utf-8', { fatal: true }).decode(candidateBody), maximumBytes),
+            'utf8'
+          );
+        }
+      const bodyByteLength = body.byteLength;
+      const bodySha256 = crypto.createHash('sha256').update(body).digest('hex');
+      emit('payload-prepared:' + bodyByteLength + ':' + bodySha256);
+      try { fs.lstatSync(receipt); throw new Error('receipt_exists'); }
+      catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+      // The parent may classify the destination as published only after this
+      // acknowledgement. It is emitted before the first transaction-private
+      // pathname is created and remains buffered through child close.
+      emit('writer-preflight');
+      // The payload is deliberately not the canonical destination. A crash
+      // after this point can leave an opaque private payload, but cannot leave
+      // a public artifact that resembles committed evidence or blocks retry.
+      const handle = fs.openSync(temporary, 'wx', 0o600);
+      try {
+        fs.writeFileSync(handle, body);
+        fs.fsyncSync(handle);
+      } finally {
+        fs.closeSync(handle);
+      }
+      const publicationDirectory = fs.openSync(path.dirname(destination), 'r');
+      try { fs.fsyncSync(publicationDirectory); } finally { fs.closeSync(publicationDirectory); }
+      // This acknowledges only private payload durability. It is intentionally
+      // before canonical visibility so a SIGKILL at this seam is retry-safe.
+      emit('transaction-prepared');
+      const commit = Buffer.from(JSON.stringify({
+        schemaVersion: 1,
+        kind: 'hosted-v1-artifact-commit',
+        payload: expectedPayload,
+        byteLength: bodyByteLength,
+        sha256: bodySha256,
+        candidateByteLength: candidateBody.byteLength,
+        candidateSha256: crypto.createHash('sha256').update(candidateBody).digest('hex'),
+        retainedMaximumBytes,
+      }), 'utf8');
+      const commitHandle = fs.openSync(receipt, 'wx', 0o600);
+      try {
+        fs.writeFileSync(commitHandle, commit);
+        fs.fsyncSync(commitHandle);
+      } finally {
+        fs.closeSync(commitHandle);
+      }
+      // link() is no-replace publication. A competing canonical commit is
+      // never overwritten, and failure cleanup below only touches our random
+      // private names.
+      fs.linkSync(receipt, destination);
+      canonicalLinked = true;
+      // Harness-only seam: prove the parent never cleans a payload after its
+      // canonical commit record has become visible but before acknowledgement.
+      if (testInterruptAfterCanonicalLink === 'interrupt-after-canonical-link') {
+        process.kill(process.pid, 'SIGKILL');
+      }
+      const directory = fs.openSync(path.dirname(destination), 'r');
+      try { fs.fsyncSync(directory); } finally { fs.closeSync(directory); }
+      emit('canonical-directory-synced');
+      fs.unlinkSync(receipt);
+      const finalDirectory = fs.openSync(path.dirname(destination), 'r');
+      try { fs.fsyncSync(finalDirectory); } finally { fs.closeSync(finalDirectory); }
+      // This acknowledgement follows the durable commit record. Consumers
+      // must validate that record and its digest instead of accepting a raw
+      // pathname as evidence.
+      emit('destination-owned');
+      } finally {
+        releaseRetentionLock(retentionLock);
+      }
+    } catch (error) {
+      // After link succeeds the canonical record refers to the private payload by
+      // name. Never delete either private name here: a retry/settler must
+      // validate the linked record first. Before that point both are merely
+      // uncommitted transaction-private staging and can be cleaned safely.
+      if (!canonicalLinked) {
+        try { fs.unlinkSync(temporary); } catch (_) {}
+        try { fs.unlinkSync(receipt); } catch (_) {}
+      }
+      fail(error instanceof Error ? error.message : 'writer_error');
+    }
+  });
+`;
+
+// Cleanup runs in a killable child too.  A promise race cannot stop a stalled
+// parent-process filesystem call, while this child remains bounded by the same
+// absolute persistence deadline as the writer.
+const hostedV1AtomicArtifactCleanupProgram = String.raw`
+  try {
+    const fs = require('node:fs');
+    const nodePath = require('node:path');
+    const crypto = require('node:crypto');
+    const [destination, receipt, capability, scope, testInterruptAfterEncounter, expectedByteLength, expectedSha256] = process.argv.slice(1);
+    if (typeof capability !== 'string' || capability.length < 1) throw new Error('transaction_capability_invalid');
+    if (scope === 'private') {
+      // The randomized temporary name is transaction-private.  It is the
+      // only pathname cleanup may unlink; the receipt remains as durable
+      // evidence for a retained public destination.
+      try { fs.unlinkSync(destination); } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+      try { fs.lstatSync(destination); throw new Error('private_path_still_present'); }
+      catch (error) { if (!error || error.code !== 'ENOENT') throw error; }
+      process.stdout.write('hosted-v1-artifact-v1:cleaner-absent\n');
+    } else if (scope === 'public') {
+      // This is observation-only recovery. It deliberately has no unlink,
+      // rename, or quarantine path: a public record is never cleanup-owned.
+      let publicPresent = true;
+      try {
+        fs.lstatSync(destination, { bigint: true });
+      } catch (error) {
+        if (error && error.code === 'ENOENT') {
+          publicPresent = false;
+        } else {
+          throw error;
+        }
+      }
+      if (!publicPresent) {
+        process.stdout.write('hosted-v1-artifact-v1:canonical-absent\n');
+      } else {
+        // The emitted observation is a real parent-visible seam. The focused
+        // crash test kills this child in its write callback, immediately after
+        // the public directory entry has been observed and before validation.
+        process.stdout.write('hosted-v1-artifact-v1:public-destination-observed\n', () => {
+          if (testInterruptAfterEncounter === 'interrupt-after-encounter') process.kill(process.pid, 'SIGKILL');
+          try {
+            const commit = JSON.parse(fs.readFileSync(destination, 'utf8'));
+            const payload = typeof commit.payload === 'string' ? commit.payload : '';
+            const bytes = fs.readFileSync(nodePath.join(nodePath.dirname(destination), payload));
+            const expectedLength = Number(expectedByteLength);
+            const valid = commit && commit.schemaVersion === 1 && commit.kind === 'hosted-v1-artifact-commit' &&
+              Number.isSafeInteger(commit.byteLength) && typeof commit.sha256 === 'string' &&
+              /^[0-9a-f]{64}$/.test(commit.sha256) && nodePath.basename(payload) === payload &&
+              payload.endsWith('.payload') && bytes.byteLength === commit.byteLength &&
+              crypto.createHash('sha256').update(bytes).digest('hex') === commit.sha256;
+            process.stdout.write('hosted-v1-artifact-v1:' +
+              (valid && commit.byteLength === expectedLength && commit.sha256 === expectedSha256
+                ? 'canonical-owned' : 'canonical-competing') + '\n');
+          } catch (_) {
+            process.stdout.write('hosted-v1-artifact-v1:canonical-competing\n');
+          }
+        });
+      }
+    } else {
+      throw new Error('cleanup_scope_invalid');
+    }
+    process.exitCode = 0;
+  } catch (error) {
+    process.stderr.write(error instanceof Error ? error.message : 'cleanup_error');
+    process.exitCode = 1;
+  }
+`;
+
+export async function writeHostedV1AtomicArtifact(input: {
+  readonly path: string;
+  /** Inline evidence. Exactly one of body and sourcePath must be provided. */
+  readonly body?: string;
+  /** An absolute path read by the supervised writer, never by the test process. */
+  readonly sourcePath?: string;
+  /**
+   * Converts raw evidence to the final redacted bytes before the supervised
+   * writer sees it. The returned string is the only payload that is hashed.
+   */
+  readonly sanitizeBody?: (body: string) => string;
+  /**
+   * Declarative redaction for path-backed diagnostics. It deliberately avoids
+   * serializing a closure into the child process while still ensuring the
+   * worker redacts and bounds bytes before it computes its commit digest.
+   */
+  readonly sourceRedaction?: {
+    readonly replacements: readonly { readonly value: string; readonly placeholder: string }[];
+    readonly maximumBytes: number;
+  };
+  /**
+   * Immutable Playwright attachments are admitted under these payload budgets
+   * by the writer before their digest-bearing commit record is published.
+   */
+  readonly retentionBudget?: {
+    readonly root: string;
+    readonly maximumFileBytes: number;
+    readonly maximumTotalBytes: number;
+  };
+  readonly timeoutMs: number;
+  readonly signal?: AbortSignal;
+  /** Harness-only seam for a stalled preparation inside the supervised writer. */
+  readonly testPreparationStall?: boolean;
+  /** Focused harness proof only; kills the real writer after canonical link. */
+  readonly testWriterInterruptAfterCanonicalLink?: boolean;
+  /** Focused harness proof only; production callers always use the real writer. */
+  readonly testWriterProgram?: string;
+  /** Focused harness proof only; production callers always use the real cleaner. */
+  readonly testCleanupProgram?: string;
+  /** Focused harness proof only; kills cleanup immediately after public-path observation. */
+  readonly testCleanupInterruptAfterEncounter?: boolean;
+  /** Focused harness proof only; called after the real observation protocol record arrives. */
+  readonly testOnPublicDestinationObserved?: () => void;
+  /** Focused harness proof only; called after the real canonical-directory fsync. */
+  readonly testOnCanonicalDirectorySynced?: () => void;
+  /**
+   * Focused harness proof only. Each pause is a real writer-process protocol
+   * seam: it creates readyPath and waits until resumePath exists.
+   */
+  readonly testRetentionProtocol?: Partial<Record<
+    | 'afterReclaimerClaim'
+    | 'afterRecoveryGateRetired'
+    | 'beforeReclaimerClaimReleased'
+    | 'afterReclaimerClaimReleased'
+    | 'afterPublisherClaim'
+    | 'afterPublisherReclaimerBarrierEncountered'
+    | 'afterRecoveryGatePublished'
+    | 'afterLockPublished',
+    { readonly readyPath: string; readonly resumePath: string }
+  >>;
+}): Promise<void> {
+  const hasInlineBody = typeof input.body === 'string';
+  const hasSourcePath = typeof input.sourcePath === 'string';
+  if (
+    !isAbsolute(input.path) ||
+    hasInlineBody === hasSourcePath ||
+    (hasSourcePath && !isAbsolute(input.sourcePath ?? '')) ||
+    !Number.isSafeInteger(input.timeoutMs) ||
+    input.timeoutMs < 1
+  ) {
+    throw new Error('hosted_e2e_artifact_writer_input_invalid');
+  }
+  if (
+    input.retentionBudget !== undefined &&
+    (!isAbsolute(input.retentionBudget.root) ||
+      relative(input.retentionBudget.root, input.path).startsWith(`..${sep}`) ||
+      relative(input.retentionBudget.root, input.path) === '..' ||
+      !Number.isSafeInteger(input.retentionBudget.maximumFileBytes) ||
+      input.retentionBudget.maximumFileBytes < 1 ||
+      !Number.isSafeInteger(input.retentionBudget.maximumTotalBytes) ||
+      input.retentionBudget.maximumTotalBytes < 1)
+  ) {
+    throw new Error('hosted_e2e_artifact_writer_retention_budget_invalid');
+  }
+  if (input.retentionBudget !== undefined) {
+    const destination = relative(input.retentionBudget.root, input.path);
+    const [firstSegment = ''] = destination.split(sep);
+    const lockName = '.hosted-v1-artifact-retention.lock';
+    // These names are not artifact namespaces. They are protocol-owned
+    // public gates, create-only candidates, claims, and private tombstones.
+    // Reject them before a writer process is spawned, so artifact publication
+    // can never overwrite, pin, or later reclaim protocol state.
+    if (
+      firstSegment === '.recovery' ||
+      firstSegment === lockName ||
+      firstSegment.startsWith(`${lockName}.`) ||
+      firstSegment.startsWith('.hosted-v1-reclaim-') ||
+      firstSegment === '.hosted-v1-retention-tombstones'
+    ) {
+      throw new Error('hosted_e2e_artifact_writer_retention_destination_reserved');
+    }
+  }
+  if (hasSourcePath && input.sanitizeBody !== undefined) {
+    throw new Error('hosted_e2e_artifact_writer_source_sanitizer_invalid');
+  }
+  if (
+    input.sourceRedaction !== undefined &&
+    (!Number.isSafeInteger(input.sourceRedaction.maximumBytes) || input.sourceRedaction.maximumBytes < 1)
+  ) {
+    throw new Error('hosted_e2e_artifact_writer_source_redaction_invalid');
+  }
+  if (
+    input.testRetentionProtocol !== undefined &&
+    Object.values(input.testRetentionProtocol).some((pause) =>
+      pause === undefined || !isAbsolute(pause.readyPath) || !isAbsolute(pause.resumePath)
+    )
+  ) {
+    throw new Error('hosted_e2e_artifact_writer_retention_protocol_invalid');
+  }
+  const inlineBody = input.body ?? '';
+  const committedBody = input.sanitizeBody === undefined ? inlineBody : input.sanitizeBody(inlineBody);
+  if (typeof committedBody !== 'string') throw new Error('hosted_e2e_artifact_writer_sanitizer_invalid');
+  let committedByteLength = Buffer.byteLength(committedBody, 'utf8');
+  let committedSha256 = createHash('sha256').update(committedBody, 'utf8').digest('hex');
+  let classification: HostedV1ArtifactPersistenceError['classification'] | null = null;
+  let succeeded = false;
+  let writer: ReturnType<typeof spawn> | undefined;
+  let writerClosed: Promise<{ readonly code: number | null; readonly signal: NodeJS.Signals | null }> | undefined;
+  let destinationOwned = false;
+  let transactionPrepared = false;
+  let preparationFailed = false;
+  let primaryFailure: unknown;
+  let cleanupFailure: HostedV1ArtifactPersistenceError | undefined;
+  let operationTimer: ReturnType<typeof setTimeout> | undefined;
+  let operationStop: ((error: HostedV1ArtifactPersistenceError) => void) | undefined;
+  const operationStopped = new Promise<HostedV1ArtifactPersistenceError>((resolve) => { operationStop = resolve; });
+  const deadlineAtMs = Date.now() + input.timeoutMs;
+  // Reserve the tail of the one absolute deadline for reaping the owned child
+  // and names. The parent does no filesystem work: it only supervises one
+  // killable child at a time.
+  const cleanupReserveMs = Math.max(1, Math.min(250, Math.floor(input.timeoutMs / 4)));
+  const operationBudgetMs = Math.max(1, input.timeoutMs - cleanupReserveMs);
+  const stopWriter = (reason: HostedV1ArtifactPersistenceError['classification']) => {
+    classification ??= reason;
+    writer?.kill('SIGKILL');
+    operationStop?.(new HostedV1ArtifactPersistenceError(classification, input.path));
+  };
+  operationTimer = setTimeout(() => {
+    stopWriter('deadline_exceeded');
+  }, operationBudgetMs);
+  const abort = () => {
+    stopWriter('aborted');
+  };
+  if (input.signal?.aborted) abort();
+  else input.signal?.addEventListener('abort', abort, { once: true });
+  const withinOperationBudget = <T>(operation: Promise<T>): Promise<T> =>
+    Promise.race([
+      operation,
+      operationStopped.then((error) => Promise.reject(error)),
+    ]);
+  const cleanupFailures: unknown[] = [];
+  const artifactNameId = Buffer.byteLength(basename(input.path), 'utf8') <= 180
+    ? basename(input.path)
+    : `id-${createHash('sha256').update(basename(input.path), 'utf8').digest('hex')}`;
+  const privateNameDigest = () => createHash('sha256').update(randomUUID()).digest('hex');
+  const capability = randomUUID();
+  const temporary = join(dirname(input.path), `.${artifactNameId}.${privateNameDigest()}.payload`);
+  // This is a transaction-private staging file for the canonical commit
+  // record, not an ownership receipt for the public destination.
+  const receipt = join(dirname(input.path), `.${artifactNameId}.${privateNameDigest()}.receipt`);
+  const cleanupOwnedPath = async (
+    path: string,
+    scope: 'private' | 'public'
+  ): Promise<'canonical-absent' | 'canonical-owned' | 'canonical-competing' | null> => {
+    let cleaner: ReturnType<typeof spawn>;
+    try {
+      cleaner = spawn(process.execPath, [
+        '-e', input.testCleanupProgram ?? hostedV1AtomicArtifactCleanupProgram,
+        path,
+        receipt,
+        capability,
+        scope,
+        input.testCleanupInterruptAfterEncounter && scope === 'public' ? 'interrupt-after-encounter' : '',
+        String(committedByteLength),
+        committedSha256,
+      ], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (error) {
+      cleanupFailures.push(error);
+      return null;
+    }
+    let protocolBuffer = '';
+    let protocolInvalid = false;
+    let cleanerAbsent = false;
+    let publicDestinationObserved = false;
+    let canonicalSettlement: 'canonical-absent' | 'canonical-owned' | 'canonical-competing' | null = null;
+    let stderr = '';
+    cleaner.stdout?.setEncoding('utf8');
+    cleaner.stderr?.setEncoding('utf8');
+    cleaner.stdout?.on('data', (chunk: string) => {
+      const parsed = parseHostedV1ArtifactProtocolRecords({ buffer: protocolBuffer, chunk });
+      protocolBuffer = parsed.buffer;
+      protocolInvalid ||= parsed.invalid;
+      for (const record of parsed.records) {
+        if (record === hostedV1ArtifactProtocolRecords.cleanerAbsent && !cleanerAbsent) {
+          cleanerAbsent = true;
+        } else if (
+          record === hostedV1ArtifactProtocolRecords.publicDestinationObserved &&
+          scope === 'public' &&
+          !publicDestinationObserved
+        ) {
+          publicDestinationObserved = true;
+          input.testOnPublicDestinationObserved?.();
+        } else if (
+          (record === hostedV1ArtifactProtocolRecords.canonicalAbsent ||
+            record === hostedV1ArtifactProtocolRecords.canonicalOwned ||
+            record === hostedV1ArtifactProtocolRecords.canonicalCompeting) &&
+          scope === 'public' &&
+          canonicalSettlement === null
+        ) {
+          canonicalSettlement = record;
+        } else {
+          protocolInvalid = true;
+        }
+      }
+    });
+    cleaner.stderr?.on('data', (chunk: string) => { stderr += chunk; });
+    const cleaned = new Promise<{
+      readonly code: number | null;
+      readonly signal: NodeJS.Signals | null;
+      readonly spawnError: unknown;
+    }>((resolve) => {
+      cleaner.once('error', (spawnError) => resolve({ code: null, signal: null, spawnError }));
+      cleaner.once('close', (code, signal) => resolve({ code, signal, spawnError: null }));
+    });
+    const remainingMs = deadlineAtMs - Date.now();
+    if (remainingMs <= 0) {
+      try {
+        if (!cleaner.kill('SIGKILL')) cleanupFailures.push(new Error(`cleanup_kill_refused:${path}`));
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
+      // Do not return while a cleaner is live, even when the work budget has
+      // already been exhausted.  This is a deliberately separate hard reap
+      // reserve, not a promise race that abandons the child.
+      const reapReserveMs = Math.max(1, Math.min(100, Math.floor(input.timeoutMs / 4)));
+      const reaped = await Promise.race([
+        cleaned,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), reapReserveMs)),
+      ]);
+      if (reaped === null) cleanupFailures.push(new Error(`cleanup_reap_deadline_exceeded:${path}`));
+      else if (reaped.spawnError !== null || reaped.signal !== 'SIGKILL') {
+        cleanupFailures.push(new Error(`cleanup_reap_unconfirmed:${path}`));
+      }
+      cleanupFailures.push(new Error(`cleanup_deadline_exhausted:${path}`));
+      return null;
+    }
+    const reapReserveMs = Math.max(1, Math.min(100, Math.floor(remainingMs / 2)));
+    const workBudgetMs = Math.max(1, remainingMs - reapReserveMs);
+    let workTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        cleaned,
+        new Promise<null>((resolve) => { workTimer = setTimeout(() => resolve(null), workBudgetMs); }),
+      ]);
+      if (result === null) {
+        const signalFailures: unknown[] = [];
+        try {
+          if (!cleaner.kill('SIGKILL')) signalFailures.push(new Error(`cleanup_kill_refused:${path}`));
+        } catch (error) {
+          signalFailures.push(error);
+        }
+        let reapTimer: ReturnType<typeof setTimeout> | undefined;
+        const reaped = await Promise.race([
+          cleaned,
+          new Promise<null>((resolve) => { reapTimer = setTimeout(() => resolve(null), reapReserveMs); }),
+        ]);
+        if (reapTimer !== undefined) clearTimeout(reapTimer);
+        if (reaped === null) signalFailures.push(new Error(`cleanup_reap_deadline_exceeded:${path}`));
+        else if (reaped.spawnError !== null || reaped.signal !== 'SIGKILL') {
+          signalFailures.push(new Error(`cleanup_reap_unconfirmed:${path}`));
+        }
+        cleanupFailures.push(
+          new AggregateError(
+            [new Error(`cleanup_deadline_exceeded:${path}`), ...signalFailures],
+            'hosted_e2e_artifact_cleaner_timeout_failures'
+          )
+        );
+        return null;
+      }
+      const privateConfirmed = scope === 'private' && cleanerAbsent;
+      const publicConfirmed =
+        scope === 'public' &&
+        ((canonicalSettlement === 'canonical-absent' && !publicDestinationObserved) ||
+          (canonicalSettlement !== 'canonical-absent' && publicDestinationObserved));
+      if (
+        result.code !== 0 ||
+        result.signal !== null ||
+        result.spawnError !== null ||
+        !(privateConfirmed || publicConfirmed) ||
+        protocolInvalid ||
+        protocolBuffer !== ''
+      ) {
+        cleanupFailures.push(new Error(
+          `cleanup_unconfirmed:${path}:${stderr}:${JSON.stringify({
+            cleanerAbsent,
+            publicDestinationObserved,
+            canonicalSettlement,
+            protocolInvalid,
+            protocolBuffer,
+            code: result.code,
+            signal: result.signal,
+          })}`
+        ));
+        return null;
+      }
+      return canonicalSettlement;
+    } catch (error) {
+      cleanupFailures.push(error);
+      return null;
+    } finally {
+      if (workTimer !== undefined) clearTimeout(workTimer);
+    }
+  };
+  try {
+    writer = spawn(process.execPath, [
+      '-e', input.testWriterProgram ?? hostedV1AtomicArtifactWriterProgram,
+      input.path,
+      temporary,
+      receipt,
+      capability,
+      input.testPreparationStall ? 'stall' : '',
+      input.sourcePath ?? '',
+      input.sourceRedaction === undefined ? '' : JSON.stringify(input.sourceRedaction),
+      input.testWriterInterruptAfterCanonicalLink ? 'interrupt-after-canonical-link' : '',
+      input.retentionBudget === undefined ? '' : JSON.stringify(input.retentionBudget),
+      input.testRetentionProtocol === undefined ? '' : JSON.stringify(input.testRetentionProtocol),
+    ], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let protocolBuffer = '';
+    let protocolInvalid = false;
+    let writerPreflightConfirmed = false;
+    let canonicalDirectorySynced = false;
+    let preparedPayload: HostedV1ArtifactPreparedPayload | undefined;
+    let writerStderr = '';
+    writer.stdout?.setEncoding('utf8');
+    writer.stderr?.setEncoding('utf8');
+    writer.stderr?.on('data', (chunk: string) => { writerStderr += chunk; });
+    writer.stdout?.on('data', (chunk: string) => {
+      const parsed = parseHostedV1ArtifactProtocolRecords({ buffer: protocolBuffer, chunk });
+      protocolBuffer = parsed.buffer;
+      protocolInvalid ||= parsed.invalid;
+      for (const payload of parsed.payloads) {
+        if (preparedPayload !== undefined) {
+          protocolInvalid = true;
+        } else {
+          preparedPayload = payload;
+          committedByteLength = payload.byteLength;
+          committedSha256 = payload.sha256;
+        }
+      }
+      for (const record of parsed.records) {
+        if (
+          record === hostedV1ArtifactProtocolRecords.preparationFailed &&
+          !preparationFailed &&
+          preparedPayload === undefined &&
+          !writerPreflightConfirmed &&
+          !transactionPrepared &&
+          !destinationOwned
+        ) {
+          preparationFailed = true;
+        } else if (record === hostedV1ArtifactProtocolRecords.writerPreflight && !writerPreflightConfirmed && !destinationOwned) {
+          writerPreflightConfirmed = true;
+        } else if (
+          record === hostedV1ArtifactProtocolRecords.transactionPrepared &&
+          writerPreflightConfirmed &&
+          !transactionPrepared &&
+          !destinationOwned
+        ) {
+          transactionPrepared = true;
+        } else if (
+          record === hostedV1ArtifactProtocolRecords.canonicalDirectorySynced &&
+          writerPreflightConfirmed &&
+          transactionPrepared &&
+          !destinationOwned &&
+          !canonicalDirectorySynced
+        ) {
+          canonicalDirectorySynced = true;
+          input.testOnCanonicalDirectorySynced?.();
+        } else if (
+          record === hostedV1ArtifactProtocolRecords.destinationOwned &&
+          writerPreflightConfirmed &&
+          transactionPrepared &&
+          !destinationOwned
+        ) {
+          destinationOwned = true;
+        } else {
+          protocolInvalid = true;
+        }
+      }
+    });
+    writerClosed = new Promise((resolve) => {
+      writer.once('error', () => resolve({ code: null, signal: null }));
+      writer.once('close', (code, signal) => resolve({ code, signal }));
+    });
+    // spawn() is synchronous but an abort may be delivered between it and the
+    // stdin write.  Do not hand the writer bytes after that boundary.
+    if (classification !== null) throw new HostedV1ArtifactPersistenceError(classification, input.path);
+    await withinOperationBudget(new Promise<void>((resolvePromise, rejectPromise) => {
+      let settled = false;
+      const writerFailures = new AggregateError([], 'hosted_e2e_artifact_writer_failures');
+      const recordWriterFailure = (error: unknown): void => {
+        writerFailures.errors.push(error);
+      };
+      const rejectWriter = (error: HostedV1ArtifactPersistenceError): void => {
+        if (settled) return;
+        settled = true;
+        rejectPromise(error);
+      };
+      const writerSucceeded = (): void => {
+        if (settled) return;
+        settled = true;
+        resolvePromise();
+      };
+      // This must be registered before end() so EPIPE from a writer that
+      // exits during its input handoff is owned by this bounded operation.
+      // Keep the listener through child close: SIGKILL teardown can surface a
+      // later stdin error, and removing it would turn that into an uncaught
+      // stream error.
+      // Do not settle from stdin/process errors. A preparation failure can
+      // close either stream before its protocol and stderr drain; close is the
+      // single terminal classification point for this child.
+      writer.stdin?.on('error', recordWriterFailure);
+      writer!.once('error', recordWriterFailure);
+      writer!.once('close', (code, signal) => {
+        if (classification !== null) {
+          rejectWriter(new HostedV1ArtifactPersistenceError(classification, input.path));
+        } else if (preparationFailed || writerStderr.startsWith('preparation_failed:')) {
+          rejectWriter(new HostedV1ArtifactPersistenceError('preparation_failed', input.path, {
+            cause: writerFailures,
+          }));
+        } else if (
+          code === 0 &&
+          signal === null &&
+          (!hasSourcePath || preparedPayload !== undefined) &&
+          writerPreflightConfirmed &&
+          transactionPrepared &&
+          destinationOwned &&
+          !protocolInvalid &&
+          protocolBuffer === ''
+        ) {
+          writerSucceeded();
+        } else {
+          const error = new HostedV1ArtifactPersistenceError('writer_failed', input.path, {
+            cause: writerFailures,
+          });
+          recordWriterFailure(error);
+          rejectWriter(error);
+        }
+      });
+      try {
+        if (writer!.stdin === null || writer!.stdin === undefined) {
+          recordWriterFailure(new Error('hosted_e2e_artifact_writer_stdin_unavailable'));
+        } else {
+          writer!.stdin.end(committedBody, 'utf8');
+        }
+      } catch (error) {
+        recordWriterFailure(error);
+      }
+    }));
+    succeeded = true;
+  } catch (error) {
+    primaryFailure = error;
+  } finally {
+    input.signal?.removeEventListener('abort', abort);
+    if (operationTimer !== undefined) clearTimeout(operationTimer);
+    operationTimer = undefined;
+    if (!succeeded && writer !== undefined) {
+      // Entering cleanup permanently disconnects the writer timer before a
+      // cleaner is assigned. Old operation timers therefore cannot kill a
+      // cleaner; each cleanup child receives its own deadline-derived timer.
+      writer.kill('SIGKILL');
+      if (writerClosed !== undefined) {
+        const remainingMs = deadlineAtMs - Date.now();
+        if (remainingMs <= 0) cleanupFailures.push(new Error('writer_reap_deadline_exhausted'));
+        else {
+          let reapTimer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            await Promise.race([
+              writerClosed,
+              new Promise<never>((_resolve, reject) => {
+                reapTimer = setTimeout(
+                  () => reject(new Error('writer_reap_deadline_exceeded')),
+                  remainingMs
+                );
+              }),
+            ]);
+          } catch (error) {
+            cleanupFailures.push(error);
+          } finally {
+            if (reapTimer !== undefined) clearTimeout(reapTimer);
+          }
+        }
+      }
+      // Canonical evidence is a commit record and is never a cleanup target.
+      // Once a transaction-prepared writer has failed, first settle through a
+      // killable, observation-only reader. It decides whether `temporary` is
+      // still uncommitted private staging or the payload referenced by the
+      // already-linked canonical record. In the latter case it must survive.
+      let canonicalSettlement: 'canonical-absent' | 'canonical-owned' | 'canonical-competing' | null = null;
+      if (!preparationFailed && !destinationOwned) {
+        canonicalSettlement = await cleanupOwnedPath(input.path, 'public');
+      }
+      if (!preparationFailed) {
+        if (canonicalSettlement !== 'canonical-owned' && canonicalSettlement !== null) {
+          await cleanupOwnedPath(temporary, 'private');
+        } else if (!transactionPrepared) {
+          await cleanupOwnedPath(temporary, 'private');
+        }
+      }
+    }
+    if (cleanupFailures.length > 0) {
+      classification ??= 'writer_failed';
+      cleanupFailure = new HostedV1ArtifactPersistenceError(classification, input.path, {
+        cause: new AggregateError(
+          primaryFailure === undefined ? cleanupFailures : [primaryFailure, ...cleanupFailures],
+          'hosted_e2e_artifact_cleanup_failures'
+        ),
+      });
+    }
+  }
+  if (cleanupFailure !== undefined) throw cleanupFailure;
+  if (primaryFailure !== undefined) throw primaryFailure;
+}
+
+/**
+ * Reads evidence only through its durable commit record. A raw payload file,
+ * including one left by a killed writer before commit, is never accepted.
+ */
+export async function readHostedV1CommittedArtifact(path: string): Promise<string> {
+  if (!isAbsolute(path)) throw new Error('hosted_e2e_artifact_commit_path_invalid');
+  let rawCommit: string;
+  try {
+    rawCommit = await readFile(path, 'utf8');
+  } catch (error) {
+    throw new Error(`hosted_e2e_artifact_commit_missing:${path}`, { cause: error });
+  }
+  let commit: unknown;
+  try {
+    commit = JSON.parse(rawCommit);
+  } catch (error) {
+    throw new Error(`hosted_e2e_artifact_commit_invalid:${path}`, { cause: error });
+  }
+  if (
+    commit === null ||
+    typeof commit !== 'object' ||
+    (commit as { schemaVersion?: unknown }).schemaVersion !== 1 ||
+    (commit as { kind?: unknown }).kind !== 'hosted-v1-artifact-commit' ||
+    typeof (commit as { payload?: unknown }).payload !== 'string' ||
+    !Number.isSafeInteger((commit as { byteLength?: unknown }).byteLength) ||
+    (commit as { byteLength: number }).byteLength < 0 ||
+    typeof (commit as { sha256?: unknown }).sha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test((commit as { sha256: string }).sha256)
+  ) {
+    throw new Error(`hosted_e2e_artifact_commit_invalid:${path}`);
+  }
+  const payloadName = (commit as { payload: string }).payload;
+  const destinationName = basename(path);
+  const artifactNameId = Buffer.byteLength(destinationName, 'utf8') <= 180
+    ? destinationName
+    : `id-${createHash('sha256').update(destinationName, 'utf8').digest('hex')}`;
+  const expectedPrefix = `.${artifactNameId}.`;
+  if (
+    !payloadName.startsWith(expectedPrefix) ||
+    payloadName.length !== expectedPrefix.length + 64 + '.payload'.length ||
+    !/^[0-9a-f]{64}$/u.test(payloadName.slice(expectedPrefix.length, -'.payload'.length)) ||
+    !payloadName.endsWith('.payload') ||
+    basename(payloadName) !== payloadName
+  ) {
+    throw new Error(`hosted_e2e_artifact_commit_payload_invalid:${path}`);
+  }
+  const payloadPath = join(dirname(path), payloadName);
+  let payload: Buffer;
+  try {
+    payload = await readFile(payloadPath);
+  } catch (error) {
+    throw new Error(`hosted_e2e_artifact_commit_payload_missing:${path}`, { cause: error });
+  }
+  const byteLength = (commit as { byteLength: number }).byteLength;
+  const sha256 = (commit as { sha256: string }).sha256;
+  if (
+    payload.byteLength !== byteLength ||
+    createHash('sha256').update(payload).digest('hex') !== sha256
+  ) {
+    throw new Error(`hosted_e2e_artifact_commit_payload_mismatch:${path}`);
+  }
+  return payload.toString('utf8');
+}
+
+export interface HostedV1ExternalCoordinationObservedEvent {
+  readonly eventId: string | null;
+  readonly eventSequence: number | null;
+  readonly frameIndex: number;
+  readonly streamId: number;
+  /** Wall-clock receipt time, retained for the resumed-stream completion proof. */
+  readonly observedAtMs: number;
+}
+
+export function assertHostedV1ExternalCoordinationStreamProof(input: {
+  readonly launchBoundaryEventCount: number;
+  readonly launchBoundaryFrameIndex: number;
+  readonly opens: number;
+  readonly reconnects: number;
+  readonly error: string | null;
+  readonly heartbeatStreamIds: readonly number[];
+  readonly heartbeatFrameIndexes: readonly number[];
+  readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
+  readonly targetEventId: string;
+}): void {
+  if (input.launchBoundaryEventCount !== 0) {
+    throw new Error('hosted_e2e_external_coordination_target_before_boundary');
+  }
+  if (input.opens !== 1 || input.reconnects !== 0 || input.error !== null) {
+    throw new Error('hosted_e2e_external_coordination_stream_identity_unstable');
+  }
+  const targets = input.events.filter((event) => event.eventId === input.targetEventId);
+  if (targets.length !== 1) throw new Error('hosted_e2e_external_coordination_target_not_exactly_once');
+  const target = targets[0];
+  if (!target) throw new Error('hosted_e2e_external_coordination_target_not_exactly_once');
+  if (target.frameIndex < input.launchBoundaryFrameIndex) {
+    throw new Error('hosted_e2e_external_coordination_target_before_boundary');
+  }
+  if (
+    input.heartbeatStreamIds.length === 0 ||
+    !input.heartbeatStreamIds.every((streamId) => streamId === 1) ||
+    !input.heartbeatFrameIndexes.some((frameIndex) => frameIndex < target.frameIndex)
+  ) {
+    throw new Error('hosted_e2e_external_coordination_heartbeat_before_target_missing');
+  }
+  if (!input.events.every((event) => event.streamId === 1)) {
+    throw new Error('hosted_e2e_external_coordination_event_stream_identity_unstable');
+  }
+  let previousSequence = -1;
+  for (const event of input.events) {
+    if (
+      typeof event.eventSequence !== 'number' ||
+      !Number.isSafeInteger(event.eventSequence) ||
+      event.eventSequence <= previousSequence
+    ) {
+      throw new Error('hosted_e2e_external_coordination_sequence_not_monotonic');
+    }
+    if (!Number.isFinite(event.observedAtMs)) {
+      throw new Error('hosted_e2e_external_coordination_event_observation_invalid');
+    }
+    previousSequence = event.eventSequence;
+  }
+}
+
+/**
+ * Proves a resumed stream crossed its own replay completion boundary.  Headers
+ * alone are not a completion boundary: a duplicate can still be buffered by
+ * the resumed response.  The caller therefore records a heartbeat (the
+ * server's durable replay watermark) from the resumed stream and the
+ * following heartbeat with an unchanged durable cursor before calling this
+ * assertion.  A time-only quiet window is not a replay boundary.
+ */
+export function assertHostedV1ExternalCoordinationReconnectProof(input: {
+  readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
+  readonly baselineCursor: string;
+  readonly baselineOpens: number;
+  readonly baselineReconnects: number;
+  readonly baselineStreamId: number;
+  readonly opens: number;
+  readonly reconnects: number;
+  readonly error: string | null;
+  readonly heartbeatCursors: readonly string[];
+  readonly heartbeatEventCounts: readonly number[];
+  readonly heartbeatFrameIndexes: readonly number[];
+  readonly heartbeatStreamIds: readonly number[];
+  readonly heartbeatObservedAtMs: readonly number[];
+  readonly observedAtMs: number;
+  readonly originMs: number;
+  readonly replayDeadlineMs: number;
+  readonly reconnectStreamId: number;
+  readonly targetEventId: string;
+  readonly targetEventSequence: number;
+}): void {
+  if (
+    !Number.isSafeInteger(input.baselineOpens) || input.baselineOpens < 1 ||
+    !Number.isSafeInteger(input.baselineReconnects) || input.baselineReconnects < 0 ||
+    !Number.isSafeInteger(input.baselineStreamId) || input.baselineStreamId !== input.baselineOpens ||
+    !Number.isSafeInteger(input.reconnectStreamId) ||
+    input.reconnectStreamId !== input.baselineStreamId + 1 ||
+    input.opens !== input.reconnectStreamId || input.reconnects <= input.baselineReconnects ||
+    input.error !== null ||
+    !Number.isSafeInteger(input.targetEventSequence) || input.targetEventSequence < 0 ||
+    !Number.isFinite(input.originMs) || !Number.isFinite(input.observedAtMs) ||
+    !Number.isFinite(input.replayDeadlineMs) || input.replayDeadlineMs <= input.originMs ||
+    input.observedAtMs > input.replayDeadlineMs
+  ) {
+    throw new Error('hosted_e2e_external_reconnect_completion_boundary_invalid');
+  }
+  const targets = input.events.filter((event) => event.eventId === input.targetEventId);
+  if (targets.length !== 1) {
+    throw new Error('hosted_e2e_external_reconnect_target_not_exactly_once');
+  }
+  const target = targets[0];
+  if (!target) throw new Error('hosted_e2e_external_reconnect_target_not_exactly_once');
+  if (!input.events.every((event) => Number.isFinite(event.observedAtMs))) {
+    throw new Error('hosted_e2e_external_reconnect_event_observation_invalid');
+  }
+  if (target.eventSequence !== input.targetEventSequence) {
+    throw new Error('hosted_e2e_external_reconnect_target_sequence_changed');
+  }
+  if (target.streamId > input.baselineOpens || !input.events.every((event) => event.streamId <= input.reconnectStreamId)) {
+    throw new Error('hosted_e2e_external_reconnect_stream_identity_unstable');
+  }
+  const resumedHeartbeatIndexes = input.heartbeatStreamIds.flatMap((streamId, index) =>
+    streamId === input.reconnectStreamId ? [index] : []
+  );
+  if (resumedHeartbeatIndexes.length < 2) {
+    throw new Error('hosted_e2e_external_reconnect_completion_heartbeat_missing');
+  }
+  const replayStartHeartbeatIndex = resumedHeartbeatIndexes[0];
+  const completionHeartbeatIndex = resumedHeartbeatIndexes[1];
+  if (replayStartHeartbeatIndex === undefined || completionHeartbeatIndex === undefined) {
+    throw new Error('hosted_e2e_external_reconnect_completion_heartbeat_missing');
+  }
+  const completionHeartbeatObservedAtMs = input.heartbeatObservedAtMs[completionHeartbeatIndex];
+  const replayStartHeartbeatObservedAtMs = input.heartbeatObservedAtMs[replayStartHeartbeatIndex];
+  const completionHeartbeatFrameIndex = input.heartbeatFrameIndexes[completionHeartbeatIndex];
+  const replayStartHeartbeatFrameIndex = input.heartbeatFrameIndexes[replayStartHeartbeatIndex];
+  if (
+    typeof completionHeartbeatObservedAtMs !== 'number' ||
+    !Number.isFinite(completionHeartbeatObservedAtMs) ||
+    typeof replayStartHeartbeatObservedAtMs !== 'number' ||
+    !Number.isFinite(replayStartHeartbeatObservedAtMs) ||
+    typeof completionHeartbeatFrameIndex !== 'number' ||
+    typeof replayStartHeartbeatFrameIndex !== 'number' ||
+    completionHeartbeatObservedAtMs > input.replayDeadlineMs ||
+    completionHeartbeatFrameIndex <= replayStartHeartbeatFrameIndex ||
+    input.heartbeatCursors[replayStartHeartbeatIndex] !== input.baselineCursor ||
+    input.heartbeatCursors[completionHeartbeatIndex] !== input.baselineCursor ||
+    input.heartbeatCursors[replayStartHeartbeatIndex] !== input.heartbeatCursors[completionHeartbeatIndex] ||
+    input.heartbeatEventCounts[replayStartHeartbeatIndex] !== input.heartbeatEventCounts[completionHeartbeatIndex]
+  ) {
+    throw new Error('hosted_e2e_external_reconnect_completion_boundary_invalid');
+  }
 }
 
 export function assertHostedV1ScenarioIsolation(
@@ -2088,6 +4172,8 @@ async function runHostedV1Main(
             forbiddenWorkspaceId: E2E_FORBIDDEN_WORKSPACE_ID,
             origin: composeEnv.HOSTED_E2E_ORIGIN,
             pairingCode,
+            sandboxRoot: scenarioSandbox.root,
+            lifecycleTrustAnchor: scenarioSandbox.lifecycleTrustAnchor,
             projectWorkspaceId: E2E_PROJECT_WORKSPACE_ID,
             runtimeWorkspaceId: E2E_RUNTIME_WORKSPACE_ID,
             teamId: E2E_TEAM_ID,

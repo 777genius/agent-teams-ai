@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chown, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { connect, type IncomingHttpHeaders, type IncomingHttpStatusHeader } from 'node:http2';
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import {
@@ -15,17 +15,28 @@ import {
 } from '@playwright/test';
 
 import {
+  assertHostedV1ExternalCoordinationReconnectProof,
+  assertHostedV1ExternalCoordinationStreamProof,
   captureOriginalHostedV1HttpResponse,
+  createHostedV1ExternalCoordinationReplayBudget,
   createHostedV1ProbeDeadlineBudget,
+  freezeHostedV1DiagnosticFailures,
+  HostedV1ArtifactPersistenceError,
+  type HostedV1ExternalCoordinationObservedEvent,
   type HostedV1ProbeDeadlineBudget,
+  redactEvidence,
   restartHostedV1LifecycleOwner,
+  runHostedV1BestEffortDiagnostic,
+  writeHostedV1AtomicArtifact,
 } from '../../../scripts/e2e/hosted-v1/run';
+import { encodeReplayCursor } from '../../../src/features/coordination-events';
 import { advanceHostedV1MountGeneration } from '../../fixtures/hosted-v1/createSandbox';
 
 interface RuntimeInput {
   readonly authMode: 'oidc' | 'oidc-viewer' | 'personal';
   readonly composeFile: string;
   readonly composeProject: string;
+  readonly appDataDir: string;
   readonly controllerProjectObservationFile: string;
   readonly eventCursor: string;
   readonly fakeRuntimeLifecycleTraceFile: string;
@@ -33,16 +44,93 @@ interface RuntimeInput {
   readonly forbiddenWorkspaceId: string;
   readonly origin: string;
   readonly pairingCode: string | null;
+  readonly sandboxRoot: string;
+  readonly lifecycleTrustAnchor: string;
   readonly projectWorkspaceId: string;
   readonly runtimeWorkspaceId: string;
   readonly teamId: string;
   readonly teamName: string;
   readonly workspaceId: string;
+  readonly workspaceDir: string;
+}
+
+interface HostedV1ExternalCoordinationStreamEvent extends HostedV1ExternalCoordinationObservedEvent {
+  readonly id: string;
+  readonly deploymentId: string | null;
+  readonly eventEpoch: string | null;
+  readonly eventCursor: string | null;
+  readonly scopeKind: string | null;
+  readonly scopeId: string | null;
+  readonly eventType: string | null;
+  readonly payload: unknown;
+}
+
+interface HostedV1ExternalCoordinationStreamState {
+  controller: AbortController | null;
+  opens: number;
+  ids: string[];
+  events: HostedV1ExternalCoordinationStreamEvent[];
+  frames: Array<'heartbeat' | 'coordination_event'>;
+  heartbeats: number;
+  heartbeatFrameIndexes: number[];
+  heartbeatStreamIds: number[];
+  heartbeatObservedAtMs: number[];
+  heartbeatCursors: string[];
+  heartbeatEventCounts: number[];
+  reconnects: number;
+  cursor: string;
+  reconnectTimer: number | null;
+  closed: boolean;
+  error: string | null;
+}
+
+function requireHostedV1JournalString(value: unknown, name: string): string {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`hosted_e2e_journal_${name}_invalid`);
+  }
+  return value;
+}
+
+function requireHostedV1JournalSequence(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error('hosted_e2e_journal_event_sequence_invalid');
+  }
+  return value;
 }
 
 const runtimePath = process.env.HOSTED_E2E_RUNTIME_FILE;
 if (!runtimePath) throw new Error('HOSTED_E2E_RUNTIME_FILE is required');
 const runtime = JSON.parse(await readFile(runtimePath, 'utf8')) as RuntimeInput;
+const hostedV1DiagnosticRedactionContext = Object.freeze({
+  root: runtime.sandboxRoot,
+  lifecycleTrustAnchor: runtime.lifecycleTrustAnchor,
+});
+const hostedV1DiagnosticSourceRedaction = Object.freeze({
+  replacements: Object.freeze([
+    Object.freeze({ value: process.cwd(), placeholder: '<repository-root>' }),
+    Object.freeze({ value: runtime.sandboxRoot, placeholder: '<sandbox-root>' }),
+    Object.freeze({ value: runtime.workspaceDir, placeholder: '<workspace-root>' }),
+    Object.freeze({ value: runtime.appDataDir, placeholder: '<runtime-app-data-root>' }),
+    Object.freeze({ value: runtime.lifecycleTrustAnchor, placeholder: '<trust-anchor>' }),
+    Object.freeze({ value: '/workspaces/sandbox', placeholder: '<runtime-workspace-root>' }),
+    Object.freeze({ value: '/data/.claude', placeholder: '<runtime-claude-root>' }),
+    Object.freeze({ value: '/data/.agent-teams', placeholder: '<runtime-app-data-root>' }),
+    Object.freeze({ value: '/run/agent-teams-orchestrator', placeholder: '<lifecycle-runtime-root>' }),
+    Object.freeze({ value: '/run/agent-teams', placeholder: '<runtime-state-root>' }),
+    ...(runtime.pairingCode === null
+      ? []
+      : [Object.freeze({ value: runtime.pairingCode, placeholder: '<pairing-code>' })]),
+  ]),
+  maximumBytes: 16 * 1024,
+});
+
+function hostedV1AttachmentRetentionBudget(root: string): {
+  readonly root: string;
+  readonly maximumFileBytes: number;
+  readonly maximumTotalBytes: number;
+} {
+  return Object.freeze({ root, maximumFileBytes: 16 * 1024, maximumTotalBytes: 4 * 1024 * 1024 });
+}
 const fakeRuntimeOwnerMutationErrorTraceFile = resolve(
   runtime.fakeRuntimeLifecycleTraceFile,
   '..',
@@ -76,15 +164,472 @@ if (
 const validatedComposeFile = composeFile;
 const validatedComposeProject = composeProject;
 // The fake runtime is a separate process and therefore cannot use the
-// controller's in-process wakeup hint. Durable replay observes its commit on
-// the stream's 15-second heartbeat instead.
-const EXTERNAL_COORDINATION_EVENT_REPLAY_TIMEOUT_MS = 25_000;
+// controller's in-process wakeup hint. The origin covers both handoff and
+// durable replay; valid streams may emit any number of heartbeats meanwhile.
+const externalCoordinationReplayBudget = createHostedV1ExternalCoordinationReplayBudget({
+  handoffBudgetMs: 10_000,
+  heartbeatIntervalMs: 15_000,
+  // Reserve a deterministic quiet window after the resumed-stream heartbeat.
+  marginMs: 2_000,
+});
 const E2E_DOCKER_COMMAND_TIMEOUT_MS = 60_000;
 const E2E_PROBE_RESPONSE_MAX_BYTES = 64 * 1024;
 const E2E_PROBE_ATTEMPT_TIMEOUT_MS = 5_000;
 
+type RunAcceptedJournalObservation = {
+  readonly schemaVersion: 1;
+  readonly status: 'observed' | 'not_found' | 'unavailable';
+  readonly runId: string;
+  readonly row?: Record<string, unknown> | null;
+  readonly metadata?: Record<string, unknown> | null;
+  readonly error?: string;
+};
+
+async function readRunAcceptedJournalObservation(
+  runId: string,
+  timeoutOrSignal: number | AbortSignal = 1_000,
+  signal?: AbortSignal
+): Promise<RunAcceptedJournalObservation> {
+  const timeoutMs = typeof timeoutOrSignal === 'number' ? timeoutOrSignal : 1_000;
+  const diagnosticSignal = typeof timeoutOrSignal === 'number' ? signal : timeoutOrSignal;
+  if (diagnosticSignal?.aborted) {
+    throw Object.assign(new Error('hosted_e2e_journal_aborted'), { name: 'AbortError' });
+  }
+  try {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+      throw new Error('hosted_e2e_journal_read_timeout_invalid');
+    }
+    // better-sqlite3 is synchronous.  Running it in the Playwright process
+    // makes a Promise.race timer cosmetic: the event loop cannot run the
+    // timer while SQLite is blocked.  The isolated reader is killable, so its
+    // one-second budget is real and cannot delay the handoff proof event loop.
+    const program = String.raw`
+      const [databasePath, runId] = process.argv.slice(1);
+      const emit = (value) => process.stdout.write(JSON.stringify(value));
+      try {
+        const databaseModule = require('better-sqlite3-node');
+        const Database = databaseModule.default || databaseModule;
+        const database = new Database(databasePath, { fileMustExist: true, readonly: true });
+        try {
+          const row = database.prepare(
+            "SELECT deployment_id AS deploymentId, event_epoch AS eventEpoch, event_id AS eventId, event_sequence AS eventSequence, json_extract(body_json, '$.eventType') AS eventType, json_extract(body_json, '$.runId') AS runId, json_extract(body_json, '$.teamId') AS teamId, json_extract(body_json, '$.scope.kind') AS scopeKind, json_extract(body_json, '$.scope.scopeId') AS scopeId, json_extract(body_json, '$.payload.runId') AS payloadRunId FROM coordination_event_journal WHERE json_extract(body_json, '$.eventType') = ? AND json_extract(body_json, '$.runId') = ? ORDER BY event_sequence DESC LIMIT 1"
+          ).get('team-lifecycle.run-accepted', runId);
+          const metadata = row ? database.prepare(
+            'SELECT deployment_id AS deploymentId, event_epoch AS eventEpoch, high_watermark_sequence AS highWatermarkSequence FROM coordination_event_journal_metadata WHERE deployment_id = ?'
+          ).get(row.deploymentId) : null;
+          emit({ schemaVersion: 1, status: row && metadata ? 'observed' : 'not_found', runId, row: row || null, metadata: metadata || null });
+        } finally { database.close(); }
+      } catch (error) {
+        const code = error && typeof error === 'object' && error.code === 'ENOENT' ? 'ENOENT' : null;
+        emit({
+          schemaVersion: 1,
+          status: code === 'ENOENT' ? 'not_found' : 'unavailable',
+          runId,
+          ...(code === 'ENOENT' ? {} : { error: error instanceof Error ? error.name : 'unknown_error' }),
+        });
+      }
+    `;
+    const result = await execFileAsync(process.execPath, [
+      '-e', program, `${runtime.appDataDir}/data/storage/app.db`, runId,
+    ], {
+      timeout: timeoutMs,
+      killSignal: 'SIGKILL',
+      maxBuffer: 64 * 1024,
+      signal: diagnosticSignal,
+    });
+    if (diagnosticSignal?.aborted) {
+      throw Object.assign(new Error('hosted_e2e_journal_aborted'), { name: 'AbortError' });
+    }
+    return JSON.parse(result.stdout) as RunAcceptedJournalObservation;
+  } catch (error) {
+    return {
+      schemaVersion: 1,
+      status: 'unavailable',
+      runId,
+      error: error instanceof Error ? error.name : 'unknown_error',
+    };
+  }
+}
+
+async function attachExternalCoordinationEvidence(
+  testInfo: TestInfo,
+  phase: 'launch-receipt' | 'predicate-expiry',
+  runId: string,
+  page: Page,
+  eventRequestUrls: readonly string[],
+  initialEventStreamStatus: number,
+  timing?: Record<string, number>,
+  priorDiagnosticFailures: readonly string[] = []
+): Promise<readonly string[]> {
+  // Continue the caller's collector when supplied so snapshots retain each
+  // failed operation once, in the order it was observed.
+  const failures = (priorDiagnosticFailures.length > 0
+    ? priorDiagnosticFailures
+    : hostedV1DiagnosticFailures(testInfo)) as string[];
+  const allFailures = () => freezeHostedV1DiagnosticFailures(failures);
+  const journal = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'journal_read', operation: (signal) => readRunAcceptedJournalObservation(runId, signal),
+  });
+  // A missing row is a valid observation while the journal is catching up or
+  // when the selected run emitted no accepted event.  A reader failure is
+  // different: retain its structured evidence in the scenario-wide aggregate
+  // without turning this best-effort attachment into a proof failure.
+  if (journal?.status === 'unavailable') {
+    recordHostedV1DiagnosticObservation(testInfo, {
+      operation: 'journal_read',
+      classification: 'failed_observation',
+      error: journal.error ?? 'unknown_error',
+      timing: Object.freeze({ observedAtMs: Date.now(), ...(timing ?? {}) }),
+    });
+  }
+  const streamState = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'page_evaluate', operation: async (signal) => {
+      if (signal.aborted) return null;
+      const result = await page.evaluate(() => {
+          const state = window.__hostedE2eSse;
+          return state
+            ? {
+                opens: state.opens,
+                ids: state.ids,
+                events: state.events,
+                reconnects: state.reconnects ?? 0,
+                cursor: state.cursor,
+              }
+            : null;
+      });
+      return signal.aborted ? null : result;
+    },
+  });
+  const attach = async (name: string, body: unknown): Promise<void> => {
+    await trackHostedV1BestEffortDiagnostic(testInfo, { name: `attach:${name}`, operation: async (signal) => {
+      if (signal.aborted) return;
+      await testInfo.attach(name, {
+        body: JSON.stringify({ ...((body ?? {}) as object), diagnosticFailures: allFailures() }, null, 2),
+        contentType: 'application/json',
+      });
+      if (signal.aborted) return;
+    }});
+  };
+  await attach(`personal-lifecycle-journal-${phase}.json`, {
+    phase,
+    observedAt: new Date().toISOString(),
+    timing,
+    journal,
+    diagnosticFailures: failures,
+  });
+  await attach(`personal-lifecycle-sse-${phase}.json`, {
+    phase,
+    observedAt: new Date().toISOString(),
+    timing,
+    initialResponseStatus: initialEventStreamStatus,
+    requestUrls: eventRequestUrls,
+    state: streamState,
+    diagnosticFailures: failures,
+  });
+  // This final attachment is a frozen aggregate of every failure observed
+  // while all prior attachments were attempted.  It is deliberately last so
+  // an earlier failed attachment cannot disappear from the evidence.
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: `attach:personal-lifecycle-diagnostic-failures-${phase}.json`,
+    operation: async (signal) => {
+      if (signal.aborted) return;
+      await testInfo.attach(`personal-lifecycle-diagnostic-failures-${phase}.json`, {
+      body: JSON.stringify(Object.freeze({
+        schemaVersion: 1,
+        phase,
+        attachmentFailures: allFailures(),
+      }), null, 2),
+      contentType: 'application/json',
+      });
+      if (signal.aborted) return;
+    },
+  });
+  // testInfo.attach can itself fail, including for the aggregate attachment.
+  // Persist a complete replacement snapshot separately.  Repeating a phase
+  // updates (rather than rejects) the deterministic artifact with all later
+  // failures included.
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: `write:personal-lifecycle-diagnostic-failures-${phase}.immutable.json`,
+    awaitAbortReap: true,
+    operation: async (signal) => {
+      if (signal.aborted) return;
+      const path = join(testInfo.outputDir, `personal-lifecycle-diagnostic-failures-${phase}.immutable.json`);
+      const body = JSON.stringify(Object.freeze({
+        schemaVersion: 1,
+        phase,
+        attachmentFailures: allFailures(),
+      }), null, 2);
+      await writeHostedV1AtomicArtifact({
+        path,
+        body,
+        sanitizeBody: (value) => redactEvidence(
+          value,
+          hostedV1DiagnosticRedactionContext,
+          runtime.pairingCode
+        ),
+        retentionBudget: hostedV1AttachmentRetentionBudget(testInfo.outputDir),
+        timeoutMs: 1_000,
+        signal,
+      });
+    },
+  });
+  return allFailures();
+}
+
+/**
+ * Attachments are diagnostics, never proof prerequisites.  Keep this wrapper
+ * at the TestInfo boundary so every evidence attachment in a scenario has the
+ * same failure semantics, including legacy call sites.
+ */
+interface HostedV1DiagnosticObservationFailure {
+  readonly operation: string;
+  readonly classification: 'failed_observation';
+  readonly error: string;
+  readonly timing: Readonly<Record<string, number>>;
+}
+
+interface HostedV1DiagnosticCollector {
+  readonly failures: string[];
+  readonly observations: HostedV1DiagnosticObservationFailure[];
+  /** Admission closes before the final snapshot is written. */
+  accepting: boolean;
+  /** Started wrappers may merge until the one final drain has settled them. */
+  collecting: boolean;
+  readonly pending: Map<Promise<unknown>, AbortController>;
+}
+
+const hostedV1DiagnosticCollectors = new WeakMap<object, HostedV1DiagnosticCollector>();
+const HOSTED_V1_FINAL_DIAGNOSTIC_DRAIN_TIMEOUT_MS = 2_000;
+
+function hostedV1DiagnosticFailures(testInfo: TestInfo): string[] {
+  const collector = hostedV1DiagnosticCollectors.get(testInfo);
+  if (!collector) throw new Error('hosted_e2e_diagnostic_collector_missing');
+  return collector.failures;
+}
+
+function recordHostedV1DiagnosticObservation(
+  testInfo: TestInfo,
+  observation: HostedV1DiagnosticObservationFailure
+): void {
+  const collector = hostedV1DiagnosticCollectors.get(testInfo);
+  if (!collector) throw new Error('hosted_e2e_diagnostic_collector_missing');
+  if (!collector.accepting) return;
+  collector.observations.push(Object.freeze({
+    ...observation,
+    timing: Object.freeze({ ...observation.timing }),
+  }));
+}
+
+function freezeHostedV1DiagnosticAggregate(testInfo: TestInfo): Readonly<{
+  attachmentFailures: readonly string[];
+  observationFailures: readonly HostedV1DiagnosticObservationFailure[];
+}> {
+  const collector = hostedV1DiagnosticCollectors.get(testInfo);
+  if (!collector) throw new Error('hosted_e2e_diagnostic_collector_missing');
+  return Object.freeze({
+    attachmentFailures: freezeHostedV1DiagnosticFailures(collector.failures),
+    observationFailures: Object.freeze([...collector.observations]),
+  });
+}
+
+function trackHostedV1BestEffortDiagnostic<T>(
+  testInfo: TestInfo,
+  input: {
+    readonly name: string;
+    readonly operation: (signal: AbortSignal) => Promise<T>;
+    readonly timeoutMs?: number;
+    readonly awaitAbortReap?: boolean;
+  }
+): Promise<T | null> {
+  const collector = hostedV1DiagnosticCollectors.get(testInfo);
+  if (!collector) throw new Error('hosted_e2e_diagnostic_collector_missing');
+  // Event callbacks can arrive while afterEach is persisting the final
+  // snapshot.  Refusing admission here prevents them from attaching evidence
+  // after that snapshot has become authoritative.
+  if (!collector.accepting) return Promise.resolve(null);
+  const controller = new AbortController();
+  // A wrapper gets a private sink until it reaches terminal settlement.  This
+  // is what makes the final drain authoritative: a wrapper which outlives a
+  // failed-closed drain has no reference capable of appending to the final
+  // aggregate later.
+  const wrapperFailures: string[] = [];
+  const running = runHostedV1BestEffortDiagnostic({
+    ...input,
+    failures: wrapperFailures,
+    signal: controller.signal,
+  });
+  const diagnostic = running.then(
+    (result) => {
+      if (collector.collecting) collector.failures.push(...wrapperFailures);
+      return result;
+    },
+    (error) => {
+      if (collector.collecting) {
+        collector.failures.push(
+          `${input.name}:${error instanceof Error ? error.name : 'unknown_error'}`
+        );
+      }
+      throw error;
+    }
+  );
+  collector.pending.set(diagnostic, controller);
+  void diagnostic.then(
+    () => collector.pending.delete(diagnostic),
+    () => collector.pending.delete(diagnostic)
+  );
+  return diagnostic;
+}
+
+async function settleHostedV1Diagnostics(testInfo: TestInfo): Promise<void> {
+  const collector = hostedV1DiagnosticCollectors.get(testInfo);
+  if (!collector) throw new Error('hosted_e2e_diagnostic_collector_missing');
+  // Finalization is an admission gate, not merely a snapshot. Abort every
+  // in-flight operation, then give every already-admitted wrapper one bounded
+  // terminal-settlement window.  A timeout is fail-closed: serializing while a
+  // wrapper could still append a failure would make the aggregate dishonest.
+  collector.accepting = false;
+  for (const controller of collector.pending.values()) controller.abort();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const drained = await Promise.race([
+      Promise.allSettled([...collector.pending.keys()]).then(() => true),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), HOSTED_V1_FINAL_DIAGNOSTIC_DRAIN_TIMEOUT_MS);
+      }),
+    ]);
+    if (!drained) throw new Error('hosted_e2e_final_diagnostic_drain_timeout');
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    // No wrapper may mutate the aggregate after this point, including an
+    // intentionally non-cooperative API which completes after a drain fault.
+    collector.collecting = false;
+    Object.freeze(collector.failures);
+    Object.freeze(collector.observations);
+  }
+}
+
+async function persistHostedV1FinalDiagnosticFailures(testInfo: TestInfo): Promise<void> {
+  await settleHostedV1Diagnostics(testInfo);
+  // This is the one final persistence point. It follows every independently
+  // bounded diagnostic, including shutdown, reconnect, OIDC, and a proof
+  // failure's finally path.
+  // This is deliberately outside the closed collector: a late failed write
+  // must not mutate the aggregate after its authoritative snapshot.
+  const path = join(testInfo.outputDir, 'hosted-v1-diagnostic-failures-final.json');
+  const body = JSON.stringify({ schemaVersion: 1, ...freezeHostedV1DiagnosticAggregate(testInfo) }, null, 2);
+  // This record is deliberately synchronous and outside the artifact writer:
+  // it remains observable even when the evidence filesystem is unavailable.
+  console.error(JSON.stringify({
+    event: 'hosted_e2e_final_diagnostic_persistence_attempt', path, timeoutMs: 2_000,
+  }));
+  try {
+    await writeHostedV1AtomicArtifact({
+      path,
+      body,
+      sanitizeBody: (value) => redactEvidence(
+        value,
+        hostedV1DiagnosticRedactionContext,
+        runtime.pairingCode
+      ),
+      retentionBudget: hostedV1AttachmentRetentionBudget(testInfo.outputDir),
+      timeoutMs: 2_000,
+    });
+    console.error(JSON.stringify({
+      event: 'hosted_e2e_final_diagnostic_persistence_result', path, classification: 'published',
+    }));
+  } catch (error) {
+    const classification = error instanceof HostedV1ArtifactPersistenceError
+      ? error.classification
+      : 'writer_failed';
+    console.error(JSON.stringify({
+      event: 'hosted_e2e_final_diagnostic_persistence_result', path, classification,
+    }));
+    throw new Error(`hosted_e2e_final_diagnostic_persistence_failed:${classification}:${path}`, {
+      cause: error,
+    });
+  }
+}
+
+async function prepareHostedV1DiagnosticArtifact(
+  testInfo: TestInfo,
+  name: string,
+  options: Parameters<TestInfo['attach']>[1],
+  signal: AbortSignal
+): Promise<void> {
+  if (signal.aborted) return;
+  // Do not read path-backed attachments here. File reads are preparation and
+  // must share the writer's hard deadline instead of blocking this process.
+  const preparedBody = options?.body === undefined
+    ? options?.path === undefined ? '' : undefined
+    : options.body;
+  if (signal.aborted) return;
+  const body = preparedBody === undefined
+    ? undefined
+    : typeof preparedBody === 'string' ? preparedBody : preparedBody.toString('utf8');
+  await writeHostedV1AtomicArtifact({
+    // Playwright's path helper may synchronously create or probe a directory. The
+    // supervised writer owns all filesystem preparation, so derive the target
+    // from TestInfo's pure outputDir value instead.
+    path: join(testInfo.outputDir, name),
+    ...(body === undefined
+      ? {
+          sourcePath: options?.path,
+          sourceRedaction: hostedV1DiagnosticSourceRedaction,
+        }
+      : {
+          body,
+          sanitizeBody: (value) => redactEvidence(
+            value,
+            hostedV1DiagnosticRedactionContext,
+            runtime.pairingCode
+          ),
+    }),
+    retentionBudget: hostedV1AttachmentRetentionBudget(testInfo.outputDir),
+    timeoutMs: 1_000,
+    signal,
+  });
+}
+
+async function attachHostedV1DiagnosticArtifact(
+  testInfo: TestInfo,
+  name: string,
+  options: Parameters<TestInfo['attach']>[1]
+): Promise<void> {
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: `attach:${name}`,
+    awaitAbortReap: true,
+    operation: (signal) => prepareHostedV1DiagnosticArtifact(testInfo, name, options, signal),
+  });
+}
+
+function bestEffortDiagnosticTestInfo(testInfo: TestInfo): TestInfo {
+  const collector: HostedV1DiagnosticCollector = {
+    failures: [], observations: [], accepting: true, collecting: true, pending: new Map(),
+  };
+  hostedV1DiagnosticCollectors.set(testInfo, collector);
+  const diagnosticTestInfo = new Proxy(testInfo, {
+    get(target, property, receiver) {
+      if (property === 'attach') {
+        return (name: string, options: Parameters<TestInfo['attach']>[1]) =>
+          attachHostedV1DiagnosticArtifact(testInfo, name, options);
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  hostedV1DiagnosticCollectors.set(diagnosticTestInfo, collector);
+  return diagnosticTestInfo;
+}
+
+test.afterEach(async (_fixtures, testInfo) => {
+  if (hostedV1DiagnosticCollectors.has(testInfo)) {
+    await persistHostedV1FinalDiagnosticFailures(testInfo);
+  }
+});
+
 declare global {
   interface Window {
+    __hostedE2eSse?: HostedV1ExternalCoordinationStreamState;
     __hostedE2eProbe(
       input: string,
       init?: RequestInit,
@@ -241,6 +786,16 @@ async function compose(...args: readonly string[]): Promise<string> {
   return `${result.stdout}${result.stderr}`;
 }
 
+async function composeDiagnostic(signal: AbortSignal, ...args: readonly string[]): Promise<string> {
+  if (signal.aborted) throw Object.assign(new Error('hosted_e2e_compose_aborted'), { name: 'AbortError' });
+  const result = await execFileAsync('docker', ['compose', '--project-name', validatedComposeProject, '--file', validatedComposeFile, ...args], {
+    env: { ...process.env, COMPOSE_FILE: validatedComposeFile, COMPOSE_PROJECT_NAME: validatedComposeProject },
+    maxBuffer: 8 * 1024 * 1024, timeout: E2E_DOCKER_COMMAND_TIMEOUT_MS, signal,
+  });
+  if (signal.aborted) throw Object.assign(new Error('hosted_e2e_compose_aborted'), { name: 'AbortError' });
+  return `${result.stdout}${result.stderr}`;
+}
+
 async function docker(...args: readonly string[]): Promise<string> {
   const result = await execFileAsync('docker', [...args], {
     env: {
@@ -280,23 +835,54 @@ async function captureOriginalHttpResponse(
   });
 }
 
+type OwnerMutationErrorTraceObservation = Readonly<{
+  status: 'observed' | 'not_found' | 'unavailable';
+  body: Buffer | null;
+  error?: string;
+}>;
+
 async function attachOwnerMutationErrorTraceIfPresent(
   testInfo: TestInfo,
   evidenceName: string
 ): Promise<void> {
-  try {
-    await testInfo.attach(`${evidenceName}-owner-mutation-error-trace.json`, {
-      body: await readFile(fakeRuntimeOwnerMutationErrorTraceFile),
-      contentType: 'application/json',
+  const trace = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: `read:${evidenceName}-owner-mutation-error-trace.json`,
+    operation: async (signal): Promise<OwnerMutationErrorTraceObservation> => {
+      if (signal.aborted) throw Object.assign(new Error('hosted_e2e_trace_aborted'), { name: 'AbortError' });
+      try {
+        const body = await readFile(fakeRuntimeOwnerMutationErrorTraceFile, { signal });
+        if (signal.aborted) throw Object.assign(new Error('hosted_e2e_trace_aborted'), { name: 'AbortError' });
+        return Object.freeze({ status: 'observed' as const, body });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return Object.freeze({ status: 'not_found' as const, body: null });
+        }
+        return Object.freeze({
+          status: 'unavailable' as const,
+          body: null,
+          error: error instanceof Error ? error.name : 'unknown_error',
+        });
+      }
+    },
+  });
+  if (trace?.status === 'unavailable') {
+    recordHostedV1DiagnosticObservation(testInfo, {
+      operation: `read:${evidenceName}-owner-mutation-error-trace.json`,
+      classification: 'failed_observation',
+      error: trace.error ?? 'unknown_error',
+      timing: Object.freeze({ observedAtMs: Date.now() }),
     });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      await testInfo.attach(`${evidenceName}-owner-mutation-error-trace-unavailable.json`, {
-        body: JSON.stringify({ schemaVersion: 1, kind: 'trace_unavailable' }),
-        contentType: 'application/json',
-      });
-    }
   }
+  const traceBody = trace?.status === 'observed' && trace.body !== null
+    ? trace.body
+    : JSON.stringify(Object.freeze({ schemaVersion: 1, kind: trace?.status ?? 'unavailable', error: trace?.error ?? null }));
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: `attach:${evidenceName}-owner-mutation-error-trace.json`,
+    operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach(`${evidenceName}-owner-mutation-error-trace.json`, {
+      body: traceBody,
+      contentType: 'application/json',
+    }),
+  });
 }
 
 async function clickAndExpectCommittedTaskMutation(
@@ -541,7 +1127,8 @@ async function expectOriginalOidcSessionRevoked(
 test('production HTTPS personal flow remains sandboxed and truthful', async ({
   context,
   page,
-}, testInfo) => {
+}, rawTestInfo) => {
+  const testInfo = bestEffortDiagnosticTestInfo(rawTestInfo);
   test.setTimeout(12 * 60_000);
   test.skip(runtime.authMode !== 'personal', 'personal-mode scenario only');
   if (runtime.pairingCode === null) throw new Error('hosted_e2e_pairing_code_missing');
@@ -1815,14 +2402,23 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
 
   const eventRequestHeaders: Record<string, string>[] = [];
   const eventRequestUrls: string[] = [];
+  const eventRequestHeaderDiagnostics = hostedV1DiagnosticFailures(testInfo);
   page.on('request', (request) => {
     const url = new URL(request.url());
     if (url.pathname === '/api/hosted/v1/events' && url.searchParams.get('e2e') === 'resume') {
-      eventRequestUrls.push(request.url());
-      void request
-        .allHeaders()
-        .then((headers) => eventRequestHeaders.push(headers))
-        .catch(() => undefined);
+      void trackHostedV1BestEffortDiagnostic(testInfo, {
+        name: 'request_all_headers:personal-event-stream',
+        operation: async (signal) => {
+          if (signal.aborted) return;
+          eventRequestUrls.push(request.url());
+          if (signal.aborted) return;
+          const headers = await request.allHeaders();
+          // The finalization gate may close while Playwright is resolving
+          // headers.  Do not let that late callback feed an attachment after
+          // the final diagnostic snapshot is persisted.
+          if (!signal.aborted) eventRequestHeaders.push(headers);
+        },
+      });
     }
   });
   const initialEventStreamResponsePromise = page.waitForResponse((response) => {
@@ -1835,71 +2431,174 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   });
   void initialEventStreamResponsePromise.catch(() => undefined);
   await page.evaluate((cursor) => {
-    const state = {
-      source: null as EventSource | null,
+    const state: HostedV1ExternalCoordinationStreamState = {
+      controller: null,
       opens: 0,
-      ids: [] as string[],
+      ids: [],
+      events: [],
+      frames: [],
+      heartbeats: 0,
+      heartbeatFrameIndexes: [],
+      heartbeatStreamIds: [],
+      heartbeatObservedAtMs: [],
+      heartbeatCursors: [],
+      heartbeatEventCounts: [],
+      reconnects: 0,
       cursor,
-      reconnectTimer: null as number | null,
+      reconnectTimer: null,
       closed: false,
+      error: null,
     };
-    const connect = () => {
-      if (state.closed) return;
-      const source = new EventSource(
-        `/api/hosted/v1/events?after=${encodeURIComponent(state.cursor)}&e2e=resume`
-      );
-      state.source = source;
-      source.onopen = () => {
-        if (state.source === source) state.opens += 1;
-      };
-      source.onerror = () => {
-        if (state.closed || state.source !== source) return;
-        source.close();
-        state.reconnectTimer = window.setTimeout(connect, 250);
-      };
-      source.addEventListener('coordination_event', (event) => {
-        const data = JSON.parse((event as MessageEvent).data) as { eventType?: unknown };
-        if (data.eventType !== 'team-lifecycle.run-accepted') return;
-        const eventCursor = (event as MessageEvent).lastEventId;
-        state.ids.push(eventCursor);
-        state.cursor = eventCursor;
-      });
+    const consume = async () => {
+      const controller = new AbortController();
+      state.controller = controller;
+      try {
+        const response = await fetch(
+          `/api/hosted/v1/events?after=${encodeURIComponent(state.cursor)}&e2e=resume`,
+          { credentials: 'include', headers: { accept: 'text/event-stream' }, signal: controller.signal }
+        );
+        if (!response.ok || !response.body) throw new Error('coordination_stream_unavailable');
+        state.opens += 1;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (!state.closed) {
+          const result = await reader.read();
+          if (result.done) throw new Error('coordination_stream_closed');
+          buffer += decoder.decode(result.value, { stream: true });
+          let boundary = buffer.indexOf('\n\n');
+          while (boundary >= 0) {
+            const frame = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            boundary = buffer.indexOf('\n\n');
+            if (frame === ': heartbeat') {
+              state.heartbeats += 1;
+              state.heartbeatStreamIds.push(state.opens);
+              state.frames.push('heartbeat');
+              state.heartbeatFrameIndexes.push(state.frames.length - 1);
+              state.heartbeatObservedAtMs.push(Date.now());
+              state.heartbeatCursors.push(state.cursor);
+              state.heartbeatEventCounts.push(state.events.length);
+              continue;
+            }
+            const fields = new Map(
+              frame.split('\n').flatMap((line) => {
+                const separator = line.indexOf(':');
+                return separator < 0 ? [] : [[line.slice(0, separator), line.slice(separator + 1).trimStart()] as const];
+              })
+            );
+            if (fields.get('event') !== 'coordination_event') continue;
+            const data = JSON.parse(fields.get('data') ?? '') as {
+          eventType?: unknown;
+          deploymentId?: unknown;
+          eventId?: unknown;
+          eventEpoch?: unknown;
+          eventSequence?: unknown;
+          eventCursor?: unknown;
+          scope?: { kind?: unknown; scopeId?: unknown };
+          payload?: unknown;
+        };
+            const eventCursor = fields.get('id') ?? '';
+            if (!eventCursor) throw new Error('coordination_event_cursor_missing');
+            state.frames.push('coordination_event');
+            if (data.eventType === 'team-lifecycle.run-accepted') state.ids.push(eventCursor);
+            state.events.push({
+              id: eventCursor,
+              deploymentId: typeof data.deploymentId === 'string' ? data.deploymentId : null,
+              eventId: typeof data.eventId === 'string' ? data.eventId : null,
+              eventEpoch: typeof data.eventEpoch === 'string' ? data.eventEpoch : null,
+              eventSequence: typeof data.eventSequence === 'number' ? data.eventSequence : null,
+              eventCursor: typeof data.eventCursor === 'string' ? data.eventCursor : null,
+              scopeKind: typeof data.scope?.kind === 'string' ? data.scope.kind : null,
+              scopeId: typeof data.scope?.scopeId === 'string' ? data.scope.scopeId : null,
+              eventType: typeof data.eventType === 'string' ? data.eventType : null,
+              payload: data.payload ?? null,
+              frameIndex: state.frames.length - 1,
+              streamId: state.opens,
+              observedAtMs: Date.now(),
+            });
+            state.cursor = eventCursor;
+          }
+        }
+      } catch (error) {
+        if (state.closed) return;
+        state.error = error instanceof Error ? error.message : String(error);
+        state.reconnects += 1;
+        state.reconnectTimer = window.setTimeout(() => {
+          state.error = null;
+          void consume();
+        }, 250);
+      }
     };
-    connect();
-    (window as typeof window & { __hostedE2eSse?: typeof state }).__hostedE2eSse = state;
+    void consume();
+    window.__hostedE2eSse = state;
   }, runtime.eventCursor);
   const initialEventStreamResponse = await initialEventStreamResponsePromise;
   const initialEventStreamStatus = initialEventStreamResponse.status();
-  await testInfo.attach('initial-event-stream-response.json', {
-    body: JSON.stringify(
-      {
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'attach:initial-event-stream-response.json',
+    operation: async (signal) => {
+      if (signal.aborted) return;
+      const requestHeaders = await initialEventStreamResponse.request().allHeaders();
+      if (signal.aborted) return;
+      const responseHeaders = await initialEventStreamResponse.allHeaders();
+      if (signal.aborted) return;
+      await testInfo.attach('initial-event-stream-response.json', {
+      body: JSON.stringify({
         status: initialEventStreamStatus,
-        requestHeaders: await initialEventStreamResponse.request().allHeaders(),
-        responseHeaders: await initialEventStreamResponse.allHeaders(),
+        requestHeaders,
+        responseHeaders,
         failureBody: null,
-      },
-      null,
-      2
-    ),
-    contentType: 'application/json',
+      }, null, 2),
+      contentType: 'application/json',
+      });
+    },
   });
   expect(initialEventStreamStatus, 'initial coordination event stream status').toBe(200);
   await expect
     .poll(() =>
       page.evaluate(() => {
-        const state = (
-          window as typeof window & {
-            __hostedE2eSse?: { opens: number; ids: string[] };
-          }
-        ).__hostedE2eSse;
+        const state = window.__hostedE2eSse;
         return state ? { opens: state.opens, events: state.ids.length } : null;
       })
     )
     .toEqual({ opens: 1, events: 0 });
 
-  const lifecycleLaunch = await page.evaluate(
+  // This reader is the asserted delivery stream. It exposes heartbeat frames
+  // that EventSource deliberately hides, without a second replay query.
+  await expect
+    .poll(
+      () => page.evaluate(() => {
+        const state = window.__hostedE2eSse;
+        return Boolean(state && state.opens === 1 && state.heartbeats >= 1 && state.reconnects === 0 && state.error === null);
+      }),
+      { timeout: externalCoordinationReplayBudget.replayBudgetMs }
+    )
+    .toBe(true);
+  const lifecycleHandoffOriginMs = Date.now();
+  const lifecycleDeadlines = externalCoordinationReplayBudget.deadlinesFrom(
+    lifecycleHandoffOriginMs
+  );
+  const remainingLifecycleBudget = (deadlineMs: number, phase: string): number => {
+    try {
+      return externalCoordinationReplayBudget.requireRemainingAt(deadlineMs, Date.now());
+    } catch (error) {
+      if (error instanceof Error && error.message === 'hosted_e2e_external_replay_deadline_exhausted') {
+        throw new Error(`hosted_e2e_external_coordination_${phase}_deadline_exhausted`, {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+  };
+  const lifecycleLaunchReceipt = await page.evaluate(
     async (input) => {
-      return window.__hostedE2eProbe('/api/hosted/v1/team-lifecycle/launch', {
+      const state = window.__hostedE2eSse;
+      if (!state) throw new Error('coordination_stream_state_missing');
+      const launchBoundaryFrameIndex = state.frames.length;
+      const launchBoundaryEventCount = state.events.length;
+      const commitInitiatedAtMs = Date.now();
+      const launch = await window.__hostedE2eProbe('/api/hosted/v1/team-lifecycle/launch', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -1915,21 +2614,12 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
           expectedRevision: input.revision,
         }),
       });
+      return { commitInitiatedAtMs, launch, launchBoundaryFrameIndex, launchBoundaryEventCount };
     },
     { csrfToken, identity: activeTeam, revision: activeTeam.revision }
   );
-  await testInfo.attach('personal-lifecycle-launch-response.json', {
-    body: JSON.stringify(lifecycleLaunch, null, 2),
-    contentType: 'application/json',
-  });
-  await testInfo.attach('personal-lifecycle-launch-runtime-state.json', {
-    body: await readFile(runtime.fakeRuntimeStateFile),
-    contentType: 'application/json',
-  });
-  await testInfo.attach('personal-lifecycle-launch-runtime-trace.json', {
-    body: await readFile(runtime.fakeRuntimeLifecycleTraceFile),
-    contentType: 'application/json',
-  });
+  const lifecycleLaunch = lifecycleLaunchReceipt.launch;
+  const launchReceiptDiagnosticFailures = hostedV1DiagnosticFailures(testInfo);
   expect(lifecycleLaunch.status).toBe(202);
   expect(lifecycleLaunch.body).toMatchObject({
     schemaVersion: 1,
@@ -1946,26 +2636,199 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     runId: string;
   };
   expect(lifecycleLaunchBody.resourceRevision).not.toBe(activeTeam.revision);
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const state = (
-            window as typeof window & {
-              __hostedE2eSse?: { opens: number; ids: string[] };
-            }
-          ).__hostedE2eSse;
-          return Boolean(state && state.opens >= 1 && state.ids.length === 1);
-        }),
-      { timeout: EXTERNAL_COORDINATION_EVENT_REPLAY_TIMEOUT_MS }
-    )
-    .toBe(true);
-  const firstDeliveredCursor = await page.evaluate(() => {
-    const state = (
-      window as typeof window & {
-        __hostedE2eSse?: { ids: string[] };
+  let observedJournal: RunAcceptedJournalObservation | undefined;
+  try {
+    await expect
+      .poll(
+        async () => {
+          const observation = await readRunAcceptedJournalObservation(
+            lifecycleLaunchBody.runId,
+            Math.min(
+              1_000,
+              remainingLifecycleBudget(lifecycleDeadlines.handoffDeadlineMs, 'handoff')
+            )
+          );
+          if (observation.status === 'observed') observedJournal = observation;
+          if (observation.status === 'unavailable') {
+            recordHostedV1DiagnosticObservation(testInfo, {
+              operation: 'journal_read',
+              classification: 'failed_observation',
+              error: observation.error ?? 'unknown_error',
+              timing: Object.freeze({ observedAtMs: Date.now() }),
+            });
+          }
+          return observation.status;
+        },
+        {
+          timeout: remainingLifecycleBudget(
+            lifecycleDeadlines.handoffDeadlineMs,
+            'handoff'
+          ),
+        }
+      )
+      .toBe('observed');
+    expect(observedJournal?.status).toBe('observed');
+    const observedJournalRow = observedJournal?.row;
+    expect(observedJournalRow?.eventId).toEqual(expect.any(String));
+    await expect
+      .poll(
+        () =>
+          page.evaluate((eventId) => {
+            const state = window.__hostedE2eSse;
+            return state?.opens === 1 && state.events.filter((event) => event.eventId === eventId).length === 1;
+          }, observedJournalRow?.eventId),
+        {
+          timeout: remainingLifecycleBudget(lifecycleDeadlines.replayDeadlineMs, 'replay'),
+        }
+      )
+      .toBe(true);
+  } catch (error) {
+    await attachExternalCoordinationEvidence(
+      testInfo,
+      'predicate-expiry',
+      lifecycleLaunchBody.runId,
+      page,
+      eventRequestUrls,
+      initialEventStreamStatus,
+      {
+        handoffOriginMs: lifecycleHandoffOriginMs,
+        commitInitiatedAtMs: lifecycleLaunchReceipt.commitInitiatedAtMs,
+        handoffDeadlineMs: lifecycleDeadlines.handoffDeadlineMs,
+        replayDeadlineMs: lifecycleDeadlines.replayDeadlineMs,
+        observedElapsedMs: Date.now() - lifecycleHandoffOriginMs,
       }
-    ).__hostedE2eSse;
+    );
+    throw error;
+  }
+  const journalObservation = observedJournal;
+  if (!journalObservation) throw new Error('hosted_e2e_journal_observation_missing');
+  expect(journalObservation.status).toBe('observed');
+  const journalRow = journalObservation.row;
+  const journalMetadata = journalObservation.metadata;
+  const journalEventEpoch = requireHostedV1JournalString(journalRow?.eventEpoch, 'event_epoch');
+  expect(journalRow).toEqual(expect.objectContaining({
+    eventType: 'team-lifecycle.run-accepted',
+    runId: lifecycleLaunchBody.runId,
+    payloadRunId: lifecycleLaunchBody.runId,
+    teamId: runtime.teamId,
+    scopeKind: 'team',
+    scopeId: runtime.teamId,
+    deploymentId: expect.any(String),
+    eventEpoch: expect.any(String),
+    eventId: expect.any(String),
+    eventSequence: expect.any(Number),
+  }));
+  expect(journalMetadata).toEqual(expect.objectContaining({
+    deploymentId: journalRow?.deploymentId,
+    eventEpoch: journalEventEpoch,
+    highWatermarkSequence: expect.any(Number),
+  }));
+  expect(journalMetadata?.highWatermarkSequence).toBeGreaterThanOrEqual(
+    requireHostedV1JournalSequence(journalRow?.eventSequence)
+  );
+  const journalEventId = requireHostedV1JournalString(journalRow?.eventId, 'event_id');
+  const journalDeploymentId = requireHostedV1JournalString(journalRow?.deploymentId, 'deployment_id');
+  const journalEventSequence = requireHostedV1JournalSequence(journalRow?.eventSequence);
+  const deliveredEvents = await page.evaluate(() => window.__hostedE2eSse);
+  if (!deliveredEvents) throw new Error('hosted_e2e_external_coordination_stream_missing');
+  const targetEvents = deliveredEvents.events.filter((event) => event.eventId === journalEventId);
+  assertHostedV1ExternalCoordinationStreamProof({
+    launchBoundaryEventCount: lifecycleLaunchReceipt.launchBoundaryEventCount,
+    launchBoundaryFrameIndex: lifecycleLaunchReceipt.launchBoundaryFrameIndex,
+    opens: deliveredEvents.opens,
+    reconnects: deliveredEvents.reconnects,
+    error: deliveredEvents.error,
+    heartbeatStreamIds: deliveredEvents.heartbeatStreamIds,
+    heartbeatFrameIndexes: deliveredEvents.heartbeatFrameIndexes,
+    events: deliveredEvents.events,
+    targetEventId: journalEventId,
+  });
+  expect(lifecycleLaunchReceipt.launchBoundaryEventCount).toBe(0);
+  expect(targetEvents).toHaveLength(1);
+  const targetEvent = targetEvents[0]!;
+  expect(deliveredEvents.opens).toBe(1);
+  expect(deliveredEvents.reconnects).toBe(0);
+  expect(deliveredEvents.error).toBeNull();
+  expect(deliveredEvents.heartbeatStreamIds).not.toHaveLength(0);
+  expect(deliveredEvents.heartbeatStreamIds.every((streamId) => streamId === 1)).toBe(true);
+  expect(deliveredEvents.heartbeatFrameIndexes.some((index) => index < targetEvent.frameIndex)).toBe(true);
+  expect(deliveredEvents.events.every((event) => event.streamId === 1)).toBe(true);
+  const eventSequences = deliveredEvents.events.map((event) => event.eventSequence).filter(
+    (sequence): sequence is number => typeof sequence === 'number'
+  );
+  expect(eventSequences).toEqual([...eventSequences].sort((left, right) => left - right));
+  expect(new Set(eventSequences).size).toBe(eventSequences.length);
+  expect(targetEvent).toEqual(expect.objectContaining({
+    id: expect.any(String),
+    deploymentId: journalDeploymentId,
+    eventId: journalEventId,
+    eventSequence: journalEventSequence,
+    eventCursor: expect.any(String),
+    eventEpoch: journalRow?.eventEpoch,
+    scopeKind: 'workspace',
+    scopeId: runtime.workspaceId,
+    payload: { kind: 'invalidate', resource: 'team_lifecycle' },
+    streamId: 1,
+  }));
+  expect(targetEvent.id).toBe(targetEvent.eventCursor);
+  const expectedJournalCursor = encodeReplayCursor({
+    cursorVersion: 1,
+    deploymentId: journalDeploymentId,
+    eventEpoch: journalEventEpoch,
+    eventSequence: journalEventSequence,
+  });
+  expect(targetEvent.eventCursor).toBe(expectedJournalCursor);
+  // The handoff proof above is complete.  These are useful artifacts, but
+  // they must not spend the ten-second commitment deadline or reject a timely
+  // journal/stream proof.
+  const launchRuntimeState = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'read:personal-lifecycle-launch-runtime-state.json',
+    operation: (signal) => readFile(runtime.fakeRuntimeStateFile, { signal }),
+  });
+  const launchRuntimeTrace = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'read:personal-lifecycle-launch-runtime-trace.json',
+    operation: (signal) => readFile(runtime.fakeRuntimeLifecycleTraceFile, { signal }),
+  });
+  await Promise.all([
+    trackHostedV1BestEffortDiagnostic(testInfo, {
+      name: 'attach:personal-lifecycle-launch-response.json',
+      operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('personal-lifecycle-launch-response.json', {
+        body: JSON.stringify(lifecycleLaunch, null, 2), contentType: 'application/json',
+      }),
+    }),
+    trackHostedV1BestEffortDiagnostic(testInfo, {
+      name: 'attach:personal-lifecycle-launch-runtime-state.json',
+      operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('personal-lifecycle-launch-runtime-state.json', {
+        body: launchRuntimeState ?? JSON.stringify({ schemaVersion: 1, kind: 'read_unavailable' }),
+        contentType: 'application/json',
+      }),
+    }),
+    trackHostedV1BestEffortDiagnostic(testInfo, {
+      name: 'attach:personal-lifecycle-launch-runtime-trace.json',
+      operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('personal-lifecycle-launch-runtime-trace.json', {
+        body: launchRuntimeTrace ?? JSON.stringify({ schemaVersion: 1, kind: 'read_unavailable' }),
+        contentType: 'application/json',
+      }),
+    }),
+  ]);
+  await attachExternalCoordinationEvidence(
+    testInfo,
+    'predicate-expiry',
+    lifecycleLaunchBody.runId,
+    page,
+    eventRequestUrls,
+    initialEventStreamStatus,
+    {
+      handoffOriginMs: lifecycleHandoffOriginMs,
+      commitInitiatedAtMs: lifecycleLaunchReceipt.commitInitiatedAtMs,
+      handoffDeadlineMs: lifecycleDeadlines.handoffDeadlineMs,
+      replayDeadlineMs: lifecycleDeadlines.replayDeadlineMs,
+      observedElapsedMs: Date.now() - lifecycleHandoffOriginMs,
+    },
+    launchReceiptDiagnosticFailures
+  );
+  const firstDeliveredCursor = await page.evaluate(() => {
+    const state = window.__hostedE2eSse;
     return state?.ids[0] ?? null;
   });
   expect(firstDeliveredCursor).toMatch(/^cev1\./);
@@ -2332,91 +3195,158 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   const controllerPid = Number(controllerProcess?.trim().split(/\s+/u)[0]);
   expect(Number.isSafeInteger(controllerPid) && controllerPid > 1).toBe(true);
 
+  // A restart proof is relative to the reader that existed before shutdown.
+  // Failed reconnection attempts may change reconnects, but they cannot make a
+  // successful resumed stream look like the prior one.
+  const reconnectBaseline = await page.evaluate(() => {
+    const state = window.__hostedE2eSse;
+    if (!state) throw new Error('coordination_stream_state_missing_before_restart');
+    return {
+      opens: state.opens,
+      reconnects: state.reconnects,
+      streamGeneration: state.opens,
+      cursor: state.cursor,
+    };
+  });
+  expect(reconnectBaseline.opens).toBeGreaterThanOrEqual(1);
+
   process.kill(controllerPid, 'SIGTERM');
   await expect
     .poll(async () => compose('ps', '--status', 'exited', '--quiet', 'hosted-controller'))
     .not.toBe('');
-  const shutdownLogs = await compose('logs', '--no-color', 'hosted-controller');
   const shutdownState = JSON.parse(
     await docker('inspect', '--format', '{{json .State}}', controllerId)
   ) as { Error: string; ExitCode: number; OOMKilled: boolean };
-  await testInfo.attach('personal-controller-shutdown.json', {
-    body: JSON.stringify({ logs: shutdownLogs, state: shutdownState }, null, 2),
-    contentType: 'application/json',
+  const shutdownLogs = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'compose_logs:personal-controller-shutdown',
+    operation: (signal) => composeDiagnostic(signal, 'logs', '--no-color', 'hosted-controller'),
+  });
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'attach:personal-controller-shutdown.json',
+    operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('personal-controller-shutdown.json', {
+      body: JSON.stringify({ logs: shutdownLogs, state: shutdownState }, null, 2),
+      contentType: 'application/json',
+    }),
   });
   expect(shutdownState).toMatchObject({ Error: '', ExitCode: 0, OOMKilled: false });
+  const reconnectOriginMs = Date.now();
+  const reconnectDeadlines = externalCoordinationReplayBudget.deadlinesFrom(reconnectOriginMs);
   await restartHostedV1LifecycleOwner({ compose });
   await expect
     .poll(
       () =>
         page.evaluate(() => {
-          const state = (
-            window as typeof window & {
-              __hostedE2eSse?: { opens: number; ids: string[] };
-            }
-          ).__hostedE2eSse;
+          const state = window.__hostedE2eSse;
           return state?.opens ?? 0;
         }),
-      { timeout: EXTERNAL_COORDINATION_EVENT_REPLAY_TIMEOUT_MS }
+      {
+        timeout: externalCoordinationReplayBudget.requireRemainingAt(
+          reconnectDeadlines.replayDeadlineMs,
+          Date.now()
+        ),
+      }
     )
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThan(reconnectBaseline.opens);
   await expect
-    .poll(() => eventRequestHeaders.length, {
-      timeout: EXTERNAL_COORDINATION_EVENT_REPLAY_TIMEOUT_MS,
+    .poll(() => eventRequestUrls.length, {
+      timeout: externalCoordinationReplayBudget.requireRemainingAt(
+        reconnectDeadlines.replayDeadlineMs,
+        Date.now()
+      ),
     })
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThan(reconnectBaseline.opens);
   const resumeHeaders = eventRequestHeaders;
-  expect(resumeHeaders.length).toBeGreaterThanOrEqual(2);
-  expect(resumeHeaders[0]['last-event-id']).toBeUndefined();
+  if (resumeHeaders[0]) expect(resumeHeaders[0]['last-event-id']).toBeUndefined();
   expect(
     eventRequestUrls
-      .slice(1)
+      .slice(reconnectBaseline.opens)
       .some((url) => new URL(url).searchParams.get('after') === firstDeliveredCursor)
   ).toBe(true);
-  await testInfo.attach('personal-event-stream-reconnect.json', {
-    body: JSON.stringify(
+  await expect
+    .poll(
+      () => page.evaluate((baseline) => {
+        const state = window.__hostedE2eSse;
+        return Boolean(
+          state &&
+          state.opens === baseline.streamGeneration + 1 &&
+          state.reconnects > baseline.reconnects &&
+          state.error === null &&
+          state.heartbeatStreamIds.filter(
+            (streamId, index) =>
+              streamId === baseline.streamGeneration + 1 &&
+              Number.isFinite(state.heartbeatObservedAtMs[index]) &&
+              state.heartbeatCursors[index] === baseline.cursor &&
+              Number.isSafeInteger(state.heartbeatEventCounts[index])
+          ).length >= 2
+        );
+      }, reconnectBaseline),
       {
+        timeout: externalCoordinationReplayBudget.requireRemainingAt(
+          reconnectDeadlines.replayDeadlineMs,
+          Date.now()
+        ),
+      }
+    )
+    .toBe(true);
+  // Capture and validate the completion boundary synchronously with the
+  // second resumed heartbeat.  Nothing diagnostic may run before this proof:
+  // Playwright attachment/read work is intentionally best-effort and must not
+  // consume the replay deadline.
+  const reconnectProofState = await page.evaluate(() => window.__hostedE2eSse);
+  if (!reconnectProofState) throw new Error('hosted_e2e_external_reconnect_stream_missing');
+  assertHostedV1ExternalCoordinationReconnectProof({
+    events: reconnectProofState.events,
+    baselineCursor: reconnectBaseline.cursor,
+    baselineOpens: reconnectBaseline.opens,
+    baselineReconnects: reconnectBaseline.reconnects,
+    baselineStreamId: reconnectBaseline.streamGeneration,
+    opens: reconnectProofState.opens,
+    reconnects: reconnectProofState.reconnects,
+    error: reconnectProofState.error,
+    heartbeatFrameIndexes: reconnectProofState.heartbeatFrameIndexes,
+    heartbeatStreamIds: reconnectProofState.heartbeatStreamIds,
+    heartbeatObservedAtMs: reconnectProofState.heartbeatObservedAtMs,
+    heartbeatCursors: reconnectProofState.heartbeatCursors,
+    heartbeatEventCounts: reconnectProofState.heartbeatEventCounts,
+    observedAtMs: Date.now(),
+    originMs: reconnectOriginMs,
+    replayDeadlineMs: reconnectDeadlines.replayDeadlineMs,
+    reconnectStreamId: reconnectBaseline.streamGeneration + 1,
+    targetEventId: journalEventId,
+    targetEventSequence: journalEventSequence,
+  });
+  expect(reconnectProofState.ids).toEqual([firstDeliveredCursor]);
+  const reconnectState = await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'page_evaluate:personal-event-stream-reconnect',
+    operation: async (signal) => {
+      if (signal.aborted) return null;
+      const result = await page.evaluate(() => {
+          const state = window.__hostedE2eSse;
+          return state ? { opens: state.opens, ids: state.ids, cursor: state.cursor } : null;
+      });
+      return signal.aborted ? null : result;
+    },
+  });
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'attach:personal-event-stream-reconnect.json',
+    operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('personal-event-stream-reconnect.json', {
+      body: JSON.stringify({
         requestUrls: eventRequestUrls,
         requestHeaders: resumeHeaders,
-        state: await page.evaluate(() => {
-          const state = (
-            window as typeof window & {
-              __hostedE2eSse?: { opens: number; ids: string[]; cursor: string };
-            }
-          ).__hostedE2eSse;
-          return state ? { opens: state.opens, ids: state.ids, cursor: state.cursor } : null;
-        }),
-      },
-      null,
-      2
-    ),
-    contentType: 'application/json',
+        state: reconnectState,
+        diagnosticFailures: hostedV1DiagnosticFailures(testInfo),
+        requestHeaderDiagnosticFailures: eventRequestHeaderDiagnostics,
+      }, null, 2),
+      contentType: 'application/json',
+    }),
   });
-  expect(
-    await page.evaluate(() => {
-      const state = (
-        window as typeof window & {
-          __hostedE2eSse?: { ids: string[] };
-        }
-      ).__hostedE2eSse;
-      return state?.ids ?? [];
-    })
-  ).toEqual([firstDeliveredCursor]);
   await expectInstanceLockRejection();
   await page.evaluate(() => {
-    const state = (
-      window as typeof window & {
-        __hostedE2eSse?: {
-          source: EventSource | null;
-          reconnectTimer: number | null;
-          closed: boolean;
-        };
-      }
-    ).__hostedE2eSse;
+    const state = window.__hostedE2eSse;
     if (!state) return;
     state.closed = true;
     if (state.reconnectTimer !== null) window.clearTimeout(state.reconnectTimer);
-    state.source?.close();
+    state.controller?.abort();
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await selectRegisteredWorkspace(page);
@@ -2804,18 +3734,26 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   void personalLogoutReloadPromise.catch(() => undefined);
   await page.getByRole('button', { name: 'Sign out' }).click();
   const personalLogoutResponse = await personalLogoutResponsePromise;
-  await testInfo.attach('personal-local-logout-response.json', {
-    body: JSON.stringify(
-      {
-        method: personalLogoutResponse.request().method(),
-        url: personalLogoutResponse.url(),
-        status: personalLogoutResponse.status(),
-        headers: await personalLogoutResponse.allHeaders(),
-      },
-      null,
-      2
-    ),
-    contentType: 'application/json',
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'attach:personal-local-logout-response.json',
+    operation: async (signal) => {
+      if (signal.aborted) return;
+      const headers = await personalLogoutResponse.allHeaders();
+      if (signal.aborted) return;
+      await testInfo.attach('personal-local-logout-response.json', {
+      body: JSON.stringify(
+        {
+          method: personalLogoutResponse.request().method(),
+          url: personalLogoutResponse.url(),
+          status: personalLogoutResponse.status(),
+          headers,
+        },
+        null,
+        2
+      ),
+      contentType: 'application/json',
+      });
+    },
   });
   expect(personalLogoutResponse.status()).toBe(200);
   await personalLogoutReloadPromise;
@@ -2843,7 +3781,8 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
 test('production HTTPS OIDC flow uses the isolated provider without pairing fallback', async ({
   context,
   page,
-}, testInfo) => {
+}, rawTestInfo) => {
+  const testInfo = bestEffortDiagnosticTestInfo(rawTestInfo);
   test.setTimeout(180_000);
   test.skip(runtime.authMode !== 'oidc', 'OIDC-mode scenario only');
   const documentResponse = await page.goto(runtime.origin, {
@@ -3143,9 +4082,12 @@ test('production HTTPS OIDC flow uses the isolated provider without pairing fall
     },
     { token: csrfToken, identity: lifecycleItem }
   );
-  await testInfo.attach('oidc-owner-lifecycle-launch-response.json', {
-    body: JSON.stringify(lifecycleResponse, null, 2),
-    contentType: 'application/json',
+  await trackHostedV1BestEffortDiagnostic(testInfo, {
+    name: 'attach:oidc-owner-lifecycle-launch-response.json',
+    operation: (signal) => signal.aborted ? Promise.resolve() : testInfo.attach('oidc-owner-lifecycle-launch-response.json', {
+      body: JSON.stringify(lifecycleResponse, null, 2),
+      contentType: 'application/json',
+    }),
   });
   expect(lifecycleResponse).toMatchObject({
     status: 202,
@@ -3245,7 +4187,8 @@ test('production HTTPS OIDC flow uses the isolated provider without pairing fall
   );
 });
 
-test('OIDC viewer is isolated from workspace mutations', async ({ page, context }, testInfo) => {
+test('OIDC viewer is isolated from workspace mutations', async ({ page, context }, rawTestInfo) => {
+  const testInfo = bestEffortDiagnosticTestInfo(rawTestInfo);
   test.setTimeout(180_000);
   test.skip(runtime.authMode !== 'oidc-viewer', 'OIDC viewer scenario only');
   const viewerNavigationUrls: string[] = [];

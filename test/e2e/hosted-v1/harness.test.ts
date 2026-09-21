@@ -1,7 +1,7 @@
 import { execFile, spawn as spawnChild } from 'node:child_process';
 import { createHash, createHmac, createPublicKey, verify } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,15 +17,23 @@ import YAML from 'yaml';
 
 import {
   allocateHostedV1CaddyPublishedPorts,
+  assertHostedV1ExternalCoordinationReconnectProof,
+  assertHostedV1ExternalCoordinationStreamProof,
   assertHostedV1ScenarioIsolation,
   boundHostedV1EvidenceUtf8,
   classifyHostedV1ProjectAccess,
   cleanupHostedV1SandboxRoots,
   collectHostedV1GrantEvidence,
   collectHostedV1ScannerEvidence,
+  createHostedV1ExternalCoordinationReplayBudget,
   createMarkerOwnedHostedV1ScenarioSandbox,
+  freezeHostedV1DiagnosticFailures,
+  HostedV1ArtifactPersistenceError,
+  readHostedV1CommittedArtifact,
   redactEvidence,
+  runHostedV1BestEffortDiagnostic,
   sanitizePlaywrightEvidence,
+  writeHostedV1AtomicArtifact,
 } from '../../../scripts/e2e/hosted-v1/run';
 import {
   advanceHostedV1MountGeneration,
@@ -142,8 +150,8 @@ async function sendFakeRuntimeLifecycleRequest(
   return parsed;
 }
 
-async function waitForPath(path: string): Promise<void> {
-  const deadlineAt = Date.now() + 10_000;
+async function waitForPath(path: string, timeoutMs = 10_000): Promise<void> {
+  const deadlineAt = Date.now() + timeoutMs;
   for (;;) {
     try {
       await lstat(path);
@@ -154,6 +162,17 @@ async function waitForPath(path: string): Promise<void> {
       }
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
     }
+  }
+}
+
+async function waitForTemporaryArtifact(directory: string): Promise<void> {
+  const deadlineAt = Date.now() + 10_000;
+  for (;;) {
+    if ((await readdir(directory)).some((entry) => entry.endsWith('.payload'))) return;
+    if (Date.now() >= deadlineAt) {
+      throw new Error('hosted_v1_test_temporary_artifact_not_observed');
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
   }
 }
 
@@ -210,6 +229,1422 @@ afterEach(async () => {
 });
 
 describe('hosted v1 browser E2E sandbox', () => {
+  it('reaps a writer stalled before preflight without a parent filesystem request', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-hung-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path, body: '{"proof":true}', timeoutMs: 100,
+      testWriterProgram: 'process.stdin.resume(); setInterval(() => {}, 1_000);',
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'deadline_exceeded', path,
+    });
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toEqual([]);
+  });
+
+  it('bounds a stalled artifact-directory preparation inside the writer without hanging the parent', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-stalled-mkdir-'));
+    roots.push(root);
+    const path = join(root, 'not-yet-created', 'aggregate.json');
+    const startedAtMs = Date.now();
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 100,
+      testPreparationStall: true,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'deadline_exceeded', path,
+    });
+    expect(Date.now() - startedAtMs).toBeLessThan(1_000);
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('classifies a writer-side mkdir preparation error with its diagnostic artifact path', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-mkdir-error-'));
+    roots.push(root);
+    const blockedDirectory = join(root, 'blocked');
+    await writeFile(blockedDirectory, 'not a directory');
+    const path = join(blockedDirectory, 'diagnostic-attachment.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 1_000,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'preparation_failed', path,
+    });
+    const failures: string[] = [];
+    await expect(runHostedV1BestEffortDiagnostic({
+      failures,
+      name: 'attach:diagnostic-attachment.json',
+      operation: () => writeHostedV1AtomicArtifact({ path, body: '{"proof":true}', timeoutMs: 1_000 }),
+    })).resolves.toBeNull();
+    expect(failures).toEqual([
+      `attach:diagnostic-attachment.json:preparation_failed:${path}`,
+    ]);
+  });
+
+  it('fails closed when cleanup starts near deadline and cannot prove owned names absent', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-cleanup-deadline-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const result = await writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 500,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const temporary = process.argv[2];
+        process.stdin.resume(); process.stdin.on('end', () => {
+          process.stdout.write('preflight-ok\\n'); fs.writeFileSync(temporary, 'partial');
+          setInterval(() => {}, 1_000);
+        });
+      `,
+      testCleanupProgram: 'setInterval(() => {}, 1_000);',
+    }).then(
+      () => ({ kind: 'fulfilled' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error })
+    );
+    expect(result).toMatchObject({
+      kind: 'rejected',
+      error: expect.objectContaining<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'deadline_exceeded', path,
+      }),
+    });
+    const cause = (result as { readonly error: Error }).error.cause;
+    expect(cause).toBeInstanceOf(AggregateError);
+    // A timeout is not a successful cleanup merely because the parent has
+    // stopped waiting; the owned partial remains visible to this test.
+    expect((await readdir(root)).some((entry) => entry.endsWith('.payload'))).toBe(true);
+  });
+
+  it('SIGKILLs and reaps a hung cleaner before diagnostic persistence settles', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-cleaner-reap-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const cleanerPidPath = join(root, 'cleaner.pid');
+    const result = await writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 3_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const temporary = process.argv[2];
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(temporary, 'partial'); setInterval(() => {}, 1_000);
+        });
+      `,
+      testCleanupProgram: String.raw`
+        const fs = require('node:fs'); fs.writeFileSync(${JSON.stringify(cleanerPidPath)}, String(process.pid));
+        setInterval(() => {}, 1_000);
+      `,
+    }).then(
+      () => ({ kind: 'fulfilled' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error })
+    );
+    expect(result).toMatchObject({
+      kind: 'rejected',
+      error: expect.objectContaining<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'deadline_exceeded', path,
+      }),
+    });
+    const cleanerPid = Number.parseInt(await readFile(cleanerPidPath, 'utf8'), 10);
+    expect(Number.isSafeInteger(cleanerPid)).toBe(true);
+    expect(() => process.kill(cleanerPid, 0)).toThrow();
+  });
+
+  it('aborts an evidence writer mid-write without publishing its final path', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-abort-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const controller = new AbortController();
+    const writing = writeHostedV1AtomicArtifact({
+      path, body: '{"proof":"mid-write"}', timeoutMs: 15_000, signal: controller.signal,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const [destination, temporary, receipt] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(temporary, 'partial'); fs.linkSync(temporary, receipt);
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n'); setInterval(() => {}, 1_000);
+        });
+      `,
+    });
+    // Observe rejection before waiting for readiness so a test failure cannot
+    // become an unhandled rejection.  The writer budget exceeds the bounded
+    // readiness observation, leaving abort classification deterministic.
+    const writingResult = writing.then(
+      () => ({ kind: 'fulfilled' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error })
+    );
+    await waitForTemporaryArtifact(root);
+    controller.abort();
+    await expect(writingResult).resolves.toMatchObject({
+      kind: 'rejected',
+      error: expect.objectContaining<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'aborted', path,
+      }),
+    });
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toEqual([]);
+  });
+
+  it('durably receipts the exact temporary inode before body writes so a pre-body SIGKILL is cleanup-safe', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-pre-body-receipt-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const identityPath = join(root, 'receipt-identity.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs');
+        const nodePath = require('node:path');
+        const [destination, temporary, receipt] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.closeSync(fs.openSync(receipt, 'wx', 0o600));
+          fs.linkSync(receipt, temporary);
+          const directory = fs.openSync(nodePath.dirname(receipt), 'r');
+          try { fs.fsyncSync(directory); } finally { fs.closeSync(directory); }
+          const temporaryIdentity = fs.lstatSync(temporary, { bigint: true });
+          const receiptIdentity = fs.lstatSync(receipt, { bigint: true });
+          fs.writeFileSync(${JSON.stringify(identityPath)}, JSON.stringify({
+            sameDevice: temporaryIdentity.dev === receiptIdentity.dev,
+            sameInode: temporaryIdentity.ino === receiptIdentity.ino,
+            temporaryBytes: Number(temporaryIdentity.size),
+          }));
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    await expect(readFile(identityPath, 'utf8')).resolves.toBe(
+      JSON.stringify({ sameDevice: true, sameInode: true, temporaryBytes: 0 })
+    );
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toEqual([]);
+  });
+
+  it('fails final persistence deterministically when the writer fails', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-failure-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path, body: '{}', timeoutMs: 1_000, testWriterProgram: 'process.stdin.resume(); process.exitCode = 1;',
+    })).rejects.toThrow(`hosted_e2e_artifact_persistence_writer_failed:${path}`);
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('treats newline-delimited writer acknowledgements as exact destination ownership', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-rename-failure-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const result = await writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const [destination, temporary] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n');
+          process.stdout.write('hosted-v1-artifact-v1:transaction-prepared\n');
+          fs.writeFileSync(temporary, 'published'); fs.renameSync(temporary, destination);
+          process.stdout.write('hosted-v1-artifact-v1:destination-owned\n');
+          process.exitCode = 1;
+        });
+      `,
+    }).then(
+      () => ({ kind: 'fulfilled' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error })
+    );
+    expect(result).toMatchObject({
+      kind: 'rejected',
+      error: expect.objectContaining<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'writer_failed', path,
+      }),
+    });
+    expect((result as { readonly error: Error }).error.cause).toBeInstanceOf(AggregateError);
+    // An acknowledgement is not an exclusive lock. A public name is retained
+    // after a writer failure rather than being detached during cleanup.
+    await expect(readFile(path, 'utf8')).resolves.toBe('published');
+  });
+
+  it('settles an acknowledged canonical commit after SIGKILL and retries it idempotently', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-killed-after-commit-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const body = '{"proof":true}';
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body,
+      timeoutMs: 1_000,
+      testWriterInterruptAfterCanonicalLink: true,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    // The failed writer has already made a durable canonical record. Its
+    // payload must remain readable, and a retry validates that record instead
+    // of failing with destination_exists or deleting the referenced payload.
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(body);
+    let retryCanonicalDirectorySynced = false;
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body,
+      timeoutMs: 1_000,
+      testOnCanonicalDirectorySynced: () => { retryCanonicalDirectorySynced = true; },
+    })).resolves.toBeUndefined();
+    // The callback comes from the real worker's canonical retry branch after
+    // its publication-directory fsync, not from public recovery observation.
+    expect(retryCanonicalDirectorySynced).toBe(true);
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(body);
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toHaveLength(1);
+  });
+
+  it('refuses to delete a replacement after post-rename crash recovery', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-replacement-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 3_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs');
+        const [destination, temporary, receipt, capability] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(temporary, 'published');
+          fs.linkSync(temporary, receipt);
+          fs.renameSync(temporary, destination);
+          const replacement = temporary + '.replacement';
+          fs.writeFileSync(replacement, 'replacement'); fs.renameSync(replacement, destination);
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    await expect(readFile(path, 'utf8')).resolves.toBe('replacement');
+  });
+
+  it('preserves a competing canonical artifact when cleanup is interrupted immediately after observing it', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-cleanup-competing-interrupt-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    let observedPublicDestination = false;
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 3_000,
+      testCleanupInterruptAfterEncounter: true,
+      testOnPublicDestinationObserved: () => { observedPublicDestination = true; },
+      testWriterProgram: String.raw`
+        const fs = require('node:fs');
+        const [destination, temporary, receipt] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(temporary, 'published');
+          fs.linkSync(temporary, receipt);
+          fs.renameSync(temporary, destination);
+          const competing = temporary + '.competing';
+          fs.writeFileSync(competing, 'competing-canonical-artifact');
+          fs.renameSync(competing, destination);
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    // This assertion makes the test fail if the interruption hook is not
+    // reached from the observation-only public recovery path.
+    expect(observedPublicDestination).toBe(true);
+    await expect(readFile(path, 'utf8')).resolves.toBe('competing-canonical-artifact');
+    const entries = await readdir(root);
+    expect(entries.filter((entry) => entry.endsWith('.payload'))).toEqual([]);
+    expect(entries.filter((entry) => entry.endsWith('.receipt'))).toHaveLength(1);
+  });
+
+  it('atomically refuses a deterministic competing publication without overwriting its evidence', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-no-replace-race-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs');
+        const [destination, temporary, receipt] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.closeSync(fs.openSync(receipt, 'wx', 0o600));
+          fs.linkSync(receipt, temporary);
+          fs.writeFileSync(temporary, 'our-proof');
+          fs.writeFileSync(destination, 'competing-proof', { flag: 'wx' });
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n');
+          fs.linkSync(temporary, destination);
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    await expect(readFile(path, 'utf8')).resolves.toBe('competing-proof');
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toEqual([]);
+  });
+
+  it('recognizes the cleaner success acknowledgement as a newline-delimited record', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-cleaner-ack-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const result = await writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":true}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const [destination, temporary] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(temporary, 'published'); fs.renameSync(temporary, destination);
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n' +
+            'hosted-v1-artifact-v1:destination-owned\n'); process.exitCode = 1;
+        });
+      `,
+      testCleanupProgram: String.raw`
+        const fs = require('node:fs'); const [path,,,scope] = process.argv.slice(1);
+        if (scope === 'private') fs.rmSync(path, { force: true });
+        process.stdout.write('hosted-v1-artifact-v1:cleaner-absent\n');
+      `,
+    }).then(
+      () => ({ kind: 'fulfilled' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error })
+    );
+    expect(result).toMatchObject({
+      kind: 'rejected',
+      error: expect.objectContaining({ message: `hosted_e2e_artifact_persistence_writer_failed:${path}` }),
+    });
+    const cleanupAwareCause = (result as { readonly error: Error }).error.cause;
+    expect(cleanupAwareCause).toBeInstanceOf(AggregateError);
+    expect((cleanupAwareCause as AggregateError).errors).toHaveLength(1);
+    await expect(readFile(path, 'utf8')).resolves.toBe('published');
+  });
+
+  it('publishes the final aggregate atomically after fsync with no-replace linking', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-success-'));
+    roots.push(root);
+    const path = join(root, 'hosted-v1-diagnostic-failures-final.json');
+    const aggregate = JSON.stringify({ schemaVersion: 1, attachmentFailures: [], observationFailures: [] });
+    await writeHostedV1AtomicArtifact({ path, body: aggregate, timeoutMs: 1_000 });
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(aggregate);
+    expect((await readdir(root)).filter((entry) => entry.endsWith('.payload'))).toHaveLength(1);
+  });
+
+  it('redacts evidence before commit hashing and leaves committed payload bytes immutable', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-redacted-commit-'));
+    roots.push(root);
+    const sandbox = await createHostedV1Sandbox(root);
+    const path = join(root, 'aggregate.json');
+    const pairingCode = 'pairing-secret-must-not-survive-commit';
+    const raw = JSON.stringify({ authorization: 'Bearer raw-secret', pairingCode, root: sandbox.root });
+    const redacted = redactEvidence(raw, sandbox, pairingCode);
+
+    await writeHostedV1AtomicArtifact({
+      path,
+      body: raw,
+      sanitizeBody: (body) => redactEvidence(body, sandbox, pairingCode),
+      timeoutMs: 1_000,
+    });
+
+    const commit = JSON.parse(await readFile(path, 'utf8')) as { sha256: string; payload: string };
+    const payloadPath = join(root, commit.payload);
+    const committedBytes = await readFile(payloadPath);
+    expect(committedBytes.toString('utf8')).toBe(redacted);
+    expect(committedBytes.toString('utf8')).not.toContain(pairingCode);
+    expect(commit.sha256).toBe(createHash('sha256').update(committedBytes).digest('hex'));
+    // This is the normal post-write read path: it validates the same immutable
+    // bytes, so later runner completion cannot make the commit digest stale.
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(redacted);
+    expect(await readFile(payloadPath)).toEqual(committedBytes);
+  });
+
+  it('reads, redacts, bounds, and commits path-backed evidence in the supervised writer', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-source-redaction-'));
+    roots.push(root);
+    const sourcePath = join(root, 'raw-source.json');
+    const path = join(root, 'aggregate.json');
+    const secret = 'source-secret-must-not-survive';
+    const raw = JSON.stringify({ authorization: `Bearer ${secret}`, root, padding: '🧪'.repeat(20_000) });
+    await writeFile(sourcePath, raw, 'utf8');
+
+    await writeHostedV1AtomicArtifact({
+      path,
+      sourcePath,
+      sourceRedaction: {
+        replacements: [{ value: root, placeholder: '<sandbox-root>' }],
+        maximumBytes: 16 * 1024,
+      },
+      timeoutMs: 1_000,
+    });
+
+    const committed = await readHostedV1CommittedArtifact(path);
+    expect(committed).not.toContain(secret);
+    expect(committed).not.toContain(root);
+    expect(Buffer.byteLength(committed)).toBeLessThanOrEqual(16 * 1024);
+    expect(JSON.parse(committed)).toMatchObject({
+      schemaVersion: 1,
+      truncated: true,
+      fullRedactedSha256: expect.stringMatching(/^[0-9a-f]{64}$/u),
+    });
+  });
+
+  it('commits equivalent inline and path-backed CLI credential redaction before hashing', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-equivalent-redaction-'));
+    roots.push(root);
+    const sandbox = await createHostedV1Sandbox(root);
+    const pairingCode = 'pairing-code-must-not-survive';
+    const apiKey = 'api-key-must-not-survive';
+    const credential = 'credential-must-not-survive';
+    const sourcePath = join(root, 'raw-source.json');
+    const inlinePath = join(root, 'inline.json');
+    const pathBackedPath = join(root, 'path-backed.json');
+    const raw = JSON.stringify({
+      command: `runner --api-key ${apiKey} --client-secret '${credential}'`,
+      authorization: `Bearer ${credential}`,
+      nested: { credential, cookie: `__Host-agent-teams-session=${credential}` },
+      redirect: `https://example.invalid/callback?code=${credential}&access_token=${apiKey}`,
+      pairingCode,
+      root: sandbox.root,
+    });
+    const expected = redactEvidence(raw, sandbox, pairingCode, 16 * 1024);
+    await writeFile(sourcePath, raw, 'utf8');
+
+    await writeHostedV1AtomicArtifact({
+      path: inlinePath,
+      body: raw,
+      sanitizeBody: (value) => redactEvidence(value, sandbox, pairingCode, 16 * 1024),
+      timeoutMs: 1_000,
+    });
+    await writeHostedV1AtomicArtifact({
+      path: pathBackedPath,
+      sourcePath,
+      sourceRedaction: {
+        replacements: [
+          { value: process.cwd(), placeholder: '<repository-root>' },
+          { value: sandbox.root, placeholder: '<sandbox-root>' },
+          { value: '/workspaces/sandbox', placeholder: '<runtime-workspace-root>' },
+          { value: '/data/.claude', placeholder: '<runtime-claude-root>' },
+          { value: '/data/.agent-teams', placeholder: '<runtime-app-data-root>' },
+          { value: '/run/agent-teams-orchestrator', placeholder: '<lifecycle-runtime-root>' },
+          { value: '/run/agent-teams', placeholder: '<runtime-state-root>' },
+          { value: sandbox.lifecycleTrustAnchor, placeholder: '<trust-anchor>' },
+          { value: pairingCode, placeholder: '<pairing-code>' },
+        ],
+        maximumBytes: 16 * 1024,
+      },
+      timeoutMs: 1_000,
+    });
+
+    const inline = await readHostedV1CommittedArtifact(inlinePath);
+    const pathBacked = await readHostedV1CommittedArtifact(pathBackedPath);
+    expect(inline).toBe(expected);
+    expect(pathBacked).toBe(expected);
+    for (const secret of [apiKey, credential, pairingCode, sandbox.root]) {
+      expect(pathBacked).not.toContain(secret);
+    }
+    const commit = JSON.parse(await readFile(pathBackedPath, 'utf8')) as { sha256: string };
+    expect(commit.sha256).toBe(createHash('sha256').update(pathBacked, 'utf8').digest('hex'));
+  });
+
+  it('enforces committed attachment file and aggregate budgets before publication', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-retention-budget-'));
+    roots.push(root);
+    const perFileRoot = join(root, 'per-file');
+    const aggregateRoot = join(root, 'aggregate');
+    await mkdir(perFileRoot);
+    await mkdir(aggregateRoot);
+    const perFileBudget = {
+      root: perFileRoot,
+      maximumFileBytes: 16 * 1024,
+      maximumTotalBytes: 4 * 1024 * 1024,
+    };
+    const retentionBudget = {
+      root: aggregateRoot,
+      maximumFileBytes: 16 * 1024,
+      maximumTotalBytes: 32 * 1024,
+    };
+    const first = join(aggregateRoot, 'first.json');
+    const second = join(aggregateRoot, 'second.json');
+    const overFile = join(perFileRoot, 'over-file.json');
+    const overAggregate = join(aggregateRoot, 'over-aggregate.json');
+    const retained = 'a'.repeat(16 * 1024);
+
+    await writeHostedV1AtomicArtifact({
+      path: overFile, body: `${retained}x`, retentionBudget: perFileBudget, timeoutMs: 1_000,
+    });
+    await writeHostedV1AtomicArtifact({ path: first, body: retained, retentionBudget, timeoutMs: 1_000 });
+    await writeHostedV1AtomicArtifact({ path: second, body: retained, retentionBudget, timeoutMs: 1_000 });
+    await writeHostedV1AtomicArtifact({
+      path: overAggregate, body: retained, retentionBudget, timeoutMs: 1_000,
+    });
+
+    expect(await readHostedV1CommittedArtifact(first)).toHaveLength(16 * 1024);
+    expect(await readHostedV1CommittedArtifact(second)).toHaveLength(16 * 1024);
+    expect(Buffer.byteLength(await readHostedV1CommittedArtifact(overFile))).toBeLessThanOrEqual(16 * 1024);
+    expect(Buffer.byteLength(await readHostedV1CommittedArtifact(overFile))).toBeGreaterThan(0);
+    expect(Buffer.byteLength(await readHostedV1CommittedArtifact(overAggregate))).toBe(0);
+  });
+
+  it('serializes concurrent production attachment admissions under one aggregate budget', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-concurrent-retention-'));
+    roots.push(root);
+    const retentionBudget = {
+      root,
+      maximumFileBytes: 4 * 1024 * 1024,
+      maximumTotalBytes: 4 * 1024 * 1024,
+    };
+    const paths = ['first.json', 'second.json', 'third.json'].map((name) => join(root, name));
+    const body = 'a'.repeat(3 * 1024 * 1024);
+
+    // Each call uses the production writer. The shared budget lock must cover
+    // scan, admission, and publication rather than merely producing a lucky
+    // non-overlapping outcome after independent scans.
+    await Promise.all(paths.map((path) => writeHostedV1AtomicArtifact({
+      path, body, retentionBudget, timeoutMs: 5_000,
+    })));
+
+    const retainedBytes = (await Promise.all(paths.map(async (path) =>
+      Buffer.byteLength(await readHostedV1CommittedArtifact(path), 'utf8')
+    ))).reduce((total, byteLength) => total + byteLength, 0);
+    expect(retainedBytes).toBeLessThanOrEqual(retentionBudget.maximumTotalBytes);
+    expect(retainedBytes).toBeGreaterThan(0);
+  });
+
+  it('recovers one dead lock generation while concurrent writers race to admit evidence', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-stale-lock-race-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_536 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    // This is a fully published, dead generation rather than a missing-owner
+    // gap. All contenders must serialize its recovery before either can
+    // publish a replacement owner.
+    await writeFile(lockPath, JSON.stringify({ pid: 999_999_999, token: 'dead-generation' }), 'utf8');
+    const paths = ['first.json', 'second.json', 'third.json'].map((name) => join(root, name));
+
+    await Promise.all(paths.map((path, index) => writeHostedV1AtomicArtifact({
+      path, body: String(index).repeat(1_024), retentionBudget, timeoutMs: 5_000,
+    })));
+
+    const retainedBytes = (await Promise.all(paths.map(async (path) =>
+      Buffer.byteLength(await readHostedV1CommittedArtifact(path), 'utf8')
+    ))).reduce((total, byteLength) => total + byteLength, 0);
+    expect(retainedBytes).toBeLessThanOrEqual(retentionBudget.maximumTotalBytes);
+    await expect(readFile(lockPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await readdir(root)).filter((name) => name.includes('.candidate-') || name.endsWith('.recovery'))).toEqual([]);
+  });
+
+  it('serializes two stale-gate reclaimers before a new writer publishes its owner', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-stale-gate-race-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_536 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    await writeFile(lockPath, JSON.stringify({ pid: 999_999_999, token: 'dead-lock-generation' }), 'utf8');
+    await writeFile(gatePath, JSON.stringify({ pid: 999_999_999, token: 'dead-gate-generation' }), 'utf8');
+
+    const paths = ['first.json', 'second.json', 'third.json'].map((name) => join(root, name));
+    await Promise.all(paths.map((path, index) => writeHostedV1AtomicArtifact({
+      path, body: String(index).repeat(1_024), retentionBudget, timeoutMs: 5_000,
+    })));
+
+    const retainedBytes = (await Promise.all(paths.map(async (path) =>
+      Buffer.byteLength(await readHostedV1CommittedArtifact(path), 'utf8')
+    ))).reduce((total, byteLength) => total + byteLength, 0);
+    expect(retainedBytes).toBeLessThanOrEqual(retentionBudget.maximumTotalBytes);
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await readdir(root)).filter((name) => name.includes('.candidate-') || name.includes('.claim-'))).toEqual([]);
+  });
+
+  it('keeps a replacement lock when concurrent reclaimers race a dead gate', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-concurrent-reclaimer-replacement-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    await writeFile(lockPath, JSON.stringify({ pid: 999_999_999, token: 'dead-lock-generation' }), 'utf8');
+    await writeFile(gatePath, JSON.stringify({ pid: 999_999_999, token: 'dead-gate-generation' }), 'utf8');
+
+    // Each production call has a separate supervised writer process.  The
+    // shared dead gate makes both processes reclaim concurrently; old
+    // pathname-reuse promotion could rename the lock one process had already
+    // republished, leaving the admitted artifact without its exclusion.
+    const destinations = ['replacement-a.json', 'replacement-b.json'].map((name) => join(root, name));
+    await Promise.all(destinations.map((path, index) => writeHostedV1AtomicArtifact({
+      path,
+      body: String(index).repeat(1_024),
+      retentionBudget,
+      timeoutMs: 5_000,
+    })));
+
+    const retained = await Promise.all(destinations.map((path) =>
+      readHostedV1CommittedArtifact(path).then((body) => Buffer.byteLength(body, 'utf8'))
+    ));
+    expect(retained.reduce((total, bytes) => total + bytes, 0)).toBeLessThanOrEqual(retentionBudget.maximumTotalBytes);
+    await expect(readFile(lockPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('does not let a paused reclaimer retire the live gate published after another reclaimer removes the stale generation', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-publisher-barrier-interleaving-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    await writeFile(lockPath, JSON.stringify({ pid: 999_999_999, token: 'dead-lock-generation' }), 'utf8');
+    await writeFile(gatePath, JSON.stringify({ pid: 999_999_999, token: 'dead-gate-generation' }), 'utf8');
+
+    const aClaimed = join(root, 'a-reclaimer-claimed');
+    const aResume = join(root, 'a-reclaimer-resume');
+    const aClaimReleased = join(root, 'a-reclaimer-claim-released');
+    const aClaimReleasedResume = join(root, 'a-reclaimer-claim-released-resume');
+    const bRetired = join(root, 'b-reclaimer-retired');
+    const bRetiredResume = join(root, 'b-reclaimer-retired-resume');
+    const bClaimReleased = join(root, 'b-reclaimer-claim-released');
+    const bClaimReleasedResume = join(root, 'b-reclaimer-claim-released-resume');
+    const publisherBarrierEncountered = join(root, 'publisher-reclaimer-barrier-encountered');
+    const publisherBarrierEncounteredResume = join(root, 'publisher-reclaimer-barrier-encountered-resume');
+    const publisherGatePublished = join(root, 'publisher-gate-published');
+    const publisherGateResume = join(root, 'publisher-gate-resume');
+
+    // A observes the dead public gate and publishes its destructive claim,
+    // but pauses before its final generation observation.
+    const a = writeHostedV1AtomicArtifact({
+      path: join(root, 'a.json'), body: 'a', retentionBudget, timeoutMs: 10_000,
+      testRetentionProtocol: {
+        afterReclaimerClaim: { readyPath: aClaimed, resumePath: aResume },
+        afterReclaimerClaimReleased: { readyPath: aClaimReleased, resumePath: aClaimReleasedResume },
+      },
+    });
+    await waitForPath(aClaimed);
+
+    // B is allowed to remove the stale generation while A still holds its
+    // claim. It pauses immediately after releasing its claim, before it can
+    // reacquire or recover any successor state.
+    const b = writeHostedV1AtomicArtifact({
+      path: join(root, 'b.json'), body: 'b', retentionBudget, timeoutMs: 10_000,
+      testRetentionProtocol: {
+        afterRecoveryGateRetired: { readyPath: bRetired, resumePath: bRetiredResume },
+        afterReclaimerClaimReleased: { readyPath: bClaimReleased, resumePath: bClaimReleasedResume },
+      },
+    });
+    await waitForPath(bRetired);
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    // A's final exact-generation observation must abandon the gate B already
+    // retired. Keep A paused after releasing its stale claim so B is the only
+    // reclaimer the publisher can encounter.
+    await writeFile(aResume, '', 'utf8');
+    await waitForPath(aClaimReleased);
+
+    // The publisher's real process claims the same barrier before it can
+    // create any replacement. Its acknowledgement is emitted only after it
+    // observes B's now-sole live reclaimer claim, eliminating a timing-only
+    // absence assertion.
+    const publisher = writeHostedV1AtomicArtifact({
+      path: join(root, 'publisher.json'), body: 'publisher', retentionBudget, timeoutMs: 10_000,
+      testRetentionProtocol: {
+        afterPublisherReclaimerBarrierEncountered: {
+          readyPath: publisherBarrierEncountered,
+          resumePath: publisherBarrierEncounteredResume,
+        },
+        afterRecoveryGatePublished: { readyPath: publisherGatePublished, resumePath: publisherGateResume },
+      },
+    });
+    await waitForPath(publisherBarrierEncountered);
+
+    // B cannot advance beyond the post-release pause, while the publisher
+    // remains paused after its observed barrier acknowledgement.
+    await writeFile(bRetiredResume, '', 'utf8');
+    await waitForPath(bClaimReleased);
+    // The publisher has proven it encountered B's claim, and B is now paused
+    // immediately after release. No process can race from B's release into a
+    // recovery/reacquire before this absence assertion.
+    await expect(waitForPath(publisherGatePublished, 100)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    // Release the acknowledged publisher only after B is frozen past release,
+    // then prove the publisher alone creates and keeps the replacement gate.
+    await writeFile(publisherBarrierEncounteredResume, '', 'utf8');
+    await waitForPath(publisherGatePublished);
+    await writeFile(bClaimReleasedResume, '', 'utf8');
+    await writeFile(aClaimReleasedResume, '', 'utf8');
+
+    const liveOwner = JSON.parse(await readFile(gatePath, 'utf8')) as { pid: number; token: string };
+    expect(liveOwner.pid).toBeGreaterThan(0);
+    expect(liveOwner.token).not.toBe('dead-lock-generation');
+    // A has exited after its exact-generation re-read. The replacement remains
+    // public while its publisher is deliberately paused, proving A's delayed
+    // promotion cannot rename or unlink this new generation.
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    await expect(readFile(gatePath, 'utf8')).resolves.toContain(liveOwner.token);
+
+    await writeFile(publisherGateResume, '', 'utf8');
+    await Promise.all([publisher, b, a]);
+    await expect(readHostedV1CommittedArtifact(join(root, 'publisher.json'))).resolves.toBe('publisher');
+  });
+
+  it('keeps long destination and reclaim basenames below NAME_MAX', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-name-max-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    await writeFile(lockPath, JSON.stringify({ pid: 999_999_999, token: 'dead-lock-generation' }), 'utf8');
+    const destination = join(root, `${'x'.repeat(235)}.json`);
+
+    await writeHostedV1AtomicArtifact({ path: destination, body: 'name-max', retentionBudget, timeoutMs: 5_000 });
+    await expect(readHostedV1CommittedArtifact(destination)).resolves.toBe('name-max');
+    const entries = await readdir(root);
+    expect(entries.every((name) => Buffer.byteLength(name, 'utf8') < 255)).toBe(true);
+    const commit = JSON.parse(await readFile(destination, 'utf8')) as { payload: string };
+    expect(commit.payload).toMatch(/^\.id-[0-9a-f]{64}\.[0-9a-f]{64}\.payload$/u);
+  });
+
+  it('recovers a stale gate when its prior reclaimer died after publishing the generation-unique claim', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-dead-gate-claim-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    const gateOwner = { pid: 999_999_999, token: 'dead-gate-generation' };
+    await writeFile(gatePath, JSON.stringify(gateOwner), 'utf8');
+    const gateStat = await lstat(gatePath, { bigint: true });
+    const gateIdentity = `${gateStat.dev}:${gateStat.ino}`;
+    const gateKey = createHash('sha256').update(gatePath, 'utf8').digest('hex');
+    // Match the writer's binary claim key exactly: UTF-8 gate digest, one NUL
+    // byte, generation, one NUL byte, then the unique claimant token.
+    const claimKey = Buffer.concat([
+      Buffer.from(gateKey, 'utf8'),
+      Buffer.from([0]),
+      Buffer.from('reclaimer', 'utf8'),
+      Buffer.from([0]),
+      Buffer.from(gateIdentity, 'utf8'),
+      Buffer.from([0]),
+      Buffer.from('00000000-0000-4000-8000-000000000001', 'utf8'),
+    ]);
+    const claimPath = join(root, `.hosted-v1-reclaim-${createHash('sha256').update(claimKey).digest('hex')}`);
+    // Model a reclaimer being killed after its create-only claim publication
+    // and before it can unlink the dead gate.
+    await writeFile(claimPath, JSON.stringify({
+      pid: 999_999_999,
+      token: '00000000-0000-4000-8000-000000000001',
+      processIncarnation: 'linux-proc-start:0',
+      retentionOwnerSchema: 'hosted-v1-retention-owner-v1',
+      retentionOwnerRole: 'reclaimer',
+      recoveryGateKey: gateKey,
+      recoveryGateIdentity: gateIdentity,
+      recoveryGateRole: 'reclaimer',
+    }), 'utf8');
+    await expect(readFile(claimPath, 'utf8')).resolves.toContain('00000000-0000-4000-8000-000000000001');
+
+    const destination = join(root, 'recovered.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: 'recovered', retentionBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(destination)).resolves.toBe('recovered');
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    // Only exact dead-claim recovery removes this generation-specific name;
+    // publication and normal private cleanup never visit it.
+    await expect(readFile(claimPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it.skipIf(process.platform !== 'linux')('reclaims a stale owner whose pid has been reused by this live harness process', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-pid-incarnation-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    // process.pid is deliberately live. Only the mismatched immutable Linux
+    // start tick proves this is a stale prior incarnation rather than a lease
+    // held by the current harness process.
+    await writeFile(lockPath, JSON.stringify({
+      pid: process.pid,
+      token: '00000000-0000-4000-8000-000000000002',
+      processIncarnation: 'linux-proc-start:0',
+      retentionOwnerSchema: 'hosted-v1-retention-owner-v1',
+      retentionOwnerRole: 'retention-lock',
+    }), 'utf8');
+
+    const destination = join(root, 'pid-reused.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: 'reclaimed-after-pid-reuse', retentionBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(destination)).resolves.toBe('reclaimed-after-pid-reuse');
+  });
+
+  it('leaves user tombstone-like artifacts and malformed tombstone claims untouched', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-tombstone-namespace-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const userArtifact = join(root, 'customer-export.tombstone-keep-me.json');
+    const tombstoneRoot = join(root, '.hosted-v1-retention-tombstones');
+    const malformedClaim = join(tombstoneRoot, `v1-${'0'.repeat(64)}.tombstone`);
+    await writeFile(userArtifact, 'user-owned');
+    await mkdir(tombstoneRoot, { mode: 0o700 });
+    await writeFile(malformedClaim, JSON.stringify({ pid: 999_999_999, token: 'not-a-protocol-token' }), 'utf8');
+    await writeFile(join(root, '.hosted-v1-artifact-retention.lock'), JSON.stringify({
+      pid: 999_999_999,
+      token: 'dead-lock-generation',
+    }), 'utf8');
+
+    await writeHostedV1AtomicArtifact({
+      path: join(root, 'survives-cleanup.json'), body: 'survives-cleanup', retentionBudget, timeoutMs: 5_000,
+    });
+    await expect(readFile(userArtifact, 'utf8')).resolves.toBe('user-owned');
+    await expect(readFile(malformedClaim, 'utf8')).resolves.toContain('not-a-protocol-token');
+  });
+
+  it('rejects symlinked artifact destinations and ancestor aliases before retention accounting', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-symlink-'));
+    roots.push(root);
+    const outside = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-symlink-outside-'));
+    roots.push(outside);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const ancestorAlias = join(root, 'outside-alias');
+    const destinationAlias = join(root, 'destination-alias.json');
+    const scannerAlias = join(root, 'retention-alias');
+    await symlink(outside, ancestorAlias, 'dir');
+    await symlink(join(outside, 'destination.json'), destinationAlias, 'file');
+    await symlink(outside, scannerAlias, 'dir');
+
+    await expect(writeHostedV1AtomicArtifact({
+      path: join(ancestorAlias, 'escaped.json'), body: 'escaped', retentionBudget, timeoutMs: 1_000,
+    })).rejects.toBeInstanceOf(HostedV1ArtifactPersistenceError);
+    await expect(writeHostedV1AtomicArtifact({
+      path: destinationAlias, body: 'escaped', retentionBudget, timeoutMs: 1_000,
+    })).rejects.toBeInstanceOf(HostedV1ArtifactPersistenceError);
+    await expect(writeHostedV1AtomicArtifact({
+      path: join(root, 'ordinary.json'), body: 'blocked-by-scanner-alias', retentionBudget, timeoutMs: 1_000,
+    })).rejects.toBeInstanceOf(HostedV1ArtifactPersistenceError);
+
+    await expect(readFile(join(outside, 'escaped.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(join(outside, 'destination.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(lstat(ancestorAlias).then((stat) => stat.isSymbolicLink())).resolves.toBe(true);
+    await expect(lstat(destinationAlias).then((stat) => stat.isSymbolicLink())).resolves.toBe(true);
+    await expect(lstat(scannerAlias).then((stat) => stat.isSymbolicLink())).resolves.toBe(true);
+  });
+
+  it('recovers an old ownerless gate left by a crash before owner publication', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-ownerless-gate-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    // Current gates are linked only after their owner is fsynced. This empty
+    // regular file models the old process dying in its open-to-owner window.
+    await writeFile(gatePath, '', 'utf8');
+    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+
+    const destination = join(root, 'recovered.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: 'recovered', retentionBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(destination)).resolves.toBe('recovered');
+    await expect(readFile(gatePath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('reserves recovery destinations and preserves a nonempty artifact-like gate', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-reserved-recovery-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    const gatePath = `${lockPath}.recovery`;
+    const artifactLikeGate = JSON.stringify({
+      schemaVersion: 1,
+      kind: 'hosted-v1-artifact-commit',
+      payload: 'unrelated.payload',
+      byteLength: 9,
+      sha256: 'f'.repeat(64),
+    });
+    await writeFile(gatePath, artifactLikeGate, 'utf8');
+
+    // A protocol pathname is rejected before the supervised publisher can
+    // create a payload, receipt, or any replacement at that destination.
+    await expect(writeHostedV1AtomicArtifact({
+      path: gatePath, body: 'must-not-publish', retentionBudget, timeoutMs: 1_000,
+    })).rejects.toThrow('hosted_e2e_artifact_writer_retention_destination_reserved');
+    await expect(readFile(gatePath, 'utf8')).resolves.toBe(artifactLikeGate);
+
+    // A nonempty regular file is not the old protocol's exact zero-byte
+    // marker, so recovery leaves it intact even after it is old enough that a
+    // genuine legacy marker would be eligible for reclamation.
+    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    await expect(writeHostedV1AtomicArtifact({
+      path: join(root, 'blocked.json'), body: 'blocked', retentionBudget, timeoutMs: 500,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'deadline_exceeded', path: join(root, 'blocked.json'),
+    });
+    await expect(readFile(gatePath, 'utf8')).resolves.toBe(artifactLikeGate);
+  });
+
+  it('never recovers an owner-publication-gap directory as a stale writer lock', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-owner-gap-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 1_024 };
+    const lockPath = join(root, '.hosted-v1-artifact-retention.lock');
+    // Model the old mkdir-before-owner seam. It stays present beyond the old
+    // stale threshold; a new implementation must wait, not unlink it.
+    await mkdir(lockPath);
+    const destination = join(root, 'blocked.json');
+
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: 'blocked', retentionBudget, timeoutMs: 500,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'deadline_exceeded', path: destination,
+    });
+    await expect(lstat(lockPath)).resolves.toMatchObject({ isDirectory: expect.any(Function) });
+    await expect(readFile(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('accepts a same-body retry after its aggregate budget is full', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-full-budget-retry-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 16 * 1024, maximumTotalBytes: 16 * 1024 };
+    const path = join(root, 'full.json');
+    const body = 'r'.repeat(16 * 1024);
+
+    await writeHostedV1AtomicArtifact({ path, body, retentionBudget, timeoutMs: 1_000 });
+    await expect(writeHostedV1AtomicArtifact({ path, body, retentionBudget, timeoutMs: 1_000 }))
+      .resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(body);
+  });
+
+  it('rejects forged candidate metadata after accepting the exact committed payload basename', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-forged-candidate-'));
+    roots.push(root);
+    const path = join(root, 'forged.json');
+    const candidate = 'candidate-A';
+    const forgedPayload = 'candidate-B';
+    const payloadName = `.forged.json.${createHash('sha256').update(candidate, 'utf8').digest('hex')}.payload`;
+    await writeFile(join(root, payloadName), candidate, 'utf8');
+    await writeFile(path, JSON.stringify({
+      schemaVersion: 1,
+      kind: 'hosted-v1-artifact-commit',
+      payload: payloadName,
+      byteLength: Buffer.byteLength(candidate, 'utf8'),
+      sha256: createHash('sha256').update(candidate, 'utf8').digest('hex'),
+      candidateByteLength: Buffer.byteLength(candidate, 'utf8'),
+      candidateSha256: createHash('sha256').update(candidate, 'utf8').digest('hex'),
+      retainedMaximumBytes: Buffer.byteLength(candidate, 'utf8'),
+    }), 'utf8');
+
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(candidate);
+    // Preserve a commit record the reader can validate, but forge the
+    // candidate binding so retry admission must reject the substituted bytes.
+    await writeFile(join(root, payloadName), forgedPayload, 'utf8');
+    await writeFile(path, JSON.stringify({
+      schemaVersion: 1,
+      kind: 'hosted-v1-artifact-commit',
+      payload: payloadName,
+      byteLength: Buffer.byteLength(forgedPayload, 'utf8'),
+      sha256: createHash('sha256').update(forgedPayload, 'utf8').digest('hex'),
+      candidateByteLength: Buffer.byteLength(candidate, 'utf8'),
+      candidateSha256: createHash('sha256').update(candidate, 'utf8').digest('hex'),
+      retainedMaximumBytes: Buffer.byteLength(candidate, 'utf8'),
+    }), 'utf8');
+
+    await expect(writeHostedV1AtomicArtifact({ path, body: candidate, timeoutMs: 1_000 }))
+      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'writer_failed', path,
+      });
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(forgedPayload);
+  });
+
+  it('rejects a same-body retry whose pre-existing commit names an unrelated payload basename', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-unrelated-retry-payload-'));
+    roots.push(root);
+    const path = join(root, 'destination.json');
+    const body = 'same-body';
+    const digest = createHash('sha256').update(body, 'utf8').digest('hex');
+    await writeFile(join(root, 'unrelated.payload'), body, 'utf8');
+    await writeFile(path, JSON.stringify({
+      schemaVersion: 1,
+      kind: 'hosted-v1-artifact-commit',
+      payload: 'unrelated.payload',
+      byteLength: Buffer.byteLength(body, 'utf8'),
+      sha256: digest,
+      candidateByteLength: Buffer.byteLength(body, 'utf8'),
+      candidateSha256: digest,
+      retainedMaximumBytes: Buffer.byteLength(body, 'utf8'),
+    }), 'utf8');
+
+    await expect(readHostedV1CommittedArtifact(path)).rejects.toThrow(
+      `hosted_e2e_artifact_commit_payload_invalid:${path}`
+    );
+    await expect(writeHostedV1AtomicArtifact({ path, body, timeoutMs: 1_000 }))
+      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+        classification: 'writer_failed', path,
+      });
+    await expect(readFile(path, 'utf8')).resolves.toContain('unrelated.payload');
+  });
+
+  it('rejects a retry when its retained destination exceeds a lowered aggregate limit', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-lowered-retry-budget-'));
+    roots.push(root);
+    const path = join(root, 'retained.json');
+    const body = 'r'.repeat(512);
+    await writeHostedV1AtomicArtifact({
+      path,
+      body,
+      retentionBudget: { root, maximumFileBytes: 1_024, maximumTotalBytes: 512 },
+      timeoutMs: 1_000,
+    });
+
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body,
+      retentionBudget: { root, maximumFileBytes: 1_024, maximumTotalBytes: 511 },
+      timeoutMs: 1_000,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(body);
+  });
+
+  it('accepts a retry whose original admission was aggregate-truncated to partial or zero bytes', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-truncated-retry-'));
+    roots.push(root);
+    const partialBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 512 };
+    const partialPath = join(root, 'partial.json');
+    const source = 'partial-retry-'.repeat(128);
+    await expect(writeHostedV1AtomicArtifact({
+      path: partialPath,
+      body: source,
+      retentionBudget: partialBudget,
+      timeoutMs: 5_000,
+      testWriterInterruptAfterCanonicalLink: true,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path: partialPath,
+    });
+    const partial = await readHostedV1CommittedArtifact(partialPath);
+    expect(Buffer.byteLength(partial, 'utf8')).toBeGreaterThan(0);
+    expect(Buffer.byteLength(partial, 'utf8')).toBeLessThan(partialBudget.maximumTotalBytes);
+    await expect(writeHostedV1AtomicArtifact({
+      path: partialPath, body: source, retentionBudget: partialBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+
+    const zeroRoot = join(root, 'zero');
+    await mkdir(zeroRoot);
+    const zeroBudget = { root: zeroRoot, maximumFileBytes: 1_024, maximumTotalBytes: 32 };
+    const zeroPath = join(zeroRoot, 'zero.json');
+    await writeHostedV1AtomicArtifact({ path: zeroPath, body: source, retentionBudget: zeroBudget, timeoutMs: 5_000 });
+    await expect(readHostedV1CommittedArtifact(zeroPath)).resolves.toBe('');
+    await expect(writeHostedV1AtomicArtifact({
+      path: zeroPath, body: source, retentionBudget: zeroBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+  });
+
+  it('retries an aggregate-partial commit by its recorded candidate after an intervening admission', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-intervening-admission-retry-'));
+    roots.push(root);
+    const initialBudget = { root, maximumFileBytes: 2_048, maximumTotalBytes: 512 };
+    const laterBudget = { root, maximumFileBytes: 2_048, maximumTotalBytes: 2_048 };
+    const destination = join(root, 'partial.json');
+    const source = 'r'.repeat(1_024);
+
+    await writeHostedV1AtomicArtifact({ path: destination, body: source, retentionBudget: initialBudget, timeoutMs: 5_000 });
+    const originallyCommitted = await readHostedV1CommittedArtifact(destination);
+    expect(Buffer.byteLength(originallyCommitted, 'utf8')).toBeLessThan(initialBudget.maximumTotalBytes);
+    // The retention policy may grow between attempts. A later admission now
+    // changes today's remaining capacity, but must not rewrite the identity
+    // that the original partial commit recorded.
+    await writeHostedV1AtomicArtifact({
+      path: join(root, 'intervening.json'), body: 'i'.repeat(1_024), retentionBudget: laterBudget, timeoutMs: 5_000,
+    });
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: source, retentionBudget: laterBudget, timeoutMs: 5_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(destination)).resolves.toBe(originallyCommitted);
+  });
+
+  it('rejects a valid pre-existing committed payload that is already over retention budget', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-oversized-existing-'));
+    roots.push(root);
+    const payloadName = 'oversized.payload';
+    const payload = 'o'.repeat(1_025);
+    await writeFile(join(root, payloadName), payload, 'utf8');
+    await writeFile(join(root, 'existing.json'), JSON.stringify({
+      schemaVersion: 1,
+      kind: 'hosted-v1-artifact-commit',
+      payload: payloadName,
+      byteLength: Buffer.byteLength(payload, 'utf8'),
+      sha256: createHash('sha256').update(payload, 'utf8').digest('hex'),
+    }), 'utf8');
+    const destination = join(root, 'new.json');
+    const retentionBudget = { root, maximumFileBytes: 1_024, maximumTotalBytes: 2_048 };
+
+    await expect(writeHostedV1AtomicArtifact({
+      path: destination, body: 'new', retentionBudget, timeoutMs: 1_000,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path: destination,
+    });
+    await expect(readFile(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('counts an interrupted canonical link and its private receipt as one retained payload', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-interrupted-retention-'));
+    roots.push(root);
+    const retentionBudget = { root, maximumFileBytes: 16 * 1024, maximumTotalBytes: 32 * 1024 };
+    const interruptedPath = join(root, 'interrupted.json');
+    const laterPath = join(root, 'later.json');
+    const body = 'i'.repeat(16 * 1024);
+
+    await expect(writeHostedV1AtomicArtifact({
+      path: interruptedPath,
+      body,
+      retentionBudget,
+      timeoutMs: 1_000,
+      testWriterInterruptAfterCanonicalLink: true,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path: interruptedPath,
+    });
+    await expect(readHostedV1CommittedArtifact(interruptedPath)).resolves.toBe(body);
+
+    await writeHostedV1AtomicArtifact({
+      path: laterPath, body, retentionBudget, timeoutMs: 1_000,
+    });
+    await expect(readHostedV1CommittedArtifact(laterPath)).resolves.toBe(body);
+  });
+
+  it('retries a path-backed sanitized attachment without changing its committed bytes', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-atomic-writer-source-retry-'));
+    roots.push(root);
+    const sourcePath = join(root, 'raw.txt');
+    const path = join(root, 'committed.json');
+    const secret = 'retry-secret-must-not-survive';
+    await writeFile(sourcePath, `command --api-key ${secret}`, 'utf8');
+    const input = {
+      path,
+      sourcePath,
+      sourceRedaction: { replacements: [], maximumBytes: 16 * 1024 },
+      timeoutMs: 1_000,
+    } as const;
+    await expect(writeHostedV1AtomicArtifact({ ...input, testWriterInterruptAfterCanonicalLink: true }))
+      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({ classification: 'writer_failed', path });
+    await writeHostedV1AtomicArtifact(input);
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe('command --api-key <sensitive-value>');
+  });
+
+  it('does not accept or strand a canonical artifact when killed after private payload visibility before commit', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-commit-before-visibility-crash-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const visiblePayload = join(root, 'payload-visible-before-commit');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":"first"}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const [destination, payload] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(payload, 'private-uncommitted-payload');
+          fs.writeFileSync(${JSON.stringify(visiblePayload)}, payload);
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    // The marker proves the payload became visible to the interrupted writer,
+    // while the canonical commit record never did.
+    await expect(readFile(visiblePayload, 'utf8')).resolves.toContain('.payload');
+    await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readHostedV1CommittedArtifact(path)).rejects.toThrow(
+      `hosted_e2e_artifact_commit_missing:${path}`
+    );
+    await expect(writeHostedV1AtomicArtifact({
+      path, body: '{"proof":"retry"}', timeoutMs: 1_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe('{"proof":"retry"}');
+  });
+
+  it('preserves competing canonical evidence and allows an independent retry to commit', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-commit-competing-evidence-'));
+    roots.push(root);
+    const path = join(root, 'aggregate.json');
+    const retryPath = join(root, 'aggregate-retry.json');
+    await expect(writeHostedV1AtomicArtifact({
+      path,
+      body: '{"proof":"ours"}',
+      timeoutMs: 1_000,
+      testWriterProgram: String.raw`
+        const fs = require('node:fs'); const [destination, payload] = process.argv.slice(1);
+        process.stdin.resume(); process.stdin.on('end', () => {
+          fs.writeFileSync(payload, 'private-payload');
+          fs.writeFileSync(destination, 'competing-canonical-evidence', { flag: 'wx' });
+          process.stdout.write('hosted-v1-artifact-v1:writer-preflight\n' +
+            'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
+        });
+      `,
+    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      classification: 'writer_failed', path,
+    });
+    await expect(readFile(path, 'utf8')).resolves.toBe('competing-canonical-evidence');
+    await expect(readHostedV1CommittedArtifact(path)).rejects.toThrow(
+      `hosted_e2e_artifact_commit_invalid:${path}`
+    );
+    await expect(writeHostedV1AtomicArtifact({
+      path: retryPath, body: '{"proof":"retry"}', timeoutMs: 1_000,
+    })).resolves.toBeUndefined();
+    await expect(readHostedV1CommittedArtifact(retryPath)).resolves.toBe('{"proof":"retry"}');
+    await expect(readFile(path, 'utf8')).resolves.toBe('competing-canonical-evidence');
+  });
+
+  it('accepts multiple same-stream heartbeats before the target coordination event', () => {
+    expect(() => assertHostedV1ExternalCoordinationStreamProof({
+      launchBoundaryEventCount: 0,
+      launchBoundaryFrameIndex: 2,
+      opens: 1,
+      reconnects: 0,
+      error: null,
+      heartbeatStreamIds: [1, 1],
+      heartbeatFrameIndexes: [0, 1],
+      events: [{ eventId: 'event_target', eventSequence: 7, frameIndex: 2, streamId: 1, observedAtMs: 1_000 }],
+      targetEventId: 'event_target',
+    })).not.toThrow();
+  });
+
+  it('records failures for every proof-diagnostic attachment without replacing proof work', async () => {
+    const failures: string[] = [];
+    const diagnosticNames = [
+      'attach:initial-event-stream-response.json',
+      'attach:personal-lifecycle-launch-response.json',
+      'attach:personal-lifecycle-launch-runtime-state.json',
+      'attach:personal-lifecycle-launch-runtime-trace.json',
+      'attach:personal-controller-shutdown.json',
+      'page_evaluate:personal-event-stream-reconnect',
+      'attach:personal-event-stream-reconnect.json',
+      'attach:oidc-owner-lifecycle-launch-response.json',
+      'attach:owner-mutation-error-trace-unavailable.json',
+    ];
+    for (const name of diagnosticNames) {
+      await expect(runHostedV1BestEffortDiagnostic({
+        failures,
+        name,
+        operation: async () => { throw new Error(`${name} failed`); },
+      })).resolves.toBeNull();
+    }
+    await expect(runHostedV1BestEffortDiagnostic({
+      failures,
+      name: 'proof',
+      operation: async () => 'still-runs',
+    })).resolves.toBe('still-runs');
+    expect(failures).toEqual(diagnosticNames.map((name) => `${name}:Error`));
+    const immutableFailures = freezeHostedV1DiagnosticFailures(failures);
+    failures.push('attach:later.json:Error');
+    expect(Object.isFrozen(immutableFailures)).toBe(true);
+    expect(immutableFailures).toEqual(diagnosticNames.map((name) => `${name}:Error`));
+  });
+
+  it('returns after the one-second boundary when a diagnostic ignores abort', async () => {
+    const failures: string[] = [];
+    let observedAbort = false;
+    await expect(runHostedV1BestEffortDiagnostic({
+      failures,
+      name: 'attach:hung-shutdown.json',
+      timeoutMs: 1,
+      operation: (signal) => new Promise<string>(() => {
+        signal.addEventListener('abort', () => {
+          observedAbort = true;
+        }, { once: true });
+      }),
+    })).resolves.toBeNull();
+    expect(observedAbort).toBe(true);
+    expect(failures).toEqual(['attach:hung-shutdown.json:TimeoutError']);
+  });
+
+  it('does not invoke a diagnostic operation after its parent has aborted', async () => {
+    const failures: string[] = [];
+    const controller = new AbortController();
+    controller.abort();
+    let invoked = false;
+    await expect(runHostedV1BestEffortDiagnostic({
+      failures, name: 'page:aborted-before-await', signal: controller.signal,
+      operation: async () => { invoked = true; return 'unexpected'; },
+    })).resolves.toBeNull();
+    expect(invoked).toBe(false);
+    expect(failures).toEqual(['page:aborted-before-await:AbortError']);
+  });
+
+  it('makes file and page diagnostics discard results after abort', async () => {
+    const failures: string[] = [];
+    const controller = new AbortController();
+    let published = false;
+    const diagnostic = runHostedV1BestEffortDiagnostic({
+      failures, name: 'file:aborted-after-await', signal: controller.signal,
+      operation: async (signal) => {
+        await Promise.resolve();
+        controller.abort();
+        if (!signal.aborted) published = true;
+        return 'late';
+      },
+    });
+    await expect(diagnostic).resolves.toBeNull();
+    expect(published).toBe(false);
+    expect(failures).toEqual(['file:aborted-after-await:AbortError']);
+  });
+
+  it('rejects a target duplicate delayed beyond one second but before replay completion', () => {
+    expect(() => assertHostedV1ExternalCoordinationReconnectProof({
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      observedAtMs: 31_000,
+      baselineCursor: 'cursor_target',
+      baselineOpens: 1,
+      baselineReconnects: 0,
+      baselineStreamId: 1,
+      opens: 2,
+      reconnects: 1,
+      error: null,
+      reconnectStreamId: 2,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+      heartbeatFrameIndexes: [1, 3, 5],
+      heartbeatStreamIds: [1, 2, 2],
+      heartbeatObservedAtMs: [2_000, 10_000, 30_000],
+      heartbeatCursors: ['cursor_target', 'cursor_target', 'cursor_target'],
+      heartbeatEventCounts: [1, 1, 1],
+      events: [
+        { eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 },
+        // This arrives two seconds after the pre-replay heartbeat, so a 1s
+        // quiet window would miss it; the second heartbeat is the boundary.
+        { eventId: 'event_target', eventSequence: 7, frameIndex: 4, streamId: 2, observedAtMs: 12_000 },
+      ],
+    })).toThrow('hosted_e2e_external_reconnect_target_not_exactly_once');
+  });
+
+  it('derives the external coordination replay window from an explicit clock origin', async () => {
+    vi.useFakeTimers({ now: 0 });
+    try {
+      const startedAtMs = Date.now();
+      const budget = createHostedV1ExternalCoordinationReplayBudget({
+        handoffBudgetMs: 10_000,
+        heartbeatIntervalMs: 15_000,
+        marginMs: 1_000,
+      });
+      const deadlines = budget.deadlinesFrom(startedAtMs);
+      const deadlineMs = deadlines.replayDeadlineMs - startedAtMs;
+
+      await vi.advanceTimersByTimeAsync(deadlineMs);
+
+      expect(Date.now() - startedAtMs).toBe(deadlineMs);
+      expect(deadlines).toEqual({ handoffDeadlineMs: 10_000, replayDeadlineMs: 41_000 });
+      expect(Date.now()).toBe(deadlines.replayDeadlineMs);
+      expect(() => budget.requireRemainingAt(deadlines.replayDeadlineMs, Date.now())).toThrow(
+        'hosted_e2e_external_replay_deadline_exhausted'
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('publishes auth drain evidence only from a serialized empty runtime state', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-v1-auth-drain-'));
     roots.push(root);
@@ -3392,6 +4827,30 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(Buffer.byteLength(boundHostedV1EvidenceUtf8('🧪'.repeat(10), 17))).toBe(16);
   });
 
+  it('redacts Unicode and delimiter-safe credential keys with bounded large-Unicode scanning', () => {
+    const root = '/tmp/hosted-v1-unicode-redaction';
+    const sandbox = {
+      root,
+      lifecycleTrustAnchor: root + '/trust-anchor.pem',
+    } as Pick<HostedV1Sandbox, 'root' | 'lifecycleTrustAnchor'>;
+    const largeSecret = '🧪'.repeat(100_000);
+    const input = [
+      '秘密token: ' + largeSecret,
+      'token/秘密=slash-secret',
+      '普通🧪=keep-me',
+    ].join('\n');
+    const started = performance.now();
+    const redacted = redactEvidence(input, sandbox, null);
+    const elapsedMs = performance.now() - started;
+
+    expect(elapsedMs).toBeLessThan(1_000);
+    expect(redacted).toContain('秘密token: <token>');
+    expect(redacted).toContain('token/秘密=<token>');
+    expect(redacted).toContain('普通🧪=keep-me');
+    expect(redacted).not.toContain(largeSecret);
+    expect(redacted).not.toContain('slash-secret');
+  });
+
   it('redacts and bounds every retained Playwright artifact while removing binary captures', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-v1-browser-artifact-proof-'));
     roots.push(root);
@@ -3427,5 +4886,35 @@ describe('hosted v1 browser E2E sandbox', () => {
     await expect(lstat(join(artifacts, 'test-failure.png'))).rejects.toMatchObject({
       code: 'ENOENT',
     });
+  });
+
+  it('does not rewrite valid committed attachment bytes during final evidence post-processing', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-committed-evidence-postprocess-'));
+    roots.push(root);
+    const sandbox = await createHostedV1Sandbox(root);
+    const artifacts = join(root, 'browser-evidence');
+    await mkdir(artifacts);
+    const path = join(artifacts, 'committed-diagnostic.json');
+    const raw = JSON.stringify({ authorization: 'Bearer raw-secret', root: sandbox.root });
+    const redacted = redactEvidence(raw, sandbox, null);
+    await writeHostedV1AtomicArtifact({
+      path,
+      body: raw,
+      sanitizeBody: (body) => redactEvidence(body, sandbox, null),
+      retentionBudget: {
+        root: artifacts,
+        maximumFileBytes: 16 * 1024,
+        maximumTotalBytes: 4 * 1024 * 1024,
+      },
+      timeoutMs: 1_000,
+    });
+    const commit = JSON.parse(await readFile(path, 'utf8')) as { payload: string };
+    const payloadPath = join(artifacts, commit.payload);
+    const before = await readFile(payloadPath);
+
+    await sanitizePlaywrightEvidence(artifacts, sandbox, null);
+
+    await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(redacted);
+    expect(await readFile(payloadPath)).toEqual(before);
   });
 });
