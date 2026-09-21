@@ -99,7 +99,6 @@ import {
   type TimelineCardPosition,
 } from './timelineCardStack';
 import { TimelineHeaderAccent } from './TimelineHeaderAccent';
-import { WideChatMessageFooter } from './WideChatMessageFooter';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
@@ -729,7 +728,7 @@ export const ActivityItem = memo(
     );
     const isWideOrdinary = appearance === 'wide-chat' && messagePresentation.kind !== 'special';
     const isWideUser = isWideOrdinary && messagePresentation.kind === 'ordinary-user';
-    const isWideGroupAgent = isWideOrdinary && !isWideUser && !directParticipant;
+    const isWideAgent = isWideOrdinary && !isWideUser;
     const hideWideAuthor = isWideOrdinary && (isWideUser || continuesPreviousAuthor);
 
     const parsedCrossTeamPrefix = parseCrossTeamPrefix(message.text);
@@ -1059,7 +1058,7 @@ export const ActivityItem = memo(
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
-        size={isWideGroupAgent ? 'md' : undefined}
+        size={isWideAgent ? 'md' : undefined}
         variant="text"
         hideAvatar={senderHideAvatar || compactHeader}
         onClick={onMemberNameClick}
@@ -1202,7 +1201,7 @@ export const ActivityItem = memo(
     const card = (
       <article
         data-message-presentation={isWideOrdinary ? messagePresentation.kind : undefined}
-        data-wide-group-agent={isWideGroupAgent ? 'true' : undefined}
+        data-wide-agent={isWideAgent ? 'true' : undefined}
         data-continues-author={isWideOrdinary && continuesPreviousAuthor ? 'true' : undefined}
         data-expanded={isExpanded ? 'true' : 'false'}
         data-has-recipient-route={recipientBadge ? 'true' : 'false'}
@@ -1585,7 +1584,10 @@ export const ActivityItem = memo(
                 className={isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : undefined}
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
-                <ExpandableContent onExpand={onExpandContent}>
+                <ExpandableContent
+                  collapsedHeight={isWideOrdinary ? 400 : undefined}
+                  onExpand={onExpandContent}
+                >
                   <span
                     onClickCapture={
                       onTaskIdClick
@@ -1651,27 +1653,17 @@ export const ActivityItem = memo(
             ) : null}
           </div>
         ) : null}
-        {isWideOrdinary && showHoverToolbar ? (
-          <WideChatMessageFooter
-            timestamp={timestamp}
-            copyText={displayText ?? ''}
-            canRevise={Boolean(canRevise && onRevise)}
-            onRevise={onRevise ? () => onRevise(message) : undefined}
-            onReply={onReply ? () => onReply(message) : undefined}
-            onCreateTask={onCreateTask ? handleCreateTask : undefined}
-          />
-        ) : null}
       </article>
     );
     /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
-
-    if (isWideOrdinary) return card;
 
     return (
       <ActivityMessageHoverCard
         copyText={displayText ?? ''}
         showToolbar={showHoverToolbar}
         canRevise={Boolean(canRevise && onRevise)}
+        appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+        timestamp={isWideOrdinary ? timestamp : undefined}
         onRevise={onRevise ? () => onRevise(message) : undefined}
         onReply={onReply ? () => onReply(message) : undefined}
         onCreateTask={onCreateTask ? handleCreateTask : undefined}

@@ -929,8 +929,20 @@ async function main() {
       const agentRect = agent.getBoundingClientRect();
       const userRowRect = userRow.getBoundingClientRect();
       const agentRowRect = agentRow.getBoundingClientRect();
+      const agentAvatar = agent.querySelector('.wide-chat-message-header img');
+      const agentAvatarRect = agentAvatar?.getBoundingClientRect();
       const shortUserMessageTruncated = Array.from(
         root.querySelectorAll('[data-message-presentation="ordinary-user"]')
+      ).some((message) => {
+        const body = message.querySelector('.wide-chat-message-body');
+        const text = (body?.textContent ?? '').replace('Show more', '').trim();
+        return text.length > 0 && text.length < 120 &&
+          Array.from(message.querySelectorAll('button')).some(
+            (button) => button.textContent?.trim() === 'Show more'
+          );
+      });
+      const shortAgentMessageTruncated = Array.from(
+        root.querySelectorAll('[data-message-presentation="ordinary-agent"]')
       ).some((message) => {
         const body = message.querySelector('.wide-chat-message-body');
         const text = (body?.textContent ?? '').replace('Show more', '').trim();
@@ -943,21 +955,36 @@ async function main() {
         toolbarGutter: getComputedStyle(userRow).paddingInlineEnd,
         userOnRight: userRect.right > userRowRect.left + userRowRect.width / 2 &&
           userRowRect.right - userRect.right >= 39,
-        agentOnLeft: Math.abs(agentRect.left - agentRowRect.left) <= 2,
+        agentBubbleOnLeft: Math.abs(agentRect.left - agentRowRect.left) <= 2,
+        agentAvatar32:
+          agentAvatarRect != null && Math.round(agentAvatarRect.width) === 32 &&
+          Math.round(agentAvatarRect.height) === 32,
+        avatarLeftOfMessage:
+          agentAvatarRect != null && agentAvatarRect.left >= agentRect.left &&
+          agentAvatarRect.right <= agentRect.left + 52,
         userWidthBounded: userRect.width <= Math.min((userRowRect.width - 40) * 0.72, 640) + 2,
         noHorizontalOverflow: root.scrollWidth <= root.clientWidth + 1,
         shortUserMessageTruncated,
+        shortAgentMessageTruncated,
       };
     })()`);
     assert.deepEqual(wideChatGeometry, {
       toolbarGutter: '40px',
       userOnRight: true,
-      agentOnLeft: true,
+      agentBubbleOnLeft: true,
+      agentAvatar32: true,
+      avatarLeftOfMessage: true,
       userWidthBounded: true,
       noHorizontalOverflow: true,
       shortUserMessageTruncated: false,
+      shortAgentMessageTruncated: false,
     });
     await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen.png'));
+    await cdp.evaluate(
+      `document.activeElement instanceof HTMLElement && document.activeElement.blur()`
+    );
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
+    await new Promise((resolve) => setTimeout(resolve, 250));
     const hoverPoint = await cdp.evaluate(`(() => {
       const article = Array.from(document.querySelectorAll(
         '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]'
@@ -967,6 +994,8 @@ async function main() {
       });
       if (!(article instanceof HTMLElement)) return null;
       const rect = article.getBoundingClientRect();
+      const row = article.closest('[data-timeline-row-key]');
+      if (!(row instanceof HTMLElement)) return null;
       for (const type of ['pointerover', 'pointerenter', 'pointermove']) {
         article.dispatchEvent(new PointerEvent(type, {
           bubbles: true,
@@ -974,7 +1003,13 @@ async function main() {
           isPrimary: true,
         }));
       }
-      return { x: rect.left + Math.min(rect.width / 2, 160), y: rect.top + rect.height / 2 };
+      return {
+        x: rect.left + Math.min(rect.width / 2, 160),
+        y: rect.top + rect.height / 2,
+        rowKey: row.dataset.timelineRowKey,
+        rowHeight: row.getBoundingClientRect().height,
+        articleHeight: rect.height,
+      };
     })()`);
     assert(hoverPoint, 'missing ordinary agent row for wide-chat hover verification');
     await cdp.send('Input.dispatchMouseEvent', {
@@ -982,18 +1017,22 @@ async function main() {
       x: hoverPoint.x,
       y: hoverPoint.y,
     });
-    await new Promise((resolve) => setTimeout(resolve, 180));
+    await new Promise((resolve) => setTimeout(resolve, 320));
     const hoverGeometry = await cdp.evaluate(`(() => {
-      const article = document.elementFromPoint(${JSON.stringify(hoverPoint.x)}, ${JSON.stringify(hoverPoint.y)})
-        ?.closest('[data-message-presentation="ordinary-agent"]');
+      const article = document.querySelector(
+        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"][data-state="open"]'
+      );
       const body = article?.querySelector('.wide-chat-message-body');
-      const footer = article?.querySelector('[data-wide-chat-message-footer="true"]');
+      const footer = document.querySelector('[data-wide-chat-message-footer="true"]');
       const timestamp = footer?.querySelector('[data-wide-chat-timestamp="true"]');
       const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
+      const row = document.querySelector(
+        '[data-timeline-row-key="' + CSS.escape(${JSON.stringify(hoverPoint.rowKey)}) + '"]'
+      );
       if (!(article instanceof HTMLElement) || !(body instanceof HTMLElement) ||
           !(footer instanceof HTMLElement) || !(timestamp instanceof HTMLElement) ||
-          !(toolbar instanceof HTMLElement)) return null;
-      const bodyRect = body.getBoundingClientRect();
+          !(toolbar instanceof HTMLElement) || !(row instanceof HTMLElement)) return null;
+      const articleRect = article.getBoundingClientRect();
       const footerRect = footer.getBoundingClientRect();
       const footerHitTarget = document.elementFromPoint(
         footerRect.left + footerRect.width / 2,
@@ -1001,44 +1040,43 @@ async function main() {
       );
       return {
         horizontal: toolbar.getAttribute('data-orientation') === 'horizontal',
-        inline: article.contains(toolbar),
-        underMessage: footerRect.top >= bodyRect.bottom - 3,
-        visible: Number.parseFloat(getComputedStyle(footer).opacity) > 0.9,
+        portaled: !article.contains(toolbar),
+        underMessage: footerRect.top >= articleRect.bottom - 3,
+        rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
+        articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
         interactive: footerHitTarget instanceof Element && footer.contains(footerHitTarget),
-        noWidePortal: !document.querySelector('[data-chat-toolbar-appearance="wide-chat"]'),
+        side: footer.getAttribute('data-side'),
       };
     })()`);
     assert.deepEqual(hoverGeometry, {
       horizontal: true,
-      inline: true,
+      portaled: true,
       underMessage: true,
-      visible: true,
+      rowStable: true,
+      articleStable: true,
       interactive: true,
-      noWidePortal: true,
+      side: 'bottom',
     });
     await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen-hover.png'));
     const focusedWideArticle = await cdp.evaluate(`(() => {
       const article = Array.from(document.querySelectorAll(
         '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]'
-      )).find((candidate) => candidate.querySelector('[data-wide-chat-message-footer="true"]'));
+      )).find((candidate) => candidate instanceof HTMLElement && candidate.tabIndex === 0);
       if (!(article instanceof HTMLElement)) return false;
       article.focus();
       return document.activeElement === article;
     })()`);
     assert.equal(focusedWideArticle, true, 'wide-chat row must accept keyboard focus');
     await cdp.waitFor(
-      `(() => {
-        const footer = document.activeElement?.querySelector?.('[data-wide-chat-message-footer="true"]');
-        return footer instanceof HTMLElement && Number.parseFloat(getComputedStyle(footer).opacity) > 0.9;
-      })()`,
+      `Boolean(document.querySelector('[data-wide-chat-message-footer="true"]'))`,
       'wide-chat footer after keyboard focus',
       2_000
     );
     const focusFooterVisible = await cdp.evaluate(`(() => {
       const article = document.activeElement;
       if (!(article instanceof HTMLElement)) return false;
-      const footer = article.querySelector('[data-wide-chat-message-footer="true"]');
-      return footer instanceof HTMLElement && Number.parseFloat(getComputedStyle(footer).opacity) > 0.9;
+      const footer = document.querySelector('[data-wide-chat-message-footer="true"]');
+      return footer instanceof HTMLElement && article.getAttribute('data-state') === 'open';
     })()`);
     assert.equal(focusFooterVisible, true, 'wide-chat footer must be keyboard-focus visible');
 
@@ -1175,7 +1213,7 @@ async function main() {
     );
     const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
       const article = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-wide-group-agent="true"]:not([data-continues-author="true"])'
+        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]:not([data-continues-author="true"])'
       );
       const avatar = article?.querySelector('.wide-chat-message-header img');
       const body = article?.querySelector('.wide-chat-message-body');

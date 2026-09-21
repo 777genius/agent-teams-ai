@@ -50,6 +50,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     avoidCollisions,
     collisionPadding,
     'data-chat-toolbar-appearance': toolbarAppearance,
+    'data-wide-chat-message-footer': wideFooter,
   }: {
     children: React.ReactNode;
     className?: string;
@@ -57,6 +58,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     avoidCollisions?: boolean;
     collisionPadding?: number;
     'data-chat-toolbar-appearance'?: string;
+    'data-wide-chat-message-footer'?: string;
   }) =>
     React.createElement(
       'div',
@@ -66,6 +68,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
         'data-avoid-collisions': String(avoidCollisions),
         'data-collision-padding': collisionPadding,
         'data-chat-toolbar-appearance': toolbarAppearance,
+        'data-wide-chat-message-footer': wideFooter,
       },
       children
     ),
@@ -165,16 +168,18 @@ describe('ActivityItem compact header preview', () => {
     const article = host.querySelector('article');
     expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
     expect(article?.dataset.continuesAuthor).toBe('true');
-    expect(article?.dataset.wideGroupAgent).toBe('true');
+    expect(article?.dataset.wideAgent).toBe('true');
     expect(article?.textContent).toContain('A compact continuation');
     expect(article?.textContent).not.toContain('alice');
-    const footer = article?.querySelector('[data-wide-chat-message-footer="true"]');
+    const footer = host.querySelector('[data-wide-chat-message-footer="true"]');
     const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
     expect(footer?.querySelector('[data-wide-chat-timestamp="true"]')?.textContent).toMatch(
       /\d{2}:\d{2}/
     );
     expect(toolbar?.getAttribute('data-orientation')).toBe('horizontal');
-    expect(host.querySelector('[data-chat-toolbar-appearance="wide-chat"]')).toBeNull();
+    expect(footer?.getAttribute('data-side')).toBe('bottom');
+    expect(footer?.getAttribute('data-avoid-collisions')).toBe('true');
+    expect(article?.contains(toolbar ?? null)).toBe(false);
 
     await act(async () => root.unmount());
   });
