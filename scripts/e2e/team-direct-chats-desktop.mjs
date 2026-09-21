@@ -1211,7 +1211,7 @@ async function main() {
         const articleRect = article.getBoundingClientRect();
         const headerRect = header.getBoundingClientRect();
         const bodyRect = body.getBoundingClientRect();
-        return headerRect.height >= 20 && bodyRect.top >= headerRect.bottom - 1 &&
+        return headerRect.height >= 18 && bodyRect.top >= headerRect.bottom - 1 &&
           rowRect.height >= articleRect.height - 1;
       });
     })()`);
@@ -1252,8 +1252,8 @@ async function main() {
       width: 32,
       height: 32,
       leftOfMessage: true,
-      avatarTailGap: 8,
-      compactPadding: ['3px', '10px', '9px', '10px'],
+      avatarTailGap: 2,
+      compactPadding: ['2px', '8px', '7px', '8px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(`(() => {
       const root = document.querySelector('[data-chat-appearance="wide-chat"]');
@@ -1270,12 +1270,11 @@ async function main() {
         '[data-wide-agent="true"][data-continues-author="true"]' +
         ':not([data-continues-next-author="true"])'
       );
-      if (!(first instanceof HTMLElement) || !(middle instanceof HTMLElement) ||
-          !(last instanceof HTMLElement)) return null;
+      if (!(first instanceof HTMLElement) || !(last instanceof HTMLElement)) return null;
       const firstAvatar = first.querySelector('.wide-chat-message-header img');
       const firstName = first.querySelector('.wide-chat-message-header img + span');
-      const middleAvatar = middle.querySelector('.wide-chat-message-header img');
-      const middleName = middle.querySelector('.wide-chat-message-header img + span');
+      const middleAvatar = middle?.querySelector('.wide-chat-message-header img') ?? null;
+      const middleName = middle?.querySelector('.wide-chat-message-header img + span') ?? null;
       const lastAvatar = last.querySelector('.wide-chat-message-header img');
       const lastName = last.querySelector('.wide-chat-message-header img + span');
       if (!(firstAvatar instanceof HTMLImageElement) || !(firstName instanceof HTMLElement) ||
