@@ -1363,17 +1363,21 @@ async function main() {
       const preview = quote.querySelector('[data-wide-reply-preview="true"]');
       const author = quote.querySelector('[data-wide-reply-author="true"]');
       const body = quote.closest('.wide-chat-message-body');
+      const article = quote.closest('.wide-chat-message');
+      const header = article?.querySelector('.wide-chat-message-header');
       if (!(preview instanceof HTMLElement) || !(author instanceof HTMLElement) ||
-          !(body instanceof HTMLElement)) return null;
+          !(body instanceof HTMLElement) || !(article instanceof HTMLElement) ||
+          !(header instanceof HTMLElement)) return null;
       const style = getComputedStyle(quote);
       const quoteRect = quote.getBoundingClientRect();
       const previewRect = preview.getBoundingClientRect();
       const bodyRect = body.getBoundingClientRect();
       return {
         compact: quote.getBoundingClientRect().height <= 52,
-        hasAvatar: quote.querySelector('img') !== null,
+        hasAvatar: author.querySelectorAll('img').length === 1,
         hasLegacyLabel: quote.textContent?.includes('Replying to') ?? false,
-        hasQuotedAuthor: author.textContent?.includes('alice') ?? false,
+        hasQuotedAuthor: author.textContent?.trim() === 'alice',
+        quotedAuthorNotDuplicated: !header.textContent?.includes('alice'),
         hasPreview: quote.textContent?.includes('Messenger history 62') ?? false,
         flushTop: Math.abs(quoteRect.top - bodyRect.top) <= 0.5,
         flushInline:
@@ -1386,15 +1390,26 @@ async function main() {
     })()`);
     assert.deepEqual(wideReplyQuote, {
       compact: true,
-      hasAvatar: false,
+      hasAvatar: true,
       hasLegacyLabel: false,
       hasQuotedAuthor: true,
+      quotedAuthorNotDuplicated: true,
       hasPreview: true,
       flushTop: true,
       flushInline: true,
       previewFits: true,
       leftRule: '2px',
     });
+    const wideParticipantLabels = await cdp.evaluate(`(() => {
+      const text = Array.from(document.querySelectorAll(
+        '[data-chat-appearance="wide-chat"] .wide-chat-message-header'
+      )).map((header) => header.textContent ?? '').join(' ');
+      return {
+        usesYou: text.toLowerCase().includes('you'),
+        hidesUser: !text.toLowerCase().includes('user'),
+      };
+    })()`);
+    assert.deepEqual(wideParticipantLabels, { usesYou: true, hidesUser: true });
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
     const pinnedVisualizePrepared = await cdp.evaluate(`(() => {

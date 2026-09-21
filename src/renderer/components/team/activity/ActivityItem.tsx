@@ -32,6 +32,7 @@ import {
   getSanitizedInboxMessageText,
 } from '@renderer/utils/bootstrapPromptSanitizer';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { displayMemberName } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import {
   areInboxMessagesEquivalentForRender,
@@ -275,7 +276,7 @@ const NoiseRow = ({
   <div className="flex items-center gap-2 px-3 py-1" style={{ opacity: 0.45 }}>
     <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colors.border }} />
     <span className="text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-      {name}
+      {displayMemberName(name)}
     </span>
     <span className="text-[11px]" style={{ color: CARD_ICON_MUTED }}>
       {label}
@@ -328,7 +329,7 @@ const PassiveIdlePeerSummaryRow = ({
               color: CARD_TEXT_LIGHT,
             }}
           >
-            {recipient}
+            {displayMemberName(recipient)}
           </span>
         </>
       ) : null}
@@ -1121,6 +1122,13 @@ export const ActivityItem = memo(
     ) : null;
 
     const hideMemberRoute = hideDirectRoute(message.to);
+    const recipientMemberName =
+      crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to;
+    const quotedRecipientAlreadyShown =
+      isWideOrdinary &&
+      parsedReply != null &&
+      crossTeamTarget == null &&
+      recipientMemberName?.trim().toLowerCase() === parsedReply.agentName.trim().toLowerCase();
     const recipientBadge =
       commentTaskRef && commentTaskDisplayId ? (
         <>
@@ -1132,7 +1140,9 @@ export const ActivityItem = memo(
             onTaskIdClick={onTaskIdClick}
           />
         </>
-      ) : hideMemberRoute || !(message.to && message.to !== message.from) ? null : (
+      ) : hideMemberRoute ||
+        quotedRecipientAlreadyShown ||
+        !(message.to && message.to !== message.from) ? null : (
         <>
           <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
           {crossTeamTarget ? (
@@ -1140,15 +1150,12 @@ export const ActivityItem = memo(
           ) : null}
           {crossTeamSentMemberName || !crossTeamTarget ? (
             <MemberBadge
-              name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
+              name={recipientMemberName ?? message.to}
               color={crossTeamTarget ? undefined : recipientColor}
               teamName={crossTeamTarget ? undefined : teamName}
               isLight={isLight}
               variant="text"
-              hideAvatar={
-                compactHeader ||
-                (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
-              }
+              hideAvatar={compactHeader || recipientMemberName === 'user'}
               onClick={onMemberNameClick}
               disableHoverCard={crossTeamTarget != null}
             />
@@ -1210,7 +1217,7 @@ export const ActivityItem = memo(
         data-continues-next-author={isWideOrdinary && continuesNextAuthor ? 'true' : undefined}
         data-expanded={isExpanded ? 'true' : 'false'}
         data-has-recipient-route={recipientBadge ? 'true' : 'false'}
-        aria-label={isWideOrdinary ? `${message.from}, ${timestamp}` : undefined}
+        aria-label={isWideOrdinary ? `${displayMemberName(message.from)}, ${timestamp}` : undefined}
         tabIndex={isWideOrdinary && showHoverToolbar ? 0 : undefined}
         className={[
           'activity-timeline-card group relative overflow-hidden',
@@ -1582,6 +1589,7 @@ export const ActivityItem = memo(
               <ReplyQuoteBlock
                 reply={parsedReply}
                 appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+                teamName={teamName}
                 memberColor={memberColorMap?.get(parsedReply.agentName)}
                 replyTaskRefs={message.taskRefs}
               />
