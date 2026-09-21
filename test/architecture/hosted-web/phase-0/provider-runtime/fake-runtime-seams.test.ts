@@ -102,6 +102,15 @@ function launchData(memberNames: string[]): OpenCodeLaunchTeamCommandData {
     ),
     warnings: [],
     diagnostics: [],
+    // A ready bridge response is not enough to declare a lane safe to use.
+    // Keep the fixture on the real durable-checkpoint contract so the success
+    // cases prove both provider isolation and persisted readiness evidence.
+    durableCheckpoints: [
+      { name: 'required_tools_proven', observedAt: NOW },
+      { name: 'delivery_ready', observedAt: NOW },
+      { name: 'member_ready', observedAt: NOW },
+      { name: 'run_ready', observedAt: NOW },
+    ],
   };
 }
 

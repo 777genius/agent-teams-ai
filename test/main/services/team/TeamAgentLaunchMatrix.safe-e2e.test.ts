@@ -13922,6 +13922,10 @@ describe(
         read: true,
       });
       const userInbox = await readInboxRows(teamName, 'user');
+      // A visible runtime reply is only a delivery proof after the reply is
+      // durably present in its owner inbox. Do not let an empty owner inbox
+      // turn this into an accidental optional assertion.
+      expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         from: 'team-lead',
         to: 'user',

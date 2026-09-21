@@ -39,7 +39,13 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
-const INHERITED_PUBLIC_SERVICE_ENTRYPOINTS = ['createTeam', 'launchTeam'] as const;
+const INHERITED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  'createTeam',
+  'launchTeam',
+  // This recovery control stays public through the inherited facade, so its
+  // contract is deliberately counted with the app-shell entrypoints.
+  'rebootstrapOpenCodeAggregatePrimaryLane',
+] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
   'assessLeadRuntimeRestart',
