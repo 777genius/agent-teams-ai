@@ -6,7 +6,7 @@
 [data-chat-appearance='wide-chat'] .wide-chat-message {
   min-width: 0;
   overflow: visible;
-  border-radius: 18px !important;
+  border-radius: 14px !important;
   transition:
     background-color 120ms ease,
     box-shadow 120ms ease;
@@ -67,8 +67,8 @@
   )::before {
   position: absolute;
   inset-block-end: 0;
-  width: 18px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   content: '';
 }
 
@@ -78,16 +78,16 @@
   )::before {
   inset-inline-start: 34px;
   background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
-  clip-path: path('M 18 0 C 16 6 11 10 0 12 C 8 12 13 12 18 12 Z');
+  clip-path: path('M 14 0 C 13 6 9 11 2 13 Q 0 13.5 2 13.8 C 7 14 11 14 14 13 Z');
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user']:not(
     [data-continues-next-author='true']
   )::before {
-  inset-inline-end: -10px;
+  inset-inline-end: -8px;
   background: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
-  clip-path: path('M 0 0 C 2 6 7 10 18 12 C 10 12 5 12 0 12 Z');
+  clip-path: path('M 0 0 C 1 6 5 11 12 13 Q 14 13.5 12 13.8 C 7 14 3 14 0 13 Z');
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message-header {
@@ -100,7 +100,7 @@
   .wide-chat-message-header {
   position: static;
   background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent) !important;
-  border-radius: 18px 18px 0 0;
+  border-radius: 14px 14px 0 0;
 }
 
 [data-chat-appearance='wide-chat']
@@ -153,7 +153,7 @@
   .wide-chat-message-body {
   padding: 2px 8px 7px;
   background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
-  border-radius: 0 0 18px 18px;
+  border-radius: 0 0 14px 14px;
 }
 
 [data-chat-appearance='wide-chat']
@@ -178,7 +178,7 @@
   .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false']
   .wide-chat-message-body {
   padding-block: 6px;
-  border-radius: 18px;
+  border-radius: 14px;
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message [data-chat-metadata='true'] {

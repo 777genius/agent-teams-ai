@@ -1580,6 +1580,7 @@ export const ActivityItem = memo(
               <ReplyQuoteBlock
                 reply={parsedReply}
                 appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+                hideAuthor={isWideOrdinary && parsedReply.agentName === message.to}
                 memberColor={memberColorMap?.get(parsedReply.agentName)}
                 replyTaskRefs={message.taskRefs}
               />
