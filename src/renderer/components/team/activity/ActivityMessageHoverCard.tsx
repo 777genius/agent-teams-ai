@@ -10,7 +10,6 @@ import {
 } from 'react';
 
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
-import { CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 
 import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
 
@@ -20,7 +19,6 @@ interface ActivityMessageHoverCardProps {
   showToolbar: boolean;
   canRevise: boolean;
   appearance?: 'compact' | 'wide-chat';
-  timestamp?: string;
   onRevise?: () => void;
   onReply?: () => void;
   onCreateTask?: () => void;
@@ -32,7 +30,6 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   showToolbar,
   canRevise,
   appearance = 'compact',
-  timestamp,
   onRevise,
   onReply,
   onCreateTask,
@@ -92,15 +89,6 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
           onFocusCapture={() => setWideOpen(true)}
           onBlurCapture={closeAfterFocusLeaves}
         >
-          {isWide && timestamp ? (
-            <span
-              data-wide-chat-timestamp="true"
-              className="whitespace-nowrap px-1 text-[10px]"
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              {timestamp}
-            </span>
-          ) : null}
           <ActivityMessageHoverToolbar
             copyText={copyText}
             canRevise={canRevise}

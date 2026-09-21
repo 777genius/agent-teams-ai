@@ -15,11 +15,12 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent'][data-expanded='true'] {
   width: max-content;
-  max-width: min(78%, 760px);
+  max-width: min(82%, 800px);
+  padding-inline-start: 44px;
   margin-inline-start: 0 !important;
   margin-inline-end: auto !important;
   border: 0 !important;
-  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent) !important;
+  background: transparent !important;
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
@@ -34,8 +35,17 @@
 [data-chat-appearance='wide-chat'] .wide-chat-message:hover,
 [data-chat-appearance='wide-chat'] .wide-chat-message:focus-within,
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-state='open'] {
-  background-color: color-mix(in srgb, var(--color-surface-raised) 90%, transparent) !important;
   box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent']:is(
+    :hover,
+    :focus-within,
+    [data-state='open']
+  )
+  :is(.wide-chat-message-header, .wide-chat-message-body) {
+  background-color: color-mix(in srgb, var(--color-surface-raised) 90%, transparent) !important;
 }
 
 [data-chat-appearance='wide-chat']
@@ -48,42 +58,49 @@
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-message-presentation='ordinary-agent']::before,
+  .wide-chat-message[data-message-presentation='ordinary-agent']:not(
+    [data-continues-next-author='true']
+  )::before,
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-message-presentation='ordinary-user']::before {
+  .wide-chat-message[data-message-presentation='ordinary-user']:not(
+    [data-continues-next-author='true']
+  )::before {
   position: absolute;
-  inset-block-end: 2px;
+  inset-block-end: 0;
   width: 12px;
-  height: 12px;
-  background: inherit;
+  height: 14px;
   content: '';
-  transform: rotate(45deg);
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-message-presentation='ordinary-agent']::before {
-  inset-inline-start: -4px;
-  border-radius: 0 0 0 3px;
+  .wide-chat-message[data-message-presentation='ordinary-agent']:not(
+    [data-continues-next-author='true']
+  )::before {
+  inset-inline-start: 36px;
+  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-message-presentation='ordinary-user']::before {
-  inset-inline-end: -4px;
-  border-radius: 0 3px 0 0;
+  .wide-chat-message[data-message-presentation='ordinary-user']:not(
+    [data-continues-next-author='true']
+  )::before {
+  inset-inline-end: -8px;
+  background: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message-header {
   min-height: 24px;
   padding: 7px 12px 2px !important;
-  background: transparent !important;
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-wide-agent='true']:not([data-continues-author='true'])
+  .wide-chat-message[data-wide-agent='true']
   .wide-chat-message-header {
   position: static;
-  min-height: 26px;
-  padding-inline-start: 52px !important;
+  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent) !important;
+  border-radius: 18px 18px 0 0;
 }
 
 [data-chat-appearance='wide-chat']
@@ -91,11 +108,28 @@
   .wide-chat-message-header
   img {
   position: absolute;
-  inset-block-end: 8px;
-  inset-inline-start: 10px;
+  inset-block-end: 4px;
+  inset-inline-start: 4px;
   width: 32px;
   height: 32px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-wide-agent='true'][data-continues-next-author='true']
+  .wide-chat-message-header
+  img {
+  display: none;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-wide-agent='true'][data-continues-author='true']:not(
+    [data-continues-next-author='true']
+  )
+  .wide-chat-message-header
+  img
+  + span {
+  display: none;
 }
 
 [data-chat-appearance='wide-chat']
@@ -117,25 +151,33 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent']
   .wide-chat-message-body {
-  padding: 2px 12px 10px;
-}
-
-[data-chat-appearance='wide-chat']
-  .wide-chat-message[data-wide-agent='true']:not([data-continues-author='true'])
-  .wide-chat-message-body {
-  padding-inline-start: 52px;
+  padding: 4px 58px 24px 12px;
+  background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
+  border-radius: 0 0 18px 18px;
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user']
   .wide-chat-message-body {
-  padding: 8px 12px;
+  padding: 10px 58px 24px 14px;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']
+  .wide-chat-message-header {
+  background: transparent !important;
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true']
   .wide-chat-message-body {
-  padding-inline-end: 12px;
+  padding-inline-end: 58px;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false']
+  .wide-chat-message-body {
+  border-radius: 18px;
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message [data-chat-metadata='true'] {
@@ -146,6 +188,17 @@
 
 [data-chat-appearance='wide-chat'] .wide-chat-message .wide-chat-message-header > div:last-child {
   display: none;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message [data-wide-chat-inline-time='true'] {
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-end: 7px;
+  z-index: 2;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message:hover [data-chat-metadata='true'],

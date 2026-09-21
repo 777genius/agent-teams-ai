@@ -1024,7 +1024,7 @@ async function main() {
       );
       const body = article?.querySelector('.wide-chat-message-body');
       const footer = document.querySelector('[data-wide-chat-message-footer="true"]');
-      const timestamp = footer?.querySelector('[data-wide-chat-timestamp="true"]');
+      const timestamp = article?.querySelector('[data-wide-chat-inline-time="true"]');
       const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
       const row = document.querySelector(
         '[data-timeline-row-key="' + CSS.escape(${JSON.stringify(hoverPoint.rowKey)}) + '"]'
@@ -1034,6 +1034,7 @@ async function main() {
           !(toolbar instanceof HTMLElement) || !(row instanceof HTMLElement)) return null;
       const articleRect = article.getBoundingClientRect();
       const footerRect = footer.getBoundingClientRect();
+      const timestampRect = timestamp.getBoundingClientRect();
       const footerHitTarget = document.elementFromPoint(
         footerRect.left + footerRect.width / 2,
         footerRect.top + footerRect.height / 2
@@ -1044,6 +1045,8 @@ async function main() {
         underMessage: footerRect.top >= articleRect.bottom - 3,
         rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
         articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
+        timeInsideBubble:
+          timestampRect.right <= articleRect.right && timestampRect.bottom <= articleRect.bottom,
         interactive: footerHitTarget instanceof Element && footer.contains(footerHitTarget),
         side: footer.getAttribute('data-side'),
       };
@@ -1054,6 +1057,7 @@ async function main() {
       underMessage: true,
       rowStable: true,
       articleStable: true,
+      timeInsideBubble: true,
       interactive: true,
       side: 'bottom',
     });
@@ -1213,7 +1217,7 @@ async function main() {
     );
     const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
       const article = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]:not([data-continues-author="true"])'
+        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]:not([data-continues-next-author="true"])'
       );
       const avatar = article?.querySelector('.wide-chat-message-header img');
       const body = article?.querySelector('.wide-chat-message-body');
@@ -1231,6 +1235,48 @@ async function main() {
       width: 32,
       height: 32,
       leftOfMessage: true,
+    });
+    const groupedBubbleIdentity = await cdp.evaluate(`(() => {
+      const root = document.querySelector('[data-chat-appearance="wide-chat"]');
+      if (!(root instanceof HTMLElement)) return null;
+      const first = root.querySelector(
+        '[data-wide-agent="true"]:not([data-continues-author="true"])' +
+        '[data-continues-next-author="true"]'
+      );
+      const middle = root.querySelector(
+        '[data-wide-agent="true"][data-continues-author="true"]' +
+        '[data-continues-next-author="true"]'
+      );
+      const last = root.querySelector(
+        '[data-wide-agent="true"][data-continues-author="true"]' +
+        ':not([data-continues-next-author="true"])'
+      );
+      if (!(first instanceof HTMLElement) || !(middle instanceof HTMLElement) ||
+          !(last instanceof HTMLElement)) return null;
+      const firstAvatar = first.querySelector('.wide-chat-message-header img');
+      const firstName = first.querySelector('.wide-chat-message-header img + span');
+      const middleAvatar = middle.querySelector('.wide-chat-message-header img');
+      const middleName = middle.querySelector('.wide-chat-message-header img + span');
+      const lastAvatar = last.querySelector('.wide-chat-message-header img');
+      const lastName = last.querySelector('.wide-chat-message-header img + span');
+      if (!(firstAvatar instanceof HTMLImageElement) || !(firstName instanceof HTMLElement) ||
+          !(lastAvatar instanceof HTMLImageElement) || !(lastName instanceof HTMLElement)) {
+        return null;
+      }
+      return {
+        firstNameVisible: getComputedStyle(firstName).display !== 'none',
+        firstAvatarHidden: getComputedStyle(firstAvatar).display === 'none',
+        middleIdentityAbsent: middleAvatar === null && middleName === null,
+        lastNameHidden: getComputedStyle(lastName).display === 'none',
+        lastAvatarVisible: getComputedStyle(lastAvatar).display !== 'none',
+      };
+    })()`);
+    assert.deepEqual(groupedBubbleIdentity, {
+      firstNameVisible: true,
+      firstAvatarHidden: true,
+      middleIdentityAbsent: true,
+      lastNameHidden: true,
+      lastAvatarVisible: true,
     });
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
