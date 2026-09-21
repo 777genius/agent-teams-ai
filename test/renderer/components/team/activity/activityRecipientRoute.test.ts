@@ -1,4 +1,7 @@
-import { shouldHideDirectMemberRoute } from '@renderer/components/team/activity/activityRecipientRoute';
+import {
+  isDirectParticipantSender,
+  shouldHideDirectMemberRoute,
+} from '@renderer/components/team/activity/activityRecipientRoute';
 import { describe, expect, it } from 'vitest';
 
 describe('shouldHideDirectMemberRoute', () => {
@@ -24,5 +27,13 @@ describe('shouldHideDirectMemberRoute', () => {
 
   it('does not treat orchestrator as a conversation lead route', () => {
     expect(shouldHideDirectMemberRoute('orchestrator', 'atlas', 'oscar')).toBe(false);
+  });
+});
+
+describe('isDirectParticipantSender', () => {
+  it('matches only the selected participant, case-insensitively', () => {
+    expect(isDirectParticipantSender(' Alice ', 'alice')).toBe(true);
+    expect(isDirectParticipantSender('oscar', 'alice')).toBe(false);
+    expect(isDirectParticipantSender('alice', undefined)).toBe(false);
   });
 });

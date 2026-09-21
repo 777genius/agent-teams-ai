@@ -28,7 +28,8 @@ vi.mock('@renderer/components/team/attachments/AttachmentDisplay', () => ({
   AttachmentDisplay: () => null,
 }));
 vi.mock('@renderer/components/team/MemberBadge', () => ({
-  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+  MemberBadge: ({ name, hideAvatar }: { name: string; hideAvatar?: boolean }) =>
+    React.createElement('span', { 'data-member-avatar-hidden': String(!!hideAvatar) }, name),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
   TaskTooltip: ({ children }: { children: React.ReactNode }) =>
@@ -247,6 +248,47 @@ describe('ActivityItem compact header preview', () => {
     expect(article?.dataset.wideContent).toBe('true');
     expect(expandable?.getAttribute('data-collapsed-height')).toBe('400');
     expect(expandable?.getAttribute('data-fade-length-percent')).toBe('20');
+
+    await act(async () => root.unmount());
+  });
+
+  it('hides only the selected participant avatar in a wide direct thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderMessage = async (from: string, to: string, messageId: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from,
+              to,
+              text: `${from} writes to ${to}`,
+              timestamp: '2026-09-21T10:00:00.000Z',
+              read: true,
+              source: 'inbox',
+              messageId,
+            } satisfies InboxMessage,
+            teamName: 'demo',
+            appearance: 'wide-chat',
+            directParticipant: 'alice',
+          })
+        );
+      });
+    };
+
+    await renderMessage('alice', 'user', 'direct-alice');
+    expect(host.querySelector('article')?.dataset.hideDirectAvatar).toBe('true');
+    expect(
+      host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
+    ).toBe('true');
+
+    await renderMessage('oscar', 'alice', 'direct-oscar');
+    expect(host.querySelector('article')?.dataset.hideDirectAvatar).toBeUndefined();
+    expect(
+      host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
+    ).toBe('false');
 
     await act(async () => root.unmount());
   });

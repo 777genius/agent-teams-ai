@@ -81,7 +81,7 @@ import {
   parseQualifiedRecipient,
   parseStructuredAgentMessageCached,
 } from './activityMessagePresentation';
-import { shouldHideDirectMemberRoute } from './activityRecipientRoute';
+import { isDirectParticipantSender, shouldHideDirectMemberRoute } from './activityRecipientRoute';
 import {
   encodeCacheParts,
   extractMarkdownPlainTextCached,
@@ -699,12 +699,10 @@ export const ActivityItem = memo(
     // Hide role when it matches the sender name (avoids "lead" badge + "Team Lead" text duplication)
     const formattedRole =
       memberRole && memberRole !== message.from ? formatAgentRole(memberRole) : null;
-
     const timestamp = useMemo(
       () => formatActivityTimestamp(message.timestamp),
       [message.timestamp]
     );
-
     const structured = parseStructuredAgentMessageCached(message.text);
     const bootstrapDisplay = getBootstrapPromptDisplay(message);
     const bootstrapAcknowledgement = getBootstrapAcknowledgementDisplay(message);
@@ -719,7 +717,6 @@ export const ActivityItem = memo(
     // Never collapse rate limit messages as noise — they must be visible
     const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
     const idleSemantic = classifyIdleNotificationCached(message);
-
     const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
     const isManaged = collapseMode === 'managed';
     const isExpanded = isManaged ? !isCollapsed : true;
@@ -732,7 +729,6 @@ export const ActivityItem = memo(
     const isWideUser = isWideOrdinary && messagePresentation.kind === 'ordinary-user';
     const isWideAgent = isWideOrdinary && !isWideUser;
     const hideWideAuthor = isWideOrdinary && (isWideUser || continuesPreviousAuthor);
-
     const parsedCrossTeamPrefix = parseCrossTeamPrefix(message.text);
     const qualifiedRecipient = parseQualifiedRecipient(message.to);
     const crossTeamSentTarget = getCrossTeamSentTarget(message.to, teamName, localMemberNames);
@@ -765,7 +761,8 @@ export const ActivityItem = memo(
     const senderHideAvatar =
       message.from === 'user' ||
       message.from === 'system' ||
-      crossTeamOrigin?.memberName === 'user';
+      crossTeamOrigin?.memberName === 'user' ||
+      (isWideAgent && isDirectParticipantSender(senderName, directParticipant));
     const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
     const isSystemMessage = message.from === 'system';
 
@@ -819,10 +816,12 @@ export const ActivityItem = memo(
         teamNames
       );
     }, [strippedText, message.taskRefs, memberColorMap, teamNames, systemLabel]);
-    const usesWideAgentContent =
+    const wideContent =
       isWideAgent &&
       !!displayText &&
       (displayText.length >= 600 || /```|^\s*\|.+\|\s*$/m.test(displayText));
+    const showWideSender =
+      !hideWideAuthor || (isWideAgent && (!continuesNextAuthor || wideContent));
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
       const oneLine = strippedText.replace(/\n+/g, ' ').trim();
@@ -1204,7 +1203,8 @@ export const ActivityItem = memo(
       <article
         data-message-presentation={isWideOrdinary ? messagePresentation.kind : undefined}
         data-wide-agent={isWideAgent ? 'true' : undefined}
-        data-wide-content={usesWideAgentContent ? 'true' : undefined}
+        data-wide-content={wideContent ? 'true' : undefined}
+        data-hide-direct-avatar={isWideAgent && senderHideAvatar ? 'true' : undefined}
         data-continues-author={isWideOrdinary && continuesPreviousAuthor ? 'true' : undefined}
         data-continues-next-author={isWideOrdinary && continuesNextAuthor ? 'true' : undefined}
         data-expanded={isExpanded ? 'true' : 'false'}
@@ -1297,7 +1297,7 @@ export const ActivityItem = memo(
                   {crossTeamOrigin ? (
                     <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                   ) : null}
-                  {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
+                  {showWideSender ? senderBadge : null}
                   {messageTypeBadge}
                   {leadSourceBadge}
                   {statusBadge}
@@ -1367,7 +1367,7 @@ export const ActivityItem = memo(
                 {crossTeamOrigin ? (
                   <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                 ) : null}
-                {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
+                {showWideSender ? senderBadge : null}
                 {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                   <span
                     data-chat-metadata={isWideOrdinary ? 'true' : undefined}
@@ -1440,7 +1440,7 @@ export const ActivityItem = memo(
               {crossTeamOrigin ? (
                 <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
               ) : null}
-              {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
+              {showWideSender ? senderBadge : null}
               {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                 <span
                   data-chat-metadata={isWideOrdinary ? 'true' : undefined}
