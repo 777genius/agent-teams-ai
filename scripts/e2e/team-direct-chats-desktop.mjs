@@ -560,12 +560,17 @@ async function main() {
       await pressKey(cdp, 'Escape', 'Escape');
     }
     await cdp.screenshot(path.join(shotDir, 'chat-list.png'));
-    await clickPoint(
-      cdp,
-      `Array.from(document.querySelectorAll('button')).find((button) =>
-        (button.getAttribute('aria-label') ?? '').startsWith('alice,'))`,
-      'alice chat row'
-    );
+    if (attachPort) {
+      await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
+        (button.getAttribute('aria-label') ?? '').startsWith('alice,'))?.click()`);
+    } else {
+      await clickPoint(
+        cdp,
+        `Array.from(document.querySelectorAll('button')).find((button) =>
+          (button.getAttribute('aria-label') ?? '').startsWith('alice,'))`,
+        'alice chat row'
+      );
+    }
     await cdp.waitFor(
       `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
         button.getAttribute('aria-label') === 'Back to chats'))`,
@@ -656,6 +661,19 @@ async function main() {
       historyBeforeLatest: true,
       virtualized: false,
     });
+    const historyFadeGeometry = await cdp.evaluate(`(() => {
+      const fade = document.querySelector('[data-conversation-history-fade="true"]');
+      const control = fade?.nextElementSibling;
+      if (!(fade instanceof HTMLElement) || !(control instanceof HTMLElement)) return null;
+      const fadeRect = fade.getBoundingClientRect();
+      const controlRect = control.getBoundingClientRect();
+      return {
+        downward: fade.style.background.includes('to bottom'),
+        snug: fadeRect.top <= controlRect.top && fadeRect.bottom >= controlRect.bottom &&
+          fadeRect.height <= controlRect.height + 40,
+      };
+    })()`);
+    assert.deepEqual(historyFadeGeometry, { downward: true, snug: true });
 
     const revealedRemainingHistory = await cdp.evaluate(`(() => {
       const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
@@ -1113,8 +1131,53 @@ async function main() {
       'expanded Group chat selected from list',
       15_000
     );
+    const groupRouteContinuationsMeasured = await cdp.evaluate(`(() => {
+      const articles = Array.from(document.querySelectorAll(
+        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]' +
+        '[data-continues-author="true"][data-has-recipient-route="true"]'
+      ));
+      return articles.length > 0 && articles.every((article) => {
+        const row = article.closest('[data-timeline-row-key]');
+        const header = article.querySelector('.wide-chat-message-header');
+        const body = article.querySelector('.wide-chat-message-body');
+        if (!(row instanceof HTMLElement) || !(header instanceof HTMLElement) ||
+            !(body instanceof HTMLElement)) return false;
+        const rowRect = row.getBoundingClientRect();
+        const articleRect = article.getBoundingClientRect();
+        const headerRect = header.getBoundingClientRect();
+        const bodyRect = body.getBoundingClientRect();
+        return headerRect.height >= 20 && bodyRect.top >= headerRect.bottom - 1 &&
+          rowRect.height >= articleRect.height - 1;
+      });
+    })()`);
+    assert.equal(
+      groupRouteContinuationsMeasured,
+      true,
+      'group-chat continuation routes must keep a measured header slot'
+    );
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
+    const pinnedVisualizePrepared = await cdp.evaluate(`(() => {
+      const button = document.querySelector('[data-visualize-button="header"]');
+      let current = button?.parentElement ?? null;
+      while (current) {
+        const style = getComputedStyle(current);
+        if (['auto', 'scroll'].includes(style.overflowY) &&
+            current.scrollHeight > current.clientHeight) {
+          current.scrollTop = Math.min(current.scrollHeight - current.clientHeight, 800);
+          current.dispatchEvent(new Event('scroll', { bubbles: true }));
+          return true;
+        }
+        current = current.parentElement;
+      }
+      return false;
+    })()`);
+    assert.equal(pinnedVisualizePrepared, true, 'missing scroll owner for pinned Visualize');
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-visualize-button="pinned"]'))`,
+      'pinned Visualize before bottom sheet',
+      10_000
+    );
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().setMessagesPanelMode('bottom-sheet')`
     );
@@ -1151,6 +1214,9 @@ async function main() {
       if (!(scroll instanceof HTMLElement) || !(footer instanceof HTMLElement)) return null;
       const scrollRect = scroll.getBoundingClientRect();
       const footerRect = footer.getBoundingClientRect();
+      const pinnedVisualize = document.querySelector('[data-visualize-button="pinned"]');
+      const pinnedLayer = pinnedVisualize?.parentElement;
+      const sheetLayer = document.querySelector('.react-modal-sheet-root');
       return {
         footerOutsideScroll: !scroll.contains(footer),
         noVisibleMessageOverlap:
@@ -1160,6 +1226,10 @@ async function main() {
         terminalLauncherVisible: Boolean(
           document.querySelector('[data-testid="open-terminal-floating-button"]')
         ),
+        bottomSheetAbovePinnedVisualize:
+          pinnedLayer instanceof HTMLElement && sheetLayer instanceof HTMLElement &&
+          Number.parseFloat(getComputedStyle(sheetLayer).zIndex) >
+            Number.parseFloat(getComputedStyle(pinnedLayer).zIndex),
       };
     })()`);
     assert.deepEqual(bottomSheetGeometry, {
@@ -1168,6 +1238,7 @@ async function main() {
       footerReachable: true,
       oneOuterScrollOwner: 1,
       terminalLauncherVisible: false,
+      bottomSheetAbovePinnedVisualize: true,
     });
     assert.equal(
       await cdp.evaluate(`Boolean(document.querySelector('[data-chat-appearance="wide-chat"]'))`),

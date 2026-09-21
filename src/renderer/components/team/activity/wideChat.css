@@ -48,7 +48,7 @@
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false']
   .wide-chat-message-header {
   height: 0;
   min-height: 0;
