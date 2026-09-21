@@ -19,6 +19,7 @@ const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 const keepApp = process.env.TEAM_DIRECT_CHATS_E2E_KEEP_APP === '1';
 const attachPort = Number(process.env.TEAM_DIRECT_CHATS_E2E_ATTACH_PORT ?? 0);
+const ownsFixture = attachPort === 0;
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
@@ -368,7 +369,7 @@ async function cleanup(fixture) {
   }
   appProcess = null;
   appProcessGroupId = null;
-  if (fixture?.root && process.env.TEAM_DIRECT_CHATS_E2E_KEEP !== '1') {
+  if (ownsFixture && fixture?.root && process.env.TEAM_DIRECT_CHATS_E2E_KEEP !== '1') {
     await rm(fixture.root, { recursive: true, force: true }).catch(() => undefined);
   }
 }
