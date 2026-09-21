@@ -184,6 +184,7 @@ vi.mock('@renderer/store', () => ({
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
+  getCurrentProvisioningProgressForTeam: () => null,
   isTeamProvisioningActive: () => false,
 }));
 

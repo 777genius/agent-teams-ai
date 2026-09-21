@@ -6,7 +6,10 @@ import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFail
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember } from '@shared/types';
 
-vi.mock('@renderer/api', () => ({ api: { openExternal: vi.fn() } }));
+vi.mock('@renderer/api', () => ({
+  api: { openExternal: vi.fn() },
+  isElectronMode: () => true,
+}));
 
 vi.mock('@renderer/components/ui/badge', () => ({
   Badge: ({

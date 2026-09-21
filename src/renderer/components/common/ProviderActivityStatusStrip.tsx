@@ -23,7 +23,8 @@ interface ProviderActivityState {
   error: boolean;
 }
 
-interface ProviderActivityStatusStripProps {
+/** Public renderer contract for consumers of the shared provider activity surface. */
+export interface ProviderActivityStatusStripProps {
   readonly cliStatus: CliInstallationStatus | null | undefined;
   readonly sourceCliStatus?: CliInstallationStatus | null;
   readonly providerStatusOverride?: CliProviderStatus | null;

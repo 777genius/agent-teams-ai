@@ -29,6 +29,10 @@ vi.mock('@main/services/team/lifecycle/teamLeadProcessTreeReap', () => ({
   reapCursorAgentLeadTreesForStoppedTeam: vi.fn(async () => ({ killedPids: [], diagnostics: [] })),
 }));
 import { registerTeamRoutes } from '@main/http/teams';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
 import { readTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
@@ -38,11 +42,6 @@ import {
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify from 'fastify';
 
-import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
-} from '../../../../src/main/ipc/teams';
 import { TEAM_FORCE_STOP, TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
@@ -55,6 +54,37 @@ function deferred() {
   return { promise, resolve };
 }
 const team = 'stop-publication-callers';
+
+/**
+ * Stop admission belongs to the desktop composition. Keep this fixture on that
+ * path so it cannot silently prove only the legacy registrar in isolation.
+ */
+function registerDesktopStopFlowComposition(
+  ipcMain: { handle(channel: string, handler: (...args: unknown[]) => Promise<unknown>): void },
+  teamDataService: unknown,
+  runtime: unknown
+): void {
+  const composition = createDesktopTeamFeatureComposition({
+    teamDataService,
+    capabilities: { runtime },
+    teamMemberLogsFinder: {},
+    memberStatsComputer: {},
+    boardTaskActivityService: {},
+    boardTaskActivityDetailService: {},
+    boardTaskLogStreamService: {},
+    boardTaskExactLogsService: {},
+    boardTaskExactLogDetailService: {},
+    teammateToolTracker: undefined,
+    teamLogSourceTracker: undefined,
+    branchStatusService: undefined,
+    teamBackupService: undefined,
+    launchIoGovernor: undefined,
+    teamPermanentDeletionLifecycle: undefined,
+  } as never);
+  composition.initializeLegacyHandlers();
+  composition.register(ipcMain as never);
+}
+
 describe('Stop publication admission through real IPC/HTTP wrappers', () => {
   let temp: string;
   const store = new TeamLaunchStateStore();
@@ -74,17 +104,17 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
     setClaudeBasePathOverride(temp);
     await mkdir(path.join(getTeamsBasePath(), team), { recursive: true });
     await store.beginLaunch(team, 'original', ['alice'], () => true);
-    initializeTeamHandlers(
-      { getTeamData: vi.fn(async () => ({ members: [] })) } as never,
-      { runtime } as never
+    registerDesktopStopFlowComposition(
+      ipc,
+      { getTeamData: vi.fn(async () => ({ members: [] })) },
+      runtime
     );
-    registerTeamHandlers(ipc as never);
     tails.release.mockReset();
     tails.release.mockResolvedValue({ diagnostics: [] });
     runtime.stopTeam.mockClear();
   });
   afterEach(async () => {
-    removeTeamHandlers(ipc as never);
+    removeDesktopTeamFeatureComposition(ipc as never);
     handlers.clear();
     setClaudeBasePathOverride(null);
     await rm(temp, { recursive: true, force: true });
