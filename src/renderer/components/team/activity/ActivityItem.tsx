@@ -821,7 +821,8 @@ export const ActivityItem = memo(
       !!displayText &&
       (displayText.length >= 600 || /```|^\s*\|.+\|\s*$/m.test(displayText));
     const showWideSender =
-      !hideWideAuthor || (isWideAgent && (!continuesNextAuthor || wideContent));
+      !hideWideAuthor ||
+      (isWideAgent && (wideContent || (!senderHideAvatar && !continuesNextAuthor)));
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
       const oneLine = strippedText.replace(/\n+/g, ' ').trim();
