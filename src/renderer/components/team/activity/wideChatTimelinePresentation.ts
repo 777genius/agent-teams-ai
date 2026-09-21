@@ -55,7 +55,7 @@ export function getWideChatRowStyle(
   if (appearance !== 'wide-chat') return undefined;
   return {
     boxSizing: 'border-box',
-    paddingInlineEnd: 40,
+    paddingInlineEnd: 0,
     paddingBlockStart: rowIndex === 0 ? 0 : flags[rowIndex] ? 4 : 12,
   };
 }

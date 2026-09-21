@@ -981,7 +981,7 @@ async function main() {
       return {
         toolbarGutter: getComputedStyle(userRow).paddingInlineEnd,
         userOnRight: userRect.right > userRowRect.left + userRowRect.width / 2 &&
-          userRowRect.right - userRect.right >= 39,
+          Math.abs(userRowRect.right - userRect.right) <= 1,
         agentBubbleOnLeft: Math.abs(agentRect.left - agentRowRect.left) <= 2,
         participantAvatarHidden: agentAvatar === null,
         participantNameVisible:
@@ -990,14 +990,14 @@ async function main() {
           agentBody instanceof HTMLElement &&
           Math.abs(agentBody.getBoundingClientRect().left - agentRect.left) <= 1,
         otherAgentAvatarVisible: otherAgentAvatar instanceof HTMLImageElement,
-        userWidthBounded: userRect.width <= Math.min((userRowRect.width - 40) * 0.72, 640) + 2,
+        userWidthBounded: userRect.width <= Math.min(userRowRect.width * 0.72, 640) + 2,
         noHorizontalOverflow: root.scrollWidth <= root.clientWidth + 1,
         shortUserMessageTruncated,
         shortAgentMessageTruncated,
       };
     })()`);
     assert.deepEqual(wideChatGeometry, {
-      toolbarGutter: '40px',
+      toolbarGutter: '0px',
       userOnRight: true,
       agentBubbleOnLeft: true,
       participantAvatarHidden: true,
