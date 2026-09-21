@@ -977,52 +977,70 @@ async function main() {
       return { x: rect.left + Math.min(rect.width / 2, 160), y: rect.top + rect.height / 2 };
     })()`);
     assert(hoverPoint, 'missing ordinary agent row for wide-chat hover verification');
-    await cdp.waitFor(
-      `Boolean(document.querySelector('[data-chat-toolbar-appearance="wide-chat"]'))`,
-      'wide-chat hover toolbar',
-      5_000
-    );
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: hoverPoint.x,
+      y: hoverPoint.y,
+    });
     await new Promise((resolve) => setTimeout(resolve, 180));
     const hoverGeometry = await cdp.evaluate(`(() => {
-      const toolbar = document.querySelector('[data-chat-toolbar-appearance="wide-chat"]');
-      const article = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"][data-state="open"]'
+      const article = document.elementFromPoint(${JSON.stringify(hoverPoint.x)}, ${JSON.stringify(hoverPoint.y)})
+        ?.closest('[data-message-presentation="ordinary-agent"]');
+      const body = article?.querySelector('.wide-chat-message-body');
+      const footer = article?.querySelector('[data-wide-chat-message-footer="true"]');
+      const timestamp = footer?.querySelector('[data-wide-chat-timestamp="true"]');
+      const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
+      if (!(article instanceof HTMLElement) || !(body instanceof HTMLElement) ||
+          !(footer instanceof HTMLElement) || !(timestamp instanceof HTMLElement) ||
+          !(toolbar instanceof HTMLElement)) return null;
+      const bodyRect = body.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      const footerHitTarget = document.elementFromPoint(
+        footerRect.left + footerRect.width / 2,
+        footerRect.top + footerRect.height / 2
       );
-      const metadata = article?.querySelector('[data-chat-metadata="true"]');
-      if (!(toolbar instanceof HTMLElement) || !(article instanceof HTMLElement) ||
-          !(metadata instanceof HTMLElement)) return null;
-      const rect = toolbar.getBoundingClientRect();
       return {
-        side: toolbar.getAttribute('data-side'),
-        inViewport: rect.top >= 8 && rect.bottom <= innerHeight - 8 && rect.right <= innerWidth,
-        metadataVisible: Number.parseFloat(getComputedStyle(metadata).opacity) > 0.9,
-        articleOpen: article.getAttribute('data-state') === 'open',
+        horizontal: toolbar.getAttribute('data-orientation') === 'horizontal',
+        inline: article.contains(toolbar),
+        underMessage: footerRect.top >= bodyRect.bottom - 3,
+        visible: Number.parseFloat(getComputedStyle(footer).opacity) > 0.9,
+        interactive: footerHitTarget instanceof Element && footer.contains(footerHitTarget),
+        noWidePortal: !document.querySelector('[data-chat-toolbar-appearance="wide-chat"]'),
       };
     })()`);
     assert.deepEqual(hoverGeometry, {
-      side: 'right',
-      inViewport: true,
-      metadataVisible: true,
-      articleOpen: true,
+      horizontal: true,
+      inline: true,
+      underMessage: true,
+      visible: true,
+      interactive: true,
+      noWidePortal: true,
     });
     await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen-hover.png'));
     const focusedWideArticle = await cdp.evaluate(`(() => {
-      const article = document.querySelector(
+      const article = Array.from(document.querySelectorAll(
         '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]'
-      );
+      )).find((candidate) => candidate.querySelector('[data-wide-chat-message-footer="true"]'));
       if (!(article instanceof HTMLElement)) return false;
       article.focus();
       return document.activeElement === article;
     })()`);
     assert.equal(focusedWideArticle, true, 'wide-chat row must accept keyboard focus');
-    await new Promise((resolve) => setTimeout(resolve, 180));
-    const focusMetadataVisible = await cdp.evaluate(`(() => {
+    await cdp.waitFor(
+      `(() => {
+        const footer = document.activeElement?.querySelector?.('[data-wide-chat-message-footer="true"]');
+        return footer instanceof HTMLElement && Number.parseFloat(getComputedStyle(footer).opacity) > 0.9;
+      })()`,
+      'wide-chat footer after keyboard focus',
+      2_000
+    );
+    const focusFooterVisible = await cdp.evaluate(`(() => {
       const article = document.activeElement;
       if (!(article instanceof HTMLElement)) return false;
-      const metadata = article.querySelector('[data-chat-metadata="true"]');
-      return metadata instanceof HTMLElement && Number.parseFloat(getComputedStyle(metadata).opacity) > 0.9;
+      const footer = article.querySelector('[data-wide-chat-message-footer="true"]');
+      return footer instanceof HTMLElement && Number.parseFloat(getComputedStyle(footer).opacity) > 0.9;
     })()`);
-    assert.equal(focusMetadataVisible, true, 'wide-chat metadata must be keyboard-focus visible');
+    assert.equal(focusFooterVisible, true, 'wide-chat footer must be keyboard-focus visible');
 
     for (let index = 0; index < 10; index += 1) {
       await toggleFullScreen(index % 2 === 1, `identity cycle ${index + 1}`);
@@ -1155,6 +1173,27 @@ async function main() {
       true,
       'group-chat continuation routes must keep a measured header slot'
     );
+    const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
+      const article = document.querySelector(
+        '[data-chat-appearance="wide-chat"] [data-wide-group-agent="true"]:not([data-continues-author="true"])'
+      );
+      const avatar = article?.querySelector('.wide-chat-message-header img');
+      const body = article?.querySelector('.wide-chat-message-body');
+      if (!(avatar instanceof HTMLImageElement) || !(body instanceof HTMLElement)) return null;
+      const avatarRect = avatar.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
+      const bodyPadding = Number.parseFloat(getComputedStyle(body).paddingInlineStart);
+      return {
+        width: Math.round(avatarRect.width),
+        height: Math.round(avatarRect.height),
+        leftOfMessage: avatarRect.right <= bodyRect.left + bodyPadding,
+      };
+    })()`);
+    assert.deepEqual(groupAgentAvatarGeometry, {
+      width: 32,
+      height: 32,
+      leftOfMessage: true,
+    });
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
     const pinnedVisualizePrepared = await cdp.evaluate(`(() => {

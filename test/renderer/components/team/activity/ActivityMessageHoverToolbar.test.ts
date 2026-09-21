@@ -69,4 +69,26 @@ describe('ActivityMessageHoverToolbar', () => {
     });
     vi.unstubAllGlobals();
   });
+
+  it('renders wide-chat actions as a horizontal row', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityMessageHoverToolbar, {
+          copyText: 'wide message',
+          orientation: 'horizontal',
+        })
+      );
+    });
+
+    const toolbar = host.querySelector('[data-activity-message-toolbar="true"]');
+    expect(toolbar?.getAttribute('data-orientation')).toBe('horizontal');
+    expect(toolbar?.className).toContain('flex-row');
+
+    await act(async () => root.unmount());
+  });
 });
