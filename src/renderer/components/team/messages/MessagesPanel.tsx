@@ -1141,6 +1141,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     />
   );
 
+  const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
   const renderTimelineSection = (): React.JSX.Element => (
     <MessagesTimelineSection
       messages={activityTimelineMessages}
@@ -1165,6 +1166,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       onReviseMessage={handleReviseMessage}
       onMessageVisible={handleMessageVisible}
       presentation={isConversation ? 'conversation' : 'activity'}
+      appearance={useWideChat ? 'wide-chat' : 'compact'}
       observationEnabled={!isConversation || isActive}
       conversationIdentity={conversationIdentity}
       conversationHandleRef={conversationHandleRef}
@@ -1185,8 +1187,6 @@ export const MessagesPanel = memo(function MessagesPanel({
       onExpandDialogChange={handleExpandDialogChange}
     />
   );
-
-  // ---- Shared content (used in both modes) ----
   const searchControlProps = {
     teamName,
     members,
