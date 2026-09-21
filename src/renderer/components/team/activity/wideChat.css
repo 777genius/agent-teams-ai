@@ -238,6 +238,27 @@
   display: none;
 }
 
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent']
+  [data-wide-reply-quote='true'] {
+  margin-block-start: -2px;
+  margin-inline: -8px;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']
+  [data-wide-reply-quote='true'] {
+  margin-block-start: -6px;
+  margin-inline: -10px;
+  border-radius: 14px 14px 0 0;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false']
+  [data-wide-reply-quote='true'] {
+  border-radius: 14px 14px 0 0;
+}
+
 [data-chat-appearance='wide-chat'] .wide-chat-message:hover [data-chat-metadata='true'],
 [data-chat-appearance='wide-chat'] .wide-chat-message:focus-within [data-chat-metadata='true'],
 [data-chat-appearance='wide-chat']

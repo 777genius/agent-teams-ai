@@ -1361,16 +1361,24 @@ async function main() {
       );
       if (!(quote instanceof HTMLElement)) return null;
       const preview = quote.querySelector('[data-wide-reply-preview="true"]');
-      if (!(preview instanceof HTMLElement)) return null;
+      const author = quote.querySelector('[data-wide-reply-author="true"]');
+      const body = quote.closest('.wide-chat-message-body');
+      if (!(preview instanceof HTMLElement) || !(author instanceof HTMLElement) ||
+          !(body instanceof HTMLElement)) return null;
       const style = getComputedStyle(quote);
       const quoteRect = quote.getBoundingClientRect();
       const previewRect = preview.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
       return {
-        compact: quote.getBoundingClientRect().height <= 48,
+        compact: quote.getBoundingClientRect().height <= 52,
         hasAvatar: quote.querySelector('img') !== null,
         hasLegacyLabel: quote.textContent?.includes('Replying to') ?? false,
-        hasDuplicatedAuthor: quote.textContent?.includes('alice') ?? false,
+        hasQuotedAuthor: author.textContent?.includes('alice') ?? false,
         hasPreview: quote.textContent?.includes('Messenger history 62') ?? false,
+        flushTop: Math.abs(quoteRect.top - bodyRect.top) <= 0.5,
+        flushInline:
+          Math.abs(quoteRect.left - bodyRect.left) <= 0.5 &&
+          Math.abs(quoteRect.right - bodyRect.right) <= 0.5,
         previewFits:
           previewRect.top >= quoteRect.top && previewRect.bottom <= quoteRect.bottom + 0.5,
         leftRule: style.borderInlineStartWidth,
@@ -1380,8 +1388,10 @@ async function main() {
       compact: true,
       hasAvatar: false,
       hasLegacyLabel: false,
-      hasDuplicatedAuthor: false,
+      hasQuotedAuthor: true,
       hasPreview: true,
+      flushTop: true,
+      flushInline: true,
       previewFits: true,
       leftRule: '2px',
     });
