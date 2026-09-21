@@ -1296,6 +1296,36 @@ async function main() {
       lastNameHidden: true,
       lastAvatarVisible: true,
     });
+    const wideReplyQuote = await cdp.evaluate(`(() => {
+      const quote = document.querySelector(
+        '[data-chat-appearance="wide-chat"] [data-wide-reply-quote="true"]'
+      );
+      if (!(quote instanceof HTMLElement)) return null;
+      const preview = quote.querySelector('[data-wide-reply-preview="true"]');
+      if (!(preview instanceof HTMLElement)) return null;
+      const style = getComputedStyle(quote);
+      const quoteRect = quote.getBoundingClientRect();
+      const previewRect = preview.getBoundingClientRect();
+      return {
+        compact: quote.getBoundingClientRect().height <= 48,
+        hasAvatar: quote.querySelector('img') !== null,
+        hasLegacyLabel: quote.textContent?.includes('Replying to') ?? false,
+        hasAuthor: quote.textContent?.includes('alice') ?? false,
+        hasPreview: quote.textContent?.includes('Messenger history 62') ?? false,
+        previewFits:
+          previewRect.top >= quoteRect.top && previewRect.bottom <= quoteRect.bottom + 0.5,
+        leftRule: style.borderInlineStartWidth,
+      };
+    })()`);
+    assert.deepEqual(wideReplyQuote, {
+      compact: true,
+      hasAvatar: false,
+      hasLegacyLabel: false,
+      hasAuthor: true,
+      hasPreview: true,
+      previewFits: true,
+      leftRule: '2px',
+    });
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
     const pinnedVisualizePrepared = await cdp.evaluate(`(() => {
