@@ -995,7 +995,8 @@ async function main() {
       if (!(article instanceof HTMLElement)) return null;
       const rect = article.getBoundingClientRect();
       const row = article.closest('[data-timeline-row-key]');
-      if (!(row instanceof HTMLElement)) return null;
+      const preHoverTime = article.querySelector('[data-wide-chat-inline-time="true"]');
+      if (!(row instanceof HTMLElement) || !(preHoverTime instanceof HTMLElement)) return null;
       for (const type of ['pointerover', 'pointerenter', 'pointermove']) {
         article.dispatchEvent(new PointerEvent(type, {
           bubbles: true,
@@ -1009,9 +1010,11 @@ async function main() {
         rowKey: row.dataset.timelineRowKey,
         rowHeight: row.getBoundingClientRect().height,
         articleHeight: rect.height,
+        timeHidden: getComputedStyle(preHoverTime).opacity === '0',
       };
     })()`);
     assert(hoverPoint, 'missing ordinary agent row for wide-chat hover verification');
+    assert.equal(hoverPoint.timeHidden, true, 'wide-chat timestamp must stay hidden before hover');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseMoved',
       x: hoverPoint.x,
@@ -1045,8 +1048,9 @@ async function main() {
         underMessage: footerRect.top >= articleRect.bottom - 3,
         rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
         articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
-        timeInsideBubble:
-          timestampRect.right <= articleRect.right && timestampRect.bottom <= articleRect.bottom,
+        timeBelowBubble:
+          timestampRect.right <= articleRect.right && timestampRect.top >= articleRect.bottom,
+        timeVisible: getComputedStyle(timestamp).opacity === '1',
         interactive: footerHitTarget instanceof Element && footer.contains(footerHitTarget),
         side: footer.getAttribute('data-side'),
       };
@@ -1057,7 +1061,8 @@ async function main() {
       underMessage: true,
       rowStable: true,
       articleStable: true,
-      timeInsideBubble: true,
+      timeBelowBubble: true,
+      timeVisible: true,
       interactive: true,
       side: 'bottom',
     });
@@ -1217,24 +1222,38 @@ async function main() {
     );
     const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
       const article = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]:not([data-continues-next-author="true"])'
+        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]' +
+        '[data-continues-author="true"]:not([data-continues-next-author="true"])'
       );
       const avatar = article?.querySelector('.wide-chat-message-header img');
       const body = article?.querySelector('.wide-chat-message-body');
       if (!(avatar instanceof HTMLImageElement) || !(body instanceof HTMLElement)) return null;
       const avatarRect = avatar.getBoundingClientRect();
+      const articleRect = article.getBoundingClientRect();
       const bodyRect = body.getBoundingClientRect();
-      const bodyPadding = Number.parseFloat(getComputedStyle(body).paddingInlineStart);
+      const bodyStyle = getComputedStyle(body);
+      const tailStyle = getComputedStyle(article, '::before');
+      const bodyPadding = Number.parseFloat(bodyStyle.paddingInlineStart);
+      const tailLeft = Number.parseFloat(tailStyle.insetInlineStart);
       return {
         width: Math.round(avatarRect.width),
         height: Math.round(avatarRect.height),
         leftOfMessage: avatarRect.right <= bodyRect.left + bodyPadding,
+        avatarTailGap: Math.round(articleRect.left + tailLeft - avatarRect.right),
+        compactPadding: [
+          bodyStyle.paddingBlockStart,
+          bodyStyle.paddingInlineEnd,
+          bodyStyle.paddingBlockEnd,
+          bodyStyle.paddingInlineStart,
+        ],
       };
     })()`);
     assert.deepEqual(groupAgentAvatarGeometry, {
       width: 32,
       height: 32,
       leftOfMessage: true,
+      avatarTailGap: 8,
+      compactPadding: ['3px', '10px', '9px', '10px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(`(() => {
       const root = document.querySelector('[data-chat-appearance="wide-chat"]');
