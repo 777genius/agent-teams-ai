@@ -1795,6 +1795,7 @@ describe('Keycloak production secret boundary', () => {
 
     expect(electronConfig).toContain("entryFileNames: '[name].cjs'");
     expect(mainEntry).toContain("preload: join(__dirname, '../preload/index.cjs')");
+    expect(mainEntry).not.toContain("preload: join(__dirname, '../preload/index.js')");
     expect(preloadEntry).toContain("contextBridge.exposeInMainWorld('electronAPI', electronAPI)");
     expect(rendererEntry).toMatch(
       /const app = window\.electronAPI \? \(\s*<App \/>\s*\) : \(\s*<HostedAuthGate onAuthenticated=\{initializeRendererWorkspace\}>/u
