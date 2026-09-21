@@ -10,6 +10,8 @@ interface ExpandableContentProps {
   children: React.ReactNode;
   /** Maximum height (px) before truncation kicks in. Default: 200. */
   collapsedHeight?: number;
+  /** Percentage of the collapsed area occupied by the fade. Default: 40. */
+  fadeLengthPercent?: number;
   /** Extra className applied to the outermost wrapper. */
   className?: string;
   /** Called when the user clicks "Show more" to expand the content. */
@@ -27,6 +29,7 @@ interface ExpandableContentProps {
 export const ExpandableContent = ({
   children,
   collapsedHeight = DEFAULT_COLLAPSED_HEIGHT,
+  fadeLengthPercent = 40,
   className,
   onExpand,
 }: ExpandableContentProps): React.JSX.Element => {
@@ -34,6 +37,7 @@ export const ExpandableContent = ({
   const anchorRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
+  const fadeStartPercent = 100 - Math.max(0, Math.min(100, fadeLengthPercent));
 
   // Measure content height via callback ref — re-runs when children change
   const measureRef = useCallback(
@@ -64,8 +68,8 @@ export const ExpandableContent = ({
             ? {
                 maxHeight: collapsedHeight,
                 overflow: 'hidden',
-                WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-                maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+                WebkitMaskImage: `linear-gradient(to bottom, black ${fadeStartPercent}%, transparent 100%)`,
+                maskImage: `linear-gradient(to bottom, black ${fadeStartPercent}%, transparent 100%)`,
               }
             : undefined
         }

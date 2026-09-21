@@ -35,8 +35,24 @@ vi.mock('@renderer/components/team/TaskTooltip', () => ({
     React.createElement(React.Fragment, null, children),
 }));
 vi.mock('@renderer/components/ui/ExpandableContent', () => ({
-  ExpandableContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
+  ExpandableContent: ({
+    children,
+    collapsedHeight,
+    fadeLengthPercent,
+  }: {
+    children: React.ReactNode;
+    collapsedHeight?: number;
+    fadeLengthPercent?: number;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        'data-expandable-content': 'true',
+        'data-collapsed-height': collapsedHeight,
+        'data-fade-length-percent': fadeLengthPercent,
+      },
+      children
+    ),
 }));
 vi.mock('@renderer/components/ui/hover-card', () => ({
   HoverCard: ({ children }: { children: React.ReactNode }) =>
@@ -196,6 +212,41 @@ describe('ActivityItem compact header preview', () => {
     });
     expect(article?.dataset.continuesNextAuthor).toBeUndefined();
     expect(article?.textContent).toContain('alice');
+
+    await act(async () => root.unmount());
+  });
+
+  it('widens long incoming messages and truncates wide chat content at 400px', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      to: 'user',
+      text: 'A readable long paragraph. '.repeat(30),
+      timestamp: '2026-09-21T10:00:00.000Z',
+      read: true,
+      source: 'inbox',
+      messageId: 'wide-agent-long',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+        })
+      );
+    });
+
+    const article = host.querySelector('article');
+    const expandable = host.querySelector('[data-expandable-content="true"]');
+    expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
+    expect(article?.dataset.wideContent).toBe('true');
+    expect(expandable?.getAttribute('data-collapsed-height')).toBe('400');
+    expect(expandable?.getAttribute('data-fade-length-percent')).toBe('20');
 
     await act(async () => root.unmount());
   });
