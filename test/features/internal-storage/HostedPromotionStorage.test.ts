@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { HostedPromotionBegin, HostedPromotionBeginResult, HostedPromotionRecord,
   HostedTeamConfigurationStorageCreateResult, TeamDraftPublication } from '@features/internal-storage/contracts';
 
+import { restoreReleasedV30Schema } from './fixtures/releasedInternalStorageSchema';
+
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
 const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
@@ -84,7 +86,7 @@ describe('durable promotion prerequisite', () => {
           reference: { operationId: operation.operationId } } as never)).toEqual(operation);
         expect(reopened.handle('hostedPromotion.begin', f.input)).toEqual({ kind: 'frozen', operation });
         reopened.close();
-        expect(writer.pragma('user_version', { simple: true })).toBe(30);
+        expect(writer.pragma('user_version', { simple: true })).toBe(31);
         expect(snapshot()).toEqual(before);
       }
     } finally { writer.close(); }
@@ -97,7 +99,7 @@ describe('durable promotion prerequisite', () => {
     try {
       const saved = db.prepare('SELECT members_json FROM hosted_team_configuration_drafts').get() as { members_json: string };
       expect(operation.frozenRosterJson).toBe(saved.members_json);
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
     } finally { db.close(); }
     expect(operation.planSha256).toBe(createHash('sha256').update(operation.planJson).digest('hex'));
     expect(JSON.parse(operation.planJson)).toEqual({ schemaVersion: 2, workspaceId: publicationBinding.runtimeWorkspaceId,
@@ -109,6 +111,30 @@ describe('durable promotion prerequisite', () => {
     expect(restarted.handle('hostedPromotion.begin', f.input)).toEqual({ kind: 'frozen', operation });
     expect(restarted.handle('hostedPromotion.lookup', { ...f.scope, reference: { operationId: operation.operationId } } as never)).toEqual(operation);
     expect(restarted.handle('hostedPromotion.lookup', { ...f.scope, reference: { idempotencyKey: f.input.idempotencyKey } } as never)).toEqual(operation);
+  });
+
+  it('migrates a released v30 promotion to the exact current v31 schema', async () => {
+    const f = await fixture();
+    const operation = f.frozen();
+    f.worker.close();
+    const writer = new Database(f.databasePath);
+    const snapshot = () => ({
+      schema: writer.prepare('SELECT type, name, tbl_name, sql FROM main.sqlite_schema ORDER BY name').all(),
+      rows: ['hosted_team_configuration_promotions', 'hosted_team_configuration_drafts',
+        'hosted_team_configuration_create_keys', 'hosted_team_configuration_publications'].map((table) =>
+        writer.prepare(`SELECT * FROM main.${table} ORDER BY rowid`).all()),
+    });
+    try {
+      const current = snapshot();
+      restoreReleasedV30Schema(writer);
+      expect(writer.pragma('user_version', { simple: true })).toBe(30);
+      const reopened = f.open();
+      expect(reopened.handle('hostedPromotion.lookup', { ...f.scope,
+        reference: { operationId: operation.operationId } } as never)).toEqual(operation);
+      reopened.close();
+      expect(writer.pragma('user_version', { simple: true })).toBe(31);
+      expect(snapshot()).toEqual(current);
+    } finally { writer.close(); }
   });
 
   it('keeps a saved manual draft readable while refusing to freeze it for activation', async () => {

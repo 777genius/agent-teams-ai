@@ -14,6 +14,7 @@ import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  addExpectedV31JournalColumnSql,
   createReleasedInternalStorageSchema,
   restorePrePublicationSchema,
 } from './fixtures/releasedInternalStorageSchema';
@@ -454,7 +455,7 @@ describe('hosted team configuration SQLite authority', () => {
       const identities = database.prepare('SELECT * FROM team_identity_records').all();
       const reservations = database.prepare('SELECT * FROM legacy_team_key_reservations').all();
       const legacySchema = database.prepare("SELECT type, name, sql FROM sqlite_schema WHERE name != 'trg_team_identity_transition' AND tbl_name != 'hosted_team_configuration_publications' ORDER BY name");
-      const schemaBefore = legacySchema.all();
+      const schemaBefore = legacySchema.all() as { type: string; name: string; sql: string | null }[];
       const migrated = core(file);
       expect(migrated.handle('ping', {})).toMatchObject({ schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION });
       expect(database.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
@@ -467,8 +468,15 @@ describe('hosted team configuration SQLite authority', () => {
       expect(promotionObjects).toHaveLength(18); // One table, fourteen triggers, three autoindexes.
       expect(database.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
       const promotionNames = new Set(promotionObjects.map((object) => object.name));
-      const schemaAfter = legacySchema.all() as { name: string }[];
-      expect(schemaAfter.filter((object) => !promotionNames.has(object.name))).toEqual(schemaBefore);
+      const schemaAfter = legacySchema.all() as { type: string; name: string; sql: string | null }[];
+      const expectedSchemaAfter = schemaBefore.map((object) => {
+        if (object.name !== 'member_work_sync_report_intents') return object;
+        if (typeof object.sql !== 'string') throw new Error('released-v30-report-intents-schema-missing');
+        return { ...object, sql: addExpectedV31JournalColumnSql(object.sql) };
+      });
+      expect(schemaAfter.filter((object) => !promotionNames.has(object.name))).toEqual(
+        expectedSchemaAfter
+      );
       expect(database.prepare('SELECT * FROM hosted_team_configuration_publications').all()).toEqual([]);
       expect(database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'trg_team_identity_transition'").get()).toEqual({
         sql: RESERVED_TEAM_IDENTITY_TRANSITION,
