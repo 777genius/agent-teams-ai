@@ -1240,6 +1240,7 @@ async function main() {
         height: Math.round(avatarRect.height),
         leftOfMessage: avatarRect.right <= bodyRect.left + bodyPadding,
         avatarTailGap: Math.round(articleRect.left + tailLeft - avatarRect.right),
+        tailSize: [tailStyle.width, tailStyle.height],
         compactPadding: [
           bodyStyle.paddingBlockStart,
           bodyStyle.paddingInlineEnd,
@@ -1253,6 +1254,7 @@ async function main() {
       height: 32,
       leftOfMessage: true,
       avatarTailGap: 2,
+      tailSize: ['14px', '14px'],
       compactPadding: ['2px', '8px', '7px', '8px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(`(() => {
@@ -1310,7 +1312,7 @@ async function main() {
         compact: quote.getBoundingClientRect().height <= 48,
         hasAvatar: quote.querySelector('img') !== null,
         hasLegacyLabel: quote.textContent?.includes('Replying to') ?? false,
-        hasAuthor: quote.textContent?.includes('alice') ?? false,
+        hasDuplicatedAuthor: quote.textContent?.includes('alice') ?? false,
         hasPreview: quote.textContent?.includes('Messenger history 62') ?? false,
         previewFits:
           previewRect.top >= quoteRect.top && previewRect.bottom <= quoteRect.bottom + 0.5,
@@ -1321,7 +1323,7 @@ async function main() {
       compact: true,
       hasAvatar: false,
       hasLegacyLabel: false,
-      hasAuthor: true,
+      hasDuplicatedAuthor: false,
       hasPreview: true,
       previewFits: true,
       leftRule: '2px',

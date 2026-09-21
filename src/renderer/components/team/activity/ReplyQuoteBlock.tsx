@@ -11,6 +11,7 @@ import type { TaskRef } from '@shared/types';
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
   appearance?: 'compact' | 'wide-chat';
+  hideAuthor?: boolean;
   /** Color name for the quoted agent (resolved from memberColorMap). */
   memberColor?: string;
   /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
@@ -26,6 +27,7 @@ export const ReplyQuoteBlock = memo(
   ({
     reply,
     appearance = 'compact',
+    hideAuthor = false,
     memberColor,
     bodyMaxHeight = 'max-h-56',
     replyTaskRefs,
@@ -43,16 +45,18 @@ export const ReplyQuoteBlock = memo(
             className="min-w-0 overflow-hidden rounded-r-md border-l-2 border-blue-400/70 bg-blue-500/[0.06] py-1 pl-2 pr-1.5 leading-none"
             data-wide-reply-quote="true"
           >
-            <MemberBadge
-              name={reply.agentName}
-              color={memberColor}
-              size="sm"
-              hideAvatar
-              disableHoverCard
-              variant="text"
-            />
+            {!hideAuthor ? (
+              <MemberBadge
+                name={reply.agentName}
+                color={memberColor}
+                size="sm"
+                hideAvatar
+                disableHoverCard
+                variant="text"
+              />
+            ) : null}
             <div
-              className="mt-0.5 h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4"
+              className={`${hideAuthor ? '' : 'mt-0.5'} h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4`}
               data-wide-reply-preview="true"
             >
               <MarkdownViewer
