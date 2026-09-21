@@ -398,6 +398,29 @@ async function main() {
     const resetInbox = userInbox.filter((message) => message.messageId !== 'dm-live-append');
     if (resetInbox.length !== userInbox.length) await json(userInboxPath, resetInbox);
   }
+  const aliceInboxPath = path.join(
+    fixture.claudeRoot,
+    'teams',
+    fixture.teamName,
+    'inboxes',
+    'alice.json'
+  );
+  const aliceInbox = JSON.parse(await readFile(aliceInboxPath, 'utf8')).filter(
+    (message) => message.messageId !== 'dm-oscar-alice'
+  );
+  const directAnchor = aliceInbox.find((message) => message.messageId === 'dm-user-alice');
+  aliceInbox.push({
+    from: 'oscar',
+    to: 'alice',
+    text: 'Oscar routed note to alice',
+    timestamp: new Date(
+      Date.parse(directAnchor?.timestamp ?? new Date().toISOString()) + 36_000
+    ).toISOString(),
+    messageId: 'dm-oscar-alice',
+    read: true,
+    source: 'inbox',
+  });
+  await json(aliceInboxPath, aliceInbox);
   await mkdir(shotDir, { recursive: true });
   let failure = null;
   try {
@@ -930,7 +953,11 @@ async function main() {
       const userRowRect = userRow.getBoundingClientRect();
       const agentRowRect = agentRow.getBoundingClientRect();
       const agentAvatar = agent.querySelector('.wide-chat-message-header img');
-      const agentAvatarRect = agentAvatar?.getBoundingClientRect();
+      const agentBody = agent.querySelector('.wide-chat-message-body');
+      const otherAgent = Array.from(
+        root.querySelectorAll('[data-message-presentation="ordinary-agent"]')
+      ).find((message) => message.getAttribute('aria-label')?.startsWith('oscar,'));
+      const otherAgentAvatar = otherAgent?.querySelector('.wide-chat-message-header img');
       const shortUserMessageTruncated = Array.from(
         root.querySelectorAll('[data-message-presentation="ordinary-user"]')
       ).some((message) => {
@@ -956,12 +983,13 @@ async function main() {
         userOnRight: userRect.right > userRowRect.left + userRowRect.width / 2 &&
           userRowRect.right - userRect.right >= 39,
         agentBubbleOnLeft: Math.abs(agentRect.left - agentRowRect.left) <= 2,
-        agentAvatar32:
-          agentAvatarRect != null && Math.round(agentAvatarRect.width) === 32 &&
-          Math.round(agentAvatarRect.height) === 32,
-        avatarLeftOfMessage:
-          agentAvatarRect != null && agentAvatarRect.left >= agentRect.left &&
-          agentAvatarRect.right <= agentRect.left + 52,
+        participantAvatarHidden: agentAvatar === null,
+        participantNameVisible:
+          agent.querySelector('.wide-chat-message-header')?.textContent?.includes('alice') === true,
+        participantContentUsesAvatarSpace:
+          agentBody instanceof HTMLElement &&
+          Math.abs(agentBody.getBoundingClientRect().left - agentRect.left) <= 1,
+        otherAgentAvatarVisible: otherAgentAvatar instanceof HTMLImageElement,
         userWidthBounded: userRect.width <= Math.min((userRowRect.width - 40) * 0.72, 640) + 2,
         noHorizontalOverflow: root.scrollWidth <= root.clientWidth + 1,
         shortUserMessageTruncated,
@@ -972,8 +1000,10 @@ async function main() {
       toolbarGutter: '40px',
       userOnRight: true,
       agentBubbleOnLeft: true,
-      agentAvatar32: true,
-      avatarLeftOfMessage: true,
+      participantAvatarHidden: true,
+      participantNameVisible: true,
+      participantContentUsesAvatarSpace: true,
+      otherAgentAvatarVisible: true,
       userWidthBounded: true,
       noHorizontalOverflow: true,
       shortUserMessageTruncated: false,
@@ -1184,6 +1214,18 @@ async function main() {
         (button.getAttribute('aria-label') ?? '').includes('Group chat')))`,
       'returned to chat list',
       15_000
+    );
+    const directFixtureInbox = JSON.parse(await readFile(aliceInboxPath, 'utf8'));
+    await json(
+      aliceInboxPath,
+      directFixtureInbox.filter((message) => message.messageId !== 'dm-oscar-alice')
+    );
+    await cdp.waitFor(
+      `window.__agentTeamsDevStore.getState()
+        .teamMessagesByName[${JSON.stringify(fixture.teamName)}]
+        ?.canonicalMessages?.some((message) => message.messageId === 'dm-oscar-alice') !== true`,
+      'direct-only third-party fixture removed before group chat',
+      30_000
     );
     await toggleFullScreen(true, 'list opens Group chat', 'composer');
     await cdp.waitFor(
