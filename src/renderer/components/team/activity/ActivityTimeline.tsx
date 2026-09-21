@@ -1,3 +1,5 @@
+import './wideChat.css';
+
 import React, {
   type RefObject,
   useCallback,
@@ -14,8 +16,8 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2 } from 'lucide-react';
 
-import { isNoiseMessage } from './ActivityItem';
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
+import { type ChatAppearance, isNoiseMessage } from './activityMessagePresentation';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
 import { projectTimelineRows } from './conversationWindow';
 import {
@@ -39,6 +41,11 @@ import {
 } from './useConversationViewport';
 import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
+import {
+  buildWideChatContinuationFlags,
+  collectScrollMarginObserverTargets,
+  getWideChatRowStyle,
+} from './wideChatTimelinePresentation';
 
 import type { TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
@@ -139,6 +146,7 @@ interface ActivityTimelineProps {
    */
   viewport?: TimelineViewport;
   presentation?: 'activity' | 'conversation';
+  appearance?: ChatAppearance;
   conversationIdentity?: string;
   conversationHandleRef?: RefObject<ConversationViewportHandle | null>;
   onLatestAvailable?: (available: boolean) => void;
@@ -216,35 +224,6 @@ const TimelineEmptyState = ({
   );
 };
 
-function collectScrollMarginObserverTargets(
-  rootElement: HTMLElement,
-  scrollElement: HTMLElement
-): HTMLElement[] {
-  const targets = new Set<HTMLElement>([rootElement, scrollElement]);
-
-  let current: HTMLElement | null = rootElement;
-  while (current && current !== scrollElement) {
-    const parentElement: HTMLElement | null = current.parentElement;
-    if (!parentElement) {
-      break;
-    }
-
-    targets.add(parentElement);
-
-    let previousSibling: Element | null = current.previousElementSibling;
-    while (previousSibling) {
-      if (previousSibling instanceof HTMLElement) {
-        targets.add(previousSibling);
-      }
-      previousSibling = previousSibling.previousElementSibling;
-    }
-
-    current = parentElement;
-  }
-
-  return [...targets];
-}
-
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
@@ -285,6 +264,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   emptyHint,
   viewport,
   presentation = 'activity',
+  appearance = 'compact',
   conversationIdentity = teamName,
   conversationHandleRef,
   onLatestAvailable,
@@ -647,6 +627,16 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     [allCollapsed, newestMessageIndex, pinnedThoughtGroup, expandOverrides, onToggleExpandOverride]
   );
 
+  const continuesPreviousAuthor = useMemo<readonly boolean[]>(() => {
+    return buildWideChatContinuationFlags({
+      appearance,
+      rows: renderRows,
+      teamName,
+      localMemberNames,
+      isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
+    });
+  }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
+
   // Render a single atomic row. Logic per kind mirrors the previous inline
   // render path; separators and dividers are their own rows rather than
   // being bundled into Fragments, which is the contract the virtualizer will
@@ -775,6 +765,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             onExpandContent={onExpandContent}
             timelineCardPosition={cardPosition}
             directParticipant={directParticipant}
+            appearance={appearance}
+            continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
           />
         );
       }
@@ -799,7 +791,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   if (messages.length === 0) {
     return (
-      <div ref={rootRef} className="flex flex-col">
+      <div
+        ref={rootRef}
+        className="flex flex-col"
+        data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
+      >
         {conversation && history}
         {loading ? (
           <TimelineLoadingState />
@@ -811,7 +807,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col">
+    <div
+      ref={rootRef}
+      className="flex flex-col"
+      data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
+    >
       {conversation && history}
       {shouldVirtualize ? (
         <div
@@ -832,14 +832,14 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 // `measureElement` swaps each row's estimated height for its
                 // real rendered height as it mounts, so the virtualizer can
                 // correct totalSize and downstream row positions. The wrapper
-                // div carries no padding/margin, so its bounding box matches
-                // the inner row's bounding box — this is why a merged ref
-                // callback between the observer and `measureElement` isn't
-                // needed here.
+                // The wrapper owns wide-chat gutter and group spacing, so the
+                // virtualizer measures the complete visual row. The observer
+                // remains on the inner reveal and keeps its read semantics.
                 ref={rowVirtualizer.measureElement}
                 data-index={virtualRow.index}
                 data-timeline-row-key={row.key}
                 style={{
+                  ...getWideChatRowStyle(appearance, continuesPreviousAuthor, virtualRow.index),
                   position: 'absolute',
                   top: 0,
                   left: 0,
@@ -864,7 +864,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           <div
             key={row.key}
             data-timeline-row-key={row.key}
-            style={{ visibility: conversationViewport.initialPending ? 'hidden' : undefined }}
+            style={{
+              ...getWideChatRowStyle(appearance, continuesPreviousAuthor, index),
+              visibility: conversationViewport.initialPending ? 'hidden' : undefined,
+            }}
           >
             {renderTimelineRow(row, { rowIndex: index })}
           </div>

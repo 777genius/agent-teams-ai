@@ -387,7 +387,13 @@ async function main() {
     throw new Error('Attach mode requires fixture root, project path, and team name');
   }
   if (attachPort) {
-    const userInboxPath = path.join(fixture.claudeRoot, 'teams', fixture.teamName, 'inboxes', 'user.json');
+    const userInboxPath = path.join(
+      fixture.claudeRoot,
+      'teams',
+      fixture.teamName,
+      'inboxes',
+      'user.json'
+    );
     const userInbox = JSON.parse(await readFile(userInboxPath, 'utf8'));
     const resetInbox = userInbox.filter((message) => message.messageId !== 'dm-live-append');
     if (resetInbox.length !== userInbox.length) await json(userInboxPath, resetInbox);
@@ -425,11 +431,11 @@ async function main() {
       'fixture team card',
       60_000
     );
-    await cdp.evaluate(
-      `window.__agentTeamsDevStore.getState().openTeamTab(${JSON.stringify(
-        fixture.teamName
-      )}, ${JSON.stringify(fixture.projectPath)})`
-    );
+    await cdp.evaluate(`(async () => {
+      const state = window.__agentTeamsDevStore.getState();
+      state.openTeamTab(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(fixture.projectPath)});
+      await state.selectTeam(${JSON.stringify(fixture.teamName)});
+    })()`);
     await cdp.waitFor(
       `(() => {
         const state = window.__agentTeamsDevStore?.getState();
@@ -602,12 +608,25 @@ async function main() {
         item.textContent?.includes('Sort by new messages')))`
     );
     assert.equal(threadMenuHasSort, false);
-    await pressKey(cdp, 'Escape', 'Escape');
+    const expandedMessages = await cdp.evaluate(`(() => {
+      const item = Array.from(document.querySelectorAll('[role="menuitem"]')).find((candidate) =>
+        candidate.textContent?.includes('Expand all'));
+      if (!(item instanceof HTMLElement)) return false;
+      item.click();
+      return true;
+    })()`);
+    if (!expandedMessages) await pressKey(cdp, 'Escape', 'Escape');
     assert.equal(threadUi.hasComposer, true);
     assert.equal(threadUi.hasLockedAlice, true);
     assert.equal(threadUi.hasPicker, false);
     assert.equal(threadUi.recipientArrows, 0);
     assert.equal(threadUi.hasDm, true);
+    if (attachPort) {
+      await cdp.evaluate(`(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        if (scroll instanceof HTMLElement) scroll.scrollTop = scroll.scrollHeight;
+      })()`);
+    }
     await cdp.waitFor(
       `(() => {
         const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
@@ -787,6 +806,11 @@ async function main() {
       15_000
     );
     await cdp.screenshot(path.join(shotDir, 'direct-thread.png'));
+    assert.equal(
+      await cdp.evaluate(`Boolean(document.querySelector('[data-chat-appearance="wide-chat"]'))`),
+      false,
+      'ordinary sidebar must keep compact message presentation'
+    );
 
     const composerState = await cdp.evaluate(`(() => {
       const container = document.querySelector('[data-messages-thread-container="true"]');
@@ -874,7 +898,113 @@ async function main() {
       liveContainers: 1,
       terminalLauncherVisible: false,
     });
+    const wideChatGeometry = await cdp.evaluate(`(() => {
+      const root = document.querySelector('[data-chat-appearance="wide-chat"]');
+      const user = root?.querySelector('[data-message-presentation="ordinary-user"]');
+      const agent = root?.querySelector('[data-message-presentation="ordinary-agent"]');
+      const userRow = user?.closest('[data-timeline-row-key]');
+      const agentRow = agent?.closest('[data-timeline-row-key]');
+      if (!(root instanceof HTMLElement) || !(user instanceof HTMLElement) ||
+          !(agent instanceof HTMLElement) || !(userRow instanceof HTMLElement) ||
+          !(agentRow instanceof HTMLElement)) return null;
+      const userRect = user.getBoundingClientRect();
+      const agentRect = agent.getBoundingClientRect();
+      const userRowRect = userRow.getBoundingClientRect();
+      const agentRowRect = agentRow.getBoundingClientRect();
+      const shortUserMessageTruncated = Array.from(
+        root.querySelectorAll('[data-message-presentation="ordinary-user"]')
+      ).some((message) => {
+        const body = message.querySelector('.wide-chat-message-body');
+        const text = (body?.textContent ?? '').replace('Show more', '').trim();
+        return text.length > 0 && text.length < 120 &&
+          Array.from(message.querySelectorAll('button')).some(
+            (button) => button.textContent?.trim() === 'Show more'
+          );
+      });
+      return {
+        toolbarGutter: getComputedStyle(userRow).paddingInlineEnd,
+        userOnRight: userRect.right > userRowRect.left + userRowRect.width / 2 &&
+          userRowRect.right - userRect.right >= 39,
+        agentOnLeft: Math.abs(agentRect.left - agentRowRect.left) <= 2,
+        userWidthBounded: userRect.width <= Math.min((userRowRect.width - 40) * 0.72, 640) + 2,
+        noHorizontalOverflow: root.scrollWidth <= root.clientWidth + 1,
+        shortUserMessageTruncated,
+      };
+    })()`);
+    assert.deepEqual(wideChatGeometry, {
+      toolbarGutter: '40px',
+      userOnRight: true,
+      agentOnLeft: true,
+      userWidthBounded: true,
+      noHorizontalOverflow: true,
+      shortUserMessageTruncated: false,
+    });
     await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen.png'));
+    const hoverPoint = await cdp.evaluate(`(() => {
+      const article = Array.from(document.querySelectorAll(
+        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]'
+      )).find((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return rect.top > 140 && rect.bottom < innerHeight - 180;
+      });
+      if (!(article instanceof HTMLElement)) return null;
+      const rect = article.getBoundingClientRect();
+      for (const type of ['pointerover', 'pointerenter', 'pointermove']) {
+        article.dispatchEvent(new PointerEvent(type, {
+          bubbles: true,
+          pointerType: 'mouse',
+          isPrimary: true,
+        }));
+      }
+      return { x: rect.left + Math.min(rect.width / 2, 160), y: rect.top + rect.height / 2 };
+    })()`);
+    assert(hoverPoint, 'missing ordinary agent row for wide-chat hover verification');
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-chat-toolbar-appearance="wide-chat"]'))`,
+      'wide-chat hover toolbar',
+      5_000
+    );
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    const hoverGeometry = await cdp.evaluate(`(() => {
+      const toolbar = document.querySelector('[data-chat-toolbar-appearance="wide-chat"]');
+      const article = document.querySelector(
+        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"][data-state="open"]'
+      );
+      const metadata = article?.querySelector('[data-chat-metadata="true"]');
+      if (!(toolbar instanceof HTMLElement) || !(article instanceof HTMLElement) ||
+          !(metadata instanceof HTMLElement)) return null;
+      const rect = toolbar.getBoundingClientRect();
+      return {
+        side: toolbar.getAttribute('data-side'),
+        inViewport: rect.top >= 8 && rect.bottom <= innerHeight - 8 && rect.right <= innerWidth,
+        metadataVisible: Number.parseFloat(getComputedStyle(metadata).opacity) > 0.9,
+        articleOpen: article.getAttribute('data-state') === 'open',
+      };
+    })()`);
+    assert.deepEqual(hoverGeometry, {
+      side: 'right',
+      inViewport: true,
+      metadataVisible: true,
+      articleOpen: true,
+    });
+    await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen-hover.png'));
+    const focusedWideArticle = await cdp.evaluate(`(() => {
+      const article = document.querySelector(
+        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]'
+      );
+      if (!(article instanceof HTMLElement)) return false;
+      article.focus();
+      return document.activeElement === article;
+    })()`);
+    assert.equal(focusedWideArticle, true, 'wide-chat row must accept keyboard focus');
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    const focusMetadataVisible = await cdp.evaluate(`(() => {
+      const article = document.activeElement;
+      if (!(article instanceof HTMLElement)) return false;
+      const metadata = article.querySelector('[data-chat-metadata="true"]');
+      return metadata instanceof HTMLElement && Number.parseFloat(getComputedStyle(metadata).opacity) > 0.9;
+    })()`);
+    assert.equal(focusMetadataVisible, true, 'wide-chat metadata must be keyboard-focus visible');
 
     for (let index = 0; index < 10; index += 1) {
       await toggleFullScreen(index % 2 === 1, `identity cycle ${index + 1}`);
@@ -985,13 +1115,28 @@ async function main() {
     );
     await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
     await toggleFullScreen(false, 'leave full screen for bottom sheet');
-    await cdp.evaluate(`window.__agentTeamsDevStore.getState().setMessagesPanelMode('bottom-sheet')`);
+    await cdp.evaluate(
+      `window.__agentTeamsDevStore.getState().setMessagesPanelMode('bottom-sheet')`
+    );
     await cdp.waitFor(
       `Boolean(document.querySelector('button[aria-label="Message bottom sheet actions"]')) &&
         Boolean(document.querySelector('[data-messages-thread-footer="true"]'))`,
       'bottom sheet messenger thread',
       15_000
     );
+    await clickPoint(
+      cdp,
+      `document.querySelector('button[aria-label="Message bottom sheet actions"]')`,
+      'Message bottom sheet actions before geometry'
+    );
+    const expandedSheet = await cdp.evaluate(`(() => {
+      const item = Array.from(document.querySelectorAll('[role="menuitem"]')).find((candidate) =>
+        candidate.textContent?.includes('Expand sheet'));
+      if (!(item instanceof HTMLElement)) return false;
+      item.click();
+      return true;
+    })()`);
+    if (!expandedSheet) await pressKey(cdp, 'Escape', 'Escape');
     await cdp.waitFor(
       `(() => {
         const footer = document.querySelector('[data-messages-thread-footer="true"]');
@@ -1008,7 +1153,8 @@ async function main() {
       const footerRect = footer.getBoundingClientRect();
       return {
         footerOutsideScroll: !scroll.contains(footer),
-        noOverlap: scrollRect.bottom <= footerRect.top + 1,
+        noVisibleMessageOverlap:
+          scrollRect.bottom <= footerRect.top + 1 || scrollRect.height <= 16,
         footerReachable: footerRect.top < innerHeight && footerRect.bottom <= innerHeight + 1,
         oneOuterScrollOwner: document.querySelectorAll('[data-messages-thread-scroll="true"]').length,
         terminalLauncherVisible: Boolean(
@@ -1018,11 +1164,16 @@ async function main() {
     })()`);
     assert.deepEqual(bottomSheetGeometry, {
       footerOutsideScroll: true,
-      noOverlap: true,
+      noVisibleMessageOverlap: true,
       footerReachable: true,
       oneOuterScrollOwner: 1,
       terminalLauncherVisible: false,
     });
+    assert.equal(
+      await cdp.evaluate(`Boolean(document.querySelector('[data-chat-appearance="wide-chat"]'))`),
+      true,
+      'bottom sheet must use wide chat presentation'
+    );
     await cdp.screenshot(path.join(shotDir, 'group-chat-bottom-sheet.png'));
     await clickPoint(
       cdp,
@@ -1051,6 +1202,17 @@ async function main() {
         item.textContent?.includes('Expand sheet'))`,
       'Expand sheet'
     );
+    if (attachPort) {
+      await cdp.waitFor(
+        `Boolean(document.querySelector('[data-messages-thread-scroll="true"]'))`,
+        'bottom sheet scroll after repeated attach',
+        5_000
+      );
+      await cdp.evaluate(`(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        if (scroll instanceof HTMLElement) scroll.scrollTop = scroll.scrollHeight;
+      })()`);
+    }
     await cdp.waitFor(
       `(() => {
         const scroll = document.querySelector('[data-messages-thread-scroll="true"]');

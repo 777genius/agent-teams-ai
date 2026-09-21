@@ -48,18 +48,24 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     className,
     side,
     avoidCollisions,
+    collisionPadding,
+    'data-chat-toolbar-appearance': toolbarAppearance,
   }: {
     children: React.ReactNode;
     className?: string;
     side?: string;
     avoidCollisions?: boolean;
+    collisionPadding?: number;
+    'data-chat-toolbar-appearance'?: string;
   }) =>
     React.createElement(
       'div',
       {
         className,
         'data-side': side,
-        'data-avoid-collisions': avoidCollisions === false ? 'false' : undefined,
+        'data-avoid-collisions': String(avoidCollisions),
+        'data-collision-padding': collisionPadding,
+        'data-chat-toolbar-appearance': toolbarAppearance,
       },
       children
     ),
@@ -129,6 +135,44 @@ describe('ActivityItem compact header preview', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('renders ordinary wide-chat continuations without repeated author chrome', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      text: 'A compact continuation',
+      timestamp: '2026-09-21T10:00:00.000Z',
+      read: true,
+      source: 'inbox',
+      messageId: 'wide-agent-1',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          continuesPreviousAuthor: true,
+        })
+      );
+    });
+
+    const article = host.querySelector('article');
+    expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
+    expect(article?.dataset.continuesAuthor).toBe('true');
+    expect(article?.textContent).toContain('A compact continuation');
+    expect(article?.textContent).not.toContain('alice');
+    const toolbar = host.querySelector('[data-chat-toolbar-appearance="wide-chat"]');
+    expect(toolbar?.getAttribute('data-side')).toBe('right');
+    expect(toolbar?.getAttribute('data-avoid-collisions')).toBe('true');
+    expect(toolbar?.getAttribute('data-collision-padding')).toBe('8');
+
+    await act(async () => root.unmount());
   });
 
   it('uses a two-line clamped preview in compact mode', async () => {

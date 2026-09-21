@@ -1,0 +1,142 @@
+[data-chat-appearance='wide-chat'] {
+  container-name: team-chat-timeline;
+  container-type: inline-size;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message {
+  min-width: 0;
+  overflow: visible;
+  transition: background-color 120ms ease;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-expanded='true'] {
+  width: 100%;
+  margin-inline: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
+  width: fit-content;
+  max-width: min(72%, 640px);
+  margin-inline-start: auto !important;
+  margin-inline-end: 0 !important;
+  border: 0 !important;
+  background: color-mix(in srgb, var(--color-surface-raised) 78%, transparent) !important;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message:hover,
+[data-chat-appearance='wide-chat'] .wide-chat-message:focus-within,
+[data-chat-appearance='wide-chat'] .wide-chat-message[data-state='open'] {
+  background-color: color-mix(in srgb, var(--color-surface-raised) 52%, transparent) !important;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']:hover,
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']:focus-within,
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user'][data-state='open'] {
+  background-color: color-mix(in srgb, var(--color-surface-raised) 92%, transparent) !important;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message-header {
+  min-height: 24px;
+  padding: 2px 8px 4px !important;
+  background: transparent !important;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true']
+  .wide-chat-message-header {
+  height: 0;
+  min-height: 0;
+  padding: 0 !important;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user'][data-expanded='true'][data-has-recipient-route='false']
+  .wide-chat-message-header {
+  height: 0;
+  min-height: 0;
+  padding: 0 !important;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent']
+  .wide-chat-message-body {
+  padding: 0 8px 2px 36px;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']
+  .wide-chat-message-body {
+  padding: 6px 8px;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true']
+  .wide-chat-message-body {
+  padding-inline-end: 72px;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message [data-chat-metadata='true'] {
+  display: inline-block;
+  width: 64px;
+  text-align: end;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message:hover [data-chat-metadata='true'],
+[data-chat-appearance='wide-chat'] .wide-chat-message:focus-within [data-chat-metadata='true'],
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-state='open']
+  [data-chat-metadata='true'] {
+  opacity: 1;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-continues-author='true']
+  .wide-chat-message-header
+  > div:last-child {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 8px;
+  z-index: 2;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user'][data-expanded='true'][data-has-recipient-route='false']
+  .wide-chat-message-header
+  > div:last-child {
+  position: absolute;
+  inset-block-start: -16px;
+  inset-inline-end: 8px;
+  z-index: 2;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message :is(pre, table) {
+  max-width: 100%;
+}
+
+[data-chat-appearance='wide-chat'] .wide-chat-message :is(p, li, a) {
+  overflow-wrap: anywhere;
+}
+
+@container team-chat-timeline (max-width: 559px) {
+  [data-message-presentation='ordinary-user'] {
+    max-width: 92%;
+  }
+}
+
+@media (hover: none) {
+  [data-chat-appearance='wide-chat'] .wide-chat-message [data-chat-metadata='true'] {
+    opacity: 1;
+  }
+}
+
+[data-chat-toolbar-appearance='wide-chat'] {
+  max-height: calc(100vh - 16px);
+}

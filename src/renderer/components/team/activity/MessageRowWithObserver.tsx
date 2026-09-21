@@ -9,6 +9,7 @@ import {
 import { ActivityItem } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
 
+import type { ChatAppearance } from './activityMessagePresentation';
 import type { TimelineCardPosition } from './timelineCardStack';
 import type { InboxMessage } from '@shared/types';
 
@@ -59,6 +60,8 @@ interface MessageRowWithObserverProps {
   observerRoot?: RefObject<HTMLElement | null>;
   timelineCardPosition?: TimelineCardPosition;
   directParticipant?: string;
+  appearance?: ChatAppearance;
+  continuesPreviousAuthor?: boolean;
 }
 
 const MessageRowWithObserver = ({
@@ -97,6 +100,8 @@ const MessageRowWithObserver = ({
   observerRoot,
   timelineCardPosition,
   directParticipant,
+  appearance,
+  continuesPreviousAuthor,
 }: Readonly<MessageRowWithObserverProps>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -186,6 +191,8 @@ const MessageRowWithObserver = ({
         onExpandContent={onExpandContent}
         timelineCardPosition={timelineCardPosition}
         directParticipant={directParticipant}
+        appearance={appearance}
+        continuesPreviousAuthor={continuesPreviousAuthor}
       />
     </AnimatedHeightReveal>
   );
@@ -228,5 +235,7 @@ export const MemoizedMessageRowWithObserver = React.memo(
     prev.observerRoot === next.observerRoot &&
     prev.timelineCardPosition === next.timelineCardPosition &&
     prev.directParticipant === next.directParticipant &&
+    prev.appearance === next.appearance &&
+    prev.continuesPreviousAuthor === next.continuesPreviousAuthor &&
     areInboxMessagesEquivalentForRender(prev.message, next.message)
 );
