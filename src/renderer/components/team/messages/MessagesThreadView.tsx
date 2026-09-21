@@ -45,24 +45,30 @@ export const MessagesThreadView = ({
           {search}
         </div>
       ) : null}
-      <div
-        ref={scrollRef}
-        className={cn(
-          'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden',
-          wide ? 'touch-pan-y overscroll-contain px-4 py-2' : 'px-3 py-2'
-        )}
-        onScroll={onScroll}
-        data-messages-thread-scroll="true"
-      >
-        {status}
-        <div className="min-w-0">{timeline}</div>
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <div
+          ref={scrollRef}
+          className={cn(
+            'size-full overflow-y-auto overflow-x-hidden',
+            wide ? 'touch-pan-y overscroll-contain px-4 py-2' : 'px-3 py-2'
+          )}
+          onScroll={onScroll}
+          data-messages-thread-scroll="true"
+        >
+          {status}
+          <div className="min-w-0">{timeline}</div>
+        </div>
+        {latestControl ? (
+          <div className="pointer-events-none absolute bottom-3 right-3 z-10">
+            <div className="pointer-events-auto">{latestControl}</div>
+          </div>
+        ) : null}
       </div>
       <div
         ref={composerRef}
         data-messages-thread-footer="true"
         className="max-h-full min-h-0 overflow-y-auto border-t border-[var(--color-border)] px-3 py-2"
       >
-        {latestControl}
         <div data-messages-composer-content="true">{composer}</div>
       </div>
     </div>

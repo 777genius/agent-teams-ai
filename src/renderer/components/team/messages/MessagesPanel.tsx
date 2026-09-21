@@ -42,6 +42,7 @@ import {
 } from '@shared/utils/teamAutomationMessages';
 import {
   CheckCheck,
+  ChevronDown,
   Dock,
   MessageSquare,
   MoreHorizontal,
@@ -1252,14 +1253,21 @@ export const MessagesPanel = memo(function MessagesPanel({
       searchRef={bottomSheetSearchRef}
       latestControl={
         latestAvailable ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            data-conversation-latest="true"
-            onClick={() => conversationHandleRef.current?.revealLatest()}
-          >
-            {t('messages.actions.toLatest')}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="size-9 rounded-full border border-[var(--color-border)] shadow-lg"
+                aria-label={t('messages.actions.toLatest')}
+                data-conversation-latest="true"
+                onClick={() => conversationHandleRef.current?.revealLatest()}
+              >
+                <ChevronDown className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">{t('messages.actions.toLatest')}</TooltipContent>
+          </Tooltip>
         ) : undefined
       }
     />

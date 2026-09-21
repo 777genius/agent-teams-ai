@@ -742,6 +742,35 @@ async function main() {
       'reading anchor preserved after live append',
       30_000
     );
+    const latestControlGeometry = await cdp.evaluate(`(() => {
+      const control = document.querySelector('[data-conversation-latest="true"]');
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      const footer = document.querySelector('[data-messages-thread-footer="true"]');
+      if (!(control instanceof HTMLElement) ||
+          !(scroll instanceof HTMLElement) ||
+          !(footer instanceof HTMLElement)) return null;
+      const controlRect = control.getBoundingClientRect();
+      const scrollRect = scroll.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      return {
+        circular: Math.abs(controlRect.width - controlRect.height) <= 1,
+        compact: controlRect.width <= 40,
+        inBottomRightCorner:
+          scrollRect.right - controlRect.right >= 8 &&
+          scrollRect.right - controlRect.right <= 20 &&
+          scrollRect.bottom - controlRect.bottom >= 8 &&
+          scrollRect.bottom - controlRect.bottom <= 20,
+        aboveComposer: controlRect.bottom <= footerRect.top,
+        accessibleName: control.getAttribute('aria-label'),
+      };
+    })()`);
+    assert.deepEqual(latestControlGeometry, {
+      circular: true,
+      compact: true,
+      inBottomRightCorner: true,
+      aboveComposer: true,
+      accessibleName: 'To latest',
+    });
     await clickPoint(
       cdp,
       `document.querySelector('[data-conversation-latest="true"]')`,
