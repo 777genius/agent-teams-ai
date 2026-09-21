@@ -69,6 +69,7 @@ export async function compareAndWriteMemberWorkSyncJsonStatus(input: {
       }
       const raw = `${JSON.stringify({ schemaVersion: 2, status: input.nextStatus }, null, 2)}\n`;
       let publishStarted = false;
+      let directorySyncFailedAfterPublish = false;
       try {
         await atomicWriteAsync(input.path, raw, {
           durability: 'strict',
@@ -76,11 +77,17 @@ export async function compareAndWriteMemberWorkSyncJsonStatus(input: {
           beforeCommit: async () => {
             publishStarted = true;
           },
+          onDirectorySyncOutcome: (outcome) => {
+            directorySyncFailedAfterPublish = outcome === 'failed-after-publish';
+          },
         });
       } catch {
         return publishStarted
           ? { committed: 'unknown', reason: 'commit_unknown', mutationId: input.mutationId }
           : { committed: false, reason: 'write_failed' };
+      }
+      if (directorySyncFailedAfterPublish) {
+        return { committed: 'unknown', reason: 'commit_unknown', mutationId: input.mutationId };
       }
       try {
         await input.project();

@@ -1,5 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
+import { normalizeMemberWorkSyncTeamKey } from '../../../contracts/memberWorkSyncTeamIdentity';
+
 import { memberWorkSyncMetricEvents, memberWorkSyncStatus } from './internalStorageSchema';
 import { STATUS_RECORD_SELECTION, toPersistenceRow } from './memberWorkSyncWorkerState';
 
@@ -13,6 +15,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 function statusFields(record: MemberWorkSyncStatusRecord) {
   return {
+    teamKey: normalizeMemberWorkSyncTeamKey(record.teamName),
     memberName: record.memberName,
     state: record.state,
     evaluatedAt: record.evaluatedAt,
@@ -33,6 +36,7 @@ function appendMetrics(
       .onConflictDoUpdate({
         target: [memberWorkSyncMetricEvents.teamName, memberWorkSyncMetricEvents.id],
         set: {
+          teamKey: normalizeMemberWorkSyncTeamKey(event.teamName),
           memberKey: event.memberKey,
           memberName: event.memberName,
           kind: event.kind,
