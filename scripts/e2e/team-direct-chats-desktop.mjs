@@ -1068,6 +1068,7 @@ async function main() {
       const articleRect = article.getBoundingClientRect();
       const footerRect = footer.getBoundingClientRect();
       const timestampRect = timestamp.getBoundingClientRect();
+      const footerShadow = getComputedStyle(footer).boxShadow;
       const footerHitTarget = document.elementFromPoint(
         footerRect.left + footerRect.width / 2,
         footerRect.top + footerRect.height / 2
@@ -1075,6 +1076,10 @@ async function main() {
       return {
         horizontal: toolbar.getAttribute('data-orientation') === 'horizontal',
         portaled: !article.contains(toolbar),
+        bubbleShadow: getComputedStyle(article).boxShadow,
+        footerShadowless:
+          footerShadow === 'none' ||
+          !footerShadow.replaceAll('rgba(0, 0, 0, 0)', '').includes('rgb'),
         underMessage: footerRect.top >= articleRect.bottom - 3,
         rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
         articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
@@ -1091,6 +1096,8 @@ async function main() {
     assert.deepEqual(hoverGeometry, {
       horizontal: true,
       portaled: true,
+      bubbleShadow: 'none',
+      footerShadowless: true,
       underMessage: true,
       rowStable: true,
       articleStable: true,
