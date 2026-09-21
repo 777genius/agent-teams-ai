@@ -8,12 +8,8 @@ import {
   type CoordinationReplayBatch,
   HOSTED_COORDINATION_EVENT_SSE_EVENT,
   HOSTED_COORDINATION_EVENT_STREAM_ROUTE,
-  HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION,
-  HOSTED_COORDINATION_RESYNC_SSE_EVENT,
-  type HostedCoordinationEventEnvelope,
   type HostedCoordinationEventProjection,
   type HostedCoordinationResyncReason,
-  type HostedCoordinationResyncRequired,
   type ReplayCursor,
 } from '../../../../contracts';
 
@@ -23,14 +19,19 @@ import {
 } from './hostedCoordinationEventStreamAuthorization';
 import {
   admitsSameOriginEventSource,
-  boundedCursor,
   type HostedCoordinationHttpApplication,
   type HostedCoordinationHttpReply,
   type HostedCoordinationHttpRequest,
+  boundedCursor,
   initialCursor,
   rawConnectionClosed,
   resyncReason,
 } from './HostedCoordinationEventStreamRequestSupport';
+import {
+  eventFrame,
+  materializeProjectedEnvelope,
+  resyncFrame,
+} from './HostedCoordinationEventStreamFrames';
 import {
   HostedCoordinationEventStreamWriter,
   hostedCoordinationEventStreamWriteSucceeded,
@@ -63,15 +64,10 @@ const MAX_REPLAY_BATCH_SIZE = 500;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 const DEFAULT_SLOW_CONSUMER_TIMEOUT_MS = 5_000;
 const DEFAULT_MAX_FRAME_BYTES = 256 * 1_024;
-const MAX_IDENTIFIER_LENGTH = 256;
 const REJECTED_ORIGIN_DIAGNOSTIC_ID = 'preauth_origin_invalid';
 const AUTHENTICATION_REQUIRED_DIAGNOSTIC_ID = 'preauth_authentication_required';
 const STREAM_CLOSED_DIAGNOSTIC_ID = 'preauth_event_stream_closed';
 const ABORTED_OPERATION = Symbol('aborted_operation');
-const UTF8_ENCODER = new TextEncoder();
-function utf8ByteLength(value: string): number {
-  return UTF8_ENCODER.encode(value).byteLength;
-}
 interface HostedCoordinationEventReplay {
   replay(input: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch>;
 }
@@ -121,17 +117,6 @@ function positiveBounded(value: number, field: string, maximum: number): number 
   return value;
 }
 
-function validIdentifier(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= MAX_IDENTIFIER_LENGTH &&
-    value.trim() === value &&
-    !value.includes('\r') &&
-    !value.includes('\n')
-  );
-}
-
 function awaitUnlessAborted<T>(
   operation: Promise<T>,
   signal: AbortSignal
@@ -171,71 +156,6 @@ async function invokeUnlessAborted<T>(
 ): Promise<T | typeof ABORTED_OPERATION> {
   if (signal.aborted) return ABORTED_OPERATION;
   return await awaitUnlessAborted(operation(), signal);
-}
-
-function materializeProjectedEnvelope(input: {
-  readonly event: CoordinationEventEnvelope;
-  readonly projection: HostedCoordinationEventProjection;
-  readonly previousEventCursor: ReplayCursor;
-  readonly maxFrameBytes: number;
-}): { readonly envelope: HostedCoordinationEventEnvelope; readonly data: string } | null {
-  const { event, projection } = input;
-  if (
-    !validIdentifier(event.deploymentId) ||
-    !validIdentifier(event.eventEpoch) ||
-    !validIdentifier(event.eventId) ||
-    !boundedCursor(event.eventCursor) ||
-    !Number.isSafeInteger(event.eventSequence) ||
-    event.eventSequence < 0 ||
-    !event.scope ||
-    !validIdentifier(event.scope.scopeId) ||
-    !validIdentifier(projection.eventType) ||
-    !projection.scope ||
-    !validIdentifier(projection.scope.scopeId) ||
-    projection.publicPayload === undefined ||
-    projection.scope.kind !== event.scope.kind ||
-    projection.scope.scopeId !== event.scope.scopeId
-  ) {
-    return null;
-  }
-  const envelope: HostedCoordinationEventEnvelope = Object.freeze({
-    schemaVersion: HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION,
-    kind: HOSTED_COORDINATION_EVENT_SSE_EVENT,
-    deploymentId: event.deploymentId,
-    eventEpoch: event.eventEpoch,
-    eventSequence: event.eventSequence,
-    eventId: event.eventId,
-    previousEventCursor: input.previousEventCursor,
-    eventCursor: event.eventCursor,
-    scope: Object.freeze({ ...projection.scope }),
-    eventType: projection.eventType,
-    ...(projection.resourceRevision === undefined
-      ? {}
-      : { resourceRevision: Object.freeze({ ...projection.resourceRevision }) }),
-    emittedAt: event.emittedAt,
-    payload: projection.publicPayload,
-  });
-  let data: string;
-  try {
-    data = JSON.stringify(envelope);
-  } catch {
-    return null;
-  }
-  if (utf8ByteLength(data) > input.maxFrameBytes) return null;
-  return Object.freeze({ envelope, data });
-}
-
-function eventFrame(cursor: ReplayCursor, data: string): string {
-  return `id: ${cursor}\nevent: ${HOSTED_COORDINATION_EVENT_SSE_EVENT}\ndata: ${data}\n\n`;
-}
-
-function resyncFrame(reason: HostedCoordinationResyncReason): string {
-  const message: HostedCoordinationResyncRequired = Object.freeze({
-    schemaVersion: HOSTED_COORDINATION_EVENT_STREAM_SCHEMA_VERSION,
-    kind: HOSTED_COORDINATION_RESYNC_SSE_EVENT,
-    reason,
-  });
-  return `event: ${HOSTED_COORDINATION_RESYNC_SSE_EVENT}\ndata: ${JSON.stringify(message)}\n\n`;
 }
 
 export class HostedCoordinationEventStreamController {
