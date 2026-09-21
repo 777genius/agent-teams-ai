@@ -30,9 +30,10 @@ export async function readProcessStartTimeMs(
   timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS,
   onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
+  const probeEnv = createProcessProbeEnvironment(platform);
   return platform === 'win32'
-    ? readWindowsProcessStartTimeMs(pid, timeoutMs, onDiagnostic)
-    : readNativeProcessStartTimeMs(pid, timeoutMs, onDiagnostic);
+    ? readWindowsProcessStartTimeMs(pid, timeoutMs, probeEnv, onDiagnostic)
+    : readNativeProcessStartTimeMs(pid, timeoutMs, probeEnv, onDiagnostic);
 }
 
 /**
@@ -86,14 +87,26 @@ async function readStartTimeOrNull(
 async function readNativeProcessStartTimeMs(
   pid: number,
   timeoutMs: number,
+  env: NodeJS.ProcessEnv,
   onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
-  return execProcessProbeText('ps', ['-p', String(pid), '-o', 'lstart='], timeoutMs, onDiagnostic);
+  return execProcessProbeText(
+    'ps',
+    ['-p', String(pid), '-o', 'lstart='],
+    timeoutMs,
+    env,
+    onDiagnostic,
+    // `ps lstart` has no offset. The probe forces its clock to UTC, so make
+    // that offset explicit before parsing rather than letting the parent
+    // process's TZ reinterpret the child output as local time.
+    (output) => Date.parse(`${output.trim()} UTC`)
+  );
 }
 
 async function readWindowsProcessStartTimeMs(
   pid: number,
   timeoutMs: number,
+  env: NodeJS.ProcessEnv,
   onDiagnostic?: ProcessProbeObserver
 ): Promise<number | null> {
   const normalizedPid = Math.trunc(pid);
@@ -121,15 +134,38 @@ async function readWindowsProcessStartTimeMs(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
     timeoutMs,
+    env,
     onDiagnostic
   );
+}
+
+/**
+ * A process probe does not need application configuration, provider runtime
+ * variables, or credentials. Inheriting those can change the child runtime
+ * (for example through NODE_OPTIONS), so pass only the OS lookup/runtime
+ * values and deterministic locale required by the commands we invoke.
+ */
+function createProcessProbeEnvironment(platform: NodeJS.Platform): NodeJS.ProcessEnv {
+  return {
+    // Omit PATH when it is absent. Supplying an empty PATH prevents Node from
+    // using the platform's command-search fallback and makes `ps` unresolvable.
+    ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
+    LC_ALL: 'C',
+    LANG: 'C',
+    // POSIX `ps lstart` renders a timezone-less local timestamp. Keep the
+    // command's timezone stable and parse that output as UTC above.
+    ...(platform === 'win32' ? {} : { TZ: 'UTC' }),
+    ...(platform === 'win32' ? { SystemRoot: process.env.SystemRoot ?? 'C:\\Windows' } : {}),
+  };
 }
 
 function execProcessProbeText(
   command: string,
   args: string[],
   timeout: number,
-  onDiagnostic?: ProcessProbeObserver
+  env: NodeJS.ProcessEnv,
+  onDiagnostic?: ProcessProbeObserver,
+  parse: (output: string) => number = (output) => Date.parse(output.trim())
 ): Promise<number | null> {
   const startedAt = performance.now();
   return new Promise((resolve) => {
@@ -141,17 +177,11 @@ function execProcessProbeText(
         timeout,
         maxBuffer: PROBE_MAX_BUFFER_BYTES,
         windowsHide: true,
-        // POSIX `ps` renders `lstart=` in the caller's LC_TIME, and Date.parse only
-        // understands the C spelling of it. On a non-English desktop the probe would
-        // otherwise parse to NaN, read as "start time unobservable", and leave a
-        // recycled pid owning whatever the caller guards. The probe environment is an
-        // override of the app environment, not a replacement: dropping PATH here would
-        // break the `ps` lookup on some hosts.
-        env: { ...process.env, LC_ALL: 'C' },
+        env,
       },
       (error: ExecFileException | null, stdout: string | Buffer, stderr: string | Buffer) => {
         const output = String(stdout);
-        const parsed = error ? Number.NaN : Date.parse(output.trim());
+        const parsed = error ? Number.NaN : parse(output);
         if (!Number.isFinite(parsed)) {
           observeProcessProbe(
             onDiagnostic,

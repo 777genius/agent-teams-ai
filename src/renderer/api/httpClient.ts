@@ -244,6 +244,7 @@ export class HttpAPIClient implements ElectronAPI {
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
+  private eventSourceListeners = new Map<string, EventListener>();
   telemetry = {
     getSentryContext: async (): Promise<null> => null,
     getSentryStatus: async () => ({
@@ -272,6 +273,11 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   private initEventSource(): void {
+    // EventSource is a browser global. It is absent while rendering on the
+    // server and in Node-based consumers, where HTTP request methods still
+    // work but live updates are unavailable.
+    if (typeof EventSource === 'undefined') return;
+
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
     this.eventSource.onerror = () => {
@@ -285,16 +291,27 @@ export class HttpAPIClient implements ElectronAPI {
     if (!this.eventListeners.has(channel)) {
       this.eventListeners.set(channel, new Set());
       // Register SSE listener for this channel once
-      this.eventSource?.addEventListener(channel, ((event: MessageEvent) => {
+      const sourceListener = ((event: MessageEvent) => {
         const data: unknown = JSON.parse(event.data as string);
         const listeners = this.eventListeners.get(channel);
         listeners?.forEach((cb) => cb(data));
-      }) as EventListener);
+      }) as EventListener;
+      this.eventSourceListeners.set(channel, sourceListener);
+      this.eventSource?.addEventListener(channel, sourceListener);
     }
     this.eventListeners.get(channel)!.add(callback);
 
     return () => {
-      this.eventListeners.get(channel)?.delete(callback);
+      const listeners = this.eventListeners.get(channel);
+      listeners?.delete(callback);
+      if (listeners?.size !== 0) return;
+
+      this.eventListeners.delete(channel);
+      const sourceListener = this.eventSourceListeners.get(channel);
+      if (sourceListener) {
+        this.eventSource?.removeEventListener(channel, sourceListener);
+        this.eventSourceListeners.delete(channel);
+      }
     };
   }
 
