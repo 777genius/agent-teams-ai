@@ -2802,6 +2802,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           ? {
               right: pinnedVisualizeButtonPosition.right,
               top: pinnedVisualizeButtonPosition.top,
+              zIndex: messagesPanelMode === 'bottom-sheet' ? 20 : 50,
             }
           : undefined
       }

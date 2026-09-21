@@ -11,17 +11,20 @@ interface ActivityMessageHoverToolbarProps {
   onRevise?: () => void;
   onReply?: () => void;
   onCreateTask?: () => void;
+  orientation?: 'horizontal' | 'vertical';
 }
 
 interface ToolbarIconButtonProps {
   label: string;
   onClick: () => void;
+  tooltipSide: 'left' | 'top';
   children: ReactNode;
 }
 
 const ToolbarIconButton = memo(function ToolbarIconButton({
   label,
   onClick,
+  tooltipSide,
   children,
 }: ToolbarIconButtonProps): React.JSX.Element {
   return (
@@ -40,7 +43,7 @@ const ToolbarIconButton = memo(function ToolbarIconButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side={tooltipSide}>{label}</TooltipContent>
     </Tooltip>
   );
 });
@@ -51,6 +54,7 @@ export const ActivityMessageHoverToolbar = memo(function ActivityMessageHoverToo
   onRevise,
   onReply,
   onCreateTask,
+  orientation = 'vertical',
 }: ActivityMessageHoverToolbarProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -71,16 +75,24 @@ export const ActivityMessageHoverToolbar = memo(function ActivityMessageHoverToo
   return (
     <div
       data-activity-message-toolbar="true"
-      data-orientation="vertical"
-      className="flex flex-col items-center gap-1"
+      data-orientation={orientation}
+      className={`flex items-center gap-1 ${orientation === 'vertical' ? 'flex-col' : 'flex-row'}`}
     >
       {canRevise && onRevise ? (
-        <ToolbarIconButton label={t('activity.actions.editMessage')} onClick={onRevise}>
+        <ToolbarIconButton
+          label={t('activity.actions.editMessage')}
+          onClick={onRevise}
+          tooltipSide={orientation === 'vertical' ? 'left' : 'top'}
+        >
           <Pencil size={14} />
         </ToolbarIconButton>
       ) : null}
       {onReply ? (
-        <ToolbarIconButton label={t('activity.actions.replyToMessage')} onClick={onReply}>
+        <ToolbarIconButton
+          label={t('activity.actions.replyToMessage')}
+          onClick={onReply}
+          tooltipSide={orientation === 'vertical' ? 'left' : 'top'}
+        >
           <Reply size={14} />
         </ToolbarIconButton>
       ) : null}
@@ -88,11 +100,16 @@ export const ActivityMessageHoverToolbar = memo(function ActivityMessageHoverToo
         <ToolbarIconButton
           label={t('activity.actions.createTaskFromMessage')}
           onClick={onCreateTask}
+          tooltipSide={orientation === 'vertical' ? 'left' : 'top'}
         >
           <ListPlus size={14} />
         </ToolbarIconButton>
       ) : null}
-      <ToolbarIconButton label={tCommon('actions.copyToClipboard')} onClick={handleCopy}>
+      <ToolbarIconButton
+        label={tCommon('actions.copyToClipboard')}
+        onClick={handleCopy}
+        tooltipSide={orientation === 'vertical' ? 'left' : 'top'}
+      >
         {copied ? (
           <Check className="size-3.5" style={{ color: 'var(--badge-success-bg)' }} />
         ) : (

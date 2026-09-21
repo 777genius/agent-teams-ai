@@ -78,13 +78,12 @@ export const TimelineHistoryControls = ({
       {' '}
       {hiddenCount > 0 && (
         <div className="relative flex justify-center pb-3 pt-1">
-          {/* Bottom-up shadow gradient: darkest at bottom edge, fades upward */}
           <div
-            className="pointer-events-none absolute inset-x-0 -top-24"
+            data-conversation-history-fade="true"
+            className="pointer-events-none absolute -inset-y-2 inset-x-0"
             style={{
-              bottom: '-1.6rem',
               background:
-                'linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.25) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.03) 75%, transparent 100%)',
+                'linear-gradient(to bottom, color-mix(in srgb, var(--color-surface) 92%, transparent) 0%, color-mix(in srgb, var(--color-surface) 64%, transparent) 48%, transparent 100%)',
             }}
           />
           <div

@@ -636,7 +636,6 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
     });
   }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
-
   // Render a single atomic row. Logic per kind mirrors the previous inline
   // render path; separators and dividers are their own rows rather than
   // being bundled into Fragments, which is the contract the virtualizer will
@@ -767,6 +766,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             directParticipant={directParticipant}
             appearance={appearance}
             continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
+            continuesNextAuthor={continuesPreviousAuthor[(options?.rowIndex ?? 0) + 1] ?? false}
           />
         );
       }

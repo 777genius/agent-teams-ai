@@ -50,6 +50,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     avoidCollisions,
     collisionPadding,
     'data-chat-toolbar-appearance': toolbarAppearance,
+    'data-wide-chat-message-footer': wideFooter,
   }: {
     children: React.ReactNode;
     className?: string;
@@ -57,6 +58,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
     avoidCollisions?: boolean;
     collisionPadding?: number;
     'data-chat-toolbar-appearance'?: string;
+    'data-wide-chat-message-footer'?: string;
   }) =>
     React.createElement(
       'div',
@@ -66,6 +68,7 @@ vi.mock('@renderer/components/ui/hover-card', () => ({
         'data-avoid-collisions': String(avoidCollisions),
         'data-collision-padding': collisionPadding,
         'data-chat-toolbar-appearance': toolbarAppearance,
+        'data-wide-chat-message-footer': wideFooter,
       },
       children
     ),
@@ -158,6 +161,7 @@ describe('ActivityItem compact header preview', () => {
           teamName: 'demo',
           appearance: 'wide-chat',
           continuesPreviousAuthor: true,
+          continuesNextAuthor: true,
         })
       );
     });
@@ -165,12 +169,33 @@ describe('ActivityItem compact header preview', () => {
     const article = host.querySelector('article');
     expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
     expect(article?.dataset.continuesAuthor).toBe('true');
+    expect(article?.dataset.continuesNextAuthor).toBe('true');
+    expect(article?.dataset.wideAgent).toBe('true');
     expect(article?.textContent).toContain('A compact continuation');
     expect(article?.textContent).not.toContain('alice');
-    const toolbar = host.querySelector('[data-chat-toolbar-appearance="wide-chat"]');
-    expect(toolbar?.getAttribute('data-side')).toBe('right');
-    expect(toolbar?.getAttribute('data-avoid-collisions')).toBe('true');
-    expect(toolbar?.getAttribute('data-collision-padding')).toBe('8');
+    const footer = host.querySelector('[data-wide-chat-message-footer="true"]');
+    const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
+    expect(article?.querySelector('[data-wide-chat-inline-time="true"]')?.textContent).toMatch(
+      /\d{2}:\d{2}/
+    );
+    expect(toolbar?.getAttribute('data-orientation')).toBe('horizontal');
+    expect(footer?.getAttribute('data-side')).toBe('bottom');
+    expect(footer?.getAttribute('data-avoid-collisions')).toBe('true');
+    expect(article?.contains(toolbar ?? null)).toBe(false);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          continuesPreviousAuthor: true,
+          continuesNextAuthor: false,
+        })
+      );
+    });
+    expect(article?.dataset.continuesNextAuthor).toBeUndefined();
+    expect(article?.textContent).toContain('alice');
 
     await act(async () => root.unmount());
   });

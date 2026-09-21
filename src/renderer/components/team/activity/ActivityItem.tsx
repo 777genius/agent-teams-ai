@@ -10,7 +10,6 @@ import { AttachmentDisplay } from '@renderer/components/team/attachments/Attachm
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
@@ -69,7 +68,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
+import { ActivityMessageHoverCard } from './ActivityMessageHoverCard';
 import {
   type ChatAppearance,
   classifyActivityMessagePresentation,
@@ -248,6 +247,7 @@ interface ActivityItemProps {
   directParticipant?: string;
   appearance?: ChatAppearance;
   continuesPreviousAuthor?: boolean;
+  continuesNextAuthor?: boolean;
 }
 
 function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
@@ -691,6 +691,7 @@ export const ActivityItem = memo(
     directParticipant,
     appearance = 'compact',
     continuesPreviousAuthor = false,
+    continuesNextAuthor = false,
   }: Readonly<ActivityItemProps>): React.JSX.Element => {
     const { t } = useAppTranslation('team');
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
@@ -729,6 +730,7 @@ export const ActivityItem = memo(
     );
     const isWideOrdinary = appearance === 'wide-chat' && messagePresentation.kind !== 'special';
     const isWideUser = isWideOrdinary && messagePresentation.kind === 'ordinary-user';
+    const isWideAgent = isWideOrdinary && !isWideUser;
     const hideWideAuthor = isWideOrdinary && (isWideUser || continuesPreviousAuthor);
 
     const parsedCrossTeamPrefix = parseCrossTeamPrefix(message.text);
@@ -1058,6 +1060,7 @@ export const ActivityItem = memo(
         color={senderColor}
         teamName={teamName}
         isLight={isLight}
+        size={isWideAgent ? 'md' : undefined}
         variant="text"
         hideAvatar={senderHideAvatar || compactHeader}
         onClick={onMemberNameClick}
@@ -1200,7 +1203,9 @@ export const ActivityItem = memo(
     const card = (
       <article
         data-message-presentation={isWideOrdinary ? messagePresentation.kind : undefined}
+        data-wide-agent={isWideAgent ? 'true' : undefined}
         data-continues-author={isWideOrdinary && continuesPreviousAuthor ? 'true' : undefined}
+        data-continues-next-author={isWideOrdinary && continuesNextAuthor ? 'true' : undefined}
         data-expanded={isExpanded ? 'true' : 'false'}
         data-has-recipient-route={recipientBadge ? 'true' : 'false'}
         aria-label={isWideOrdinary ? `${message.from}, ${timestamp}` : undefined}
@@ -1291,7 +1296,7 @@ export const ActivityItem = memo(
                   {crossTeamOrigin ? (
                     <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                   ) : null}
-                  {!hideWideAuthor ? senderBadge : null}
+                  {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
                   {messageTypeBadge}
                   {leadSourceBadge}
                   {statusBadge}
@@ -1361,7 +1366,7 @@ export const ActivityItem = memo(
                 {crossTeamOrigin ? (
                   <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                 ) : null}
-                {!hideWideAuthor ? senderBadge : null}
+                {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
                 {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                   <span
                     data-chat-metadata={isWideOrdinary ? 'true' : undefined}
@@ -1434,7 +1439,7 @@ export const ActivityItem = memo(
               {crossTeamOrigin ? (
                 <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
               ) : null}
-              {!hideWideAuthor ? senderBadge : null}
+              {!hideWideAuthor || (isWideAgent && !continuesNextAuthor) ? senderBadge : null}
               {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                 <span
                   data-chat-metadata={isWideOrdinary ? 'true' : undefined}
@@ -1582,7 +1587,10 @@ export const ActivityItem = memo(
                 className={isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : undefined}
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
-                <ExpandableContent onExpand={onExpandContent}>
+                <ExpandableContent
+                  collapsedHeight={isWideOrdinary ? 800 : undefined}
+                  onExpand={onExpandContent}
+                >
                   <span
                     onClickCapture={
                       onTaskIdClick
@@ -1648,36 +1656,23 @@ export const ActivityItem = memo(
             ) : null}
           </div>
         ) : null}
+        {isWideOrdinary ? <span data-wide-chat-inline-time="true">{timestamp}</span> : null}
       </article>
     );
     /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
 
     return (
-      <HoverCard openDelay={120} closeDelay={220}>
-        <HoverCardTrigger asChild>{card}</HoverCardTrigger>
-        {showHoverToolbar ? (
-          <HoverCardContent
-            side="right"
-            align="start"
-            sideOffset={0}
-            avoidCollisions={appearance === 'wide-chat'}
-            collisionPadding={appearance === 'wide-chat' ? 8 : undefined}
-            hideWhenDetached={false}
-            data-chat-toolbar-appearance={appearance === 'wide-chat' ? appearance : undefined}
-            className="activity-message-toolbar w-auto min-w-0 bg-[var(--color-surface-raised)] p-1 shadow-none data-[side=left]:rounded-r-none data-[side=right]:rounded-l-none data-[side=left]:border-r-0 data-[side=right]:border-l-0"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ActivityMessageHoverToolbar
-              copyText={displayText ?? ''}
-              canRevise={Boolean(canRevise && onRevise)}
-              onRevise={onRevise ? () => onRevise(message) : undefined}
-              onReply={onReply ? () => onReply(message) : undefined}
-              onCreateTask={onCreateTask ? handleCreateTask : undefined}
-            />
-          </HoverCardContent>
-        ) : null}
-      </HoverCard>
+      <ActivityMessageHoverCard
+        copyText={displayText ?? ''}
+        showToolbar={showHoverToolbar}
+        canRevise={Boolean(canRevise && onRevise)}
+        appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+        onRevise={onRevise ? () => onRevise(message) : undefined}
+        onReply={onReply ? () => onReply(message) : undefined}
+        onCreateTask={onCreateTask ? handleCreateTask : undefined}
+      >
+        {card}
+      </ActivityMessageHoverCard>
     );
   },
   (prev, next) =>
@@ -1713,6 +1708,7 @@ export const ActivityItem = memo(
     prev.directParticipant === next.directParticipant &&
     prev.appearance === next.appearance &&
     prev.continuesPreviousAuthor === next.continuesPreviousAuthor &&
+    prev.continuesNextAuthor === next.continuesNextAuthor &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );
 

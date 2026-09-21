@@ -62,6 +62,7 @@ interface MessageRowWithObserverProps {
   directParticipant?: string;
   appearance?: ChatAppearance;
   continuesPreviousAuthor?: boolean;
+  continuesNextAuthor?: boolean;
 }
 
 const MessageRowWithObserver = ({
@@ -102,6 +103,7 @@ const MessageRowWithObserver = ({
   directParticipant,
   appearance,
   continuesPreviousAuthor,
+  continuesNextAuthor,
 }: Readonly<MessageRowWithObserverProps>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -193,6 +195,7 @@ const MessageRowWithObserver = ({
         directParticipant={directParticipant}
         appearance={appearance}
         continuesPreviousAuthor={continuesPreviousAuthor}
+        continuesNextAuthor={continuesNextAuthor}
       />
     </AnimatedHeightReveal>
   );
@@ -237,5 +240,6 @@ export const MemoizedMessageRowWithObserver = React.memo(
     prev.directParticipant === next.directParticipant &&
     prev.appearance === next.appearance &&
     prev.continuesPreviousAuthor === next.continuesPreviousAuthor &&
+    prev.continuesNextAuthor === next.continuesNextAuthor &&
     areInboxMessagesEquivalentForRender(prev.message, next.message)
 );
