@@ -181,6 +181,14 @@
 }
 
 [data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false'][data-wide-content='true']
+  .wide-chat-message-header {
+  height: auto;
+  min-height: 18px;
+  padding: 5px 8px 0 !important;
+}
+
+[data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user'][data-expanded='true'][data-has-recipient-route='false']
   .wide-chat-message-header {
   height: 0;

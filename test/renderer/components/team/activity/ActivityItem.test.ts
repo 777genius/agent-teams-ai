@@ -291,6 +291,29 @@ describe('ActivityItem compact header preview', () => {
       host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
     ).toBe('false');
 
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'alice',
+            to: 'user',
+            text: 'Short direct continuation',
+            timestamp: '2026-09-21T10:01:00.000Z',
+            read: true,
+            source: 'inbox',
+            messageId: 'direct-alice-continuation',
+          } satisfies InboxMessage,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          directParticipant: 'alice',
+          continuesPreviousAuthor: true,
+          continuesNextAuthor: false,
+        })
+      );
+    });
+    expect(host.querySelector('[data-member-avatar-hidden]')).toBeNull();
+    expect(host.querySelector('article')?.textContent).toContain('Short direct continuation');
+
     await act(async () => root.unmount());
   });
 
