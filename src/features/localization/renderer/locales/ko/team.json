@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "최신으로",
       "bottomSheetActions": "메시지 하단 시트 작업",
       "collapseAll": "모든 메시지",
       "collapseSheet": "연락처",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "눈에 띄는ReplyCorrelation",
         "visibleReplyMessageId": "현재 위치"
       }
+    },
+    "fullScreen": {
+      "label": "전체 화면",
+      "teamOnly": "전체 화면은 팀 화면에서 사용할 수 있습니다"
     },
     "panelMode": "Message 패널 모드",
     "title": "이름 *",

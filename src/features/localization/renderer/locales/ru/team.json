@@ -733,6 +733,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "К последним",
       "bottomSheetActions": "Действия нижней панели сообщений",
       "collapseAll": "Свернуть все сообщения",
       "collapseSheet": "Свернуть панель",
@@ -775,6 +776,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "На весь экран",
+      "teamOnly": "Режим на весь экран доступен на экране команды"
     },
     "panelMode": "Режим панели сообщений",
     "title": "Сообщения",

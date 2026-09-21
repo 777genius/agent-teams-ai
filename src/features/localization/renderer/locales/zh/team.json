@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "跳至最新",
       "bottomSheetActions": "消息底部工作表操作",
       "collapseAll": "折叠所有消息",
       "collapseSheet": "折叠表",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "可见回复相关性",
         "visibleReplyMessageId": "可见回复消息 ID"
       }
+    },
+    "fullScreen": {
+      "label": "全屏",
+      "teamOnly": "全屏模式可在团队界面中使用"
     },
     "panelMode": "消息面板模式",
     "title": "消息",

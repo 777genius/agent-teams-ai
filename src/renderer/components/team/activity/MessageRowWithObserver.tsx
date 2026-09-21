@@ -41,6 +41,7 @@ interface MessageRowWithObserverProps {
   revisionMessageId?: string | null;
   onRevise?: (message: InboxMessage) => void;
   onVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
   collapseMode: 'default' | 'managed';
@@ -78,6 +79,7 @@ const MessageRowWithObserver = ({
   revisionMessageId,
   onRevise,
   onVisible,
+  observationEnabled = true,
   onTaskIdClick,
   onRestartTeam,
   collapseMode,
@@ -126,13 +128,14 @@ const MessageRowWithObserver = ({
   }, [message, onVisible]);
 
   useEffect(() => {
-    if (!onVisible) return;
+    if (!onVisible || !observationEnabled) return;
     const el = ref.current;
     if (!el) return;
     const root = observerRoot?.current ?? null;
+    let observing = true;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!observing || !observationEnabled || !entry?.isIntersecting) return;
         if (reportedRef.current) return;
         const cb = onVisibleRef.current;
         const msg = messageRef.current;
@@ -143,8 +146,11 @@ const MessageRowWithObserver = ({
       { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );
     observer.observe(el);
-    return () => observer.disconnect();
-  }, [onVisible, observerRoot]);
+    return () => {
+      observing = false;
+      observer.disconnect();
+    };
+  }, [observationEnabled, onVisible, observerRoot]);
 
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref}>
@@ -204,6 +210,7 @@ export const MemoizedMessageRowWithObserver = React.memo(
     prev.revisionMessageId === next.revisionMessageId &&
     prev.onRevise === next.onRevise &&
     prev.onVisible === next.onVisible &&
+    prev.observationEnabled === next.observationEnabled &&
     prev.onTaskIdClick === next.onTaskIdClick &&
     prev.onRestartTeam === next.onRestartTeam &&
     prev.collapseMode === next.collapseMode &&

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Naar nieuwste",
       "bottomSheetActions": "Acties berichtenpaneel onderaan",
       "collapseAll": "Alle berichten inklappen",
       "collapseSheet": "Paneel inklappen",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Volledig scherm",
+      "teamOnly": "Volledig scherm is beschikbaar op het teamscherm"
     },
     "panelMode": "Modus berichtenpaneel",
     "title": "Berichten",

@@ -318,6 +318,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTarget,
   DiscardQueuedUserMessagesResult,
   ElectronAPI,
   ExecuteReviewMutationRequest,
@@ -1423,17 +1424,7 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<CrossTeamSendResult>(CROSS_TEAM_SEND, request);
     },
     listTargets: async (excludeTeam?: string) => {
-      return invokeIpcWithResult<
-        {
-          teamName: string;
-          displayName: string;
-          description?: string;
-          color?: string;
-          leadName?: string;
-          leadColor?: string;
-          isOnline?: boolean;
-        }[]
-      >(CROSS_TEAM_LIST_TARGETS, excludeTeam);
+      return invokeIpcWithResult<CrossTeamTarget[]>(CROSS_TEAM_LIST_TARGETS, excludeTeam);
     },
     getOutbox: async (teamName: string) => {
       return invokeIpcWithResult<CrossTeamMessage[]>(CROSS_TEAM_GET_OUTBOX, teamName);

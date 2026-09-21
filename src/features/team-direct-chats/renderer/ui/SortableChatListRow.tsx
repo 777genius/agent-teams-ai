@@ -23,6 +23,7 @@ interface SortableChatListRowProps {
   item: ChatListViewItem;
   teamName: string;
   pinned: boolean;
+  selected?: boolean;
   onOpen: (scope: ConversationScope) => void;
   onTogglePin: (key: string) => void;
 }
@@ -31,6 +32,7 @@ export const SortableChatListRow = ({
   item,
   teamName,
   pinned,
+  selected = false,
   onOpen,
   onTogglePin,
 }: SortableChatListRowProps): JSX.Element => {
@@ -69,6 +71,8 @@ export const SortableChatListRow = ({
             item={item}
             teamName={teamName}
             pinned={pinned}
+            aria-current={selected ? 'true' : undefined}
+            className={selected ? 'bg-[var(--color-surface-raised)]' : undefined}
             onOpen={(scope) => {
               if (skipOpenAfterDragRef.current) {
                 skipOpenAfterDragRef.current = false;

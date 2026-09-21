@@ -734,6 +734,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "To latest",
       "bottomSheetActions": "Message bottom sheet actions",
       "collapseAll": "Collapse all messages",
       "collapseSheet": "Collapse sheet",
@@ -778,6 +779,10 @@
       }
     },
     "panelMode": "Message panel mode",
+    "fullScreen": {
+      "label": "Full Screen",
+      "teamOnly": "Full Screen is available on the team screen"
+    },
     "title": "Messages",
     "unread": {
       "new": "{{count}} new",

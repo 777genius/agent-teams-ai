@@ -128,7 +128,7 @@
     "src/renderer/components/team/members/MemberList.tsx": 1364,
     "src/renderer/components/team/members/MemberLogsTab.tsx": 985,
     "src/renderer/components/team/messages/MessageComposer.tsx": 1331,
-    "src/renderer/components/team/messages/MessagesPanel.tsx": 1607,
+    "src/renderer/components/team/messages/MessagesPanel.tsx": 1591,
     "src/renderer/components/team/ProvisioningProgressBlock.tsx": 862,
     "src/renderer/components/team/review/ChangeReviewDialog.tsx": 5441,
     "src/renderer/components/team/review/CodeMirrorDiffView.tsx": 975,

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Ir para as últimas",
       "bottomSheetActions": "Acções da folha inferior da mensagem",
       "collapseAll": "Recolher todas as mensagens",
       "collapseSheet": "Folha de colapso",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visívelReplyCorrelation",
         "visibleReplyMessageId": "visívelReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Tela cheia",
+      "teamOnly": "A tela cheia está disponível na tela da equipe"
     },
     "panelMode": "Modo do painel de mensagens",
     "title": "Mensagens",

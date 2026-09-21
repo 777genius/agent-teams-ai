@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "తాజా సందేశాలకు",
       "bottomSheetActions": "సందేశ బాటమ్ షీట్ చర్యలు",
       "collapseAll": "అన్ని సందేశాలను కుదించు",
       "collapseSheet": "షీట్‌ను కుదించు",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "పూర్తి స్క్రీన్",
+      "teamOnly": "పూర్తి స్క్రీన్ జట్టు స్క్రీన్‌లో అందుబాటులో ఉంది"
     },
     "panelMode": "సందేశ ప్యానెల్ మోడ్",
     "title": "సందేశాలు",

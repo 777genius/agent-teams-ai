@@ -13,6 +13,7 @@ interface ConversationHeaderProps {
   unreadCount: number;
   attentionCount: number;
   onBack?: () => void;
+  participant?: string;
   actions?: ReactNode;
 }
 
@@ -21,10 +22,12 @@ export const ConversationHeader = ({
   unreadCount,
   attentionCount,
   onBack,
+  participant,
   actions,
 }: ConversationHeaderProps): JSX.Element => {
   const { t } = useAppTranslation('team');
-  const showParticipant = Boolean(onBack) && title !== t('messages.chats.teamFeed');
+  const participantName =
+    participant ?? (onBack && title !== t('messages.chats.teamFeed') ? title : undefined);
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -46,8 +49,8 @@ export const ConversationHeader = ({
           <TooltipContent side="bottom">{t('messages.chats.back')}</TooltipContent>
         </Tooltip>
       ) : null}
-      {showParticipant ? (
-        <MemberBadge name={title} size="sm" variant="text" />
+      {participantName ? (
+        <MemberBadge name={participantName} size="sm" variant="text" />
       ) : (
         <span className="min-w-0 truncate text-sm font-medium text-[var(--color-text)]">
           {title}

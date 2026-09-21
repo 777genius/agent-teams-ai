@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "La cele mai recente",
       "bottomSheetActions": "Acțiuni panou inferior pentru mesaje",
       "collapseAll": "Restrânge toate mesajele",
       "collapseSheet": "Restrânge panoul",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Ecran complet",
+      "teamOnly": "Ecranul complet este disponibil pe ecranul echipei"
     },
     "panelMode": "Mod panou de mesaje",
     "title": "Mesaje",

@@ -733,6 +733,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "До останніх",
       "bottomSheetActions": "Дії нижнього аркуша повідомлень",
       "collapseAll": "Згорнути всі повідомлення",
       "collapseSheet": "Згорнути аркуш",
@@ -775,6 +776,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "На весь екран",
+      "teamOnly": "Режим на весь екран доступний на екрані команди"
     },
     "panelMode": "Режим панелі повідомлень",
     "title": "Повідомлення",

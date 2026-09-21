@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "ไปข้อความล่าสุด",
       "bottomSheetActions": "การดำเนินการชีตด้านล่างของข้อความ",
       "collapseAll": "ยุบข้อความทั้งหมด",
       "collapseSheet": "ยุบชีต",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "เต็มหน้าจอ",
+      "teamOnly": "โหมดเต็มหน้าจอพร้อมใช้งานในหน้าจอทีม"
     },
     "panelMode": "โหมดแผงข้อความ",
     "title": "ข้อความ",

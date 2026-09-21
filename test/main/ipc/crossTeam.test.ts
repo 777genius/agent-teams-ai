@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -75,6 +75,7 @@ describe('crossTeam IPC handlers', () => {
       fromTeam: 'team-a',
       fromMember: 'lead',
       toTeam: 'team-b',
+      toMember: 'worker',
       text: 'Hello',
       actionMode: 'delegate',
     });
@@ -87,7 +88,11 @@ describe('crossTeam IPC handlers', () => {
       fromTeam: 'team-a',
       fromMember: 'lead',
       toTeam: 'team-b',
+      toMember: 'worker',
+      conversationId: undefined,
+      replyToConversationId: undefined,
       text: 'Hello',
+      taskRefs: undefined,
       actionMode: 'delegate',
       summary: undefined,
       chainDepth: undefined,
@@ -143,9 +148,7 @@ describe('crossTeam IPC handlers', () => {
     ]);
 
     registerCrossTeamHandlers(mockIpc as never);
-    const handler = mockIpc.handle.mock.calls.find(
-      (c) => c[0] === 'cross-team:listTargets'
-    )![1];
+    const handler = mockIpc.handle.mock.calls.find((c) => c[0] === 'cross-team:listTargets')![1];
 
     const result = await handler({} as never, 'team-a');
 
@@ -160,9 +163,7 @@ describe('crossTeam IPC handlers', () => {
     mockService.getOutbox.mockResolvedValue([]);
 
     registerCrossTeamHandlers(mockIpc as never);
-    const handler = mockIpc.handle.mock.calls.find(
-      (c) => c[0] === 'cross-team:getOutbox'
-    )![1];
+    const handler = mockIpc.handle.mock.calls.find((c) => c[0] === 'cross-team:getOutbox')![1];
 
     const result = await handler({} as never, 'team-a');
 
@@ -172,9 +173,7 @@ describe('crossTeam IPC handlers', () => {
 
   it('getOutbox handler rejects empty teamName', async () => {
     registerCrossTeamHandlers(mockIpc as never);
-    const handler = mockIpc.handle.mock.calls.find(
-      (c) => c[0] === 'cross-team:getOutbox'
-    )![1];
+    const handler = mockIpc.handle.mock.calls.find((c) => c[0] === 'cross-team:getOutbox')![1];
 
     const result = await handler({} as never, '');
 

@@ -12,11 +12,12 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Layers, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { isNoiseMessage } from './ActivityItem';
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
+import { projectTimelineRows } from './conversationWindow';
 import {
   getThoughtGroupKey,
   groupTimelineItems,
@@ -25,10 +26,21 @@ import {
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
 import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
-import { getTimelineCardPosition, type TimelineCardPosition } from './timelineCardStack';
+import {
+  CompactionDivider,
+  getCardPositionForRow,
+  getItemSessionAnchorId,
+  TimelineHistoryControls,
+  type TimelineRow,
+} from './timelineRows';
+import {
+  type ConversationViewportHandle,
+  useConversationViewport,
+} from './useConversationViewport';
+import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
 
-import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
+import type { TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /**
@@ -36,18 +48,6 @@ import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
  * maps 1:1 into JSX for `@tanstack/react-virtual`. `itemIndex` points back
  * into `timelineItems` for collapse, zebra, and session-anchor state.
  */
-type TimelineRow =
-  | { kind: 'session-separator'; key: string }
-  | {
-      kind: 'lead-thought-group';
-      key: string;
-      itemIndex: number;
-      group: LeadThoughtGroup;
-      isPinned: boolean;
-    }
-  | { kind: 'compaction-divider'; key: string; message: InboxMessage }
-  | { kind: 'message-row'; key: string; itemIndex: number; message: InboxMessage };
-
 /**
  * Viewport contract — describes the scroll container that hosts the timeline
  * and how ActivityTimeline should report visibility against it. When omitted,
@@ -60,6 +60,8 @@ type TimelineRow =
 export interface TimelineViewport {
   /** The element that actually scrolls. */
   scrollElementRef: RefObject<HTMLElement | null>;
+  /** Reactive counterpart to the ref, used to bind effects after portal mounts. */
+  scrollElement?: HTMLElement | null;
   /**
    * Root element for IntersectionObserver-based visibility tracking.
    * Typically the same node as `scrollElementRef`, but left separate so
@@ -92,8 +94,8 @@ interface ActivityTimelineProps {
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  /** Called when a message enters the viewport (for marking as read). */
   onMessageVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   /** Called when a task ID link (e.g. #10) is clicked in message text. */
   onTaskIdClick?: (taskId: string) => void;
   /** Called when the user clicks "Restart team" on an auth error message. */
@@ -136,6 +138,11 @@ interface ActivityTimelineProps {
    * page viewport.
    */
   viewport?: TimelineViewport;
+  presentation?: 'activity' | 'conversation';
+  conversationIdentity?: string;
+  conversationHandleRef?: RefObject<ConversationViewportHandle | null>;
+  onLatestAvailable?: (available: boolean) => void;
+  historyControl?: (prepare: () => void) => React.ReactNode;
 }
 
 const MESSAGES_PAGE_SIZE = 30;
@@ -238,57 +245,12 @@ function collectScrollMarginObserverTargets(
   return [...targets];
 }
 
-function getItemSessionAnchorId(item: TimelineItem): string | undefined {
-  if (item.type === 'lead-thoughts') {
-    return item.group.thoughts[0]?.leadSessionId;
-  }
-  return undefined;
-}
-
-function isCardTimelineRow(row: TimelineRow | undefined): boolean {
-  return row?.kind === 'message-row' || row?.kind === 'lead-thought-group';
-}
-
-function getCardPositionForRow(
-  rows: readonly TimelineRow[],
-  rowIndex: number | undefined
-): TimelineCardPosition {
-  if (rowIndex == null || rowIndex < 0) return 'single';
-  return getTimelineCardPosition(
-    isCardTimelineRow(rows[rowIndex - 1]),
-    isCardTimelineRow(rows[rowIndex + 1])
-  );
-}
-
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
   canToggleCollapse: boolean;
   collapseToggleKey?: string;
 }
-
-/** Inline compaction boundary divider — styled like session separators but with amber accent. */
-const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.Element => (
-  <div className="flex items-center gap-3" style={{ paddingTop: 16, paddingBottom: 16 }}>
-    <div
-      className="h-px flex-1"
-      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
-    />
-    <div className="flex shrink-0 items-center gap-2 px-3">
-      <Layers size={12} style={{ color: 'var(--tool-call-text)' }} />
-      <span
-        className="whitespace-nowrap text-[11px] font-medium"
-        style={{ color: 'var(--tool-call-text)' }}
-      >
-        {message.text}
-      </span>
-    </div>
-    <div
-      className="h-px flex-1"
-      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
-    />
-  </div>
-);
 
 export const ActivityTimeline = React.memo(function ActivityTimeline({
   messages,
@@ -301,6 +263,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onReviseMessage,
   onMemberClick,
   onMessageVisible,
+  observationEnabled = true,
   onTaskIdClick,
   onRestartTeam,
   allCollapsed,
@@ -321,9 +284,16 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   emptyLabel,
   emptyHint,
   viewport,
+  presentation = 'activity',
+  conversationIdentity = teamName,
+  conversationHandleRef,
+  onLatestAvailable,
+  historyControl,
 }: ActivityTimelineProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const observerRoot = viewport?.observerRoot ?? viewport?.scrollElementRef;
+  const conversation = presentation === 'conversation';
+  const conversationWindow = useConversationWindow(messages, conversationIdentity, conversation);
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
   const rootRef = useRef<HTMLDivElement>(null);
   const [compactHeader, setCompactHeader] = useState(false);
@@ -367,6 +337,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   // Pagination counts only significant (non-thought) messages so that lead thoughts
   // don't consume the page limit — they collapse into a single visual group anyway.
   const { visibleMessages, hiddenCount } = useMemo(() => {
+    if (conversation) return conversationWindow;
     const total = messages.length;
     if (total === 0) return { visibleMessages: messages, hiddenCount: 0 };
 
@@ -390,7 +361,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       visibleMessages: cutoff < total ? messages.slice(0, cutoff) : messages,
       hiddenCount: hidden,
     };
-  }, [messages, visibleCount]);
+  }, [messages, visibleCount, conversation, conversationWindow]);
 
   // Group consecutive lead thoughts into collapsible blocks.
   const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
@@ -427,11 +398,25 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     return timelineItems.map(getItemKey);
   }, [timelineItems]);
 
-  const newItemKeys = useNewItemKeys({
+  const activityNewItemKeys = useNewItemKeys({
     itemKeys: timelineItemKeys,
     paginationKey: visibleCount,
     resetKey: teamName,
   });
+
+  const newItemKeys = conversation
+    ? new Set(
+        timelineItems.flatMap((item, index) => {
+          const fresh =
+            item.type === 'lead-thoughts'
+              ? item.group.thoughts.every((message) =>
+                  conversationWindow.freshKeys.has(toMessageKey(message))
+                )
+              : conversationWindow.freshKeys.has(toMessageKey(item.message));
+          return fresh ? [timelineItemKeys[index]] : [];
+        })
+      )
+    : activityNewItemKeys;
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
@@ -450,11 +435,17 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   }, [teamName, timelineItemKeys]);
 
   const handleShowMore = (): void => {
-    setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
+    if (conversation) {
+      conversationHandleRef?.current?.prepareHistory();
+      conversationWindow.showMore();
+    } else setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
   };
 
   const handleShowAll = (): void => {
-    setVisibleCount(Infinity);
+    if (conversation) {
+      conversationHandleRef?.current?.prepareHistory();
+      conversationWindow.showAll();
+    } else setVisibleCount(Infinity);
   };
 
   // Precompute, per timeline index, the most recent session anchor that appears
@@ -533,17 +524,19 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         message,
       });
     }
-    return rows;
-  }, [pinnedThoughtGroup, previousSessionAnchorByIndex, startIndex, timelineItems]);
+    return projectTimelineRows(rows, presentation);
+  }, [pinnedThoughtGroup, previousSessionAnchorByIndex, startIndex, timelineItems, presentation]);
 
   // Virtualizer gate — activates only when the parent opts in via
   // `viewport.virtualizationEnabled`, the scroll element ref is present, and
   // the row count is large enough for virtualization to pay for itself. Below
   // the threshold the direct render path is both simpler and faster, so we
   // keep it for short lists.
+  const viewportScrollElement =
+    viewport?.scrollElement ?? viewport?.scrollElementRef.current ?? null;
   const shouldVirtualize =
     viewport?.virtualizationEnabled === true &&
-    viewport.scrollElementRef != null &&
+    viewportScrollElement !== null &&
     renderRows.length >= (viewport.virtualizationRowThreshold ?? VIRTUALIZATION_ROW_THRESHOLD);
 
   // DOM-measured distance from the scroll container's scroll origin to the
@@ -554,7 +547,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   useLayoutEffect(() => {
     if (!shouldVirtualize) return;
-    const scrollEl = viewport?.scrollElementRef?.current ?? null;
+    const scrollEl = viewportScrollElement;
     const rootEl = rootRef.current;
     if (!scrollEl || !rootEl) return;
 
@@ -567,7 +560,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         rafId = null;
         pending = false;
         const scrollRect = scrollEl.getBoundingClientRect();
-        const rootRect = rootEl.getBoundingClientRect();
+        const rootRect = (
+          rootEl.querySelector<HTMLElement>('[data-timeline-rows]') ?? rootEl
+        ).getBoundingClientRect();
         // Distance from top of scroll content to top of timeline root. Adding
         // `scrollTop` compensates for the fact that both rects are relative
         // to the viewport at measurement time, not the scrollable content.
@@ -578,7 +573,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
     measure();
     const resizeObserver = new ResizeObserver(measure);
-    const observedTargets = collectScrollMarginObserverTargets(rootEl, scrollEl);
+    const observedTargets = collectScrollMarginObserverTargets(
+      rootEl.querySelector<HTMLElement>('[data-timeline-rows]') ?? rootEl,
+      scrollEl
+    );
     observedTargets.forEach((target) => resizeObserver.observe(target));
     window.addEventListener('resize', measure);
 
@@ -587,11 +585,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       resizeObserver.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [shouldVirtualize, viewport?.scrollElementRef]);
+  }, [shouldVirtualize, viewportScrollElement]);
 
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? renderRows.length : 0,
-    getScrollElement: () => viewport?.scrollElementRef?.current ?? null,
+    getScrollElement: () => viewportScrollElement,
     estimateSize: (index) => ROW_SIZE_ESTIMATES[renderRows[index]?.kind ?? 'message-row'],
     getItemKey: (index) => renderRows[index]?.key ?? `row-${index}`,
     overscan: VIRTUALIZER_OVERSCAN,
@@ -599,16 +597,25 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     scrollMargin: measuredScrollMargin,
   });
 
-  // Determine the index of the "newest" non-thought timeline item (for auto-expand).
+  const conversationViewport = useConversationViewport({
+    enabled: conversation,
+    identity: conversationIdentity,
+    active: observationEnabled,
+    rows: renderRows,
+    scrollRef: viewport?.scrollElementRef,
+    scrollElement: viewportScrollElement,
+    contentRef: rootRef,
+    virtualizer: rowVirtualizer,
+    virtual: shouldVirtualize,
+    handleRef: conversationHandleRef,
+    onLatestAvailable,
+  });
+  const canObserve = observationEnabled && conversationViewport.observationEnabled;
+
   const newestMessageIndex = useMemo(() => {
     return findNewestMessageIndex(timelineItems);
   }, [timelineItems]);
 
-  /**
-   * Compute the externally managed collapse state for an item in the timeline.
-   * In collapsed mode we always keep the newest real message open, keep the pinned
-   * thought group open, and let localStorage overrides reopen older items.
-   */
   const getItemCollapseProps = useCallback(
     (stableKey: string, itemIndex: number): ItemCollapseProps => {
       const collapseState = resolveTimelineCollapseState({
@@ -697,7 +704,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             leadActivity={pinnedCanBeLive ? leadActivity : undefined}
             leadContextUpdatedAt={pinnedCanBeLive ? leadContextUpdatedAt : undefined}
             isNew={!suppressEntry && newItemKeys.has(key)}
+            animateLatestThought={
+              !conversation || conversationWindow.freshKeys.has(toMessageKey(firstThought))
+            }
             onVisible={onMessageVisible}
+            observationEnabled={canObserve}
             observerRoot={observerRoot}
             zebraShade={zebraShadeSet.has(itemIndex)}
             collapseMode={collapseProps.collapseMode}
@@ -746,6 +757,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             revisionMessageId={revisionMessageId}
             onRevise={onReviseMessage}
             onVisible={onMessageVisible}
+            observationEnabled={canObserve}
             onTaskIdClick={onTaskIdClick}
             onRestartTeam={onRestartTeam}
             collapseMode={collapseProps.collapseMode}
@@ -769,9 +781,26 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     }
   };
 
+  const history = (
+    <div data-conversation-history={conversation || undefined}>
+      <TimelineHistoryControls
+        hiddenCount={hiddenCount}
+        onShowMore={handleShowMore}
+        onShowAll={handleShowAll}
+      />
+      {hiddenCount === 0 &&
+        conversation &&
+        historyControl?.(() => {
+          conversationHandleRef?.current?.prepareHistory();
+          conversationWindow.showAll();
+        })}
+    </div>
+  );
+
   if (messages.length === 0) {
     return (
       <div ref={rootRef} className="flex flex-col">
+        {conversation && history}
         {loading ? (
           <TimelineLoadingState />
         ) : (
@@ -783,9 +812,12 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   return (
     <div ref={rootRef} className="flex flex-col">
+      {conversation && history}
       {shouldVirtualize ? (
         <div
+          data-timeline-rows="true"
           style={{
+            visibility: conversationViewport.initialPending ? 'hidden' : undefined,
             height: `${rowVirtualizer.getTotalSize()}px`,
             width: '100%',
             position: 'relative',
@@ -806,6 +838,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 // needed here.
                 ref={rowVirtualizer.measureElement}
                 data-index={virtualRow.index}
+                data-timeline-row-key={row.key}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -827,54 +860,17 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           })}
         </div>
       ) : (
-        renderRows.map((row, index) => renderTimelineRow(row, { rowIndex: index }))
-      )}
-      {hiddenCount > 0 && (
-        <div className="relative flex justify-center pb-3 pt-1">
-          {/* Bottom-up shadow gradient: darkest at bottom edge, fades upward */}
+        renderRows.map((row, index) => (
           <div
-            className="pointer-events-none absolute inset-x-0 -top-24"
-            style={{
-              bottom: '-1.6rem',
-              background:
-                'linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.25) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.03) 75%, transparent 100%)',
-            }}
-          />
-          <div
-            className="relative z-[1] flex items-center gap-3 rounded-full px-4 py-1.5"
-            style={{
-              backgroundColor: 'var(--color-surface-raised)',
-              boxShadow:
-                '0 0 12px 4px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--color-border-emphasis)',
-            }}
+            key={row.key}
+            data-timeline-row-key={row.key}
+            style={{ visibility: conversationViewport.initialPending ? 'hidden' : undefined }}
           >
-            <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">
-              {t('activity.timeline.olderCount', { count: hiddenCount })}
-            </span>
-            <span className="h-3 w-px bg-blue-600/30 dark:bg-blue-400/30" />
-            <button
-              onClick={handleShowMore}
-              className="rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text)]"
-            >
-              {t('activity.timeline.showMore', {
-                count: Math.min(MESSAGES_PAGE_SIZE, hiddenCount),
-              })}
-            </button>
-            {hiddenCount > MESSAGES_PAGE_SIZE && (
-              <>
-                <span className="h-3 w-px bg-blue-600/30 dark:bg-blue-400/30" />
-                <button
-                  onClick={handleShowAll}
-                  className="rounded-full px-2.5 py-0.5 text-[11px] text-[var(--color-text-muted)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text-secondary)]"
-                >
-                  {t('activity.timeline.showAll')}
-                </button>
-              </>
-            )}
+            {renderTimelineRow(row, { rowIndex: index })}
           </div>
-        </div>
+        ))
       )}
+      {!conversation && history}
     </div>
   );
 });

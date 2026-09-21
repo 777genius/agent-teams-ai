@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "تازہ ترین پر جائیں",
       "bottomSheetActions": "پیغام مندرجہ ذیل کام",
       "collapseAll": "تمام پیاموں کو پھیلا ئيں",
       "collapseSheet": "رنگ",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "نظر آنے والی غلطی",
         "visibleReplyMessageId": "بند بند"
       }
+    },
+    "fullScreen": {
+      "label": "پوری اسکرین",
+      "teamOnly": "پوری اسکرین ٹیم اسکرین پر دستیاب ہے"
     },
     "panelMode": "پیام پینل موڈ",
     "title": "پیغامات",

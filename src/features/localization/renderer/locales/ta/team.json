@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "சமீபத்தியவற்றுக்கு",
       "bottomSheetActions": "செய்தி bottom sheet நடவடிக்கைகள்",
       "collapseAll": "அனைத்து செய்திகளையும் சுருக்கு",
       "collapseSheet": "sheet ஐ சுருக்கு",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "முழுத் திரை",
+      "teamOnly": "முழுத் திரை குழுத் திரையில் கிடைக்கும்"
     },
     "panelMode": "செய்தி panel பயன்முறை",
     "title": "செய்திகள்",

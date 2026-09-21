@@ -24,8 +24,13 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 vi.mock('../../../../../src/renderer/components/team/activity/AnimatedHeightReveal', () => ({
   ENTRY_REVEAL_ANIMATION_MS: 220,
   ENTRY_REVEAL_EASING: 'ease',
-  AnimatedHeightReveal: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
+  AnimatedHeightReveal: ({
+    children,
+    containerRef,
+  }: {
+    children: React.ReactNode;
+    containerRef?: React.Ref<HTMLDivElement>;
+  }) => React.createElement('div', { ref: containerRef }, children),
 }));
 vi.mock('../../../../../src/renderer/components/team/activity/ThoughtBodyContent', () => ({
   ThoughtBodyContent: ({ thought }: { thought: { text: string } }) =>
@@ -34,6 +39,9 @@ vi.mock('../../../../../src/renderer/components/team/activity/ThoughtBodyContent
 vi.mock('@renderer/utils/memberHelpers', () => ({
   agentAvatarUrl: () => '/avatar.png',
   displayMemberName: (name: string) => (name === 'team-lead' ? 'lead' : name),
+}));
+vi.mock('@renderer/hooks/useTheme', () => ({
+  useTheme: () => ({ isLight: false }),
 }));
 
 import {
@@ -61,15 +69,15 @@ describe('LeadThoughtsGroup', () => {
     vi.stubGlobal(
       'IntersectionObserver',
       class {
-        observe() {}
-        disconnect() {}
+        observe = vi.fn();
+        disconnect = vi.fn();
       }
     );
     vi.stubGlobal(
       'ResizeObserver',
       class {
-        observe() {}
-        disconnect() {}
+        observe = vi.fn();
+        disconnect = vi.fn();
       }
     );
   });
@@ -248,6 +256,81 @@ System-level bootstrap rules:
     expect((accent?.closest('[role="button"]') as HTMLElement | null)?.style.backgroundImage).toBe(
       ''
     );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('reports only newly prepended thoughts after the visible group updates', async () => {
+    const observerCallbacks: IntersectionObserverCallback[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          observerCallbacks.push(callback);
+        }
+        observe = vi.fn();
+        disconnect = vi.fn();
+      }
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onVisible = vi.fn();
+    const older = makeLeadSessionMsg('older', { messageId: 'thought-older' });
+    const newer = makeLeadSessionMsg('newer', { messageId: 'thought-newer' });
+    const newest = makeLeadSessionMsg('newest', { messageId: 'thought-newest' });
+
+    await act(async () => {
+      root.render(
+        React.createElement(LeadThoughtsGroupRow, {
+          group: { type: 'lead-thoughts', thoughts: [newer, older] },
+          collapseMode: 'managed',
+          isCollapsed: false,
+          canToggleCollapse: true,
+          onVisible,
+        })
+      );
+      await Promise.resolve();
+    });
+    act(() => {
+      observerCallbacks.at(-1)?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      );
+    });
+
+    expect(onVisible.mock.calls.map(([message]) => message.messageId)).toEqual([
+      'thought-newer',
+      'thought-older',
+    ]);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LeadThoughtsGroupRow, {
+          group: { type: 'lead-thoughts', thoughts: [newest, newer, older] },
+          collapseMode: 'managed',
+          isCollapsed: false,
+          canToggleCollapse: true,
+          onVisible,
+        })
+      );
+      await Promise.resolve();
+    });
+    act(() => {
+      observerCallbacks.at(-1)?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      );
+    });
+
+    expect(onVisible.mock.calls.map(([message]) => message.messageId)).toEqual([
+      'thought-newer',
+      'thought-older',
+      'thought-newest',
+    ]);
 
     await act(async () => {
       root.unmount();

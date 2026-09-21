@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "إلى الأحدث",
       "bottomSheetActions": "تصوّرات في الجزء السفلي",
       "collapseAll": "كل الرسائل",
       "collapseSheet": "صفائح التصفيق",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "تصوّر مرئي",
         "visibleReplyMessageId": "مرئية"
       }
+    },
+    "fullScreen": {
+      "label": "ملء الشاشة",
+      "teamOnly": "يتوفر ملء الشاشة في شاشة الفريق"
     },
     "panelMode": "طريقة لوحة الرسائل",
     "title": "الرسائل",

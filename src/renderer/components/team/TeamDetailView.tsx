@@ -170,6 +170,8 @@ const ChangeReviewDialog = lazy(() =>
 );
 import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
+import { type ExpandedChatHost } from './messages/MessagesThreadPlacement';
+import { useExpandedTeamChat } from './messages/useExpandedTeamChat';
 import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
@@ -547,6 +549,7 @@ type TeamSidebarRailBridgeProps = Omit<
   'messagesPanelProps'
 > & {
   messagesPanelProps: SharedTeamMessagesPanelProps;
+  expandedChatHost: ExpandedChatHost;
 };
 interface LeadLoadBridgeProps {
   teamName: string;
@@ -1084,6 +1087,7 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
 
 const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
   messagesPanelProps,
+  expandedChatHost,
   ...props
 }: TeamSidebarRailBridgeProps): React.JSX.Element {
   const teamName = messagesPanelProps.teamName;
@@ -1130,6 +1134,7 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       pendingRepliesByMember,
       onPendingReplyChange: handlePendingReplyChange,
+      expandedChatHost,
     }),
     [
       handlePendingReplyChange,
@@ -1137,6 +1142,7 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       messagesPanelProps,
       pendingRepliesByMember,
+      expandedChatHost,
     ]
   );
 
@@ -1387,16 +1393,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     [isLight]
   );
   useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    if (editorOpen || graphOpen) {
-      el.setAttribute('inert', '');
-    } else {
-      el.removeAttribute('inert');
-    }
-  }, [editorOpen, graphOpen]);
-
-  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.teamName === teamName) {
@@ -1406,7 +1402,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     window.addEventListener('toggle-team-graph', handler);
     return () => window.removeEventListener('toggle-team-graph', handler);
   }, [handleOpenGraphTab, teamName]);
-
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
@@ -1575,6 +1570,23 @@ export const TeamDetailView = memo(function TeamDetailView({
     [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
   );
   const isThisTabActive = isActive;
+  const expandedChatController = useExpandedTeamChat({
+    teamName,
+    messagesPanelMode,
+    isActive: isThisTabActive,
+    graphOpen,
+    editorOpen,
+    contentRef,
+  });
+  const {
+    expanded: expandedChat,
+    rendersSidebar,
+    host: expandedChatHost,
+    collapse: collapseExpandedChat,
+    setTarget: setExpandedChatTarget,
+    onNativeOwnershipChange: handleNativeSidebarOwnershipChange,
+    onRenderedSidebarChange: handleRenderedSidebarChange,
+  } = expandedChatController;
   const interactiveTeamRef = useRef<string | null>(null);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
   const loadingHeaderColorSet = useMemo(
@@ -1604,9 +1616,10 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const changeMessagesPanelMode = useCallback(
     (mode: TeamMessagesPanelMode) => {
+      collapseExpandedChat();
       setMessagesPanelMode(mode);
     },
-    [setMessagesPanelMode]
+    [collapseExpandedChat, setMessagesPanelMode]
   );
   useEffect(() => {
     if (tabId) {
@@ -2418,7 +2431,14 @@ export const TeamDetailView = memo(function TeamDetailView({
           : pendingTeamSectionFocus.section;
 
     if (sectionId === 'overview') {
-      contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const revealOverview = (): void =>
+        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (expandedChat) {
+        collapseExpandedChat();
+        window.requestAnimationFrame(revealOverview);
+      } else {
+        revealOverview();
+      }
       clearTeamSectionFocus();
       return;
     }
@@ -2429,7 +2449,15 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (!section) return;
     section.dispatchEvent(new CustomEvent('team-section-navigate'));
     clearTeamSectionFocus();
-  }, [pendingTeamSectionFocus, clearTeamSectionFocus, isThisTabActive, teamName, data]);
+  }, [
+    pendingTeamSectionFocus,
+    clearTeamSectionFocus,
+    isThisTabActive,
+    teamName,
+    data,
+    expandedChat,
+    collapseExpandedChat,
+  ]);
 
   // Pick up pending member profile request from MemberHoverCard
   const pendingMemberProfile = useStore((s) => s.pendingMemberProfile);
@@ -2647,17 +2675,28 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, updateKanbanColumnOrder]
   );
 
-  const handleScrollToTask = useCallback((taskId: string) => {
-    const el = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    el.classList.remove('kanban-card-focus-pulse');
-    void (el as HTMLElement).offsetWidth;
-    el.classList.add('kanban-card-focus-pulse');
-    el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
-      once: true,
-    });
-  }, []);
+  const handleScrollToTask = useCallback(
+    (taskId: string) => {
+      const reveal = (): void => {
+        const el = contentRef.current?.querySelector(`[data-task-id="${taskId}"]`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.classList.remove('kanban-card-focus-pulse');
+        void (el as HTMLElement).offsetWidth;
+        el.classList.add('kanban-card-focus-pulse');
+        el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
+          once: true,
+        });
+      };
+      if (expandedChat) {
+        collapseExpandedChat();
+        window.requestAnimationFrame(reveal);
+        return;
+      }
+      reveal();
+    },
+    [collapseExpandedChat, expandedChat]
+  );
 
   const handleAddTask = useCallback(
     (startImmediately: boolean) => {
@@ -2712,9 +2751,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   };
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
-
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
+      isActive: isThisTabActive || rendersSidebar,
       teamName,
       onPositionChange: changeMessagesPanelMode,
       mountPoint: messagesPanelMountPoint,
@@ -2748,9 +2787,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       teamName,
       timeWindow,
       changeMessagesPanelMode,
+      isThisTabActive,
+      rendersSidebar,
     ]
   );
-
   const renderTeamActionButtons = (pinned: boolean): React.JSX.Element => (
     <div
       className={cn(
@@ -2771,15 +2811,18 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Button
             variant="ghost"
             size="sm"
+            aria-label={t('detail.actions.visualize')}
+            data-visualize-button={pinned ? 'pinned' : 'header'}
             className={cn(
               TEAM_HEADER_NAV_ACTION_CLASS,
-              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95'
+              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95',
+              pinned && 'w-8 px-0'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
           >
             <Network size={13} className="shrink-0" />
-            {t('detail.actions.visualize')}
+            {pinned ? null : t('detail.actions.visualize')}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
@@ -2905,7 +2948,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
     return (
       <>
-        {pinnedVisualizeButtonPosition ? renderTeamActionButtons(true) : null}
+        {pinnedVisualizeButtonPosition && !expandedChat ? renderTeamActionButtons(true) : null}
         <div className="relative flex size-full overflow-hidden">
           <LeadLoadBridge
             teamName={teamName}
@@ -2917,7 +2960,6 @@ export const TeamDetailView = memo(function TeamDetailView({
             isThisTabActive={isThisTabActive}
           />
 
-          {/* Messages sidebar (left, after context panel) */}
           <TeamSidebarHost
             teamName={teamName}
             surface="team"
@@ -2928,10 +2970,13 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               isActive={isThisTabActive}
               isFocused={isPaneFocused}
+              onNativeOwnershipChange={handleNativeSidebarOwnershipChange}
+              onRenderedSidebarChange={handleRenderedSidebarChange}
             >
               <TeamSidebarRailBridge
                 teamName={teamName}
                 messagesPanelProps={sharedMessagesPanelProps}
+                expandedChatHost={expandedChatHost}
                 isResizing={isMessagesPanelResizing}
                 onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
                 logsHeight={sidebarLogsHeight}
@@ -2946,7 +2991,10 @@ export const TeamDetailView = memo(function TeamDetailView({
           <div className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={contentRef}
-              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0"
+              className={cn(
+                'size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0',
+                expandedChat && 'invisible'
+              )}
               style={{ paddingBottom: floatingComposerScrollReserve }}
               data-team-name={teamName}
             >
@@ -3674,6 +3722,16 @@ export const TeamDetailView = memo(function TeamDetailView({
               )}
             </div>
             <div
+              ref={setExpandedChatTarget}
+              className={cn(
+                'absolute inset-0 z-10 min-h-0 min-w-0 overflow-hidden',
+                expandedChat ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
+              )}
+              aria-hidden={!expandedChat || editorOpen || graphOpen ? 'true' : undefined}
+              inert={editorOpen || graphOpen ? true : undefined}
+              data-messages-thread-slot="main"
+            />
+            <div
               ref={setMessagesPanelMountPoint}
               className="pointer-events-none absolute inset-0 z-30"
             />
@@ -3693,7 +3751,12 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               bottomOffset={Math.max(floatingComposerHeight + 18, 18)}
               buttonTestId="open-terminal-floating-button"
-              enabled={isThisTabActive && !graphOpen}
+              enabled={
+                isThisTabActive &&
+                !graphOpen &&
+                !expandedChat &&
+                messagesPanelMode !== 'bottom-sheet'
+              }
             />
           </div>
         </div>
@@ -3732,9 +3795,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     );
   };
 
-  // The launch dialog renders outside renderBody's branches so a branch change
-  // (e.g. draft view → provisioning view after Launch) does not unmount it and
-  // discard in-progress user edits. The draft view has no resolved members yet.
+  // Keep the launch dialog outside renderBody so branch changes preserve in-progress edits.
   const isDraftTeamView = error === 'TEAM_DRAFT';
   const launchDialogDefaultProjectPath = isDraftTeamView
     ? useStore.getState().teamByName[teamName]?.projectPath

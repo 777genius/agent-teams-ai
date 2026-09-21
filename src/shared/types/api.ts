@@ -69,6 +69,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTarget,
   DiscardQueuedUserMessagesResult,
   GlobalTask,
   KanbanColumnId,
@@ -664,17 +665,7 @@ export interface MemberWorkSyncElectronApi {
 
 export interface CrossTeamAPI {
   send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;
-  listTargets: (excludeTeam?: string) => Promise<
-    {
-      teamName: string;
-      displayName: string;
-      description?: string;
-      color?: string;
-      leadName?: string;
-      leadColor?: string;
-      isOnline?: boolean;
-    }[]
-  >;
+  listTargets: (excludeTeam?: string) => Promise<CrossTeamTarget[]>;
   getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;
 }
 

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Đến mới nhất",
       "bottomSheetActions": "Thao tác bảng tin nhắn dưới cùng",
       "collapseAll": "Thu gọn tất cả tin nhắn",
       "collapseSheet": "Thu gọn bảng",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Toàn màn hình",
+      "teamOnly": "Chế độ toàn màn hình khả dụng trên màn hình nhóm"
     },
     "panelMode": "Chế độ bảng tin nhắn",
     "title": "Tin nhắn",

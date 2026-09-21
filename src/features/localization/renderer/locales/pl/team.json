@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Do najnowszych",
       "bottomSheetActions": "Akcje dolnego arkusza wiadomości",
       "collapseAll": "Zwiń wszystkie wiadomości",
       "collapseSheet": "Zwiń arkusz",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Pełny ekran",
+      "teamOnly": "Pełny ekran jest dostępny na ekranie zespołu"
     },
     "panelMode": "Tryb panelu wiadomości",
     "title": "Wiadomości",

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Vai ai più recenti",
       "bottomSheetActions": "Azioni del foglio inferiore dei messaggi",
       "collapseAll": "Comprimi tutti i messaggi",
       "collapseSheet": "Comprimi foglio",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Schermo intero",
+      "teamOnly": "Lo schermo intero è disponibile nella schermata del team"
     },
     "panelMode": "Modalità del pannello dei messaggi",
     "title": "Messaggi",

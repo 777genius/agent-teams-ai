@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "সাম্প্রতিক বার্তায়",
       "bottomSheetActions": "বার্তার প্রধান অংশ",
       "collapseAll": "সমস্ত বার্তার থ্রেড সংকুচিত করা হবে",
       "collapseSheet": "টালি",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "দৃশ্যমান",
         "visibleReplyMessageId": "উত্তর-প্রাপক বার্তা প্রদর্শিত হবে"
       }
+    },
+    "fullScreen": {
+      "label": "পূর্ণ পর্দা",
+      "teamOnly": "পূর্ণ পর্দা টিম স্ক্রিনে উপলভ্য"
     },
     "panelMode": "বার্তার মোড",
     "title": "বার্তা",

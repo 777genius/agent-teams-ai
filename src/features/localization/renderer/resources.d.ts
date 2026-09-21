@@ -4805,6 +4805,7 @@ export default interface Resources {
         floatComposer: 'Float composer';
         floatMessagesComposer: 'Float messages composer';
         hideSearch: 'Hide search';
+        toLatest: 'To latest';
         loadOlder: 'Load older messages';
         markAllRead: 'Mark all as read';
         messageActions: 'Message actions';
@@ -4869,6 +4870,10 @@ export default interface Resources {
         showStatusUpdates: 'Show status updates (idle/shutdown)';
         to: 'To';
         tooltip: 'Filter messages';
+      };
+      fullScreen: {
+        label: 'Full Screen';
+        teamOnly: 'Full Screen is available on the team screen';
       };
       panelMode: 'Message panel mode';
       search: {

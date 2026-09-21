@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "नवीनतम संदेशांकडे",
       "bottomSheetActions": "संदेश तळ शीट कृती",
       "collapseAll": "सर्व संदेश संकुचित करा",
       "collapseSheet": "शीट संकुचित करा",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "पूर्ण स्क्रीन",
+      "teamOnly": "पूर्ण स्क्रीन टीम स्क्रीनवर उपलब्ध आहे"
     },
     "panelMode": "संदेश पॅनेल मोड",
     "title": "संदेश",

@@ -193,6 +193,7 @@ import type {
   AddTaskCommentRequest,
   CreateTaskRequest,
   CrossTeamSendRequest,
+  CrossTeamTarget,
   GlobalTask,
   InboxMessage,
   KanbanColumnId,
@@ -1600,15 +1601,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
     delayMs?: number
   ) => void;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
-  crossTeamTargets: {
-    teamName: string;
-    displayName: string;
-    description?: string;
-    color?: string;
-    leadName?: string;
-    leadColor?: string;
-    isOnline?: boolean;
-  }[];
+  crossTeamTargets: CrossTeamTarget[];
   crossTeamTargetsLoading: boolean;
   fetchCrossTeamTargets: () => Promise<boolean>;
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<void>;

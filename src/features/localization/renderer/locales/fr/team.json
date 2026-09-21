@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Aller aux plus récents",
       "bottomSheetActions": "Message actions de la feuille de bas",
       "collapseAll": "Réduire tous les messages",
       "collapseSheet": "Feuille d'effondrement",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "Correlation visible",
         "visibleReplyMessageId": "visibleRépondreMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Plein écran",
+      "teamOnly": "Le mode plein écran est disponible sur l'écran de l'équipe"
     },
     "panelMode": "Mode panneau de message",
     "title": "Messages",

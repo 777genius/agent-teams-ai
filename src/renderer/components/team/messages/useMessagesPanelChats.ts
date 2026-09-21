@@ -148,12 +148,14 @@ export function useThreadUnreadSnapshot({
 }
 
 export function useResetScrollOnConversationChange({
+  enabled = true,
   teamName,
   scopeKey,
   navigationSurface,
   persistScrollTop,
   scrollElementRef,
 }: {
+  enabled?: boolean;
   teamName: string;
   scopeKey: string;
   navigationSurface: ConversationSurface;
@@ -173,7 +175,8 @@ export function useResetScrollOnConversationChange({
       return;
     }
     lastConversationRef.current = conversationKey;
+    if (!enabled) return;
     persistScrollTop(0);
     if (scrollElementRef.current) scrollElementRef.current.scrollTop = 0;
-  }, [conversationKey, persistScrollTop, scrollElementRef, teamName]);
+  }, [conversationKey, persistScrollTop, scrollElementRef, teamName, enabled]);
 }

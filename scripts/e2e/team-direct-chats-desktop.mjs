@@ -17,35 +17,55 @@ const repoRoot = path.resolve(scriptDir, '../..');
 const shotDir = path.join(os.tmpdir(), 'team-direct-chats-e2e-shots');
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
+const keepApp = process.env.TEAM_DIRECT_CHATS_E2E_KEEP_APP === '1';
+const attachPort = Number(process.env.TEAM_DIRECT_CHATS_E2E_ATTACH_PORT ?? 0);
+const ownsFixture = attachPort === 0;
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
 
 async function clickPoint(client, expression, label) {
-  const clicked = await client.evaluate(`(() => {
+  const point = await client.evaluate(`(() => {
     const element = ${expression};
-    if (!(element instanceof HTMLElement)) return false;
+    if (!(element instanceof HTMLElement)) return null;
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const rect = element.getBoundingClientRect();
-    const clientX = rect.left + rect.width / 2;
-    const clientY = rect.top + rect.height / 2;
-    const base = {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      pointerId: 1,
-      pointerType: 'mouse',
-      isPrimary: true,
-      clientX,
-      clientY,
-      view: window,
-    };
-    element.focus();
-    element.dispatchEvent(new PointerEvent('pointerdown', { ...base, button: 0, buttons: 1 }));
-    element.dispatchEvent(new PointerEvent('pointerup', { ...base, button: 0, buttons: 0 }));
-    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, clientX, clientY, view: window }));
-    return true;
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   })()`);
-  assert.equal(clicked, true, `missing click target: ${label}`);
+  assert(point, `missing click target: ${label}`);
+  await client.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: point.x,
+    y: point.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await client.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: point.x,
+    y: point.y,
+    button: 'left',
+    clickCount: 1,
+  });
+}
+
+async function pressKey(client, key, code = key) {
+  const escape = key === 'Escape';
+  const keyCode = escape ? 27 : undefined;
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key,
+    code,
+    windowsVirtualKeyCode: keyCode,
+    nativeVirtualKeyCode: keyCode,
+  });
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key,
+    code,
+    windowsVirtualKeyCode: keyCode,
+    nativeVirtualKeyCode: keyCode,
+  });
 }
 
 function rememberAppLog(chunk, stream) {
@@ -79,6 +99,7 @@ function member(name, agentType, role, teamName, projectPath, color) {
 
 async function seedFixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'team-direct-chats-e2e-')));
+  const fixtureNow = Date.now();
   const runtimeLock = JSON.parse(await readFile(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));
   const fixture = {
     root,
@@ -126,7 +147,16 @@ async function seedFixture() {
   await chmod(fixture.runtimeWrapperPath, 0o755);
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable chats E2E\n');
   const oscar = member('oscar', 'team-lead', 'Lead', fixture.teamName, fixture.projectPath, 'blue');
-  const alice = member('alice', 'developer', 'Developer', fixture.teamName, fixture.projectPath, 'green');
+  const alice = member(
+    'alice',
+    'developer',
+    'Developer',
+    fixture.teamName,
+    fixture.projectPath,
+    'green'
+  );
+  oscar.joinedAt = fixtureNow - 600_000;
+  alice.joinedAt = fixtureNow - 600_000;
   const teamDir = path.join(fixture.claudeRoot, 'teams', fixture.teamName);
   await json(path.join(fixture.claudeRoot, 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
@@ -136,7 +166,7 @@ async function seedFixture() {
     description: 'Disposable chats E2E fixture',
     color: 'blue',
     language: 'en',
-    createdAt: Date.now(),
+    createdAt: fixtureNow - 600_000,
     leadAgentId: oscar.agentId,
     members: [oscar, alice],
     projectPath: fixture.projectPath,
@@ -149,26 +179,41 @@ async function seedFixture() {
     providerId: 'opencode',
     model: 'test-model',
     prompt: 'Renderer fixture only. Never launch any provider.',
-    createdAt: Date.now(),
+    createdAt: fixtureNow - 600_000,
   });
   await mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
+  const directHistory = Array.from({ length: 64 }, (_, index) => {
+    const sequence = index + 1;
+    const fromAlice = sequence % 2 === 0;
+    return {
+      from: fromAlice ? 'alice' : 'user',
+      to: fromAlice ? 'user' : 'alice',
+      text: `Messenger history ${String(sequence).padStart(2, '0')}`,
+      timestamp: new Date(fixtureNow - (180_000 - sequence * 1_000)).toISOString(),
+      messageId: `dm-history-${String(sequence).padStart(2, '0')}`,
+      read: sequence < 62,
+      source: fromAlice ? 'inbox' : 'user_sent',
+    };
+  });
   await json(path.join(teamDir, 'inboxes', 'user.json'), [
+    ...directHistory.filter((message) => message.from === 'alice'),
     {
       from: 'alice',
       to: 'user',
       text: 'Need you to review the chat list',
-      timestamp: '2026-09-17T12:00:00.000Z',
+      timestamp: new Date(fixtureNow - 60_000).toISOString(),
       messageId: 'dm-alice-user',
       read: false,
       source: 'inbox',
     },
   ]);
   await json(path.join(teamDir, 'inboxes', 'alice.json'), [
+    ...directHistory.filter((message) => message.from === 'user'),
     {
       from: 'user',
       to: 'alice',
       text: 'Opening a 1:1 with you',
-      timestamp: '2026-09-17T11:50:00.000Z',
+      timestamp: new Date(fixtureNow - 120_000).toISOString(),
       messageId: 'dm-user-alice',
       read: true,
       source: 'user_sent',
@@ -181,22 +226,25 @@ async function seedFixture() {
 
 function getTargets(port) {
   return new Promise((resolve, reject) => {
-    const request = http.get({ host: '127.0.0.1', port, path: '/json/list', agent: false }, (response) => {
-      let body = '';
-      response.setEncoding('utf8');
-      response.on('data', (chunk) => (body += chunk));
-      response.once('end', () => {
-        if (response.statusCode !== 200) {
-          reject(new Error(`CDP ${port} returned HTTP ${response.statusCode}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(body));
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
+    const request = http.get(
+      { host: '127.0.0.1', port, path: '/json/list', agent: false },
+      (response) => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => (body += chunk));
+        response.once('end', () => {
+          if (response.statusCode !== 200) {
+            reject(new Error(`CDP ${port} returned HTTP ${response.statusCode}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+    );
     request.setTimeout(1_000, () => request.destroy(new Error('CDP request timed out')));
     request.once('error', reject);
   });
@@ -303,6 +351,12 @@ async function cleanup(fixture) {
     }
     cdp = null;
   }
+  if (keepApp) {
+    process.stdout.write(
+      `Leaving isolated dev:mcp running (PID ${appProcessGroupId}, fixture ${fixture.root})\n`
+    );
+    return;
+  }
   if (appProcessGroupId && process.platform !== 'win32') {
     try {
       process.kill(-appProcessGroupId, 'SIGKILL');
@@ -315,21 +369,43 @@ async function cleanup(fixture) {
   }
   appProcess = null;
   appProcessGroupId = null;
-  if (fixture?.root && process.env.TEAM_DIRECT_CHATS_E2E_KEEP !== '1') {
+  if (ownsFixture && fixture?.root && process.env.TEAM_DIRECT_CHATS_E2E_KEEP !== '1') {
     await rm(fixture.root, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 
 async function main() {
-  const fixture = await seedFixture();
+  const fixture = attachPort
+    ? {
+        root: process.env.TEAM_DIRECT_CHATS_E2E_FIXTURE_ROOT,
+        claudeRoot: path.join(process.env.TEAM_DIRECT_CHATS_E2E_FIXTURE_ROOT, '.claude'),
+        projectPath: process.env.TEAM_DIRECT_CHATS_E2E_PROJECT_PATH,
+        teamName: process.env.TEAM_DIRECT_CHATS_E2E_TEAM_NAME,
+      }
+    : await seedFixture();
+  if (!fixture.root || !fixture.projectPath || !fixture.teamName) {
+    throw new Error('Attach mode requires fixture root, project path, and team name');
+  }
+  if (attachPort) {
+    const userInboxPath = path.join(fixture.claudeRoot, 'teams', fixture.teamName, 'inboxes', 'user.json');
+    const userInbox = JSON.parse(await readFile(userInboxPath, 'utf8'));
+    const resetInbox = userInbox.filter((message) => message.messageId !== 'dm-live-append');
+    if (resetInbox.length !== userInbox.length) await json(userInboxPath, resetInbox);
+  }
   await mkdir(shotDir, { recursive: true });
   let failure = null;
   try {
-    const { port, renderer } = await startApp(fixture);
+    const { port, renderer } = attachPort
+      ? { port: attachPort, renderer: await waitForRenderer(attachPort) }
+      : await startApp(fixture);
     process.stdout.write(`Using isolated dev:mcp CDP port ${port}\n`);
     cdp = await CdpClient.connect(renderer.webSocketDebuggerUrl);
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
+    if (attachPort) await cdp.send('Page.reload', { ignoreCache: true });
+    // Keep renderer lifecycle deterministic without stealing macOS focus from the user.
+    await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+    await cdp.send('Page.setWebLifecycleState', { state: 'active' });
     await cdp.waitFor(
       'window.electronAPI?.teams && window.__agentTeamsDevStore',
       'native API and dev store',
@@ -375,12 +451,41 @@ async function main() {
       60_000
     );
     await cdp.evaluate(`window.__agentTeamsDevStore.getState().setMessagesPanelMode('sidebar')`);
+    await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label') === 'Back to chats')?.click()`);
     await cdp.waitFor(
       `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
         (button.getAttribute('aria-label') ?? '').includes('Group chat')))`,
       'chat list Group chat row',
       60_000
     );
+    if (!attachPort) {
+      await clickPoint(
+        cdp,
+        `Array.from(document.querySelectorAll('button')).find((button) =>
+          button.getAttribute('aria-label') === 'Message panel actions')`,
+        'Message panel actions initial normalization'
+      );
+      const initialSortEnabled = await cdp.evaluate(
+        `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
+          item.textContent?.includes('Sort by new messages'))?.getAttribute('aria-checked') === 'true'`
+      );
+      if (initialSortEnabled) {
+        await clickPoint(
+          cdp,
+          `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
+            item.textContent?.includes('Sort by new messages'))`,
+          'disable persisted chat sorting'
+        );
+      }
+      await pressKey(cdp, 'Escape', 'Escape');
+      await cdp.waitFor(
+        `!Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).some((item) =>
+          item.textContent?.includes('Sort by new messages'))`,
+        'initial message panel actions closed',
+        10_000
+      );
+    }
     const listUi = await cdp.evaluate(`(() => {
       const rows = Array.from(document.querySelectorAll('button[aria-label]')).map((button) => ({
         label: button.getAttribute('aria-label') ?? '',
@@ -408,57 +513,46 @@ async function main() {
     const aliceRow = listUi.rows.find((row) => row.label.includes('alice'));
     assert.match(aliceRow.label, /unread/);
     assert.match(aliceRow.preview, /Need you to review the chat list/);
-    const rosterOrder = await cdp.evaluate(`(() => Array.from(document.querySelectorAll('button[aria-label]'))
-      .map((button) => button.getAttribute('aria-label') ?? '')
-      .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
-      .map((label) => label.split(',')[0]))()`);
-    assert.deepEqual(rosterOrder, ['Group chat', 'oscar', 'alice']);
-    await clickPoint(
-      cdp,
-      `Array.from(document.querySelectorAll('button')).find((button) =>
-        button.getAttribute('aria-label') === 'Message panel actions')`,
-      'Message panel actions'
-    );
-    await cdp.waitFor(
-      `Boolean(Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
-        item.textContent?.includes('Sort by new messages')))`,
-      'sort chats checkbox',
-      10_000
-    );
-    const sortItem = await cdp.evaluate(`(() => {
-      const item = Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((entry) =>
-        entry.textContent?.includes('Sort by new messages'));
-      return {
-        checked: item?.getAttribute('aria-checked') ?? null,
-        text: item?.textContent ?? '',
-      };
-    })()`);
-    assert.equal(sortItem.checked, 'false');
-    await cdp.screenshot(path.join(shotDir, 'sort-menu.png'));
-    await clickPoint(
-      cdp,
-      `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
-        item.textContent?.includes('Sort by new messages'))`,
-      'Sort by new messages'
-    );
-    await cdp.waitFor(
-      `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
-        item.textContent?.includes('Sort by new messages'))?.getAttribute('aria-checked') === 'true'`,
-      'sort chats checkbox checked',
-      10_000
-    );
-    await cdp.waitFor(
-      `(() => {
-        const names = Array.from(document.querySelectorAll('button[aria-label]'))
-          .map((button) => button.getAttribute('aria-label') ?? '')
-          .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
-          .map((label) => label.split(',')[0]);
-        return names[0] === 'Group chat' && names[1] === 'alice' && names[2] === 'oscar';
-      })()`,
-      'attention chat raised after sort',
-      10_000
-    );
-    await cdp.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    if (!attachPort) {
+      const rosterOrder =
+        await cdp.evaluate(`(() => Array.from(document.querySelectorAll('button[aria-label]'))
+        .map((button) => button.getAttribute('aria-label') ?? '')
+        .filter((label) => label.includes('Group chat') || label.includes('alice') || label.includes('oscar'))
+        .map((label) => label.split(',')[0]))()`);
+      assert.deepEqual(rosterOrder, ['Group chat', 'oscar', 'alice']);
+      await clickPoint(
+        cdp,
+        `Array.from(document.querySelectorAll('button')).find((button) =>
+          button.getAttribute('aria-label') === 'Message panel actions')`,
+        'Message panel actions'
+      );
+      await cdp.waitFor(
+        `Boolean(Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
+          item.textContent?.includes('Sort by new messages')))`,
+        'sort chats checkbox',
+        10_000
+      );
+      const sortItem = await cdp.evaluate(`(() => {
+        const item = Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((entry) =>
+          entry.textContent?.includes('Sort by new messages'));
+        return { checked: item?.getAttribute('aria-checked') ?? null };
+      })()`);
+      assert.equal(sortItem.checked, 'false');
+      await cdp.screenshot(path.join(shotDir, 'sort-menu.png'));
+      await clickPoint(
+        cdp,
+        `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
+          item.textContent?.includes('Sort by new messages'))`,
+        'Sort by new messages'
+      );
+      await cdp.waitFor(
+        `Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).find((item) =>
+          item.textContent?.includes('Sort by new messages'))?.getAttribute('aria-checked') === 'true'`,
+        'sort chats checkbox checked',
+        10_000
+      );
+      await pressKey(cdp, 'Escape', 'Escape');
+    }
     await cdp.screenshot(path.join(shotDir, 'chat-list.png'));
     await clickPoint(
       cdp,
@@ -475,7 +569,7 @@ async function main() {
     await cdp.waitFor(
       `(document.body?.innerText ?? '').includes('Need you to review the chat list')`,
       'alice thread message',
-      15_000
+      90_000
     );
     const threadUi = await cdp.evaluate(`(() => {
       const body = document.body?.innerText ?? '';
@@ -508,13 +602,368 @@ async function main() {
         item.textContent?.includes('Sort by new messages')))`
     );
     assert.equal(threadMenuHasSort, false);
-    await cdp.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await pressKey(cdp, 'Escape', 'Escape');
     assert.equal(threadUi.hasComposer, true);
     assert.equal(threadUi.hasLockedAlice, true);
     assert.equal(threadUi.hasPicker, false);
     assert.equal(threadUi.recipientArrows, 0);
     assert.equal(threadUi.hasDm, true);
+    await cdp.waitFor(
+      `(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        return scroll instanceof HTMLElement &&
+          Math.abs(scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop) <= 2;
+      })()`,
+      'conversation opens at latest message',
+      15_000
+    );
+    const initialMessengerLayout = await cdp.evaluate(`(() => {
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      const footer = document.querySelector('[data-messages-thread-footer="true"]');
+      const rows = Array.from(document.querySelectorAll('[data-timeline-row-key]'));
+      const text = rows.map((row) => row.textContent ?? '');
+      const history62 = text.findIndex((value) => value.includes('Messenger history 62'));
+      const history64 = text.findIndex((value) => value.includes('Messenger history 64'));
+      const latest = text.findIndex((value) => value.includes('Need you to review the chat list'));
+      return {
+        footerOutsideScroll: footer instanceof HTMLElement &&
+          scroll instanceof HTMLElement && !scroll.contains(footer),
+        historyBeforeLatest: history62 >= 0 && history64 > history62 && latest > history64,
+        virtualized: rows.some((row) => row.hasAttribute('data-index')),
+      };
+    })()`);
+    assert.deepEqual(initialMessengerLayout, {
+      footerOutsideScroll: true,
+      historyBeforeLatest: true,
+      virtualized: false,
+    });
+
+    const revealedRemainingHistory = await cdp.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
+        candidate.textContent?.trim() === 'Show all' ||
+        /^Show \\d+ more$/.test(candidate.textContent?.trim() ?? ''));
+      if (!(button instanceof HTMLButtonElement)) return false;
+      button.click();
+      return true;
+    })()`);
+    assert.equal(revealedRemainingHistory, true, 'missing remaining history control');
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-timeline-row-key][data-index]'))`,
+      'virtualized conversation history',
+      15_000
+    );
+    await cdp.evaluate(`(() => {
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      if (!(scroll instanceof HTMLElement)) return false;
+      scroll.scrollTop = Math.max(0, Math.round((scroll.scrollHeight - scroll.clientHeight) * 0.45));
+      scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+      return true;
+    })()`);
+    await cdp.waitFor(
+      `(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        if (!(scroll instanceof HTMLElement)) return false;
+        const scrollRect = scroll.getBoundingClientRect();
+        const row = Array.from(document.querySelectorAll('[data-timeline-row-key]')).find((candidate) => {
+          const rect = candidate.getBoundingClientRect();
+          return rect.bottom > scrollRect.top + 1 && rect.top < scrollRect.bottom - 1;
+        });
+        if (!(row instanceof HTMLElement)) return false;
+        window.__teamChatE2eReadingAnchor = {
+          key: row.dataset.timelineRowKey,
+          top: row.getBoundingClientRect().top - scrollRect.top,
+        };
+        return Boolean(window.__teamChatE2eReadingAnchor.key);
+      })()`,
+      'reading anchor captured',
+      10_000
+    );
+    await cdp.evaluate(`(() => {
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      if (!(scroll instanceof HTMLElement)) return false;
+      // The first synthetic event advances the virtual range. Re-emit once
+      // its DOM window has settled so the viewport owner captures that range,
+      // matching the follow-up events produced by an actual user scroll.
+      scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+      const scrollRect = scroll.getBoundingClientRect();
+      const row = Array.from(document.querySelectorAll('[data-timeline-row-key]')).find(
+        (candidate) => {
+          const rect = candidate.getBoundingClientRect();
+          return rect.bottom > scrollRect.top + 1 && rect.top < scrollRect.bottom - 1;
+        }
+      );
+      if (!(row instanceof HTMLElement)) return false;
+      window.__teamChatE2eReadingAnchor = {
+        key: row.dataset.timelineRowKey,
+        top: row.getBoundingClientRect().top - scrollRect.top,
+      };
+      return Boolean(window.__teamChatE2eReadingAnchor.key);
+    })()`);
+    const userInboxPath = path.join(
+      fixture.claudeRoot,
+      'teams',
+      fixture.teamName,
+      'inboxes',
+      'user.json'
+    );
+    const userInbox = JSON.parse(await readFile(userInboxPath, 'utf8'));
+    userInbox.push({
+      from: 'alice',
+      to: 'user',
+      text: 'Messenger live append',
+      timestamp: new Date(Date.now() + 1_000).toISOString(),
+      messageId: 'dm-live-append',
+      read: false,
+      source: 'inbox',
+    });
+    await json(userInboxPath, userInbox);
+    await cdp.waitFor(
+      `window.__agentTeamsDevStore.getState()
+        .teamMessagesByName[${JSON.stringify(fixture.teamName)}]
+        ?.canonicalMessages?.some((message) => message.messageId === 'dm-live-append') === true`,
+      'live append loaded into the canonical feed',
+      30_000
+    );
+    await cdp.waitFor(
+      `(() => {
+        const anchor = window.__teamChatE2eReadingAnchor;
+        const row = anchor?.key
+          ? document.querySelector('[data-timeline-row-key="' + CSS.escape(anchor.key) + '"]')
+          : null;
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        return row instanceof HTMLElement &&
+          scroll instanceof HTMLElement &&
+          Math.abs(
+            row.getBoundingClientRect().top - scroll.getBoundingClientRect().top -
+              Math.max(anchor.top, -Math.max(0, row.getBoundingClientRect().height - 4))
+          ) <= 2 &&
+          Boolean(document.querySelector('[data-conversation-latest="true"]'));
+      })()`,
+      'reading anchor preserved after live append',
+      30_000
+    );
+    const latestControlGeometry = await cdp.evaluate(`(() => {
+      const control = document.querySelector('[data-conversation-latest="true"]');
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      const footer = document.querySelector('[data-messages-thread-footer="true"]');
+      if (!(control instanceof HTMLElement) ||
+          !(scroll instanceof HTMLElement) ||
+          !(footer instanceof HTMLElement)) return null;
+      const controlRect = control.getBoundingClientRect();
+      const scrollRect = scroll.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      return {
+        circular: Math.abs(controlRect.width - controlRect.height) <= 1,
+        compact: controlRect.width <= 40,
+        inBottomRightCorner:
+          scrollRect.right - controlRect.right >= 8 &&
+          scrollRect.right - controlRect.right <= 20 &&
+          scrollRect.bottom - controlRect.bottom >= 8 &&
+          scrollRect.bottom - controlRect.bottom <= 20,
+        aboveComposer: controlRect.bottom <= footerRect.top,
+        accessibleName: control.getAttribute('aria-label'),
+      };
+    })()`);
+    assert.deepEqual(latestControlGeometry, {
+      circular: true,
+      compact: true,
+      inBottomRightCorner: true,
+      aboveComposer: true,
+      accessibleName: 'To latest',
+    });
+    await clickPoint(
+      cdp,
+      `document.querySelector('[data-conversation-latest="true"]')`,
+      'To latest'
+    );
+    await cdp.waitFor(
+      `(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        return scroll instanceof HTMLElement &&
+          Math.abs(scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop) <= 2 &&
+          !document.querySelector('[data-conversation-latest="true"]');
+      })()`,
+      'returned to latest message',
+      15_000
+    );
     await cdp.screenshot(path.join(shotDir, 'direct-thread.png'));
+
+    const composerState = await cdp.evaluate(`(() => {
+      const container = document.querySelector('[data-messages-thread-container="true"]');
+      const textarea = container?.querySelector('textarea');
+      if (!(textarea instanceof HTMLTextAreaElement)) return null;
+      textarea.focus();
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      valueSetter?.call(textarea, 'Unsent full-screen draft');
+      textarea.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: textarea.value,
+      }));
+      textarea.setSelectionRange(7, 18);
+      window.__teamChatE2eComposer = textarea;
+      window.__teamChatE2eScroll = container.querySelector('[data-messages-thread-scroll]') ??
+        Array.from(container.querySelectorAll('div')).find((element) =>
+          getComputedStyle(element).overflowY === 'auto');
+      return {
+        focused: document.activeElement === textarea,
+        start: textarea.selectionStart,
+        end: textarea.selectionEnd,
+      };
+    })()`);
+    assert.deepEqual(composerState, { focused: true, start: 7, end: 18 });
+
+    const toggleFullScreen = async (expected, label, expectedFocus = 'switch') => {
+      const toggled = await cdp.evaluate(`(() => {
+        const toggle = document.querySelector('[role="switch"][aria-label="Full Screen"]');
+        if (!(toggle instanceof HTMLElement)) return false;
+        toggle.focus();
+        toggle.click();
+        return true;
+      })()`);
+      assert.equal(toggled, true, `missing Full Screen switch: ${label}`);
+      await cdp.waitFor(
+        `(() => {
+          const toggle = document.querySelector('[role="switch"][aria-label="Full Screen"]');
+          const focusMatches = ${JSON.stringify(expectedFocus)} === 'composer'
+            ? document.activeElement instanceof HTMLTextAreaElement &&
+              document.querySelector('[data-messages-thread-slot="main"]')?.contains(document.activeElement)
+            : document.activeElement === toggle;
+          return toggle?.getAttribute('aria-checked') === ${JSON.stringify(String(expected))} && focusMatches;
+        })()`,
+        `Full Screen ${expected ? 'ON' : 'OFF'}: ${label}`,
+        10_000
+      );
+    };
+
+    await toggleFullScreen(true, 'alice thread initial expansion');
+    const expandedUi = await cdp.evaluate(`(() => {
+      const composer = window.__teamChatE2eComposer;
+      const scroll = window.__teamChatE2eScroll;
+      const main = document.querySelector('[data-messages-thread-slot="main"]');
+      const content = main?.previousElementSibling;
+      const alice = Array.from(document.querySelectorAll('button[aria-label]')).find((button) =>
+        (button.getAttribute('aria-label') ?? '').startsWith('alice,'));
+      return {
+        sameComposer: composer instanceof HTMLTextAreaElement && main?.contains(composer),
+        sameScroll: scroll instanceof HTMLElement && main?.contains(scroll),
+        draft: composer instanceof HTMLTextAreaElement ? composer.value : null,
+        start: composer instanceof HTMLTextAreaElement ? composer.selectionStart : null,
+        end: composer instanceof HTMLTextAreaElement ? composer.selectionEnd : null,
+        selectedAlice: alice?.getAttribute('aria-current') ?? null,
+        groupVisible: Boolean(Array.from(document.querySelectorAll('button[aria-label]')).find((button) =>
+          (button.getAttribute('aria-label') ?? '').includes('Group chat'))),
+        contentInert: content?.hasAttribute('inert') ?? false,
+        contentHidden: content?.getAttribute('aria-hidden') ?? null,
+        liveContainers: document.querySelectorAll('[data-messages-thread-container="true"]').length,
+        terminalLauncherVisible: Boolean(
+          document.querySelector('[data-testid="open-terminal-floating-button"]')
+        ),
+      };
+    })()`);
+    assert.deepEqual(expandedUi, {
+      sameComposer: true,
+      sameScroll: true,
+      draft: 'Unsent full-screen draft',
+      start: 7,
+      end: 18,
+      selectedAlice: 'true',
+      groupVisible: true,
+      contentInert: true,
+      contentHidden: 'true',
+      liveContainers: 1,
+      terminalLauncherVisible: false,
+    });
+    await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen.png'));
+
+    for (let index = 0; index < 10; index += 1) {
+      await toggleFullScreen(index % 2 === 1, `identity cycle ${index + 1}`);
+    }
+    await toggleFullScreen(false, 'return live thread to sidebar');
+    const repeatedToggleState = await cdp.evaluate(`(() => {
+      const composer = window.__teamChatE2eComposer;
+      const scroll = window.__teamChatE2eScroll;
+      const sidebar = document.querySelector('[data-messages-thread-slot="sidebar"]');
+      return {
+        sameComposer: composer instanceof HTMLTextAreaElement && sidebar?.contains(composer),
+        sameScroll: scroll instanceof HTMLElement && sidebar?.contains(scroll),
+        draft: composer instanceof HTMLTextAreaElement ? composer.value : null,
+        start: composer instanceof HTMLTextAreaElement ? composer.selectionStart : null,
+        end: composer instanceof HTMLTextAreaElement ? composer.selectionEnd : null,
+        liveContainers: document.querySelectorAll('[data-messages-thread-container="true"]').length,
+      };
+    })()`);
+    assert.deepEqual(repeatedToggleState, {
+      sameComposer: true,
+      sameScroll: true,
+      draft: 'Unsent full-screen draft',
+      start: 7,
+      end: 18,
+      liveContainers: 1,
+    });
+
+    const mentionPrepared = await cdp.evaluate(`(() => {
+      const textarea = window.__teamChatE2eComposer;
+      if (!(textarea instanceof HTMLTextAreaElement)) return false;
+      textarea.focus();
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      valueSetter?.call(textarea, '@a');
+      textarea.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: textarea.value,
+      }));
+      textarea.setSelectionRange(2, 2);
+      textarea.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', bubbles: true }));
+      return true;
+    })()`);
+    assert.equal(mentionPrepared, true);
+    await cdp.waitFor(
+      `(() => {
+        const popup = document.querySelector('[data-mention-suggestions="above"]');
+        const textarea = window.__teamChatE2eComposer;
+        if (!(popup instanceof HTMLElement) || !(textarea instanceof HTMLElement)) return false;
+        const popupRect = popup.getBoundingClientRect();
+        const textareaRect = textarea.getBoundingClientRect();
+        return popupRect.bottom <= textareaRect.top + 2 && popupRect.top >= 0;
+      })()`,
+      'mention suggestions above footer',
+      10_000
+    );
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const mentionGeometry = await cdp.evaluate(`(() => {
+      const popup = document.querySelector('[data-mention-suggestions="above"]');
+      const textarea = window.__teamChatE2eComposer;
+      const footer = document.querySelector('[data-messages-thread-footer="true"]');
+      if (!(popup instanceof HTMLElement) || !(textarea instanceof HTMLElement)) return null;
+      const popupRect = popup.getBoundingClientRect();
+      const textareaRect = textarea.getBoundingClientRect();
+      return {
+        aboveTextarea: popupRect.bottom <= textareaRect.top + 2,
+        notClippedByFooter: !(footer instanceof HTMLElement) || !footer.contains(popup),
+        inViewport: popupRect.top >= 0 && popupRect.bottom <= innerHeight,
+      };
+    })()`);
+    assert.deepEqual(mentionGeometry, {
+      aboveTextarea: true,
+      notClippedByFooter: true,
+      inViewport: true,
+    });
+    await cdp.screenshot(path.join(shotDir, 'mention-suggestions-above.png'));
+    await pressKey(cdp, 'Escape', 'Escape');
+    await cdp.evaluate(`(() => {
+      const textarea = window.__teamChatE2eComposer;
+      if (!(textarea instanceof HTMLTextAreaElement)) return;
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      valueSetter?.call(textarea, 'Unsent full-screen draft');
+      textarea.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: textarea.value,
+      }));
+      textarea.setSelectionRange(7, 18);
+    })()`);
+
     await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
       button.getAttribute('aria-label') === 'Back to chats')?.click()`);
     await cdp.waitFor(
@@ -523,8 +972,108 @@ async function main() {
       'returned to chat list',
       15_000
     );
+    await toggleFullScreen(true, 'list opens Group chat', 'composer');
+    await cdp.waitFor(
+      `(() => {
+        const main = document.querySelector('[data-messages-thread-slot="main"]');
+        const selected = Array.from(document.querySelectorAll('button[aria-current="true"]'));
+        return main?.querySelector('[data-messages-thread-container="true"]') &&
+          selected.some((button) => (button.getAttribute('aria-label') ?? '').includes('Group chat'));
+      })()`,
+      'expanded Group chat selected from list',
+      15_000
+    );
+    await cdp.screenshot(path.join(shotDir, 'group-chat-full-screen.png'));
+    await toggleFullScreen(false, 'leave full screen for bottom sheet');
+    await cdp.evaluate(`window.__agentTeamsDevStore.getState().setMessagesPanelMode('bottom-sheet')`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('button[aria-label="Message bottom sheet actions"]')) &&
+        Boolean(document.querySelector('[data-messages-thread-footer="true"]'))`,
+      'bottom sheet messenger thread',
+      15_000
+    );
+    await cdp.waitFor(
+      `(() => {
+        const footer = document.querySelector('[data-messages-thread-footer="true"]');
+        return footer instanceof HTMLElement && footer.getBoundingClientRect().bottom <= innerHeight + 1;
+      })()`,
+      'bottom sheet footer layout',
+      10_000
+    );
+    const bottomSheetGeometry = await cdp.evaluate(`(() => {
+      const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+      const footer = document.querySelector('[data-messages-thread-footer="true"]');
+      if (!(scroll instanceof HTMLElement) || !(footer instanceof HTMLElement)) return null;
+      const scrollRect = scroll.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      return {
+        footerOutsideScroll: !scroll.contains(footer),
+        noOverlap: scrollRect.bottom <= footerRect.top + 1,
+        footerReachable: footerRect.top < innerHeight && footerRect.bottom <= innerHeight + 1,
+        oneOuterScrollOwner: document.querySelectorAll('[data-messages-thread-scroll="true"]').length,
+        terminalLauncherVisible: Boolean(
+          document.querySelector('[data-testid="open-terminal-floating-button"]')
+        ),
+      };
+    })()`);
+    assert.deepEqual(bottomSheetGeometry, {
+      footerOutsideScroll: true,
+      noOverlap: true,
+      footerReachable: true,
+      oneOuterScrollOwner: 1,
+      terminalLauncherVisible: false,
+    });
+    await cdp.screenshot(path.join(shotDir, 'group-chat-bottom-sheet.png'));
+    await clickPoint(
+      cdp,
+      `document.querySelector('button[aria-label="Message bottom sheet actions"]')`,
+      'Message bottom sheet actions'
+    );
+    await clickPoint(
+      cdp,
+      `Array.from(document.querySelectorAll('[role="menuitem"]')).find((item) =>
+        item.textContent?.includes('Collapse sheet'))`,
+      'Collapse sheet'
+    );
+    await cdp.waitFor(
+      `!document.querySelector('[data-messages-thread-container="true"]')`,
+      'bottom sheet header-only collapse',
+      10_000
+    );
+    await clickPoint(
+      cdp,
+      `document.querySelector('button[aria-label="Message bottom sheet actions"]')`,
+      'Message bottom sheet actions collapsed'
+    );
+    await clickPoint(
+      cdp,
+      `Array.from(document.querySelectorAll('[role="menuitem"]')).find((item) =>
+        item.textContent?.includes('Expand sheet'))`,
+      'Expand sheet'
+    );
+    await cdp.waitFor(
+      `(() => {
+        const scroll = document.querySelector('[data-messages-thread-scroll="true"]');
+        return scroll instanceof HTMLElement &&
+          Math.abs(scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop) <= 2;
+      })()`,
+      'bottom sheet reopens at latest',
+      15_000
+    );
     process.stdout.write(
-      JSON.stringify({ ok: true, teamName: fixture.teamName, shots: shotDir }, null, 2) + '\n'
+      JSON.stringify(
+        {
+          ok: true,
+          teamName: fixture.teamName,
+          shots: shotDir,
+          appPid: appProcessGroupId,
+          fixtureRoot: fixture.root,
+          cdpPort: port,
+          keptOpen: keepApp,
+        },
+        null,
+        2
+      ) + '\n'
     );
   } catch (error) {
     failure = error;

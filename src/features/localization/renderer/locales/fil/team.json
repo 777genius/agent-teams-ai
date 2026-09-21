@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Sa pinakabago",
       "bottomSheetActions": "Mga aksyon ng message bottom sheet",
       "collapseAll": "I-collapse lahat ng mensahe",
       "collapseSheet": "I-collapse ang sheet",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "visibleReplyCorrelation",
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
+    },
+    "fullScreen": {
+      "label": "Buong screen",
+      "teamOnly": "Available ang buong screen sa screen ng team"
     },
     "panelMode": "Mode ng message panel",
     "title": "Mga Mensahe",

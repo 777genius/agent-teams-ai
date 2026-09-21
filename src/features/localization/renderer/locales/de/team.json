@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Zu den neuesten",
       "bottomSheetActions": "Nachrichten unten Blatt Aktionen",
       "collapseAll": "Alle Nachrichten abbrechen",
       "collapseSheet": "Verfallsbogen",
@@ -773,6 +774,10 @@
         "visibleReplyCorrelation": "sichtbarReplyCorrelation",
         "visibleReplyMessageId": "sichtbarReplyNachrichten"
       }
+    },
+    "fullScreen": {
+      "label": "Vollbild",
+      "teamOnly": "Vollbild ist auf dem Team-Bildschirm verfügbar"
     },
     "panelMode": "Anzeigetafelmodus",
     "title": "Nachrichten",
