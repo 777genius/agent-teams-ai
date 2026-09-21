@@ -802,14 +802,12 @@ export const ActivityItem = memo(
       !isSlashCommandResult &&
       (message.messageKind === 'slash_command' || (isUserSent && standaloneSlashCommand !== null));
     const isCommandOutputError = isSlashCommandResult && message.commandOutput?.stream === 'stderr';
-
     // Parse reply BEFORE linkification — linkifyAllMentionsInMarkdown transforms @name
     // into markdown links which breaks the reply regex matcher
     const parsedReply = useMemo(
       () => (strippedText ? parseMessageReply(strippedText) : null),
       [strippedText]
     );
-
     // Linkify task IDs (always, for TaskTooltip) + @mentions for display
     const displayText = useMemo(() => {
       if (!strippedText) return null;
@@ -821,14 +819,16 @@ export const ActivityItem = memo(
         teamNames
       );
     }, [strippedText, message.taskRefs, memberColorMap, teamNames, systemLabel]);
-
+    const usesWideAgentContent =
+      isWideAgent &&
+      !!displayText &&
+      (displayText.length >= 600 || /```|^\s*\|.+\|\s*$/m.test(displayText));
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
       const oneLine = strippedText.replace(/\n+/g, ' ').trim();
       if (!oneLine) return '';
       return oneLine;
     }, [isCrossTeamAny, strippedText]);
-
     const rawSummary = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
         return idleSemantic.peerSummary;
@@ -1204,6 +1204,7 @@ export const ActivityItem = memo(
       <article
         data-message-presentation={isWideOrdinary ? messagePresentation.kind : undefined}
         data-wide-agent={isWideAgent ? 'true' : undefined}
+        data-wide-content={usesWideAgentContent ? 'true' : undefined}
         data-continues-author={isWideOrdinary && continuesPreviousAuthor ? 'true' : undefined}
         data-continues-next-author={isWideOrdinary && continuesNextAuthor ? 'true' : undefined}
         data-expanded={isExpanded ? 'true' : 'false'}
@@ -1590,7 +1591,8 @@ export const ActivityItem = memo(
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
                 <ExpandableContent
-                  collapsedHeight={isWideOrdinary ? 800 : undefined}
+                  collapsedHeight={isWideOrdinary ? 400 : undefined}
+                  fadeLengthPercent={isWideOrdinary ? 20 : undefined}
                   onExpand={onExpandContent}
                 >
                   <span

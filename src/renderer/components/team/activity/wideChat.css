@@ -23,6 +23,12 @@
   background: transparent !important;
 }
 
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent'][data-wide-content='true'] {
+  width: 100%;
+  max-width: 100%;
+}
+
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
   width: fit-content;
   max-width: min(72%, 640px);
