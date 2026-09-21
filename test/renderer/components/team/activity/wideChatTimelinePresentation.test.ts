@@ -88,13 +88,13 @@ describe('wide chat message presentation', () => {
     ).toEqual([]);
   });
 
-  it('reserves the toolbar gutter and applies group spacing inside the measured row', () => {
+  it('aligns outgoing bubbles to the edge and applies group spacing inside the measured row', () => {
     expect(getWideChatRowStyle('wide-chat', [false, true], 0)).toMatchObject({
-      paddingInlineEnd: 40,
+      paddingInlineEnd: 0,
       paddingBlockStart: 0,
     });
     expect(getWideChatRowStyle('wide-chat', [false, true], 1)).toMatchObject({
-      paddingInlineEnd: 40,
+      paddingInlineEnd: 0,
       paddingBlockStart: 4,
     });
     expect(getWideChatRowStyle('compact', [], 0)).toBeUndefined();
