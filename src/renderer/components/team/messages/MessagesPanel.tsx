@@ -42,7 +42,6 @@ import {
 } from '@shared/utils/teamAutomationMessages';
 import {
   CheckCheck,
-  ChevronDown,
   Dock,
   MessageSquare,
   MoreHorizontal,
@@ -67,7 +66,11 @@ import {
 } from '../sidebar/teamSidebarUiState';
 
 import { MessageComposer, type MessageRevisionRequest } from './MessageComposer';
-import { FullScreenControl, WideThreadHeader } from './MessagesExpandedChrome';
+import {
+  FullScreenControl,
+  LatestMessageControl,
+  WideThreadHeader,
+} from './MessagesExpandedChrome';
 import { MessagesInlineBackButton } from './MessagesInlineBackButton';
 import { MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
 import {
@@ -1253,21 +1256,10 @@ export const MessagesPanel = memo(function MessagesPanel({
       searchRef={bottomSheetSearchRef}
       latestControl={
         latestAvailable ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="size-9 rounded-full border border-[var(--color-border)] shadow-lg"
-                aria-label={t('messages.actions.toLatest')}
-                data-conversation-latest="true"
-                onClick={() => conversationHandleRef.current?.revealLatest()}
-              >
-                <ChevronDown className="size-4" aria-hidden="true" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">{t('messages.actions.toLatest')}</TooltipContent>
-          </Tooltip>
+          <LatestMessageControl
+            label={t('messages.actions.toLatest')}
+            onReveal={() => conversationHandleRef.current?.revealLatest()}
+          />
         ) : undefined
       }
     />

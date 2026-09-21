@@ -9,9 +9,35 @@ import {
 } from '@renderer/components/ui/dropdown-menu';
 import { Switch } from '@renderer/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { CheckCheck, MoreHorizontal } from 'lucide-react';
+import { CheckCheck, ChevronDown, MoreHorizontal } from 'lucide-react';
 
 import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems';
+
+interface LatestMessageControlProps {
+  label: string;
+  onReveal: () => void;
+}
+
+export const LatestMessageControl = ({
+  label,
+  onReveal,
+}: LatestMessageControlProps): React.JSX.Element => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant="secondary"
+        size="icon"
+        className="size-9 rounded-full border border-[var(--color-border)] shadow-lg"
+        aria-label={label}
+        data-conversation-latest="true"
+        onClick={onReveal}
+      >
+        <ChevronDown className="size-4" aria-hidden="true" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent side="left">{label}</TooltipContent>
+  </Tooltip>
+);
 
 interface FullScreenControlProps {
   label: string;
