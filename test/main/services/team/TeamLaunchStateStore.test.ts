@@ -1,4 +1,5 @@
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
+import { createPersistedLaunchSummaryProjection } from '@main/services/team/TeamLaunchSummaryProjection';
 import {
   getTeamLaunchStatePath,
   getTeamLaunchStoppedMarkerPath,
@@ -153,6 +154,48 @@ describe('TeamLaunchStateStore', () => {
       expect.any(String),
       expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
+  });
+
+  it('rejects an invalid producer snapshot without touching an existing publication', async () => {
+    const invalidSnapshot = snapshot();
+    invalidSnapshot.members.Builder.launchIdentity = {
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      selectedModel: 'opencode/big-pickle',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'opencode/big-pickle',
+      catalogId: 'opencode/big-pickle',
+      // `bundled` is not a catalog source in the persisted launch-state contract.
+      catalogSource: 'bundled' as never,
+      catalogFetchedAt: '2026-01-01T00:00:00.000Z',
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+    };
+    const statePath = getTeamLaunchStatePath('demo');
+    const summaryPath = getTeamLaunchSummaryPath('demo');
+    const existingState = `${JSON.stringify(snapshot(), null, 2)}\n`;
+    const existingSummary = `${JSON.stringify(
+      createPersistedLaunchSummaryProjection(snapshot()),
+      null,
+      2
+    )}\n`;
+    fs.writeFileSync(statePath, existingState);
+    fs.writeFileSync(summaryPath, existingSummary);
+    const remove = vi.spyOn(fs.promises, 'rm');
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', invalidSnapshot)).rejects.toThrow(
+        'Refusing to persist malformed launch state'
+      );
+
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
+      expect(fs.readFileSync(statePath, 'utf8')).toBe(existingState);
+      expect(fs.readFileSync(summaryPath, 'utf8')).toBe(existingSummary);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      remove.mockRestore();
+    }
   });
 
   it('resolves only after both files from the snapshot generation are persisted', async () => {

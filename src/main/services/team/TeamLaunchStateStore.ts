@@ -311,6 +311,25 @@ export class TeamLaunchStateStore {
     if (!beginsLaunch && (await this.isStopped(teamName))) return false;
     if (!beginsLaunch && freshness?.kind === 'launch' && options.runId !== freshness.runId)
       return false;
+    // Validate every document derived solely from the producer before taking a
+    // rollback snapshot. A producer validation failure has not mutated
+    // anything, so it must not restore (or remove) an otherwise valid prior
+    // publication as a side effect of handling the failure.
+    const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
+    const producerStateDocument = {
+      ...mergeLaunchState(null, snapshot),
+      publicationRunId: options.runId,
+    };
+    const producerSummaryDocument = {
+      ...launchSummary,
+      publicationRunId: options.runId,
+    } as JsonRecord;
+    if (!isSupportedLaunchStateDocument(teamName, producerStateDocument)) {
+      throw new Error('Refusing to persist malformed launch state');
+    }
+    if (!isSupportedLaunchSummaryDocument(teamName, producerSummaryDocument)) {
+      throw new Error('Refusing to persist malformed launch summary');
+    }
     const statePath = getTeamLaunchStatePath(teamName);
     const directory = path.dirname(statePath);
     const directoryIdentity = await fs.promises.stat(directory).catch(() => null);
@@ -327,6 +346,34 @@ export class TeamLaunchStateStore {
       }
     };
     const summaryPath = getTeamLaunchSummaryPath(teamName);
+    const [existingState, existingSummary] = await Promise.all([
+      readVersionedDocumentForMutation(statePath, 2, teamName),
+      readVersionedDocumentForMutation(summaryPath, 1),
+    ]);
+    if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
+      throw new Error('Refusing to replace malformed launch state');
+    }
+    if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
+      throw new Error('Refusing to replace malformed launch summary');
+    }
+    const stateDocument = {
+      ...mergeLaunchState(existingState, snapshot),
+      publicationRunId: options.runId,
+    };
+    const summaryDocument = replaceKnownFields(
+      existingSummary,
+      producerSummaryDocument,
+      LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
+    );
+    // Existing documents have already passed the same strict validator, but
+    // validate their merged result as well so preservation of unknown fields
+    // never weakens the producer contract.
+    if (!isSupportedLaunchStateDocument(teamName, stateDocument)) {
+      throw new Error('Refusing to persist malformed launch state');
+    }
+    if (!isSupportedLaunchSummaryDocument(teamName, summaryDocument)) {
+      throw new Error('Refusing to persist malformed launch summary');
+    }
     const paths = beginsLaunch
       ? [
           statePath,
@@ -357,37 +404,14 @@ export class TeamLaunchStateStore {
     };
     if (options.isAuthorized?.() === false) return false;
     try {
-      const [existingState, existingSummary] = await Promise.all([
-        readVersionedDocumentForMutation(statePath, 2, teamName),
-        readVersionedDocumentForMutation(summaryPath, 1),
-      ]);
-      if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
-        throw new Error('Refusing to replace malformed launch state');
-      }
-      if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
-        throw new Error('Refusing to replace malformed launch summary');
-      }
-      const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
       await atomicWriteAsync(
         statePath,
-        `${JSON.stringify(
-          { ...mergeLaunchState(existingState, snapshot), publicationRunId: options.runId },
-          null,
-          2
-        )}\n`,
+        `${JSON.stringify(stateDocument, null, 2)}\n`,
         { beforeCommit }
       );
       await atomicWriteAsync(
         summaryPath,
-        `${JSON.stringify(
-          replaceKnownFields(
-            existingSummary,
-            { ...launchSummary, publicationRunId: options.runId } as unknown as JsonRecord,
-            LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
-          ),
-          null,
-          2
-        )}\n`,
+        `${JSON.stringify(summaryDocument, null, 2)}\n`,
         { beforeCommit }
       );
       if (beginsLaunch) {

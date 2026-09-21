@@ -426,6 +426,7 @@ export function mergeLaunchState(
 
 export function isSupportedLaunchStateDocument(teamName: string, document: JsonRecord): boolean {
   if (
+    document.version !== 2 ||
     document.teamName !== teamName ||
     typeof document.updatedAt !== 'string' ||
     document.updatedAt.trim().length === 0 ||

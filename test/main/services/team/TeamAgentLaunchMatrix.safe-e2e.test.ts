@@ -23057,7 +23057,7 @@ function createMixedLiveRun(input: {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: primary.leadModel,
       catalogId: primary.leadModel,
-      catalogSource: 'bundled',
+      catalogSource: 'runtime',
       catalogFetchedAt: now,
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
