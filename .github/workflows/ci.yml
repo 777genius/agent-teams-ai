@@ -169,7 +169,9 @@ jobs:
 
       - name: Test CI scripts and OpenCode proof runner safety
         if: matrix.shard == 1
-        run: node --test test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs
+        run: |
+          set -o pipefail
+          node --test test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
 
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2

@@ -11,6 +11,10 @@ describe('install-dependencies-with-retry', () => {
     'ERR_PNPM_META_FETCH_FAIL ECONNRESET',
     'getaddrinfo EAI_AGAIN registry.npmjs.org',
     'socket hang up while downloading Electron',
+    'ERR_SOCKET_TIMEOUT while downloading Electron',
+    'UND_ERR_CONNECT_TIMEOUT while downloading Electron',
+    'Socket timeout while downloading Electron',
+    'HTTPError: Response code 504\nELIFECYCLE Command failed with exit code 1',
   ]) {
     it(`retries transient network failure: ${output}`, () => {
       assert.equal(isRetryableInstallFailure(output), true);
@@ -27,4 +31,10 @@ describe('install-dependencies-with-retry', () => {
       assert.equal(isRetryableInstallFailure(output), false);
     });
   }
+
+  it('lets a later deterministic error override an earlier transient marker', () => {
+    const output =
+      'HTTPError: Response code 503\nERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile';
+    assert.equal(isRetryableInstallFailure(output), false);
+  });
 });
