@@ -14,6 +14,7 @@ import {
   buildMemberAvatarMap,
   buildMemberColorMap,
   buildMemberLaunchPresentation,
+  displayMemberName,
   getMemberRuntimeAdvisoryLabel,
   getMemberRuntimeAdvisoryTitle,
   resolveMemberIdentityColor,
@@ -73,6 +74,12 @@ function createConfirmedCodexSpawn(): {
 }
 
 describe('member identity visuals', () => {
+  it('uses conversational labels without changing stored member identities', () => {
+    expect(displayMemberName('user')).toBe('you');
+    expect(displayMemberName('team-lead')).toBe('lead');
+    expect(displayMemberName('alice')).toBe('alice');
+  });
+
   it('keeps avatar slots and accent colors synchronized across a full roster cycle', () => {
     const members = [
       createMember({ name: 'maya', agentType: 'team-lead', color: 'saffron' }),

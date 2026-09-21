@@ -911,7 +911,8 @@ describe('ActivityItem legacy system message fallback', () => {
 
     expect(host.textContent).toContain('note');
     expect(host.textContent).toContain('alice');
-    expect(host.textContent).toContain('user');
+    expect(host.textContent).toContain('you');
+    expect(host.textContent).not.toContain('user');
     expect(host.textContent).toContain('Я здесь.');
     expect(host.textContent).not.toContain('[to user]');
     expect(host.textContent).not.toContain('idle');

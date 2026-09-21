@@ -37,11 +37,13 @@ import type {
 
 /**
  * UI display name for a team member.
- * "team-lead" → "lead"; everything else passes through unchanged.
+ * "team-lead" → "lead" and the local "user" identity → "you".
  * Data layer (store, IPC, backend) must keep the original name untouched.
  */
 export function displayMemberName(name: string): string {
-  return name === 'team-lead' ? 'lead' : name;
+  if (name === 'team-lead') return 'lead';
+  if (name === 'user') return 'you';
+  return name;
 }
 
 export function agentAvatarUrl(name: string, size = 64): string {

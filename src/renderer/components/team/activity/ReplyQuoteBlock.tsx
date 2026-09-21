@@ -11,6 +11,7 @@ import type { TaskRef } from '@shared/types';
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
   appearance?: 'compact' | 'wide-chat';
+  teamName?: string;
   /** Color name for the quoted agent (resolved from memberColorMap). */
   memberColor?: string;
   /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
@@ -26,6 +27,7 @@ export const ReplyQuoteBlock = memo(
   ({
     reply,
     appearance = 'compact',
+    teamName,
     memberColor,
     bodyMaxHeight = 'max-h-56',
     replyTaskRefs,
@@ -43,12 +45,12 @@ export const ReplyQuoteBlock = memo(
             className="min-w-0 overflow-hidden border-l-2 border-blue-400/80 bg-blue-500/[0.08] px-2.5 py-1.5 leading-none"
             data-wide-reply-quote="true"
           >
-            <div className="flex h-4 min-w-0 items-center" data-wide-reply-author="true">
+            <div className="flex h-5 min-w-0 items-center" data-wide-reply-author="true">
               <MemberBadge
                 name={reply.agentName}
                 color={memberColor}
-                size="sm"
-                hideAvatar
+                teamName={teamName}
+                size="xs"
                 disableHoverCard
                 variant="text"
               />
