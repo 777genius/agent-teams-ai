@@ -53,6 +53,7 @@ export async function recomputeHostedLockDigests(ownerBytes, stackBytes, evidenc
   return { ownerSha256: sha256Digest(ownerBytes), stackSha256: sha256Digest(stackBytes), productToolchainSha256: sha256Digest(canonicalJsonBytes(pair.stack.product.toolchain)), ownerToolchainSha256: sha256Digest(canonicalJsonBytes(pair.owner.toolchain)), openCodeToolchainSha256: sha256Digest(canonicalJsonBytes(pair.stack.openCode.toolchain)), declaredDigests };
 }
 export async function materializeHostedLocksAtRoot(root, input, trustedAdapter, options = {}) {
+  requireLinuxFilesystemPublication('secure hosted lock publication');
   const resolvedRoot = path.resolve(root), result = await materializeHostedLockPair(input, trustedAdapter);
   const rootBinding = await openBoundRoot(resolvedRoot);
   const { parentHandle, rootHandle } = rootBinding;
@@ -142,13 +143,22 @@ export async function materializeHostedLocksAtRoot(root, input, trustedAdapter, 
   return { ...result, ownerPath: path.join(resolvedRoot, transactionName, OWNER_LOCK_FILENAME), stackPath: path.join(resolvedRoot, transactionName, STACK_LOCK_FILENAME),
     transactionIdentity: { device: transactionIdentity.dev.toString(), inode: transactionIdentity.ino.toString() }, warnings: cleanupErrors.map((error) => error instanceof Error ? error.message : String(error)) };
 }
+function requireLinuxFilesystemPublication(operation) {
+  if (process.platform !== 'linux') throw new Error(`${operation} is unsupported on this platform; Linux descriptor-anchored filesystems are required`);
+}
 function descriptorPath(handle) { if (process.platform === 'linux') return `/proc/self/fd/${handle.fd}`; throw new Error('secure hosted lock publication requires descriptor-anchored paths on this platform'); }
 async function linkHeldFileAt(destinationDirectory, source, destinationName) {
   if (process.platform !== 'linux' || !/^[^/]+$/u.test(destinationName)) throw new Error('secure hosted lock publication requires a Linux descriptor-link primitive');
   await new Promise((resolve, reject) => {
     let settled = false, stderr = '';
     const child = spawn('/usr/bin/python3', ['-I', '-c', DESCRIPTOR_LINK_PROGRAM, destinationName], { stdio: ['ignore', 'ignore', 'pipe', source.fd, destinationDirectory.fd] });
-    const finish = (error) => { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(); };
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
     const timer = setTimeout(() => { child.kill('SIGKILL'); finish(new Error('descriptor-link helper exceeded its execution bound')); }, DESCRIPTOR_LINK_TIMEOUT_MS);
     child.stderr.on('data', (chunk) => { if (stderr.length < 1024) stderr += chunk.toString(); });
     child.once('error', (error) => finish(new Error(`descriptor-link helper failed: ${error.message}`)));
@@ -441,7 +451,10 @@ async function verifyIndependentEvidence(input, trustedRelease) {
 }
 function evidenceIdentity(identity) {
   if (!identity || typeof identity !== 'object') return identity;
-  const { schemaVersion, lockType, lockSha256, ...subject } = identity;
+  const subject = { ...identity };
+  delete subject.schemaVersion;
+  delete subject.lockType;
+  delete subject.lockSha256;
   return subject;
 }
 function verifyTrustedRelease(input, policy) {
@@ -676,7 +689,7 @@ async function verifyBuild(identity, facts, artifactFacts, kind) {
   verifyDigest(identity.closureSha256, facts.closureBytes, `${kind}.build closure`);
   const manifest = parseCanonicalClosure(facts.closureManifestBytes, `${kind}.build closure manifest`);
   const closure = parseCanonicalClosure(facts.closureBytes, `${kind}.build closure`);
-  if (manifest.entryPath !== identity.entryPath || manifest.members.length === 0 || !sameCanonical(manifest.members, closure.members)) {
+  if (manifest.entryPath !== identity.entryPath || closure.entryPath !== manifest.entryPath || manifest.members.length === 0 || !sameCanonical(manifest.members, closure.members)) {
     throw new Error(`${kind}.build closure is incomplete or unrelated to the declared entry`);
   }
   const artifactMembers = await parseGzipTarMembers(artifactFacts?.bytes, `${kind}.artifact`, identity.entryPath);

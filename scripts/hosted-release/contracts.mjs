@@ -408,6 +408,7 @@ export function verifyHostedLockPair(ownerBytes, stackBytes) {
  * final pair verification.
  */
 export async function resolveCommittedHostedLockPair(root, options = {}) {
+  requireLinuxCommittedLockResolution();
   const resolvedRoot = path.resolve(root), rootBinding = await openBoundRoot(resolvedRoot);
   const { parentHandle, rootHandle } = rootBinding;
   try {
@@ -462,6 +463,10 @@ export async function resolveCommittedHostedLockPair(root, options = {}) {
     await rootHandle.close();
     await parentHandle.close();
   }
+}
+
+function requireLinuxCommittedLockResolution() {
+  if (process.platform !== 'linux') throw new Error('committed hosted lock resolution is unsupported on this platform; Linux descriptor-anchored filesystems are required');
 }
 
 function parseCommitMarker(bytes) {

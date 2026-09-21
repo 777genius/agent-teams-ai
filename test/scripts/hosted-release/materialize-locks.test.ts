@@ -1,20 +1,22 @@
 // @vitest-environment node
-import { link, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, unlink, writeFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { createHash, generateKeyPairSync, sign as signDetached } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
+import { constants as fsConstants, readFileSync } from 'node:fs';
+import { access, link, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { gzipSync } from 'node:zlib';
+
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { canonicalJsonBytes, createTestHostedTrustedReleaseAdapter, resolveCommittedHostedLockPair } from '../../../scripts/hosted-release/contracts.mjs';
-import { verifyHostedLocksAtRoot } from '../../../scripts/hosted-release/verify-locks.mjs';
-import type { HostedActualOwnerIdentity, HostedOpenCodeIdentity, HostedOwnerIdentity, HostedProductIdentity, HostedSourceIdentity, HostedTrustedReleaseAdapter, HostedTrustedReleasePolicy } from '../../../scripts/hosted-release/contracts.mjs';
 import {
   materializeHostedLockPair as materializeHostedLockPairWithTrust,
   materializeHostedLocksAtRoot as materializeHostedLocksAtRootWithTrust,
   recomputeHostedLockDigests,
 } from '../../../scripts/hosted-release/materialize-locks.mjs';
+import { verifyHostedLocksAtRoot } from '../../../scripts/hosted-release/verify-locks.mjs';
+
+import type { HostedActualOwnerIdentity, HostedOpenCodeIdentity, HostedOwnerIdentity, HostedProductIdentity, HostedSourceIdentity, HostedTrustedReleaseAdapter, HostedTrustedReleasePolicy } from '../../../scripts/hosted-release/contracts.mjs';
 import type {
   HostedLockEvidence,
   HostedMaterializerInput,
@@ -163,6 +165,17 @@ function replaceArtifact(value: Fixture, role: 'product' | 'owner' | 'openCode',
   resignRelease(value);
 }
 
+function replaceClosureEntryPath(value: Fixture, role: 'product' | 'owner' | 'openCode', entryPath: string) {
+  const closure = JSON.parse(value.evidence[role].build.closureBytes.toString()) as {
+    entryPath: string;
+    members: unknown[];
+  };
+  closure.entryPath = entryPath;
+  value.evidence[role].build.closureBytes = canonicalJsonBytes(closure);
+  value[role].build.closureSha256 = sha256(value.evidence[role].build.closureBytes);
+  resignRelease(value);
+}
+
 function resignRelease(value: Fixture) {
   const payload = canonicalJsonBytes({ repository: value.trustedRelease.repository, releaseId: value.trustedRelease.releaseId, policyVersion: value.trustedRelease.policyVersion, trustAdapterId: value.trustedRelease.adapterId, composition: { product: value.product, owner: value.owner, openCode: value.openCode, actualOwner: value.actualOwner, contracts: value.contracts, deploymentRecipe: value.deploymentRecipe } });
   value.evidence.release.payloadBytes = payload;
@@ -239,7 +252,48 @@ describe('hosted lock materializer', () => {
     await expect(materializeHostedLockPair(oversizedMember)).rejects.toThrow(/duplicate, traversal, or oversized/);
   });
 
-  it('publishes a committed generation atomically and refuses stale or legacy names', async () => {
+  it('rejects a re-signed closure whose entry differs from its manifest during materialization and digest recomputation', async () => {
+    const value = input();
+    const pair = await materializeHostedLockPair(value);
+    replaceClosureEntryPath(value, 'product', 'dist/rebound-product');
+    await expect(materializeHostedLockPair(value)).rejects.toThrow(
+      /closure is incomplete or unrelated to the declared entry/
+    );
+
+    const stack = JSON.parse(pair.stackBytes.toString()) as { product: { build: { closureSha256: string } } };
+    stack.product.build.closureSha256 = value.product.build.closureSha256;
+    await expect(
+      recomputeHostedLockDigests(pair.ownerBytes, canonicalJsonBytes(stack), value.evidence, value.trustedAdapter)
+    ).rejects.toThrow(/closure is incomplete or unrelated to the declared entry/);
+  });
+
+  it.each(['darwin', 'win32'] as const)(
+    'rejects %s publication and committed resolution before touching an absent root',
+    async (platform) => {
+      const parent = await mkdtemp(path.join(os.tmpdir(), `hosted-lock-unsupported-${platform}-`));
+      const root = path.join(parent, 'absent-root');
+      try {
+        await withPlatform(platform, async () => {
+          await expect(materializeHostedLocksAtRoot(root, input())).rejects.toThrow(/unsupported on this platform/);
+          await expect(resolveCommittedHostedLockPair(root)).rejects.toThrow(/unsupported on this platform/);
+          await expect(resolveCommittedHostedLockPair(root, { ifPresent: true })).rejects.toThrow(/unsupported on this platform/);
+        });
+        await expect(lstat(root)).rejects.toThrow();
+        await expect(readdir(parent)).resolves.toEqual([]);
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    }
+  );
+
+  const describeLinuxFilesystemPublication = process.platform === 'linux' ? describe : describe.skip;
+  describeLinuxFilesystemPublication('Linux filesystem publication', () => {
+    beforeAll(async () => {
+      await access('/proc/self/fd', fsConstants.R_OK | fsConstants.X_OK);
+      await access('/usr/bin/python3', fsConstants.X_OK);
+    });
+
+    it('publishes a committed generation atomically and refuses stale or legacy names', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'hosted-lock-materializer-'));
     try {
       const result = await materializeHostedLocksAtRoot(root, input());
@@ -265,7 +319,7 @@ describe('hosted lock materializer', () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
+    });
 
   it('lets the authoritative verifier accept only an unchanged marker-selected generation', async () => {
     const roots = await Promise.all(Array.from({ length: 6 }, () => mkdtemp(path.join(os.tmpdir(), 'hosted-lock-verifier-'))));
@@ -276,14 +330,14 @@ describe('hosted lock materializer', () => {
       await expect(verifyHostedLocksAtRoot(staleRoot, { ifPresent: true })).rejects.toThrow(/stale root-level/);
 
       await writeFile(path.join(malformedRoot, '.hosted-lock-commit.json'), canonicalJsonBytes({ schemaVersion: 2 }));
-      await expect(verifyHostedLocksAtRoot(malformedRoot, { ifPresent: true })).rejects.toThrow(/incomplete or invalid/);
+      await expect(verifyHostedLocksAtRoot(malformedRoot, { ifPresent: true })).rejects.toThrow(/incomplete or invalid|bounded standalone file/);
       await rm(path.join(malformedRoot, '.hosted-lock-commit.json'));
       await writeFile(path.join(malformedRoot, '.hosted-lock-commit.json.tmp'), 'temporary marker');
       await expect(verifyHostedLocksAtRoot(malformedRoot, { ifPresent: true })).rejects.toThrow(/temporary hosted lock commit marker/);
 
       const missingGeneration = await materializeHostedLocksAtRoot(missingGenerationRoot, input());
       await rm(path.dirname(missingGeneration.ownerPath), { recursive: true, force: true });
-      await expect(verifyHostedLocksAtRoot(missingGenerationRoot)).rejects.toThrow(/ENOENT|no such file|committed/);
+      await expect(verifyHostedLocksAtRoot(missingGenerationRoot)).rejects.toThrow(/ENOENT|no such file|committed|bounded standalone file/);
 
       const directGeneration = path.join(directParent, '.hosted-lock-transaction-123e4567-e89b-12d3-a456-426614174000');
       await mkdir(directGeneration);
@@ -498,9 +552,9 @@ describe('hosted lock materializer', () => {
   it.each([
     ['marker in-place corruption', async (root: string) => writeFile(path.join(root, '.hosted-lock-commit.json'), '{}\n'), /staged (identity|bytes) changed/],
     ['owner in-place corruption', async (root: string) => writeFile(path.join(root, (await generationName(root)), 'hosted-lifecycle-owner.lock.json'), '{}\n'), /staged (identity|bytes) changed/],
-    ['owner replacement', async (root: string) => { const target = path.join(root, await generationName(root), 'hosted-lifecycle-owner.lock.json'); await unlink(target); await writeFile(target, '{}\n'); }, /staged path was replaced/],
+    ['owner replacement', async (root: string) => { const target = path.join(root, await generationName(root), 'hosted-lifecycle-owner.lock.json'); await unlink(target); await writeFile(target, '{}\n'); }, /staged (path was replaced|link count changed)/],
     ['stack in-place corruption', async (root: string) => writeFile(path.join(root, (await generationName(root)), 'hosted-stack.lock.json'), '{}\n'), /staged (identity|bytes) changed/],
-    ['stack replacement', async (root: string) => { const target = path.join(root, await generationName(root), 'hosted-stack.lock.json'); await unlink(target); await writeFile(target, '{}\n'); }, /staged path was replaced/],
+    ['stack replacement', async (root: string) => { const target = path.join(root, await generationName(root), 'hosted-stack.lock.json'); await unlink(target); await writeFile(target, '{}\n'); }, /staged (path was replaced|link count changed)/],
     ['generation rename', async (root: string) => { const generation = path.join(root, await generationName(root)); await rename(generation, `${generation}-displaced`); await mkdir(generation); }, /directory identity changed/],
     ['root replacement', async (root: string) => { await rename(root, `${root}-displaced`); await mkdir(root); }, /root pathname was renamed or replaced/],
   ])('rejects post-cleanup %s before reporting publication success', async (_name, attack, expected) => {
@@ -562,7 +616,7 @@ describe('hosted lock materializer', () => {
           await unlink(temporary[0]);
           await writeFile(temporary[0], replacement);
         },
-      })).rejects.toThrow(/staged path was replaced/);
+      })).rejects.toThrow(/staged (path was replaced|link count changed)/);
       const staging = (await readdir(root)).find((name) => name.startsWith('.hosted-lock-transaction-') && !name.endsWith('.json'));
       expect(staging).toBeDefined();
       await expect(readFile(path.join(root, staging!, 'hosted-lifecycle-owner.lock.json'))).resolves.toEqual(replacement);
@@ -570,6 +624,8 @@ describe('hosted lock materializer', () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
   });
 
   it('compares the actual-owner tuple canonically rather than by property insertion order', async () => {
@@ -643,6 +699,16 @@ describe('hosted lock materializer', () => {
     expect(Object.keys(actual)).toHaveLength(56);
   });
 });
+
+async function withPlatform<T>(platform: NodeJS.Platform, operation: () => Promise<T>): Promise<T> {
+  const descriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { configurable: true, value: platform });
+  try {
+    return await operation();
+  } finally {
+    Object.defineProperty(process, 'platform', descriptor!);
+  }
+}
 
 async function generationName(root: string) {
   const name = (await readdir(root)).find((entry) => entry.startsWith('.hosted-lock-transaction-') && !entry.endsWith('.json'));
