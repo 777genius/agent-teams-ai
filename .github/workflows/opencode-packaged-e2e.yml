@@ -41,7 +41,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - run: pnpm install --frozen-lockfile
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
       - name: Stage pinned runtime
