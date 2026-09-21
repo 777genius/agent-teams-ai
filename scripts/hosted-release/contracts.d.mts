@@ -52,6 +52,24 @@ export interface HostedEligibility {
   releaseEligible: false;
 }
 
+export interface HostedActualOwnerIdentity {
+  ownerAuthority: string;
+  ownerGeneration: number;
+  ownerSessionId: string;
+  socketIdentity: { device: string; inode: string; uid: number; gid: number; mode: number };
+}
+
+export interface HostedTrustedReleasePolicy {
+  adapterId: string;
+  repository: string;
+  releaseId: string;
+  policyVersion: string;
+  publicKey: string | Uint8Array | object;
+}
+
+/** Opaque repository-owned trust adapter; it cannot be synthesized from evidence. */
+export interface HostedTrustedReleaseAdapter { readonly kind: 'hosted-release-trust-adapter'; }
+
 export interface HostedOwnerToolchain {
   nodeVersion: string;
   bunVersion: string;
@@ -71,6 +89,7 @@ export interface HostedOwnerIdentity {
     formatVersion: string;
     compatibilityDigest: string;
   };
+  actualOwner: HostedActualOwnerIdentity;
   eligibility: HostedEligibility;
 }
 
@@ -130,9 +149,49 @@ export interface HostedStackLock {
 
 export function canonicalJsonBytes(value: unknown): Buffer;
 export function sha256Digest(bytes: Uint8Array): string;
+export function normalizeActualOwner(value: HostedActualOwnerIdentity): HostedActualOwnerIdentity;
+export function actualOwnersEqual(left: HostedActualOwnerIdentity, right: HostedActualOwnerIdentity): boolean;
+/** Loads one of the repository-controlled, pinned production release policies. */
+export function loadPinnedHostedReleaseTrust(releaseId?: 'hosted-release-v1'): HostedTrustedReleaseAdapter;
+/** Test-only custom trust; throws outside NODE_ENV=test. */
+export function createTestHostedTrustedReleaseAdapter(policy: HostedTrustedReleasePolicy): HostedTrustedReleaseAdapter;
+export function trustedReleasePolicyFor(adapter: HostedTrustedReleaseAdapter): HostedTrustedReleasePolicy;
 export function parseOwnerLock(bytes: Uint8Array): HostedOwnerLock;
 export function parseStackLock(bytes: Uint8Array): HostedStackLock;
 export function verifyHostedLockPair(
   ownerBytes: Uint8Array,
   stackBytes: Uint8Array
 ): { owner: HostedOwnerLock; stack: HostedStackLock };
+export interface HostedCommittedLockResolutionOptions {
+  /** Return undefined only when no committed generation and no stale lock topology exists. */
+  ifPresent?: boolean;
+  /** Test seam used to prove marker revalidation; not for production use. */
+  onMarkerRead?: (marker: { marker: Record<string, unknown> }) => void | Promise<void>;
+  /** Test seam used to prove generation-entry revalidation; not for production use. */
+  onGenerationOpened?: (generation: { transactionName: string }) => void | Promise<void>;
+}
+
+export interface ResolvedCommittedHostedLockPair {
+  owner: HostedOwnerLock;
+  stack: HostedStackLock;
+  ownerBytes: Buffer;
+  stackBytes: Buffer;
+  ownerPath: string;
+  stackPath: string;
+  transactionIdentity: { device: string; inode: string };
+}
+
+/** Resolves only the marker-selected generation, never a bare transaction directory. */
+export function resolveCommittedHostedLockPair(root: string): Promise<ResolvedCommittedHostedLockPair>;
+export function resolveCommittedHostedLockPair(
+  root: string,
+  options: HostedCommittedLockResolutionOptions & { ifPresent: true }
+): Promise<ResolvedCommittedHostedLockPair | undefined>;
+export function resolveCommittedHostedLockPair(
+  root: string,
+  options: HostedCommittedLockResolutionOptions & { ifPresent?: false | undefined }
+): Promise<ResolvedCommittedHostedLockPair>;
+export function resolveCommittedHostedLockPair(
+  root: string,
+  options: HostedCommittedLockResolutionOptions
+): Promise<ResolvedCommittedHostedLockPair | undefined>;
