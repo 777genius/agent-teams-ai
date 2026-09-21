@@ -67,8 +67,8 @@
   )::before {
   position: absolute;
   inset-block-end: 0;
-  width: 12px;
-  height: 14px;
+  width: 18px;
+  height: 12px;
   content: '';
 }
 
@@ -76,23 +76,23 @@
   .wide-chat-message[data-message-presentation='ordinary-agent']:not(
     [data-continues-next-author='true']
   )::before {
-  inset-inline-start: 40px;
+  inset-inline-start: 34px;
   background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
-  clip-path: path('M 12 0 C 12 7 9 11 0 14 L 12 14 Z');
+  clip-path: path('M 18 0 C 16 6 11 10 0 12 C 8 12 13 12 18 12 Z');
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user']:not(
     [data-continues-next-author='true']
   )::before {
-  inset-inline-end: -8px;
+  inset-inline-end: -10px;
   background: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
-  clip-path: path('M 0 0 C 0 7 3 11 12 14 L 0 14 Z');
+  clip-path: path('M 0 0 C 2 6 7 10 18 12 C 10 12 5 12 0 12 Z');
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message-header {
-  min-height: 20px;
-  padding: 6px 10px 0 !important;
+  min-height: 18px;
+  padding: 5px 8px 0 !important;
 }
 
 [data-chat-appearance='wide-chat']
@@ -151,7 +151,7 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent']
   .wide-chat-message-body {
-  padding: 3px 10px 9px;
+  padding: 2px 8px 7px;
   background: color-mix(in srgb, var(--color-surface-raised) 72%, transparent);
   border-radius: 0 0 18px 18px;
 }
@@ -159,7 +159,7 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user']
   .wide-chat-message-body {
-  padding: 8px 12px;
+  padding: 6px 10px;
 }
 
 [data-chat-appearance='wide-chat']
@@ -171,13 +171,13 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true']
   .wide-chat-message-body {
-  padding-inline-end: 10px;
+  padding-inline-end: 8px;
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-agent'][data-continues-author='true'][data-has-recipient-route='false']
   .wide-chat-message-body {
-  padding-block: 8px;
+  padding-block: 6px;
   border-radius: 18px;
 }
 
