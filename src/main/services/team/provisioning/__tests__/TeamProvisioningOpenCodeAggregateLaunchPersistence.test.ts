@@ -159,7 +159,7 @@ async function launchAggregateRuntimeEvidenceFixture(): Promise<{
       migrateLegacyOpenCodeRuntimeState: async () => ({}),
       upsertOpenCodeRuntimeLaneIndexEntry: async () => {},
       setOpenCodeRuntimeActiveRunManifest: async () => {},
-      clearOpenCodeRuntimeLaneStorage: async () => true,
+      clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
       persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
         persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
           createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -499,7 +499,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         setOpenCodeRuntimeActiveRunManifest: async () => {
           calls.push('setActive');
         },
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         persistOpenCodeRuntimeAdapterLaunchResult: async (launchResult, input) => {
           calls.push('persist');
           expect(input.expectedMembers).toMatchObject([
@@ -594,7 +594,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
           migrateLegacyOpenCodeRuntimeState: async () => ({}),
           upsertOpenCodeRuntimeLaneIndexEntry: async () => {},
           setOpenCodeRuntimeActiveRunManifest: async () => {},
-          clearOpenCodeRuntimeLaneStorage: async () => true,
+          clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
           persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
             persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
               createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -677,7 +677,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
           laneIndexWrites.push({ state: input.state, diagnostics: input.diagnostics });
         },
         setOpenCodeRuntimeActiveRunManifest: async () => undefined,
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
           persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
             createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -814,7 +814,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         migrateLegacyOpenCodeRuntimeState: async () => ({}),
         upsertOpenCodeRuntimeLaneIndexEntry: async () => {},
         setOpenCodeRuntimeActiveRunManifest: async () => {},
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
           persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
             createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -922,7 +922,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
             laneIndexStates.push(input.state);
           },
           setOpenCodeRuntimeActiveRunManifest: async () => undefined,
-          clearOpenCodeRuntimeLaneStorage: async () => true,
+          clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
           persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
             persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
               createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -1013,7 +1013,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         migrateLegacyOpenCodeRuntimeState: async () => ({}),
         upsertOpenCodeRuntimeLaneIndexEntry: async () => undefined,
         setOpenCodeRuntimeActiveRunManifest: async () => undefined,
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
           persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
             createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -1083,7 +1083,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
             if (indexWrites === 2) throw new Error('degraded index failed');
           },
           setOpenCodeRuntimeActiveRunManifest: async () => undefined,
-          clearOpenCodeRuntimeLaneStorage: async () => true,
+          clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
           persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
             persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
               createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
@@ -1151,7 +1151,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     >((teamName, owner) => {
       runtimeOwners.set(teamName, owner);
     });
-    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => true);
+    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => 'cleared' as const);
     let indexWrites = 0;
 
     await expect(

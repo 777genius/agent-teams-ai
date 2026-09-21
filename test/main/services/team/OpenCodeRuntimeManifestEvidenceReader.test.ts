@@ -1731,9 +1731,11 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
         releaseCleanupMutation = resolve;
       });
       let mutationPaused = false;
+      let cleanupPinnedDescriptorPath: string | null = null;
       const unlinkSpy = vi.spyOn(fs, 'unlink').mockImplementation(async (target) => {
         if (!mutationPaused && target.toString().startsWith('/proc/self/fd/')) {
           mutationPaused = true;
+          cleanupPinnedDescriptorPath = target.toString();
           signalCleanupMutation();
           await cleanupMutationRelease;
         }
@@ -1795,6 +1797,9 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
 
         releaseCleanupMutation();
         await expect(cleanup).resolves.toBe('cleared');
+        // Destructive cleanup remains bound to the already-open lane
+        // descriptor, rather than resolving the mutable lane path again.
+        expect(cleanupPinnedDescriptorPath).toMatch(/^\/proc\/self\/fd\/\d+\//);
         await expect(journalRead).resolves.toEqual(
           expect.arrayContaining([
             expect.objectContaining({ idempotencyKey: 'delivery-before-cleanup' }),

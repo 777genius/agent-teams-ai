@@ -557,7 +557,9 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       })
     );
     expect(deleteSecondaryRuntimeRun).toHaveBeenCalledWith(teamName, secondaryRun.laneId);
-    expect(clearSecondaryRuntimeRuns).toHaveBeenCalledWith(teamName);
+    // Stop cleanup is run-id fenced: it may remove only the owner that was
+    // observed before the primary stop awaited, never every lane for a team.
+    expect(clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(secondaryRuns).toEqual([]);
   });
 });

@@ -3654,7 +3654,7 @@ describe(
         readLaunchState: async () => null,
         getOpenCodeRuntimeAdapter: () => adapter,
         readPersistedTeamProjectPath: () => projectPath,
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         logWarning: (message) => {
           warnings.push(message);
         },

@@ -85,6 +85,7 @@ const HOSTED_STANDALONE_LEGACY_ROUTE_INVENTORY = Object.freeze([
   'POST /api/teams/:teamName/launch',
   'POST /api/teams/:teamName/member-work-sync/:memberName/refresh',
   'POST /api/teams/:teamName/member-work-sync/report',
+  'POST /api/teams/:teamName/member-work-sync/:memberName/runtime-stop',
   'POST /api/teams/:teamName/opencode/runtime/bootstrap-checkin',
   'POST /api/teams/:teamName/opencode/runtime/deliver-message',
   'POST /api/teams/:teamName/opencode/runtime/heartbeat',
@@ -388,6 +389,7 @@ describe('hosted HTTP authorization policy', () => {
     ['HEAD', '/api/hosted/v1/events'],
     ['GET', '/api/hosted/v1/events/bootstrap'],
     ['PUT', '/api/hosted/v1/events/bootstrap'],
+    ['GET', '/api/teams/team-a/member-work-sync/alice/runtime-stop'],
   ])('forbids the wrong method in %s %s', (method, path) => {
     expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
   });
@@ -412,6 +414,7 @@ describe('hosted HTTP authorization policy', () => {
     ['GET', '/api/hosted/v1/events-stream'],
     ['POST', '/api/hosted/v1/events/bootstrap/'],
     ['POST', '/api/hosted/v1/events/bootstraps'],
+    ['POST', '/api/teams/team-a/member-work-sync/alice/runtime-stop/again'],
   ])('forbids the near-match route in %s %s', (method, path) => {
     expect(classifyHostedHttpAuthorization(method, path)).toEqual({ kind: 'forbidden' });
   });
@@ -472,6 +475,7 @@ describe('hosted HTTP authorization policy', () => {
     '/api/terminal/spawn',
     '/api/teams/synthetic/launch',
     '/api/teams/synthetic/stop',
+    '/api/teams/synthetic/member-work-sync/synthetic/runtime-stop',
     '/api/teams/synthetic/opencode/runtime/deliver-message',
   ])('removes post-v1 or unsafe route %s', (path) => {
     expect(classifyHostedHttpAuthorization('POST', path)).toEqual({ kind: 'forbidden' });

@@ -58,14 +58,18 @@ describe('InternalStorageWorkerClient physical retirement', () => {
 
   it('blocks replacement and negative proof until a timed-out writer exits', async () => {
     const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
-    const write = client.replaceStallJournalEntries('sandbox', []).catch((error: unknown) => error);
-    const queued = client.statusRead('sandbox', 'alice').catch((error: unknown) => error);
+    const write = client.replaceStallJournalEntries('sandbox', []);
+    const queued = client.statusRead('sandbox', 'alice');
+    // Attach both rejection handlers before the timer triggers retirement: the
+    // writer is ambiguous, while the queued operation never starts.
+    const writeFailure = write.catch((error: unknown) => error);
+    const queuedNotStarted = expect(queued).rejects.toMatchObject({ execution: 'not_started' });
     const first = fixture.workers[0];
     await vi.advanceTimersByTimeAsync(20_000);
-    const failure = await write;
+    const failure = await writeFailure;
     expect(failure).toBeInstanceOf(InternalStorageOperationInterruptedError);
     expect(failure).toMatchObject({ execution: 'unknown' });
-    expect(await queued).toMatchObject({ execution: 'not_started' });
+    await queuedNotStarted;
     expect(first.messages).toHaveLength(1);
     expect(first.terminate).toHaveBeenCalledTimes(1);
 
@@ -125,7 +129,7 @@ describe('InternalStorageWorkerClient physical retirement', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     await pending;
     const close = client.close();
-    expect(client.close()).toBe(close);
+    const duplicateClose = client.close();
     let closed = false;
     void close.then(() => {
       closed = true;
@@ -135,6 +139,7 @@ describe('InternalStorageWorkerClient physical retirement', () => {
     await expect(client.ping()).rejects.toThrow('client is closed');
     fixture.workers[0].finishTermination(1);
     await close;
+    await duplicateClose;
     expect(closed).toBe(true);
     expect(fixture.workers[0].terminate).toHaveBeenCalledTimes(1);
   });

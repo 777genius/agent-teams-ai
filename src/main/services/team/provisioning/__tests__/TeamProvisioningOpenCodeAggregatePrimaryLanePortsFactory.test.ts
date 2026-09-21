@@ -48,7 +48,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactory', () => {
     const migrateLegacyOpenCodeRuntimeState = vi.fn(async () => ({ degraded: false }));
     const upsertOpenCodeRuntimeLaneIndexEntry = vi.fn(async () => undefined);
     const setOpenCodeRuntimeActiveRunManifest = vi.fn(async () => undefined);
-    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => true);
+    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => 'cleared' as const);
     const ports = createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(host, {
       getTeamsBasePath: () => '/teams',
       migrateLegacyOpenCodeRuntimeState,
