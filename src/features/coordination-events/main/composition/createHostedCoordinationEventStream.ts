@@ -1,5 +1,8 @@
 import { HostedCoordinationEventBootstrapController } from '../adapters/input/http/HostedCoordinationEventBootstrapController';
-import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
+import {
+  HostedCoordinationEventStreamController,
+  type RetainHostedCoordinationEventStreamAdmission,
+} from '../adapters/input/http/HostedCoordinationEventStreamController';
 import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
 
 import { createCoordinationEventsFeature } from './createCoordinationEventsFeature';
@@ -16,6 +19,10 @@ import type {
 } from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
+
+export type {
+  RetainHostedCoordinationEventStreamAdmission,
+} from '../adapters/input/http/HostedCoordinationEventStreamController';
 
 const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
   schedule(delayMs: number, callback: () => void): () => void {
@@ -70,7 +77,9 @@ export interface HostedCoordinationEventStream {
   /** Lossy latency hint after an atomic commit through the shared storage worker. */
   notifyDurableCommit(): Promise<void>;
   register(app: unknown): void;
-  runWithStreamsDrained<T>(operation: () => Promise<T>): Promise<T>;
+  runWithStreamsDrained<T>(
+    operation: (retainAdmission: RetainHostedCoordinationEventStreamAdmission) => Promise<T>
+  ): Promise<T>;
   close(): void;
 }
 
@@ -172,7 +181,9 @@ export function createHostedCoordinationEventStream(
   let closed = false;
   return Object.freeze({
     handoff,
-    runWithStreamsDrained: <T>(operation: () => Promise<T>) => controller.runWithStreamsDrained(operation),
+    runWithStreamsDrained: <T>(
+      operation: (retainAdmission: RetainHostedCoordinationEventStreamAdmission) => Promise<T>
+    ) => controller.runWithStreamsDrained(operation),
     notifyDurableCommit: () => wakeupHub.notifyCommittedEvent({} as CoordinationEventEnvelope),
     register: (app: unknown) => {
       controller.register(app);

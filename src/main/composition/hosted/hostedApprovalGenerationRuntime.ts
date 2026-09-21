@@ -32,7 +32,9 @@ export interface HostedApprovalGenerationRuntimeOptions {
   readonly serializedBootstrap: string;
   readonly provenance: HostedProducerProvenance;
   readonly sseEmitter: ProductSseWriteEmitter;
-  readonly drainStreams: <T>(operation: () => Promise<T>) => Promise<T>;
+  readonly drainStreams: <T>(
+    operation: (retainAdmission: () => () => void) => Promise<T>
+  ) => Promise<T>;
   /** Close the independently owned lifecycle lease before the supervisor retires
    * that Owner. It grants no successor lifecycle/task/message authority. */
   readonly revokeLifecycle: () => void;
@@ -57,6 +59,7 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
   private handlerDrain = deferred();
   private streamsDone: Promise<void> | undefined;
   private releaseStreams: (() => void) | undefined;
+  private releaseCoordinationAdmission: (() => void) | undefined;
   private registered = false;
   private readonly terminal = deferred();
   private readonly sessions = new Set<string>();
@@ -137,7 +140,8 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
       const drained = deferred(), end = deferred();
       this.releaseStreams = end.resolve;
       const old = this.composition;
-      this.streamsDone = this.options.drainStreams(async () => {
+      this.streamsDone = this.options.drainStreams(async (retainAdmission) => {
+        this.releaseCoordinationAdmission = retainAdmission();
         if (this.handlers) await Promise.race([this.handlerDrain.promise, this.terminal.promise]);
         this.assertState('draining');
         await old.drain!();
@@ -197,6 +201,12 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
       this.state = 'ready';
       await this.sendReady(next.transitionSha256);
       this.assertState('ready');
+      const releaseCoordinationAdmission = this.releaseCoordinationAdmission;
+      if (!releaseCoordinationAdmission) {
+        throw new Error('approval_generation_stream_admission_missing');
+      }
+      releaseCoordinationAdmission();
+      this.releaseCoordinationAdmission = undefined;
       clearTimeout(this.deadline);
       this.transition = undefined;
     } catch (error) {

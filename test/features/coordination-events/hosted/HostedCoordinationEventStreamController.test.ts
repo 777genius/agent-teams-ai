@@ -274,7 +274,7 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
-  it('rejects gap admission and never resumes a predecessor replay after drain reopens', async () => {
+  it('keeps admission closed from drain through successor adoption', async () => {
     const pending = deferred<CoordinationReplayBatch>();
     const entered = deferred<void>();
     const controller = new HostedCoordinationEventStreamController({
@@ -291,13 +291,25 @@ describe('HostedCoordinationEventStreamController', () => {
     const serving = handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), old.reply);
     await entered.promise;
     const gap = deferred<void>(), release = deferred<void>();
-    const draining = controller.runWithStreamsDrained(async () => { gap.resolve(); await release.promise; });
+    let releaseAdmission!: () => void;
+    const draining = controller.runWithStreamsDrained(async (retainAdmission) => {
+      releaseAdmission = retainAdmission();
+      gap.resolve();
+      await release.promise;
+    });
     await gap.promise;
     const rejected = createReply();
     await handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), rejected.reply);
     expect(rejected.statusCode).toBe(503);
     release.resolve();
     await draining;
+    const retained = createReply();
+    await handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), retained.reply);
+    expect(retained.statusCode).toBe(503);
+    releaseAdmission();
+    const adopted = createReply();
+    await handler(createRequest({ origin: 'https://host.test' }), adopted.reply);
+    expect(adopted.raw.headers.at(0)?.status).toBe(200);
     pending.resolve(batch({ from: 'cursor-0', next: 'cursor-1', events: [event({ sequence: 1 })], hasMore: false }));
     await serving;
     expect(old.raw.frames).toEqual([]);

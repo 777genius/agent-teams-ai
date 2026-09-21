@@ -12,4 +12,5 @@ export {
   createHostedCoordinationEventStream,
   type CreateHostedCoordinationEventStreamOptions,
   type HostedCoordinationEventStream,
+  type RetainHostedCoordinationEventStreamAdmission,
 } from './composition/createHostedCoordinationEventStream';

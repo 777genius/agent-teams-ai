@@ -49,6 +49,15 @@ import type { CoordinationEventWakeupListener } from '../../../infrastructure/In
 
 export type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
 
+/** Releases one retained admission fence. A failed generation deliberately
+ * leaves its fence retained so the route remains fail-closed. */
+export type HostedCoordinationEventStreamAdmissionRelease = () => void;
+
+/** Returns the release for the admission fence synchronously retained before
+ * the drain waits for already-admitted writes and their evidence. */
+export type RetainHostedCoordinationEventStreamAdmission = () =>
+  HostedCoordinationEventStreamAdmissionRelease;
+
 const DEFAULT_REPLAY_BATCH_SIZE = 100;
 const MAX_REPLAY_BATCH_SIZE = 500;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
@@ -243,6 +252,7 @@ export class HostedCoordinationEventStreamController {
   private authenticationDiagnosticRecorded = false;
   private streamClosedDiagnosticRecorded = false;
   private readonly pendingWrites = new Set<Promise<boolean>>();
+  private readonly retainedAdmissions = new Set<symbol>();
 
   constructor(options: unknown) {
     const controllerOptions = options as HostedCoordinationEventStreamControllerOptions;
@@ -296,17 +306,41 @@ export class HostedCoordinationEventStreamController {
     for (const closeStream of [...this.activeStreams]) closeStream();
   }
 
-  /** Stop admission synchronously; keep admitted writes and evidence alive before retirement. */
-  async runWithStreamsDrained<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.closed || this.draining) throw new Error('event_stream_drain_unavailable');
+  /** Stop admission synchronously and retain that fence before awaiting any
+   * already-admitted writes or their evidence. The caller receives the release
+   * only after the drain completes, and must use it only after successor
+   * readiness. A failed drain deliberately leaves the fence closed. */
+  async runWithStreamsDrained<T>(
+    operation: (retainAdmission: RetainHostedCoordinationEventStreamAdmission) => Promise<T>
+  ): Promise<T> {
+    if (this.admissionClosed()) throw new Error('event_stream_drain_unavailable');
     this.draining = true;
+    const releaseAdmission = this.retainAdmission();
     try {
       await Promise.all([...this.pendingWrites]);
       for (const closeStream of [...this.activeStreams]) closeStream();
-      return await operation();
+      return await operation(() => releaseAdmission);
     } finally {
+      // The retained fence, not this transient drain state, owns admission
+      // after this point. If drain/evidence failed, nobody received its release.
       this.draining = false;
     }
+  }
+
+  private retainAdmission(): HostedCoordinationEventStreamAdmissionRelease {
+    if (this.closed || !this.draining) throw new Error('event_stream_admission_retain_unavailable');
+    const token = Symbol('hosted_coordination_event_stream_admission');
+    this.retainedAdmissions.add(token);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.retainedAdmissions.delete(token);
+    };
+  }
+
+  private admissionClosed(): boolean {
+    return this.closed || this.draining || this.retainedAdmissions.size > 0;
   }
 
   private async handle(
@@ -328,7 +362,7 @@ export class HostedCoordinationEventStreamController {
       );
       return;
     }
-    if (this.closed || this.draining) {
+    if (this.admissionClosed()) {
       const observeDiagnostic = !this.streamClosedDiagnosticRecorded;
       this.streamClosedDiagnosticRecorded = true;
       await this.sendJson(
@@ -676,7 +710,7 @@ export class HostedCoordinationEventStreamController {
     streamId: string
   ): Promise<boolean> {
     if (!(await authorizationIsCurrent(authorization, signal))) return false;
-    if (this.closed || this.draining) return false;
+    if (this.admissionClosed()) return false;
     const productSseWriteEmitter = currentProductHostedProducerSseWriteEmitter();
     const pending = (async () => {
       const disposition = await this.writer.write({ frame, raw: reply.raw, signal, streamId });
@@ -750,8 +784,7 @@ export class HostedCoordinationEventStreamController {
     this.observeResponse(reply, streamId, 'sse_headers', 'attempted');
     if (
       signal.aborted ||
-      this.closed ||
-      this.draining ||
+      this.admissionClosed() ||
       this.responseCommittedOrUnavailable(reply)
     ) {
       this.observeResponse(reply, streamId, 'sse_headers', 'skipped_closed');
@@ -775,7 +808,7 @@ export class HostedCoordinationEventStreamController {
     } catch (error) {
       // Fastify marks reply.sent at hijack time. It therefore cannot identify a
       // closed transport here: live writeHead/flushHeaders failures must escape.
-      if (!(signal.aborted || this.closed || this.draining || this.rawResponseUnavailable(reply))) {
+      if (!(signal.aborted || this.admissionClosed() || this.rawResponseUnavailable(reply))) {
         throw error;
       }
       this.observeResponse(reply, streamId, 'sse_headers', 'failed_closed');

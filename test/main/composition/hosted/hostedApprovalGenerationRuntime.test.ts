@@ -114,7 +114,7 @@ async function setup(authenticated = false, afterStreamDrain?: () => Promise<voi
     initial: first.received, serializedBootstrap: fixture.bootstrap, provenance: fixture.writer,
     sseEmitter: () => true,
     drainStreams: async operation => {
-      const result = await operation();
+      const result = await operation(() => () => undefined);
       await afterStreamDrain?.();
       return result;
     },
@@ -128,13 +128,46 @@ async function setup(authenticated = false, afterStreamDrain?: () => Promise<voi
 }
 
 describe('actual Product approval generation composition', () => {
-  it('drains the production hosted registry through real backpressure and delayed pinned evidence before ACK', async () => {
+  it('keeps Product coordination requests rejected after pending evidence is rejected', async () => {
+    const coordination = generationCoordinationStream();
+    cleanup.push(async () => { coordination.raw.destroy(); coordination.stream.close(); });
+    const evidenceStarted = deferred();
+    const f = await setup(false, undefined, undefined, {
+      drainStreams: operation => coordination.stream.runWithStreamsDrained(operation),
+      sseEmitter: async () => {
+        evidenceStarted.resolve();
+        throw new Error('evidence_rejected');
+      },
+    });
+    const opened = coordination.open();
+    await vi.waitFor(() => expect(() => coordination.heartbeat()).not.toThrow());
+    await coordination.blocked;
+
+    const preparing = f.runtime.prepare(f.ticket());
+    expect(await coordination.gapRequest()).toBe(503);
+    coordination.releaseWrite();
+    await evidenceStarted.promise;
+    await expect(preparing).rejects.toThrow('evidence_rejected');
+    await opened;
+
+    expect(f.runtime.isReady()).toBe(false);
+    // The drain's fence is installed before the rejected evidence is awaited;
+    // clearing transient drain state must never reopen this predecessor route.
+    expect(await coordination.gapRequest()).toBe(503);
+  });
+
+  it('keeps Product coordination admission closed through successor adoption after delayed evidence', async () => {
     const coordination = generationCoordinationStream();
     cleanup.push(async () => { coordination.raw.destroy(); coordination.stream.close(); });
     const evidenceStarted = deferred(), releaseEvidence = deferred();
+    const controllerDrained = deferred(), releaseDrainFinalization = deferred();
     const emit = createProductHostedProducerSseWriteEmitter({});
     const f = await setup(false, undefined, undefined, {
-      drainStreams: operation => coordination.stream.runWithStreamsDrained(operation),
+      drainStreams: async operation => {
+        await coordination.stream.runWithStreamsDrained(operation);
+        controllerDrained.resolve();
+        await releaseDrainFinalization.promise;
+      },
       sseEmitter: async (frame, identity, wrote, provenance) => {
         evidenceStarted.resolve();
         await releaseEvidence.promise;
@@ -159,7 +192,14 @@ describe('actual Product approval generation composition', () => {
     const evidence = vi.mocked(f.writer.emit).mock.calls.find(([, row]) => row.recordType === 'coordination-sse-write-succeeded');
     expect(evidence?.[1].native).toMatchObject({ ownerGeneration: 1 });
     const second = await f.endpoint(2);
-    await f.runtime.adopt(second.received);
+    const adopting = f.runtime.adopt(second.received);
+    await controllerDrained.promise;
+    // The controller has finished draining, but its retained admission fence
+    // must still reject while the runtime has not adopted the successor.
+    expect(await coordination.gapRequest()).toBe(503);
+    expect(f.runtime.isReady()).toBe(false);
+    releaseDrainFinalization.resolve();
+    await adopting;
     expect(f.runtime.isReady()).toBe(true);
     expect(f.leases[0]!.currentBinding()).toBeNull();
     expect(requireProductHostedProducerInstance(currentProductHostedProducerProvenance()!).ownerGeneration).toBe(2);

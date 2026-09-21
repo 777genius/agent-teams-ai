@@ -476,8 +476,8 @@ async function start(): Promise<void> {
       drainStreams: (operation) => {
         if (!hostedCoordinationEventStream)
           throw new Error('hosted_coordination_stream_not_initialized');
-        return hostedCoordinationEventStream.runWithStreamsDrained(() =>
-          runWithEventStreamsDrained(operation)
+        return hostedCoordinationEventStream.runWithStreamsDrained((retainAdmission) =>
+          runWithEventStreamsDrained(() => operation(retainAdmission))
         );
       },
       createRouteAdmission: (isReady) =>

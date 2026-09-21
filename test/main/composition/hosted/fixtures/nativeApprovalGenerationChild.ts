@@ -25,7 +25,9 @@ try {
     createRouteAdmission: fixture.createRouteAdmission,
     initial: { socket: first.transport.socket, selection: first.selection },
     serializedBootstrap: fixture.bootstrap, provenance: fixture.writer,
-    sseEmitter: () => true, drainStreams: async operation => operation(), revokeLifecycle: () => {},
+    sseEmitter: () => true,
+    drainStreams: async operation => operation(() => () => undefined),
+    revokeLifecycle: () => {},
     send: message => new Promise<void>((resolve, reject) => {
       process.send!(message, error => error ? reject(error) : resolve());
     }),
