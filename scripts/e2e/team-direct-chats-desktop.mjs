@@ -1293,9 +1293,9 @@ async function main() {
         height: Math.round(avatarRect.height),
         leftOfMessage: avatarRect.right <= bodyRect.left + bodyPadding,
         avatarTailGap: Math.round(articleRect.left + tailLeft - avatarRect.right),
-        tailJoinsBubble:
-          Math.abs(articleRect.left + tailLeft + Number.parseFloat(tailStyle.width) -
-            bodyRect.left) <= 1,
+        tailBubbleOverlap: Math.round(
+          articleRect.left + tailLeft + Number.parseFloat(tailStyle.width) - bodyRect.left
+        ),
         tailSize: [tailStyle.width, tailStyle.height],
         compactPadding: [
           bodyStyle.paddingBlockStart,
@@ -1309,9 +1309,9 @@ async function main() {
       width: 32,
       height: 32,
       leftOfMessage: true,
-      avatarTailGap: 1,
-      tailJoinsBubble: true,
-      tailSize: ['12px', '13px'],
+      avatarTailGap: 0,
+      tailBubbleOverlap: 5,
+      tailSize: ['17px', '15px'],
       compactPadding: ['2px', '8px', '7px', '8px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(`(() => {

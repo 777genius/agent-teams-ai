@@ -98,8 +98,8 @@
   )::before {
   position: absolute;
   inset-block-end: 0;
-  width: 12px;
-  height: 13px;
+  width: 17px;
+  height: 15px;
   content: '';
 }
 
@@ -107,18 +107,20 @@
   .wide-chat-message[data-message-presentation='ordinary-agent']:not(
     [data-continues-next-author='true']
   )::before {
-  inset-inline-start: 33px;
+  inset-inline-start: 32px;
   background: var(--wide-chat-bubble-bg);
-  clip-path: path('M 12 0 V 13 H 0 C 5 12 10 7 12 0 Z');
+  clip-path: path(
+    'M 12 0 C 12 6 9 11 0 13 C 2 14 4 15 6 15 C 10 14 13 12 17 12 C 14 9 12 5 12 0 Z'
+  );
 }
 
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user']:not(
     [data-continues-next-author='true']
   )::before {
-  inset-inline-end: -11px;
+  inset-inline-end: -12px;
   background: var(--wide-chat-bubble-bg);
-  clip-path: path('M 0 0 V 13 H 12 C 7 12 2 7 0 0 Z');
+  clip-path: path('M 5 0 C 5 6 8 11 17 13 C 15 14 13 15 11 15 C 7 14 4 12 0 12 C 3 9 5 5 5 0 Z');
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message-header {
