@@ -393,6 +393,39 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await expect(fs.readFile(pinned.receipt.pinPath, 'utf8')).resolves.toBe('replacement');
   });
 
+  it('settles a detached-generation cleanup that another cleaner already removed', async () => {
+    const { publicPath } = await createRoot();
+    await writeFile(publicPath, 'old');
+    const identity = await fs.lstat(publicPath);
+    const detached = await detachTaskAttachmentGeneration(publicPath, {
+      dev: identity.dev,
+      ino: identity.ino,
+      birthtimeMs: identity.birthtimeMs,
+      size: identity.size,
+    });
+    if (detached.kind !== 'detached') throw new Error('Expected detached generation');
+
+    const realLstat = fs.lstat.bind(fs);
+    const realRm = fs.rm.bind(fs);
+    let privateArtifactRemoved = false;
+    const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
+      if (!privateArtifactRemoved && basename(String(filePath)).includes('.deleting.')) {
+        privateArtifactRemoved = true;
+        await realRm(String(filePath));
+        throw Object.assign(new Error('already removed'), { code: 'ENOENT' });
+      }
+      return realLstat(filePath);
+    });
+
+    try {
+      await expect(finalizeDetachedTaskAttachmentGeneration(detached.receipt)).resolves.toBeUndefined();
+    } finally {
+      lstat.mockRestore();
+    }
+
+    await expect(fs.lstat(detached.receipt.detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('does not remove a replacement published while a restored receipt is cleaned up', async () => {
     const { publicPath } = await createRoot();
     await writeFile(publicPath, 'old');

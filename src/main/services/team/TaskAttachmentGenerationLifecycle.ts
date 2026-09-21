@@ -71,19 +71,30 @@ async function removeExactTaskAttachmentGeneration(
   targetPath: string,
   expectedIdentity: TaskAttachmentFileIdentity
 ): Promise<'deleted' | 'missing' | 'changed'> {
-  return removePathWithIdentityFenceAsync(targetPath, {
-    force: true,
-    durability: 'strict',
-    validateDetached: async (detachedPath) => {
-      const detached = await lstatOrNull(detachedPath);
-      return Boolean(
-        detached &&
-        detached.isFile() &&
-        !detached.isSymbolicLink() &&
-        isSameTaskAttachmentFileIdentity(detached, expectedIdentity)
-      );
-    },
-  });
+  try {
+    return await removePathWithIdentityFenceAsync(targetPath, {
+      force: true,
+      durability: 'strict',
+      validateDetached: async (detachedPath) => {
+        const detached = await lstatOrNull(detachedPath);
+        return Boolean(
+          detached &&
+          detached.isFile() &&
+          !detached.isSymbolicLink() &&
+          isSameTaskAttachmentFileIdentity(detached, expectedIdentity)
+        );
+      },
+    });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error;
+
+    // The identity-fenced primitive may have already detached this private
+    // artifact when a concurrent cleanup removes it. Treat that as terminal
+    // only if the public name remains absent; a newly published name is a
+    // material conflict and must remain visible to the caller.
+    return (await lstatOrNull(targetPath)) ? 'changed' : 'missing';
+  }
 }
 
 /**

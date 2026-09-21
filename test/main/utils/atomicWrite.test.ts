@@ -17,6 +17,8 @@ vi.mock('fs', () => ({
     rename: vi.fn(),
     copyFile: vi.fn(),
     unlink: vi.fn(),
+    mkdtemp: vi.fn(),
+    rmdir: vi.fn(),
   },
 }));
 
@@ -40,6 +42,8 @@ const mockReaddir = vi.mocked(fs.promises.readdir);
 const mockRename = vi.mocked(fs.promises.rename);
 const mockCopyFile = vi.mocked(fs.promises.copyFile);
 const mockUnlink = vi.mocked(fs.promises.unlink);
+const mockMkdtemp = vi.mocked(fs.promises.mkdtemp);
+const mockRmdir = vi.mocked(fs.promises.rmdir);
 
 const TARGET_PATH = path.resolve('/Users/test/project/src/index.ts');
 const TARGET_DIR = path.dirname(TARGET_PATH);
@@ -96,6 +100,8 @@ beforeEach(() => {
   mockReaddir.mockResolvedValue([]);
   mockRename.mockResolvedValue(undefined);
   mockUnlink.mockResolvedValue(undefined);
+  mockMkdtemp.mockImplementation(async (prefix) => `${String(prefix)}cleanup-test`);
+  mockRmdir.mockResolvedValue(undefined);
 });
 
 // =============================================================================
@@ -624,6 +630,113 @@ describe('atomicCreateAsync', () => {
     await cleanupAtomicCreateTempLinks(TARGET_PATH);
 
     expect(mockUnlink).toHaveBeenCalledTimes(1);
-    expect(String(mockUnlink.mock.calls[0]?.[0])).toContain('.review-create.');
+    expect(String(mockUnlink.mock.calls[0]?.[0])).toContain('.review-create-cleanup-');
+    expect(mockUnlink).not.toHaveBeenCalledWith(
+      path.join(TARGET_DIR, '.review-create.12345678-1234-1234-1234-123456789abc.tmp')
+    );
+    expect(mockRmdir).toHaveBeenCalledTimes(1);
+  });
+
+  it(
+    'deletes only the detached generation when a new guard is published after validation',
+    async () => {
+      const guardName = '.review-create.12345678-1234-1234-1234-123456789abc.tmp';
+      const guardPath = path.join(TARGET_DIR, guardName);
+      const cleanupDirectory = path.join(TARGET_DIR, '.review-create-cleanup-race');
+      const detachedPath = path.join(cleanupDirectory, guardName);
+      const ownedStats = {
+        dev: 7,
+        ino: 9,
+        birthtimeMs: 11,
+        size: 13,
+        nlink: 2,
+        isFile: () => true,
+        isSymbolicLink: () => false,
+      } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>;
+      mockLstat.mockResolvedValue(ownedStats);
+      mockReaddir.mockResolvedValue(
+        [guardName] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>
+      );
+      mockMkdtemp.mockResolvedValue(cleanupDirectory);
+      let replacementPublished = false;
+      mockRename.mockImplementationOnce(async (source, destination) => {
+        expect(source).toBe(guardPath);
+        expect(destination).toBe(detachedPath);
+        // A concurrent publisher wins the public guard name immediately after
+        // the owned generation has been detached.
+        replacementPublished = true;
+      });
+
+      await cleanupAtomicCreateTempLinks(TARGET_PATH);
+
+      // The replacement is published at guardPath after rename. Cleanup only
+      // touches the detached path, so the public replacement is never removed.
+      expect(replacementPublished).toBe(true);
+      expect(mockRename).toHaveBeenCalledWith(guardPath, detachedPath);
+      expect(mockUnlink).toHaveBeenCalledWith(detachedPath);
+      expect(mockUnlink).not.toHaveBeenCalledWith(guardPath);
+    }
+  );
+
+  it('restores or preserves a foreign generation moved between validation and detach', async () => {
+    const guardName = '.review-create.12345678-1234-1234-1234-123456789abc.tmp';
+    const guardPath = path.join(TARGET_DIR, guardName);
+    const cleanupDirectory = path.join(TARGET_DIR, '.review-create-cleanup-race');
+    const detachedPath = path.join(cleanupDirectory, guardName);
+    const ownedStats = {
+      dev: 7,
+      ino: 9,
+      birthtimeMs: 11,
+      size: 13,
+      nlink: 2,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>;
+    const foreignStats = {
+      dev: 7,
+      ino: 10,
+      birthtimeMs: 12,
+      size: 14,
+      nlink: 1,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>;
+    mockLstat
+      .mockResolvedValueOnce(ownedStats)
+      .mockResolvedValueOnce(ownedStats)
+      .mockResolvedValueOnce(foreignStats);
+    mockReaddir.mockResolvedValue(
+      [guardName] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>
+    );
+    mockMkdtemp.mockResolvedValue(cleanupDirectory);
+    // A replacement already recreated guardPath, so a no-clobber restore must
+    // leave both it and the foreign detached object untouched.
+    mockLink.mockRejectedValueOnce(Object.assign(new Error('exists'), { code: 'EEXIST' }));
+
+    await cleanupAtomicCreateTempLinks(TARGET_PATH);
+
+    expect(mockLink).toHaveBeenCalledWith(detachedPath, guardPath);
+    expect(mockUnlink).not.toHaveBeenCalled();
+    expect(mockRmdir).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the filesystem cannot report a trustworthy inode', async () => {
+    mockLstat.mockResolvedValue({
+      dev: 7,
+      ino: 0,
+      birthtimeMs: 11,
+      size: 13,
+      nlink: 2,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+    mockReaddir.mockResolvedValue([
+      '.review-create.12345678-1234-1234-1234-123456789abc.tmp',
+    ] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>);
+
+    await cleanupAtomicCreateTempLinks(TARGET_PATH);
+
+    expect(mockUnlink).not.toHaveBeenCalled();
+    expect(mockMkdtemp).not.toHaveBeenCalled();
   });
 });

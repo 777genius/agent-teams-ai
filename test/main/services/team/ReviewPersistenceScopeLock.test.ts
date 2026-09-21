@@ -200,7 +200,7 @@ describe('ReviewPersistenceScopeLock', () => {
   });
 
   it.skipIf(process.platform === 'win32')(
-    'gives the process-start probe only its exact host locale environment',
+    'isolates the process-start probe environment while forcing the C locale',
     async () => {
       const logPath = path.join(teamsBasePath, 'environment-probe.log');
       const counterPath = path.join(teamsBasePath, 'environment-probe-counter.txt');
@@ -225,8 +225,11 @@ describe('ReviewPersistenceScopeLock', () => {
 
       expect(firstResult.code).toBe(0);
       expect(secondResult.code).toBe(0);
-      expect(secondResult.stderr).toContain("env: { LC_ALL: 'C' }");
-      expect(secondResult.stderr).toContain("envPairs: [ 'LC_ALL=C' ]");
+      // Node's child-process diagnostic representation is not a contract: it
+      // may render this as an object entry or an env pair, and the probe now
+      // also carries the minimal PATH/LANG/TZ values it needs. The security and
+      // parsing invariant is that its effective LC_ALL is deterministic.
+      expect(secondResult.stderr).toMatch(/\bLC_ALL(?:=|:\s*)['"]?C['"]?/);
       expect(secondResult.stderr).not.toContain(AMBIENT_PROVIDER_POISON);
       expect(secondResult.stderr).not.toContain('CLAUDE_CODE_USE_OPENAI');
       expect(secondResult.stderr).not.toContain('hostile-locale');

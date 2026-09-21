@@ -1,6 +1,8 @@
 import { parseMemberId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { InternalStorageOperationInterruptedError } from '../../../src/features/internal-storage/core/application/InternalStorageOperationInterruptedError';
+
 const hoisted = vi.hoisted(() => {
   interface MockWorker {
     messages: Array<{ id: string; op: string; payload: unknown }>;
@@ -171,8 +173,18 @@ describe('InternalStorageWorkerClient', () => {
     const failure = new Error('test worker failure');
     worker.handlers.get('error')?.(failure);
 
-    await expect(activeError).resolves.toBe(failure);
-    await expect(queuedError).resolves.toBe(failure);
+    await expect(activeError).resolves.toBeInstanceOf(InternalStorageOperationInterruptedError);
+    await expect(activeError).resolves.toMatchObject({
+      message: failure.message,
+      execution: 'unknown',
+      cause: failure,
+    });
+    await expect(queuedError).resolves.toBeInstanceOf(InternalStorageOperationInterruptedError);
+    await expect(queuedError).resolves.toMatchObject({
+      message: failure.message,
+      execution: 'not_started',
+      cause: failure,
+    });
     expect(worker.messages.map(({ op }) => op)).toEqual(['ping']);
     consoleError.mockRestore();
   });
