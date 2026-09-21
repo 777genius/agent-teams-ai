@@ -83,7 +83,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
           data-wide-chat-message-footer={isWide ? 'true' : undefined}
           className={
             isWide
-              ? 'activity-message-toolbar flex w-auto min-w-0 items-center gap-1 rounded-lg bg-[var(--color-surface-raised)] px-1 py-0.5 shadow-md'
+              ? 'activity-message-toolbar flex w-auto min-w-0 items-center gap-1 rounded-lg bg-[var(--color-surface-raised)] px-1 py-0.5 shadow-none'
               : 'activity-message-toolbar w-auto min-w-0 bg-[var(--color-surface-raised)] p-1 shadow-none data-[side=left]:rounded-r-none data-[side=right]:rounded-l-none data-[side=left]:border-r-0 data-[side=right]:border-l-0'
           }
           onPointerDown={(event) => event.stopPropagation()}
