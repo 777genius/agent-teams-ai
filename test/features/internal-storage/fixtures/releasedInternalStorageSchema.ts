@@ -19,7 +19,7 @@ type Database = InstanceType<typeof DatabaseConstructor>;
 // No copied DDL, rewritten versions, swallowed migration errors or production hooks.
 export function createReleasedInternalStorageSchema(
   db: Database,
-  version: 6 | 7 | 8 | 9 | 10 | 17 | 18 | 20 | 21 | 22 | 24 | 25 | 27 | 28 | 29
+  version: 4 | 6 | 7 | 8 | 9 | 10 | 17 | 18 | 20 | 21 | 22 | 24 | 25 | 27 | 28 | 29 | 30 | 31
 ): void {
   expect(readSchemaVersion(db)).toBe(0);
   expect(db.prepare("SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'").all()).toEqual([]);
@@ -42,20 +42,169 @@ export function createReleasedInternalStorageSchema(
     if (error !== prefixComplete) throw error;
   }
   expect(readSchemaVersion(db)).toBe(version);
-  if (version < 29) expectReleasedIdentitySchema(db);
+  if (version >= 5 && version < 29) expectReleasedIdentitySchema(db);
+}
+
+const schema = (namespace: 'main' | 'temp') =>
+  `SELECT type, name, tbl_name, sql FROM ${namespace}.sqlite_schema ORDER BY type, name, tbl_name`;
+const REPORT_INTENTS = 'member_work_sync_report_intents';
+const JOURNAL_COLUMN_SQL = ' journal_json TEXT,';
+
+/**
+ * SQLite's ADD COLUMN inserts at the delimiter immediately before the first
+ * table constraint, retaining every surrounding byte. Locate that structural
+ * anchor instead of assuming the formatting of a released CREATE TABLE.
+ */
+function journalColumnAnchor(sql: string): number {
+  let depth = 0;
+  let opening = -1;
+  const anchors: number[] = [];
+  let quote: "'" | '"' | '`' | ']' | null = null;
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index];
+    if (quote) {
+      if (character === quote) {
+        if ((quote === "'" || quote === '"') && sql[index + 1] === quote) index += 1;
+        else quote = null;
+      }
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '[') {
+      quote = ']';
+      continue;
+    }
+    if (character === '(') {
+      if (depth === 0) opening = index;
+      depth += 1;
+      continue;
+    }
+    if (character === ',' && depth === 1 && /^\s*PRIMARY\s+KEY\b/iu.test(sql.slice(index + 1))) {
+      anchors.push(index + 1);
+      continue;
+    }
+    if (character !== ')') continue;
+    depth -= 1;
+    if (depth === 0 && opening >= 0 && /^\s*$/u.test(sql.slice(index + 1))) break;
+  }
+  if (anchors.length === 1) return anchors[0]!;
+  throw new Error('released-v30-report-intents-schema-missing-unambiguous-journal-anchor');
+}
+
+export function addExpectedV31JournalColumnSql(releasedSql: string): string {
+  const anchor = journalColumnAnchor(releasedSql);
+  return `${releasedSql.slice(0, anchor)}${JOURNAL_COLUMN_SQL}${releasedSql.slice(anchor)}`;
+}
+
+export function removeExpectedV31JournalColumnSql(currentSql: string): string {
+  const anchor = journalColumnAnchor(currentSql);
+  const journalStart = anchor - JOURNAL_COLUMN_SQL.length;
+  if (currentSql.slice(journalStart, anchor) !== JOURNAL_COLUMN_SQL) {
+    throw new Error('current-v31-report-intents-schema-missing-exact-journal-column');
+  }
+  // journalColumnAnchor points just after the journal segment in v31. Remove
+  // that exact added segment only, leaving the released prefix/suffix bytes
+  // (including their historical whitespace) untouched.
+  return `${currentSql.slice(0, journalStart)}${currentSql.slice(anchor)}`;
+}
+
+/** The sole v31 schema difference is an appended nullable report journal. */
+function assertExactV31JournalProjection(db: Database, reference: Database): void {
+  const current = db.prepare(schema('main')).all() as { name: string; sql: string | null }[];
+  const released = reference.prepare(schema('main')).all() as { name: string; sql: string | null }[];
+  const currentReport = current.filter(({ name }) => name === REPORT_INTENTS);
+  const releasedReport = released.filter(({ name }) => name === REPORT_INTENTS);
+  expect(current.filter(({ name }) => name !== REPORT_INTENTS))
+    .toEqual(released.filter(({ name }) => name !== REPORT_INTENTS));
+  expect(currentReport).toHaveLength(1);
+  expect(releasedReport).toHaveLength(1);
+  const releasedSql = releasedReport[0]?.sql;
+  if (typeof releasedSql !== 'string') {
+    throw new Error('released-v30-report-intents-schema-missing');
+  }
+  const expectedV31Sql = addExpectedV31JournalColumnSql(releasedSql);
+  // The transforms are deliberately inverse byte edits: all historical DDL
+  // bytes, including whitespace and newlines, survive the v31 projection.
+  expect(removeExpectedV31JournalColumnSql(expectedV31Sql)).toBe(releasedSql);
+  expect(currentReport[0]).toEqual({
+    ...releasedReport[0],
+    sql: expectedV31Sql,
+  });
+  expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+}
+
+function restoreReleasedV30SchemaInTransaction(db: Database, reference: Database): void {
+  const journalColumn = (db.pragma('table_info(member_work_sync_report_intents)') as {
+    cid: number;
+    name: string;
+    type: string;
+    notnull: number;
+    dflt_value: unknown;
+    pk: number;
+  }[]).find(({ name }) => name === 'journal_json');
+  // v9 appended team_key at cid 10; v31 appends journal_json at cid 11.
+  expect(journalColumn).toEqual({
+    cid: 11,
+    name: 'journal_json',
+    type: 'TEXT',
+    notnull: 0,
+    dflt_value: null,
+    pk: 0,
+  });
+  assertExactV31JournalProjection(db, reference);
+  const v31Sql = db.prepare(
+    "SELECT sql FROM main.sqlite_schema WHERE name = 'member_work_sync_report_intents'"
+  ).get() as { sql: string } | undefined;
+  if (typeof v31Sql?.sql !== 'string') throw new Error('current-v31-report-intents-schema-missing');
+  expect(db.prepare(
+    'SELECT COUNT(*) AS count FROM member_work_sync_report_intents WHERE journal_json IS NOT NULL'
+  ).get()).toEqual({ count: 0 });
+  db.exec('ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json');
+  db.pragma('user_version = 30');
+  const restoredSql = db.prepare(
+    "SELECT sql FROM main.sqlite_schema WHERE name = 'member_work_sync_report_intents'"
+  ).get() as { sql: string } | undefined;
+  expect(restoredSql?.sql).toBe(removeExpectedV31JournalColumnSql(v31Sql.sql));
+  expect(db.prepare(schema('main')).all()).toEqual(reference.prepare(schema('main')).all());
+  expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+}
+
+/**
+ * Test-only projection of the current v31 schema to the exact released v30
+ * snapshot. v31's nullable journal column must be empty and byte-for-byte
+ * compatible before it is removed; no unknown current state is discarded.
+ */
+export function restoreReleasedV30Schema(db: Database): void {
+  expect(readSchemaVersion(db)).toBe(31);
+  const reference = new DatabaseFixture(':memory:');
+  try {
+    createReleasedInternalStorageSchema(reference, 30);
+    db.transaction(() => restoreReleasedV30SchemaInTransaction(db, reference))();
+  } finally {
+    reference.close();
+  }
+  expect(readSchemaVersion(db)).toBe(30);
 }
 
 // Test-only current-to-released projection. Check every v30 object before
 // removing it, then compare the COMPLETE remaining schema with a real v29
 // migration prefix. Never relabel current DDL as a historical fixture.
 export function restoreReleasedV29Schema(db: Database): void {
-  expect(readSchemaVersion(db)).toBe(30);
-  const reference = new DatabaseFixture(':memory:');
+  const current = readSchemaVersion(db);
+  expect(current === 30 || current === 31).toBe(true);
+  const v29Reference = new DatabaseFixture(':memory:');
+  const v30Reference = current === 31 ? new DatabaseFixture(':memory:') : null;
   try {
-    createReleasedInternalStorageSchema(reference, 29);
+    createReleasedInternalStorageSchema(v29Reference, 29);
+    if (v30Reference) createReleasedInternalStorageSchema(v30Reference, 30);
     db.transaction(() => {
-      const schema = (namespace: 'main' | 'temp') =>
-        `SELECT type, name, tbl_name, sql FROM ${namespace}.sqlite_schema ORDER BY type, name, tbl_name`;
+      // Keep v31 -> v30 -> v29 validation and both marker changes inside this
+      // single transaction. A v30 rejection must not leave a partial v30 projection.
+      if (v30Reference) restoreReleasedV30SchemaInTransaction(db, v30Reference);
+      expect(readSchemaVersion(db)).toBe(30);
       // Validate the complete main/TEMP schema and data graph BEFORE any drop.
       const retained = readRetainedPromotionObjects(db);
       expect(retained.length).toBeGreaterThan(0);
@@ -64,8 +213,8 @@ export function restoreReleasedV29Schema(db: Database): void {
       const names = new Set(retained.map((object) => object.name));
       const main = db.prepare(schema('main')).all() as { name: string }[];
       expect(main.filter((object) => !names.has(object.name)))
-        .toEqual(reference.prepare(schema('main')).all());
-      expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+        .toEqual(v29Reference.prepare(schema('main')).all());
+      expect(db.prepare(schema('temp')).all()).toEqual(v29Reference.prepare(schema('temp')).all());
       const objects = HOSTED_PROMOTION_STORAGE_MIGRATION.statements.map((statement) => {
         const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(statement);
         if (!match) throw new Error('unexpected-promotion-schema-object');
@@ -76,11 +225,12 @@ export function restoreReleasedV29Schema(db: Database): void {
       });
       for (const { type, name } of [...objects].reverse()) db.exec(`DROP ${type} main.${name}`);
       db.pragma('user_version = 29');
-      expect(db.prepare(schema('main')).all()).toEqual(reference.prepare(schema('main')).all());
-      expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+      expect(db.prepare(schema('main')).all()).toEqual(v29Reference.prepare(schema('main')).all());
+      expect(db.prepare(schema('temp')).all()).toEqual(v29Reference.prepare(schema('temp')).all());
     })();
   } finally {
-    reference.close();
+    v30Reference?.close();
+    v29Reference.close();
   }
   expect(readSchemaVersion(db)).toBe(29);
 }
@@ -88,7 +238,7 @@ export function restoreReleasedV29Schema(db: Database): void {
 // Only v29 changes v27/v28 DDL: remove its table (and attached triggers/indexes),
 // then restore the exact released identity trigger. v28 itself is admission-only.
 export function restorePrePublicationSchema(db: Database, version: 27 | 28): void {
-  if (readSchemaVersion(db) === 30) restoreReleasedV29Schema(db);
+  if (readSchemaVersion(db) === 30 || readSchemaVersion(db) === 31) restoreReleasedV29Schema(db);
   expect(readSchemaVersion(db)).toBe(29);
   const oldTrigger = TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS.find((statement) =>
     statement.startsWith('CREATE TRIGGER IF NOT EXISTS trg_team_identity_transition\n')

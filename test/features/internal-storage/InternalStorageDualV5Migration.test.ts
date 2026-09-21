@@ -6,6 +6,8 @@ import {
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
+
 const databases: Database.Database[] = [];
 
 function openDatabase(): Database.Database {
@@ -37,7 +39,9 @@ function migrateThrough(db: Database.Database, version: 4 | 5): void {
 }
 
 function createMainV5(db: Database.Database): void {
-  migrateThrough(db, 4);
+  // Main's independent v5 starts from the genuine released v4 prefix.
+  // Do not manufacture it by altering a later/current schema.
+  createReleasedInternalStorageSchema(db, 4);
   db.exec('ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json TEXT');
   db.pragma('user_version = 5');
   db.prepare(`INSERT INTO member_work_sync_report_intents (
@@ -118,6 +122,19 @@ describe('internal-storage dual-v5 migration admission', () => {
     expect(schema(db)).toEqual(before);
     expect(db.prepare('SELECT journal_json FROM member_work_sync_report_intents').pluck().get())
       .toBe('{"retained":true}');
+  });
+
+  it('rejects a tampered v31 journal definition without advancing or repairing it', () => {
+    const db = openDatabase();
+    runInternalStorageMigrations(db);
+    db.exec(`ALTER TABLE member_work_sync_report_intents RENAME COLUMN journal_json TO journal_json_old;
+      ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json INTEGER`);
+    const before = schema(db);
+
+    expect(() => runInternalStorageMigrations(db))
+      .toThrow('internal-storage-v31-report-journal-schema-incompatible');
+    expect(readSchemaVersion(db)).toBe(31);
+    expect(schema(db)).toEqual(before);
   });
 
   it('rejects a partial Product identity component without advancing or repairing it', () => {

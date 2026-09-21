@@ -3,12 +3,19 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
+  parseDirectoryFingerprint,
+  parseLegacyTeamKey,
+  parseTeamAdoptionIntentId,
+  parseTeamIdentityChecksum,
   parseTeamRosterSnapshotRecord,
   TEAM_ROSTER_STORAGE_SCHEMA_VERSION,
   type TeamRosterSnapshotRecord,
 } from '@features/internal-storage/contracts';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
+import { TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
+import { TeamIdentityStorageSupport } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSupport';
 import {
   parseMemberId,
   parseTeamId,
@@ -59,6 +66,21 @@ function roster(
 
 function insertActiveTeamIdentity(databasePath: string, teamId: TeamId, key: string): void {
   const character = teamId.slice('team_'.length, 'team_'.length + 1);
+  const intentId = parseTeamAdoptionIntentId(`adoption_${character.repeat(32)}`);
+  const legacyKey = parseLegacyTeamKey(key);
+  const directoryFingerprint = parseDirectoryFingerprint(character.repeat(64));
+  const workspaceId = parseWorkspaceId(`workspace_${character.repeat(32)}`);
+  const identityChecksum = parseTeamIdentityChecksum(character.repeat(64));
+  const preparedAt = '2026-07-23T09:00:00.000Z';
+  const intentChecksum = new TeamIdentityStorageSupport().computeIntentChecksum({
+    intentId,
+    teamId,
+    legacyKey,
+    directoryFingerprint,
+    workspaceBinding: { workspaceId, generation: 1 },
+    expectedIdentityChecksum: identityChecksum,
+    preparedAt,
+  });
   const database = new Database(databasePath);
   try {
     database.pragma('foreign_keys = ON');
@@ -72,13 +94,38 @@ function insertActiveTeamIdentity(databasePath: string, teamId: TeamId, key: str
       )
       .run(
         teamId,
-        key,
-        character.repeat(64),
-        parseWorkspaceId(`workspace_${character.repeat(32)}`),
-        `adoption_${character.repeat(32)}`,
-        character.repeat(64),
-        '2026-07-23T09:00:00.000Z',
+        legacyKey,
+        directoryFingerprint,
+        workspaceId,
+        intentId,
+        identityChecksum,
+        preparedAt,
         '2026-07-23T09:01:00.000Z'
+      );
+    // Active identities are only readable when their reservation and the
+    // committed adoption intent form one consistent immutable graph.
+    database
+      .prepare(
+        `INSERT INTO team_adoption_intents (
+           intent_id, team_id, state, legacy_key, directory_fingerprint,
+           workspace_id, workspace_binding_generation, expected_identity_checksum,
+           intent_checksum, prepared_at, file_published_at, published_identity_checksum,
+           committed_at, committed_identity_checksum
+         ) VALUES (?, ?, 'committed', ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        intentId,
+        teamId,
+        legacyKey,
+        directoryFingerprint,
+        workspaceId,
+        identityChecksum,
+        intentChecksum,
+        preparedAt,
+        '2026-07-23T09:00:30.000Z',
+        identityChecksum,
+        '2026-07-23T09:01:00.000Z',
+        identityChecksum
       );
     database
       .prepare(
@@ -86,7 +133,7 @@ function insertActiveTeamIdentity(databasePath: string, teamId: TeamId, key: str
            legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
          ) VALUES (?, ?, 'active', ?, NULL, NULL)`
       )
-      .run(key, teamId, '2026-07-23T09:00:00.000Z');
+      .run(legacyKey, teamId, preparedAt);
   } finally {
     database.close();
   }
@@ -168,6 +215,32 @@ describe('TeamRoster internal storage', () => {
       schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
       integrity: 'ok',
     });
+  });
+
+  it('seeds a readable production-checksummed identity graph and rejects checksum tampering', async () => {
+    const target = await databasePath();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const core = track(makeCore(target));
+    core.handle('ping', {});
+    insertActiveTeamIdentity(target, teamId, 'atlas');
+
+    const database = new Database(target);
+    try {
+      const identities = new TeamIdentityStorageOps(() => database);
+      expect(identities.getIdentity(teamId)).toMatchObject({ teamId, state: 'active' });
+      const transition = TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.find(
+        ({ name }) => name === 'trg_team_adoption_intent_transition'
+      )?.sql;
+      if (!transition) throw new Error('team-adoption-intent-transition-missing');
+      database.exec('DROP TRIGGER main.trg_team_adoption_intent_transition');
+      database.prepare('UPDATE team_adoption_intents SET intent_checksum = ? WHERE team_id = ?')
+        .run('0'.repeat(64), teamId);
+      database.exec(transition);
+      expect(() => identities.getIdentity(teamId))
+        .toThrow('team-identity-storage:tampering_detected');
+    } finally {
+      database.close();
+    }
   });
 
   it('rejects a conflicting adoption without overwriting persisted identity', async () => {

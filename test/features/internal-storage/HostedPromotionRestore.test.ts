@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { seedCurrentPublicationRestore } from './fixtures/currentPublicationRestore';
 import {
   createReleasedInternalStorageSchema,
+  restoreReleasedV30Schema,
   restoreReleasedV29Schema,
 } from './fixtures/releasedInternalStorageSchema';
 
@@ -48,7 +49,37 @@ const corruptions = [
   ['disabled CHECK enforcement', 'PRAGMA ignore_check_constraints = ON'],
 ] as const;
 
-describe('strict composed v30 restore', () => {
+describe('strict composed v31 restore', () => {
+  it('projects only an empty exact v31 journal addition to the genuine v30 prefix', () => {
+    const db = new Database(':memory:');
+    const reference = new Database(':memory:');
+    try {
+      runInternalStorageMigrations(db);
+      createReleasedInternalStorageSchema(reference, 30);
+      restoreReleasedV30Schema(db);
+      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(snapshot(db)).toEqual(snapshot(reference));
+    } finally { reference.close(); db.close(); }
+  });
+
+  it.each([
+    ['retained journal data', `INSERT INTO member_work_sync_report_intents (
+      team_name, id, member_key, member_name, status, reason, recorded_at, request_json, journal_json
+    ) VALUES ('sandbox', 'journal-proof', 'lead', 'lead', 'pending', 'test', 'now', '{}', '{}')`],
+    ['wrong journal definition', `ALTER TABLE member_work_sync_report_intents RENAME COLUMN journal_json TO journal_json_old;
+      ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json INTEGER`],
+  ])('refuses v31 %s without changing the current schema or marker', (_label, sql) => {
+    const db = new Database(':memory:');
+    try {
+      runInternalStorageMigrations(db);
+      db.exec(sql);
+      const before = snapshot(db);
+      expect(() => restoreReleasedV30Schema(db)).toThrow();
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
+      expect(snapshot(db)).toEqual(before);
+    } finally { db.close(); }
+  });
+
   it('projects only validated empty v30 additions back to the genuine v29 prefix', () => {
     const db = new Database(':memory:');
     const reference = new Database(':memory:');
@@ -57,12 +88,66 @@ describe('strict composed v30 restore', () => {
       seedCurrentPublicationRestore(db);
       createReleasedInternalStorageSchema(reference, 29);
       seedCurrentPublicationRestore(reference);
-      restoreReleasedV29Schema(db);
+      let journalRemoved = false;
+      let journalMarkerLowered = false;
+      let postJournalRemovalMutation = false;
+      const observed = new Proxy(db, { get(target, property) {
+        if (property === 'exec') return (sql: string) => {
+          const result = target.exec(sql);
+          if (sql === 'ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json') journalRemoved = true;
+          if (journalRemoved && /^DROP (TABLE|TRIGGER) main\./u.test(sql)) postJournalRemovalMutation = true;
+          return result;
+        };
+        if (property === 'pragma') return (...args: Parameters<typeof target.pragma>) => {
+          const result = target.pragma(...args);
+          if (journalRemoved && args[0] === 'user_version = 30') journalMarkerLowered = true;
+          return result;
+        };
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      } });
+      restoreReleasedV29Schema(observed);
+      expect(journalRemoved).toBe(true);
+      expect(journalMarkerLowered).toBe(true);
+      expect(postJournalRemovalMutation).toBe(true);
       expect(db.pragma('user_version', { simple: true })).toBe(29);
       expect(snapshot(db)).toEqual(snapshot(reference));
       runInternalStorageMigrations(db);
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
     } finally { reference.close(); db.close(); }
+  });
+
+  it('rolls back the v31 journal projection after v30 validation rejects', () => {
+    const db = new Database(':memory:');
+    try {
+      runInternalStorageMigrations(db);
+      seedCurrentPublicationRestore(db);
+      const before = snapshot(db);
+      let journalRemoved = false;
+      let journalMarkerLowered = false;
+      const observed = new Proxy(db, { get(target, property) {
+        if (property === 'exec') return (sql: string) => {
+          const result = target.exec(sql);
+          if (sql === 'ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json') {
+            journalRemoved = true;
+            target.exec('DROP TRIGGER hosted_promotions_no_update');
+          }
+          return result;
+        };
+        if (property === 'pragma') return (...args: Parameters<typeof target.pragma>) => {
+          const result = target.pragma(...args);
+          if (journalRemoved && args[0] === 'user_version = 30') journalMarkerLowered = true;
+          return result;
+        };
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      } });
+      expect(() => restoreReleasedV29Schema(observed)).toThrow();
+      expect(journalRemoved).toBe(true);
+      expect(journalMarkerLowered).toBe(true);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
+      expect(snapshot(db)).toEqual(before);
+    } finally { db.close(); }
   });
 
   it.each(corruptions)('rejects %s without changing main/TEMP state or marker', (_label, sql) => {
@@ -73,7 +158,7 @@ describe('strict composed v30 restore', () => {
       db.exec(sql);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       expect(snapshot(db)).toEqual(before);
       for (const marker of [28, 29]) {
         db.pragma(`user_version = ${marker}`);
@@ -99,7 +184,7 @@ describe('strict composed v30 restore', () => {
       });
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       for (const marker of [28, 29]) {
         db.pragma(`user_version = ${marker}`);
         expect(() => runInternalStorageMigrations(db)).toThrow();
@@ -139,7 +224,7 @@ describe('strict composed v30 restore', () => {
       db.exec(trigger);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -151,7 +236,7 @@ describe('strict composed v30 restore', () => {
       db.exec(`CREATE TABLE ${schema}.unknown_projection_object (value TEXT)`);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -166,7 +251,7 @@ describe('strict composed v30 restore', () => {
         FROM hosted_team_configuration_publications`);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(30);
+      expect(db.pragma('user_version', { simple: true })).toBe(31);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
