@@ -4,7 +4,6 @@ import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
-import * as path from 'path';
 
 import { resolveGeminiRuntimeAuth } from '../../runtime/geminiRuntimeAuth';
 import {
@@ -34,6 +33,7 @@ import {
   truncatePreflightDebugText,
 } from './TeamProvisioningProviderPreflight';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
+import { createAgentTeamsMcpValidationFixture } from './TeamProvisioningMcpValidationContract';
 import {
   type AuthStatusCommandResponse,
   extractJsonObjectFromCli,
@@ -42,6 +42,8 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamProviderId } from '@shared/types';
+
+export { createAgentTeamsMcpValidationFixture };
 
 const { AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 
@@ -419,11 +421,11 @@ export async function runProviderOneShotDiagnostic({
     resolvedProviderId === 'codex'
       ? diagnosticModel?.trim() || ports.getConfiguredCodexCustomProviderModel()
       : undefined;
-  const args = buildProviderCliCommandArgs(
+  const args = buildProviderLaunchCliCommandArgs(
     providerArgs,
     buildProviderPreflightPingArgs(providerId, { modelOverride })
   );
-  const timeoutMs = getPreflightTimeoutMs(providerId);
+  const timeoutMs = getProviderModelProbeTimeoutMs(providerId);
   ports.appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
     providerId: resolvedProviderId,
     cwd,
@@ -562,13 +564,6 @@ export function buildAgentTeamsMcpValidationError(
   return buildAgentTeamsMcpValidationErrorMessage(output, normalizeApiRetryErrorMessage);
 }
 
-export interface AgentTeamsMcpLaunchSpec {
-  command: string;
-  args: string[];
-  cwd?: string;
-  env: Record<string, string>;
-}
-
 interface McpJsonRpcErrorPayload {
   code?: number;
   message?: string;
@@ -595,10 +590,11 @@ interface McpToolCallResult {
   isError?: boolean;
 }
 
-interface AgentTeamsMcpValidationFixture {
-  claudeDir: string;
-  teamName: string;
-  memberName: string;
+export interface AgentTeamsMcpLaunchSpec {
+  command: string;
+  args: string[];
+  cwd?: string;
+  env: Record<string, string>;
 }
 
 export function parseAgentTeamsMcpLaunchSpec(
@@ -679,45 +675,6 @@ export async function readAgentTeamsMcpLaunchSpec({
   return parseAgentTeamsMcpLaunchSpec(parsed, mcpConfigPath, (output) =>
     buildAgentTeamsMcpValidationError(output, ports.normalizeApiRetryErrorMessage)
   );
-}
-
-export async function createAgentTeamsMcpValidationFixture({
-  projectPath,
-  ports,
-}: {
-  projectPath: string;
-  ports: Pick<
-    TeamProvisioningProviderDiagnosticsPorts,
-    'makeTempDir' | 'tmpdir' | 'mkdirRecursive' | 'writeFileUtf8'
-  >;
-}): Promise<AgentTeamsMcpValidationFixture> {
-  const claudeDir = await ports.makeTempDir(path.join(ports.tmpdir(), 'agent-teams-mcp-validate-'));
-  const teamName = 'mcp-validation-team';
-  const memberName = 'mcp-validation-member';
-  const teamDir = path.join(claudeDir, 'teams', teamName);
-
-  await ports.mkdirRecursive(teamDir);
-  await ports.writeFileUtf8(
-    path.join(teamDir, 'config.json'),
-    JSON.stringify(
-      {
-        name: teamName,
-        projectPath,
-        members: [
-          { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
-          { name: memberName, agentType: 'teammate', role: 'developer' },
-        ],
-      },
-      null,
-      2
-    )
-  );
-
-  return {
-    claudeDir,
-    teamName,
-    memberName,
-  };
 }
 
 export async function validateAgentTeamsMcpRuntime({
@@ -1216,14 +1173,6 @@ export async function spawnProbe({
       terminate(() => resolve({ exitCode: 0, stdout: ctx.stdout, stderr: ctx.stderr }));
     };
   });
-}
-
-function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {
-  return getProviderModelProbeTimeoutMs(providerId);
-}
-
-function buildProviderCliCommandArgs(providerArgs: string[], args: string[]): string[] {
-  return buildProviderLaunchCliCommandArgs(providerArgs, args);
 }
 
 function isMissingCwdSpawnError(message: string): boolean {

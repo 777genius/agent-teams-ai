@@ -3667,7 +3667,6 @@ void app.whenReady().then(async () => {
     }
   });
 });
-
 /**
  * All windows closed handler.
  */
