@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { promises as fs } from 'node:fs';
 import { PassThrough } from 'node:stream';
 
+import type { TeamCreateRequest } from '@shared/types';
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +25,6 @@ import {
   createTeamProvisioningProviderDiagnosticsBasePorts,
   createTeamProvisioningProviderDiagnosticsRuntime,
 } from '../TeamProvisioningProviderDiagnosticsPorts';
-import type { TeamCreateRequest } from '@shared/types';
 
 function createLeaseRequest(cwd: string): TeamCreateRequest {
   return { teamName: 'provider-diagnostics-lease', cwd, members: [] };
@@ -561,6 +561,8 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     });
   });
 });
+
+
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */
 
 describe('TeamProvisioningProviderDiagnostics provider probes', () => {

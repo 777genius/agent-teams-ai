@@ -1,15 +1,23 @@
+import type { spawnCli } from '@main/utils/childProcess';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import type {
+  ProviderModelLaunchIdentity,
+  TeamCreateRequest,
+  TeamProviderId,
+  TeamProvisioningProgress,
+  TeamProvisioningState,
+} from '@shared/types';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type spawn, type SpawnOptions } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import {
   applyDesktopTeammateModeDecisionToEnv,
   resolveDesktopTeammateModeDecision,
 } from '../runtimeTeammateMode';
-
 import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
@@ -28,14 +36,15 @@ import {
   type TeamProvisioningCreateMembersMetaStore,
   type TeamProvisioningCreateTeamMetaStore,
 } from './TeamProvisioningCreateTeamFlow';
+import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import {
   applyProjectDirectoryLeaseAtProviderBoundary,
-  projectDirectoryLeaseForRequest,
   type ProjectDirectoryLease,
+  projectDirectoryLeaseForRequest,
 } from './TeamProvisioningProjectDirectoryLease';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import { buildCreateBootstrapUserPrompt } from './TeamProvisioningRosterPrompt';
@@ -50,17 +59,6 @@ import {
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-
-import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
-import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
-import type { spawnCli } from '@main/utils/childProcess';
-import type {
-  ProviderModelLaunchIdentity,
-  TeamCreateRequest,
-  TeamProviderId,
-  TeamProvisioningProgress,
-  TeamProvisioningState,
-} from '@shared/types';
 
 type SpawnedChild = ReturnType<typeof spawn>;
 

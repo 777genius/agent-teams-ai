@@ -1,3 +1,14 @@
+import type {
+  ProviderModelLaunchIdentity,
+  TeamCreateRequest,
+  TeamLaunchRequest,
+  TeamLaunchResponse,
+  TeamMember,
+  TeamProviderId,
+  TeamProvisioningProgress,
+  TeamProvisioningState,
+  TeamTask,
+} from '@shared/types';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type ChildProcess, type SpawnOptions } from 'child_process';
 
@@ -7,7 +18,6 @@ import {
   resolveDesktopTeammateModeDecision,
 } from '../runtimeTeammateMode';
 import { type TeamMetaFile } from '../TeamMetaStore';
-
 import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
@@ -37,11 +47,12 @@ import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCl
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import {
   applyProjectDirectoryLeaseAtProviderBoundary,
-  projectDirectoryLeaseForRequest,
   type ProjectDirectoryLease,
+  projectDirectoryLeaseForRequest,
 } from './TeamProvisioningProjectDirectoryLease';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
+import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
@@ -53,19 +64,6 @@ import {
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-
-import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
-import type {
-  ProviderModelLaunchIdentity,
-  TeamCreateRequest,
-  TeamLaunchRequest,
-  TeamLaunchResponse,
-  TeamMember,
-  TeamProviderId,
-  TeamProvisioningProgress,
-  TeamProvisioningState,
-  TeamTask,
-} from '@shared/types';
 
 export type LaunchTeamMetaPayload = Omit<TeamMetaFile, 'version'>;
 

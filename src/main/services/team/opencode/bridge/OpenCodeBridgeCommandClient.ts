@@ -9,6 +9,7 @@ import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import {
   extractRunId,
   OPEN_CODE_BRIDGE_SCHEMA_VERSION,
@@ -26,22 +27,20 @@ import {
   abortOpenCodeBridgeCommandDispatch,
   assertOpenCodeBridgeCommandDispatchAllowed,
   ExecCliOpenCodeBridgeProcessRunner,
-  resolveOpenCodeBridgeProjectDirectoryLeaseDispatch,
   type OpenCodeBridgeProcessRunner,
+  resolveOpenCodeBridgeProjectDirectoryLeaseDispatch,
 } from './OpenCodeBridgeProjectDirectoryLease';
 import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
 } from './OpenCodeStartupCleanupBridge';
 
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
-
-export { ExecCliOpenCodeBridgeProcessRunner } from './OpenCodeBridgeProjectDirectoryLease';
 export type {
   OpenCodeBridgeProcessRunInput,
-  OpenCodeBridgeProcessRunResult,
   OpenCodeBridgeProcessRunner,
+  OpenCodeBridgeProcessRunResult,
 } from './OpenCodeBridgeProjectDirectoryLease';
+export { ExecCliOpenCodeBridgeProcessRunner } from './OpenCodeBridgeProjectDirectoryLease';
 
 interface OpenCodeBridgeOutputReadResult {
   content: string;

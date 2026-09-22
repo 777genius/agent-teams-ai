@@ -3,8 +3,8 @@ import * as path from 'node:path';
 import { execCli, killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 
 import {
-  resolveProjectDirectoryLeaseCwdAtProviderBoundary,
   type ProjectDirectoryLease,
+  resolveProjectDirectoryLeaseCwdAtProviderBoundary,
 } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export interface OpenCodeBridgeProcessRunInput {
@@ -86,7 +86,6 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
       let settled = false;
       let terminating = false;
       let child: ReturnType<typeof spawnCli> | undefined;
-      let timer: ReturnType<typeof setTimeout> | undefined;
       const onAbort = () => terminate('timeout');
       const settle = (result: OpenCodeBridgeProcessRunResult): void => {
         if (settled) return;
@@ -124,6 +123,8 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
             })
         );
       };
+      const timer = setTimeout(() => terminate('timeout'), input.timeoutMs);
+      timer.unref?.();
       try {
         child = spawnCli(input.binaryPath, input.args, { cwd, env: input.env, stdio });
       } catch (error) {
@@ -159,8 +160,6 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
       child.once('close', (code) => {
         if (!terminating) settle({ stdout, stderr, exitCode: code, timedOut: false });
       });
-      timer = setTimeout(() => terminate('timeout'), input.timeoutMs);
-      timer.unref?.();
     });
   }
 
