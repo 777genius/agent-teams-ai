@@ -1,3 +1,7 @@
+import { createLogger } from '@shared/utils/logger';
+
+import { whenOpenCodeStartupRuntimeSweepSettled } from '../opencode/bridge/OpenCodeStartupSweepGate';
+
 import type {
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
@@ -110,16 +114,10 @@ function bindOpenCodeStartPreparation(source: {
   onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
 }) => Promise<void> {
   return async ({ teamName, request, onProgress }) => {
-    const [{ purgeStaleOpenCodeHostStartupLocksBeforeLaunch }, startupSweepGate, { createLogger }] =
-      await Promise.all([
-        import('../opencode/bridge/OpenCodeHostStartupLockCleanup'),
-        import('../opencode/bridge/OpenCodeStartupSweepGate'),
-        import('@shared/utils/logger'),
-      ]);
     const logger = createLogger('Service:TeamProvisioningStart');
 
     if (startRequestMayRaceOpenCodeStartupSweep(request)) {
-      await startupSweepGate.whenOpenCodeStartupRuntimeSweepSettled({
+      await whenOpenCodeStartupRuntimeSweepSettled({
         logWaited: (message) => logger.diagnostic(message),
         onWaitStart: () => {
           const observedAt = new Date().toISOString();
@@ -134,6 +132,9 @@ function bindOpenCodeStartPreparation(source: {
         },
       });
     }
+    const { purgeStaleOpenCodeHostStartupLocksBeforeLaunch } = await import(
+      '../opencode/bridge/OpenCodeHostStartupLockCleanup'
+    );
     await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
       teamName,
       aliveTeams: source.getAliveTeams?.() ?? [],

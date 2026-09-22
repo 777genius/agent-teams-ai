@@ -2596,7 +2596,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       const state = window.__hostedE2eSse;
       if (!state) throw new Error('coordination_stream_state_missing');
       const launchBoundaryFrameIndex = state.frames.length;
-      const launchBoundaryEventCount = state.events.length;
+      const launchBoundaryEventIds = state.events.map((event) => event.eventId);
       const commitInitiatedAtMs = Date.now();
       const launch = await window.__hostedE2eProbe('/api/hosted/v1/team-lifecycle/launch', {
         method: 'POST',
@@ -2614,7 +2614,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
           expectedRevision: input.revision,
         }),
       });
-      return { commitInitiatedAtMs, launch, launchBoundaryFrameIndex, launchBoundaryEventCount };
+      return { commitInitiatedAtMs, launch, launchBoundaryFrameIndex, launchBoundaryEventIds };
     },
     { csrfToken, identity: activeTeam, revision: activeTeam.revision }
   );
@@ -2733,7 +2733,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   if (!deliveredEvents) throw new Error('hosted_e2e_external_coordination_stream_missing');
   const targetEvents = deliveredEvents.events.filter((event) => event.eventId === journalEventId);
   assertHostedV1ExternalCoordinationStreamProof({
-    launchBoundaryEventCount: lifecycleLaunchReceipt.launchBoundaryEventCount,
+    launchBoundaryEventIds: lifecycleLaunchReceipt.launchBoundaryEventIds,
     launchBoundaryFrameIndex: lifecycleLaunchReceipt.launchBoundaryFrameIndex,
     opens: deliveredEvents.opens,
     reconnects: deliveredEvents.reconnects,
@@ -2743,7 +2743,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     events: deliveredEvents.events,
     targetEventId: journalEventId,
   });
-  expect(lifecycleLaunchReceipt.launchBoundaryEventCount).toBe(0);
+  expect(lifecycleLaunchReceipt.launchBoundaryEventIds).not.toContain(journalEventId);
   expect(targetEvents).toHaveLength(1);
   const targetEvent = targetEvents[0]!;
   expect(deliveredEvents.opens).toBe(1);

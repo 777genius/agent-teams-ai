@@ -3538,7 +3538,12 @@ export interface HostedV1ExternalCoordinationObservedEvent {
 }
 
 export function assertHostedV1ExternalCoordinationStreamProof(input: {
-  readonly launchBoundaryEventCount: number;
+  /**
+   * Event identities observed before crossing the launch boundary. The target
+   * must not already be among them, but unrelated coordination activity is
+   * valid and must not invalidate this exact-target delivery proof.
+   */
+  readonly launchBoundaryEventIds: readonly (string | null)[];
   readonly launchBoundaryFrameIndex: number;
   readonly opens: number;
   readonly reconnects: number;
@@ -3548,7 +3553,7 @@ export function assertHostedV1ExternalCoordinationStreamProof(input: {
   readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
   readonly targetEventId: string;
 }): void {
-  if (input.launchBoundaryEventCount !== 0) {
+  if (input.launchBoundaryEventIds.includes(input.targetEventId)) {
     throw new Error('hosted_e2e_external_coordination_target_before_boundary');
   }
   if (input.opens !== 1 || input.reconnects !== 0 || input.error !== null) {

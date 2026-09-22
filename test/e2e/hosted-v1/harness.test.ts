@@ -1497,9 +1497,26 @@ describe('hosted v1 browser E2E sandbox', () => {
     await expect(readFile(path, 'utf8')).resolves.toBe('competing-canonical-evidence');
   });
 
-  it('accepts multiple same-stream heartbeats before the target coordination event', () => {
+  it('preserves the target identity across the external coordination boundary', () => {
     expect(() => assertHostedV1ExternalCoordinationStreamProof({
-      launchBoundaryEventCount: 0,
+      launchBoundaryEventIds: ['event_before_boundary'],
+      launchBoundaryFrameIndex: 2,
+      opens: 1,
+      reconnects: 0,
+      error: null,
+      heartbeatStreamIds: [1, 1],
+      heartbeatFrameIndexes: [0, 1],
+      events: [
+        { eventId: 'event_before_boundary', eventSequence: 6, frameIndex: 1, streamId: 1, observedAtMs: 900 },
+        { eventId: 'event_target', eventSequence: 7, frameIndex: 2, streamId: 1, observedAtMs: 1_000 },
+      ],
+      targetEventId: 'event_target',
+    })).not.toThrow();
+  });
+
+  it('rejects a target identity observed before the external coordination boundary', () => {
+    expect(() => assertHostedV1ExternalCoordinationStreamProof({
+      launchBoundaryEventIds: ['event_target'],
       launchBoundaryFrameIndex: 2,
       opens: 1,
       reconnects: 0,
@@ -1508,7 +1525,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       heartbeatFrameIndexes: [0, 1],
       events: [{ eventId: 'event_target', eventSequence: 7, frameIndex: 2, streamId: 1, observedAtMs: 1_000 }],
       targetEventId: 'event_target',
-    })).not.toThrow();
+    })).toThrow('hosted_e2e_external_coordination_target_before_boundary');
   });
 
   it('records failures for every proof-diagnostic attachment without replacing proof work', async () => {
