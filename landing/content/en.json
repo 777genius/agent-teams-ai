@@ -7,17 +7,17 @@
     {
       "id": "agentTeams",
       "title": "Agent Teams",
-      "description": "Create teams with different roles. Agents work autonomously in parallel, communicate with each other, and collaborate across teams."
+      "description": "Build mixed teams with Claude, Codex, Gemini, and OpenCode-connected providers. Give agents distinct roles, let them work autonomously in parallel, and coordinate across team boundaries."
     },
     {
       "id": "kanban",
       "title": "Kanban Board",
-      "description": "Tasks change status in real-time as agents work. Drag, assign, review — all on a visual board."
+      "description": "Agents manage the cards themselves: they pick up tasks, update statuses, and move work across the board. You do not have to touch the Kanban manually, but you stay in control."
     },
     {
       "id": "codeReview",
-      "title": "Code Review",
-      "description": "Diff view per task with accept, reject, and comment. Built-in code editor with Git support."
+      "title": "Changes Viewer",
+      "description": "Review task and teammate changes in one Cursor-style workspace. Navigate files and full diffs, accept or reject whole files or individual hunks, edit when needed, undo decisions, and send feedback."
     },
     {
       "id": "tokenUsage",
