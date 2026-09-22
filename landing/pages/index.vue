@@ -7,9 +7,9 @@ usePageSeo("meta.homeTitle", "meta.homeDescription");
     <PageBackground />
     <HeroSection />
     <SectionDivider />
-    <LazyFeaturesSection />
-    <SectionDivider :flip="true" />
     <LazyScreenshotsSection />
+    <SectionDivider :flip="true" />
+    <LazyFeaturesSection />
     <SectionDivider />
     <LazyDownloadSection />
     <SectionDivider />
