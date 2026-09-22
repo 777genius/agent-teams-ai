@@ -15,7 +15,6 @@ import {
 } from '@playwright/test';
 
 import {
-  assertHostedV1ExternalCoordinationReconnectProof,
   assertHostedV1ExternalCoordinationStreamProof,
   captureOriginalHostedV1HttpResponse,
   createHostedV1ExternalCoordinationReplayBudget,
@@ -26,6 +25,7 @@ import {
   type HostedV1ProbeDeadlineBudget,
   redactEvidence,
   restartHostedV1LifecycleOwner,
+  pollHostedV1ExternalCoordinationReconnectProof,
   runHostedV1BestEffortDiagnostic,
   writeHostedV1AtomicArtifact,
 } from '../../../scripts/e2e/hosted-v1/run';
@@ -3262,59 +3262,29 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       .slice(reconnectBaseline.opens)
       .some((url) => new URL(url).searchParams.get('after') === firstDeliveredCursor)
   ).toBe(true);
-  await expect
-    .poll(
-      () => page.evaluate((baseline) => {
-        const state = window.__hostedE2eSse;
-        return Boolean(
-          state &&
-          state.opens === baseline.streamGeneration + 1 &&
-          state.reconnects > baseline.reconnects &&
-          state.error === null &&
-          state.heartbeatStreamIds.filter(
-            (streamId, index) =>
-              streamId === baseline.streamGeneration + 1 &&
-              Number.isFinite(state.heartbeatObservedAtMs[index]) &&
-              state.heartbeatCursors[index] === baseline.cursor &&
-              Number.isSafeInteger(state.heartbeatEventCounts[index])
-          ).length >= 2
-        );
-      }, reconnectBaseline),
-      {
-        timeout: externalCoordinationReplayBudget.requireRemainingAt(
-          reconnectDeadlines.replayDeadlineMs,
-          Date.now()
-        ),
-      }
-    )
-    .toBe(true);
-  // Capture and validate the completion boundary synchronously with the
-  // second resumed heartbeat.  Nothing diagnostic may run before this proof:
-  // Playwright attachment/read work is intentionally best-effort and must not
-  // consume the replay deadline.
-  const reconnectProofState = await page.evaluate(() => window.__hostedE2eSse);
-  if (!reconnectProofState) throw new Error('hosted_e2e_external_reconnect_stream_missing');
-  assertHostedV1ExternalCoordinationReconnectProof({
-    events: reconnectProofState.events,
-    baselineCursor: reconnectBaseline.cursor,
-    baselineOpens: reconnectBaseline.opens,
-    baselineReconnects: reconnectBaseline.reconnects,
-    baselineStreamId: reconnectBaseline.streamGeneration,
-    opens: reconnectProofState.opens,
-    reconnects: reconnectProofState.reconnects,
-    error: reconnectProofState.error,
-    heartbeatFrameIndexes: reconnectProofState.heartbeatFrameIndexes,
-    heartbeatStreamIds: reconnectProofState.heartbeatStreamIds,
-    heartbeatObservedAtMs: reconnectProofState.heartbeatObservedAtMs,
-    heartbeatCursors: reconnectProofState.heartbeatCursors,
-    heartbeatEventCounts: reconnectProofState.heartbeatEventCounts,
-    observedAtMs: Date.now(),
+  // Capture and validate the exact state which crosses the completion
+  // boundary. The shared helper never rereads mutable browser state or
+  // substitutes a later Node-side clock reading for the heartbeat receipt.
+  const reconnectProofCapture = await pollHostedV1ExternalCoordinationReconnectProof({
+    baseline: reconnectBaseline,
     originMs: reconnectOriginMs,
     replayDeadlineMs: reconnectDeadlines.replayDeadlineMs,
-    reconnectStreamId: reconnectBaseline.streamGeneration + 1,
     targetEventId: journalEventId,
     targetEventSequence: journalEventSequence,
+    timeoutMs: externalCoordinationReplayBudget.requireRemainingAt(
+      reconnectDeadlines.replayDeadlineMs,
+      Date.now()
+    ),
+    stateReader: () => page.evaluate(() => window.__hostedE2eSse ?? null),
+    poll: async (predicate, timeoutMs) => {
+      await expect.poll(predicate, { timeout: timeoutMs }).not.toBeNull();
+    },
   });
+  // Nothing diagnostic may run before this proof: Playwright attachment/read
+  // work is intentionally best-effort and must not consume the replay deadline.
+  const reconnectProofState = JSON.parse(
+    reconnectProofCapture.serializedState
+  ) as HostedV1ExternalCoordinationStreamState;
   expect(reconnectProofState.ids).toEqual([firstDeliveredCursor]);
   const reconnectState = await trackHostedV1BestEffortDiagnostic(testInfo, {
     name: 'page_evaluate:personal-event-stream-reconnect',

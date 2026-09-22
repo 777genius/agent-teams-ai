@@ -3643,6 +3643,126 @@ export interface HostedV1ExternalCoordinationObservedEvent {
   readonly observedAtMs: number;
 }
 
+/** The serializable portion of the browser's resumed-stream observation. */
+export interface HostedV1ExternalCoordinationReconnectState {
+  readonly error: string | null;
+  readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
+  readonly heartbeatCursors: readonly string[];
+  readonly heartbeatEventCounts: readonly number[];
+  readonly heartbeatFrameIndexes: readonly number[];
+  readonly heartbeatObservedAtMs: readonly number[];
+  readonly heartbeatStreamIds: readonly number[];
+  readonly opens: number;
+  readonly reconnects: number;
+}
+
+export interface HostedV1ExternalCoordinationReconnectBaseline {
+  readonly cursor: string;
+  readonly reconnects: number;
+  readonly streamGeneration: number;
+}
+
+export interface HostedV1ExternalCoordinationReconnectProofCapture {
+  /** A browser-to-Node-safe copy of the exact state which passed the poll. */
+  readonly serializedState: string;
+  /** Receipt time of the second resumed heartbeat in that exact copy. */
+  readonly observedAtMs: number;
+}
+
+/** The largest browser-state receipt eligible for reconnect proof capture. */
+export const HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES = 64 * 1024;
+
+/**
+ * The production poll adapter. It deliberately owns the capture-to-assertion
+ * operation so callers cannot turn a successful poll into a later browser
+ * reread or a later wall-clock assertion.
+ */
+export async function pollHostedV1ExternalCoordinationReconnectProof(input: {
+  readonly baseline: HostedV1ExternalCoordinationReconnectBaseline;
+  readonly originMs: number;
+  readonly poll: (
+    predicate: () => Promise<HostedV1ExternalCoordinationReconnectProofCapture | null>,
+    timeoutMs: number
+  ) => Promise<void>;
+  readonly replayDeadlineMs: number;
+  readonly stateReader: () => Promise<HostedV1ExternalCoordinationReconnectState | null>;
+  readonly targetEventId: string;
+  readonly targetEventSequence: number;
+  readonly timeoutMs: number;
+}): Promise<HostedV1ExternalCoordinationReconnectProofCapture> {
+  if (!Number.isSafeInteger(input.timeoutMs) || input.timeoutMs < 1) {
+    throw new Error('hosted_e2e_external_reconnect_poll_timeout_invalid');
+  }
+  let capture: HostedV1ExternalCoordinationReconnectProofCapture | null = null;
+  await input.poll(async () => {
+    // This is the sole browser-state read for each poll predicate invocation.
+    const state = await input.stateReader();
+    const candidate = captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline: input.baseline,
+      stateReader: () => state,
+      originMs: input.originMs,
+      replayDeadlineMs: input.replayDeadlineMs,
+      targetEventId: input.targetEventId,
+      targetEventSequence: input.targetEventSequence,
+    });
+    if (candidate !== null) capture = candidate;
+    return candidate;
+  }, input.timeoutMs);
+  if (capture === null) throw new Error('hosted_e2e_external_reconnect_stream_missing');
+  return capture;
+}
+
+/**
+ * Reads the browser state once and returns the exact serialized state which
+ * crossed the replay-completion boundary.  The caller must validate this
+ * result rather than rereading browser state after polling, because a later
+ * transport transition can invalidate an already completed proof.
+ */
+export function captureHostedV1ExternalCoordinationReconnectProof(input: {
+  readonly baseline: HostedV1ExternalCoordinationReconnectBaseline;
+  readonly stateReader: () => HostedV1ExternalCoordinationReconnectState | null;
+}): HostedV1ExternalCoordinationReconnectProofCapture | null {
+  const state = input.stateReader();
+  if (state === null) return null;
+  const serializedState = JSON.stringify(state);
+  if (
+    Buffer.byteLength(serializedState, 'utf8') >
+    HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES
+  ) {
+    throw new Error('hosted_e2e_external_reconnect_state_too_large');
+  }
+  const candidate = JSON.parse(serializedState) as HostedV1ExternalCoordinationReconnectState;
+  if (
+    candidate.opens !== input.baseline.streamGeneration + 1 ||
+    candidate.reconnects <= input.baseline.reconnects ||
+    candidate.error !== null
+  ) {
+    return null;
+  }
+  const resumedHeartbeatIndexes = candidate.heartbeatStreamIds.flatMap((streamId, index) =>
+    streamId === input.baseline.streamGeneration + 1 ? [index] : []
+  );
+  const replayStartHeartbeatIndex = resumedHeartbeatIndexes[0];
+  const completionHeartbeatIndex = resumedHeartbeatIndexes[1];
+  const observedAtMs =
+    completionHeartbeatIndex === undefined
+      ? Number.NaN
+      : candidate.heartbeatObservedAtMs[completionHeartbeatIndex] ?? Number.NaN;
+  if (
+    replayStartHeartbeatIndex === undefined ||
+    completionHeartbeatIndex === undefined ||
+    !Number.isFinite(candidate.heartbeatObservedAtMs[replayStartHeartbeatIndex]) ||
+    !Number.isFinite(observedAtMs) ||
+    candidate.heartbeatCursors[replayStartHeartbeatIndex] !== input.baseline.cursor ||
+    candidate.heartbeatCursors[completionHeartbeatIndex] !== input.baseline.cursor ||
+    !Number.isSafeInteger(candidate.heartbeatEventCounts[replayStartHeartbeatIndex]) ||
+    !Number.isSafeInteger(candidate.heartbeatEventCounts[completionHeartbeatIndex])
+  ) {
+    return null;
+  }
+  return Object.freeze({ serializedState, observedAtMs });
+}
+
 export function assertHostedV1ExternalCoordinationStreamProof(input: {
   /**
    * Event identities observed before crossing the launch boundary. The target
@@ -3788,6 +3908,53 @@ export function assertHostedV1ExternalCoordinationReconnectProof(input: {
   ) {
     throw new Error('hosted_e2e_external_reconnect_completion_boundary_invalid');
   }
+}
+
+/**
+ * Captures and immediately validates the exact resumed-stream state selected
+ * by a poll.  Keeping this as one operation is intentional: a second state
+ * read or a Node-side clock read can race a later transport transition and
+ * turn a proof that completed before its deadline into a false failure.
+ */
+export function captureAndAssertHostedV1ExternalCoordinationReconnectProof(input: {
+  readonly baseline: HostedV1ExternalCoordinationReconnectBaseline;
+  readonly stateReader: () => HostedV1ExternalCoordinationReconnectState | null;
+  readonly originMs: number;
+  readonly replayDeadlineMs: number;
+  readonly targetEventId: string;
+  readonly targetEventSequence: number;
+}): HostedV1ExternalCoordinationReconnectProofCapture | null {
+  const capture = captureHostedV1ExternalCoordinationReconnectProof({
+    baseline: input.baseline,
+    stateReader: input.stateReader,
+  });
+  if (capture === null) return null;
+
+  const state = JSON.parse(
+    capture.serializedState
+  ) as HostedV1ExternalCoordinationReconnectState;
+  assertHostedV1ExternalCoordinationReconnectProof({
+    events: state.events,
+    baselineCursor: input.baseline.cursor,
+    baselineOpens: input.baseline.streamGeneration,
+    baselineReconnects: input.baseline.reconnects,
+    baselineStreamId: input.baseline.streamGeneration,
+    opens: state.opens,
+    reconnects: state.reconnects,
+    error: state.error,
+    heartbeatFrameIndexes: state.heartbeatFrameIndexes,
+    heartbeatStreamIds: state.heartbeatStreamIds,
+    heartbeatObservedAtMs: state.heartbeatObservedAtMs,
+    heartbeatCursors: state.heartbeatCursors,
+    heartbeatEventCounts: state.heartbeatEventCounts,
+    observedAtMs: capture.observedAtMs,
+    originMs: input.originMs,
+    replayDeadlineMs: input.replayDeadlineMs,
+    reconnectStreamId: input.baseline.streamGeneration + 1,
+    targetEventId: input.targetEventId,
+    targetEventSequence: input.targetEventSequence,
+  });
+  return capture;
 }
 
 export function assertHostedV1ScenarioIsolation(

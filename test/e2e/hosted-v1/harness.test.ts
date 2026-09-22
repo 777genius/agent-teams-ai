@@ -21,6 +21,9 @@ import {
   assertHostedV1ExternalCoordinationStreamProof,
   assertHostedV1ScenarioIsolation,
   boundHostedV1EvidenceUtf8,
+  captureAndAssertHostedV1ExternalCoordinationReconnectProof,
+  HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES,
+  pollHostedV1ExternalCoordinationReconnectProof,
   classifyHostedV1ProjectAccess,
   cleanupHostedV1SandboxRoots,
   collectHostedV1GrantEvidence,
@@ -1636,6 +1639,155 @@ describe('hosted v1 browser E2E sandbox', () => {
         { eventId: 'event_target', eventSequence: 7, frameIndex: 4, streamId: 2, observedAtMs: 12_000 },
       ],
     })).toThrow('hosted_e2e_external_reconnect_target_not_exactly_once');
+  });
+
+  it('uses the production async poll wrapper to retain the 31s second heartbeat across a 42s transport failure', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    try {
+      const replayBudget = createHostedV1ExternalCoordinationReplayBudget({
+        handoffBudgetMs: 10_000,
+        heartbeatIntervalMs: 15_000,
+        marginMs: 1_000,
+      });
+      const deadlines = replayBudget.deadlinesFrom(Date.now());
+      const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+      const browserState = {
+        cursor: baseline.cursor,
+        opens: baseline.streamGeneration,
+        reconnects: baseline.reconnects,
+        error: null as string | null,
+        events: [
+          {
+            eventId: 'event_target',
+            eventSequence: 7,
+            frameIndex: 0,
+            streamId: 1,
+            observedAtMs: 1_500,
+          },
+        ],
+        heartbeatCursors: ['cursor_target'],
+        heartbeatEventCounts: [1],
+        heartbeatFrameIndexes: [1],
+        heartbeatObservedAtMs: [2_000],
+        heartbeatStreamIds: [1],
+      };
+      const recordHeartbeat = (streamId: number): void => {
+        browserState.heartbeatStreamIds.push(streamId);
+        browserState.heartbeatFrameIndexes.push(browserState.heartbeatFrameIndexes.length + 1);
+        browserState.heartbeatObservedAtMs.push(Date.now());
+        browserState.heartbeatCursors.push(browserState.cursor ?? baseline.cursor);
+        browserState.heartbeatEventCounts.push(browserState.events.length);
+      };
+
+      browserState.opens += 1;
+      browserState.reconnects += 1;
+      await vi.advanceTimersByTimeAsync(15_000);
+      recordHeartbeat(2);
+      let reads = 0;
+      const readAtMs: number[] = [];
+      const capturedProof = await pollHostedV1ExternalCoordinationReconnectProof({
+        baseline,
+        originMs: 1_000,
+        replayDeadlineMs: deadlines.replayDeadlineMs,
+        targetEventId: 'event_target',
+        targetEventSequence: 7,
+        timeoutMs: replayBudget.requireRemainingAt(deadlines.replayDeadlineMs, Date.now()),
+        stateReader: async () => {
+          reads += 1;
+          readAtMs.push(Date.now());
+          return browserState;
+        },
+        poll: async (predicate) => {
+          expect(await predicate()).toBeNull();
+          await vi.advanceTimersByTimeAsync(15_000);
+          recordHeartbeat(2);
+          expect(Date.now()).toBe(31_000);
+          expect(await predicate()).not.toBeNull();
+
+          // This occurs after the 42s deadline, after the real poll adapter
+          // has selected its result. A boolean poll followed by a browser
+          // reread (or a Date.now assertion) would now reject the proof.
+          await vi.advanceTimersByTimeAsync(11_001);
+          expect(Date.now()).toBe(42_001);
+          browserState.opens += 1;
+          browserState.error = 'coordination_stream_closed';
+        },
+      });
+      expect(capturedProof).not.toBeNull();
+      // The capture-to-assertion path may read browser state only once. A
+      // later read after the poll returns would be the race this proof prevents.
+      expect(reads).toBe(2);
+      expect(readAtMs).toEqual([16_000, 31_000]);
+      const capturedProofState = JSON.parse(capturedProof.serializedState) as typeof browserState;
+      const capturedResumedHeartbeatIndexes = capturedProofState.heartbeatStreamIds.flatMap(
+        (streamId, index) => (streamId === 2 ? [index] : [])
+      );
+      const capturedCompletionHeartbeatIndex = capturedResumedHeartbeatIndexes[1];
+      expect(capturedCompletionHeartbeatIndex).toBe(2);
+      expect(capturedProof.observedAtMs).toBe(31_000);
+
+      expect(() => captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+        baseline,
+        stateReader: () => capturedProofState,
+        originMs: 1_000,
+        replayDeadlineMs: deadlines.replayDeadlineMs,
+        targetEventId: 'event_target',
+        targetEventSequence: 7,
+      })).not.toThrow();
+      expect(() => captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+        baseline,
+        stateReader: () => ({
+        ...capturedProofState,
+        events: [
+          ...capturedProofState.events,
+          {
+            eventId: 'event_target',
+            eventSequence: 7,
+            frameIndex: 4,
+            streamId: 2,
+            observedAtMs: 12_000,
+          },
+        ],
+        }),
+        originMs: 1_000,
+        replayDeadlineMs: deadlines.replayDeadlineMs,
+        targetEventId: 'event_target',
+        targetEventSequence: 7,
+      })).toThrow('hosted_e2e_external_reconnect_target_not_exactly_once');
+      expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+        baseline,
+        stateReader: () => browserState,
+        originMs: 1_000,
+        replayDeadlineMs: deadlines.replayDeadlineMs,
+        targetEventId: 'event_target',
+        targetEventSequence: 7,
+      })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects reconnect state above the 64KiB capture bound', () => {
+    const state = {
+      error: null,
+      events: [],
+      heartbeatCursors: [],
+      heartbeatEventCounts: [],
+      heartbeatFrameIndexes: [],
+      heartbeatObservedAtMs: [],
+      heartbeatStreamIds: [],
+      opens: 2,
+      reconnects: 1,
+      padding: 'x'.repeat(HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES),
+    };
+    expect(() => captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline: { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 },
+      stateReader: () => state,
+      originMs: 0,
+      replayDeadlineMs: 42_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toThrow('hosted_e2e_external_reconnect_state_too_large');
   });
 
   it('derives the external coordination replay window from an explicit clock origin', async () => {
