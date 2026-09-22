@@ -123,6 +123,32 @@ describe('conversation viewport owner', () => {
     flush();
     expect(scroll.scrollTop).toBe(1400);
   });
+  it.each(['pointerdown', 'touchstart'] as const)(
+    'keeps following after %s without scroll intent',
+    (eventName) => {
+      render();
+      flush();
+      act(() => scroll.dispatchEvent(new Event(eventName)));
+      height = 1300;
+      act(() => resize());
+      flush();
+      expect(scroll.scrollTop).toBe(1100);
+      expect(state.observationEnabled).toBe(true);
+    }
+  );
+  it('keeps initial observation gated when pointer input interrupts placement', () => {
+    props.rows = [{ kind: 'message-row', key: 'first', itemIndex: 0 } as TimelineRow];
+    render();
+    expect(state.observationEnabled).toBe(false);
+    act(() => scroll.dispatchEvent(new PointerEvent('pointerdown')));
+    expect(frames.size).toBe(0);
+    expect(state.observationEnabled).toBe(false);
+    height = 1200;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(1000);
+    expect(state.observationEnabled).toBe(true);
+  });
   it.each(['before resize', 'after resize'] as const)(
     'preserves reading when browser shrink clamp emits scroll %s',
     (order) => {
@@ -205,6 +231,7 @@ describe('conversation viewport owner', () => {
     expect(scroll.scrollTop).toBe(0);
     expect(frames.size).toBe(0);
     expect(state.observationEnabled).toBe(false);
+    expect(state.initialPending).toBe(false);
 
     hidden = false;
     act(() => document.dispatchEvent(new Event('visibilitychange')));

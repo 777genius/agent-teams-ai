@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildChatListView,
   type ChatListViewItem,
+  type ChatListDraftPreview,
   type ConversationScope,
   conversationScopeKey,
   type ConversationSurface,
@@ -23,6 +24,7 @@ export function useTeamChatListItems(args: {
   leadNames: Iterable<string>;
   sortByActivity?: boolean;
   enabled?: boolean;
+  draftsByScope?: ReadonlyMap<string, ChatListDraftPreview>;
 }): ChatListViewItem[] {
   return useMemo(
     () =>
@@ -37,10 +39,12 @@ export function useTeamChatListItems(args: {
             emptyPreview: args.emptyPreview,
             leadNames: args.leadNames,
             sortByActivity: args.sortByActivity,
+            draftsByScope: args.draftsByScope,
           }),
     [
       args.emptyPreview,
       args.enabled,
+      args.draftsByScope,
       args.leadNames,
       args.members,
       args.messages,

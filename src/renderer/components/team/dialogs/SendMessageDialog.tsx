@@ -288,6 +288,7 @@ export const SendMessageDialog = ({
 
   const canSend =
     member.trim().length > 0 &&
+    selectedMember != null &&
     finalText.length > 0 &&
     finalText.length <= MAX_TEXT_LENGTH &&
     !sending &&
@@ -302,7 +303,7 @@ export const SendMessageDialog = ({
   };
 
   const handleSubmit = (): void => {
-    if (!canSend) return;
+    if (!canSend || !members.some((candidate) => candidate.name === member.trim())) return;
     const taskRefs = extractTaskRefsFromText(textDraft.value, taskSuggestions);
     void Promise.resolve(
       onSend(
@@ -343,7 +344,7 @@ export const SendMessageDialog = ({
     fileRestrictionTimerRef.current = window.setTimeout(() => {
       setFileRestrictionError(null);
     }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason]);
+  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
 
   const validateSelectedAttachmentFiles = useCallback(
     (files: FileList | File[]): boolean => {

@@ -15,6 +15,7 @@ import {
   ChatList,
   ChatUnreadBadges,
   ConversationHeader,
+  createDirectScope,
   TEAM_FEED_SCOPE,
   useTeamConversationSurface,
 } from '@features/team-direct-chats/renderer';
@@ -26,11 +27,11 @@ import {
   DropdownMenuTrigger,
 } from '@renderer/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useComposerWorkingSummaries } from '@renderer/hooks/useComposerWorkingSummaries';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
-import { shouldClearPendingReplyForOpenCodeRuntimeDelivery } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
@@ -65,7 +66,7 @@ import {
   setTeamMessagesSidebarUiState,
 } from '../sidebar/teamSidebarUiState';
 
-import { MessageComposer, type MessageRevisionRequest } from './MessageComposer';
+import { MessageComposer } from './MessageComposer';
 import {
   FullScreenControl,
   LatestMessageControl,
@@ -81,15 +82,12 @@ import {
   scopedUnreadKeys,
 } from './messagesPanelConversations';
 import {
-  buildRevisionNoticeText,
   findLatestRevisableUserSentMessage,
-  getRevisableMessageText,
   hasVisibleReplyForSendMessageDiagnostics,
-  isRevisableUserSentMessage,
   reconcilePendingRepliesByMember,
-  REVISION_NOTICE_PREFIX,
   trimString,
 } from './messagesPanelLogic';
+import { resolveReplyRecipient } from './messagesPanelReplyRecipient';
 import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
 import { MessagesSidebarSurface } from './MessagesSidebarSurface';
@@ -100,23 +98,27 @@ import { MessagesTimelineSection } from './MessagesTimelineSection';
 import { StatusBlock } from './StatusBlock';
 import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
+import { useComposerOutboxItems } from './useComposerOutboxItems';
+import { useMessageRevisionIntent } from './useMessageRevisionIntent';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
   useTeamChatListItems,
   useThreadUnreadSnapshot,
 } from './useMessagesPanelChats';
+import { useMessagesPanelSend } from './useMessagesPanelSend';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
-import type { ActionMode } from './ActionModeSelector';
+import type { ComposerDraftDestination } from './composerDraftDestination';
+import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { MessagesFilterState } from './MessagesFilterPopover';
+import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type {
   DiscardQueuedUserMessagesResult,
   InboxMessage,
   ResolvedTeamMember,
-  TaskRef,
   TeamTaskWithKanban,
 } from '@shared/types';
 
@@ -157,7 +159,7 @@ interface MessagesPanelProps {
   /** Callback to open create task dialog from a message. */
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
   /** Callback to open reply dialog for a message. */
-  onReplyToMessage?: (message: InboxMessage) => void;
+  onReplyToMessage?: (message: InboxMessage, recipientHint?: string) => void;
   /** Callback when "Restart team" is clicked. */
   onRestartTeam?: () => void;
   /** Callback when a task ID link is clicked. */
@@ -221,6 +223,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     messagesLoadingOlder,
     loadOlderTeamMessages,
     refreshTeamMessagesHead,
+    activeContextId,
   } = useStore(
     useShallow((s) => {
       const messagesState = teamName ? s.teamMessagesByName[teamName] : undefined;
@@ -243,6 +246,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         messagesLoadingOlder: messagesState?.loadingOlder ?? false,
         loadOlderTeamMessages: s.loadOlderTeamMessages,
         refreshTeamMessagesHead: s.refreshTeamMessagesHead,
+        activeContextId: s.activeContextId,
       };
     })
   );
@@ -372,7 +376,16 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [sortChatsByActivity, setSortChatsByActivity] = useState(
     () => initialSidebarStateRef.current.sortChatsByActivity === true
   );
-  const [revisionRequest, setRevisionRequest] = useState<MessageRevisionRequest | null>(null);
+  const [composerDestination, setComposerDestination] =
+    useState<ComposerDraftDestination | null>(null);
+  const revisionNavigationGenerationRef = useRef(0);
+  const revisionPreparationRef = useRef<MessageRevisionTargetController | null>(null);
+  const handleRevisionPreparationChange = useCallback(
+    (controller: MessageRevisionTargetController | null) => {
+      revisionPreparationRef.current = controller;
+    },
+    []
+  );
   const conversation = useTeamConversationSurface({
     teamName,
     members,
@@ -415,7 +428,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       ) {
         return;
       }
-      setRevisionRequest(null);
+      revisionNavigationGenerationRef.current += 1;
       openChat(nextScope);
     },
     [navigationSurface, openChat, scope]
@@ -429,6 +442,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         conversationHandleRef.current?.prepareLayoutChange();
       }
       if (nextExpanded && navigationSurface === 'list') {
+        revisionNavigationGenerationRef.current += 1;
         openChat(TEAM_FEED_SCOPE);
       }
       expandedChatHost.onExpandedChange(nextExpanded);
@@ -593,6 +607,15 @@ export const MessagesPanel = memo(function MessagesPanel({
     [members]
   );
   const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
+  const handleReplyToTimelineMessage = useCallback(
+    (message: InboxMessage) => {
+      onReplyToMessage?.(
+        message,
+        resolveReplyRecipient({ message, scope, teamName, members })
+      );
+    },
+    [members, onReplyToMessage, scope, teamName]
+  );
   const canonicalMessages = useMemo(() => {
     return filterTeamMessages(effectiveMessages, {
       leadNames,
@@ -619,6 +642,31 @@ export const MessagesPanel = memo(function MessagesPanel({
     () => filterScopedMessages(canonicalMessages, scope, leadNames),
     [canonicalMessages, leadNames, scope]
   );
+  const visibleConversationAddress = useMemo<ComposerDraftAddress>(
+    () => ({
+      contextId: activeContextId,
+      teamName,
+      target:
+        scope.kind === 'direct'
+          ? { kind: 'direct', participant: scope.participant }
+          : { kind: 'team-feed' },
+    }),
+    [activeContextId, scope, teamName]
+  );
+  const hasConversationSurface = useCallback(
+    (address: ComposerDraftAddress) =>
+      address.target.kind === 'team-feed' ||
+      (address.target.kind === 'direct' && memberNames.has(address.target.participant)),
+    [memberNames]
+  );
+  const composerOutbox = useComposerOutboxItems({
+    contextId: activeContextId,
+    teamName,
+    viewAddress: visibleConversationAddress,
+    destination: composerDestination,
+    canonicalMessages: threadCanonicalMessages,
+    canOpenAddress: hasConversationSurface,
+  });
 
   const activityTimelineMessages = useMemo(() => {
     const unscoped = filterTeamMessages(effectiveMessages, {
@@ -679,46 +727,33 @@ export const MessagesPanel = memo(function MessagesPanel({
     [effectiveMessages, memberNames]
   );
   const revisionMessageId = trimString(latestRevisableMessage?.messageId) || null;
+  const {
+    revisionRequest,
+    revisionPreparation,
+    handleReviseMessage,
+    cancelRevision: handleRevisionCancel,
+    completeRevision: handleRevisionComplete,
+    invalidatePendingRevisionIntent,
+  } = useMessageRevisionIntent({
+    teamName,
+    conversationKey: scopeKey,
+    directRecipient: scope.kind === 'direct' ? scope.participant : undefined,
+    revisionMessageId,
+    memberNames,
+    sendRevisionNotice: sendTeamMessage,
+    navigationGenerationRef: revisionNavigationGenerationRef,
+    prepareRevisionTarget: (recipient, signal) =>
+      revisionPreparationRef.current?.prepare(recipient, signal) ?? Promise.resolve(null),
+    isRevisionTargetCurrent: (target) =>
+      revisionPreparationRef.current?.isCurrent(target) === true,
+    focusComposer: () => composerTextareaRef.current?.focus(),
+  });
 
-  useEffect(() => {
-    setRevisionRequest(null);
-  }, [teamName]);
-
-  const handleRevisionCancel = useCallback(() => {
-    setRevisionRequest(null);
-  }, []);
-
-  const handleRevisionComplete = useCallback((requestId: string) => {
-    setRevisionRequest((current) => (current?.requestId === requestId ? null : current));
-  }, []);
-
-  const handleReviseMessage = useCallback(
-    async (message: InboxMessage) => {
-      if (!isRevisableUserSentMessage(message, memberNames)) return;
-      const originalMessageId = trimString(message.messageId);
-      if (originalMessageId !== revisionMessageId) return;
-      const recipient = trimString(message.to);
-      const originalText = getRevisableMessageText(message);
-      try {
-        await sendTeamMessage(teamName, {
-          member: recipient,
-          text: buildRevisionNoticeText(originalMessageId, originalText),
-          summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId}`,
-        });
-      } catch {
-        return;
-      }
-      setRevisionRequest({
-        requestId: `${originalMessageId}:${Date.now()}`,
-        originalMessageId,
-        originalText,
-        recipient,
-        actionMode: message.actionMode,
-      });
-      composerTextareaRef.current?.focus();
-    },
-    [memberNames, revisionMessageId, sendTeamMessage, teamName]
-  );
+  const handleBackToList = useCallback(() => {
+    revisionNavigationGenerationRef.current += 1;
+    handleRevisionCancel();
+    backToList();
+  }, [backToList, handleRevisionCancel]);
 
   // Resolve the expanded item from filtered messages
   const expandedItem = useMemo<TimelineItem | null>(() => {
@@ -809,6 +844,38 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const { teamNames, teamColorByName } = teamMentionMeta;
 
+  const workingDrafts = useComposerWorkingSummaries(activeContextId, teamName);
+  const localDraftsByScope = useMemo(() => {
+    const drafts = new Map<
+      string,
+      {
+        preview: string;
+        updatedAt: number;
+        attachmentCount: number;
+        chipCount: number;
+        editorKind: 'plain' | 'revision';
+      }
+    >();
+    for (const summary of workingDrafts.summaries) {
+      const target = summary.address.target;
+      if (target.kind === 'cross-team') continue;
+      const draft = {
+        preview: summary.preview,
+        updatedAt: summary.updatedAt,
+        attachmentCount: summary.attachmentCount,
+        chipCount: summary.chipCount,
+        editorKind: summary.editorKind,
+      };
+      drafts.set(
+        conversationScopeKey(
+          target.kind === 'team-feed' ? TEAM_FEED_SCOPE : createDirectScope(target.participant)
+        ),
+        draft
+      );
+    }
+    return drafts;
+  }, [workingDrafts.summaries]);
+
   const chatListItems = useTeamChatListItems({
     members,
     messages: canonicalMessages,
@@ -817,6 +884,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     emptyPreview: t('messages.chats.emptyPreview'),
     leadNames,
     sortByActivity: sortChatsByActivity,
+    draftsByScope: localDraftsByScope,
     enabled: showChatList,
   });
   useDirectThreadAutoOlder({
@@ -895,72 +963,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     teamName,
   ]);
 
-  const handleSend = useCallback(
-    (
-      member: string,
-      text: string,
-      summary?: string,
-      attachments?: Parameters<typeof sendTeamMessage>[1] extends { attachments?: infer A }
-        ? A
-        : never,
-      actionMode?: ActionMode,
-      taskRefs?: TaskRef[]
-    ) => {
-      conversationHandleRef.current?.revealLatest();
-      const sentAtMs = Date.now();
-      onPendingReplyChange((prev) => ({ ...prev, [member]: sentAtMs }));
-      void sendTeamMessage(teamName, {
-        member,
-        text,
-        summary,
-        attachments,
-        actionMode,
-        taskRefs,
-      })
-        .then((result) => {
-          if (shouldClearPendingReplyForOpenCodeRuntimeDelivery(result?.runtimeDelivery)) {
-            onPendingReplyChange((prev) => {
-              if (prev[member] !== sentAtMs) return prev;
-              const next = { ...prev };
-              delete next[member];
-              return next;
-            });
-          }
-        })
-        .catch(() => {
-          onPendingReplyChange((prev) => {
-            if (prev[member] !== sentAtMs) return prev;
-            const next = { ...prev };
-            delete next[member];
-            return next;
-          });
-        });
-    },
-    [teamName, sendTeamMessage, onPendingReplyChange]
-  );
-  const handleCrossTeamSend = useCallback(
-    (
-      toTeam: string,
-      text: string,
-      summary?: string,
-      actionMode?: ActionMode,
-      taskRefs?: TaskRef[],
-      toMember?: string
-    ) => {
-      conversationHandleRef.current?.revealLatest();
-      void sendCrossTeamMessage({
-        fromTeam: teamName,
-        fromMember: 'user',
-        toTeam,
-        ...(toMember ? { toMember } : {}),
-        text,
-        taskRefs,
-        actionMode,
-        summary,
-      });
-    },
-    [teamName, sendCrossTeamMessage]
-  );
+  const { handleSend, handleCrossTeamSend } = useMessagesPanelSend({
+    teamName,
+    sendTeamMessage,
+    sendCrossTeamMessage,
+    onPendingReplyChange,
+  });
 
   const moveToInline = useCallback(() => {
     expandedChatHost?.onExpandedChange(false);
@@ -1049,12 +1057,19 @@ export const MessagesPanel = memo(function MessagesPanel({
     sendDebugDetails: effectiveSendMessageDebugDetails,
     lastResult: lastSendMessageResult,
     revisionRequest,
+    revisionPreparation,
+    revisableMessageId: revisionMessageId,
     textareaRef: composerTextareaRef,
     suggestionPlacement: isConversation ? ('above' as const) : undefined,
     lockedRecipient,
     autoFocusKey: threadOpenedAt,
+    workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,
+    onSubmitIntent: () => conversationHandleRef.current?.revealLatest(),
+    onDraftMutation: invalidatePendingRevisionIntent,
+    onRecoveryDestinationChange: setComposerDestination,
+    onRevisionPreparationChange: handleRevisionPreparationChange,
     onRevisionCancel: handleRevisionCancel,
     onRevisionComplete: handleRevisionComplete,
   };
@@ -1105,7 +1120,11 @@ export const MessagesPanel = memo(function MessagesPanel({
       {...sharedComposerProps}
       layout="compact"
       widthMode="floating-adaptive"
-      cornerActionPrefix={renderFloatingComposerModeControls()}
+      cornerActionPrefix={
+        <div className="flex items-center gap-1">
+          {renderFloatingComposerModeControls()}
+        </div>
+      }
     />
   );
 
@@ -1143,49 +1162,60 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
   const renderTimelineSection = (): React.JSX.Element => (
-    <MessagesTimelineSection
-      messages={activityTimelineMessages}
-      loading={loadingInitialMessages}
-      teamName={teamName}
-      members={members}
-      readState={readState}
-      allCollapsed={messagesCollapsed}
-      expandOverrides={expandedSet}
-      onToggleExpandOverride={toggleExpandOverride}
-      currentLeadSessionId={currentLeadSessionId}
-      isTeamAlive={isTeamAlive}
-      leadActivity={timelineLeadActivity}
-      leadContextUpdatedAt={timelineLeadContextUpdatedAt}
-      teamNames={teamNames}
-      teamColorByName={teamColorByName}
-      onTeamClick={openTeamTab}
-      onMemberClick={onMemberClick}
-      onCreateTaskFromMessage={onCreateTaskFromMessage}
-      onReplyToMessage={onReplyToMessage}
-      revisionMessageId={revisionMessageId}
-      onReviseMessage={handleReviseMessage}
-      onMessageVisible={handleMessageVisible}
-      presentation={isConversation ? 'conversation' : 'activity'}
-      appearance={useWideChat ? 'wide-chat' : 'compact'}
-      observationEnabled={!isConversation || isActive}
-      conversationIdentity={conversationIdentity}
-      conversationHandleRef={conversationHandleRef}
-      onLatestAvailable={setLatestAvailable}
-      directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
-      unreadSnapshot={unreadSnapshot}
-      emptyLabel={t('messages.chats.emptyThread')}
-      onRestartTeam={onRestartTeam}
-      onTaskIdClick={onTaskIdClick}
-      onExpandItem={handleExpandItem}
-      onExpandContent={handleExpandContent}
-      viewport={activityTimelineViewport}
-      hasMore={hasMore}
-      loadingOlderMessages={loadingOlderMessages}
-      onLoadOlderMessages={handleLoadOlderMessagesClick}
-      expandedItem={expandedItem}
-      expandedItemKey={expandedItemKey}
-      onExpandDialogChange={handleExpandDialogChange}
-    />
+    <>
+      {composerOutbox.readError ? (
+        <p role="status" className="px-3 py-1 text-[10px] text-amber-400">
+          {t('messages.outbox.storageWarning')}
+        </p>
+      ) : null}
+      <MessagesTimelineSection
+        messages={activityTimelineMessages}
+        loading={loadingInitialMessages}
+        teamName={teamName}
+        members={members}
+        readState={readState}
+        allCollapsed={useWideChat ? false : messagesCollapsed}
+        expandOverrides={expandedSet}
+        onToggleExpandOverride={toggleExpandOverride}
+        currentLeadSessionId={currentLeadSessionId}
+        isTeamAlive={isTeamAlive}
+        leadActivity={timelineLeadActivity}
+        leadContextUpdatedAt={timelineLeadContextUpdatedAt}
+        teamNames={teamNames}
+        teamColorByName={teamColorByName}
+        onTeamClick={openTeamTab}
+        onMemberClick={onMemberClick}
+        onCreateTaskFromMessage={onCreateTaskFromMessage}
+        onReplyToMessage={handleReplyToTimelineMessage}
+        revisionMessageId={revisionMessageId}
+        onReviseMessage={handleReviseMessage}
+        onMessageVisible={handleMessageVisible}
+        presentation={isConversation ? 'conversation' : 'activity'}
+        appearance={useWideChat ? 'wide-chat' : 'compact'}
+        observationEnabled={!isConversation || isActive}
+        conversationIdentity={conversationIdentity}
+        conversationHandleRef={conversationHandleRef}
+        onLatestAvailable={setLatestAvailable}
+        directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
+        unreadSnapshot={unreadSnapshot}
+        emptyLabel={t('messages.chats.emptyThread')}
+        onRestartTeam={onRestartTeam}
+        onTaskIdClick={onTaskIdClick}
+        onExpandItem={handleExpandItem}
+        onExpandContent={handleExpandContent}
+        viewport={activityTimelineViewport}
+        composerOutboxItems={composerOutbox.items}
+        onComposerOutboxCopy={composerOutbox.copy}
+        onComposerOutboxRestore={composerOutbox.restore}
+        onComposerOutboxDiscard={composerOutbox.discard}
+        hasMore={hasMore}
+        loadingOlderMessages={loadingOlderMessages}
+        onLoadOlderMessages={handleLoadOlderMessagesClick}
+        expandedItem={expandedItem}
+        expandedItemKey={expandedItemKey}
+        onExpandDialogChange={handleExpandDialogChange}
+      />
+    </>
   );
   const searchControlProps = {
     teamName,
@@ -1288,7 +1318,7 @@ export const MessagesPanel = memo(function MessagesPanel({
             title={showChatList ? t('messages.title') : (lockedRecipient ?? conversationTitle)}
             unreadCount={messagesUnreadCount}
             attentionCount={messagesAttentionCount}
-            onBack={!expanded && renderSurface === 'thread' ? backToList : undefined}
+            onBack={!expanded && renderSurface === 'thread' ? handleBackToList : undefined}
           />
         }
         showMarkAllRead={!showChatList && messagesUnreadCount > 0}
@@ -1300,6 +1330,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         searchVisible={messagesSearchBarVisible}
         onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
         onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+        showCollapse={!expanded}
         panelActionsLabel={t('messages.actions.panelActions')}
         messageActionsLabel={t('messages.actions.messageActions')}
         layoutMenu={
@@ -1400,7 +1431,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                   title={lockedRecipient ?? conversationTitle}
                   unreadCount={messagesUnreadCount}
                   attentionCount={messagesAttentionCount}
-                  onBack={renderSurface === 'thread' ? backToList : undefined}
+                  onBack={renderSurface === 'thread' ? handleBackToList : undefined}
                 />
                 <div
                   className="ml-auto flex items-center gap-1"
@@ -1440,6 +1471,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                           searchVisible={messagesSearchBarVisible}
                           onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
                           onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+                          showCollapse={false}
                         />
                       ) : null}
                       <MessagesLayoutMenuItems
@@ -1490,7 +1522,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       title={conversationTitle}
       icon={
         renderSurface === 'thread' ? (
-          <MessagesInlineBackButton label={t('messages.chats.back')} onBack={backToList} />
+          <MessagesInlineBackButton label={t('messages.chats.back')} onBack={handleBackToList} />
         ) : (
           <MessageSquare size={14} />
         )

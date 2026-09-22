@@ -26,8 +26,26 @@ interface ChatListRowProps
 export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
   ({ item, teamName, pinned = false, onOpen, className, onClick, ...props }, ref) => {
     const { t } = useAppTranslation('team');
-    const preview = item.previewText || t('messages.chats.emptyPreview');
-    const time = item.previewTimestamp ? formatActivityTimestamp(item.previewTimestamp) : '';
+    const draftPreview = item.draft
+      ? item.draft.preview ||
+        [
+          item.draft.chipCount > 0
+            ? t('messages.chats.draftReferences', { count: item.draft.chipCount })
+            : '',
+          item.draft.attachmentCount > 0
+            ? t('messages.chats.draftAttachments', { count: item.draft.attachmentCount })
+            : '',
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : '';
+    const preview = item.draft
+      ? draftPreview
+      : item.previewText || t('messages.chats.emptyPreview');
+    const timestamp = item.draft
+      ? new Date(item.draft.updatedAt).toISOString()
+      : item.previewTimestamp;
+    const time = timestamp ? formatActivityTimestamp(timestamp) : '';
     const memberName = item.member?.name ?? item.displayName;
     const identity = useChatMemberIdentity(teamName, memberName, item.member?.color);
     const title =
@@ -77,9 +95,14 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
             {title}
           </span>
           <ChatPreviewLine
-            from={item.previewFrom}
+            from={item.draft ? null : item.previewFrom}
             text={preview}
-            avatarUrl={item.previewFrom ? identity.avatarUrlFor(item.previewFrom) : undefined}
+            avatarUrl={
+              !item.draft && item.previewFrom
+                ? identity.avatarUrlFor(item.previewFrom)
+                : undefined
+            }
+            draft={item.draft != null}
           />
         </span>
         <span className="mt-0.5 flex shrink-0 flex-col items-end gap-1 overflow-visible">

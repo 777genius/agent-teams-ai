@@ -7,10 +7,24 @@ interface ChatPreviewLineProps {
   from: string | null;
   text: string;
   avatarUrl?: string;
+  draft?: boolean;
 }
 
-export const ChatPreviewLine = ({ from, text, avatarUrl }: ChatPreviewLineProps): JSX.Element => {
+export const ChatPreviewLine = ({
+  from,
+  text,
+  avatarUrl,
+  draft = false,
+}: ChatPreviewLineProps): JSX.Element => {
   const { t } = useAppTranslation('team');
+  if (draft) {
+    return (
+      <span className="mt-0.5 block truncate text-xs text-[var(--color-text-secondary)]">
+        <span className="font-medium text-blue-400">{t('messages.chats.draft')}:</span>{' '}
+        {text}
+      </span>
+    );
+  }
   if (!from) {
     return (
       <span className="mt-0.5 block truncate text-xs text-[var(--color-text-secondary)]">

@@ -188,6 +188,7 @@ describe('ActivityItem compact header preview', () => {
     expect(article?.dataset.continuesAuthor).toBe('true');
     expect(article?.dataset.continuesNextAuthor).toBe('true');
     expect(article?.dataset.wideAgent).toBe('true');
+    expect(article?.dataset.wideContent).toBeUndefined();
     expect(article?.textContent).toContain('A compact continuation');
     expect(article?.textContent).not.toContain('alice');
     const footer = host.querySelector('[data-wide-chat-message-footer="true"]');

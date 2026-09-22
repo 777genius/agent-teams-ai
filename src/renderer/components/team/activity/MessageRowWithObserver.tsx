@@ -1,19 +1,20 @@
-import React, { type RefObject, useEffect, useRef, useState } from 'react';
+import React, { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   areInboxMessagesEquivalentForRender,
   areStringArraysEqual,
   areStringMapsEqual,
 } from '@renderer/utils/messageRenderEquality';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import { ActivityItem } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
+import { useMessageReadVisibility } from './useMessageReadVisibility';
 
 import type { ChatAppearance } from './activityMessagePresentation';
 import type { TimelineCardPosition } from './timelineCardStack';
 import type { InboxMessage } from '@shared/types';
 
-const VIEWPORT_THRESHOLD = 0.15;
 const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
 
 function getNewMessageHighlightRemainingMs(timestamp: string): number {
@@ -106,7 +107,6 @@ const MessageRowWithObserver = ({
   continuesNextAuthor,
 }: Readonly<MessageRowWithObserverProps>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
-  const reportedRef = useRef(false);
   const messageRef = useRef(message);
   const onVisibleRef = useRef(onVisible);
   const [isNewMessageHighlighted, setIsNewMessageHighlighted] = useState(() => {
@@ -129,35 +129,19 @@ const MessageRowWithObserver = ({
     return () => window.clearTimeout(timeoutId);
   }, [isNewMessageHighlighted, message.timestamp]);
 
-  useEffect(() => {
-    messageRef.current = message;
-    onVisibleRef.current = onVisible;
-  }, [message, onVisible]);
+  messageRef.current = message;
+  onVisibleRef.current = onVisible;
+  const handleVisible = useCallback(() => {
+    onVisibleRef.current?.(messageRef.current);
+  }, []);
 
-  useEffect(() => {
-    if (!onVisible || !observationEnabled) return;
-    const el = ref.current;
-    if (!el) return;
-    const root = observerRoot?.current ?? null;
-    let observing = true;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!observing || !observationEnabled || !entry?.isIntersecting) return;
-        if (reportedRef.current) return;
-        const cb = onVisibleRef.current;
-        const msg = messageRef.current;
-        if (!cb) return;
-        reportedRef.current = true;
-        cb(msg);
-      },
-      { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
-    );
-    observer.observe(el);
-    return () => {
-      observing = false;
-      observer.disconnect();
-    };
-  }, [observationEnabled, onVisible, observerRoot]);
+  useMessageReadVisibility({
+    targetRef: ref,
+    observerRoot,
+    observationEnabled,
+    visibilityKey: toMessageKey(message),
+    onVisible: onVisible ? handleVisible : undefined,
+  });
 
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref}>

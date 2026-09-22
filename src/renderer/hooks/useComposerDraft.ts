@@ -1,49 +1,63 @@
-/**
- * Unified composer draft hook — atomic persistence of text + chips + attachments.
- *
- * Replaces the trio of `useDraftPersistence`, `useChipDraftPersistence`, and
- * `useAttachments` for the team `MessageComposer`.
- *
- * Key guarantees:
- * - Single IndexedDB key per team (`composer:<teamName>`), no TTL.
- * - Race-safe: late async load never overwrites fresh user input.
- * - Debounced writes with immediate flush on unmount and lifecycle transitions.
- * - Legacy migration from three-key format on first load.
- */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-
+import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import {
-  type ComposerDraftSnapshot,
-  composerDraftStorage,
-} from '@renderer/services/composerDraftStorage';
-import {
-  fileToAgentAttachmentPayload,
   MAX_FILES,
   MAX_TOTAL_SIZE,
-  validateAttachment,
-  validateOptimizedImageTotal,
 } from '@renderer/utils/attachmentUtils';
-import { categorizeFile } from '@shared/constants/attachments';
+import {
+  composerDraftAddressKey,
+  sameComposerDraftAddress,
+} from '@renderer/utils/composerDraftIdentity';
 
+import { contentEquals, contentIsEmpty, type PendingComposerDraftPersistence,persistComposerDraftBeforeHydration } from './persistComposerDraftBeforeHydration';
+import { useComposerDraftAttachments } from './useComposerDraftAttachments';
+
+import type {
+  BeginAttemptResult,
+  ComposerDraftAddress,
+  ComposerDraftContent,
+  ComposerDraftRepository,
+  ComposerEditorContext,
+  ComposerPersistenceStatus,
+  ComposerPreparedRequest,
+  ComposerWorkingRecord,
+  ComposerWorkingSummary,
+  MessageRevisionContext,
+  PreparedComposerAttempt,
+  RestoreRecoveryResult,
+} from '@renderer/types/composerDraft';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { AgentActionMode, AttachmentPayload } from '@shared/types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export type { ComposerDraftContent } from '@renderer/types/composerDraft';
+
+interface LocalDraftState {
+  readonly addressKey: string;
+  readonly content: ComposerDraftContent;
+  readonly editorContext: ComposerEditorContext;
+}
+
+interface DraftMutationLease {
+  readonly address: ComposerDraftAddress;
+  readonly addressKey: string;
+  readonly loadGeneration: number;
+  readonly localEditCounter: number;
+}
+
+export interface ComposerBeginAttemptResult {
+  readonly result: BeginAttemptResult;
+  readonly address: ComposerDraftAddress;
+  readonly attempt: PreparedComposerAttempt;
+  readonly localEditCounter: number;
+}
 
 export interface UseComposerDraftResult {
-  // Text
   text: string;
-  setText: (v: string) => void;
-
-  // Chips
+  setText: (value: string) => void;
   chips: InlineChip[];
   addChip: (chip: InlineChip) => void;
   removeChip: (chipId: string) => void;
-
-  // Attachments
   attachments: AttachmentPayload[];
   attachmentError: string | null;
   canAddMore: boolean;
@@ -53,93 +67,269 @@ export interface UseComposerDraftResult {
   clearAttachmentError: () => void;
   handlePaste: (event: React.ClipboardEvent) => void;
   handleDrop: (event: React.DragEvent) => void;
-
-  // Action mode
   actionMode: AgentActionMode;
   setActionMode: (mode: AgentActionMode) => void;
-
-  // Status
+  editorContext: ComposerEditorContext;
+  revisionContext: MessageRevisionContext | null;
+  setRevision: (context: MessageRevisionContext, content: ComposerDraftContent) => boolean;
+  clearRevision: () => void;
   isSaved: boolean;
   isLoaded: boolean;
-
-  // Clear all
-  clearDraft: () => void;
-  hideDraftForPendingSend: (content: ComposerDraftContent) => void;
-  finalizePendingSendClear: (
-    teamNameOverride?: string,
-    submittedContent?: ComposerDraftContent
-  ) => void;
-  restoreDraft: (content: ComposerDraftContent) => void;
+  isRestoring: boolean;
+  persistenceStatus: ComposerPersistenceStatus;
+  readError: string | null;
+  address: ComposerDraftAddress;
+  addressKey: string;
+  renderedAddressKey: string;
+  workingRevision: string;
+  localEditCounter: number;
+  loadGeneration: number;
+  canSubmit: boolean;
+  snapshot: () => ComposerDraftContent;
+  clearDraft: () => Promise<void>;
+  flush: () => Promise<void>;
+  beginAttempt: (
+    attemptId: string,
+    preparedRequest: ComposerPreparedRequest
+  ) => Promise<ComposerBeginAttemptResult | null>;
+  stashWorking: () => Promise<RestoreRecoveryResult>;
+  restoreRecovery: (
+    sourceContextId: string,
+    sourceTeamName: string,
+    id: string,
+    options?: { readonly asNewMessage?: boolean }
+  ) => Promise<RestoreRecoveryResult>;
+  moveWorkingAsNew: (summary: ComposerWorkingSummary) => Promise<RestoreRecoveryResult>;
+  adoptWorking: (
+    working: ComposerWorkingRecord,
+    expected?: {
+      readonly addressKey: string;
+      readonly loadGeneration: number;
+      readonly localEditCounter: number;
+    }
+  ) => boolean;
 }
-
-export interface ComposerDraftContent {
-  text: string;
-  chips: InlineChip[];
-  attachments: AttachmentPayload[];
-  actionMode?: AgentActionMode;
-  pendingSendId?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const DEBOUNCE_MS = 400;
+let localRevisionSerial = 0;
 
-function draftPayloadEquals(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+function nextRevision(label: string): string {
+  localRevisionSerial += 1;
+  return `${label}:${Date.now().toString(36)}:${localRevisionSerial.toString(36)}`;
 }
 
-function snapshotMatchesContent(
-  snapshot: ComposerDraftSnapshot | null,
-  content: ComposerDraftContent
-): boolean {
-  if (snapshot == null) return false;
-  if (content.pendingSendId != null) {
-    return snapshot.pendingSendId === content.pendingSendId;
-  }
-  if (snapshot.text !== content.text) return false;
-  if (content.actionMode != null && snapshot.actionMode !== content.actionMode) return false;
+function emptyContent(): ComposerDraftContent {
+  return { text: '', chips: [], attachments: [], actionMode: 'do' };
+}
+
+function validAttachments(attachments: readonly AttachmentPayload[]): boolean {
   return (
-    draftPayloadEquals(snapshot.chips, content.chips) &&
-    draftPayloadEquals(snapshot.attachments, content.attachments)
+    attachments.length <= MAX_FILES &&
+    attachments.reduce((sum, attachment) => sum + attachment.size, 0) <= MAX_TOTAL_SIZE
   );
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-export function useComposerDraft(teamName: string): UseComposerDraftResult {
-  const [text, setTextState] = useState('');
-  const [chips, setChipsState] = useState<InlineChip[]>([]);
-  const [attachments, setAttachmentsState] = useState<AttachmentPayload[]>([]);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const [actionMode, setActionModeState] = useState<AgentActionMode>('do');
-  const [isSaved, setIsSaved] = useState(false);
+export function useComposerDraft(
+  address: ComposerDraftAddress,
+  repository: ComposerDraftRepository = composerDraftRepository
+): UseComposerDraftResult {
+  const addressKey = composerDraftAddressKey(address);
+  const [state, setState] = useState<LocalDraftState>(() => ({
+    addressKey,
+    content: emptyContent(),
+    editorContext: { kind: 'plain' },
+  }));
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [persistenceStatus, setPersistenceStatus] =
+    useState<ComposerPersistenceStatus>('durable');
+  const [readError, setReadError] = useState<string | null>(null);
 
-  // Refs for latest values — avoids stale closures in callbacks
-  const textRef = useRef('');
-  const chipsRef = useRef<InlineChip[]>([]);
-  const attachmentsRef = useRef<AttachmentPayload[]>([]);
-  const actionModeRef = useRef<AgentActionMode>('do');
-  const teamNameRef = useRef(teamName);
+  const addressRef = useRef(address);
+  const addressKeyRef = useRef(addressKey);
+  const stateRef = useRef(state);
   const mountedRef = useRef(true);
-
-  // Track whether user has interacted since last load to prevent race
-  const userTouchedRef = useRef(false);
-
-  // Debounce timer
+  const loadGenerationRef = useRef(0);
+  const localEditCounterRef = useRef(0);
+  const workingRevisionRef = useRef('0');
+  const hydratedRef = useRef(false);
+  const restoringRef = useRef(false);
+  const revisionByAddressRef = useRef(new Map<string, string>());
+  const hydratedAddressKeysRef = useRef(new Set<string>());
+  const latestEditByAddressRef = useRef(new Map<string, number>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<{ teamName: string; snapshot: ComposerDraftSnapshot } | null>(null);
+  const pendingSaveRef = useRef<PendingComposerDraftPersistence | null>(null);
   const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const persistenceVersionRef = useRef(0);
+  const attemptAddressKeyRef = useRef<string | null>(null);
+  const heldAttemptSaveRef = useRef<NonNullable<typeof pendingSaveRef.current> | null>(null);
 
-  // Keep teamNameRef in sync
-  useEffect(() => {
-    teamNameRef.current = teamName;
-  }, [teamName]);
+  addressRef.current = address;
+  addressKeyRef.current = addressKey;
+  stateRef.current = state;
+
+  const enqueue = useCallback((operation: () => Promise<void>): Promise<void> => {
+    const queued = persistQueueRef.current.catch(() => undefined).then(operation);
+    persistQueueRef.current = queued.catch(() => undefined);
+    return queued;
+  }, []);
+
+  const applyWorking = useCallback((working: ComposerWorkingRecord, key: string): void => {
+    const content = working.content ?? emptyContent();
+    const nextContent = validAttachments(content.attachments)
+      ? content
+      : { ...content, attachments: [] };
+    workingRevisionRef.current = working.workingRevision;
+    revisionByAddressRef.current.set(key, working.workingRevision);
+    stateRef.current = { addressKey: key, content: nextContent, editorContext: working.editorContext };
+    setState(stateRef.current);
+  }, []);
+
+  const preserveConflictedLocalEdit = useCallback(
+    async (
+      pending: NonNullable<typeof pendingSaveRef.current>,
+      currentWorkingRevision: string
+    ): Promise<void> => {
+      if (contentIsEmpty(pending.content)) return;
+      const id = `local-edit:${encodeURIComponent(pending.addressKey)}:${pending.editCounter}`;
+      const attempt: PreparedComposerAttempt = {
+        attemptId: id,
+        snapshot: { content: pending.content, editorContext: pending.editorContext },
+        preparedRequest: {
+          kind: 'local',
+          teamName: pending.address.teamName,
+          request: { member: '', text: pending.content.text },
+        },
+        createdAt: Date.now(),
+      };
+      const result = await repository.beginAttempt(
+        pending.address,
+        `stale:${currentWorkingRevision}`,
+        attempt
+      );
+      if (result.kind === 'prepared') {
+        await repository.settleAttempt(pending.address, id, {
+          kind: 'not-sent',
+          detail: 'A newer saved draft conflicted with this local edit.',
+        });
+      }
+    },
+    [repository]
+  );
+
+  const persistPending = useCallback(
+    async (pending: NonNullable<typeof pendingSaveRef.current>): Promise<void> => {
+      if (!hydratedAddressKeysRef.current.has(pending.addressKey)) return;
+      if (pending.editCounter !== latestEditByAddressRef.current.get(pending.addressKey)) return;
+      const expectedRevision = revisionByAddressRef.current.get(pending.addressKey) ?? '0';
+      const nextWorkingRevision = nextRevision(`edit:${pending.editCounter}`);
+      const result = await repository.saveWorking(
+        pending.address,
+        expectedRevision,
+        nextWorkingRevision,
+        contentIsEmpty(pending.content) ? null : pending.content,
+        pending.editorContext
+      );
+      setPersistenceStatus(result.status);
+      if (result.kind === 'saved') {
+        revisionByAddressRef.current.set(pending.addressKey, result.workingRevision);
+        if (pending.addressKey === addressKeyRef.current) {
+          workingRevisionRef.current = result.workingRevision;
+        }
+        if (
+          mountedRef.current &&
+          pending.addressKey === addressKeyRef.current &&
+          pending.editCounter === localEditCounterRef.current
+        ) {
+          setIsSaved(true);
+        }
+      } else if (result.kind === 'conflict') {
+        await preserveConflictedLocalEdit(pending, result.currentWorkingRevision);
+      } else {
+        setReadError(result.error);
+      }
+    },
+    [preserveConflictedLocalEdit, repository]
+  );
+
+  const persistBeforeHydration = useCallback(
+    (pending: NonNullable<typeof pendingSaveRef.current>) =>
+      persistComposerDraftBeforeHydration({
+        repository,
+        pending,
+        nextWorkingRevision: nextRevision(`edit:${pending.editCounter}`),
+        isLatest: () =>
+          pending.editCounter === latestEditByAddressRef.current.get(pending.addressKey),
+        preserveConflict: (revision) => preserveConflictedLocalEdit(pending, revision),
+      }),
+    [preserveConflictedLocalEdit, repository]
+  );
+
+  const flush = useCallback(async (): Promise<void> => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (pending) await enqueue(() => persistPending(pending));
+    await persistQueueRef.current.catch(() => undefined);
+  }, [enqueue, persistPending]);
+
+  const persistOrHold = useCallback(
+    (pending: NonNullable<typeof pendingSaveRef.current>): void => {
+      if (attemptAddressKeyRef.current === pending.addressKey) {
+        heldAttemptSaveRef.current = pending;
+        return;
+      }
+      void enqueue(() => persistPending(pending));
+    },
+    [enqueue, persistPending]
+  );
+
+  const scheduleSave = useCallback(
+    (nextState: LocalDraftState): void => {
+      const pending = {
+        address: addressRef.current,
+        addressKey: addressKeyRef.current,
+        editCounter: localEditCounterRef.current,
+        content: nextState.content,
+        editorContext: nextState.editorContext,
+      };
+      pendingSaveRef.current = pending;
+      if (timerRef.current != null) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        if (pendingSaveRef.current !== pending) return;
+        if (!hydratedAddressKeysRef.current.has(pending.addressKey)) return;
+        pendingSaveRef.current = null;
+        persistOrHold(pending);
+      }, DEBOUNCE_MS);
+    },
+    [persistOrHold]
+  );
+
+  const edit = useCallback(
+    (update: (current: LocalDraftState) => LocalDraftState): void => {
+      if (restoringRef.current) return;
+      localEditCounterRef.current += 1;
+      latestEditByAddressRef.current.set(addressKeyRef.current, localEditCounterRef.current);
+      const base =
+        stateRef.current.addressKey === addressKeyRef.current
+          ? stateRef.current
+          : {
+              addressKey: addressKeyRef.current,
+              content: emptyContent(),
+              editorContext: { kind: 'plain' as const },
+            };
+      const next = update(base);
+      stateRef.current = next;
+      setState(next);
+      setIsSaved(false);
+      scheduleSave(next);
+    },
+    [scheduleSave]
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -148,520 +338,505 @@ export function useComposerDraft(teamName: string): UseComposerDraftResult {
     };
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Persist helpers
-  // ---------------------------------------------------------------------------
-
-  const buildSnapshot = useCallback((): ComposerDraftSnapshot => {
-    return {
-      version: 1,
-      teamName: teamNameRef.current,
-      text: textRef.current,
-      chips: chipsRef.current,
-      attachments: attachmentsRef.current,
-      actionMode: actionModeRef.current,
-      updatedAt: Date.now(),
-    };
-  }, []);
-
-  const enqueuePersist = useCallback((operation: () => Promise<void>): Promise<void> => {
-    const queued = persistQueueRef.current.catch(() => undefined).then(operation);
-    persistQueueRef.current = queued.catch(() => undefined);
-    return queued;
-  }, []);
-
-  const flushPending = useCallback(() => {
-    if (timerRef.current != null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (pendingRef.current != null) {
-      const pending = pendingRef.current;
-      pendingRef.current = null;
-      const isEmpty =
-        pending.snapshot.text.length === 0 &&
-        pending.snapshot.chips.length === 0 &&
-        pending.snapshot.attachments.length === 0;
-      if (isEmpty) {
-        void enqueuePersist(() => composerDraftStorage.deleteSnapshot(pending.teamName));
-      } else {
-        void enqueuePersist(() =>
-          composerDraftStorage.saveSnapshot(pending.teamName, pending.snapshot)
-        );
-      }
-    }
-  }, [enqueuePersist]);
-
-  const scheduleSave = useCallback(() => {
-    const snapshot = buildSnapshot();
-    pendingRef.current = { teamName: teamNameRef.current, snapshot };
-    const persistenceVersion = ++persistenceVersionRef.current;
-
-    if (timerRef.current != null) {
-      clearTimeout(timerRef.current);
-    }
-
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      const pending = pendingRef.current;
-      pendingRef.current = null;
-      if (pending == null) return;
-
-      const isEmpty =
-        pending.snapshot.text.length === 0 &&
-        pending.snapshot.chips.length === 0 &&
-        pending.snapshot.attachments.length === 0;
-      const persist = enqueuePersist(() =>
-        isEmpty
-          ? composerDraftStorage.deleteSnapshot(pending.teamName)
-          : composerDraftStorage.saveSnapshot(pending.teamName, pending.snapshot)
-      );
-      void persist.then(() => {
-        if (mountedRef.current && persistenceVersionRef.current === persistenceVersion) {
-          setIsSaved(true);
-        }
-      });
-    }, DEBOUNCE_MS);
-  }, [buildSnapshot, enqueuePersist]);
-
-  // ---------------------------------------------------------------------------
-  // Apply snapshot to state
-  // ---------------------------------------------------------------------------
-
-  const applySnapshot = useCallback((snap: ComposerDraftSnapshot) => {
-    textRef.current = snap.text;
-    chipsRef.current = snap.chips;
-    attachmentsRef.current = snap.attachments;
-    actionModeRef.current = snap.actionMode ?? 'do';
-    setTextState(snap.text);
-    setChipsState(snap.chips);
-    setAttachmentsState(snap.attachments);
-    setActionModeState(snap.actionMode ?? 'do');
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Load on mount / teamName change
-  // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    let cancelled = false;
-    flushPending();
-    userTouchedRef.current = false;
-
-    // Reset to empty for the new teamName.
-    // Wrapped in queueMicrotask to avoid synchronous setState inside effect body.
-    const empty = composerDraftStorage.emptySnapshot(teamName);
-    queueMicrotask(() => {
-      if (cancelled) return;
-      applySnapshot(empty);
-      setIsSaved(false);
-      setIsLoaded(false);
-      setAttachmentError(null);
-    });
-
-    void (async () => {
-      // Try loading unified snapshot first
-      let snapshot = await composerDraftStorage.loadSnapshot(teamName);
-
-      // If none found, try legacy migration
-      if (snapshot == null) {
-        snapshot = await composerDraftStorage.migrateLegacy(teamName);
+    const generation = ++loadGenerationRef.current;
+    const loadAddress = addressRef.current;
+    const loadAddressKey = addressKey;
+    hydratedRef.current = false;
+    hydratedAddressKeysRef.current.delete(loadAddressKey);
+    setIsLoaded(false);
+    setIsSaved(false);
+    setReadError(null);
+    const editCounterAtStart = localEditCounterRef.current;
+    const previousPending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (previousPending) {
+      if (hydratedAddressKeysRef.current.has(previousPending.addressKey)) {
+        persistOrHold(previousPending);
+      } else {
+        void persistBeforeHydration(previousPending);
       }
+    }
+    stateRef.current = {
+      addressKey: loadAddressKey,
+      content: emptyContent(),
+      editorContext: { kind: 'plain' },
+    };
+    setState(stateRef.current);
 
-      if (cancelled) return;
-
-      // Race protection: if user already started typing, don't overwrite
-      if (userTouchedRef.current) {
-        if (mountedRef.current) setIsLoaded(true);
+    void repository.loadWorking(loadAddress).then(async (loaded) => {
+      if (
+        !mountedRef.current ||
+        generation !== loadGenerationRef.current ||
+        loadAddressKey !== addressKeyRef.current
+      ) {
         return;
       }
-
-      if (snapshot != null) {
-        // Validate attachment limits
-        const totalSize = snapshot.attachments.reduce((sum, a) => sum + a.size, 0);
-        if (totalSize > MAX_TOTAL_SIZE || snapshot.attachments.length > MAX_FILES) {
-          snapshot = { ...snapshot, attachments: [] };
+      setPersistenceStatus(loaded.status);
+      setReadError(loaded.readError ?? null);
+      const editedWhileLoading = localEditCounterRef.current !== editCounterAtStart;
+      hydratedRef.current = true;
+      hydratedAddressKeysRef.current.add(loadAddressKey);
+      workingRevisionRef.current = loaded.working.workingRevision;
+      revisionByAddressRef.current.set(loadAddressKey, loaded.working.workingRevision);
+      if (!editedWhileLoading) {
+        applyWorking(loaded.working, loadAddressKey);
+        setIsSaved(loaded.working.content != null);
+      } else {
+        const local = stateRef.current;
+        if (
+          loaded.working.content &&
+          !contentIsEmpty(loaded.working.content) &&
+          !contentEquals(loaded.working.content, local.content)
+        ) {
+          const displacedId = `displaced:${encodeURIComponent(loadAddressKey)}:${loaded.working.workingRevision}`;
+          const stashed = await repository.stashWorking(
+            loadAddress,
+            loaded.working.workingRevision,
+            displacedId
+          );
+          if (stashed.kind === 'restored') {
+            workingRevisionRef.current = stashed.working.workingRevision;
+            revisionByAddressRef.current.set(loadAddressKey, stashed.working.workingRevision);
+          } else {
+            setReadError(
+              'The existing saved draft could not be preserved. Your new edit remains in memory.'
+            );
+            return;
+          }
         }
-
-        applySnapshot(snapshot);
-        setIsSaved(true);
+        const pending = pendingSaveRef.current;
+        if (pending) {
+          pendingSaveRef.current = null;
+          await enqueue(() => persistPending(pending));
+        }
       }
+      if (mountedRef.current && generation === loadGenerationRef.current) setIsLoaded(true);
+    });
+  }, [
+    addressKey,
+    applyWorking,
+    enqueue,
+    persistBeforeHydration,
+    persistOrHold,
+    persistPending,
+    repository,
+  ]);
 
-      if (mountedRef.current) setIsLoaded(true);
-    })();
+  useEffect(
+    () => () => {
+      if (timerRef.current != null) clearTimeout(timerRef.current);
+      const pending = pendingSaveRef.current;
+      pendingSaveRef.current = null;
+      if (pending) {
+        if (hydratedAddressKeysRef.current.has(pending.addressKey)) persistOrHold(pending);
+        else void persistBeforeHydration(pending);
+      }
+    },
+    [persistBeforeHydration, persistOrHold]
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [teamName, flushPending, applySnapshot]);
-
-  // Flush on unmount
-  useEffect(() => {
-    return () => {
-      flushPending();
-    };
-  }, [flushPending]);
-
-  // ---------------------------------------------------------------------------
-  // Text
-  // ---------------------------------------------------------------------------
+  const visibleState =
+    state.addressKey === addressKey
+      ? state
+      : {
+          addressKey,
+          content: emptyContent(),
+          editorContext: { kind: 'plain' as const },
+        };
+  const { content, editorContext } = visibleState;
 
   const setText = useCallback(
-    (v: string) => {
-      userTouchedRef.current = true;
-      textRef.current = v;
-      setTextState(v);
-      setIsSaved(false);
-      scheduleSave();
-    },
-    [scheduleSave]
+    (text: string) => edit((current) => ({ ...current, content: { ...current.content, text } })),
+    [edit]
   );
-
-  // ---------------------------------------------------------------------------
-  // Chips
-  // ---------------------------------------------------------------------------
-
   const addChip = useCallback(
-    (chip: InlineChip) => {
-      userTouchedRef.current = true;
-      const next = [...chipsRef.current, chip];
-      chipsRef.current = next;
-      setChipsState(next);
-      setIsSaved(false);
-      scheduleSave();
-    },
-    [scheduleSave]
+    (chip: InlineChip) =>
+      edit((current) => ({
+        ...current,
+        content: { ...current.content, chips: [...current.content.chips, chip] },
+      })),
+    [edit]
   );
-
   const removeChip = useCallback(
-    (chipId: string) => {
-      userTouchedRef.current = true;
-      const next = chipsRef.current.filter((c) => c.id !== chipId);
-      chipsRef.current = next;
-      setChipsState(next);
-      setIsSaved(false);
-      scheduleSave();
-    },
-    [scheduleSave]
+    (chipId: string) =>
+      edit((current) => ({
+        ...current,
+        content: {
+          ...current.content,
+          chips: current.content.chips.filter((chip) => chip.id !== chipId),
+        },
+      })),
+    [edit]
   );
-
-  // ---------------------------------------------------------------------------
-  // Action mode
-  // ---------------------------------------------------------------------------
-
   const setActionMode = useCallback(
-    (mode: AgentActionMode) => {
-      userTouchedRef.current = true;
-      actionModeRef.current = mode;
-      setActionModeState(mode);
-      setIsSaved(false);
-      scheduleSave();
-    },
-    [scheduleSave]
+    (actionMode: AgentActionMode) =>
+      edit((current) => ({ ...current, content: { ...current.content, actionMode } })),
+    [edit]
   );
-
-  // ---------------------------------------------------------------------------
-  // Attachments
-  // ---------------------------------------------------------------------------
-
-  const totalSize = attachments.reduce((sum, a) => sum + a.size, 0);
-  const canAddMore = attachments.length < MAX_FILES && totalSize < MAX_TOTAL_SIZE;
-
-  const addFiles = useCallback(
-    async (files: FileList | File[]) => {
-      userTouchedRef.current = true;
-      setAttachmentError(null);
-      const fileArray = Array.from(files);
-      if (fileArray.length === 0) return;
-
-      // Split: supported → attachments, unsupported → path prepended to text
-      const supported: File[] = [];
-      const unsupportedPaths: string[] = [];
-      for (const f of fileArray) {
-        if (categorizeFile(f) === 'unsupported') {
-          let filePath = '';
-          try {
-            filePath = window.electronAPI.getPathForFile(f);
-          } catch {
-            // Clipboard files or non-Electron: no path available
-          }
-          if (filePath) {
-            unsupportedPaths.push(filePath);
-          } else {
-            setAttachmentError(`Unsupported file: ${f.name}`);
-          }
-        } else {
-          supported.push(f);
-        }
-      }
-
-      // Prepend unsupported file paths to text (independent of attachment validation)
-      if (unsupportedPaths.length > 0) {
-        const prefix = unsupportedPaths.join('\n') + '\n';
-        const current = textRef.current;
-        setText(current ? prefix + current : prefix);
-      }
-
-      if (supported.length === 0) return;
-
-      for (const file of supported) {
-        const validation = validateAttachment(file);
-        if (!validation.valid) {
-          setAttachmentError(validation.error);
-          return;
-        }
-      }
-
-      const newPayloads: AttachmentPayload[] = [];
-      for (const file of supported) {
-        try {
-          const payload = await fileToAgentAttachmentPayload(file);
-          newPayloads.push(payload);
-        } catch (error) {
-          const reason =
-            error instanceof Error ? error.message : `Failed to read file: ${file.name}`;
-          setAttachmentError(reason);
-          return;
-        }
-      }
-
-      const prev = attachmentsRef.current;
-      if (prev.length + newPayloads.length > MAX_FILES) {
-        setAttachmentError(`Maximum ${MAX_FILES} attachments allowed`);
-        return;
-      }
-      const currentTotal = prev.reduce((sum, a) => sum + a.size, 0);
-      const batchSize = newPayloads.reduce((sum, a) => sum + a.size, 0);
-      if (currentTotal + batchSize > MAX_TOTAL_SIZE) {
-        setAttachmentError('Total attachment size exceeds 20MB limit');
-        return;
-      }
-      const optimizedImageTotal = validateOptimizedImageTotal([...prev, ...newPayloads]);
-      if (!optimizedImageTotal.valid) {
-        setAttachmentError(optimizedImageTotal.error);
-        return;
-      }
-
-      const next = [...prev, ...newPayloads];
-      attachmentsRef.current = next;
-      setAttachmentsState(next);
-      setIsSaved(false);
-      scheduleSave();
-    },
-    [scheduleSave, setText]
+  const editContent = useCallback(
+    (update: (content: ComposerDraftContent) => ComposerDraftContent) =>
+      edit((current) => ({ ...current, content: update(current.content) })),
+    [edit]
   );
-
+  const {
+    attachmentError,
+    addFiles,
+    clearAttachmentError,
+    handleDrop,
+    handlePaste,
+  } = useComposerDraftAttachments({
+    canMutate: () => !restoringRef.current,
+    captureIdentity: () => ({
+      address: addressRef.current,
+      addressKey: addressKeyRef.current,
+      loadGeneration: loadGenerationRef.current,
+    }),
+    identityIsCurrent: (identity) =>
+      identity.loadGeneration === loadGenerationRef.current &&
+      identity.addressKey === addressKeyRef.current &&
+      sameComposerDraftAddress(identity.address, addressRef.current),
+    editContent,
+  });
   const removeAttachment = useCallback(
     (id: string) => {
-      userTouchedRef.current = true;
-      const next = attachmentsRef.current.filter((a) => a.id !== id);
-      attachmentsRef.current = next;
-      setAttachmentsState(next);
-      setAttachmentError(null);
-      setIsSaved(false);
-      scheduleSave();
+      clearAttachmentError();
+      edit((current) => ({
+        ...current,
+        content: {
+          ...current.content,
+          attachments: current.content.attachments.filter((attachment) => attachment.id !== id),
+        },
+      }));
     },
-    [scheduleSave]
+    [clearAttachmentError, edit]
   );
-
   const clearAttachments = useCallback(() => {
-    userTouchedRef.current = true;
-    attachmentsRef.current = [];
-    setAttachmentsState([]);
-    setAttachmentError(null);
-    setIsSaved(false);
-    scheduleSave();
-  }, [scheduleSave]);
+    clearAttachmentError();
+    edit((current) => ({ ...current, content: { ...current.content, attachments: [] } }));
+  }, [clearAttachmentError, edit]);
 
-  const clearAttachmentError = useCallback(() => {
-    setAttachmentError(null);
-  }, []);
-
-  const handlePaste = useCallback(
-    (event: React.ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      const pastedFiles: File[] = [];
-      for (const item of Array.from(items)) {
-        if (item.kind === 'file') {
-          const file = item.getAsFile();
-          if (file) pastedFiles.push(file);
-        }
-      }
-
-      if (pastedFiles.length > 0) {
-        event.preventDefault();
-        void addFiles(pastedFiles);
-      }
-    },
-    [addFiles]
-  );
-
-  const handleDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const files = event.dataTransfer?.files;
-      if (!files?.length) return;
-      void addFiles(Array.from(files));
-    },
-    [addFiles]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Clear all
-  // ---------------------------------------------------------------------------
-
-  const toSnapshot = useCallback((content: ComposerDraftContent): ComposerDraftSnapshot => {
-    return {
-      version: 1,
-      teamName: teamNameRef.current,
-      text: content.text,
-      chips: content.chips,
-      attachments: content.attachments,
-      actionMode: content.actionMode ?? actionModeRef.current,
-      ...(content.pendingSendId ? { pendingSendId: content.pendingSendId } : {}),
-      updatedAt: Date.now(),
+  const clearDraft = useCallback(async (): Promise<void> => {
+    await flush();
+    localEditCounterRef.current += 1;
+    latestEditByAddressRef.current.set(addressKeyRef.current, localEditCounterRef.current);
+    const next: LocalDraftState = {
+      addressKey: addressKeyRef.current,
+      content: emptyContent(),
+      editorContext: { kind: 'plain' },
     };
-  }, []);
-
-  const clearDraft = useCallback(() => {
-    if (timerRef.current != null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    stateRef.current = next;
+    setState(next);
+    const revision = nextRevision('clear');
+    const result = await repository.saveWorking(
+      addressRef.current,
+      workingRevisionRef.current,
+      revision,
+      null,
+      next.editorContext
+    );
+    setPersistenceStatus(result.status);
+    if (result.kind === 'saved') {
+      workingRevisionRef.current = revision;
+      revisionByAddressRef.current.set(addressKeyRef.current, revision);
     }
-    pendingRef.current = null;
-
-    textRef.current = '';
-    chipsRef.current = [];
-    attachmentsRef.current = [];
-    // actionMode is intentionally NOT reset — it is "sticky" across sends
-
-    setTextState('');
-    setChipsState([]);
-    setAttachmentsState([]);
-    setAttachmentError(null);
     setIsSaved(false);
+  }, [flush, repository]);
 
-    ++persistenceVersionRef.current;
-    const teamNameForDelete = teamNameRef.current;
-    void enqueuePersist(() => composerDraftStorage.deleteSnapshot(teamNameForDelete));
-  }, [enqueuePersist]);
-
-  const hideDraftForPendingSend = useCallback(
-    (content: ComposerDraftContent) => {
+  const beginAttempt = useCallback(
+    async (
+      attemptId: string,
+      preparedRequest: ComposerPreparedRequest
+    ): Promise<ComposerBeginAttemptResult | null> => {
+      if (
+        restoringRef.current ||
+        !hydratedRef.current ||
+        stateRef.current.addressKey !== addressKeyRef.current
+      ) return null;
+      const capturedAddress = addressRef.current;
+      const capturedAddressKey = addressKeyRef.current;
+      const capturedState = stateRef.current;
+      const capturedCounter = localEditCounterRef.current;
+      attemptAddressKeyRef.current = capturedAddressKey;
+      if (pendingSaveRef.current?.addressKey === capturedAddressKey) {
+        pendingSaveRef.current = null;
+      }
       if (timerRef.current != null) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      pendingRef.current = null;
-
-      ++persistenceVersionRef.current;
-      const teamNameForSave = teamNameRef.current;
-      const snapshot = toSnapshot(content);
-      void enqueuePersist(() => composerDraftStorage.saveSnapshot(teamNameForSave, snapshot));
-
-      textRef.current = '';
-      chipsRef.current = [];
-      attachmentsRef.current = [];
-
-      setTextState('');
-      setChipsState([]);
-      setAttachmentsState([]);
-      setAttachmentError(null);
-      setIsSaved(false);
-    },
-    [enqueuePersist, toSnapshot]
-  );
-
-  const deleteSubmittedSnapshotIfCurrent = useCallback(
-    (teamNameForDelete: string, submittedContent?: ComposerDraftContent) =>
-      enqueuePersist(async () => {
-        if (submittedContent != null) {
-          await composerDraftStorage.deleteSnapshotIfMatches(teamNameForDelete, (snapshot) =>
-            snapshotMatchesContent(snapshot, submittedContent)
-          );
-          return;
+      const attempt: PreparedComposerAttempt = {
+        attemptId,
+        snapshot: {
+          content: capturedState.content,
+          editorContext: capturedState.editorContext,
+        },
+        preparedRequest,
+        createdAt: Date.now(),
+      };
+      try {
+        await persistQueueRef.current.catch(() => undefined);
+        const expectedRevision = revisionByAddressRef.current.get(capturedAddressKey) ?? '0';
+        const result = await repository.beginAttempt(capturedAddress, expectedRevision, attempt);
+        if (mountedRef.current && capturedAddressKey === addressKeyRef.current) {
+          setPersistenceStatus(result.status);
         }
-        await composerDraftStorage.deleteSnapshot(teamNameForDelete);
-      }),
-    [enqueuePersist]
-  );
-
-  const finalizePendingSendClear = useCallback(
-    (teamNameOverride?: string, submittedContent?: ComposerDraftContent) => {
-      const currentTeamName = teamNameRef.current;
-      const teamNameForPersist = teamNameOverride ?? currentTeamName;
-      const isCurrentTeam = teamNameForPersist === currentTeamName;
-
-      if (!isCurrentTeam) {
-        void deleteSubmittedSnapshotIfCurrent(teamNameForPersist, submittedContent);
-        return;
-      }
-
-      if (timerRef.current != null) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      pendingRef.current = null;
-      const persistenceVersion = ++persistenceVersionRef.current;
-
-      const isEmpty =
-        textRef.current.length === 0 &&
-        chipsRef.current.length === 0 &&
-        attachmentsRef.current.length === 0;
-      if (isEmpty) {
-        void deleteSubmittedSnapshotIfCurrent(teamNameForPersist, submittedContent);
-        setIsSaved(false);
-        return;
-      }
-
-      const snapshot = buildSnapshot();
-      void enqueuePersist(() =>
-        composerDraftStorage.saveSnapshot(teamNameForPersist, snapshot)
-      ).then(() => {
-        if (mountedRef.current && persistenceVersionRef.current === persistenceVersion) {
-          setIsSaved(true);
+        if (result.kind === 'prepared') {
+          revisionByAddressRef.current.set(capturedAddressKey, result.currentWorkingRevision);
+          if (capturedAddressKey === addressKeyRef.current) {
+            workingRevisionRef.current = result.currentWorkingRevision;
+          }
+          if (
+            result.workingCleared &&
+            mountedRef.current &&
+            capturedCounter === localEditCounterRef.current &&
+            sameComposerDraftAddress(capturedAddress, addressRef.current)
+          ) {
+            const next: LocalDraftState = {
+              addressKey: addressKeyRef.current,
+              content: emptyContent(),
+              editorContext: { kind: 'plain' },
+            };
+            stateRef.current = next;
+            setState(next);
+            setIsSaved(false);
+          }
         }
-      });
+        return { result, address: capturedAddress, attempt, localEditCounter: capturedCounter };
+      } finally {
+        attemptAddressKeyRef.current = null;
+        const held = heldAttemptSaveRef.current;
+        heldAttemptSaveRef.current = null;
+        if (held) void enqueue(() => persistPending(held));
+      }
     },
-    [buildSnapshot, deleteSubmittedSnapshotIfCurrent, enqueuePersist]
+    [enqueue, persistPending, repository]
   );
 
-  const restoreDraft = useCallback(
-    (content: ComposerDraftContent) => {
-      userTouchedRef.current = true;
-      const snapshot = toSnapshot(content);
-      applySnapshot(snapshot);
-      setAttachmentError(null);
-      setIsSaved(false);
-      scheduleSave();
+  const stashWorking = useCallback(async (): Promise<RestoreRecoveryResult> => {
+    if (restoringRef.current) return { kind: 'active', status: persistenceStatus };
+    const capturedAddress = addressRef.current;
+    const capturedAddressKey = addressKeyRef.current;
+    const capturedGeneration = loadGenerationRef.current;
+    const capturedCounter = localEditCounterRef.current;
+    await flush();
+    const capturedRevision = revisionByAddressRef.current.get(capturedAddressKey) ?? '0';
+    setIsRestoring(true);
+    try {
+      if (capturedCounter !== latestEditByAddressRef.current.get(capturedAddressKey)) {
+        return { kind: 'conflict', status: persistenceStatus };
+      }
+      const result = await repository.stashWorking(
+        capturedAddress,
+        capturedRevision,
+        `stash:${Date.now().toString(36)}:${capturedCounter}`
+      );
+      if (
+        result.kind === 'restored' &&
+        capturedAddressKey === addressKeyRef.current &&
+        capturedGeneration === loadGenerationRef.current &&
+        capturedCounter === localEditCounterRef.current
+      ) {
+        applyWorking(result.working, capturedAddressKey);
+      }
+      return result;
+    } finally {
+      if (mountedRef.current) setIsRestoring(false);
+    }
+  }, [applyWorking, flush, persistenceStatus, repository]);
+
+  const restoreRecovery = useCallback(
+    async (
+      sourceContextId: string,
+      sourceTeamName: string,
+      id: string,
+      options?: { readonly asNewMessage?: boolean }
+    ): Promise<RestoreRecoveryResult> => {
+      if (restoringRef.current || !hydratedRef.current) {
+        return { kind: 'active', status: persistenceStatus };
+      }
+      restoringRef.current = true;
+      setIsRestoring(true);
+      const lease: DraftMutationLease = {
+        address: addressRef.current,
+        addressKey: addressKeyRef.current,
+        localEditCounter: localEditCounterRef.current,
+        loadGeneration: ++loadGenerationRef.current,
+      };
+      try {
+        await flush();
+        const expectedRevision = revisionByAddressRef.current.get(lease.addressKey) ?? '0';
+        const result = await repository.restoreRecovery(
+          sourceContextId,
+          sourceTeamName,
+          id,
+          lease.address,
+          expectedRevision,
+          options
+        );
+        if (
+          result.kind === 'restored' &&
+          lease.addressKey === addressKeyRef.current &&
+          lease.loadGeneration === loadGenerationRef.current &&
+          lease.localEditCounter === localEditCounterRef.current &&
+          expectedRevision === (revisionByAddressRef.current.get(lease.addressKey) ?? '0') &&
+          sameComposerDraftAddress(lease.address, addressRef.current)
+        ) {
+          applyWorking(result.working, lease.addressKey);
+        }
+        return result;
+      } finally {
+        restoringRef.current = false;
+        if (mountedRef.current) setIsRestoring(false);
+      }
     },
-    [applySnapshot, scheduleSave, toSnapshot]
+    [applyWorking, flush, persistenceStatus, repository]
   );
 
-  return {
-    text,
-    setText,
-    chips,
-    addChip,
-    removeChip,
-    attachments,
-    attachmentError,
-    canAddMore,
-    addFiles,
-    removeAttachment,
-    clearAttachments,
-    clearAttachmentError,
-    handlePaste,
-    handleDrop,
-    actionMode,
-    setActionMode,
-    isSaved,
-    isLoaded,
-    clearDraft,
-    hideDraftForPendingSend,
-    finalizePendingSendClear,
-    restoreDraft,
-  };
+  const moveWorkingAsNew = useCallback(
+    async (summary: ComposerWorkingSummary): Promise<RestoreRecoveryResult> => {
+      if (restoringRef.current || !hydratedRef.current) {
+        return { kind: 'active', status: persistenceStatus };
+      }
+      restoringRef.current = true;
+      setIsRestoring(true);
+      const lease: DraftMutationLease = {
+        address: addressRef.current,
+        addressKey: addressKeyRef.current,
+        localEditCounter: localEditCounterRef.current,
+        loadGeneration: ++loadGenerationRef.current,
+      };
+      try {
+        await flush();
+        const expectedRevision = revisionByAddressRef.current.get(lease.addressKey) ?? '0';
+        const result = await repository.moveWorkingAsNew(
+          summary.address,
+          summary.workingRevision,
+          lease.address,
+          expectedRevision
+        );
+        if (
+          result.kind === 'restored' &&
+          lease.addressKey === addressKeyRef.current &&
+          lease.loadGeneration === loadGenerationRef.current &&
+          lease.localEditCounter === localEditCounterRef.current &&
+          expectedRevision === (revisionByAddressRef.current.get(lease.addressKey) ?? '0') &&
+          sameComposerDraftAddress(lease.address, addressRef.current)
+        ) {
+          applyWorking(result.working, lease.addressKey);
+        }
+        return result;
+      } finally {
+        restoringRef.current = false;
+        if (mountedRef.current) setIsRestoring(false);
+      }
+    },
+    [applyWorking, flush, persistenceStatus, repository]
+  );
+
+  const setRevision = useCallback(
+    (context: MessageRevisionContext, nextContent: ComposerDraftContent): boolean => {
+      if (!hydratedRef.current || !contentIsEmpty(stateRef.current.content)) return false;
+      edit(() => ({ addressKey: addressKeyRef.current, content: nextContent, editorContext: context }));
+      return true;
+    },
+    [edit]
+  );
+  const clearRevision = useCallback(() => {
+    edit((current) => ({ ...current, editorContext: { kind: 'plain' } }));
+  }, [edit]);
+  const adoptWorking = useCallback(
+    (
+      working: ComposerWorkingRecord,
+      expected?: {
+        readonly addressKey: string;
+        readonly loadGeneration: number;
+        readonly localEditCounter: number;
+      }
+    ): boolean => {
+      if (
+        !sameComposerDraftAddress(working.address, addressRef.current) ||
+        (expected != null &&
+          (expected.addressKey !== addressKeyRef.current ||
+            expected.loadGeneration !== loadGenerationRef.current ||
+            expected.localEditCounter !== localEditCounterRef.current))
+      ) {
+        return false;
+      }
+      localEditCounterRef.current += 1;
+      latestEditByAddressRef.current.set(addressKeyRef.current, localEditCounterRef.current);
+      applyWorking(working, addressKeyRef.current);
+      setIsLoaded(true);
+      setIsSaved(true);
+      return true;
+    },
+    [applyWorking]
+  );
+  const snapshot = useCallback(() => stateRef.current.content, []);
+
+  const canAddMore =
+    content.attachments.length < MAX_FILES &&
+    content.attachments.reduce((sum, attachment) => sum + attachment.size, 0) < MAX_TOTAL_SIZE;
+  const canSubmit =
+    isLoaded &&
+    !isRestoring &&
+    hydratedRef.current &&
+    state.addressKey === addressKey &&
+    addressKeyRef.current === addressKey;
+
+  return useMemo(
+    () => ({
+      text: content.text,
+      setText,
+      chips: content.chips,
+      addChip,
+      removeChip,
+      attachments: content.attachments,
+      attachmentError,
+      canAddMore,
+      addFiles,
+      removeAttachment,
+      clearAttachments,
+      clearAttachmentError,
+      handlePaste,
+      handleDrop,
+      actionMode: content.actionMode,
+      setActionMode,
+      editorContext,
+      revisionContext: editorContext.kind === 'revision' ? editorContext : null,
+      setRevision,
+      clearRevision,
+      isSaved,
+      isLoaded,
+      isRestoring,
+      persistenceStatus,
+      readError,
+      address,
+      addressKey,
+      renderedAddressKey: state.addressKey,
+      workingRevision: workingRevisionRef.current,
+      localEditCounter: localEditCounterRef.current,
+      loadGeneration: loadGenerationRef.current,
+      canSubmit,
+      snapshot,
+      clearDraft,
+      flush,
+      beginAttempt,
+      stashWorking,
+      restoreRecovery,
+      moveWorkingAsNew,
+      adoptWorking,
+    }),
+    [
+      addChip, addFiles, address, addressKey, adoptWorking, attachmentError, beginAttempt,
+      canAddMore, canSubmit, clearAttachmentError, clearAttachments, clearDraft, clearRevision, content, editorContext,
+      flush, handleDrop, handlePaste, isLoaded, isRestoring, isSaved, persistenceStatus,
+      readError, removeAttachment, removeChip, setActionMode, setRevision, setText, snapshot,
+      moveWorkingAsNew, restoreRecovery, stashWorking, state.addressKey,
+    ]
+  );
 }

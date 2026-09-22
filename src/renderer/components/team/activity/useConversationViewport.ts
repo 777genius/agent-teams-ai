@@ -185,6 +185,7 @@ export function useConversationViewport(options: Options): {
       if (!alive) return;
       if (!measurable()) {
         stop();
+        if (document.hidden) initial = false;
         publish(false);
         return;
       }
@@ -206,6 +207,7 @@ export function useConversationViewport(options: Options): {
         if (!alive || generation !== operation) return;
         if (!measurable()) {
           stop();
+          if (document.hidden) initial = false;
           publish(false);
           return;
         }
@@ -238,6 +240,11 @@ export function useConversationViewport(options: Options): {
       hasPlacedRows = true;
       capture();
       publish(measurable());
+    };
+    const interruptCorrection = (): void => {
+      stop();
+      expected = null;
+      capture();
     };
     const handle: ConversationViewportHandle = {
       prepareLayoutChange: () => {
@@ -296,11 +303,12 @@ export function useConversationViewport(options: Options): {
       if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) read();
     };
     const onPointer = (): void => {
-      read();
+      interruptCorrection();
     };
     const onVisibilityChange = (): void => {
       if (document.hidden) {
         stop();
+        initial = false;
         publish(false);
         return;
       }

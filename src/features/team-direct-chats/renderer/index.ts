@@ -40,6 +40,7 @@ export { ConversationHeader } from './ui/ConversationHeader';
 export { GroupChatAvatar } from './ui/GroupChatAvatar';
 export type { ChatListViewItem } from './view-models/chatListViewModel';
 export { buildChatListView } from './view-models/chatListViewModel';
+export type { ChatListDraftPreview } from './view-models/chatListViewModel';
 
 export const teamDirectChatsRenderer = {
   ChatList,

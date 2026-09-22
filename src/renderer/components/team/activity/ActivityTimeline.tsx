@@ -16,9 +16,15 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2 } from 'lucide-react';
 
+import { ComposerOutboxBubble } from '../messages/ComposerOutboxBubble';
+
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
 import { type ChatAppearance, isNoiseMessage } from './activityMessagePresentation';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
+import {
+  type ActivityTimelineItem,
+  mergeComposerOutboxTimelineItems,
+} from './composerOutboxTimeline';
 import { projectTimelineRows } from './conversationWindow';
 import {
   getThoughtGroupKey,
@@ -47,7 +53,8 @@ import {
   getWideChatRowStyle,
 } from './wideChatTimelinePresentation';
 
-import type { TimelineItem } from './LeadThoughtsGroup';
+import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
+import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /**
@@ -151,12 +158,25 @@ interface ActivityTimelineProps {
   conversationHandleRef?: RefObject<ConversationViewportHandle | null>;
   onLatestAvailable?: (available: boolean) => void;
   historyControl?: (prepare: () => void) => React.ReactNode;
+  composerOutboxItems?: readonly ComposerOutboxItem[];
+  onComposerOutboxCopy?: (item: ComposerOutboxItem) => Promise<void>;
+  onComposerOutboxRestore?: (item: ComposerOutboxItem) => Promise<RestoreRecoveryResult>;
+  onComposerOutboxDiscard?: (
+    item: ComposerOutboxItem
+  ) => Promise<'discarded' | 'missing' | 'conflict' | 'active' | 'blocked'>;
 }
 
 const MESSAGES_PAGE_SIZE = 30;
 const COMPACT_MESSAGES_WIDTH_PX = 400;
 const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
+const EMPTY_OUTBOX_ITEMS: readonly ComposerOutboxItem[] = [];
+const NOOP_OUTBOX_COPY = async (): Promise<void> => undefined;
+const NOOP_OUTBOX_RESTORE = async (): Promise<RestoreRecoveryResult> => ({
+  kind: 'active',
+  status: 'durable',
+});
+const NOOP_OUTBOX_DISCARD = async (): Promise<'blocked'> => 'blocked';
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
 const VIRTUALIZATION_ROW_GAP_PX = 0;
@@ -181,6 +201,7 @@ const ROW_SIZE_ESTIMATES: Record<TimelineRow['kind'], number> = {
   'compaction-divider': 50,
   'lead-thought-group': 220,
   'message-row': 140,
+  'composer-outbox-row': 120,
 };
 
 const TimelineLoadingState = (): React.JSX.Element => {
@@ -269,6 +290,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   conversationHandleRef,
   onLatestAvailable,
   historyControl,
+  composerOutboxItems = EMPTY_OUTBOX_ITEMS,
+  onComposerOutboxCopy,
+  onComposerOutboxRestore,
+  onComposerOutboxDiscard,
 }: ActivityTimelineProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const observerRoot = viewport?.observerRoot ?? viewport?.scrollElementRef;
@@ -344,7 +369,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   }, [messages, visibleCount, conversation, conversationWindow]);
 
   // Group consecutive lead thoughts into collapsible blocks.
-  const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
+  const timelineItems = useMemo(
+    () => mergeComposerOutboxTimelineItems(groupTimelineItems(visibleMessages), composerOutboxItems),
+    [composerOutboxItems, visibleMessages]
+  );
 
   // Zebra striping is anchored from the bottom of the visible list so prepending
   // new live messages at the top does not recolor every existing card.
@@ -353,7 +381,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     let cardCount = 0;
     for (let i = timelineItems.length - 1; i >= 0; i--) {
       const item = timelineItems[i];
-      if (item.type === 'lead-thoughts') {
+      if (item.type === 'composer-outbox') {
+        if (cardCount % 2 === 1) result.add(i);
+        cardCount++;
+      } else if (item.type === 'lead-thoughts') {
         // Thought groups count as one card for striping
         if (cardCount % 2 === 1) result.add(i);
         cardCount++;
@@ -368,7 +399,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   }, [timelineItems]);
 
   const timelineItemKeys = useMemo(() => {
-    const getItemKey = (item: TimelineItem): string => {
+    const getItemKey = (item: ActivityTimelineItem): string => {
+      if (item.type === 'composer-outbox') {
+        return `composer-outbox:${item.item.id}`;
+      }
       if (item.type === 'lead-thoughts') {
         return getThoughtGroupKey(item.group);
       }
@@ -388,7 +422,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     ? new Set(
         timelineItems.flatMap((item, index) => {
           const fresh =
-            item.type === 'lead-thoughts'
+            item.type === 'composer-outbox'
+              ? false
+              : item.type === 'lead-thoughts'
               ? item.group.thoughts.every((message) =>
                   conversationWindow.freshKeys.has(toMessageKey(message))
                 )
@@ -437,7 +473,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     let lastSeen: string | undefined;
     for (const item of timelineItems) {
       anchors.push(lastSeen);
-      const anchor = getItemSessionAnchorId(item);
+      const anchor = item.type === 'composer-outbox' ? undefined : getItemSessionAnchorId(item);
       if (anchor) lastSeen = anchor;
     }
     return anchors;
@@ -465,7 +501,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     for (let i = startIndex; i < timelineItems.length; i += 1) {
       const item = timelineItems[i];
       if (i > 0) {
-        const currSessionId = getItemSessionAnchorId(item);
+        const currSessionId =
+          item.type === 'composer-outbox' ? undefined : getItemSessionAnchorId(item);
         const prevSessionId = previousSessionAnchorByIndex[i];
         if (prevSessionId && currSessionId && prevSessionId !== currSessionId) {
           // Include itemIndex in the key so a repeated transition (e.g. lead
@@ -477,6 +514,15 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             key: `session-separator-${i}-${prevSessionId}->${currSessionId}`,
           });
         }
+      }
+      if (item.type === 'composer-outbox') {
+        rows.push({
+          kind: 'composer-outbox-row',
+          key: `composer-outbox:${item.item.id}`,
+          itemIndex: i,
+          item: item.item,
+        });
+        continue;
       }
       if (item.type === 'lead-thoughts') {
         rows.push({
@@ -770,6 +816,21 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           />
         );
       }
+      case 'composer-outbox-row': {
+        const { item, key } = row;
+        return (
+          <ComposerOutboxBubble
+            key={key}
+            item={item}
+            appearance={appearance}
+            continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
+            continuesNextAuthor={continuesPreviousAuthor[(options?.rowIndex ?? 0) + 1] ?? false}
+            onCopy={onComposerOutboxCopy ?? NOOP_OUTBOX_COPY}
+            onRestore={onComposerOutboxRestore ?? NOOP_OUTBOX_RESTORE}
+            onDiscard={onComposerOutboxDiscard ?? NOOP_OUTBOX_DISCARD}
+          />
+        );
+      }
     }
   };
 
@@ -789,7 +850,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     </div>
   );
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && composerOutboxItems.length === 0) {
     return (
       <div
         ref={rootRef}

@@ -18,6 +18,10 @@ interface MessageComposerTeamSelectorProps {
   selectedTeam: string | null;
   sortedCrossTeamTargets: Array<CrossTeamTarget & { isOnline: boolean }>;
   targetDisplayName: string | null;
+  draftMetaByTeam: ReadonlyMap<
+    string,
+    { readonly groupPreview: string | null; readonly count: number }
+  >;
   onOpenChange: (open: boolean) => void;
   onSelectCurrent: () => void;
   onSelectTarget: (teamName: string) => void;
@@ -33,6 +37,7 @@ export const MessageComposerTeamSelector = ({
   selectedTeam,
   sortedCrossTeamTargets,
   targetDisplayName,
+  draftMetaByTeam,
   onOpenChange,
   onSelectCurrent,
   onSelectTarget,
@@ -109,6 +114,7 @@ export const MessageComposerTeamSelector = ({
               <div className="my-1 h-px bg-[var(--color-border)]" />
               {sortedCrossTeamTargets.map((target) => {
                 const isSelected = selectedTeam === target.teamName;
+                const draftMeta = draftMetaByTeam.get(target.teamName);
                 return (
                   <button
                     key={target.teamName}
@@ -157,7 +163,21 @@ export const MessageComposerTeamSelector = ({
                             : t('messageComposer.teamSelector.offline')}
                         </span>
                       </div>
-                      {target.description ? (
+                      {draftMeta ? (
+                        <div className="truncate text-[10px] text-[var(--color-text-secondary)]">
+                          {draftMeta.groupPreview ? (
+                            <>
+                              <span className="font-medium text-blue-400">
+                                {t('messages.chats.draft')}:
+                              </span>{' '}
+                              {draftMeta.groupPreview}
+                              {draftMeta.count > 1 ? ` · +${draftMeta.count - 1}` : ''}
+                            </>
+                          ) : (
+                            t('messages.chats.drafts', { count: draftMeta.count })
+                          )}
+                        </div>
+                      ) : target.description ? (
                         <div className="truncate text-[10px] text-[var(--color-text-muted)]">
                           {target.description}
                         </div>

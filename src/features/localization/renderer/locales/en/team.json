@@ -803,6 +803,13 @@
       "emptyList": "No chats yet",
       "emptyThread": "No messages in this chat",
       "emptyPreview": "No messages yet",
+      "draft": "Draft",
+      "draftAttachments_one": "{{count}} attachment",
+      "draftAttachments_other": "{{count}} attachments",
+      "draftReferences_one": "{{count}} reference",
+      "draftReferences_other": "{{count}} references",
+      "drafts_one": "{{count}} draft",
+      "drafts_other": "{{count}} drafts",
       "previewFrom": "{{name}}: {{text}}",
       "you": "You",
       "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
@@ -834,6 +841,35 @@
     },
     "search": {
       "placeholder": "Search..."
+    },
+    "outbox": {
+      "storageWarning": "Some local delivery details could not be read. Last known messages remain visible.",
+      "status": {
+        "sending": "Sending...",
+        "syncing": "Sent - syncing...",
+        "delivery-unknown": "Delivery unknown",
+        "not-sent": "Not sent",
+        "recovered-draft": "Recovered draft",
+        "memoryOnly": "saved until the app closes"
+      },
+      "actions": {
+        "edit": "Edit",
+        "useDraft": "Use draft",
+        "restoreDraft": "Restore to draft",
+        "copy": "Copy text",
+        "delete": "Delete",
+        "removeLocally": "Remove locally",
+        "cancel": "Cancel"
+      },
+      "recoveredFor": "Recovered from {{target}}",
+      "removeUnknownDescription": "This removes only the local copy. Delivery may already have happened, so retrying can create a duplicate.",
+      "deleteDescription": "This removes the local copy and cannot be undone.",
+      "errors": {
+        "draftOccupied": "This chat already has a draft. Nothing was overwritten.",
+        "changed": "The saved copy changed. Nothing was overwritten.",
+        "active": "This message is still being sent.",
+        "deleteBlocked": "The local copy could not be removed safely."
+      }
     }
   },
   "modelSelector": {
@@ -1684,11 +1720,18 @@
     },
     "status": {
       "reusedCrossTeamRequest": "Reused recent cross-team request",
-      "teamOffline": "offline"
+      "teamOffline": "offline",
+      "memoryOnly": "Saved only until the app closes",
+      "previousDeliveryUnknown": "Previous delivery is unknown; sending again may create a duplicate"
     },
     "revision": {
       "editing": "Editing previous message",
       "cancel": "Cancel",
+      "preparing": "Preparing edit...",
+      "occupied": "{{recipient}} already has a draft",
+      "saveDraft": "Save draft",
+      "unverified": "The original message could not be verified",
+      "continueAsNew": "Continue as new",
       "tooltip": "Ask the agent to ignore the previous message and restore it to the composer."
     },
     "input": {

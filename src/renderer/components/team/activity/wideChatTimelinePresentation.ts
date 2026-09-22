@@ -24,6 +24,21 @@ export function buildWideChatContinuationFlags({
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
+    if (row.kind === 'composer-outbox-row') {
+      const current = {
+        kind: 'ordinary-user' as const,
+        author: 'user',
+        route: '',
+        hasRenderableBody: true,
+      };
+      flags[index] = Boolean(
+        previous?.kind === current.kind &&
+        previous.author === current.author &&
+        previous.route === current.route
+      );
+      previous = current;
+      continue;
+    }
     if (row.kind !== 'message-row') {
       previous = undefined;
       continue;

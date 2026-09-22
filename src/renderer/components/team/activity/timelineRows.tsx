@@ -4,6 +4,7 @@ import { Layers } from 'lucide-react';
 import { getTimelineCardPosition, type TimelineCardPosition } from './timelineCardStack';
 
 import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
+import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { InboxMessage } from '@shared/types';
 
 export type TimelineRow =
@@ -16,7 +17,8 @@ export type TimelineRow =
       isPinned: boolean;
     }
   | { kind: 'compaction-divider'; key: string; message: InboxMessage }
-  | { kind: 'message-row'; key: string; itemIndex: number; message: InboxMessage };
+  | { kind: 'message-row'; key: string; itemIndex: number; message: InboxMessage }
+  | { kind: 'composer-outbox-row'; key: string; itemIndex: number; item: ComposerOutboxItem };
 
 export function getItemSessionAnchorId(item: TimelineItem): string | undefined {
   if (item.type === 'lead-thoughts') {
@@ -26,7 +28,11 @@ export function getItemSessionAnchorId(item: TimelineItem): string | undefined {
 }
 
 function isCardTimelineRow(row: TimelineRow | undefined): boolean {
-  return row?.kind === 'message-row' || row?.kind === 'lead-thought-group';
+  return (
+    row?.kind === 'message-row' ||
+    row?.kind === 'lead-thought-group' ||
+    row?.kind === 'composer-outbox-row'
+  );
 }
 
 export function getCardPositionForRow(

@@ -80,7 +80,7 @@ export const FullScreenControl = ({
         checked={expanded}
         disabled={!available && !expanded}
         aria-label={label}
-        onCheckedChange={(nextExpanded) => {
+        onCheckedChange={(nextExpanded: boolean) => {
           restoreSwitchFocusRef.current =
             restoreFocusAfterChange && document.activeElement === switchRef.current;
           onExpandedChange(nextExpanded);
@@ -167,6 +167,7 @@ export const WideThreadHeader = ({
               searchVisible={searchVisible}
               onToggleCollapsed={onToggleCollapsed}
               onToggleSearch={onToggleSearch}
+              showCollapse={false}
             />
           </DropdownMenuContent>
         </DropdownMenu>

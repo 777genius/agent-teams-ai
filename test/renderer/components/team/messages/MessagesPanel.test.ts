@@ -26,6 +26,8 @@ const storeState = {
   sendMessageWarning: null as string | null,
   sendMessageDebugDetails: null as OpenCodeRuntimeDeliveryDebugDetails | null,
   lastSendMessageResult: null as unknown,
+  activeContextId: 'local',
+  isContextSwitching: false,
   clearSendMessageRuntimeDiagnostics: vi.fn(),
   refreshSendMessageRuntimeDeliveryStatus: vi.fn().mockResolvedValue(undefined),
   teams: [],
@@ -86,9 +88,11 @@ const sidebarUiState = {
   conversationScope: { kind: 'team-feed' } as ConversationScope,
 };
 
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
-}));
+vi.mock('@renderer/store', () => {
+  const useStore = (selector: (state: typeof storeState) => unknown): unknown => selector(storeState);
+  useStore.getState = (): typeof storeState => storeState;
+  return { useStore };
+});
 
 vi.mock('@renderer/hooks/useStableTeamMentionMeta', () => ({
   useStableTeamMentionMeta: () => ({
@@ -105,6 +109,27 @@ vi.mock('@renderer/hooks/useTeamMessagesExpanded', () => ({
   useTeamMessagesExpanded: () => expandedHookState,
 }));
 
+vi.mock('@renderer/hooks/useComposerWorkingSummaries', () => ({
+  useComposerWorkingSummaries: () => ({
+    summaries: [],
+    byTargetKey: new Map(),
+    status: 'durable',
+    readError: null,
+  }),
+}));
+
+vi.mock('@renderer/components/team/messages/useComposerOutboxItems', () => ({
+  useComposerOutboxItems: () => ({
+    items: [],
+    status: 'durable',
+    readError: null,
+    refresh: vi.fn(),
+    copy: vi.fn(),
+    restore: vi.fn(),
+    discard: vi.fn(),
+  }),
+}));
+
 vi.mock('@renderer/components/ui/badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) =>
     React.createElement('span', null, children),
@@ -117,6 +142,27 @@ vi.mock('@renderer/components/ui/button', () => ({
     ...props
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) =>
     React.createElement('button', { type: 'button', ...props, onClick }, children),
+}));
+
+vi.mock('@renderer/components/ui/switch', () => ({
+  Switch: React.forwardRef<
+    HTMLButtonElement,
+    React.ButtonHTMLAttributes<HTMLButtonElement> & {
+      checked?: boolean;
+      onCheckedChange?: (checked: boolean) => void;
+    }
+  >(
+    function MockSwitch({ checked = false, onCheckedChange, ...props }, ref) {
+      return React.createElement('button', {
+        ...props,
+        ref,
+        type: 'button',
+        role: 'switch',
+        'aria-checked': checked,
+        onClick: () => onCheckedChange?.(!checked),
+      });
+    }
+  ),
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
@@ -143,11 +189,25 @@ vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
   MessageComposer: function MockMessageComposer({
     autoFocusKey,
     revisionRequest,
+    onRevisionPreparationChange,
   }: Readonly<{
     autoFocusKey?: number;
     revisionRequest?: { originalMessageId: string; originalText: string } | null;
+    onRevisionPreparationChange?: (
+      controller: {
+        prepare: () => Promise<{ addressKey: string; loadGeneration: number }>;
+        isCurrent: () => boolean;
+      } | null
+    ) => void;
   }>) {
     const composerRef = React.useRef<HTMLButtonElement>(null);
+    React.useEffect(() => {
+      onRevisionPreparationChange?.({
+        prepare: async () => ({ addressKey: 'test-address', loadGeneration: 1 }),
+        isCurrent: () => true,
+      });
+      return () => onRevisionPreparationChange?.(null);
+    }, [onRevisionPreparationChange]);
     React.useLayoutEffect(() => {
       if ((autoFocusKey ?? 0) > 0) composerRef.current?.focus();
     }, [autoFocusKey]);
@@ -206,6 +266,7 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
     onReviseMessage,
     leadActivity,
     leadContextUpdatedAt,
+    allCollapsed,
   }: {
     messages: InboxMessage[];
     loading?: boolean;
@@ -213,9 +274,10 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
     onReviseMessage?: (message: InboxMessage) => void;
     leadActivity?: string;
     leadContextUpdatedAt?: string;
+    allCollapsed?: boolean;
   }) =>
     (() => {
-      activityTimelineRenderSpy({ leadActivity, leadContextUpdatedAt, messages });
+      activityTimelineRenderSpy({ allCollapsed, leadActivity, leadContextUpdatedAt, messages });
       return React.createElement(
         'div',
         { 'data-testid': 'activity-timeline' },
@@ -318,6 +380,11 @@ describe('MessagesPanel idle summary invariants', () => {
     expandedHookState.expandedSet = new Set<string>();
     expandedHookState.toggle.mockReset();
     storeState.sendTeamMessage.mockClear();
+    storeState.sendTeamMessage.mockResolvedValue({
+      deliveredToInbox: true,
+      deliveredViaStdin: false,
+      messageId: 'message-1',
+    });
     storeState.sendCrossTeamMessage.mockClear();
     storeState.openTeamTab.mockClear();
     storeState.clearSendMessageRuntimeDiagnostics.mockClear();
@@ -454,6 +521,7 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(activityTimelineRenderSpy).toHaveBeenCalled();
     expect(activityTimelineRenderSpy.mock.lastCall?.[0]).toMatchObject({
+      allCollapsed: true,
       leadActivity: undefined,
       leadContextUpdatedAt: undefined,
     });
@@ -1723,6 +1791,9 @@ describe('MessagesPanel idle summary invariants', () => {
       expect(host.querySelector('[data-messages-thread-footer]')?.textContent).toContain(
         'composer'
       );
+      expect(activityTimelineRenderSpy.mock.lastCall?.[0]).toMatchObject({
+        allCollapsed: false,
+      });
       const snaps = JSON.parse(
         host.querySelector('[data-sheet-snaps]')!.getAttribute('data-sheet-snaps')!
       ) as number[];
