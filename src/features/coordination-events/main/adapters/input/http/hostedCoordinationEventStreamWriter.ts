@@ -3,7 +3,7 @@ import type {
   HostedCoordinationEventStreamWriteObservation,
   HostedCoordinationEventStreamWriteObserver,
 } from '../../../application/HostedCoordinationEventStreamPorts';
-import type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
+import type { HostedCoordinationEventStreamScheduler } from '../../../application/HostedCoordinationEventStreamPort';
 
 export type {
   HostedCoordinationEventStreamWriteObservation as HostedCoordinationEventStreamWriteDiagnostic,

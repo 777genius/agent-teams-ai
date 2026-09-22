@@ -108,11 +108,13 @@ function originalResponse(input: {
   readonly body?: string;
   readonly headers: readonly { readonly name: string; readonly value: string }[];
 }) {
-  const body = vi.fn(async () => new TextEncoder().encode(input.body ?? 'bounded'));
+  const body = vi.fn(async () => Buffer.from(input.body ?? 'bounded'));
   return {
     body,
     response: {
       body,
+      headers: () =>
+        Object.fromEntries(input.headers.map(({ name, value }) => [name.toLowerCase(), value])),
       headersArray: async () => input.headers,
       request: () => ({ method: () => 'POST' }),
       status: () => 200,
@@ -129,13 +131,14 @@ describe('hosted-v1 original Playwright response capture', () => {
     });
 
   it.each([
-    ['missing length', []],
+    ['missing length', [], 0],
     [
       'duplicate length',
       [
         { name: 'Content-Length', value: '7' },
         { name: 'content-length', value: '7' },
       ],
+      1,
     ],
     [
       'compressed body',
@@ -143,6 +146,7 @@ describe('hosted-v1 original Playwright response capture', () => {
         { name: 'content-length', value: '7' },
         { name: 'content-encoding', value: 'gzip' },
       ],
+      0,
     ],
     [
       'transfer encoding',
@@ -150,22 +154,42 @@ describe('hosted-v1 original Playwright response capture', () => {
         { name: 'content-length', value: '7' },
         { name: 'transfer-encoding', value: 'chunked' },
       ],
+      0,
     ],
-  ] as const)('rejects %s before asking Playwright to buffer the body', async (_label, headers) => {
+  ] as const)('rejects %s and aborts its owner transport without awaiting cancellation', async (
+    _label,
+    headers,
+    expectedBodyCalls
+  ) => {
     const original = originalResponse({ headers });
-    await expect(capture(original.response)).rejects.toThrow(
-      'hosted_e2e_original_response_transport_bound_invalid'
-    );
-    expect(original.body).not.toHaveBeenCalled();
+    let cancelled = false;
+    const cancel = vi.fn((_: unknown, signal: AbortSignal) => {
+      cancelled = signal.aborted;
+      return new Promise<void>(() => undefined);
+    });
+    await expect(
+      captureOriginalHostedV1HttpResponse(original.response, {
+        maximumBytes: 64 * 1024,
+        overallDeadlineAtMs: Date.now() + 1_000,
+        cancel,
+      })
+    ).rejects.toThrow('hosted_e2e_original_response_transport_bound_invalid');
+    expect(original.body).toHaveBeenCalledTimes(expectedBodyCalls);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(cancelled).toBe(true);
   });
 
-  it('rejects an oversized declaration before body capture', async () => {
+  it('rejects an oversized declaration and aborts a started transport', async () => {
     const original = originalResponse({
       headers: [{ name: 'content-length', value: String(64 * 1024 + 1) }],
     });
-    await expect(capture(original.response)).rejects.toThrow(
-      'hosted_e2e_original_response_body_too_large'
-    );
+    await expect(
+      captureOriginalHostedV1HttpResponse(original.response, {
+        maximumBytes: 64 * 1024,
+        overallDeadlineAtMs: Date.now() + 1_000,
+        cancel: vi.fn(),
+      })
+    ).rejects.toThrow('hosted_e2e_original_response_body_too_large');
     expect(original.body).not.toHaveBeenCalled();
   });
 
@@ -187,6 +211,117 @@ describe('hosted-v1 original Playwright response capture', () => {
       rawBody: 'bounded',
     });
     expect(original.body).toHaveBeenCalledOnce();
+  });
+
+  it('rejects when exact header evidence disagrees with the synchronous declaration and body', async () => {
+    const body = vi.fn(async () => Buffer.from('bounded'));
+    const response = {
+      body,
+      headers: () => ({ 'content-length': '7' }),
+      headersArray: async () => [{ name: 'content-length', value: '8' }],
+      request: () => ({ method: () => 'POST' }),
+      status: () => 200,
+      url: () => 'https://hosted-v1-e2e.localhost/api/hosted/v1/team-task-board/mutations',
+    };
+
+    await expect(capture(response)).rejects.toThrow(
+      'hosted_e2e_original_response_content_length_mismatch'
+    );
+    expect(body).toHaveBeenCalledOnce();
+  });
+
+  it('starts Playwright body capture before an immediate navigation can invalidate it', async () => {
+    let navigated = false;
+    let resolveHeaders!: (
+      headers: readonly { readonly name: string; readonly value: string }[]
+    ) => void;
+    const headers = new Promise<readonly { readonly name: string; readonly value: string }[]>(
+      (resolve) => {
+        resolveHeaders = resolve;
+      }
+    );
+    let bodyCaptureStarted = false;
+    let releaseBody!: () => void;
+    const bodyAvailable = new Promise<void>((resolve) => {
+      releaseBody = resolve;
+    });
+    const body = vi.fn(async () => {
+      if (navigated) throw new Error('response body discarded by navigation');
+      bodyCaptureStarted = true;
+      await bodyAvailable;
+      return Buffer.from('bounded');
+    });
+    const response = {
+      body,
+      headers: () => ({ 'content-length': '7' }),
+      headersArray: () => headers,
+      request: () => ({ method: () => 'POST' }),
+      status: () => 200,
+      url: () => 'https://hosted-v1-e2e.localhost/api/hosted/v1/team-task-board/mutations',
+    };
+
+    const capture = captureOriginalHostedV1HttpResponse(response, {
+      maximumBytes: 64 * 1024,
+      overallDeadlineAtMs: Date.now() + 1_000,
+    });
+    expect(body).toHaveBeenCalledOnce();
+    expect(bodyCaptureStarted).toBe(true);
+    navigated = true;
+    resolveHeaders([{ name: 'content-length', value: '7' }]);
+    releaseBody();
+
+    await expect(capture).resolves.toMatchObject({
+      declaredBodyBytes: 7,
+      bodyBytes: 7,
+      rawBody: 'bounded',
+    });
+  });
+
+  it('settles on the deadline, aborts its controller, and does not await owner cancellation', async () => {
+    let cancellationSignal: AbortSignal | undefined;
+    const cancel = vi.fn((_: unknown, signal: AbortSignal) => {
+      cancellationSignal = signal;
+      return new Promise<void>(() => undefined);
+    });
+    const body = vi.fn(() => new Promise<Buffer>(() => undefined));
+    const response = {
+      body,
+      headers: () => ({ 'content-length': '0' }),
+      headersArray: async () => [{ name: 'content-length', value: '0' }],
+      request: () => ({ method: () => 'POST' }),
+      status: () => 200,
+      url: () => 'https://hosted-v1-e2e.localhost/api/hosted/v1/team-task-board/mutations',
+    };
+
+    await expect(
+      captureOriginalHostedV1HttpResponse(response, {
+        maximumBytes: 64 * 1024,
+        overallDeadlineAtMs: Date.now() + 20,
+        cancel,
+      })
+    ).rejects.toThrow('hosted_e2e_original_response_deadline');
+    expect(body).toHaveBeenCalledOnce();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(cancellationSignal?.aborted).toBe(true);
+  });
+
+  it('rejects an over-cap returned Buffer even when a malformed peer declares a smaller length', async () => {
+    const body = vi.fn(async () => Buffer.alloc(5));
+    const response = {
+      body,
+      headers: () => ({ 'content-length': '4' }),
+      headersArray: async () => [{ name: 'content-length', value: '4' }],
+      request: () => ({ method: () => 'POST' }),
+      status: () => 200,
+      url: () => 'https://hosted-v1-e2e.localhost/api/hosted/v1/team-task-board/mutations',
+    };
+    await expect(
+      captureOriginalHostedV1HttpResponse(response, {
+        maximumBytes: 4,
+        overallDeadlineAtMs: Date.now() + 1_000,
+      })
+    ).rejects.toThrow('hosted_e2e_original_response_body_too_large');
+    expect(body).toHaveBeenCalledOnce();
   });
 });
 

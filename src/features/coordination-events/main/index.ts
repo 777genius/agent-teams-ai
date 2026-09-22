@@ -1,4 +1,12 @@
 export type {
+  CreateHostedCoordinationEventStreamOptions,
+  HostedCoordinationEventStorage,
+  HostedCoordinationEventStream,
+  HostedCoordinationEventStreamAdmissionRelease,
+  HostedCoordinationEventStreamScheduler,
+  RetainHostedCoordinationEventStreamAdmission,
+} from './application/HostedCoordinationEventStreamPort';
+export type {
   HostedCoordinationEventBootstrapAuthorizer,
   HostedCoordinationEventBootstrapFence,
   HostedCoordinationEventStreamAuthorization,
@@ -11,8 +19,4 @@ export type {
 export * from './composition/createCoordinationEventsFeature';
 export {
   createHostedCoordinationEventStream,
-  type CreateHostedCoordinationEventStreamOptions,
-  type HostedCoordinationEventStorage,
-  type HostedCoordinationEventStream,
-  type RetainHostedCoordinationEventStreamAdmission,
 } from './composition/createHostedCoordinationEventStream';

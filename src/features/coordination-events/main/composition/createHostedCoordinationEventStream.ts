@@ -1,8 +1,5 @@
 import { HostedCoordinationEventBootstrapController } from '../adapters/input/http/HostedCoordinationEventBootstrapController';
-import {
-  HostedCoordinationEventStreamController,
-  type RetainHostedCoordinationEventStreamAdmission,
-} from '../adapters/input/http/HostedCoordinationEventStreamController';
+import { HostedCoordinationEventStreamController } from '../adapters/input/http/HostedCoordinationEventStreamController';
 import { InProcessCoordinationEventWakeupHub } from '../infrastructure/InProcessCoordinationEventWakeupHub';
 
 import { createCoordinationEventsFeature } from './createCoordinationEventsFeature';
@@ -13,16 +10,14 @@ import type {
   ReplayCoordinationEventsInput,
 } from '../../core/application';
 import type {
-  HostedCoordinationEventStreamAuthorizer,
-  HostedCoordinationEventStreamIdentityFactory,
-  HostedCoordinationEventStreamWriteObserver,
-} from '../application/HostedCoordinationEventStreamPorts';
+  CreateHostedCoordinationEventStreamOptions,
+  HostedCoordinationEventStream,
+  HostedCoordinationEventStreamScheduler,
+  RetainHostedCoordinationEventStreamAdmission,
+} from '../application/HostedCoordinationEventStreamPort';
+import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
-
-export type {
-  RetainHostedCoordinationEventStreamAdmission,
-} from '../adapters/input/http/HostedCoordinationEventStreamController';
 
 const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
   schedule(delayMs: number, callback: () => void): () => void {
@@ -36,52 +31,6 @@ const DEFAULT_RETENTION_POLICY = Object.freeze({
   intervalMs: 60_000,
   maxRetainedEvents: 10_000,
 });
-
-export interface HostedCoordinationEventStreamScheduler {
-  schedule(delayMs: number, callback: () => void): () => void;
-}
-
-export type HostedCoordinationEventStorage = Pick<
-  CoordinationDurabilityStorageGateway,
-  | 'coordinationEventInitialize'
-  | 'coordinationEventGetWatermark'
-  | 'coordinationEventRead'
-  | 'coordinationEventAppend'
-  | 'coordinationEventPrune'
->;
-
-export interface CreateHostedCoordinationEventStreamOptions {
-  readonly storage: HostedCoordinationEventStorage;
-  readonly deploymentId: string;
-  readonly authorizer: HostedCoordinationEventStreamAuthorizer;
-  readonly streamIdentityFactory: HostedCoordinationEventStreamIdentityFactory;
-  readonly scheduler?: HostedCoordinationEventStreamScheduler;
-  readonly replayBatchSize?: number;
-  readonly heartbeatIntervalMs?: number;
-  readonly slowConsumerTimeoutMs?: number;
-  readonly maxFrameBytes?: number;
-  /**
-   * Payload-free transport observations; observer failures are isolated from
-   * stream correctness.
-   */
-  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteObserver;
-  readonly retentionScheduler?: HostedCoordinationEventStreamScheduler;
-  readonly retentionPolicy?: {
-    readonly intervalMs: number;
-    readonly maxRetainedEvents: number;
-  };
-}
-
-export interface HostedCoordinationEventStream {
-  readonly handoff: CoordinationEventHandoff;
-  /** Lossy latency hint after an atomic commit through the shared storage worker. */
-  notifyDurableCommit(): Promise<void>;
-  register(app: unknown): void;
-  runWithStreamsDrained<T>(
-    operation: (retainAdmission: RetainHostedCoordinationEventStreamAdmission) => Promise<T>
-  ): Promise<T>;
-  close(): void;
-}
 
 type PresentedCoordinationEvent = CoordinationEventEnvelope & {
   scope: { kind: CoordinationEventEnvelope['scope']['kind']; scopeId: string };

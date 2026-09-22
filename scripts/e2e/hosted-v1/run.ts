@@ -104,7 +104,18 @@ export interface HostedV1FetchLikeResponse {
 }
 
 export interface HostedV1OriginalHttpResponseLike {
+  /**
+   * This is deliberately Playwright's public Response shape. Playwright exposes a completed
+   * Buffer here, not a ReadableStream, so callers must not model it as one.
+   *
+   * Hosted response evidence is only eligible when Content-Length provides the transport bound
+   * and Content-Encoding is identity. Content-Length frames the HTTP entity, and identity
+   * encoding means Chromium cannot inflate it into a larger decoded Buffer. A response which
+   * cannot provide that proof is discarded rather than treated as bounded evidence.
+   */
   readonly body: () => Promise<Uint8Array>;
+  /** Playwright exposes normalized response headers synchronously at the response event. */
+  readonly headers: () => Readonly<Record<string, string>>;
   readonly headersArray: () => Promise<
     readonly { readonly name: string; readonly value: string }[]
   >;
@@ -121,6 +132,40 @@ export interface HostedV1OriginalHttpResponseCapture {
   readonly declaredBodyBytes: number;
   readonly bodyBytes: number;
   readonly rawBody: string;
+}
+
+function parseHostedV1OriginalResponseContentLength(
+  headers: readonly { readonly name: string; readonly value: string }[],
+  maximumBytes: number
+): number {
+  const named = (name: string) => headers.filter((header) => header.name.toLowerCase() === name);
+  const contentLengths = named('content-length');
+  const contentEncodings = named('content-encoding');
+  const transferEncodings = named('transfer-encoding');
+  if (
+    contentLengths.length !== 1 ||
+    contentEncodings.length > 1 ||
+    transferEncodings.length !== 0 ||
+    (contentEncodings.length === 1 && contentEncodings[0]?.value.toLowerCase() !== 'identity')
+  ) {
+    throw new Error('hosted_e2e_original_response_transport_bound_invalid');
+  }
+  const contentLength = contentLengths[0]?.value;
+  if (contentLength === undefined || !/^(?:0|[1-9][0-9]*)$/u.test(contentLength)) {
+    throw new Error('hosted_e2e_original_response_content_length_invalid');
+  }
+  const normalizedMaximum = String(maximumBytes);
+  if (
+    contentLength.length > normalizedMaximum.length ||
+    (contentLength.length === normalizedMaximum.length && contentLength > normalizedMaximum)
+  ) {
+    throw new Error('hosted_e2e_original_response_body_too_large');
+  }
+  const declaredBodyBytes = Number(contentLength);
+  if (!Number.isSafeInteger(declaredBodyBytes)) {
+    throw new Error('hosted_e2e_original_response_content_length_invalid');
+  }
+  return declaredBodyBytes;
 }
 
 export interface HostedV1ProbeDeadlineBudget {
@@ -443,16 +488,21 @@ export async function readHostedV1ProbeResponseBody(
 }
 
 /**
- * Captures the already-observed Playwright response without replaying its request. Playwright's
- * `body()` buffers the entire decoded entity, so it is called only after the original header array
- * proves one identity-encoded Content-Length within the hard byte cap. Responses without that
- * transport proof are deliberately unusable as bounded E2E evidence.
+ * Captures an already-observed Playwright response without replaying its request. `body()` is
+ * started before the first await, because a navigation may otherwise invalidate the response
+ * between response observation and body retrieval. It is not a stream: Content-Length plus
+ * identity encoding is the transport-level bound on the Buffer Playwright creates.
+ *
+ * A caller that owns a route/CDP transport can supply `cancel` to terminate that transport when
+ * headers are invalid or the deadline expires. A native Playwright Response has no cancellation
+ * API; cancellation is therefore intentionally best-effort and never awaited by this helper.
  */
 export async function captureOriginalHostedV1HttpResponse(
   response: HostedV1OriginalHttpResponseLike,
   input: {
     readonly maximumBytes: number;
     readonly overallDeadlineAtMs: number;
+    readonly cancel?: (reason: unknown, signal: AbortSignal) => Promise<unknown> | unknown;
   }
 ): Promise<HostedV1OriginalHttpResponseCapture> {
   if (
@@ -462,65 +512,120 @@ export async function captureOriginalHostedV1HttpResponse(
   ) {
     throw new Error('hosted_e2e_original_response_limits_invalid');
   }
-
-  const headers = await response.headersArray();
-  const named = (name: string) => headers.filter((header) => header.name.toLowerCase() === name);
-  const contentLengths = named('content-length');
-  const contentEncodings = named('content-encoding');
-  const transferEncodings = named('transfer-encoding');
-  if (
-    contentLengths.length !== 1 ||
-    contentEncodings.length > 1 ||
-    transferEncodings.length !== 0 ||
-    (contentEncodings.length === 1 && contentEncodings[0]?.value.toLowerCase() !== 'identity')
-  ) {
-    throw new Error('hosted_e2e_original_response_transport_bound_invalid');
-  }
-  const contentLength = contentLengths[0]?.value;
-  if (contentLength === undefined || !/^(?:0|[1-9][0-9]*)$/u.test(contentLength)) {
-    throw new Error('hosted_e2e_original_response_content_length_invalid');
-  }
-  const normalizedMaximum = String(input.maximumBytes);
-  if (
-    contentLength.length > normalizedMaximum.length ||
-    (contentLength.length === normalizedMaximum.length && contentLength > normalizedMaximum)
-  ) {
-    throw new Error('hosted_e2e_original_response_body_too_large');
-  }
-  const declaredBodyBytes = Number(contentLength);
-  if (!Number.isSafeInteger(declaredBodyBytes)) {
-    throw new Error('hosted_e2e_original_response_content_length_invalid');
-  }
-
   const remainingMs = input.overallDeadlineAtMs - Date.now();
   if (remainingMs <= 0) throw new Error('hosted_e2e_original_response_deadline');
+
+  // Snapshot and preflight Playwright's synchronous normalized headers before asking Playwright
+  // to allocate a Buffer. This is the hard cap: HTTP Content-Length frames the identity-encoded
+  // response entity. Do not replace this with a fictional `body.getReader()` API: Response only
+  // exposes `body(): Promise<Buffer>`.
+  const request = response.request();
+  const method = request.method();
+  const url = response.url();
+  const status = response.status();
+  const controller = new AbortController();
+  let cancelled = false;
+  const cancel = (reason: unknown): void => {
+    if (cancelled) return;
+    cancelled = true;
+    controller.abort(reason);
+    try {
+      // A route/CDP owner can terminate the wire request. Do not await an uncooperative cancel:
+      // the evidence operation itself must still settle at the fixed deadline.
+      void Promise.resolve(input.cancel?.(reason, controller.signal)).catch(() => undefined);
+    } catch {
+      // Preserve the evidence failure; transport teardown is best effort.
+    }
+  };
+  let declaredBodyBytes: number;
+  try {
+    declaredBodyBytes = parseHostedV1OriginalResponseContentLength(
+      Object.entries(response.headers()).map(([name, value]) => ({ name, value })),
+      input.maximumBytes
+    );
+  } catch (cause) {
+    cancel(cause);
+    throw cause;
+  }
+
+  // This remains before the first await, so an immediate navigation cannot invalidate the
+  // already-observed response. Exact raw headers are checked below while this bounded operation
+  // is in flight, preserving duplicate-header evidence that the normalized view cannot represent.
+  let bodyPromise: Promise<Uint8Array>;
+  try {
+    bodyPromise = Promise.resolve(response.body());
+  } catch (cause) {
+    const error = new Error('hosted_e2e_original_response_body_unavailable', { cause });
+    cancel(error);
+    throw error;
+  }
+  // The losing body promise may reject after a header/deadline failure. Observe it now so a
+  // cancelled navigation cannot become an unhandled rejection after this capture has settled.
+  void bodyPromise.catch(() => undefined);
+  let headersPromise: Promise<number>;
+  try {
+    headersPromise = Promise.resolve(response.headersArray()).then((headers) =>
+      parseHostedV1OriginalResponseContentLength(headers, input.maximumBytes)
+    );
+  } catch (cause) {
+    cancel(cause);
+    throw cause;
+  }
+  // Attach cancellation immediately so invalid headers cannot leave the route/CDP request alive.
+  void headersPromise.catch(cancel);
   let deadline: ReturnType<typeof setTimeout> | undefined;
-  const bodyBytes = await Promise.race([
-    response.body(),
+  const deadlineError = new Error('hosted_e2e_original_response_deadline');
+  const [exactDeclaredBodyBytes, bodyBytes] = await Promise.race([
+    Promise.all([headersPromise, bodyPromise]),
     new Promise<never>((_resolve, reject) => {
       deadline = setTimeout(
-        () => reject(new Error('hosted_e2e_original_response_deadline')),
+        () => {
+          controller.abort(deadlineError);
+          reject(deadlineError);
+        },
         remainingMs
       );
     }),
-  ]).finally(() => {
-    if (deadline !== undefined) clearTimeout(deadline);
-  });
-  if (!(bodyBytes instanceof Uint8Array) || bodyBytes.byteLength !== declaredBodyBytes) {
-    throw new Error('hosted_e2e_original_response_content_length_mismatch');
+  ])
+    .catch((error: unknown) => {
+      cancel(error);
+      throw error;
+    })
+    .finally(() => {
+      if (deadline !== undefined) clearTimeout(deadline);
+    });
+  if (!(bodyBytes instanceof Uint8Array)) {
+    const error = new Error('hosted_e2e_original_response_body_invalid');
+    cancel(error);
+    throw error;
+  }
+  if (bodyBytes.byteLength > input.maximumBytes) {
+    const error = new Error('hosted_e2e_original_response_body_too_large');
+    cancel(error);
+    throw error;
+  }
+  if (
+    exactDeclaredBodyBytes !== declaredBodyBytes ||
+    bodyBytes.byteLength !== declaredBodyBytes ||
+    bodyBytes.byteLength !== exactDeclaredBodyBytes
+  ) {
+    const error = new Error('hosted_e2e_original_response_content_length_mismatch');
+    cancel(error);
+    throw error;
   }
   let rawBody: string;
   try {
     rawBody = new TextDecoder('utf-8', { fatal: true }).decode(bodyBytes);
   } catch {
-    throw new Error('hosted_e2e_original_response_body_utf8_invalid');
+    const error = new Error('hosted_e2e_original_response_body_utf8_invalid');
+    cancel(error);
+    throw error;
   }
-  const request = response.request();
   return Object.freeze({
     capture: 'playwright_original_response',
-    method: request.method(),
-    url: response.url(),
-    status: response.status(),
+    method,
+    url,
+    status,
     declaredBodyBytes,
     bodyBytes: bodyBytes.byteLength,
     rawBody,

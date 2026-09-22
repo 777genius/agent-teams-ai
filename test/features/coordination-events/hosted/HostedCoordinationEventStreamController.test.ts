@@ -5,7 +5,6 @@ import { CoordinationEventHandoff } from '@features/coordination-events/core/app
 import { encodeReplayCursor } from '@features/coordination-events/core/domain';
 import {
   HostedCoordinationEventStreamController,
-  type HostedCoordinationEventStreamScheduler,
 } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController';
 import { SqliteCoordinationEventJournal } from '@features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal';
 import {
@@ -24,6 +23,7 @@ import type {
   CoordinationReplayBatch,
   ReplayCursor,
 } from '@features/coordination-events/contracts';
+import type { HostedCoordinationEventStreamScheduler } from '@features/coordination-events/main';
 import type {
   HostedCoordinationEventStreamWriteObservation,
 } from '@features/coordination-events/main/hosted';

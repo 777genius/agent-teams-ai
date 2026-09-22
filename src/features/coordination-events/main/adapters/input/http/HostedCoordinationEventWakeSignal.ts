@@ -1,8 +1,6 @@
-type WakeResult = 'wakeup' | 'heartbeat' | 'closed';
+import type { HostedCoordinationEventStreamScheduler } from '../../../application/HostedCoordinationEventStreamPort';
 
-export interface HostedCoordinationEventStreamScheduler {
-  schedule(delayMs: number, callback: () => void): () => void;
-}
+type WakeResult = 'wakeup' | 'heartbeat' | 'closed';
 
 export class WakeSignal {
   private versionValue = 0;

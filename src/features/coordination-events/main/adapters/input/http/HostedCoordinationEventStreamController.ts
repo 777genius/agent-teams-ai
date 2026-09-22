@@ -36,28 +36,19 @@ import {
   HostedCoordinationEventStreamWriter,
   hostedCoordinationEventStreamWriteSucceeded,
 } from './hostedCoordinationEventStreamWriter';
-import {
-  type HostedCoordinationEventStreamScheduler,
-  WakeSignal,
-} from './HostedCoordinationEventWakeSignal';
+import { WakeSignal } from './HostedCoordinationEventWakeSignal';
 
 import type { ReplayCoordinationEventsInput } from '../../../../core/application';
+import type {
+  HostedCoordinationEventStreamAdmissionRelease,
+  HostedCoordinationEventStreamScheduler,
+  RetainHostedCoordinationEventStreamAdmission,
+} from '../../../application/HostedCoordinationEventStreamPort';
 import type {
   HostedCoordinationEventStreamIdentityFactory,
   HostedCoordinationEventStreamWriteObserver,
 } from '../../../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
-
-export type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
-
-/** Releases one retained admission fence. A failed generation deliberately
- * leaves its fence retained so the route remains fail-closed. */
-export type HostedCoordinationEventStreamAdmissionRelease = () => void;
-
-/** Returns the release for the admission fence synchronously retained before
- * the drain waits for already-admitted writes and their evidence. */
-export type RetainHostedCoordinationEventStreamAdmission = () =>
-  HostedCoordinationEventStreamAdmissionRelease;
 
 const DEFAULT_REPLAY_BATCH_SIZE = 100;
 const MAX_REPLAY_BATCH_SIZE = 500;
