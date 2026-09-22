@@ -176,6 +176,15 @@ describe('Phase 3 coordination event architecture boundary', () => {
     // This resolves one fixed repository-owned input adapter.
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const controller = readFileSync(resolve(ROOT, hostedPaths[0]), 'utf8');
+    // This resolves one fixed repository-owned SSE frame adapter.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const frames = readFileSync(
+      resolve(
+        ROOT,
+        'src/features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamFrames.ts'
+      ),
+      'utf8'
+    );
     const handle = controller.slice(controller.indexOf('private async handle'));
     const origin = handle.indexOf('admitsSameOriginEventSource(request.headers');
     const authorize = handle.indexOf('this.options.authorizer.authorize');
@@ -194,7 +203,8 @@ describe('Phase 3 coordination event architecture boundary', () => {
     expect(controller).toContain('firstReplayWakeVersion = wakeSignal.version');
     expect(controller).toContain('invokeUnlessAborted');
     expect(controller).toContain('rawConnectionClosed');
-    expect(controller).toContain('projection.publicPayload');
+    expect(controller).toContain('materializeProjectedEnvelope');
+    expect(frames).toContain('projection.publicPayload');
     expect(controller).not.toMatch(/localStorage|WebSocket|command replay/i);
 
     // This resolves one fixed repository-owned hosted composition root.

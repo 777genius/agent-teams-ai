@@ -110,13 +110,17 @@ describe('P2.E team-lifecycle read boundaries', () => {
   it('routes production composition and renderer transport through public feature entrypoints', () => {
     const composition = source('src/main/composition/hosted/teamLifecycleReadComposition.ts');
     const rendererClient = source('src/renderer/api/httpClient.ts');
+    const rendererRequest = source('src/renderer/api/browserTeamLifecycleRequest.ts');
 
     expect(composition).toContain("from '@features/internal-storage/contracts'");
     expect(composition).toContain("from '@features/team-lifecycle/main'");
     expect(composition).not.toMatch(/@features\/internal-storage\/contracts\//);
     expect(composition).not.toMatch(/@features\/team-lifecycle\/(?:core|main)\//);
-    expect(rendererClient).toContain("from '@features/team-lifecycle/contracts'");
+    expect(rendererClient).toContain("from './browserTeamLifecycleRequest'");
     expect(rendererClient).not.toMatch(/from ['"]@features\/team-lifecycle['"]/);
+    expect(rendererClient).not.toMatch(/@features\/team-lifecycle\/contracts/);
+    expect(rendererRequest).toContain("from '@features/team-lifecycle/contracts'");
+    expect(rendererRequest).not.toMatch(/from ['"]@features\/team-lifecycle['"]/);
   });
 
   it('has one canonical identity port implementation and one legacy lifecycle source', () => {
