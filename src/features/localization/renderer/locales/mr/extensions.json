@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "कस्टम जोडा",
+      "openDashboard": "डॅशबोर्ड उघडा",
+      "refreshCatalog": "कॅटलॉग रिफ्रेश करा"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Skills: {{status}}"
+    },
+    "desktopOnly": "फक्त डेस्कटॉप अॅपमध्ये उपलब्ध.",
+    "provider": {
+      "checkingStatus": "प्रोव्हायडर स्थिती तपासत आहे...",
+      "connected": "कनेक्ट केले",
+      "loading": "लोड होत आहे...",
+      "needsSetup": "सेटअप आवश्यक",
+      "readyToConfigure": "कॉन्फिगर करण्यास तयार",
+      "unsupported": "असमर्थित"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "प्लगइन्स, MCP सर्व्हर्स, कौशल्ये आणि प्रोव्हायडर कनेक्शन्स व्यवस्थापित करण्यासाठी एक्सटेन्शन्सना कॉन्फिगर केलेल्या रनटाइमची गरज आहे.",
+      "checkingAvailabilityTitle": "एक्सटेन्शन्स रनटाइम उपलब्धता तपासत आहे",
+      "failedToStartDescription": "रनटाइम त्याची स्टार्टअप हेल्थ चेक उत्तीर्ण होईपर्यंत एक्सटेन्शन्स अक्षम आहेत. ते दुरुस्त किंवा पुन्हा इन्स्टॉल करण्यासाठी डॅशबोर्ड उघडा.",
+      "failedToStartTitle": "कॉन्फिगर केलेला रनटाइम सापडला पण सुरू होण्यात अयशस्वी",
+      "multimodelCapabilitiesDescription": "प्रोव्हायडर समर्थन विभागानुसार भिन्न असू शकते. रनटाइम स्पष्टपणे समर्थन घोषित करतो तेथेच प्लगइन्स दाखवले जातात.",
+      "multimodelCapabilitiesTitle": "मल्टीमॉडेल रनटाइम क्षमता",
+      "needsSignInDescription": "{{runtime}} सापडले{{version}}, पण तुम्ही डॅशबोर्डवरून साइन इन करेपर्यंत प्लगइन इन्स्टॉल्स अक्षम आहेत.",
+      "needsSignInTitle": "{{runtime}} ला साइन-इनची गरज आहे",
+      "notAvailableDescription": "रनटाइम इन्स्टॉल होईपर्यंत एक्सटेन्शन्स अक्षम आहेत. ते इन्स्टॉल करण्यासाठी डॅशबोर्ड उघडा आणि पुन्हा प्रयत्न करा.",
+      "notAvailableTitle": "कॉन्फिगर केलेला रनटाइम उपलब्ध नाही",
+      "readyDescription": "या पृष्ठावरून प्लगइन्स इन्स्टॉल करता येतात{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} तयार आहे",
+      "requiredForMutations": "एक्सटेन्शन्स इन्स्टॉल किंवा अनइन्स्टॉल करण्यासाठी कॉन्फिगर केलेला रनटाइम आवश्यक आहे. ते डॅशबोर्डवरून इन्स्टॉल किंवा दुरुस्त करा."
+    },
+    "sessionsRestartWarning": "चालू असलेली सत्रे रीस्टार्ट होईपर्यंत एक्सटेन्शन बदल घेणार नाहीत.",
+    "tabs": {
+      "apiKeys": {
+        "description": "ऑनलाइन सेवांसाठी सीक्रेट की. प्लगइन्स, सर्व्हर्स आणि इंटिग्रेशन्स कनेक्ट होऊन काम करू शकतील म्हणून त्या येथे जोडा.",
+        "label": "API की"
+      },
+      "mcpServers": {
+        "description": "बाह्य टूल्स आणि अॅप्सशी कनेक्शन्स. ते रनटाइमला या अॅपच्या पलीकडे डेटा वाचण्यास किंवा कृती करण्यास परवानगी देतात.",
+        "label": "MCP सर्व्हर्स"
+      },
+      "plugins": {
+        "description": "रनटाइमसाठी लहान अॅड-ऑन्स. मल्टीमॉडेल मोडमध्ये ते सध्या समर्थित असताना Anthropic सत्रांना लागू होतात. व्यापक प्रोव्हायडर समर्थन विकासात आहे.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "सामान्य कामांसाठी तयार सूचना. ते रनटाइमला पुनरावृत्त टास्क अधिक सातत्याने हाताळण्यास मदत करतात.",
+        "label": "Skills"
+      }
+    },
+    "title": "एक्सटेन्शन्स"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} सक्रिय",
+    "browseByFit": "योग्यतेनुसार ब्राउझ करा",
+    "capabilities": "क्षमता",
+    "categories": "वर्ग",
+    "clearAllFilters": "सर्व फिल्टर्स साफ करा",
+    "clearFilters": "फिल्टर्स साफ करा",
+    "counts": {
+      "capabilities": "{{count}} क्षमता",
+      "categories": "{{count}} वर्ग",
+      "plugins": "{{count}} प्लगइन्स",
+      "capabilities_few": "{{count}} क्षमता",
+      "capabilities_many": "{{count}} क्षमता",
+      "capabilities_one": "{{count}} क्षमता",
+      "capabilities_other": "{{count}} क्षमता",
+      "categories_few": "{{count}} वर्ग",
+      "categories_many": "{{count}} वर्ग",
+      "categories_one": "{{count}} वर्ग",
+      "categories_other": "{{count}} वर्ग",
+      "plugins_few": "{{count}} प्लगइन्स",
+      "plugins_many": "{{count}} प्लगइन्स",
+      "plugins_one": "{{count}} प्लगइन",
+      "plugins_other": "{{count}} प्लगइन्स"
+    },
+    "empty": {
+      "description": "नवीन प्लगइन्ससाठी नंतर पुन्हा तपासा",
+      "filteredDescription": "तुमचा शोध किंवा फिल्टर निकष समायोजित करून पाहा",
+      "filteredTitle": "तुमच्या फिल्टर्सशी कोणतेही प्लगइन्स जुळत नाहीत",
+      "title": "कोणतेही प्लगइन्स उपलब्ध नाहीत"
+    },
+    "filterDescription": "वर्ग, क्षमता किंवा इन्स्टॉल केलेल्या स्थितीनुसार कॅटलॉग संकुचित करा.",
+    "installedOnly": "फक्त इन्स्टॉल केलेले",
+    "providerSupportNotice": "प्लगइन समर्थन सध्या फक्त Anthropic (Claude) सत्रांसाठी हमी दिलेले आहे. आम्ही सर्व एजंट्सवर प्लगइन्सना समर्थन देण्यासाठी काम करत आहोत.",
+    "resultsUpdateInstantly": "तुम्ही फिल्टर्स परिष्कृत करताच परिणाम त्वरित अपडेट होतात.",
+    "searchPlaceholder": "प्लगइन्स शोधा...",
+    "selectedCount": "{{count}} निवडले",
+    "showing": "{{total}} पैकी {{shown}} प्लगइन्स दाखवत आहे",
+    "sort": {
+      "category": "वर्ग",
+      "nameAsc": "नाव अ-ज्ञ",
+      "nameDesc": "नाव ज्ञ-अ",
+      "popular": "लोकप्रिय"
+    },
+    "activeFilters_few": "{{count}} सक्रिय",
+    "activeFilters_many": "{{count}} सक्रिय",
+    "activeFilters_one": "{{count}} सक्रिय",
+    "activeFilters_other": "{{count}} सक्रिय",
+    "selectedCount_few": "{{count}} निवडले",
+    "selectedCount_many": "{{count}} निवडले",
+    "selectedCount_one": "{{count}} निवडले",
+    "selectedCount_other": "{{count}} निवडले"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "जोडा",
+      "cancel": "रद्द करा",
+      "install": "इन्स्टॉल करा",
+      "installing": "इन्स्टॉल करत आहे..."
+    },
+    "description": "कॅटलॉगशिवाय मॅन्युअली सर्व्हर जोडा.",
+    "errors": {
+      "installFailed": "इन्स्टॉल अयशस्वी",
+      "invalidServerName": "अवैध सर्व्हर नाव. अल्फान्यूमेरिक अक्षरे, डॅशेस, अंडरस्कोअर्स, डॉट्स वापरा.",
+      "npmPackageRequired": "npm पॅकेज नाव आवश्यक आहे",
+      "serverNameRequired": "सर्व्हर नाव आवश्यक आहे",
+      "serverUrlRequired": "सर्व्हर URL आवश्यक आहे"
+    },
+    "fields": {
+      "environmentVariables": "एन्व्हायर्न्मेंट व्हेरिएबल्स",
+      "headers": "हेडर्स",
+      "npmPackage": "npm पॅकेज",
+      "scope": "व्याप्ती",
+      "serverName": "सर्व्हर नाव",
+      "serverUrl": "सर्व्हर URL",
+      "transport": "ट्रान्सपोर्ट",
+      "transportType": "ट्रान्सपोर्ट प्रकार",
+      "versionOptional": "आवृत्ती (ऐच्छिक)"
+    },
+    "title": "कस्टम MCP सर्व्हर जोडा",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "रजिस्ट्री त्यांचे वर्णन करत नसतानाही रिमोट MCP सर्व्हर्सना कस्टम हेडर्स किंवा API की आवश्यक असू शकतात. इन्स्टॉलनंतर कनेक्शन अयशस्वी झाल्यास, प्रोव्हायडर दस्तऐवज तपासा.",
+      "required": "या सर्व्हरला प्रमाणीकरण आवश्यक आहे"
+    },
+    "diagnostics": {
+      "launchTarget": "लॉन्च लक्ष्य"
+    },
+    "form": {
+      "autoFilled": "ऑटो-भरले",
+      "environmentVariables": "एन्व्हायर्न्मेंट व्हेरिएबल्स",
+      "headers": "हेडर्स",
+      "scope": "व्याप्ती",
+      "serverName": "सर्व्हर नाव"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "या सर्व्हरला मॅन्युअल सेटअप आवश्यक आहे. इन्स्टॉलेशन सूचनांसाठी रिपॉझिटरी तपासा.",
+      "manualSetupRequired": "मॅन्युअल सेटअप आवश्यक",
+      "npmPackage": "npm: {{package}}",
+      "manage": "इन्स्टॉलेशन व्यवस्थापित करा",
+      "install": "सर्व्हर इन्स्टॉल करा"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "रिपॉझिटरी",
+      "website": "वेबसाइट"
+    },
+    "metadata": {
+      "author": "लेखक",
+      "githubStars": "GitHub स्टार्स",
+      "hosting": "होस्टिंग",
+      "installType": "इन्स्टॉल प्रकार",
+      "license": "परवाना",
+      "published": "प्रकाशित",
+      "source": "स्रोत",
+      "updated": "अपडेट केले",
+      "version": "आवृत्ती"
+    },
+    "scope": {
+      "local": "स्थानिक",
+      "project": "प्रकल्प"
+    },
+    "tools": {
+      "title": "टूल्स ({{count}})",
+      "title_few": "टूल्स ({{count}})",
+      "title_many": "टूल्स ({{count}})",
+      "title_one": "टूल ({{count}})",
+      "title_other": "टूल्स ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "रद्द करा",
+      "createSkill": "कौशल्य तयार करा",
+      "preparing": "तयारी करत आहे...",
+      "reviewAndCreate": "पुनरावलोकन करा आणि तयार करा",
+      "reviewAndSave": "पुनरावलोकन करा आणि जतन करा",
+      "saveSkill": "कौशल्य जतन करा"
+    },
+    "advanced": {
+      "customDescription": "हे कौशल्य कस्टम markdown स्वरूप वापरते, म्हणून ते येथे थेट संपादित करा.",
+      "customTitle": "2. SKILL.md एडिटर",
+      "description": "बहुतेक लोक हे वगळू शकतात. तुम्हाला कच्च्या markdown फाइलवर थेट नियंत्रण हवे असेल तरच ते उघडा.",
+      "hide": "प्रगत एडिटर लपवा",
+      "resetFromStructuredFields": "संरचित फील्ड्समधून रीसेट करा",
+      "show": "प्रगत एडिटर दाखवा",
+      "title": "4. प्रगत SKILL.md एडिटर"
+    },
+    "basics": {
+      "description": "या कौशल्याला स्पष्ट नाव द्या, कोण ते वापरू शकतो ते निवडा आणि ते कुठे राहावे ते ठरवा.",
+      "title": "1. मूलभूत गोष्टी"
+    },
+    "description": {
+      "create": "वर्कफ्लोचे साध्या भाषेत वर्णन करा, तयार होणाऱ्या फाइल्सचे पुनरावलोकन करा, मग ते जतन करा.",
+      "edit": "हे कौशल्य अपडेट करा, परिणामी फाइल बदलांचे पुनरावलोकन करा, मग ते जतन करा."
+    },
+    "extraFiles": {
+      "addedFiles": "जोडलेल्या फाइल्स:",
+      "assets": "अॅसेट्स",
+      "assetsDescription": "स्क्रीनशॉट्स किंवा बंडल केलेले मीडिया फक्त वर्कफ्लो स्पष्ट करण्यास मदत करत असल्यासच जोडा.",
+      "description": "हे कौशल्य खरोखर गरजेचे असल्यासच सहाय्यक दस्तऐवज, स्क्रिप्ट्स किंवा अॅसेट्स जोडा.",
+      "lockedForEdits": "रूट आणि फोल्डर संपादनांसाठी लॉक केले आहेत",
+      "optionalDescription": "स्टार्टर फाइल्स जोडा ज्या पुनरावलोकनात समाविष्ट होतील आणि `SKILL.md` सोबत लिहिल्या जातील.",
+      "optionalTitle": "ऐच्छिक फाइल्स",
+      "references": "संदर्भ",
+      "referencesDescription": "रनटाइम पाहू शकेल असे सहाय्यक दस्तऐवज, लिंक्स किंवा उदाहरणे जोडा.",
+      "scripts": "स्क्रिप्ट्स",
+      "scriptsDescription": "हेल्पर कमांड्स किंवा सेटअप नोट्स जोडा. हे कौशल्य शेअर करण्यापूर्वी काळजीपूर्वक पुनरावलोकन करा.",
+      "title": "3. अतिरिक्त फाइल्स"
+    },
+    "fields": {
+      "compatibility": "सुसंगतता",
+      "description": "वर्णन",
+      "folderName": "फोल्डर नाव",
+      "folderNameHint": "पुनरावलोकन लगेच चालावे म्हणून आम्ही कौशल्याच्या नावावरून हे स्वयंचलितपणे सुचवतो.",
+      "invocation": "ते कसे वापरले जावे",
+      "license": "परवाना",
+      "name": "कौशल्य नाव",
+      "notes": "अतिरिक्त नोट्स किंवा गार्डरेल्स",
+      "root": "ते कुठे संग्रहित करायचे",
+      "scope": "कोण ते वापरू शकतो",
+      "steps": "अनुसरण करण्याचे मुख्य टप्पे",
+      "whenToUse": "हे केव्हा वापरायचे"
+    },
+    "instructions": {
+      "description": "हे विभाग तुमच्यासाठी कौशल्य फाइल तयार करतात, म्हणून तुम्हाला हवे असल्याशिवाय markdown संपादित करण्याची गरज नाही.",
+      "locked": "तुम्ही खाली मॅन्युअल `SKILL.md` संपादनावर स्विच केल्यामुळे संरचित फील्ड्स लॉक केले आहेत.",
+      "title": "2. सूचना"
+    },
+    "invocation": {
+      "auto": "स्वयंचलितपणे वापरले जाऊ शकते",
+      "manualOnly": "फक्त तुम्ही विचारल्यावरच"
+    },
+    "placeholders": {
+      "description": "हे कौशल्य कशात मदत करते",
+      "name": "संक्षिप्त कौशल्य नाव लिहा",
+      "notes": "उदाहरण: गहाळ चाचण्या, रिग्रेशन्स आणि जोखमीच्या गृहीतकांकडे लक्ष वेधा.",
+      "steps": "1. संबंधित फाइल्स तपासा.\n2. प्रथम मुख्य जोखीम स्पष्ट करा.\n3. सर्वात सुरक्षित दुरुस्ती सुचवा.",
+      "whenToUse": "उदाहरण: कार्य कोड पुनरावलोकन किंवा बग ट्रायाज विनंती असताना हे वापरा.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "एक कौशल्य तयार करत आहे",
+      "hint": "प्रथम फाइल बदलांचे पुनरावलोकन करा, मग पुढील टप्प्यात जतन करण्याची पुष्टी करा.",
+      "saving": "हे कौशल्य जतन करत आहे"
+    },
+    "root": {
+      "codexOnly": " - फक्त Codex",
+      "shared": " - शेअर केलेले"
+    },
+    "scope": {
+      "project": "प्रकल्प: {{project}}",
+      "projectUnavailable": "प्रकल्प उपलब्ध नाही",
+      "user": "वापरकर्ता"
+    },
+    "title": {
+      "create": "कौशल्य तयार करा",
+      "edit": "कौशल्य संपादित करा"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "रद्द करा",
+      "delete": "हटवा",
+      "deleteSkill": "कौशल्य हटवा",
+      "deleting": "हटवत आहे...",
+      "editSkill": "कौशल्य संपादित करा",
+      "openFolder": "फोल्डर उघडा",
+      "openSkillFile": "SKILL.md उघडा",
+      "retry": "पुन्हा प्रयत्न करा"
+    },
+    "badges": {
+      "assets": "अॅसेट्स",
+      "autoUse": "स्वयं वापर",
+      "hasScripts": "स्क्रिप्ट्स आहेत",
+      "manualUse": "मॅन्युअल वापर",
+      "references": "संदर्भ",
+      "storedIn": "{{root}} मध्ये संग्रहित"
+    },
+    "deleteDialog": {
+      "description": "हे कौशल्य हटवायचे आणि कचऱ्यात हलवायचे?",
+      "descriptionWithName": "\"{{name}}\" हटवायचे आणि कचऱ्यात हलवायचे? गरज असल्यास तुम्ही ते नंतर कचऱ्यातून पुनर्संचयित करू शकता.",
+      "title": "कौशल्य हटवायचे?"
+    },
+    "descriptionFallback": "आढळलेला कौशल्य मेटाडेटा आणि कच्च्या सूचना तपासा.",
+    "errors": {
+      "deleteFailed": "कौशल्य हटवणे अयशस्वी",
+      "loadFailed": "हे कौशल्य लोड करण्यास असमर्थ."
+    },
+    "files": {
+      "advancedDetails": "प्रगत फाइल तपशील",
+      "assets": "अॅसेट्स",
+      "references": "संदर्भ",
+      "scripts": "स्क्रिप्ट्स",
+      "storedAt": "येथे संग्रहित"
+    },
+    "includes": {
+      "assets": "अॅसेट्स",
+      "instructionsOnly": "फक्त कौशल्य सूचना",
+      "references": "संदर्भ",
+      "scripts": "स्क्रिप्ट्स"
+    },
+    "invocation": {
+      "auto": "कार्याशी जुळल्यावर स्वयंचलितपणे चालते.",
+      "manualOnly": "तुम्ही स्पष्टपणे विचारल्यावरच चालते."
+    },
+    "issues": {
+      "bundledScripts": "या कौशल्यात बंडल केलेल्या स्क्रिप्ट्स समाविष्ट आहेत",
+      "reviewCarefully": "हे कौशल्य वापरण्यापूर्वी काळजीपूर्वक पुनरावलोकन करा"
+    },
+    "loading": "कौशल्य तपशील लोड होत आहेत...",
+    "scope": {
+      "personal": "तुमची वैयक्तिक कौशल्ये",
+      "projectOnly": "फक्त हा प्रकल्प"
+    },
+    "summary": {
+      "howUsed": "ते कसे वापरले जाते",
+      "included": "त्यासोबत काय येते",
+      "whoCanUse": "कोण ते वापरू शकतो"
+    },
+    "titleFallback": "कौशल्य तपशील"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "कौशल्य तयार करा",
+      "import": "इंपोर्ट करा"
+    },
+    "badges": {
+      "assets": "अॅसेट्स",
+      "hasScripts": "स्क्रिप्ट्स आहेत",
+      "needsAttention": "लक्ष आवश्यक",
+      "references": "संदर्भ",
+      "storedIn": "{{root}} मध्ये संग्रहित"
+    },
+    "configuredRuntime": "कॉन्फिगर केलेला रनटाइम",
+    "counts": {
+      "codexOnly": "{{count}} फक्त Codex",
+      "personal": "{{count}} वैयक्तिक",
+      "project": "{{count}} प्रकल्प",
+      "shared": "{{count}} शेअर केलेले",
+      "total": "एकूण {{count}}",
+      "codexOnly_few": "{{count}} फक्त Codex",
+      "codexOnly_many": "{{count}} फक्त Codex",
+      "codexOnly_one": "{{count}} फक्त Codex",
+      "codexOnly_other": "{{count}} फक्त Codex",
+      "personal_few": "{{count}} वैयक्तिक",
+      "personal_many": "{{count}} वैयक्तिक",
+      "personal_one": "{{count}} वैयक्तिक",
+      "personal_other": "{{count}} वैयक्तिक",
+      "project_few": "{{count}} प्रकल्प",
+      "project_many": "{{count}} प्रकल्प",
+      "project_one": "{{count}} प्रकल्प",
+      "project_other": "{{count}} प्रकल्प",
+      "shared_few": "{{count}} शेअर केलेले",
+      "shared_many": "{{count}} शेअर केलेले",
+      "shared_one": "{{count}} शेअर केलेले",
+      "shared_other": "{{count}} शेअर केलेले",
+      "total_few": "एकूण {{count}}",
+      "total_many": "एकूण {{count}}",
+      "total_one": "एकूण {{count}}",
+      "total_other": "एकूण {{count}}"
+    },
+    "empty": {
+      "noMatches": "तुमच्या शोधाशी कोणतीही कौशल्ये जुळत नाहीत",
+      "noMatchesDescription": "वेगळा शोध शब्द वापरून पाहा किंवा फिल्टर्स बदला.",
+      "noSkills": "अद्याप कोणतीही कौशल्ये नाहीत",
+      "noSkillsDescription": "पुनरावृत्त वर्कफ्लो शिकवण्यासाठी तुमचे पहिले कौशल्य तयार करा, किंवा तुम्ही आधीच वापरत असलेले एक इंपोर्ट करा."
+    },
+    "filters": {
+      "all": "सर्व कौशल्ये",
+      "codexOnly": "फक्त Codex",
+      "hasScripts": "स्क्रिप्ट्स आहेत",
+      "needsAttention": "लक्ष आवश्यक",
+      "personal": "वैयक्तिक",
+      "project": "प्रकल्प",
+      "shared": "शेअर केलेले"
+    },
+    "hero": {
+      "codexAvailable": "कौशल्य फक्त Codex साठीच राहावे तेव्हा `.codex` वापरा.",
+      "codexUnavailable": "विद्यमान `.codex` कौशल्ये येथे संपादनयोग्य राहतात, पण नवीन फक्त-Codex कौशल्यांसाठी Codex रनटाइम सक्षम असणे आवश्यक आहे.",
+      "description": "कौशल्ये ही पुनर्वापरयोग्य सूचना आहेत जी रनटाइमला समान प्रकारची कार्ये अधिक सातत्याने हाताळण्यास मदत करतात.",
+      "guidance": "तुम्हाला सर्वत्र हव्या असलेल्या सवयींसाठी वैयक्तिक कौशल्ये वापरा. फक्त एका कोडबेसमध्ये अर्थपूर्ण असलेल्या वर्कफ्लोसाठी प्रकल्प कौशल्ये वापरा.",
+      "personalContext": "तुम्हाला आत्ता फक्त तुमची वैयक्तिक कौशल्ये दिसत आहेत.",
+      "projectContext": "तुम्हाला {{project}} साठीची कौशल्ये आणि तुमची वैयक्तिक कौशल्ये दिसत आहेत.",
+      "title": "पुनरावृत्त काम शिकवा"
+    },
+    "invocation": {
+      "auto": "योग्य असल्यावर स्वयंचलितपणे चालते",
+      "manualOnly": "तुम्ही स्पष्टपणे विचारल्यावरच चालते"
+    },
+    "loading": {
+      "loading": "कौशल्ये लोड होत आहेत...",
+      "refreshing": "कौशल्ये रिफ्रेश करत आहे..."
+    },
+    "runtimeAudience": "`.claude`, `.cursor` आणि `.agents` मधील शेअर केलेली कौशल्ये {{audience}} ला उपलब्ध आहेत. `.codex` मध्ये संग्रहित कौशल्ये Codex समर्थन उपलब्ध असताना फक्त-Codex राहतात.",
+    "scope": {
+      "project": "हा प्रकल्प",
+      "user": "वैयक्तिक"
+    },
+    "searchPlaceholder": "कौशल्याच्या नावाने किंवा ते कशात मदत करते त्यानुसार शोधा...",
+    "sections": {
+      "personal": {
+        "description": "तुम्हाला सर्वत्र उपलब्ध हव्या असलेल्या सवयी आणि सूचना.",
+        "title": "वैयक्तिक कौशल्ये"
+      },
+      "project": {
+        "description": "फक्त या कोडबेससाठी अर्थपूर्ण असलेले वर्कफ्लो.",
+        "title": "प्रकल्प कौशल्ये"
+      }
+    },
+    "sort": {
+      "label": "कौशल्ये क्रमवारी लावा",
+      "name": "नाव",
+      "recent": "अलीकडील"
+    },
+    "status": {
+      "hasScripts": "स्क्रिप्ट्स समाविष्ट आहेत, म्हणून काळजीपूर्वक पुनरावलोकन करा",
+      "needsAttention": "तुम्ही त्यावर अवलंबून राहण्यापूर्वी लक्ष आवश्यक",
+      "ready": "वापरण्यास तयार"
+    },
+    "success": {
+      "created": "कौशल्य यशस्वीरित्या तयार झाले.",
+      "imported": "कौशल्य यशस्वीरित्या इंपोर्ट झाले.",
+      "saved": "कौशल्य यशस्वीरित्या जतन झाले."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "अज्ञात",
+    "metadata": {
+      "author": "लेखक",
+      "category": "वर्ग",
+      "source": "स्रोत",
+      "version": "आवृत्ती",
+      "capabilities": "क्षमता",
+      "installs": "इन्स्टॉल्स"
+    },
+    "scope": {
+      "label": "व्याप्ती:",
+      "options": {
+        "user": "वापरकर्ता (जागतिक)",
+        "project": "प्रकल्प (शेअर केलेले)",
+        "local": "स्थानिक (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "मुख्यपृष्ठ",
+      "contact": "संपर्क"
+    },
+    "readme": {
+      "loading": "README लोड होत आहे...",
+      "empty": "कोणतेही README उपलब्ध नाही."
+    }
+  },
+  "skillImport": {
+    "title": "कौशल्य इंपोर्ट करा",
+    "description": "विद्यमान कौशल्य फोल्डर निवडा, काय कॉपी होईल त्याचे पुनरावलोकन करा, मग ते तुमच्या समर्थित कौशल्य स्थानांपैकी एकात इंपोर्ट करा.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. कौशल्य फोल्डर निवडा",
+        "description": "हे असे फोल्डर असावे ज्यात आधीच `SKILL.md`, `Skill.md` किंवा `skill.md` फाइल आहे."
+      },
+      "location": {
+        "title": "2. ते कुठे राहावे ते ठरवा",
+        "description": "वैयक्तिक कौशल्ये सर्वत्र चालतात. प्रकल्प कौशल्ये फक्त एका कोडबेससाठी दिसतात."
+      }
+    },
+    "fields": {
+      "sourceFolder": "स्रोत फोल्डर",
+      "destinationFolderName": "गंतव्य फोल्डर नाव",
+      "audience": "कोण ते वापरू शकतो",
+      "storage": "ते कुठे संग्रहित करायचे"
+    },
+    "placeholders": {
+      "defaultFolderName": "डीफॉल्टनुसार स्रोत फोल्डर नाव"
+    },
+    "actions": {
+      "browse": "ब्राउझ करा",
+      "cancel": "रद्द करा",
+      "preparing": "तयारी करत आहे...",
+      "reviewAndImport": "पुनरावलोकन करा आणि इंपोर्ट करा",
+      "importSkill": "कौशल्य इंपोर्ट करा",
+      "backToImport": "इंपोर्टकडे परत"
+    },
+    "scope": {
+      "user": "वापरकर्ता",
+      "project": "प्रकल्प: {{project}}",
+      "projectUnavailable": "प्रकल्प उपलब्ध नाही"
+    },
+    "rootSuffix": {
+      "codexOnly": " - फक्त Codex",
+      "shared": " - शेअर केलेले"
+    },
+    "reviewHint": "प्रथम कॉपी केलेल्या फाइल्सचे पुनरावलोकन करा, मग पुढील टप्प्यात इंपोर्टची पुष्टी करा.",
+    "reviewLabel": "हे कौशल्य इंपोर्ट करत आहे",
+    "errors": {
+      "missingSkillFile": "हे फोल्डर अद्याप कौशल्यासारखे दिसत नाही. त्याला SKILL.md, Skill.md किंवा skill.md फाइलची गरज आहे.",
+      "symbolicLinks": "या फोल्डरमध्ये सिम्बॉलिक लिंक्स आहेत. लिंक्सऐवजी खऱ्या फाइल्स इंपोर्ट करा.",
+      "tooManyFiles": "हे कौशल्य फोल्डर एकाच वेळी इंपोर्ट करण्यास खूप मोठे आहे. अतिरिक्त फाइल्स काढा आणि पुन्हा प्रयत्न करा.",
+      "tooLarge": "हे कौशल्य फोल्डर सुरक्षितपणे इंपोर्ट करण्यास खूप मोठे आहे. मोठ्या अॅसेट्स कमी करा आणि पुन्हा प्रयत्न करा.",
+      "invalidFolderName": "अक्षरे, अंक, डॉट्स, डॅशेस किंवा अंडरस्कोअर्स वापरून सोपे गंतव्य फोल्डर नाव निवडा.",
+      "mustBeDirectory": "इंपोर्ट करण्यासाठी एकल फाइल नव्हे तर फोल्डर निवडा.",
+      "reviewFailed": "इंपोर्ट बदलांचे पुनरावलोकन करणे अयशस्वी",
+      "importFailed": "कौशल्य इंपोर्ट करणे अयशस्वी"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "नाव अ→ज्ञ",
+      "nameDesc": "नाव ज्ञ→अ",
+      "toolsDesc": "सर्वाधिक टूल्स"
+    },
+    "health": {
+      "title": "MCP आरोग्य स्थिती",
+      "checkingViaRuntime": "{{runtime}} द्वारे इन्स्टॉल केलेले MCP सर्व्हर्स तपासत आहे ...",
+      "lastChecked": "शेवटचे तपासले {{time}}",
+      "description": "इन्स्टॉल केलेली MCP कनेक्टिव्हिटी पडताळण्यासाठी या पृष्ठावरून डायग्नॉस्टिक्स चालवा.",
+      "checking": "तपासत आहे...",
+      "checkStatus": "स्थिती तपासा"
+    },
+    "diagnostics": {
+      "title": "रनटाइम MCP डायग्नॉस्टिक्स",
+      "serversCount": "{{count}} सर्व्हर्स",
+      "serversCount_one": "{{count}} सर्व्हर",
+      "serversCount_other": "{{count}} सर्व्हर्स",
+      "waiting": "डायग्नॉस्टिक्स परिणामांची वाट पाहत आहे...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "रनटाइम स्थिती तपासत आहे...",
+        "checkingRuntimeAvailability": "रनटाइम उपलब्धता तपासत आहे...",
+        "runtimeFailedToStart": "कॉन्फिगर केलेला रनटाइम सापडला पण सुरू होण्यात अयशस्वी. ते दुरुस्त किंवा पुन्हा इन्स्टॉल करण्यासाठी डॅशबोर्ड उघडा.",
+        "runtimeRequired": "कॉन्फिगर केलेला रनटाइम आवश्यक आहे. ते डॅशबोर्डवरून इन्स्टॉल किंवा दुरुस्त करा."
+      },
+      "serversCount_few": "{{count}} सर्व्हर्स",
+      "serversCount_many": "{{count}} सर्व्हर्स"
+    },
+    "searchPlaceholder": "MCP सर्व्हर्स शोधा...",
+    "runtime": {
+      "notAvailable": "{{runtime}} उपलब्ध नाही",
+      "notInstalled": "{{runtime}} इन्स्टॉल केलेले नाही",
+      "requiredDescription": "MCP आरोग्य तपासण्यांना {{runtime}} आवश्यक आहे. ते इन्स्टॉल किंवा दुरुस्त करण्यासाठी डॅशबोर्डवर जा."
+    },
+    "empty": {
+      "searchTitle": "कोणतेही सर्व्हर्स सापडले नाहीत",
+      "title": "कोणतेही MCP सर्व्हर्स उपलब्ध नाहीत",
+      "searchDescription": "वेगळा शोध शब्द वापरून पाहा",
+      "description": "नवीन सर्व्हर्ससाठी नंतर पुन्हा तपासा"
+    },
+    "loadMore": "अधिक लोड करा"
+  },
+  "apiKeys": {
+    "description": "MCP सर्व्हर्स इन्स्टॉल करताना ऑटो-भरण्यासाठी API की सुरक्षितपणे संग्रहित करा.",
+    "storage": {
+      "osKeychain": "की {{backend}} द्वारे एन्क्रिप्ट केल्या जातात आणि निर्बंधित फाइल परवानग्यांसह (फक्त-मालक) संग्रहित केल्या जातात.",
+      "localEncryption": "OS किचेन उपलब्ध नाही - की स्थानिकरित्या AES-256 ने एन्क्रिप्ट केल्या जातात. अधिक संरक्षणासाठी, एक keyring सेवा (gnome-keyring, kwallet) इन्स्टॉल करा."
+    },
+    "actions": {
+      "add": "API की जोडा",
+      "addFirst": "तुमची पहिली की जोडा",
+      "edit": "संपादित करा",
+      "copied": "कॉपी केले!",
+      "copyEnvVarName": "env var नाव कॉपी करा",
+      "confirmDelete": "पुष्टी करण्यासाठी पुन्हा क्लिक करा",
+      "delete": "हटवा"
+    },
+    "empty": {
+      "title": "कोणत्याही API की जतन केल्या नाहीत",
+      "description": "MCP सर्व्हर्स इन्स्टॉल करताना एन्व्हायर्न्मेंट व्हेरिएबल्स ऑटो-भरण्यासाठी की जोडा."
+    },
+    "form": {
+      "addTitle": "API की जोडा",
+      "editTitle": "API की संपादित करा",
+      "addDescription": "MCP सर्व्हर इन्स्टॉलेशन्समध्ये ऑटो-भरण्यासाठी API की संग्रहित करा.",
+      "editDescription": "की तपशील अपडेट करा. तुम्हाला मूल्य पुन्हा टाकावे लागेल.",
+      "keychainUnavailable": "OS किचेन उपलब्ध नाही - की स्थानिकरित्या AES-256 ने एन्क्रिप्ट केल्या. OS-स्तरीय संरक्षणासाठी gnome-keyring इन्स्टॉल करा.",
+      "name": "नाव",
+      "namePlaceholder": "उदा. OpenAI Production",
+      "environmentVariableName": "एन्व्हायर्न्मेंट व्हेरिएबल नाव",
+      "envVarPlaceholder": "उदा. OPENAI_API_KEY",
+      "value": "मूल्य",
+      "reenterValue": "की मूल्य पुन्हा टाका",
+      "valuePlaceholder": "sk-...",
+      "scope": "व्याप्ती",
+      "userScopeLabel": "वापरकर्ता (जागतिक)",
+      "projectScopeLabel": "प्रकल्प: {{project}}",
+      "projectUnavailable": "प्रकल्प उपलब्ध नाही",
+      "boundTo": "{{path}} शी बांधलेले",
+      "cancel": "रद्द करा",
+      "saving": "जतन करत आहे...",
+      "update": "अपडेट करा",
+      "save": "जतन करा",
+      "errors": {
+        "invalidEnvVarFormat": "अक्षरे, अंक, अंडरस्कोअर्स वापरा. अक्षर किंवा अंडरस्कोअरने सुरू झाले पाहिजे.",
+        "nameRequired": "नाव आवश्यक आहे",
+        "envVarRequired": "एन्व्हायर्न्मेंट व्हेरिएबल नाव आवश्यक आहे",
+        "invalidEnvVar": "अवैध एन्व्हायर्न्मेंट व्हेरिएबल नाव",
+        "valueRequired": "की मूल्य आवश्यक आहे",
+        "projectScopeRequiresProject": "प्रकल्प-व्याप्तीच्या API की ना एक सक्रिय प्रकल्प आवश्यक आहे",
+        "saveFailed": "जतन करणे अयशस्वी"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "कौशल्य बदलांचे पुनरावलोकन करा",
+    "description": "{{reviewLabel}} प्रथम फाइलसिस्टम बदलांचे पूर्वावलोकन करते. तुम्ही खाली पुष्टी करेपर्यंत काहीही लिहिले जात नाही.",
+    "noPreview": "कोणतेही पूर्वावलोकन उपलब्ध नाही.",
+    "confirmPromptPrefix": "खाली diff चे पुनरावलोकन करा, मग वापरा",
+    "confirmPromptSuffix": "हे बदल लागू करण्यासाठी.",
+    "noChanges": "अद्याप कोणतेही फाइल बदल आढळले नाहीत.",
+    "binaryBadge": "बायनरी",
+    "binaryPreviewHidden": "बायनरी फाइल पूर्वावलोकन दाखवले जात नाही. फाइल जशीच्या तशी कॉपी केली जाईल.",
+    "summary": {
+      "fileChanges": "{{count}} फाइल बदल",
+      "fileChanges_one": "{{count}} फाइल बदल",
+      "fileChanges_other": "{{count}} फाइल बदल",
+      "new": "{{count}} नवीन",
+      "updated": "{{count}} अपडेट केले",
+      "removed": "{{count}} काढले",
+      "binary": "{{count}} बायनरी",
+      "fileChanges_few": "{{count}} फाइल बदल",
+      "fileChanges_many": "{{count}} फाइल बदल"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} टूल्स",
+    "toolsCount_one": "{{count}} टूल",
+    "toolsCount_other": "{{count}} टूल्स",
+    "envCount": "{{count}} envs",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} envs",
+    "auth": "ऑथ",
+    "byAuthor": "{{author}} द्वारे",
+    "hosting": {
+      "remote": "रिमोट",
+      "local": "स्थानिक",
+      "both": "दोन्ही"
+    },
+    "toolsCount_few": "{{count}} टूल्स",
+    "toolsCount_many": "{{count}} टूल्स",
+    "envCount_few": "{{count}} envs",
+    "envCount_many": "{{count}} envs",
+    "repository": "रिपॉझिटरी",
+    "website": "वेबसाइट"
+  },
+  "installButton": {
+    "installing": "इन्स्टॉल करत आहे...",
+    "removing": "काढत आहे...",
+    "done": "पूर्ण",
+    "retry": "पुन्हा प्रयत्न करा",
+    "uninstall": "अनइन्स्टॉल करा",
+    "install": "इन्स्टॉल करा"
+  },
+  "pluginCard": {
+    "official": "अधिकृत"
+  }
+}

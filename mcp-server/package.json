@@ -1,0 +1,54 @@
+{
+  "name": "agent-teams-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for managing Agent Teams through the agent-teams-controller API",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "agent-teams-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "claude",
+    "agent-teams",
+    "kanban",
+    "task-management",
+    "model-context-protocol"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/777genius/agent-teams-ai.git",
+    "directory": "mcp-server"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:e2e": "pnpm build && vitest run --config vitest.e2e.config.ts",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "agent-teams-controller": "workspace:*",
+    "fastmcp": "^3.35.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.5"
+  },
+  "engines": {
+    "node": ">=24.15.0 <25"
+  }
+}

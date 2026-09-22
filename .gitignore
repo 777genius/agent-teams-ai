@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+dist-standalone/
+out/
+release/
+coverage/
+test-results/
+electron.vite.config.*.mjs
+
+# Runtime release artifacts are downloaded during dev/release builds.
+# Keep only the placeholder directory in git.
+.runtime-download/
+resources/runtime/*
+!resources/runtime/.gitkeep
+.terminal-platform-download/
+resources/terminal-platform/*
+!resources/terminal-platform/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript
+*.tsbuildinfo
+
+.pnpm-store/
+/package-lock.json
+notification_example/
+temp/
+.claude/
+
+
+eslint-fix/
+.eslintcache
+.eslintcache-fast
+remotion/*
+
+.home/
+.board-task-changes/
+.board-task-change-freshness/
+.board-task-log-freshness/
+
+.serena/
+.playwright-mcp/
+
+# Local release operator notes
+/ORCHESTRATOR_RELEASE_RUNBOOK.local.md
+
+# Local reference captures
+/agent-teams-reference-fix-*.png
+/.tmp-*
+
+# Local validation captures and staging harnesses
+/.artifacts/
+/.remote-agent-runtime-staging/
+/.remote-profile-spike-staging/
+/_remote_profile_spike_stage/
+
+# Deterministic announcement build output (edit landing/content/announcements).
+/landing/public/announcements/
+/landing/public/announcements.tmp-*/

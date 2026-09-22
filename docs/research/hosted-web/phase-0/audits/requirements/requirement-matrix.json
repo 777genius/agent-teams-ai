@@ -1,0 +1,662 @@
+{
+  "schemaVersion": 1,
+  "auditId": "P0.AUDIT.REQUIREMENTS.V1",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "disposition": "reject_pending_correction",
+  "statusDefinitions": {
+    "satisfied": "Authoritative current evidence proves the requirement at its required proof level.",
+    "partial": "Useful evidence exists, but it does not prove the full requirement or required topology.",
+    "failed": "Current evidence contradicts the requirement or a completed reciprocal review rejected it.",
+    "missing": "No authoritative evidence was found.",
+    "pending": "The requirement belongs to 0D/final freeze and cannot yet run because prerequisite evidence is rejected."
+  },
+  "requirements": [
+    {
+      "id": "P0.REQ.0A.001",
+      "area": "0A",
+      "requirement": "Pin the canonical remote and exact base SHA with toolchain and lockfile identity.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["BASE", "PACKET:0A.1"],
+      "finding": "base.json records the canonical URL, base cbe501ad0f1fa0e51a038e832ad35fce4120321b, observed time, Node/pnpm/OS/kernel/architecture and lockfile hash."
+    },
+    {
+      "id": "P0.REQ.0A.002",
+      "area": "0A",
+      "requirement": "Adopt the reviewed plan bundle and establish a phaseStartSha descending from base and plan evidence.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["BASE", "REGISTRY_SNAPSHOT", "W1_HANDOFF", "W6_HANDOFF"],
+      "finding": "The checked-in record uses the documented self-SHA exception, while every registered lane and handoff uses a32f509e6d9bd31ba2135940e336729bf90c3d93 and the Git ancestry contains the adopted plan and 0A evidence."
+    },
+    {
+      "id": "P0.REQ.0A.003",
+      "area": "0A",
+      "requirement": "Materialize frozen dependencies without changing the lockfile.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["BASE", "BASELINE"],
+      "finding": "The offline frozen install command, dependency fingerprint and unchanged lockfile are recorded."
+    },
+    {
+      "id": "P0.REQ.0A.004",
+      "area": "0A",
+      "requirement": "Capture each of typecheck:workspace, lint:fast, test:workspace:ci, standalone:build and check:ci with exit code, duration and final tail.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["BASELINE:Packet command coverage"],
+      "finding": "lint:fast and standalone:build were not run; nested typecheck/test lacked independent duration/tail records."
+    },
+    {
+      "id": "P0.REQ.0A.005",
+      "area": "0A",
+      "requirement": "Classify every inherited failure and rerun after adopting any base-owned prerequisite fix before dependent admission.",
+      "status": "partial",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["BASELINE", "BASE", "REGISTRY_SNAPSHOT"],
+      "finding": "Two base-owned records/five lint errors have owners and no unknowns, but no post-fix broad rerun is recorded before W1-W6 admission."
+    },
+    {
+      "id": "P0.REQ.0A.006",
+      "area": "0A",
+      "requirement": "Start all six lanes from the exact phaseStartSha with packet revision phase-00-r2.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": [
+        "REGISTRY_SNAPSHOT",
+        "W1_HANDOFF",
+        "W2_HANDOFF",
+        "W3_HANDOFF",
+        "W4_HANDOFF",
+        "W5_HANDOFF",
+        "W6_HANDOFF"
+      ],
+      "finding": "All producer registry jobs name the same phase start and all handoffs report it."
+    },
+    {
+      "id": "P0.REQ.0A.007",
+      "area": "0A",
+      "requirement": "Maintain lane-ledger state, attempt, job/worktree identity, progress and handoff hashes through evidence and review epochs.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["LANE_LEDGER", "REGISTRY_SNAPSHOT"],
+      "finding": "The checked-in lane ledger still reports all lanes unstarted with null jobs/phaseStartSha despite nine completed registry jobs."
+    },
+    {
+      "id": "P0.REQ.0A.008",
+      "area": "0A",
+      "requirement": "Admit no lane that depends on an unknown baseline failure.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["BASELINE"],
+      "finding": "The inherited-failure ledger contains zero unknown or base_blocker records."
+    },
+    {
+      "id": "P0.REQ.SCOPE.001",
+      "area": "scope",
+      "requirement": "Keep producer and review writes within exclusive owned paths.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["R12", "R35", "R46"],
+      "finding": "All three reviews independently found lane-owned paths only; this audit also observed only untracked owned additions."
+    },
+    {
+      "id": "P0.REQ.SCOPE.002",
+      "area": "scope",
+      "requirement": "Do not implement Phase 1, enable hosted mutation, use a real project/provider, or add hosted terminal behavior.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["R12", "R35", "R46", "W6_HANDOFF"],
+      "finding": "Review scope and secret/path scans found no Phase 1/product mutation, real-project/provider use or terminal implementation change."
+    },
+
+    {
+      "id": "P0.REQ.W1.001",
+      "area": "W1",
+      "requirement": "Deliver all six W1 evidence IDs and a standard handoff.",
+      "status": "partial",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W1_HANDOFF", "R12"],
+      "finding": "All files exist, but reciprocal review rejected five evidence groups and approved only the selection invariants."
+    },
+    {
+      "id": "P0.REQ.W1.002",
+      "area": "W1",
+      "requirement": "Extract exactly one disposition for every pinned TeamsAPI, ReviewAPI and CrossTeamAPI member and explain count differences.",
+      "status": "partial",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W1:P0.W1.API_PARITY_LEDGER", "R12:R12-W1-001", "R12:R12-X-001"],
+      "finding": "The 86/20/3 AST count is reproducible, but heuristic ownership/action/phase assignments are wrong, including TeamsAPI.stop."
+    },
+    {
+      "id": "P0.REQ.W1.003",
+      "area": "W1",
+      "requirement": "Map every visible team control to exactly one semantic action or deliberate absence before mount.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W1-001", "R12:R12-W1-002"],
+      "finding": "The generator maps JSX sites, including event containment and widget subparts, rather than stable semantic actions; line-based IDs are unstable."
+    },
+    {
+      "id": "P0.REQ.W1.004",
+      "area": "W1",
+      "requirement": "Annotate dynamic dispatch and fail a deliberate unannotated fixture.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W1:P0.W1.SCANNER", "R12:verification record"],
+      "finding": "The scanner and six-test suite pass the annotated/unannotated dynamic dispatch control, although this does not repair semantic action coverage."
+    },
+    {
+      "id": "P0.REQ.W1.005",
+      "area": "W1",
+      "requirement": "Inventory direct Electron, global mega-client and fabricated-success browser paths.",
+      "status": "partial",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W1:P0.W1.LEGACY_BYPASSES", "R12"],
+      "finding": "The source observations are useful, but the 7,095-line raw projection violates evidence-size policy and was rejected for adoption."
+    },
+    {
+      "id": "P0.REQ.W1.006",
+      "area": "W1",
+      "requirement": "Capture selection, thin/full snapshot, tombstone, pagination and event/poll race invariants.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["W1:P0.W1.SELECTION_INVARIANTS", "R12:artifact dispositions"],
+      "finding": "Reciprocal review explicitly approved the invariant document and its labeled proof gaps."
+    },
+    {
+      "id": "P0.REQ.W1.007",
+      "area": "W1",
+      "requirement": "Make missing/duplicate signature and semantic action fixtures fail the gate.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W1-001", "R12:R12-W1-002"],
+      "finding": "Current fixtures prove one structural row per AST site, not semantic missing/duplicate actions or line-shift-stable IDs."
+    },
+    {
+      "id": "P0.REQ.W1.008",
+      "area": "W1",
+      "requirement": "Provide a correct canonical estimate input within evidence/adoption budget.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W1-003", "R12:R12-W1-004"],
+      "finding": "Net ranges are arithmetically misreported and W1 emits 48,661 lines without an approved split or external raw-artifact treatment."
+    },
+
+    {
+      "id": "P0.REQ.W2.001",
+      "area": "W2",
+      "requirement": "Separate four provider identities from two execution backend families.",
+      "status": "satisfied",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["W2:P0.W2.EXECUTION_TOPOLOGY", "R12:artifact dispositions"],
+      "finding": "Reciprocal review approved the topology evidence at source_observed proof level."
+    },
+    {
+      "id": "P0.REQ.W2.002",
+      "area": "W2",
+      "requirement": "Map bootstrap, delivery, task, heartbeat and permission operations by direction, caller, authority, idempotency, body IDs, evidence and current route.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W2:P0.W2.RUNTIME_INGRESS_INVENTORY", "R12:R12-W2-002"],
+      "finding": "Five useful rows exist, but nested acceptance fields are not schema-enforced and can be deleted without failing the gate."
+    },
+    {
+      "id": "P0.REQ.W2.003",
+      "area": "W2",
+      "requirement": "Discover and classify every provider child environment key by provenance and required/optional/forbidden policy.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W2-001"],
+      "finding": "The scanner only checks prelisted keys; at least ten explicit source inputs are omitted and an omitted key still passes."
+    },
+    {
+      "id": "P0.REQ.W2.004",
+      "area": "W2",
+      "requirement": "Prove browser-session and runtime-ingress authority are disjoint in the proposed mapping.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W2:P0.W2.RUNTIME_INGRESS_INVENTORY", "W2_HANDOFF"],
+      "finding": "The proposed ADR-14 mapping is explicit, but no /api/hosted/v1, /api/runtime/v1, relay or lane credential exists; current callbacks remain mixed under /api/teams."
+    },
+    {
+      "id": "P0.REQ.W2.005",
+      "area": "W2",
+      "requirement": "Make Anthropic/Codex/Gemini assumptions and OpenCode differences explicit.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W2:P0.W2.EXECUTION_TOPOLOGY", "W2_HANDOFF"],
+      "finding": "Provider assumptions and OpenCode-specific processes, journals and routes are explicit and labeled source-observed."
+    },
+    {
+      "id": "P0.REQ.W2.006",
+      "area": "W2",
+      "requirement": "Provide a complete positive/negative fake-runtime provider matrix.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W2-004"],
+      "finding": "Unsupported backend and malformed capability response cases are absent; future hosted cases are collapsed into one gap row."
+    },
+    {
+      "id": "P0.REQ.W2.007",
+      "area": "W2",
+      "requirement": "Use artifact-specific schemas and deliberate negative fixtures for every W2 evidence family.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W2-002"],
+      "finding": "The generic schema requires little beyond envelope IDs, and the only negative fixture removes/duplicates a route."
+    },
+    {
+      "id": "P0.REQ.W2.008",
+      "area": "W2",
+      "requirement": "Contribute a reconcilable estimate to the canonical unique bucket model.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W2-003", "ESTIMATE_LEDGER"],
+      "finding": "W2 invents three top-level IDs instead of mapping low/high ranges and W4 overlap into EST-LIFECYCLE-RUNTIME."
+    },
+
+    {
+      "id": "P0.REQ.W3.001",
+      "area": "W3",
+      "requirement": "Catalog every state family with authority, writers, schema/version, atomicity, corruption policy and backup role.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W3:P0.W3.STATE_FAMILY_CATALOG", "R35:artifact dispositions"],
+      "finding": "The 17-family catalog was accepted as useful at source_observed proof level."
+    },
+    {
+      "id": "P0.REQ.W3.002",
+      "area": "W3",
+      "requirement": "Assign each required mutation an honest writer coordination class.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W3:P0.W3.WRITER_COORDINATION", "R35:cross-lane reconciliation"],
+      "finding": "Twelve operations are classified; unresolved external writes fail closed as quiescent-only/unavailable and control W5 assumptions."
+    },
+    {
+      "id": "P0.REQ.W3.003",
+      "area": "W3",
+      "requirement": "Prove an app-only lock does not coordinate an external writer.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W3:P0.W3.WRITER_COORDINATION", "R35"],
+      "finding": "The marker-owned child-process fixture deterministically loses the external update."
+    },
+    {
+      "id": "P0.REQ.W3.004",
+      "area": "W3",
+      "requirement": "Fault-characterize TeamBackupService async/sync enumeration, readiness, error swallowing, prune, identity and restore behavior.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-001"],
+      "finding": "The behavior file records source deductions only; production TeamBackupService is never constructed or fault-injected."
+    },
+    {
+      "id": "P0.REQ.W3.005",
+      "area": "W3",
+      "requirement": "Run supported SQLite Online Backup under WAL, reopen independently and fail closed on BUSY/corruption without raw copy.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W3:P0.W3.SQLITE_ONLINE_BACKUP_SPIKE", "R35:artifact dispositions"],
+      "finding": "The fixture proves live WAL, 2,000-row independent reopen/integrity and injected BUSY/corruption/deadline failure with no DB/WAL/SHM fallback."
+    },
+    {
+      "id": "P0.REQ.W3.006",
+      "area": "W3",
+      "requirement": "Prove the SQLite backup operation in the final Node-ABI artifact and deployment recovery topology.",
+      "status": "missing",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["W3_HANDOFF", "W6_HANDOFF"],
+      "finding": "Only current-host Node ABI 137 is exercised; the production async worker wire op, final image load and deployment quiescence are unverified."
+    },
+    {
+      "id": "P0.REQ.W3.007",
+      "area": "W3",
+      "requirement": "Provide a controller-reconcilable W3 estimate without double-counting W5.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W3:P0.W3.ESTIMATE", "R35:cross-lane reconciliation"],
+      "finding": "The 4.5k-7.25k decomposition is useful, but R35 says it overlaps W5 and cannot be added until controller reconciliation."
+    },
+
+    {
+      "id": "P0.REQ.W4.001",
+      "area": "W4",
+      "requirement": "Declare the supported final Linux/container/filesystem envelope and run probes in it.",
+      "status": "missing",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["W4:P0.W4.TARGET_HOST_ENVELOPE", "R46"],
+      "finding": "The envelope is documented, but the observed root Ubuntu host is not the final Debian-slim non-root/init/seccomp/volume topology and Docker access was denied."
+    },
+    {
+      "id": "P0.REQ.W4.002",
+      "area": "W4",
+      "requirement": "Prove only one of two final-image containers/manual starts reaches Node/effect code on one supported volume.",
+      "status": "missing",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["W4_HANDOFF", "R46"],
+      "finding": "Only current-host contenders were exercised; the mandatory two-container/manual-contender proof did not run."
+    },
+    {
+      "id": "P0.REQ.W4.003",
+      "area": "W4",
+      "requirement": "Prove paused/killed owners, duplicate close ordering and anchor replacement cannot overlap.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W4:P0.W4.INSTANCE_LEASE_SPIKE", "R46:R46-04"],
+      "finding": "Current-host cases pass, but cleanup/zero-residual evidence is hard-coded before ignored cleanup and no final topology ran."
+    },
+    {
+      "id": "P0.REQ.W4.004",
+      "area": "W4",
+      "requirement": "Prove descriptor-bound workspace effects and zero outside-marker effects for symlink, rename, bind-mount and stale-generation races.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W4:P0.W4.WORKSPACE_GUARD_SPIKE", "R46:R46-04", "R46:R46-05"],
+      "finding": "Useful current-host races and raw Node/Git controls exist, but cleanup is overstated, descriptors above 1023 are not closed, and final seccomp/image proof is absent."
+    },
+    {
+      "id": "P0.REQ.W4.005",
+      "area": "W4",
+      "requirement": "Prove nonce-ready pidfd/subreaper process ownership, double-fork reap, escalation, EOF and typed drained/unclassified outcomes without numeric-PID fallback.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R46:R46-03", "R46:R46-04"],
+      "finding": "Only the main child uses pidfd; descendants are later signaled through reusable numeric PIDs, and residual cleanup claims are not measured."
+    },
+    {
+      "id": "P0.REQ.W4.006",
+      "area": "W4",
+      "requirement": "Prove lease/control descriptors do not leak into provider, Git or helper descendants.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R46:R46-05"],
+      "finding": "The fixture closes only file descriptors 3-1023, so a canary duplicated above 1023 can survive."
+    },
+    {
+      "id": "P0.REQ.W4.007",
+      "area": "W4",
+      "requirement": "Define reproducible native artifacts/manifests and reconcile them with the hosted image inventory.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["W4:P0.W4.NATIVE_ARTIFACT_PROPOSAL", "R46:R46-06"],
+      "finding": "A proposal exists, but W6 has no manifest rows/probes for the three W4 binaries, protocol hashes, ordering, image placement or syscall readiness."
+    },
+    {
+      "id": "P0.REQ.W4.008",
+      "area": "W4",
+      "requirement": "Keep a single adoption below 1,500 lines or record an approved split.",
+      "status": "partial",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W4_HANDOFF", "R46"],
+      "finding": "W4 correctly reports 1,916 lines and requests a three-part split, but no controller approval/adoption record exists."
+    },
+
+    {
+      "id": "P0.REQ.W5.001",
+      "area": "W5",
+      "requirement": "Pause before/after read, commit, cursor, serialization, listener, replay, compensation and event publication as real crash/resume transitions.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-002"],
+      "finding": "Commit, compensation and event-publication labels are appended to traces without real scheduled crashes or durable restart transitions."
+    },
+    {
+      "id": "P0.REQ.W5.002",
+      "area": "W5",
+      "requirement": "Reproduce cursor-after-read and query-then-listen lost-event schedules.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W5:P0.W5.SNAPSHOT_HANDOFF_SCHEDULER", "R35:artifact dispositions"],
+      "finding": "Both deliberate negative algorithms lose the injected committed event."
+    },
+    {
+      "id": "P0.REQ.W5.003",
+      "area": "W5",
+      "requirement": "Prove accepted SQLite and external-file projection designs converge with duplicates but no gaps across exhaustive schedules.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-002"],
+      "finding": "The claimed 20 schedules are not exhaustive over required commit boundaries, so convergence is not established."
+    },
+    {
+      "id": "P0.REQ.W5.004",
+      "area": "W5",
+      "requirement": "Give every independently censused required mutation one versioned normalized intent/fingerprint and effect class.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-005"],
+      "finding": "The required mutation census is derived from the generated catalog, so deleting a descriptor also deletes the requirement and the gate remains green."
+    },
+    {
+      "id": "P0.REQ.W5.005",
+      "area": "W5",
+      "requirement": "Default unproven/ambiguous external effects to operator_required and never automatic replay.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-003"],
+      "finding": "Several task/inbox effects are marked idempotent_by_operation_id despite W3 proving writer coordination and durable lookup unproven."
+    },
+    {
+      "id": "P0.REQ.W5.006",
+      "area": "W5",
+      "requirement": "Cover schema, fingerprint and key version changes, omitted/default semantics and retained comparison in golden vectors.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R35:RW35-004"],
+      "finding": "Fingerprint-version and omitted-versus-materialized-default vectors are missing."
+    },
+    {
+      "id": "P0.REQ.W5.007",
+      "area": "W5",
+      "requirement": "Avoid storing sensitive command bodies and provide a deduplicated estimate input.",
+      "status": "partial",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["W5_HANDOFF", "R35"],
+      "finding": "No sensitive body/secret issue was found, and overlap is acknowledged, but the rejected recovery evidence cannot support the range until corrected and reconciled with W3."
+    },
+
+    {
+      "id": "P0.REQ.W6.001",
+      "area": "W6",
+      "requirement": "Cover restart-safe pairing, device/session renewal/rotation/revoke/reset, expiry, response loss, two tabs, replay and keyring failure.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R46:R46-01"],
+      "finding": "Restart re-enables mutation after logout, forget-device and replay-family revocation."
+    },
+    {
+      "id": "P0.REQ.W6.002",
+      "area": "W6",
+      "requirement": "Fence reset/challenge issuance on generation-bound typed process drain evidence.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R46:R46-02"],
+      "finding": "The model trusts a caller-provided runtimeCount=0 and cannot distinguish drained from unclassified/stale anchor state."
+    },
+    {
+      "id": "P0.REQ.W6.003",
+      "area": "W6",
+      "requirement": "Reject direct HTTP, forwarded spoofing, wildcard CORS and sibling authority before cookie/body/idempotency work.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W6:P0.W6.PROXY_ORIGIN_THREAT_MATRIX", "W6_HANDOFF"],
+      "finding": "The fixture ordering is useful, but loopback/HTTPS edge execution was denied and no final trusted CIDR/private-listener topology exists."
+    },
+    {
+      "id": "P0.REQ.W6.004",
+      "area": "W6",
+      "requirement": "Keep session authority server-side and avoid durable plaintext recovery credentials.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W6:P0.W6.AUTH_TRANSITIONS", "R46:R46-01", "R46:R46-02"],
+      "finding": "The model stores symbolic/server records only, but its admission and reset transitions are unsafe and real SQLite/keyring crash behavior is unverified."
+    },
+    {
+      "id": "P0.REQ.W6.005",
+      "area": "W6",
+      "requirement": "Prove exact emitted hosted artifact, worker needs, W4 native artifacts, ABI split and missing/empty stub risks.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["W6:P0.W6.ARTIFACT_INVENTORY", "R46:R46-06", "R46:R46-07"],
+      "finding": "The current build omits internal-storage-worker, retains catch-all stubs and lacks W4 artifact rows; ABI smoke claims have no owned reproducible command/assertion."
+    },
+    {
+      "id": "P0.REQ.W6.006",
+      "area": "W6",
+      "requirement": "Prove terminal daemon/gateway/SDK/routes/migrations/artifacts are absent from the v1 hosted image.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["W6:P0.W6.TERMINAL_ABSENCE_REPORT", "W6_HANDOFF"],
+      "finding": "Routes and terminal-named migrations are absent, but terminal packages are copied and PtyTerminalService is emitted; no final allowlisted image exists."
+    },
+    {
+      "id": "P0.REQ.W6.007",
+      "area": "W6",
+      "requirement": "Verify current Fastify-5 cookie compatibility from authoritative package metadata before dependency adoption.",
+      "status": "missing",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["W6_HANDOFF"],
+      "finding": "@fastify/cookie is absent and the plan-time 11.0.2 reference was not officially rechecked."
+    },
+    {
+      "id": "P0.REQ.W6.008",
+      "area": "W6",
+      "requirement": "Provide a canonical EST-HOSTED-OPS estimate supported by accepted evidence.",
+      "status": "partial",
+      "evidenceStrength": "weak",
+      "evidenceRefs": ["W6:P0.W6.ESTIMATE", "R46"],
+      "finding": "The bucket ID is canonical and overlaps are explicit, but critical auth/artifact assumptions are falsified or missing."
+    },
+
+    {
+      "id": "P0.REQ.REVIEW.001",
+      "area": "review",
+      "requirement": "Complete reciprocal W1/W2 review and resolve findings before adoption.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["REGISTRY_SNAPSHOT", "R12"],
+      "finding": "Review completed and rejected both W1 and W2 with ten actionable findings; no correction or re-review exists."
+    },
+    {
+      "id": "P0.REQ.REVIEW.002",
+      "area": "review",
+      "requirement": "Complete reciprocal W3/W5 review and resolve findings before adoption.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["REGISTRY_SNAPSHOT", "R35"],
+      "finding": "Review completed and rejected both W3 and W5 with six findings; no correction or re-review exists."
+    },
+    {
+      "id": "P0.REQ.REVIEW.003",
+      "area": "review",
+      "requirement": "Complete reciprocal W4/W6 review and resolve findings before adoption.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["REGISTRY_SNAPSHOT", "R46"],
+      "finding": "Review completed and rejected both W4 and W6 and paired integration with eight findings; no correction or re-review exists."
+    },
+    {
+      "id": "P0.REQ.REVIEW.004",
+      "area": "review",
+      "requirement": "Use self-review diff checks that inspect all untracked producer additions.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W2-005", "R35:RW35-006", "R46:R46-08"],
+      "finding": "Plain git diff --check was vacuous for W2-W6 all-untracked additions; reviewers compensated with clean no-index checks. W1 alone recorded the extra no-index coverage."
+    },
+
+    {
+      "id": "P0.REQ.0D.001",
+      "area": "0D",
+      "requirement": "Adopt all six reviewed lanes or explicitly reject each through the controller decision register.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["DECISION_REGISTER", "R12", "R35", "R46"],
+      "finding": "Reviews reject every lane, but the controller-owned decision register still contains only 0A decisions and no contested/rejection outcomes."
+    },
+    {
+      "id": "P0.REQ.0D.002",
+      "area": "0D",
+      "requirement": "Freeze exact v1 scope, contract/facet conventions, identity authority, provider topology, state/writer classes, environment policy, host primitives, recovery, auth/proxy, artifacts, terminal absence and Phase 1 prerequisites.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["DECISION_REGISTER"],
+      "finding": "The register explicitly says these lane-dependent outcomes remain unresolved; rejected evidence cannot freeze them."
+    },
+    {
+      "id": "P0.REQ.0D.003",
+      "area": "0D",
+      "requirement": "Regenerate the estimate ledger from all accepted lane inputs using canonical unique buckets and the 28k-45k fail-closed range.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["ESTIMATE_LEDGER", "R12:R12-W1-003", "R12:R12-W2-003", "R35"],
+      "finding": "The shared ledger is still the pre-inventory baseline; W1 arithmetic is wrong, W2 IDs are noncanonical and W3/W5 overlap is unreconciled. W4 also lacks a controller mapping."
+    },
+    {
+      "id": "P0.REQ.0D.004",
+      "area": "0D",
+      "requirement": "Run every required final-shape native/container/auth/proxy/artifact proof.",
+      "status": "missing",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["W4_HANDOFF", "W6_HANDOFF", "R46"],
+      "finding": "No admitted final image, two-container lease proof, final seccomp/init/process probe, HTTPS edge schedule, final ABI load or terminal-negative image scan exists."
+    },
+    {
+      "id": "P0.REQ.0D.005",
+      "area": "0D",
+      "requirement": "Validate every machine-readable evidence file against a schema that covers its acceptance fields and every scanner/spike with positive and deliberate negative fixtures.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W1-001", "R12:R12-W2-002", "R35:RW35-002", "R35:RW35-005", "R46"],
+      "finding": "Multiple gates are structural, shallow, circular or record labels without exercising the claimed boundary."
+    },
+    {
+      "id": "P0.REQ.0D.006",
+      "area": "0D",
+      "requirement": "Ensure every state/writer/provider/action row has one correct disposition and owner.",
+      "status": "failed",
+      "evidenceStrength": "authoritative",
+      "evidenceRefs": ["R12:R12-W1-001", "R12:R12-X-001", "R12:R12-W2-001", "R35:RW35-003"],
+      "finding": "Action ownership is heuristic/wrong, environment rows are incomplete and recovery classes contradict writer authority."
+    },
+    {
+      "id": "P0.REQ.0D.007",
+      "area": "0D",
+      "requirement": "Run the Phase 0 targeted combined checks and required broad repository gates after adoption.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["PACKET:0D.3", "BASELINE"],
+      "finding": "No adoption exists and this audit was forbidden from running broad/final gates; the only broad evidence is the incomplete/red 0A baseline."
+    },
+    {
+      "id": "P0.REQ.0D.008",
+      "area": "0D",
+      "requirement": "Produce a concise Phase 0 completion report with residual risks.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": [],
+      "finding": "No controller completion report exists; this document is an acceptance audit and explicitly rejects completion."
+    },
+    {
+      "id": "P0.REQ.0D.009",
+      "area": "0D",
+      "requirement": "Generate a Phase 1 JIT packet only from frozen decisions and the current integration SHA.",
+      "status": "pending",
+      "evidenceStrength": "missing",
+      "evidenceRefs": ["PACKET:Definition of Done"],
+      "finding": "No valid Phase 1 packet can be generated while all lane adoptions and freeze decisions are unresolved."
+    },
+    {
+      "id": "P0.REQ.0D.010",
+      "area": "0D",
+      "requirement": "Do not prestart Phase 1 workers.",
+      "status": "satisfied",
+      "evidenceStrength": "corroborated",
+      "evidenceRefs": ["REGISTRY_SNAPSHOT", "R12", "R35", "R46"],
+      "finding": "The audited registry scope contains Phase 0 producers/reviewers only and all reviews report no Phase 1 implementation."
+    }
+  ]
+}

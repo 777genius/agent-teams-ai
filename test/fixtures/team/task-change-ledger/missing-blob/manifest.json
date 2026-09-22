@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "missing-blob",
+  "taskId": "fixture-missing-blob",
+  "description": "Fixture with a missing pre-change text blob to validate metadata-only downgrade paths.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/missing.ts"
+    ],
+    "relationKinds": []
+  }
+}

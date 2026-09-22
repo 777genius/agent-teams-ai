@@ -1,0 +1,483 @@
+import { randomUUID } from 'crypto';
+
+import {
+  type AnthropicApiKeyHelperRunOwner,
+  cleanupRunOwnedAnthropicApiKeyHelper,
+} from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
+  killTeamProcess as killTeamProcessDefault,
+  killTeamProcessAndWait as killTeamProcessAndWaitDefault,
+  nowIso as nowIsoDefault,
+  updateProgress as updateProgressDefault,
+} from './TeamProvisioningRunProgress';
+import {
+  cancelRuntimeAdapterProvisioning as cancelRuntimeAdapterProvisioningHelper,
+  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned as clearOpenCodeRuntimeAdapterPrimaryLaneIfOwnedHelper,
+  isCancellableRuntimeAdapterProgress as isCancellableRuntimeAdapterProgressHelper,
+  recordCancelledOpenCodeRuntimeAdapterLaunch as recordCancelledOpenCodeRuntimeAdapterLaunchHelper,
+  type RuntimeAdapterCancellationPorts,
+  type RuntimeAdapterRunEntry,
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+} from './TeamProvisioningRuntimeAdapterCancellation';
+import { createTeamProvisioningRuntimeAdapterCancellationPorts } from './TeamProvisioningRuntimeAdapterCancellationPortsFactory';
+
+import type { TeamLaunchRuntimeAdapter } from '../runtime';
+import type {
+  PersistedTeamLaunchSnapshot,
+  TeamChangeEvent,
+  TeamLaunchResponse,
+  TeamProvisioningProgress,
+  TeamProvisioningState,
+} from '@shared/types';
+
+export interface TeamProvisioningCancellationRun extends AnthropicApiKeyHelperRunOwner {
+  runId: string;
+  teamName: string;
+  progress: TeamProvisioningProgress;
+  cancelRequested: boolean;
+  processKilled: boolean;
+  child: unknown;
+  onProgress(progress: TeamProvisioningProgress): void;
+}
+
+export interface TeamProvisioningCancellationBoundaryPorts<
+  TRun extends TeamProvisioningCancellationRun,
+> {
+  runs: Map<string, TRun>;
+  runtimeAdapterProgressByRunId: Map<string, TeamProvisioningProgress>;
+  cancelledRuntimeAdapterRunIds: Set<string>;
+  runtimeAdapterRunByTeam: Map<string, RuntimeAdapterRunEntry>;
+  provisioningRunByTeam: Map<string, string>;
+  aliveRunByTeam: ReadonlyMap<string, string>;
+  getTrackedRunId(teamName: string): string | null;
+  deleteAliveRunId(teamName: string): void;
+  hasSecondaryRuntimeRuns(teamName: string): boolean;
+  stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
+  stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
+  killTeamProcess(child: TRun['child']): void;
+  killTeamProcessAndWait(child: TRun['child']): Promise<void>;
+  updateProgress(
+    run: TRun,
+    state: Exclude<TeamProvisioningState, 'idle'>,
+    message: string
+  ): TeamProvisioningProgress;
+  cleanupRun(run: TRun): void;
+  cleanupRunOwnedAnthropicApiKeyHelper?(run: TRun): Promise<void>;
+  nowIso(): string;
+  clearOpenCodeRuntimeToolApprovals(
+    teamName: string,
+    options: { runId?: string; laneId?: string; emitDismiss?: boolean }
+  ): void;
+  invalidateRuntimeSnapshotCaches(teamName: string): void;
+  setRuntimeAdapterProgress(
+    progress: TeamProvisioningProgress,
+    onProgress?: (progress: TeamProvisioningProgress) => void
+  ): TeamProvisioningProgress;
+  emitTeamChange(event: TeamChangeEvent): void;
+  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
+  readPersistedTeamProjectPath(teamName: string): string | null;
+  logWarning(message: string): void;
+}
+
+export interface TeamProvisioningCancellationBoundary {
+  cancelProvisioning(runId: string): Promise<void>;
+  isCancellableRuntimeAdapterProgress(progress: TeamProvisioningProgress): boolean;
+  cancelRuntimeAdapterProvisioning(
+    runId: string,
+    runtimeProgress: TeamProvisioningProgress
+  ): Promise<void>;
+  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<void>;
+  stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+    teamName: string,
+    runId: string
+  ): Promise<boolean>;
+  recordCancelledOpenCodeRuntimeAdapterLaunch(
+    teamName: string,
+    sourceWarning: string | undefined,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): TeamLaunchResponse;
+}
+
+export interface TeamProvisioningCancellationBoundaryServiceHost<
+  TRun extends TeamProvisioningCancellationRun,
+> {
+  runs: TeamProvisioningCancellationBoundaryPorts<TRun>['runs'];
+  runtimeAdapterProgressByRunId: TeamProvisioningCancellationBoundaryPorts<TRun>['runtimeAdapterProgressByRunId'];
+  cancelledRuntimeAdapterRunIds: TeamProvisioningCancellationBoundaryPorts<TRun>['cancelledRuntimeAdapterRunIds'];
+  runtimeAdapterRunByTeam: TeamProvisioningCancellationBoundaryPorts<TRun>['runtimeAdapterRunByTeam'];
+  provisioningRunByTeam: TeamProvisioningCancellationBoundaryPorts<TRun>['provisioningRunByTeam'];
+  aliveRunByTeam: TeamProvisioningCancellationBoundaryPorts<TRun>['aliveRunByTeam'];
+  runTracking: Pick<
+    TeamProvisioningCancellationBoundaryPorts<TRun>,
+    'getTrackedRunId' | 'deleteAliveRunId'
+  >;
+  hasSecondaryRuntimeRuns: TeamProvisioningCancellationBoundaryPorts<TRun>['hasSecondaryRuntimeRuns'];
+  stopMixedSecondaryRuntimeLanes: TeamProvisioningCancellationBoundaryPorts<TRun>['stopMixedSecondaryRuntimeLanes'];
+  stopOpenCodeRuntimeAdapterTeam: TeamProvisioningCancellationBoundaryPorts<TRun>['stopOpenCodeRuntimeAdapterTeam'];
+  cleanupRun: TeamProvisioningCancellationBoundaryPorts<TRun>['cleanupRun'];
+  toolApprovalFacade: {
+    clearOpenCodeRuntimeToolApprovals: TeamProvisioningCancellationBoundaryPorts<TRun>['clearOpenCodeRuntimeToolApprovals'];
+  };
+  invalidateRuntimeSnapshotCaches: TeamProvisioningCancellationBoundaryPorts<TRun>['invalidateRuntimeSnapshotCaches'];
+  runtimeAdapterProgressState: {
+    setRuntimeAdapterProgress: TeamProvisioningCancellationBoundaryPorts<TRun>['setRuntimeAdapterProgress'];
+  };
+  teamChangeEmitter?: TeamProvisioningCancellationBoundaryPorts<TRun>['emitTeamChange'];
+  launchStateStore: {
+    read: TeamProvisioningCancellationBoundaryPorts<TRun>['readLaunchState'];
+  };
+  appShellBoundary: {
+    getOpenCodeRuntimeAdapter: TeamProvisioningCancellationBoundaryPorts<TRun>['getOpenCodeRuntimeAdapter'];
+  };
+  readPersistedTeamProjectPath: TeamProvisioningCancellationBoundaryPorts<TRun>['readPersistedTeamProjectPath'];
+}
+
+export interface TeamProvisioningCancellationBoundaryServiceHostOptions<
+  TRun extends TeamProvisioningCancellationRun,
+> {
+  killTeamProcess?: TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcess'];
+  killTeamProcessAndWait?: TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcessAndWait'];
+  updateProgress?: TeamProvisioningCancellationBoundaryPorts<TRun>['updateProgress'];
+  nowIso?: TeamProvisioningCancellationBoundaryPorts<TRun>['nowIso'];
+  logWarning?: TeamProvisioningCancellationBoundaryPorts<TRun>['logWarning'];
+}
+
+const CANCELLABLE_PROVISIONING_STATES: ReadonlySet<TeamProvisioningProgress['state']> = new Set([
+  'validating',
+  'spawning',
+  'configuring',
+  'assembling',
+  'finalizing',
+  'verifying',
+]);
+
+const RETAINED_CANCELLATION_RETRY_STATES: ReadonlySet<TeamProvisioningProgress['state']> = new Set([
+  'failed',
+  'cancelled',
+]);
+
+export function createTeamProvisioningCancellationBoundaryPortsFromService<
+  TRun extends TeamProvisioningCancellationRun,
+>(
+  service: TeamProvisioningCancellationBoundaryServiceHost<TRun>,
+  options: TeamProvisioningCancellationBoundaryServiceHostOptions<TRun> = {}
+): TeamProvisioningCancellationBoundaryPorts<TRun> {
+  return {
+    runs: service.runs,
+    runtimeAdapterProgressByRunId: service.runtimeAdapterProgressByRunId,
+    cancelledRuntimeAdapterRunIds: service.cancelledRuntimeAdapterRunIds,
+    runtimeAdapterRunByTeam: service.runtimeAdapterRunByTeam,
+    provisioningRunByTeam: service.provisioningRunByTeam,
+    aliveRunByTeam: service.aliveRunByTeam,
+    getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
+    deleteAliveRunId: (teamName) => service.runTracking.deleteAliveRunId(teamName),
+    hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
+    stopMixedSecondaryRuntimeLanes: (teamName) => service.stopMixedSecondaryRuntimeLanes(teamName),
+    stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
+      service.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
+    killTeamProcess:
+      options.killTeamProcess ??
+      (killTeamProcessDefault as TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcess']),
+    killTeamProcessAndWait:
+      options.killTeamProcessAndWait ??
+      (killTeamProcessAndWaitDefault as TeamProvisioningCancellationBoundaryPorts<TRun>['killTeamProcessAndWait']),
+    updateProgress:
+      options.updateProgress ??
+      (updateProgressDefault as unknown as TeamProvisioningCancellationBoundaryPorts<TRun>['updateProgress']),
+    cleanupRun: (run) => service.cleanupRun(run),
+    nowIso: options.nowIso ?? nowIsoDefault,
+    clearOpenCodeRuntimeToolApprovals: (teamName, approvalOptions) =>
+      service.toolApprovalFacade.clearOpenCodeRuntimeToolApprovals(teamName, approvalOptions),
+    invalidateRuntimeSnapshotCaches: (teamName) =>
+      service.invalidateRuntimeSnapshotCaches(teamName),
+    setRuntimeAdapterProgress: (progress, onProgress) =>
+      service.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
+    emitTeamChange: (event) => service.teamChangeEmitter?.(event),
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+    getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
+    readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
+    logWarning: options.logWarning ?? (() => undefined),
+  };
+}
+
+export function createTeamProvisioningCancellationBoundary<
+  TRun extends TeamProvisioningCancellationRun,
+>(ports: TeamProvisioningCancellationBoundaryPorts<TRun>): TeamProvisioningCancellationBoundary {
+  const completedTeamProcessStops = new WeakSet<TRun>();
+  const teamProcessStopInFlight = new WeakMap<TRun, Promise<void>>();
+  const retainedPrimaryStopFailures = new WeakMap<TRun, unknown>();
+  const retainedSecondaryStopFailures = new WeakMap<TRun, unknown>();
+  const cancellationInFlightByRunId = new Map<string, Promise<void>>();
+  const stopTeamProcessIfNeeded = (run: TRun): Promise<void> | null => {
+    if (completedTeamProcessStops.has(run)) {
+      return null;
+    }
+    const existingStop = teamProcessStopInFlight.get(run);
+    if (existingStop) {
+      return existingStop;
+    }
+    const stop = ports.killTeamProcessAndWait(run.child).then(
+      () => {
+        completedTeamProcessStops.add(run);
+        teamProcessStopInFlight.delete(run);
+      },
+      (error: unknown) => {
+        teamProcessStopInFlight.delete(run);
+        throw error;
+      }
+    );
+    teamProcessStopInFlight.set(run, stop);
+    return stop;
+  };
+
+  const createRuntimeAdapterCancellationPorts = (): RuntimeAdapterCancellationPorts => ({
+    ...createTeamProvisioningRuntimeAdapterCancellationPorts({
+      cancelledRuntimeAdapterRunIds: ports.cancelledRuntimeAdapterRunIds,
+      runtimeAdapterRunByTeam: ports.runtimeAdapterRunByTeam,
+      provisioningRunByTeam: ports.provisioningRunByTeam,
+      aliveRunByTeam: ports.aliveRunByTeam,
+      nowIso: () => ports.nowIso(),
+      clearOpenCodeRuntimeToolApprovals: (teamName, options) =>
+        ports.clearOpenCodeRuntimeToolApprovals(teamName, options),
+      deleteAliveRunId: (teamName) => ports.deleteAliveRunId(teamName),
+      invalidateRuntimeSnapshotCaches: (teamName) =>
+        ports.invalidateRuntimeSnapshotCaches(teamName),
+      setRuntimeAdapterProgress: (progress, onProgress) =>
+        ports.setRuntimeAdapterProgress(progress, onProgress),
+      emitTeamChange: (event) => ports.emitTeamChange(event),
+      readLaunchState: (teamName) => ports.readLaunchState(teamName),
+      getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),
+      readPersistedTeamProjectPath: (teamName) => ports.readPersistedTeamProjectPath(teamName),
+      logWarning: (message) => ports.logWarning(message),
+    }),
+    runtimeAdapterProgressByRunId: ports.runtimeAdapterProgressByRunId,
+  });
+
+  const cancelRuntimeAdapterProvisioning = async (
+    runId: string,
+    runtimeProgress: TeamProvisioningProgress
+  ): Promise<void> => {
+    await cancelRuntimeAdapterProvisioningHelper({
+      runId,
+      runtimeProgress,
+      ports: createRuntimeAdapterCancellationPorts(),
+    });
+  };
+
+  const clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned = async (
+    teamName: string,
+    runId: string
+  ): Promise<void> => {
+    await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwnedHelper({
+      teamName,
+      runId,
+      ports: createRuntimeAdapterCancellationPorts(),
+    });
+  };
+
+  const stopAndClearOpenCodeRuntimeAdapterPrimaryLane = async (
+    teamName: string,
+    runId: string
+  ): Promise<boolean> =>
+    await stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+      teamName,
+      runId,
+      ports: createRuntimeAdapterCancellationPorts(),
+    });
+
+  const recordCancelledOpenCodeRuntimeAdapterLaunch = (
+    teamName: string,
+    sourceWarning: string | undefined,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): TeamLaunchResponse =>
+    recordCancelledOpenCodeRuntimeAdapterLaunchHelper({
+      teamName,
+      sourceWarning,
+      onProgress,
+      createRunId: randomUUID,
+      ports: createRuntimeAdapterCancellationPorts(),
+    });
+
+  const executeCancelProvisioning = async (runId: string): Promise<void> => {
+    const run = ports.runs.get(runId);
+    if (!run) {
+      const runtimeProgress = ports.runtimeAdapterProgressByRunId.get(runId);
+      if (runtimeProgress) {
+        await cancelRuntimeAdapterProvisioning(runId, runtimeProgress);
+        return;
+      }
+      throw new Error('Unknown runId');
+    }
+    const isRetainedCancellationRetry =
+      run.cancelRequested && RETAINED_CANCELLATION_RETRY_STATES.has(run.progress.state);
+    if (!CANCELLABLE_PROVISIONING_STATES.has(run.progress.state) && !isRetainedCancellationRetry) {
+      throw new Error('Provisioning cannot be cancelled in current state');
+    }
+
+    run.cancelRequested = true;
+    run.processKilled = true;
+    // For a pure-OpenCode aggregate run, run.child is null so killTeamProcess is a
+    // no-op — the runtime lanes are adapter-managed. Mirror dev's
+    // stopOpenCodeAggregateRuntimeLanes: stop the owned primary OpenCode adapter
+    // lane AND any secondary lanes, otherwise cancelling mid-launch (state
+    // 'spawning', after the primary lane came up) orphans the primary runtime
+    // process.
+    let failedStop: PromiseRejectedResult | undefined;
+    let helperCleanupError: unknown = null;
+    const trackedRunId = ports.getTrackedRunId(run.teamName);
+    const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
+    const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
+    const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
+    const hasConflictingOwner = [
+      trackedRunId,
+      provisioningRunId,
+      aliveRunId,
+      primaryRun?.runId ?? null,
+    ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
+    const hasSecondaryRuntimeRuns = ports.hasSecondaryRuntimeRuns(run.teamName);
+    const retainedSecondaryStopIsFenced =
+      isRetainedCancellationRetry && hasConflictingOwner && retainedSecondaryStopFailures.has(run);
+    const retainedPrimaryStopIsFenced =
+      isRetainedCancellationRetry && hasConflictingOwner && retainedPrimaryStopFailures.has(run);
+    const stops: Promise<void>[] = [];
+    const teamProcessStop = stopTeamProcessIfNeeded(run);
+    if (teamProcessStop) {
+      stops.push(teamProcessStop);
+    }
+    if (
+      !retainedPrimaryStopIsFenced &&
+      primaryRun?.providerId === 'opencode' &&
+      primaryRun.runId === run.runId
+    ) {
+      stops.push(
+        ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId).then(
+          () => {
+            retainedPrimaryStopFailures.delete(run);
+          },
+          (error: unknown) => {
+            retainedPrimaryStopFailures.set(run, error);
+            throw error;
+          }
+        )
+      );
+    }
+    if (!hasConflictingOwner) {
+      // Secondary runtime registration happens before adapter.launch, so the
+      // secondary-run store is the cleanup ownership handoff for every lane
+      // that can have spawned. Do not wait for primary/tracked ownership: an
+      // aggregate with no primary lane (or cancellation during primary
+      // promotion) can already own live secondary processes here. The
+      // conflicting-owner fence above still protects a newer run, while the
+      // secondary stop flow preserves each lane's exact runId and blocks
+      // rejoin until its process and storage rollback has completed.
+      if (hasSecondaryRuntimeRuns) {
+        stops.push(
+          ports.stopMixedSecondaryRuntimeLanes(run.teamName).then(
+            () => {
+              retainedSecondaryStopFailures.delete(run);
+            },
+            (error: unknown) => {
+              retainedSecondaryStopFailures.set(run, error);
+              throw error;
+            }
+          )
+        );
+      }
+    }
+    if (stops.length > 0) {
+      const stopResults = await Promise.allSettled(stops);
+      failedStop = stopResults.find(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+    }
+    if (!failedStop && retainedPrimaryStopIsFenced) {
+      // The primary stop is team-scoped even though it receives the old runId.
+      // Once any team ownership entry has been replaced, retrying it could
+      // target the newer runtime. Retain the original failure instead of
+      // treating changed old-run evidence as proof that the stop completed.
+      failedStop = {
+        status: 'rejected',
+        reason:
+          retainedPrimaryStopFailures.get(run) ??
+          new Error('Retained primary runtime cancellation is fenced by a newer run'),
+      };
+    }
+    if (!failedStop && retainedSecondaryStopIsFenced) {
+      // A team-wide secondary stop cannot be retried after another run acquires
+      // team ownership: it could target the newer run. Keep the old
+      // cancellation failure and its ownership evidence retained until an
+      // exact-owner stop can safely clear the old secondary lane.
+      failedStop = {
+        status: 'rejected',
+        reason:
+          retainedSecondaryStopFailures.get(run) ??
+          new Error('Retained secondary runtime cancellation is fenced by a newer run'),
+      };
+    }
+    if (!failedStop) {
+      await (
+        ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
+        cleanupRunOwnedAnthropicApiKeyHelper(run)
+      ).catch((error: unknown) => {
+        helperCleanupError = error;
+        ports.logWarning(
+          `[${run.teamName}] Failed to clean Anthropic API-key helper after cancellation: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      });
+    }
+    try {
+      const progress = failedStop
+        ? ports.updateProgress(
+            run,
+            'failed',
+            'Provisioning cancellation could not stop all runtime lanes'
+          )
+        : ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
+      run.onProgress(progress);
+    } finally {
+      if (!failedStop && !helperCleanupError) {
+        ports.cleanupRun(run);
+      }
+    }
+    if (failedStop) {
+      throw failedStop.reason;
+    }
+    if (helperCleanupError) {
+      throw helperCleanupError instanceof Error
+        ? helperCleanupError
+        : new Error('Failed to clean app-managed Anthropic authentication material');
+    }
+  };
+
+  return {
+    cancelProvisioning(runId) {
+      const inFlightCancellation = cancellationInFlightByRunId.get(runId);
+      if (inFlightCancellation) {
+        return inFlightCancellation;
+      }
+
+      const cancellation = executeCancelProvisioning(runId);
+      cancellationInFlightByRunId.set(runId, cancellation);
+      const clearInFlightCancellation = (): void => {
+        if (cancellationInFlightByRunId.get(runId) === cancellation) {
+          cancellationInFlightByRunId.delete(runId);
+        }
+      };
+      void cancellation.then(clearInFlightCancellation, clearInFlightCancellation);
+      return cancellation;
+    },
+
+    isCancellableRuntimeAdapterProgress(progress) {
+      return isCancellableRuntimeAdapterProgressHelper(progress);
+    },
+
+    cancelRuntimeAdapterProvisioning,
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+    stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned:
+      stopAndClearOpenCodeRuntimeAdapterPrimaryLane,
+    recordCancelledOpenCodeRuntimeAdapterLaunch,
+  };
+}

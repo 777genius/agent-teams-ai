@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
+  <rect width="1200" height="750" rx="32" fill="#111827" />
+  <rect x="80" y="90" width="1040" height="570" rx="24" fill="#0f172a" stroke="#334155" stroke-width="2" />
+  <rect x="120" y="140" width="420" height="24" rx="12" fill="#ef4444" />
+  <rect x="120" y="200" width="480" height="16" rx="8" fill="#334155" />
+  <rect x="120" y="240" width="520" height="16" rx="8" fill="#334155" />
+  <rect x="120" y="280" width="420" height="16" rx="8" fill="#334155" />
+  <circle cx="980" cy="260" r="90" fill="#1f2937" stroke="#4b5563" stroke-width="2" />
+  <circle cx="980" cy="260" r="48" fill="#ef4444" />
+  <text x="120" y="520" font-family="Arial, sans-serif" font-size="32" fill="#e2e8f0">Recording</text>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright-electron": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.75",
+        "--cdp-endpoint",
+        "http://127.0.0.1:9222",
+        "--caps",
+        "devtools",
+        "--console-level",
+        "info"
+      ]
+    }
+  }
+}

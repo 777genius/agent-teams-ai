@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Додати власний",
+      "openDashboard": "Відкрити панель",
+      "refreshCatalog": "Оновити каталог"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Плагіни: {{status}}",
+      "skills": "Навички: {{status}}"
+    },
+    "desktopOnly": "Доступно лише в десктопному застосунку.",
+    "provider": {
+      "checkingStatus": "Перевірка статусу провайдера...",
+      "connected": "Підключено",
+      "loading": "Завантаження...",
+      "needsSetup": "Потребує налаштування",
+      "readyToConfigure": "Готово до налаштування",
+      "unsupported": "Не підтримується"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Розширенням потрібне налаштоване середовище для керування плагінами, серверами MCP, навичками та підключеннями провайдерів.",
+      "checkingAvailabilityTitle": "Перевірка доступності середовища розширень",
+      "failedToStartDescription": "Розширення вимкнено, доки середовище не пройде перевірку працездатності під час запуску. Відкрийте панель, щоб відремонтувати або перевстановити його.",
+      "failedToStartTitle": "Налаштоване середовище знайдено, але не вдалося запустити",
+      "multimodelCapabilitiesDescription": "Підтримка провайдерів може відрізнятися за розділами. Плагіни показано лише там, де середовище явно оголошує підтримку.",
+      "multimodelCapabilitiesTitle": "Можливості мультимодельного середовища",
+      "needsSignInDescription": "{{runtime}} знайдено{{version}}, але встановлення плагінів вимкнено, доки ви не ввійдете з панелі.",
+      "needsSignInTitle": "{{runtime}} потребує входу",
+      "notAvailableDescription": "Розширення вимкнено, доки середовище не встановлено. Відкрийте панель, щоб встановити його та повторити.",
+      "notAvailableTitle": "Налаштоване середовище недоступне",
+      "readyDescription": "Плагіни можна встановлювати з цієї сторінки{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} готовий",
+      "requiredForMutations": "Налаштоване середовище потрібне для встановлення або видалення розширень. Встановіть або відремонтуйте його з панелі."
+    },
+    "sessionsRestartWarning": "Запущені сесії не застосують зміни розширень, доки їх не перезапустити.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Секретні ключі для онлайн-сервісів. Додайте їх тут, щоб плагіни, сервери та інтеграції могли підключатися й працювати.",
+        "label": "API-ключі"
+      },
+      "mcpServers": {
+        "description": "Підключення до зовнішніх інструментів і застосунків. Вони дають змогу середовищу читати дані чи виконувати дії за межами цього застосунку.",
+        "label": "Сервери MCP"
+      },
+      "plugins": {
+        "description": "Невеликі доповнення для середовища. У мультимодельному режимі вони наразі застосовуються до сесій Anthropic, де це підтримується. Ширша підтримка провайдерів у розробці.",
+        "label": "Плагіни"
+      },
+      "skills": {
+        "description": "Готові інструкції для типових завдань. Вони допомагають середовищу виконувати повторювані завдання послідовніше.",
+        "label": "Навички"
+      }
+    },
+    "title": "Розширення"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} активних",
+    "browseByFit": "Огляд за відповідністю",
+    "capabilities": "Можливості",
+    "categories": "Категорії",
+    "clearAllFilters": "Очистити всі фільтри",
+    "clearFilters": "Очистити фільтри",
+    "counts": {
+      "capabilities": "{{count}} можливостей",
+      "categories": "{{count}} категорій",
+      "plugins": "{{count}} плагінів",
+      "capabilities_few": "{{count}} можливості",
+      "capabilities_many": "{{count}} можливостей",
+      "capabilities_one": "{{count}} можливість",
+      "capabilities_other": "{{count}} можливостей",
+      "categories_few": "{{count}} категорії",
+      "categories_many": "{{count}} категорій",
+      "categories_one": "{{count}} категорія",
+      "categories_other": "{{count}} категорій",
+      "plugins_few": "{{count}} плагіни",
+      "plugins_many": "{{count}} плагінів",
+      "plugins_one": "{{count}} плагін",
+      "plugins_other": "{{count}} плагінів"
+    },
+    "empty": {
+      "description": "Перевірте пізніше — будуть нові плагіни",
+      "filteredDescription": "Спробуйте змінити пошук або критерії фільтра",
+      "filteredTitle": "Жоден плагін не відповідає вашим фільтрам",
+      "title": "Немає доступних плагінів"
+    },
+    "filterDescription": "Звузьте каталог за категорією, можливістю чи станом встановлення.",
+    "installedOnly": "Лише встановлені",
+    "providerSupportNotice": "Підтримка плагінів наразі гарантована лише для сесій Anthropic (Claude). Ми працюємо над підтримкою плагінів для всіх агентів.",
+    "resultsUpdateInstantly": "Результати оновлюються миттєво, коли ви уточнюєте фільтри.",
+    "searchPlaceholder": "Пошук плагінів...",
+    "selectedCount": "{{count}} вибрано",
+    "showing": "Показано {{shown}} з {{total}} плагінів",
+    "sort": {
+      "category": "Категорія",
+      "nameAsc": "Назва А-Я",
+      "nameDesc": "Назва Я-А",
+      "popular": "Популярні"
+    },
+    "activeFilters_few": "{{count}} активні",
+    "activeFilters_many": "{{count}} активних",
+    "activeFilters_one": "{{count}} активний",
+    "activeFilters_other": "{{count}} активних",
+    "selectedCount_few": "{{count}} вибрано",
+    "selectedCount_many": "{{count}} вибрано",
+    "selectedCount_one": "{{count}} вибрано",
+    "selectedCount_other": "{{count}} вибрано"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Додати",
+      "cancel": "Скасувати",
+      "install": "Встановити",
+      "installing": "Встановлення..."
+    },
+    "description": "Додайте сервер вручну без каталогу.",
+    "errors": {
+      "installFailed": "Не вдалося встановити",
+      "invalidServerName": "Неправильна назва сервера. Використовуйте літери, цифри, дефіси, підкреслення, крапки.",
+      "npmPackageRequired": "Потрібна назва npm-пакета",
+      "serverNameRequired": "Потрібна назва сервера",
+      "serverUrlRequired": "Потрібна URL-адреса сервера"
+    },
+    "fields": {
+      "environmentVariables": "Змінні середовища",
+      "headers": "Заголовки",
+      "npmPackage": "npm-пакет",
+      "scope": "Область",
+      "serverName": "Назва сервера",
+      "serverUrl": "URL-адреса сервера",
+      "transport": "Транспорт",
+      "transportType": "Тип транспорту",
+      "versionOptional": "Версія (необов'язково)"
+    },
+    "title": "Додати власний сервер MCP",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "значення",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Віддалені сервери MCP можуть все одно вимагати власних заголовків або API-ключів, навіть якщо реєстр їх не описує. Якщо підключення не вдається після встановлення, перевірте документацію провайдера.",
+      "required": "Цей сервер вимагає автентифікації"
+    },
+    "diagnostics": {
+      "launchTarget": "Ціль запуску"
+    },
+    "form": {
+      "autoFilled": "Заповнено автоматично",
+      "environmentVariables": "Змінні середовища",
+      "headers": "Заголовки",
+      "scope": "Область",
+      "serverName": "Назва сервера"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Цей сервер вимагає ручного налаштування. Перевірте репозиторій щодо інструкцій зі встановлення.",
+      "manualSetupRequired": "Потрібне ручне налаштування",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Керувати встановленням",
+      "install": "Встановити сервер"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Репозиторій",
+      "website": "Вебсайт"
+    },
+    "metadata": {
+      "author": "Автор",
+      "githubStars": "Зірки GitHub",
+      "hosting": "Хостинг",
+      "installType": "Тип встановлення",
+      "license": "Ліцензія",
+      "published": "Опубліковано",
+      "source": "Джерело",
+      "updated": "Оновлено",
+      "version": "Версія"
+    },
+    "scope": {
+      "local": "Локальна",
+      "project": "Проєкт"
+    },
+    "tools": {
+      "title": "Інструменти ({{count}})",
+      "title_few": "Інструменти ({{count}})",
+      "title_many": "Інструменти ({{count}})",
+      "title_one": "Інструменти ({{count}})",
+      "title_other": "Інструменти ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Скасувати",
+      "createSkill": "Створити навичку",
+      "preparing": "Підготовка...",
+      "reviewAndCreate": "Переглянути й створити",
+      "reviewAndSave": "Переглянути й зберегти",
+      "saveSkill": "Зберегти навичку"
+    },
+    "advanced": {
+      "customDescription": "Ця навичка використовує власний формат markdown, тому редагуйте її безпосередньо тут.",
+      "customTitle": "2. Редактор SKILL.md",
+      "description": "Більшість людей можуть це пропустити. Відкривайте лише якщо хочете прямого контролю над сирим файлом markdown.",
+      "hide": "Сховати розширений редактор",
+      "resetFromStructuredFields": "Скинути зі структурованих полів",
+      "show": "Показати розширений редактор",
+      "title": "4. Розширений редактор SKILL.md"
+    },
+    "basics": {
+      "description": "Дайте цій навичці зрозумілу назву, виберіть, хто може її використовувати, і вирішіть, де вона має зберігатися.",
+      "title": "1. Основи"
+    },
+    "description": {
+      "create": "Опишіть робочий процес простою мовою, перегляньте файли, які буде створено, а потім збережіть його.",
+      "edit": "Оновіть цю навичку, перегляньте отримані зміни файлів, а потім збережіть її."
+    },
+    "extraFiles": {
+      "addedFiles": "Додані файли:",
+      "assets": "Ресурси",
+      "assetsDescription": "Додавайте знімки екрана чи вбудовані медіа лише якщо вони допомагають пояснити робочий процес.",
+      "description": "Додавайте допоміжні документи, скрипти чи ресурси лише якщо ця навичка справді цього потребує.",
+      "lockedForEdits": "Корінь і тека заблоковані для редагування",
+      "optionalDescription": "Додайте стартові файли, які буде включено в перегляд і записано разом із `SKILL.md`.",
+      "optionalTitle": "Необов'язкові файли",
+      "references": "Посилання",
+      "referencesDescription": "Додайте допоміжні документи, посилання чи приклади, на які середовище може звертатися.",
+      "scripts": "Скрипти",
+      "scriptsDescription": "Додайте допоміжні команди чи нотатки з налаштування. Уважно перевіряйте перед тим, як ділитися цією навичкою.",
+      "title": "3. Додаткові файли"
+    },
+    "fields": {
+      "compatibility": "Сумісність",
+      "description": "Опис",
+      "folderName": "Назва теки",
+      "folderNameHint": "Ми пропонуємо це автоматично з назви навички, щоб перегляд працював одразу.",
+      "invocation": "Як її слід використовувати",
+      "license": "Ліцензія",
+      "name": "Назва навички",
+      "notes": "Додаткові нотатки чи запобіжники",
+      "root": "Де зберігати",
+      "scope": "Хто може використовувати",
+      "steps": "Основні кроки для виконання",
+      "whenToUse": "Коли звертатися до цього"
+    },
+    "instructions": {
+      "description": "Ці розділи генерують файл навички за вас, тож вам не потрібно редагувати markdown, якщо ви цього не хочете.",
+      "locked": "Структуровані поля заблоковано, бо ви перейшли до ручного редагування `SKILL.md` нижче.",
+      "title": "2. Інструкції"
+    },
+    "invocation": {
+      "auto": "Можна використовувати автоматично",
+      "manualOnly": "Лише коли ви про це попросите"
+    },
+    "placeholders": {
+      "description": "З чим допомагає ця навичка",
+      "name": "Напишіть стислу назву навички",
+      "notes": "Приклад: Зверніть увагу на відсутні тести, регресії та ризиковані припущення.",
+      "steps": "1. Перевірте відповідні файли.\n2. Спочатку поясніть основний ризик.\n3. Запропонуйте найбезпечніше виправлення.",
+      "whenToUse": "Приклад: Використовуйте це, коли завдання — це запит на код-рев'ю чи розбір багів.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Створення навички",
+      "hint": "Спочатку перегляньте зміни файлів, потім підтвердьте збереження на наступному кроці.",
+      "saving": "Збереження цієї навички"
+    },
+    "root": {
+      "codexOnly": " - Лише Codex",
+      "shared": " - Спільна"
+    },
+    "scope": {
+      "project": "Проєкт: {{project}}",
+      "projectUnavailable": "Проєкт недоступний",
+      "user": "Користувач"
+    },
+    "title": {
+      "create": "Створити навичку",
+      "edit": "Редагувати навичку"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Скасувати",
+      "delete": "Видалити",
+      "deleteSkill": "Видалити навичку",
+      "deleting": "Видалення...",
+      "editSkill": "Редагувати навичку",
+      "openFolder": "Відкрити теку",
+      "openSkillFile": "Відкрити SKILL.md",
+      "retry": "Повторити"
+    },
+    "badges": {
+      "assets": "Ресурси",
+      "autoUse": "Автоматичне використання",
+      "hasScripts": "Містить скрипти",
+      "manualUse": "Ручне використання",
+      "references": "Посилання",
+      "storedIn": "Зберігається в {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Видалити цю навичку й перемістити її до кошика?",
+      "descriptionWithName": "Видалити \"{{name}}\" і перемістити до кошика? За потреби ви зможете відновити її пізніше з кошика.",
+      "title": "Видалити навичку?"
+    },
+    "descriptionFallback": "Перегляньте виявлені метадані навички та сирі інструкції.",
+    "errors": {
+      "deleteFailed": "Не вдалося видалити навичку",
+      "loadFailed": "Не вдалося завантажити цю навичку."
+    },
+    "files": {
+      "advancedDetails": "Розширені деталі файлів",
+      "assets": "Ресурси",
+      "references": "Посилання",
+      "scripts": "Скрипти",
+      "storedAt": "Зберігається в"
+    },
+    "includes": {
+      "assets": "ресурси",
+      "instructionsOnly": "Лише інструкції навички",
+      "references": "посилання",
+      "scripts": "скрипти"
+    },
+    "invocation": {
+      "auto": "Запускається автоматично, коли відповідає завданню.",
+      "manualOnly": "Запускається лише коли ви явно про це попросите."
+    },
+    "issues": {
+      "bundledScripts": "Ця навичка містить вбудовані скрипти",
+      "reviewCarefully": "Уважно перевірте цю навичку перед використанням"
+    },
+    "loading": "Завантаження деталей навички...",
+    "scope": {
+      "personal": "Ваші особисті навички",
+      "projectOnly": "Лише цей проєкт"
+    },
+    "summary": {
+      "howUsed": "Як вона використовується",
+      "included": "Що до неї входить",
+      "whoCanUse": "Хто може використовувати"
+    },
+    "titleFallback": "Деталі навички"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Створити навичку",
+      "import": "Імпортувати"
+    },
+    "badges": {
+      "assets": "Ресурси",
+      "hasScripts": "Містить скрипти",
+      "needsAttention": "Потребує уваги",
+      "references": "Посилання",
+      "storedIn": "Зберігається в {{root}}"
+    },
+    "configuredRuntime": "налаштоване середовище",
+    "counts": {
+      "codexOnly": "{{count}} лише Codex",
+      "personal": "{{count}} особистих",
+      "project": "{{count}} проєктних",
+      "shared": "{{count}} спільних",
+      "total": "{{count}} загалом",
+      "codexOnly_few": "{{count}} лише Codex",
+      "codexOnly_many": "{{count}} лише Codex",
+      "codexOnly_one": "{{count}} лише Codex",
+      "codexOnly_other": "{{count}} лише Codex",
+      "personal_few": "{{count}} особисті",
+      "personal_many": "{{count}} особистих",
+      "personal_one": "{{count}} особиста",
+      "personal_other": "{{count}} особистих",
+      "project_few": "{{count}} проєктні",
+      "project_many": "{{count}} проєктних",
+      "project_one": "{{count}} проєктна",
+      "project_other": "{{count}} проєктних",
+      "shared_few": "{{count}} спільні",
+      "shared_many": "{{count}} спільних",
+      "shared_one": "{{count}} спільна",
+      "shared_other": "{{count}} спільних",
+      "total_few": "{{count}} загалом",
+      "total_many": "{{count}} загалом",
+      "total_one": "{{count}} загалом",
+      "total_other": "{{count}} загалом"
+    },
+    "empty": {
+      "noMatches": "Жодна навичка не відповідає вашому пошуку",
+      "noMatchesDescription": "Спробуйте інший пошуковий запит або змініть фільтри.",
+      "noSkills": "Ще немає навичок",
+      "noSkillsDescription": "Створіть свою першу навичку, щоб навчити повторюваний робочий процес, або імпортуйте ту, яку вже використовуєте."
+    },
+    "filters": {
+      "all": "Усі навички",
+      "codexOnly": "Лише Codex",
+      "hasScripts": "Містить скрипти",
+      "needsAttention": "Потребує уваги",
+      "personal": "Особисті",
+      "project": "Проєктні",
+      "shared": "Спільні"
+    },
+    "hero": {
+      "codexAvailable": "Використовуйте `.codex`, коли навичка має залишатися лише для Codex.",
+      "codexUnavailable": "Наявні навички `.codex` залишаються редагованими тут, але новим навичкам лише для Codex потрібне ввімкнене середовище Codex.",
+      "description": "Навички — це багаторазові інструкції, які допомагають середовищу послідовніше виконувати однаковий тип завдань.",
+      "guidance": "Використовуйте особисті навички для звичок, які потрібні всюди. Використовуйте проєктні навички для робочих процесів, що мають сенс лише всередині однієї кодової бази.",
+      "personalContext": "Зараз ви бачите лише свої особисті навички.",
+      "projectContext": "Ви бачите навички для {{project}} плюс ваші особисті навички.",
+      "title": "Навчайте повторюваної роботи"
+    },
+    "invocation": {
+      "auto": "Запускається автоматично, коли пасує",
+      "manualOnly": "Запускається лише коли ви явно про це попросите"
+    },
+    "loading": {
+      "loading": "Завантаження навичок...",
+      "refreshing": "Оновлення навичок..."
+    },
+    "runtimeAudience": "Спільні навички в `.claude`, `.cursor` та `.agents` доступні для {{audience}}. Навички, що зберігаються в `.codex`, залишаються лише для Codex, коли підтримка Codex доступна.",
+    "scope": {
+      "project": "Цей проєкт",
+      "user": "Особисті"
+    },
+    "searchPlaceholder": "Пошук за назвою навички або тим, із чим вона допомагає...",
+    "sections": {
+      "personal": {
+        "description": "Звички та інструкції, які ви хочете мати всюди.",
+        "title": "Особисті навички"
+      },
+      "project": {
+        "description": "Робочі процеси, що мають сенс лише для цієї кодової бази.",
+        "title": "Проєктні навички"
+      }
+    },
+    "sort": {
+      "label": "Сортувати навички",
+      "name": "Назва",
+      "recent": "Недавні"
+    },
+    "status": {
+      "hasScripts": "Містить скрипти, тому уважно перевірте",
+      "needsAttention": "Потребує уваги, перш ніж покладатися на неї",
+      "ready": "Готова до використання"
+    },
+    "success": {
+      "created": "Навичку успішно створено.",
+      "imported": "Навичку успішно імпортовано.",
+      "saved": "Навичку успішно збережено."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Невідомо",
+    "metadata": {
+      "author": "Автор",
+      "category": "Категорія",
+      "source": "Джерело",
+      "version": "Версія",
+      "capabilities": "Можливості",
+      "installs": "Встановлення"
+    },
+    "scope": {
+      "label": "Область:",
+      "options": {
+        "user": "Користувач (глобально)",
+        "project": "Проєкт (спільно)",
+        "local": "Локально (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Домашня сторінка",
+      "contact": "Контакт"
+    },
+    "readme": {
+      "loading": "Завантаження README...",
+      "empty": "README недоступний."
+    }
+  },
+  "skillImport": {
+    "title": "Імпортувати навичку",
+    "description": "Виберіть наявну теку навички, перегляньте, що буде скопійовано, а потім імпортуйте її в одне з підтримуваних місць зберігання навичок.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Виберіть теку навички",
+        "description": "Це має бути тека, що вже містить файл `SKILL.md`, `Skill.md` чи `skill.md`."
+      },
+      "location": {
+        "title": "2. Вирішіть, де вона має бути",
+        "description": "Особисті навички працюють усюди. Проєктні навички з'являються лише для однієї кодової бази."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Тека-джерело",
+      "destinationFolderName": "Назва теки призначення",
+      "audience": "Хто може використовувати",
+      "storage": "Де зберігати"
+    },
+    "placeholders": {
+      "defaultFolderName": "За замовчуванням — назва теки-джерела"
+    },
+    "actions": {
+      "browse": "Огляд",
+      "cancel": "Скасувати",
+      "preparing": "Підготовка...",
+      "reviewAndImport": "Переглянути й імпортувати",
+      "importSkill": "Імпортувати навичку",
+      "backToImport": "Назад до імпорту"
+    },
+    "scope": {
+      "user": "Користувач",
+      "project": "Проєкт: {{project}}",
+      "projectUnavailable": "Проєкт недоступний"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Лише Codex",
+      "shared": " - Спільна"
+    },
+    "reviewHint": "Спочатку перегляньте скопійовані файли, потім підтвердьте імпорт на наступному кроці.",
+    "reviewLabel": "Імпорт цієї навички",
+    "errors": {
+      "missingSkillFile": "Ця тека поки що не схожа на навичку. Їй потрібен файл SKILL.md, Skill.md чи skill.md.",
+      "symbolicLinks": "Ця тека містить символьні посилання. Імпортуйте реальні файли замість посилань.",
+      "tooManyFiles": "Ця тека навички завелика, щоб імпортувати її за раз. Видаліть зайві файли та спробуйте знову.",
+      "tooLarge": "Ця тека навички завелика для безпечного імпорту. Зменшіть великі ресурси та спробуйте знову.",
+      "invalidFolderName": "Виберіть простішу назву теки призначення з літер, цифр, крапок, дефісів чи підкреслень.",
+      "mustBeDirectory": "Виберіть для імпорту теку, а не окремий файл.",
+      "reviewFailed": "Не вдалося переглянути зміни імпорту",
+      "importFailed": "Не вдалося імпортувати навичку"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Назва А→Я",
+      "nameDesc": "Назва Я→А",
+      "toolsDesc": "Найбільше інструментів"
+    },
+    "health": {
+      "title": "Стан працездатності MCP",
+      "checkingViaRuntime": "Перевірка встановлених серверів MCP через {{runtime}} ...",
+      "lastChecked": "Востаннє перевірено {{time}}",
+      "description": "Запустіть діагностику з цієї сторінки, щоб перевірити підключення встановлених MCP.",
+      "checking": "Перевірка...",
+      "checkStatus": "Перевірити стан"
+    },
+    "diagnostics": {
+      "title": "Діагностика MCP середовища",
+      "serversCount": "{{count}} серверів",
+      "serversCount_one": "{{count}} сервер",
+      "serversCount_other": "{{count}} серверів",
+      "waiting": "Очікування результатів діагностики...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Перевірка статусу середовища...",
+        "checkingRuntimeAvailability": "Перевірка доступності середовища...",
+        "runtimeFailedToStart": "Налаштоване середовище знайдено, але не вдалося запустити. Відкрийте панель, щоб відремонтувати або перевстановити його.",
+        "runtimeRequired": "Потрібне налаштоване середовище. Встановіть або відремонтуйте його з панелі."
+      },
+      "serversCount_few": "{{count}} сервери",
+      "serversCount_many": "{{count}} серверів"
+    },
+    "searchPlaceholder": "Пошук серверів MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} недоступний",
+      "notInstalled": "{{runtime}} не встановлено",
+      "requiredDescription": "Перевірки працездатності MCP вимагають {{runtime}}. Перейдіть на панель, щоб встановити або відремонтувати його."
+    },
+    "empty": {
+      "searchTitle": "Серверів не знайдено",
+      "title": "Немає доступних серверів MCP",
+      "searchDescription": "Спробуйте інший пошуковий запит",
+      "description": "Перевірте пізніше — будуть нові сервери"
+    },
+    "loadMore": "Завантажити більше"
+  },
+  "apiKeys": {
+    "description": "Безпечно зберігайте API-ключі для автозаповнення під час встановлення серверів MCP.",
+    "storage": {
+      "osKeychain": "Ключі зашифровано через {{backend}} і збережено з обмеженими правами доступу до файлів (лише для власника).",
+      "localEncryption": "Сховище ключів ОС недоступне — ключі зашифровано локально за допомогою AES-256. Для надійнішого захисту встановіть службу keyring (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Додати API-ключ",
+      "addFirst": "Додайте свій перший ключ",
+      "edit": "Редагувати",
+      "copied": "Скопійовано!",
+      "copyEnvVarName": "Копіювати назву змінної середовища",
+      "confirmDelete": "Натисніть ще раз для підтвердження",
+      "delete": "Видалити"
+    },
+    "empty": {
+      "title": "Немає збережених API-ключів",
+      "description": "Додайте ключі для автозаповнення змінних середовища під час встановлення серверів MCP."
+    },
+    "form": {
+      "addTitle": "Додати API-ключ",
+      "editTitle": "Редагувати API-ключ",
+      "addDescription": "Збережіть API-ключ для автозаповнення під час встановлення серверів MCP.",
+      "editDescription": "Оновіть деталі ключа. Вам потрібно повторно ввести значення.",
+      "keychainUnavailable": "Сховище ключів ОС недоступне — ключі зашифровано локально за допомогою AES-256. Встановіть gnome-keyring для захисту на рівні ОС.",
+      "name": "Назва",
+      "namePlaceholder": "напр. OpenAI Production",
+      "environmentVariableName": "Назва змінної середовища",
+      "envVarPlaceholder": "напр. OPENAI_API_KEY",
+      "value": "Значення",
+      "reenterValue": "Повторно введіть значення ключа",
+      "valuePlaceholder": "sk-...",
+      "scope": "Область",
+      "userScopeLabel": "Користувач (глобально)",
+      "projectScopeLabel": "Проєкт: {{project}}",
+      "projectUnavailable": "Проєкт недоступний",
+      "boundTo": "Прив'язано до {{path}}",
+      "cancel": "Скасувати",
+      "saving": "Збереження...",
+      "update": "Оновити",
+      "save": "Зберегти",
+      "errors": {
+        "invalidEnvVarFormat": "Використовуйте літери, цифри, підкреслення. Має починатися з літери чи підкреслення.",
+        "nameRequired": "Потрібна назва",
+        "envVarRequired": "Потрібна назва змінної середовища",
+        "invalidEnvVar": "Неправильна назва змінної середовища",
+        "valueRequired": "Потрібне значення ключа",
+        "projectScopeRequiresProject": "API-ключі з областю проєкту потребують активного проєкту",
+        "saveFailed": "Не вдалося зберегти"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Перегляд змін навички",
+    "description": "{{reviewLabel}} спочатку показує зміни файлової системи. Нічого не записується, доки ви не підтвердите нижче.",
+    "noPreview": "Перегляд недоступний.",
+    "confirmPromptPrefix": "Перегляньте відмінності нижче, потім використайте",
+    "confirmPromptSuffix": "щоб застосувати ці зміни.",
+    "noChanges": "Поки що не виявлено змін файлів.",
+    "binaryBadge": "бінарний",
+    "binaryPreviewHidden": "Перегляд бінарного файлу не показано. Файл буде скопійовано як є.",
+    "summary": {
+      "fileChanges": "{{count}} змін файлів",
+      "fileChanges_one": "{{count}} зміна файлу",
+      "fileChanges_other": "{{count}} змін файлів",
+      "new": "{{count}} нових",
+      "updated": "{{count}} оновлено",
+      "removed": "{{count}} видалено",
+      "binary": "{{count}} бінарних",
+      "fileChanges_few": "{{count}} зміни файлів",
+      "fileChanges_many": "{{count}} змін файлів"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} інструментів",
+    "toolsCount_one": "{{count}} інструмент",
+    "toolsCount_other": "{{count}} інструментів",
+    "envCount": "{{count}} змінних",
+    "envCount_one": "{{count}} змінна",
+    "envCount_other": "{{count}} змінних",
+    "auth": "Автентифікація",
+    "byAuthor": "від {{author}}",
+    "hosting": {
+      "remote": "Віддалено",
+      "local": "Локально",
+      "both": "Обидва"
+    },
+    "toolsCount_few": "{{count}} інструменти",
+    "toolsCount_many": "{{count}} інструментів",
+    "envCount_few": "{{count}} змінні",
+    "envCount_many": "{{count}} змінних",
+    "repository": "Репозиторій",
+    "website": "Вебсайт"
+  },
+  "installButton": {
+    "installing": "Встановлення...",
+    "removing": "Видалення...",
+    "done": "Готово",
+    "retry": "Повторити",
+    "uninstall": "Видалити",
+    "install": "Встановити"
+  },
+  "pluginCard": {
+    "official": "Офіційний"
+  }
+}

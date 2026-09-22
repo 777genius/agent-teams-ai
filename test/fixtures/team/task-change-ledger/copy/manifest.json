@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "copy",
+  "taskId": "fixture-copy",
+  "description": "Copy relation fixture generated from a committed copy detected via git diff.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/copy.ts"
+    ],
+    "relationKinds": [
+      "copy"
+    ]
+  }
+}

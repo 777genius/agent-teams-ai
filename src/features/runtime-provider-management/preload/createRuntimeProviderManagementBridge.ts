@@ -1,0 +1,181 @@
+import {
+  RUNTIME_LOCAL_PROVIDER_CONFIGURE,
+  RUNTIME_LOCAL_PROVIDER_LIST,
+  RUNTIME_LOCAL_PROVIDER_PROBE,
+  RUNTIME_LOCAL_PROVIDER_SCAN,
+  RUNTIME_PROVIDER_COMPANION_ACTION,
+  RUNTIME_PROVIDER_COMPANION_CONNECT,
+  RUNTIME_PROVIDER_COMPANION_INSTALL,
+  RUNTIME_PROVIDER_COMPANION_PROGRESS,
+  RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
+  RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
+  RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
+  RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
+  RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
+  RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
+  RUNTIME_PROVIDER_MANAGEMENT_FORGET,
+  RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL,
+  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE,
+  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
+  RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL,
+  RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
+  RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL,
+  RUNTIME_PROVIDER_MANAGEMENT_VIEW,
+  type RuntimeProviderManagementApi,
+} from '@features/runtime-provider-management/contracts';
+
+import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderListInput,
+  RuntimeLocalProviderListResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
+  RuntimeProviderCompanionActionInput,
+  RuntimeProviderCompanionInput,
+  RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementCancelModelLoadInput,
+  RuntimeProviderManagementCancelModelTestInput,
+  RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementClearProjectDefaultInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
+  RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementConnectInput,
+  RuntimeProviderManagementDirectoryResponse,
+  RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
+  RuntimeProviderManagementLoadModelsInput,
+  RuntimeProviderManagementLoadSetupFormInput,
+  RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
+  RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestControlResponse,
+  RuntimeProviderManagementModelTestResponse,
+  RuntimeProviderManagementOAuthControlResponse,
+  RuntimeProviderManagementProviderResponse,
+  RuntimeProviderManagementSetDefaultModelInput,
+  RuntimeProviderManagementSetupFormResponse,
+  RuntimeProviderManagementSubmitOAuthCodeInput,
+  RuntimeProviderManagementTestModelInput,
+  RuntimeProviderManagementViewResponse,
+  RuntimeProviderOAuthProgressDto,
+} from '@features/runtime-provider-management/contracts';
+import type { IpcRenderer, IpcRendererEvent } from 'electron';
+
+export function createRuntimeProviderManagementBridge(
+  ipcRenderer: IpcRenderer
+): RuntimeProviderManagementApi {
+  return {
+    listLocalProviders: (
+      input: RuntimeLocalProviderListInput
+    ): Promise<RuntimeLocalProviderListResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_LIST, input),
+    scanLocalProviders: (
+      input: RuntimeLocalProviderScanInput
+    ): Promise<RuntimeLocalProviderScanResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_SCAN, input),
+    probeLocalProvider: (
+      input: RuntimeLocalProviderProbeInput
+    ): Promise<RuntimeLocalProviderProbeResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_PROBE, input),
+    configureLocalProvider: (
+      input: RuntimeLocalProviderConfigureInput
+    ): Promise<RuntimeLocalProviderConfigureResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_CONFIGURE, input),
+    getCompanionStatus: (
+      input: RuntimeProviderCompanionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_STATUS, input),
+    installAndConnectCompanion: (
+      input: RuntimeProviderCompanionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_INSTALL, input),
+    connectCompanion: (
+      input: RuntimeProviderCompanionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_CONNECT, input),
+    runCompanionAction: (
+      input: RuntimeProviderCompanionActionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_ACTION, input),
+    onCompanionProgress: (
+      listener: (event: RuntimeProviderCompanionStatusDto) => void
+    ): (() => void) => {
+      const handler = (_event: IpcRendererEvent, value: RuntimeProviderCompanionStatusDto): void =>
+        listener(value);
+      ipcRenderer.on(RUNTIME_PROVIDER_COMPANION_PROGRESS, handler);
+      return () => ipcRenderer.removeListener(RUNTIME_PROVIDER_COMPANION_PROGRESS, handler);
+    },
+    loadView: (
+      input: RuntimeProviderManagementLoadViewInput
+    ): Promise<RuntimeProviderManagementViewResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_VIEW, input),
+    loadProviderDirectory: (
+      input: RuntimeProviderManagementLoadDirectoryInput
+    ): Promise<RuntimeProviderManagementDirectoryResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY, input),
+    loadSetupForm: (
+      input: RuntimeProviderManagementLoadSetupFormInput
+    ): Promise<RuntimeProviderManagementSetupFormResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM, input),
+    connectProvider: (
+      input: RuntimeProviderManagementConnectInput
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CONNECT, input),
+    connectWithApiKey: (
+      input: RuntimeProviderManagementConnectApiKeyInput
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY, input),
+    forgetCredential: (
+      input: RuntimeProviderManagementForgetInput
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_FORGET, input),
+    loadModels: (
+      input: RuntimeProviderManagementLoadModelsInput
+    ): Promise<RuntimeProviderManagementModelsResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_MODELS, input),
+    cancelModelLoad: (
+      input: RuntimeProviderManagementCancelModelLoadInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD, input),
+    testModel: (
+      input: RuntimeProviderManagementTestModelInput
+    ): Promise<RuntimeProviderManagementModelTestResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL, input),
+    cancelModelTest: (
+      input: RuntimeProviderManagementCancelModelTestInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST, input),
+    setDefaultModel: (
+      input: RuntimeProviderManagementSetDefaultModelInput
+    ): Promise<RuntimeProviderManagementViewResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL, input),
+    clearProjectDefaultModel: (
+      input: RuntimeProviderManagementClearProjectDefaultInput
+    ): Promise<RuntimeProviderManagementViewResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT, input),
+    configureModelLimits: (
+      input: RuntimeProviderManagementConfigureModelLimitsInput
+    ): Promise<RuntimeProviderManagementModelLimitsResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS, input),
+    submitOAuthCode: (
+      input: RuntimeProviderManagementSubmitOAuthCodeInput
+    ): Promise<RuntimeProviderManagementOAuthControlResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE, input),
+    cancelOAuth: (
+      input: RuntimeProviderManagementCancelOAuthInput
+    ): Promise<RuntimeProviderManagementOAuthControlResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL, input),
+    onOAuthProgress: (listener: (event: RuntimeProviderOAuthProgressDto) => void): (() => void) => {
+      const handler = (_event: IpcRendererEvent, value: RuntimeProviderOAuthProgressDto): void =>
+        listener(value);
+      ipcRenderer.on(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, handler);
+      return () => ipcRenderer.removeListener(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, handler);
+    },
+  };
+}

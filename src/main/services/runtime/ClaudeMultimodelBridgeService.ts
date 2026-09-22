@@ -1,0 +1,1878 @@
+import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
+import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { createLogger } from '@shared/utils/logger';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { mkdtemp, readFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
+
+import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
+import {
+  buildPassiveProviderStatusCliEnv,
+  buildProviderAwareCliEnv,
+  getProviderStatusStoredCredentialAllowlist,
+} from './providerAwareCliEnv';
+import {
+  canHydrateProviderCatalog,
+  markProviderCatalogRefreshFailed,
+} from './providerCatalogAuthority';
+import { providerConnectionService } from './ProviderConnectionService';
+import {
+  applyProviderStatusCheck,
+  createDefaultProviderStatus,
+  createPendingProviderStatus,
+  createRuntimeStatusErrorProviderStatus,
+  getLegacyProviderStatusCheck,
+  mapRuntimeExtensionCapabilities,
+  mergeProviderStatusDisplayEvidence,
+  resolveRuntimeProviderStatusCheck,
+  type RuntimeExtensionCapabilitiesResponse,
+  sanitizeProviderStatusAuthority,
+} from './providerStatusCheckContract';
+
+import type {
+  CliProviderId,
+  CliProviderReasoningEffort,
+  CliProviderStatus,
+  CliProviderStatusRequestOptions,
+  CliProviderSubscriptionRateLimitSnapshot,
+  OpenCodeModelRouteMetadata,
+} from '@shared/types';
+
+const logger = createLogger('ClaudeMultimodelBridgeService');
+
+const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
+const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
+const CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 15_000;
+const SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
+const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
+const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
+const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+const OPENCODE_PROJECT_STATUS_CACHE_TTL_MS = 10_000;
+
+// Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
+type ProviderStatusesObserver = (
+  providers: CliProviderStatus[],
+  updatedProviderId?: CliProviderId
+) => void;
+
+const providerStatusReadInFlight = new Map<string, Promise<CliProviderStatus>>();
+const providerStatusReadCache = new Map<
+  string,
+  { readonly expiresAt: number; readonly status: CliProviderStatus }
+>();
+
+function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
+  const normalized = projectPath?.trim();
+  if (!normalized || !path.isAbsolute(normalized)) {
+    return undefined;
+  }
+  const resolved = path.resolve(normalized);
+  return resolved === path.parse(resolved).root ? undefined : resolved;
+}
+
+interface RuntimeProviderCapabilitiesResponse {
+  modelCatalog?: {
+    dynamic?: boolean;
+    source?:
+      | 'anthropic-models-api'
+      | 'anthropic-compatible-api'
+      | 'app-server'
+      | 'static-fallback'
+      | 'runtime';
+  };
+  reasoningEffort?: {
+    supported?: boolean;
+    values?: string[];
+    configPassthrough?: boolean;
+  };
+  fastMode?: {
+    supported?: boolean;
+    available?: boolean;
+    reason?: string | null;
+    source?: 'runtime';
+  };
+}
+
+interface RuntimeSubscriptionRateLimitWindowResponse {
+  usedPercent?: number;
+  windowDurationMins?: number | null;
+  resetsAt?: number | null;
+}
+
+interface RuntimeSubscriptionRateLimitSnapshotResponse {
+  primary?: RuntimeSubscriptionRateLimitWindowResponse | null;
+  secondary?: RuntimeSubscriptionRateLimitWindowResponse | null;
+}
+
+interface RuntimeProviderModelCatalogItemResponse {
+  id?: string;
+  launchModel?: string;
+  displayName?: string;
+  hidden?: boolean;
+  supportedReasoningEfforts?: string[];
+  defaultReasoningEffort?: string | null;
+  supportsFastMode?: boolean;
+  inputModalities?: string[];
+  supportsPersonality?: boolean;
+  isDefault?: boolean;
+  upgrade?: boolean;
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
+  badgeLabel?: string | null;
+  statusMessage?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+interface RuntimeProviderModelCatalogResponse {
+  schemaVersion?: number;
+  providerId?: CliProviderId;
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
+  status?: 'ready' | 'stale' | 'degraded' | 'unavailable';
+  fetchedAt?: string;
+  staleAt?: string;
+  defaultModelId?: string | null;
+  defaultLaunchModel?: string | null;
+  models?: RuntimeProviderModelCatalogItemResponse[];
+  diagnostics?: {
+    configReadState?: 'ready' | 'unsupported' | 'failed' | 'skipped';
+    appServerState?: 'healthy' | 'degraded' | 'runtime-missing' | 'incompatible';
+    message?: string | null;
+    code?: string | null;
+  };
+}
+
+interface ProviderStatusPayloadResponse {
+  supported?: boolean;
+  authenticated?: boolean;
+  authMethod?: string | null;
+  verificationState?: 'verified' | 'unknown' | 'offline' | 'error';
+  canLoginFromUi?: boolean;
+  statusMessage?: string | null;
+  detailMessage?: string | null;
+  capabilities?: {
+    teamLaunch?: boolean;
+    oneShot?: boolean;
+    extensions?: RuntimeExtensionCapabilitiesResponse;
+  };
+  backend?: {
+    kind?: string;
+    label?: string;
+    endpointLabel?: string | null;
+    projectId?: string | null;
+    authMethodDetail?: string | null;
+  } | null;
+  runtimeCapabilities?: RuntimeProviderCapabilitiesResponse;
+  subscriptionRateLimits?: RuntimeSubscriptionRateLimitSnapshotResponse | null;
+}
+
+interface ProviderStatusCommandResponse {
+  schemaVersion?: number;
+  provider?: string;
+  status?: ProviderStatusPayloadResponse;
+  providers?: Record<string, ProviderStatusPayloadResponse>;
+}
+
+interface ProviderModelsCommandResponse {
+  schemaVersion?: number;
+  providers?: Record<
+    string,
+    {
+      models?: (string | { id?: string; label?: string; description?: string })[];
+    }
+  >;
+}
+
+interface UnifiedRuntimeStatusResponse {
+  schemaVersion?: number;
+  providers?: Record<
+    string,
+    {
+      providerId?: string;
+      supported?: boolean;
+      authenticated?: boolean;
+      authMethod?: string | null;
+      verificationState?: 'verified' | 'unknown' | 'offline' | 'error';
+      statusCheckOutcome?: 'authoritative' | 'pending' | 'transient_error' | 'model_only';
+      statusCheckErrorCode?: 'timeout' | 'unavailable' | 'runtime_missing' | 'partial_response';
+      canLoginFromUi?: boolean;
+      statusMessage?: string | null;
+      detailMessage?: string | null;
+      selectedBackendId?: string | null;
+      resolvedBackendId?: string | null;
+      availableBackends?: {
+        id?: string;
+        label?: string;
+        description?: string;
+        selectable?: boolean;
+        recommended?: boolean;
+        available?: boolean;
+        state?:
+          | 'ready'
+          | 'locked'
+          | 'disabled'
+          | 'authentication-required'
+          | 'runtime-missing'
+          | 'degraded';
+        audience?: 'general' | 'internal';
+        statusMessage?: string | null;
+        detailMessage?: string | null;
+      }[];
+      externalRuntimeDiagnostics?: {
+        id?: string;
+        label?: string;
+        detected?: boolean;
+        statusMessage?: string | null;
+        detailMessage?: string | null;
+      }[];
+      models?: (string | { id?: string; label?: string; description?: string })[];
+      modelCatalog?: RuntimeProviderModelCatalogResponse | null;
+      capabilities?: {
+        teamLaunch?: boolean;
+        oneShot?: boolean;
+        extensions?: RuntimeExtensionCapabilitiesResponse;
+      };
+      backend?: {
+        kind?: string;
+        label?: string;
+        endpointLabel?: string | null;
+        projectId?: string | null;
+        authMethodDetail?: string | null;
+      } | null;
+      runtimeCapabilities?: RuntimeProviderCapabilitiesResponse;
+      subscriptionRateLimits?: RuntimeSubscriptionRateLimitSnapshotResponse | null;
+    }
+  >;
+}
+
+interface OpenCodeRuntimeVerifyResponse {
+  schemaVersion?: number;
+  providerId?: 'opencode';
+  snapshot?: {
+    detected?: boolean;
+    hostHealthy?: boolean;
+    probeError?: string | null;
+    diagnostics?: string[];
+    host?: {
+      version?: string | null;
+      resolvedConfigFingerprint?: string | null;
+    } | null;
+    profile?: {
+      profileRootKey?: string;
+      projectBehaviorFingerprint?: string;
+      managedConfigFingerprint?: string;
+    } | null;
+    config?: {
+      default_agent?: string;
+      share?: string | null;
+      snapshot?: boolean;
+      autoupdate?: boolean | string;
+    } | null;
+  } | null;
+}
+
+export interface OpenCodeRuntimeTranscriptResponse {
+  schemaVersion?: number;
+  providerId?: 'opencode';
+  transcript?: {
+    sessionId?: string;
+    durableState?: string;
+    staleReason?: string | null;
+    messageCount?: number;
+    toolCallCount?: number;
+    errorCount?: number;
+    latestAssistantText?: string | null;
+    latestAssistantPreview?: string | null;
+    messages?: unknown[];
+    diagnostics?: string[];
+    logProjection?: {
+      sessionId?: string;
+      durableState?: string;
+      sourceMessageCount?: number;
+      projectedMessageCount?: number;
+      syntheticMessageCount?: number;
+      toolCallCount?: number;
+      errorCount?: number;
+      diagnostics?: string[];
+      messages?: OpenCodeRuntimeTranscriptLogMessage[];
+    } | null;
+  } | null;
+}
+
+export type OpenCodeRuntimeTranscriptLogContentBlock =
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'thinking';
+      thinking: string;
+      signature: string;
+    }
+  | {
+      type: 'tool_use';
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    }
+  | {
+      type: 'tool_result';
+      tool_use_id: string;
+      content: string | OpenCodeRuntimeTranscriptLogContentBlock[];
+      is_error?: boolean;
+    };
+
+export interface OpenCodeRuntimeTranscriptLogToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  isTask: boolean;
+  taskDescription?: string;
+  taskSubagentType?: string;
+}
+
+export interface OpenCodeRuntimeTranscriptLogToolResult {
+  toolUseId: string;
+  content: string | OpenCodeRuntimeTranscriptLogContentBlock[];
+  isError: boolean;
+}
+
+export interface OpenCodeRuntimeTranscriptLogMessage {
+  uuid: string;
+  parentUuid: string | null;
+  type: 'assistant' | 'user' | 'system';
+  timestamp: string;
+  role?: string;
+  content: OpenCodeRuntimeTranscriptLogContentBlock[] | string;
+  model?: string;
+  agentName?: string;
+  isMeta: boolean;
+  sessionId: string;
+  toolCalls: OpenCodeRuntimeTranscriptLogToolCall[];
+  toolResults: OpenCodeRuntimeTranscriptLogToolResult[];
+  sourceToolUseID?: string;
+  sourceToolAssistantUUID?: string;
+  subtype?: string;
+  level?: string;
+}
+
+const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
+const DEFAULT_PROVIDER_STATUS_IDS: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
+
+function extractJsonObject<T>(raw: string): T {
+  const trimmed = raw.trim();
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as T;
+    }
+    throw new Error('No JSON object found in CLI output');
+  }
+}
+
+function extractModelIds(
+  models: (string | { id?: string; label?: string; description?: string })[] | undefined
+): string[] {
+  if (!models) {
+    return [];
+  }
+
+  return models.flatMap<string>((model) => {
+    if (typeof model === 'string') {
+      return [model];
+    }
+    if (typeof model?.id === 'string' && model.id.trim().length > 0) {
+      return [model.id.trim()];
+    }
+    return [];
+  });
+}
+
+function normalizeRuntimeReasoningEffort(
+  value: string | null | undefined
+): CliProviderReasoningEffort | null {
+  return value === 'none' ||
+    value === 'minimal' ||
+    value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'xhigh' ||
+    value === 'max' ||
+    value === 'ultra'
+    ? value
+    : null;
+}
+
+function collectRuntimeReasoningEfforts(values?: string[]): CliProviderReasoningEffort[] {
+  return (
+    values?.flatMap((value) => {
+      const normalized = normalizeRuntimeReasoningEffort(value);
+      return normalized ? [normalized] : [];
+    }) ?? []
+  );
+}
+
+const OPENCODE_ACCESS_KINDS = new Set([
+  'no_model',
+  'unknown_model',
+  'credentialed',
+  'builtin_free',
+  'configured_authless',
+  'verified',
+  'not_authenticated',
+  'execution_failed',
+]);
+
+const OPENCODE_ROUTE_KINDS = new Set([
+  'connected_provider',
+  'builtin_free',
+  'configured_local',
+  'catalog_provider',
+]);
+
+const OPENCODE_PROOF_STATES = new Set(['not_required', 'needs_probe', 'verified', 'failed']);
+
+function asStringOrNull(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function mapOpenCodeModelRouteMetadata(value: unknown): OpenCodeModelRouteMetadata | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const accessKind = record.accessKind;
+  const routeKind = record.routeKind;
+  const proofState = record.proofState;
+  if (
+    typeof accessKind !== 'string' ||
+    typeof routeKind !== 'string' ||
+    typeof proofState !== 'string' ||
+    !OPENCODE_ACCESS_KINDS.has(accessKind) ||
+    !OPENCODE_ROUTE_KINDS.has(routeKind) ||
+    !OPENCODE_PROOF_STATES.has(proofState)
+  ) {
+    return null;
+  }
+
+  return {
+    providerId: asStringOrNull(record.providerId),
+    modelId: asStringOrNull(record.modelId),
+    sourceLabel: asStringOrNull(record.sourceLabel),
+    accessKind: accessKind as OpenCodeModelRouteMetadata['accessKind'],
+    routeKind: routeKind as OpenCodeModelRouteMetadata['routeKind'],
+    proofState: proofState as OpenCodeModelRouteMetadata['proofState'],
+    requiresExecutionProof: record.requiresExecutionProof === true,
+    reason: asStringOrNull(record.reason),
+  };
+}
+
+function mapRuntimeProviderModelMetadata(
+  metadata?: Record<string, unknown> | null
+): NonNullable<CliProviderStatus['modelCatalog']>['models'][number]['metadata'] {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+  const context = metadata.context;
+  const releaseDate = metadata.releaseDate;
+  const opencode = mapOpenCodeModelRouteMetadata(metadata.opencode);
+  return {
+    cost: metadata.cost ?? null,
+    context: typeof context === 'number' && Number.isFinite(context) ? context : null,
+    limits: metadata.limits ?? null,
+    free: metadata.free === true,
+    releaseDate: typeof releaseDate === 'string' ? releaseDate : null,
+    recentlyReleased: metadata.recentlyReleased === true,
+    ...(opencode ? { opencode } : {}),
+  };
+}
+
+function mapRuntimeProviderModelCatalog(
+  providerId: CliProviderId,
+  modelCatalog?: RuntimeProviderModelCatalogResponse | null
+): CliProviderStatus['modelCatalog'] {
+  if (modelCatalog?.providerId !== providerId) {
+    return null;
+  }
+
+  // Preserve the wire value exactly. Authority parsing requires an exact UTC
+  // ISO round trip, so whitespace or normalization must not repair bad input.
+  const fetchedAt = modelCatalog.fetchedAt;
+  const staleAt = modelCatalog.staleAt;
+  const source = modelCatalog.source;
+  const status = modelCatalog.status;
+  if (
+    modelCatalog.schemaVersion !== 1 ||
+    !fetchedAt ||
+    !staleAt ||
+    (source !== 'anthropic-models-api' &&
+      source !== 'anthropic-compatible-api' &&
+      source !== 'app-server' &&
+      source !== 'static-fallback') ||
+    (status !== 'ready' && status !== 'stale' && status !== 'degraded' && status !== 'unavailable')
+  ) {
+    return null;
+  }
+
+  if (!Array.isArray(modelCatalog.models)) {
+    return null;
+  }
+  if (
+    !modelCatalog.models.every(
+      (model) =>
+        model &&
+        typeof model === 'object' &&
+        !Array.isArray(model) &&
+        typeof model.id === 'string' &&
+        typeof model.launchModel === 'string' &&
+        typeof model.displayName === 'string' &&
+        Boolean(model.id.trim() && model.launchModel.trim() && model.displayName.trim())
+    )
+  ) {
+    return null;
+  }
+
+  const models: NonNullable<CliProviderStatus['modelCatalog']>['models'] =
+    modelCatalog.models.flatMap((model) => {
+      const id = model.id!.trim();
+      const launchModel = model.launchModel!.trim();
+      const displayName = model.displayName!.trim();
+
+      const supportedReasoningEfforts = collectRuntimeReasoningEfforts(
+        model.supportedReasoningEfforts
+      );
+      const defaultReasoningEffort = normalizeRuntimeReasoningEffort(
+        model.defaultReasoningEffort ?? null
+      );
+      const itemSource =
+        model.source === 'anthropic-models-api' ||
+        model.source === 'anthropic-compatible-api' ||
+        model.source === 'app-server' ||
+        model.source === 'static-fallback'
+          ? model.source
+          : source;
+
+      return [
+        {
+          id,
+          launchModel,
+          displayName,
+          hidden: model.hidden === true,
+          supportedReasoningEfforts,
+          defaultReasoningEffort,
+          supportsFastMode: model.supportsFastMode === true,
+          inputModalities: model.inputModalities?.filter((value) => value.trim().length > 0) ?? [],
+          supportsPersonality: model.supportsPersonality === true,
+          isDefault: model.isDefault === true,
+          upgrade: model.upgrade === true,
+          source: itemSource,
+          badgeLabel: model.badgeLabel ?? null,
+          statusMessage: model.statusMessage ?? null,
+          metadata: mapRuntimeProviderModelMetadata(model.metadata),
+        },
+      ];
+    });
+
+  return {
+    schemaVersion: 1,
+    providerId,
+    source,
+    status,
+    fetchedAt,
+    staleAt,
+    defaultModelId: modelCatalog.defaultModelId ?? null,
+    defaultLaunchModel: modelCatalog.defaultLaunchModel ?? null,
+    models,
+    diagnostics: {
+      configReadState: modelCatalog.diagnostics?.configReadState ?? 'skipped',
+      appServerState: modelCatalog.diagnostics?.appServerState ?? 'degraded',
+      message: modelCatalog.diagnostics?.message ?? null,
+      code: modelCatalog.diagnostics?.code ?? null,
+    },
+  };
+}
+
+function getRuntimeModelCatalogRefreshState(
+  runtimeStatus: NonNullable<UnifiedRuntimeStatusResponse['providers']>[string] | undefined,
+  modelCatalog: CliProviderStatus['modelCatalog']
+): NonNullable<CliProviderStatus['modelCatalogRefreshState']> {
+  if (modelCatalog) {
+    return modelCatalog.status === 'ready' ? 'ready' : 'error';
+  }
+
+  return runtimeStatus?.runtimeCapabilities?.modelCatalog?.dynamic === true ? 'loading' : 'idle';
+}
+
+function mapRuntimeSubscriptionRateLimitWindow(
+  window: RuntimeSubscriptionRateLimitWindowResponse | null | undefined
+): NonNullable<CliProviderSubscriptionRateLimitSnapshot['primary']> | null {
+  if (!window || typeof window.usedPercent !== 'number' || !Number.isFinite(window.usedPercent)) {
+    return null;
+  }
+
+  return {
+    usedPercent: Math.max(0, Math.min(100, window.usedPercent)),
+    windowDurationMins:
+      typeof window.windowDurationMins === 'number' && Number.isFinite(window.windowDurationMins)
+        ? window.windowDurationMins
+        : null,
+    resetsAt:
+      typeof window.resetsAt === 'number' && Number.isFinite(window.resetsAt)
+        ? window.resetsAt
+        : null,
+  };
+}
+
+function mapRuntimeSubscriptionRateLimits(
+  providerId: CliProviderId,
+  authMethod: string | null | undefined,
+  rateLimits: RuntimeSubscriptionRateLimitSnapshotResponse | null | undefined
+): CliProviderSubscriptionRateLimitSnapshot | null {
+  if (
+    providerId !== 'anthropic' ||
+    (authMethod !== 'claude.ai' && authMethod !== 'oauth_token') ||
+    !rateLimits
+  ) {
+    return null;
+  }
+
+  const primary = mapRuntimeSubscriptionRateLimitWindow(rateLimits.primary);
+  const secondary = mapRuntimeSubscriptionRateLimitWindow(rateLimits.secondary);
+  return primary || secondary ? { primary, secondary } : null;
+}
+
+export class ClaudeMultimodelBridgeService {
+  private providerStatusHydrationGeneration = 0;
+
+  private readonly providerStatusHydrationGenerations = new Map<string, number>();
+
+  private readonly providerStatusHydrationInFlight = new Map<
+    string,
+    { readonly generation: number; readonly promise: Promise<CliProviderStatus> }
+  >();
+
+  invalidateProviderStatusHydrations(): void {
+    this.providerStatusHydrationGeneration += 1;
+    this.providerStatusHydrationGenerations.clear();
+    this.providerStatusHydrationInFlight.clear();
+    providerStatusReadInFlight.clear();
+    providerStatusReadCache.clear();
+  }
+
+  private getProviderStatusHydrationKey(
+    binaryPath: string,
+    providerId: CliProviderId,
+    projectPath: string | null | undefined
+  ): string {
+    const cwd = getProviderStatusCommandCwd(projectPath) ?? '';
+    return `${path.resolve(binaryPath)}\0${providerId}\0${cwd}`;
+  }
+
+  private beginProviderStatusHydration(
+    binaryPath: string,
+    providerIds: readonly CliProviderId[],
+    projectPath?: string | null
+  ): number {
+    if (providerIds.length === 1) {
+      const hydrationKey = this.getProviderStatusHydrationKey(
+        binaryPath,
+        providerIds[0],
+        projectPath
+      );
+      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
+      if (
+        currentGeneration !== undefined &&
+        this.providerStatusHydrationInFlight.has(hydrationKey)
+      ) {
+        return currentGeneration;
+      }
+    }
+
+    const generation = ++this.providerStatusHydrationGeneration;
+    for (const providerId of providerIds) {
+      this.providerStatusHydrationGenerations.set(
+        this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath),
+        generation
+      );
+    }
+    return generation;
+  }
+
+  private isProviderStatusHydrationCurrent(
+    binaryPath: string,
+    providerId: CliProviderId,
+    generation: number,
+    projectPath?: string | null
+  ): boolean {
+    return (
+      this.providerStatusHydrationGenerations.get(
+        this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath)
+      ) === generation
+    );
+  }
+
+  private clearProviderStatusHydrationGeneration(
+    binaryPath: string,
+    providerId: CliProviderId,
+    generation: number,
+    projectPath?: string | null
+  ): void {
+    const hydrationKey = this.getProviderStatusHydrationKey(binaryPath, providerId, projectPath);
+    if (
+      this.providerStatusHydrationGenerations.get(hydrationKey) === generation &&
+      !this.providerStatusHydrationInFlight.has(hydrationKey)
+    ) {
+      this.providerStatusHydrationGenerations.delete(hydrationKey);
+    }
+  }
+
+  private getProviderCatalogHydration(
+    binaryPath: string,
+    providerId: CliProviderId,
+    generation: number,
+    options: CliProviderStatusRequestOptions = {}
+  ): Promise<CliProviderStatus | null> {
+    const hydrationKey = this.getProviderStatusHydrationKey(
+      binaryPath,
+      providerId,
+      options.projectPath
+    );
+    const inFlight = this.providerStatusHydrationInFlight.get(hydrationKey);
+    if (inFlight) {
+      if (inFlight.generation === generation) {
+        return inFlight.promise;
+      }
+
+      return inFlight.promise
+        .catch(() => undefined)
+        .then(() => {
+          if (
+            !this.isProviderStatusHydrationCurrent(
+              binaryPath,
+              providerId,
+              generation,
+              options.projectPath
+            )
+          ) {
+            return null;
+          }
+          return this.getProviderCatalogHydration(binaryPath, providerId, generation, options);
+        });
+    }
+
+    const request = this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
+      projectPath: options.projectPath,
+    }).finally(() => {
+      if (this.providerStatusHydrationInFlight.get(hydrationKey)?.promise === request) {
+        this.providerStatusHydrationInFlight.delete(hydrationKey);
+      }
+    });
+    this.providerStatusHydrationInFlight.set(hydrationKey, { generation, promise: request });
+    return request;
+  }
+
+  private async buildCliEnv(
+    binaryPath: string,
+    options: { allowedStoredApiKeyEnvVarNames?: readonly string[] } = {}
+  ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
+    return buildProviderAwareCliEnv({
+      binaryPath,
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: options.allowedStoredApiKeyEnvVarNames ?? [
+        'ANTHROPIC_AUTH_TOKEN',
+      ],
+    });
+  }
+
+  private async buildProviderCliEnv(
+    binaryPath: string,
+    providerId: CliProviderId
+  ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
+    return buildProviderAwareCliEnv({
+      binaryPath,
+      providerId,
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: getProviderStatusStoredCredentialAllowlist(providerId),
+    });
+  }
+
+  private isRuntimeStatusCompatibilityError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return (
+      lower.includes('unknown command') ||
+      lower.includes('unknown option') ||
+      lower.includes('no such command') ||
+      lower.includes('did you mean')
+    );
+  }
+
+  private isRuntimeStatusTimeoutError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return lower.includes('timed out') || lower.includes('timeout');
+  }
+
+  private shouldUseLegacyProviderTimeoutFallback(providerId: CliProviderId): boolean {
+    return providerId === 'anthropic' || providerId === 'codex' || providerId === 'opencode';
+  }
+
+  private getProviderStatusRuntimeTimeout(
+    binaryPath: string,
+    providerId: CliProviderId,
+    options: { summary?: boolean; timeoutMs?: number }
+  ): number {
+    if (
+      options.summary &&
+      options.timeoutMs === undefined &&
+      path.basename(binaryPath).toLowerCase() === 'cli-source'
+    ) {
+      return SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+    }
+    if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
+      const fallbackTimeout =
+        providerId === 'codex'
+          ? CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
+          : PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+      return Math.min(options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS, fallbackTimeout);
+    }
+    return (
+      options.timeoutMs ??
+      (options.summary ? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS : PROVIDER_STATUS_TIMEOUT_MS)
+    );
+  }
+
+  private getLegacyProviderStatusPayload(
+    providerId: CliProviderId,
+    parsed: ProviderStatusCommandResponse
+  ): ProviderStatusPayloadResponse | undefined {
+    if (parsed.providers?.[providerId]) {
+      return parsed.providers[providerId];
+    }
+    return parsed.provider === providerId ? parsed.status : undefined;
+  }
+
+  private mergeLegacyProviderStatusPayload(
+    provider: CliProviderStatus,
+    runtimeStatus: ProviderStatusPayloadResponse | undefined
+  ): CliProviderStatus {
+    if (!runtimeStatus) {
+      return provider;
+    }
+
+    return {
+      ...provider,
+      supported: runtimeStatus.supported === true,
+      authenticated: runtimeStatus.authenticated === true,
+      authMethod: runtimeStatus.authMethod ?? null,
+      verificationState: runtimeStatus.verificationState ?? 'unknown',
+      statusMessage: runtimeStatus.statusMessage ?? null,
+      detailMessage: runtimeStatus.detailMessage ?? null,
+      canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
+      capabilities: {
+        teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
+        oneShot: runtimeStatus.capabilities?.oneShot === true,
+        extensions: mapRuntimeExtensionCapabilities(
+          provider.providerId,
+          runtimeStatus.capabilities?.extensions
+        ),
+      },
+      backend: runtimeStatus.backend?.kind
+        ? {
+            kind: runtimeStatus.backend.kind,
+            label: runtimeStatus.backend.label ?? runtimeStatus.backend.kind,
+            endpointLabel: runtimeStatus.backend.endpointLabel ?? null,
+            projectId: runtimeStatus.backend.projectId ?? null,
+            authMethodDetail: runtimeStatus.backend.authMethodDetail ?? null,
+          }
+        : null,
+    };
+  }
+
+  private async getProviderStatusFromLegacyProbes(
+    binaryPath: string,
+    providerId: CliProviderId,
+    options: CliProviderStatusRequestOptions = {}
+  ): Promise<CliProviderStatus> {
+    const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
+    let provider = createDefaultProviderStatus(providerId);
+    let fulfilledProbeCount = 0;
+
+    const authStatusPromise =
+      providerId === 'anthropic' || providerId === 'codex'
+        ? execCli(binaryPath, ['auth', 'status', '--json', '--provider', providerId], {
+            timeout: LEGACY_PROVIDER_AUTH_TIMEOUT_MS,
+            maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
+            env,
+          })
+        : Promise.resolve(null);
+
+    const modelListPromise = execCli(
+      binaryPath,
+      ['model', 'list', '--json', '--provider', providerId],
+      {
+        timeout: PROVIDER_MODELS_TIMEOUT_MS,
+        maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
+        env,
+        cwd: getProviderStatusCommandCwd(options.projectPath),
+      }
+    );
+
+    const [authStatusResult, modelListResult] = await Promise.allSettled([
+      authStatusPromise,
+      modelListPromise,
+    ]);
+
+    if (authStatusResult.status === 'fulfilled' && authStatusResult.value) {
+      const parsed = extractJsonObject<ProviderStatusCommandResponse>(
+        authStatusResult.value.stdout
+      );
+      provider = this.mergeLegacyProviderStatusPayload(
+        provider,
+        this.getLegacyProviderStatusPayload(providerId, parsed)
+      );
+      fulfilledProbeCount += 1;
+    } else if (authStatusResult.status === 'rejected') {
+      logger.warn(
+        `Legacy provider auth status unavailable for ${providerId}: ${
+          authStatusResult.reason instanceof Error
+            ? authStatusResult.reason.message
+            : String(authStatusResult.reason)
+        }`
+      );
+    }
+
+    if (modelListResult.status === 'fulfilled') {
+      const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelListResult.value.stdout);
+      const runtimeModels = extractModelIds(parsed.providers?.[providerId]?.models);
+      if (runtimeModels.length > 0) {
+        provider = {
+          ...provider,
+          models: runtimeModels,
+        };
+      }
+      fulfilledProbeCount += 1;
+    } else {
+      logger.warn(
+        `Legacy provider models unavailable for ${providerId}: ${
+          modelListResult.reason instanceof Error
+            ? modelListResult.reason.message
+            : String(modelListResult.reason)
+        }`
+      );
+    }
+
+    if (fulfilledProbeCount === 0) {
+      throw new Error(`Legacy provider probes unavailable for ${providerId}`);
+    }
+
+    return providerConnectionService.enrichProviderStatus(
+      this.applyConnectionIssue(provider, connectionIssues)
+    );
+  }
+
+  private async getProviderStatusFromLegacyProbesOrError(
+    binaryPath: string,
+    providerId: CliProviderId,
+    originalError: unknown,
+    options: CliProviderStatusRequestOptions = {}
+  ): Promise<CliProviderStatus> {
+    try {
+      const provider = await this.getProviderStatusFromLegacyProbes(
+        binaryPath,
+        providerId,
+        options
+      );
+      const statusCheck = getLegacyProviderStatusCheck(providerId, originalError);
+      return sanitizeProviderStatusAuthority(
+        applyProviderStatusCheck(
+          provider,
+          statusCheck.statusCheckOutcome,
+          statusCheck.statusCheckErrorCode
+        )
+      );
+    } catch (fallbackError) {
+      logger.warn(
+        `Legacy provider probes unavailable for ${providerId}: ${
+          fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        }`
+      );
+      return createRuntimeStatusErrorProviderStatus(providerId, originalError);
+    }
+  }
+
+  private mapRuntimeProviderStatus(
+    providerId: CliProviderId,
+    runtimeStatus: NonNullable<UnifiedRuntimeStatusResponse['providers']>[string] | undefined
+  ): CliProviderStatus {
+    const provider = createDefaultProviderStatus(providerId);
+    if (!runtimeStatus) {
+      return provider;
+    }
+    if (runtimeStatus.providerId !== undefined && runtimeStatus.providerId !== providerId) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider status response did not match the requested provider')
+      );
+    }
+    const modelCatalog = mapRuntimeProviderModelCatalog(providerId, runtimeStatus.modelCatalog);
+    const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus, providerId);
+    const isAuthoritativeStatus =
+      statusCheck.statusCheckOutcome === 'authoritative' &&
+      runtimeStatus.verificationState === 'verified';
+
+    return sanitizeProviderStatusAuthority({
+      ...provider,
+      supported: runtimeStatus.supported === true,
+      authenticated: isAuthoritativeStatus && runtimeStatus.authenticated === true,
+      authMethod: isAuthoritativeStatus ? (runtimeStatus.authMethod ?? null) : null,
+      verificationState:
+        statusCheck.statusCheckOutcome === 'authoritative'
+          ? (runtimeStatus.verificationState ?? 'unknown')
+          : statusCheck.statusCheckOutcome === 'transient_error'
+            ? 'error'
+            : 'unknown',
+      ...statusCheck,
+      statusMessage: runtimeStatus.statusMessage ?? null,
+      detailMessage: runtimeStatus.detailMessage ?? null,
+      canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
+      capabilities: {
+        teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,
+        oneShot: runtimeStatus.capabilities?.oneShot === true,
+        extensions: mapRuntimeExtensionCapabilities(
+          providerId,
+          runtimeStatus.capabilities?.extensions
+        ),
+      },
+      selectedBackendId: runtimeStatus.selectedBackendId ?? null,
+      resolvedBackendId: runtimeStatus.resolvedBackendId ?? null,
+      availableBackends:
+        runtimeStatus.availableBackends?.map((backend) => ({
+          id: backend.id ?? 'unknown',
+          label: backend.label ?? backend.id ?? 'Unknown',
+          description: backend.description ?? '',
+          selectable: backend.selectable !== false,
+          recommended: backend.recommended === true,
+          available: backend.available === true,
+          state: backend.state ?? undefined,
+          audience: backend.audience ?? undefined,
+          statusMessage: backend.statusMessage ?? null,
+          detailMessage: backend.detailMessage ?? null,
+        })) ?? [],
+      externalRuntimeDiagnostics:
+        runtimeStatus.externalRuntimeDiagnostics?.map((diagnostic) => ({
+          id: diagnostic.id ?? 'unknown',
+          label: diagnostic.label ?? diagnostic.id ?? 'Unknown',
+          detected: diagnostic.detected === true,
+          statusMessage: diagnostic.statusMessage ?? null,
+          detailMessage: diagnostic.detailMessage ?? null,
+        })) ?? [],
+      models: extractModelIds(runtimeStatus.models),
+      modelCatalog,
+      modelCatalogRefreshState: getRuntimeModelCatalogRefreshState(runtimeStatus, modelCatalog),
+      subscriptionRateLimits: mapRuntimeSubscriptionRateLimits(
+        providerId,
+        runtimeStatus.authMethod,
+        runtimeStatus.subscriptionRateLimits
+      ),
+      backend: runtimeStatus.backend?.kind
+        ? {
+            kind: runtimeStatus.backend.kind,
+            label: runtimeStatus.backend.label ?? runtimeStatus.backend.kind,
+            endpointLabel: runtimeStatus.backend.endpointLabel ?? null,
+            projectId: runtimeStatus.backend.projectId ?? null,
+            authMethodDetail: runtimeStatus.backend.authMethodDetail ?? null,
+          }
+        : null,
+      runtimeCapabilities: runtimeStatus.runtimeCapabilities
+        ? {
+            modelCatalog: runtimeStatus.runtimeCapabilities.modelCatalog
+              ? {
+                  dynamic: runtimeStatus.runtimeCapabilities.modelCatalog.dynamic === true,
+                  source: runtimeStatus.runtimeCapabilities.modelCatalog.source,
+                }
+              : undefined,
+            reasoningEffort: runtimeStatus.runtimeCapabilities.reasoningEffort
+              ? {
+                  supported: runtimeStatus.runtimeCapabilities.reasoningEffort.supported === true,
+                  values: collectRuntimeReasoningEfforts(
+                    runtimeStatus.runtimeCapabilities.reasoningEffort.values
+                  ),
+                  configPassthrough:
+                    runtimeStatus.runtimeCapabilities.reasoningEffort.configPassthrough === true,
+                }
+              : undefined,
+            fastMode: runtimeStatus.runtimeCapabilities.fastMode
+              ? {
+                  supported: runtimeStatus.runtimeCapabilities.fastMode.supported === true,
+                  available: runtimeStatus.runtimeCapabilities.fastMode.available === true,
+                  reason: runtimeStatus.runtimeCapabilities.fastMode.reason ?? null,
+                  source: 'runtime',
+                }
+              : undefined,
+          }
+        : null,
+    });
+  }
+
+  private projectProviderStatuses(providers: CliProviderStatus[]): CliProviderStatus[] {
+    return providers.map((provider) => sanitizeProviderStatusAuthority(provider));
+  }
+
+  private notifyProviderStatuses(
+    onUpdate: ProviderStatusesObserver | undefined,
+    providers: CliProviderStatus[],
+    updatedProviderId?: CliProviderId
+  ): void {
+    if (!onUpdate) return;
+    try {
+      onUpdate(this.projectProviderStatuses(providers), updatedProviderId);
+    } catch (error) {
+      logger.warn(
+        `Provider status observer failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private notifyProviderStatus(
+    onUpdate: ((provider: CliProviderStatus) => void) | undefined,
+    provider: CliProviderStatus
+  ): void {
+    if (!onUpdate) return;
+    try {
+      onUpdate(sanitizeProviderStatusAuthority(provider));
+    } catch (error) {
+      logger.warn(
+        `Provider catalog observer failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private applyConnectionIssue(
+    provider: CliProviderStatus,
+    connectionIssues: Partial<Record<CliProviderId, string>>
+  ): CliProviderStatus {
+    const issue = connectionIssues[provider.providerId];
+    if (!issue) {
+      return provider;
+    }
+
+    return {
+      ...provider,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusMessage: issue,
+      detailMessage: null,
+      capabilities: { ...provider.capabilities, teamLaunch: false },
+      backend: null,
+    };
+  }
+
+  private applyConnectionIssues(
+    providers: CliProviderStatus[],
+    connectionIssues: Partial<Record<CliProviderId, string>>
+  ): CliProviderStatus[] {
+    return providers.map((provider) => this.applyConnectionIssue(provider, connectionIssues));
+  }
+
+  private buildProviderStatusesSnapshot(
+    providers: Map<CliProviderId, CliProviderStatus>,
+    providerIds: readonly CliProviderId[] = ORDERED_PROVIDER_IDS
+  ): CliProviderStatus[] {
+    return providerIds.map(
+      (providerId) => providers.get(providerId) ?? createPendingProviderStatus(providerId)
+    );
+  }
+
+  private async getProviderStatusFromRuntimeStatusCommand(
+    binaryPath: string,
+    providerId: CliProviderId,
+    env: NodeJS.ProcessEnv,
+    connectionIssues: Partial<Record<CliProviderId, string>>,
+    options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
+  ): Promise<CliProviderStatus> {
+    const args = ['runtime', 'status', '--json', '--provider', providerId];
+    if (options.summary) {
+      args.push('--summary');
+    }
+    const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
+    const { stdout } = await execCli(binaryPath, args, {
+      timeout,
+      maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
+      env,
+      cwd: getProviderStatusCommandCwd(options.projectPath),
+    });
+    const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
+    const mappedProvider = this.applyConnectionIssue(
+      this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
+      connectionIssues
+    );
+    if (mappedProvider.statusCheckOutcome !== 'authoritative') {
+      return {
+        ...mappedProvider,
+        authenticated: false,
+        authMethod: null,
+        capabilities: { ...mappedProvider.capabilities, teamLaunch: false },
+      };
+    }
+    return sanitizeProviderStatusAuthority(mappedProvider);
+  }
+
+  private async getProviderStatusFromScopedRuntimeStatus(
+    binaryPath: string,
+    providerId: CliProviderId,
+    options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
+  ): Promise<CliProviderStatus> {
+    const projectPath = getProviderStatusCommandCwd(options.projectPath) ?? '';
+    const requestKey = JSON.stringify([
+      path.resolve(binaryPath),
+      providerId,
+      options.summary === true,
+      options.timeoutMs ?? null,
+      projectPath,
+    ]);
+    const canReuseCompletedRead =
+      providerId === 'opencode' && projectPath.length > 0 && options.summary !== true;
+    const cached = canReuseCompletedRead ? providerStatusReadCache.get(requestKey) : undefined;
+    if (cached && cached.expiresAt > Date.now()) return cached.status;
+    if (cached) providerStatusReadCache.delete(requestKey);
+    const existing = providerStatusReadInFlight.get(requestKey);
+    if (existing) return existing;
+
+    const request = (async () => {
+      const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
+        binaryPath,
+        providerId,
+      });
+      const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+        passiveEnv,
+        providerId
+      );
+      const status = await this.getProviderStatusFromRuntimeStatusCommand(
+        binaryPath,
+        providerId,
+        env,
+        connectionIssues,
+        options
+      );
+      if (canReuseCompletedRead && status.statusCheckOutcome === 'authoritative') {
+        providerStatusReadCache.set(requestKey, {
+          expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
+          status,
+        });
+      }
+      return status;
+    })().finally(() => {
+      if (providerStatusReadInFlight.get(requestKey) === request) {
+        providerStatusReadInFlight.delete(requestKey);
+      }
+    });
+    providerStatusReadInFlight.set(requestKey, request);
+    return request;
+  }
+
+  private async getProviderStatusesFromScopedRuntimeStatus(
+    binaryPath: string,
+    onUpdate?: (providers: CliProviderStatus[]) => void,
+    options: { summary?: boolean; timeoutMs?: number; providerIds?: readonly CliProviderId[] } = {}
+  ): Promise<CliProviderStatus[] | null> {
+    const providerIds = options.providerIds ?? ORDERED_PROVIDER_IDS;
+    const providers = new Map<CliProviderId, CliProviderStatus>(
+      providerIds.map((providerId) => [providerId, createPendingProviderStatus(providerId)])
+    );
+    const failures: { providerId: CliProviderId; error: unknown }[] = [];
+
+    await Promise.all(
+      providerIds.map(async (providerId) => {
+        try {
+          providers.set(
+            providerId,
+            await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, options)
+          );
+          this.notifyProviderStatuses(
+            onUpdate,
+            this.buildProviderStatusesSnapshot(providers, providerIds)
+          );
+        } catch (error) {
+          failures.push({ providerId, error });
+        }
+      })
+    );
+    failures.sort((a, b) => providerIds.indexOf(a.providerId) - providerIds.indexOf(b.providerId));
+
+    if (failures.length === 0) {
+      return this.buildProviderStatusesSnapshot(providers, providerIds);
+    }
+
+    if (failures.length === providerIds.length) {
+      if (failures.every(({ error }) => this.isRuntimeStatusTimeoutError(error))) {
+        logger.warn(
+          `Provider-scoped runtime status timed out for ${failures
+            .map(({ providerId }) => providerId)
+            .join(', ')}; falling back to scoped legacy provider probes`
+        );
+        const fallbackProviders = await Promise.all(
+          failures.map(async ({ providerId, error }) => ({
+            providerId,
+            provider: this.shouldUseLegacyProviderTimeoutFallback(providerId)
+              ? await this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error)
+              : createRuntimeStatusErrorProviderStatus(providerId, error),
+          }))
+        );
+        for (const { providerId, provider } of fallbackProviders) {
+          providers.set(providerId, provider);
+        }
+        this.notifyProviderStatuses(
+          onUpdate,
+          this.buildProviderStatusesSnapshot(providers, providerIds)
+        );
+        return this.buildProviderStatusesSnapshot(providers, providerIds);
+      }
+
+      for (const { providerId, error } of failures) {
+        providers.set(providerId, createRuntimeStatusErrorProviderStatus(providerId, error));
+      }
+      this.notifyProviderStatuses(
+        onUpdate,
+        this.buildProviderStatusesSnapshot(providers, providerIds)
+      );
+      return this.buildProviderStatusesSnapshot(providers, providerIds);
+    }
+
+    logger.warn(
+      `Provider-scoped runtime status failed for ${failures
+        .map(({ providerId }) => providerId)
+        .join(', ')}; using partial provider statuses`
+    );
+
+    const fallbackProviders = await Promise.all(
+      failures.map(async ({ providerId, error }) => ({
+        providerId,
+        provider:
+          this.isRuntimeStatusTimeoutError(error) &&
+          this.shouldUseLegacyProviderTimeoutFallback(providerId)
+            ? await this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error)
+            : createRuntimeStatusErrorProviderStatus(providerId, error),
+      }))
+    );
+    for (const { providerId, provider } of fallbackProviders) {
+      providers.set(providerId, provider);
+    }
+    this.notifyProviderStatuses(
+      onUpdate,
+      this.buildProviderStatusesSnapshot(providers, providerIds)
+    );
+    return this.buildProviderStatusesSnapshot(providers, providerIds);
+  }
+
+  private hydrateProviderCatalogs(
+    binaryPath: string,
+    liveProviders: CliProviderStatus[],
+    generation: number,
+    onUpdate?: ProviderStatusesObserver
+  ): void {
+    if (!onUpdate) {
+      for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+        this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+      }
+      return;
+    }
+
+    const providers = new Map<CliProviderId, CliProviderStatus>(
+      liveProviders.map((provider) => [provider.providerId, provider])
+    );
+    const providerIds = liveProviders.map((provider) => provider.providerId);
+    const liveProviderIds = new Set(providerIds);
+
+    for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+      if (!liveProviderIds.has(providerId)) {
+        this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+      }
+    }
+
+    for (const liveProvider of liveProviders) {
+      if (!canHydrateProviderCatalog(liveProvider)) {
+        this.clearProviderStatusHydrationGeneration(
+          binaryPath,
+          liveProvider.providerId,
+          generation
+        );
+        continue;
+      }
+
+      void this.getProviderCatalogHydration(binaryPath, liveProvider.providerId, generation)
+        .then((hydratedProvider) => {
+          if (!hydratedProvider) {
+            return;
+          }
+          if (
+            !this.isProviderStatusHydrationCurrent(binaryPath, liveProvider.providerId, generation)
+          ) {
+            return;
+          }
+          const currentProvider = providers.get(liveProvider.providerId);
+          if (!currentProvider) {
+            return;
+          }
+          providers.set(
+            liveProvider.providerId,
+            mergeProviderStatusDisplayEvidence(hydratedProvider, currentProvider)
+          );
+          this.notifyProviderStatuses(
+            onUpdate,
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
+          );
+        })
+        .catch((error) => {
+          if (
+            !this.isProviderStatusHydrationCurrent(binaryPath, liveProvider.providerId, generation)
+          ) {
+            return;
+          }
+          const currentProvider = providers.get(liveProvider.providerId);
+          if (!currentProvider) {
+            return;
+          }
+          providers.set(liveProvider.providerId, markProviderCatalogRefreshFailed(currentProvider));
+          logger.warn(
+            `Provider catalog hydration failed for ${liveProvider.providerId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          this.notifyProviderStatuses(
+            onUpdate,
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
+          );
+        })
+        .finally(() => {
+          this.clearProviderStatusHydrationGeneration(
+            binaryPath,
+            liveProvider.providerId,
+            generation
+          );
+        });
+    }
+  }
+
+  private async getOpenCodeVerifySnapshot(
+    binaryPath: string
+  ): Promise<OpenCodeRuntimeVerifyResponse['snapshot'] | null> {
+    const { env } = await this.buildCliEnv(binaryPath);
+    const { stdout } = await execCli(
+      binaryPath,
+      ['runtime', 'verify', '--json', '--provider', 'opencode'],
+      {
+        timeout: PROVIDER_STATUS_TIMEOUT_MS,
+        maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
+        env,
+      }
+    );
+    const parsed = extractJsonObject<OpenCodeRuntimeVerifyResponse>(stdout);
+    return parsed.providerId === 'opencode' ? (parsed.snapshot ?? null) : null;
+  }
+
+  private mergeOpenCodeVerification(
+    provider: CliProviderStatus,
+    snapshot: OpenCodeRuntimeVerifyResponse['snapshot']
+  ): CliProviderStatus {
+    if (!snapshot) {
+      return sanitizeProviderStatusAuthority({
+        ...provider,
+        verificationState: 'unknown',
+        statusMessage: 'OpenCode live verification returned no evidence',
+      });
+    }
+
+    const diagnostics = snapshot.diagnostics ?? [];
+    const diagnosticsSummary = diagnostics.slice(0, 2).join(' - ');
+    const liveIssuesPresent =
+      snapshot.detected === false ||
+      snapshot.hostHealthy !== true ||
+      Boolean(snapshot.probeError) ||
+      diagnostics.length > 0;
+
+    const detailParts = [
+      provider.detailMessage ?? null,
+      snapshot.host?.resolvedConfigFingerprint
+        ? `live ${snapshot.host.resolvedConfigFingerprint.slice(0, 12)}`
+        : null,
+      snapshot.profile?.managedConfigFingerprint
+        ? `managed ${snapshot.profile.managedConfigFingerprint.slice(0, 12)}`
+        : null,
+      snapshot.profile?.projectBehaviorFingerprint
+        ? `behavior ${snapshot.profile.projectBehaviorFingerprint.slice(0, 12)}`
+        : null,
+      diagnosticsSummary || null,
+    ].filter((value): value is string => Boolean(value));
+
+    const nextDiagnostics = [
+      ...(provider.externalRuntimeDiagnostics ?? []),
+      {
+        id: 'opencode-live-host',
+        label: 'OpenCode live host',
+        detected: snapshot.hostHealthy === true,
+        statusMessage: snapshot.hostHealthy === true ? 'Healthy' : 'Unavailable',
+        detailMessage: snapshot.probeError ?? null,
+      },
+      {
+        id: 'opencode-managed-runtime',
+        label: 'OpenCode managed runtime',
+        detected: !liveIssuesPresent,
+        statusMessage: liveIssuesPresent
+          ? 'Live verification found runtime drift'
+          : 'Managed runtime verified',
+        detailMessage: diagnosticsSummary || null,
+      },
+    ];
+
+    return sanitizeProviderStatusAuthority({
+      ...provider,
+      verificationState: liveIssuesPresent ? 'error' : 'verified',
+      statusMessage: liveIssuesPresent
+        ? (snapshot.probeError ??
+          diagnostics[0] ??
+          'OpenCode live verification found runtime drift')
+        : provider.statusMessage,
+      detailMessage: detailParts.length > 0 ? detailParts.join(' - ') : provider.detailMessage,
+      externalRuntimeDiagnostics: nextDiagnostics,
+      backend: provider.backend
+        ? {
+            ...provider.backend,
+            authMethodDetail:
+              snapshot.config?.default_agent === 'teammate'
+                ? 'managed teammate agent'
+                : (provider.backend.authMethodDetail ?? null),
+          }
+        : provider.backend,
+    });
+  }
+
+  async getProviderStatus(
+    binaryPath: string,
+    providerId: CliProviderId,
+    onCatalogUpdate?: (provider: CliProviderStatus) => void,
+    options: CliProviderStatusRequestOptions = {}
+  ): Promise<CliProviderStatus> {
+    const requestedProjectPath = options.projectPath?.trim() ?? '';
+    const projectPath = requestedProjectPath
+      ? getProviderStatusCommandCwd(requestedProjectPath)
+      : undefined;
+    if (requestedProjectPath && !projectPath) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Project-scoped provider status requires an absolute, non-root project path')
+      );
+    }
+
+    const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);
+    let backgroundHydrationOwnsGenerationCleanup = false;
+    try {
+      const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
+        // OpenCode's passive summary intentionally omits authentication and its
+        // model catalog. A project-scoped launch check needs the exact catalog,
+        // otherwise a healthy installed CLI is misclassified as runtime_missing.
+        summary: providerId !== 'opencode' || !projectPath,
+        projectPath,
+      });
+      if (projectPath && canHydrateProviderCatalog(provider)) {
+        try {
+          const hydratedProvider = await this.getProviderCatalogHydration(
+            binaryPath,
+            provider.providerId,
+            generation,
+            { projectPath }
+          );
+          if (
+            hydratedProvider &&
+            this.isProviderStatusHydrationCurrent(
+              binaryPath,
+              provider.providerId,
+              generation,
+              projectPath
+            )
+          ) {
+            return sanitizeProviderStatusAuthority(
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
+            );
+          }
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
+        } catch (error) {
+          logger.warn(
+            `Project-scoped provider catalog hydration failed for ${provider.providerId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
+        }
+      }
+      if (canHydrateProviderCatalog(provider) && onCatalogUpdate) {
+        backgroundHydrationOwnsGenerationCleanup = true;
+        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, {
+          projectPath,
+        })
+          .then((hydratedProvider) => {
+            if (!hydratedProvider) {
+              return;
+            }
+            if (
+              !this.isProviderStatusHydrationCurrent(
+                binaryPath,
+                provider.providerId,
+                generation,
+                projectPath
+              )
+            ) {
+              return;
+            }
+            this.notifyProviderStatus(
+              onCatalogUpdate,
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
+            );
+          })
+          .catch((error) => {
+            if (
+              !this.isProviderStatusHydrationCurrent(
+                binaryPath,
+                provider.providerId,
+                generation,
+                projectPath
+              )
+            ) {
+              return;
+            }
+            logger.warn(
+              `Provider catalog hydration failed for ${provider.providerId}: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+            this.notifyProviderStatus(onCatalogUpdate, markProviderCatalogRefreshFailed(provider));
+          })
+          .finally(() => {
+            this.clearProviderStatusHydrationGeneration(
+              binaryPath,
+              providerId,
+              generation,
+              projectPath
+            );
+          });
+      }
+      return provider;
+    } catch (error) {
+      const summaryStatusError = error instanceof Error ? error.message : String(error);
+      logger.warn(
+        `Provider-scoped summary runtime status unavailable for ${providerId}; returning scoped degraded status without fallback: ${summaryStatusError}`
+      );
+      return createRuntimeStatusErrorProviderStatus(providerId, error);
+    } finally {
+      if (!backgroundHydrationOwnsGenerationCleanup) {
+        this.clearProviderStatusHydrationGeneration(
+          binaryPath,
+          providerId,
+          generation,
+          projectPath
+        );
+      }
+    }
+  }
+
+  async verifyProviderStatus(
+    binaryPath: string,
+    providerId: CliProviderId
+  ): Promise<CliProviderStatus> {
+    const provider = await this.getProviderStatus(binaryPath, providerId);
+    if (providerId !== 'opencode') {
+      return provider;
+    }
+
+    try {
+      const snapshot = await this.getOpenCodeVerifySnapshot(binaryPath);
+      return this.mergeOpenCodeVerification(provider, snapshot);
+    } catch (error) {
+      logger.warn(
+        `OpenCode live verification unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return sanitizeProviderStatusAuthority({
+        ...provider,
+        verificationState: 'error',
+        statusMessage: 'OpenCode live verification failed',
+        detailMessage: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  async getOpenCodeTranscript(
+    binaryPath: string,
+    params: {
+      teamId: string;
+      memberName: string;
+      limit?: number;
+      laneId?: string;
+      sessionId?: string;
+      timeoutMs?: number;
+    }
+  ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
+    const { env } = await this.buildCliEnv(binaryPath);
+    const args = [
+      'runtime',
+      'transcript',
+      '--json',
+      '--provider',
+      'opencode',
+      '--team',
+      params.teamId,
+      '--member',
+      params.memberName,
+      '--projection-only',
+    ];
+    if (typeof params.limit === 'number') {
+      args.push('--limit', String(params.limit));
+    }
+    if (typeof params.laneId === 'string' && params.laneId.trim().length > 0) {
+      args.push('--lane', params.laneId.trim());
+    }
+    if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
+      args.push('--session-id', params.sessionId.trim());
+    }
+
+    const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));
+    const outputPath = path.join(outputDir, 'transcript.json');
+    try {
+      await execCli(binaryPath, [...args, '--output', outputPath], {
+        timeout: params.timeoutMs ?? PROVIDER_STATUS_TIMEOUT_MS,
+        env,
+      });
+      const parsed = extractJsonObject<OpenCodeRuntimeTranscriptResponse>(
+        await readFile(outputPath, 'utf8')
+      );
+      return parsed.providerId === 'opencode' ? (parsed.transcript ?? null) : null;
+    } finally {
+      await rm(outputDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+
+  async verifyOpenCodeModels(
+    _binaryPath: string,
+    provider: CliProviderStatus
+  ): Promise<CliProviderStatus> {
+    return sanitizeProviderStatusAuthority({
+      ...provider,
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    });
+  }
+
+  private async buildGeminiStatus(binaryPath: string): Promise<CliProviderStatus> {
+    const provider = createDefaultProviderStatus('gemini');
+    const { env } = await this.buildProviderCliEnv(binaryPath, 'gemini');
+
+    try {
+      const { stdout } = await execCli(
+        binaryPath,
+        ['model', 'list', '--json', '--provider', 'gemini'],
+        {
+          timeout: PROVIDER_MODELS_TIMEOUT_MS,
+          maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
+          env,
+        }
+      );
+      const parsed = extractJsonObject<ProviderModelsCommandResponse>(stdout);
+      const models = extractModelIds(parsed.providers?.gemini?.models);
+      if (models.length > 0) {
+        provider.supported = true;
+        provider.models = models;
+        provider.capabilities = {
+          teamLaunch: true,
+          oneShot: true,
+          extensions: createDefaultCliExtensionCapabilities(),
+        };
+      }
+    } catch (error) {
+      logger.warn(
+        `Gemini model list unavailable: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    const authState = await resolveGeminiRuntimeAuth(env);
+    if (authState.authenticated) {
+      provider.authenticated = true;
+      provider.authMethod =
+        authState.authMethod === 'adc_authorized_user' ||
+        authState.authMethod === 'adc_service_account'
+          ? `gemini_${authState.authMethod}`
+          : authState.authMethod;
+      provider.verificationState = 'verified';
+      provider.statusCheckOutcome = 'authoritative';
+      provider.statusCheckErrorCode = undefined;
+      provider.statusMessage = null;
+      if (authState.authMethod === 'cli_oauth_personal') {
+        provider.backend = {
+          kind: 'cli',
+          label: 'Gemini CLI',
+          endpointLabel: 'Code Assist (cloudcode-pa.googleapis.com/v1internal)',
+          projectId: authState.projectId,
+          authMethodDetail: authState.authMethod,
+        };
+      }
+      return sanitizeProviderStatusAuthority(provider);
+    }
+
+    provider.statusMessage =
+      authState.statusMessage ?? 'Set GEMINI_API_KEY or Google ADC to use Gemini.';
+    return sanitizeProviderStatusAuthority(provider);
+  }
+
+  async getProviderStatuses(
+    binaryPath: string,
+    onUpdate?: ProviderStatusesObserver
+  ): Promise<CliProviderStatus[]> {
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
+
+    const generation = this.beginProviderStatusHydration(binaryPath, DEFAULT_PROVIDER_STATUS_IDS);
+    let catalogHydrationOwnsGenerationCleanup = false;
+    try {
+      const providers = await this.getProviderStatusesFromScopedRuntimeStatus(
+        binaryPath,
+        onUpdate,
+        {
+          summary: true,
+          providerIds: DEFAULT_PROVIDER_STATUS_IDS,
+        }
+      );
+      if (providers) {
+        catalogHydrationOwnsGenerationCleanup = true;
+        this.hydrateProviderCatalogs(binaryPath, providers, generation, onUpdate);
+        return this.projectProviderStatuses(providers);
+      }
+      throw new Error('Provider-scoped summary runtime status returned no provider snapshot');
+    } catch (error) {
+      logger.warn(
+        `Provider-scoped summary runtime status unavailable; returning scoped degraded statuses: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      const providers = DEFAULT_PROVIDER_STATUS_IDS.map((providerId) =>
+        createRuntimeStatusErrorProviderStatus(providerId, error)
+      );
+      this.notifyProviderStatuses(onUpdate, providers);
+      return this.projectProviderStatuses(providers);
+    } finally {
+      if (!catalogHydrationOwnsGenerationCleanup) {
+        for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
+          this.clearProviderStatusHydrationGeneration(binaryPath, providerId, generation);
+        }
+      }
+    }
+  }
+}

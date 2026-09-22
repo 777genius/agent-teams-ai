@@ -1,0 +1,721 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const storeState = {
+  progress: null as Record<string, unknown> | null,
+  cancelProvisioning: vi.fn(),
+  retryFailedRuntimeLanes: vi.fn(),
+  provisioningErrorByTeam: {} as Record<string, string>,
+  clearProvisioningError: vi.fn(),
+  retryFailedOpenCodeSecondaryLanes: vi.fn(),
+  selectedTeamName: 'northstar-core',
+  selectedTeamData: {
+    members: [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
+      { name: 'bob', agentType: 'developer' },
+      { name: 'jack', agentType: 'developer' },
+    ] as Array<Record<string, unknown>>,
+  },
+  teamDataCacheByName: {
+    'northstar-core': {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
+        { name: 'bob', agentType: 'developer' },
+        { name: 'jack', agentType: 'developer' },
+      ],
+    },
+  } as Record<string, { members: Array<Record<string, unknown>> }>,
+  memberSpawnStatusesByTeam: {
+    'northstar-core': {},
+  },
+  memberSpawnSnapshotsByTeam: {} as Record<string, unknown>,
+};
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+}));
+
+vi.mock('@renderer/store/slices/teamSlice', () => ({
+  getCurrentProvisioningProgressForTeam: () => storeState.progress,
+  selectTeamDataForName: (_state: typeof storeState, teamName: string) =>
+    storeState.teamDataCacheByName[teamName] ??
+    (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null),
+  selectTeamMemberSnapshotsForName: (_state: typeof storeState, teamName: string) =>
+    (
+      storeState.teamDataCacheByName[teamName] ??
+      (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null)
+    )?.members ?? [],
+  selectResolvedMembersForTeamName: (_state: typeof storeState, teamName: string) =>
+    (
+      storeState.teamDataCacheByName[teamName] ??
+      (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null)
+    )?.members ?? [],
+}));
+
+vi.mock('zustand/react/shallow', () => ({
+  useShallow: (selector: unknown) => selector,
+}));
+
+vi.mock('@renderer/components/ui/button', () => ({
+  Button: ({ children, onClick, 'aria-label': ariaLabel }: React.ComponentProps<'button'>) =>
+    React.createElement('button', { type: 'button', onClick, 'aria-label': ariaLabel }, children),
+}));
+
+vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
+  ProvisioningProgressBlock: ({
+    currentStepIndex,
+    loading,
+    message,
+    successMessage,
+    successMessageSeverity,
+  }: {
+    currentStepIndex: number;
+    loading?: boolean;
+    message?: string | null;
+    successMessage?: string | null;
+    successMessageSeverity?: string;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'progress-block',
+        'data-current-step-index': String(currentStepIndex),
+        'data-loading': loading ? 'true' : 'false',
+        'data-success-severity': successMessageSeverity ?? '',
+      },
+      [successMessage, message].filter(Boolean).join(' ')
+    ),
+}));
+
+import { TeamProvisioningBanner } from '@renderer/components/team/TeamProvisioningBanner';
+
+describe('TeamProvisioningBanner launch-step alignment', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  beforeEach(() => {
+    storeState.selectedTeamName = 'northstar-core';
+    storeState.provisioningErrorByTeam = {};
+    storeState.clearProvisioningError.mockReset();
+    storeState.clearProvisioningError.mockImplementation((teamName: string) => {
+      delete storeState.provisioningErrorByTeam[teamName];
+    });
+    storeState.progress = {
+      runId: 'run-1',
+      teamName: 'northstar-core',
+      state: 'ready',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Launch completed',
+      messageSeverity: undefined,
+      pid: 1234,
+      cliLogsTail: '',
+      assistantOutput: '',
+    };
+    storeState.retryFailedRuntimeLanes.mockResolvedValue({
+      attempted: [],
+      confirmed: [],
+      pending: [],
+      failed: [],
+      skipped: [],
+    });
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {};
+    storeState.selectedTeamData.members = [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
+      { name: 'bob', agentType: 'developer', runtimeAdvisory: undefined },
+      { name: 'jack', agentType: 'developer', runtimeAdvisory: undefined },
+    ];
+    storeState.teamDataCacheByName['northstar-core'] = {
+      members: [...storeState.selectedTeamData.members],
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 0,
+        pendingCount: 3,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      source: 'merged',
+    };
+  });
+
+  it('shows and dismisses an early launch error without inventing runtime progress', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = null;
+    const error =
+      'Worktree for member "Bob" is on "m0merge", expected "agent-teams/team/bob": /test/worktree';
+    storeState.provisioningErrorByTeam = {
+      'northstar-core': error,
+      'other-team': 'Other launch failed',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(error);
+    expect(host.textContent).not.toContain('Other launch failed');
+    expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+    const dismiss = host.querySelector('button[aria-label]');
+    expect(dismiss).not.toBeNull();
+    await act(async () => {
+      dismiss?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(storeState.clearProvisioningError).toHaveBeenCalledWith('northstar-core');
+    expect(storeState.provisioningErrorByTeam['other-team']).toBe('Other launch failed');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamProvisioningBanner, { key: 'reopen', teamName: 'northstar-core' })
+      );
+    });
+    expect(host.textContent).toBe('');
+
+    storeState.provisioningErrorByTeam['northstar-core'] = error;
+    await act(async () => {
+      root.render(
+        React.createElement(TeamProvisioningBanner, { key: 'retry', teamName: 'northstar-core' })
+      );
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(error);
+    await act(async () => root.unmount());
+  });
+
+  it('does not render another team error when this team has no progress or error', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = null;
+    storeState.provisioningErrorByTeam = { 'other-team': 'Other launch failed' };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+    expect(host.textContent).toBe('');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps real failed progress instead of rendering a second early-error banner', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = { ...storeState.progress, state: 'failed', message: 'Runtime failed' };
+    storeState.provisioningErrorByTeam = { 'northstar-core': 'Runtime failed' };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+    expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it('keeps Members joining as the active step while teammates are still starting after ready', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.getAttribute('data-loading')).toBe('true');
+    expect(block?.textContent).toContain('Finishing launch');
+    expect(block?.textContent).toContain('3 teammates still joining');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('derives teammate counts from team cache even when the team is not selected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamName = 'other-team';
+    storeState.progress = {
+      runId: 'run-2',
+      teamName: 'northstar-core',
+      state: 'ready',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Launch completed',
+      messageSeverity: undefined,
+      pid: 1234,
+      cliLogsTail: '',
+      assistantOutput: '',
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined as unknown as Record<
+      string,
+      unknown
+    >;
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {
+      alice: { status: 'waiting', launchState: 'starting' },
+      bob: { status: 'waiting', launchState: 'starting' },
+      jack: { status: 'waiting', launchState: 'starting' },
+    } as Record<string, unknown>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.textContent).toContain('3 teammates still joining');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps Starting active until a real provisioning pid exists', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = {
+      runId: 'run-1',
+      teamName: 'northstar-core',
+      state: 'configuring',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Waiting for team configuration...',
+      messageSeverity: undefined,
+      cliLogsTail: '',
+      assistantOutput: '',
+      configReady: false,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('0');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps Team setup active while config is not ready after the process starts', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = {
+      runId: 'run-1',
+      teamName: 'northstar-core',
+      state: 'configuring',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Waiting for team configuration...',
+      messageSeverity: undefined,
+      pid: 4321,
+      cliLogsTail: '',
+      assistantOutput: '',
+      configReady: false,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('1');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('advances to Finalizing once teammate runtimes are attached even before contact is confirmed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = {
+      runId: 'run-1',
+      teamName: 'northstar-core',
+      state: 'finalizing',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Waiting for teammate bootstrap confirmations...',
+      messageSeverity: undefined,
+      pid: 4321,
+      cliLogsTail: '',
+      assistantOutput: '',
+      configReady: true,
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 0,
+        pendingCount: 3,
+        failedCount: 0,
+        runtimeAlivePendingCount: 3,
+        runtimeProcessPendingCount: 3,
+      },
+      source: 'merged',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('3');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows all steps complete only after teammates actually made contact', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 3,
+        pendingCount: 0,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      source: 'merged',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('4');
+    expect(block?.textContent).toContain('all 3 teammates joined');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not mark Members joining complete when launch finishes with failed teammates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {
+      alice: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        agentToolAccepted: true,
+      },
+      bob: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: 'OpenCode lane failed before bootstrap',
+        agentToolAccepted: false,
+      },
+      jack: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        agentToolAccepted: true,
+      },
+    } as Record<string, unknown>;
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 2,
+        pendingCount: 0,
+        failedCount: 1,
+        runtimeAlivePendingCount: 0,
+      },
+      source: 'merged',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.getAttribute('data-loading')).toBe('false');
+    expect(block?.getAttribute('data-success-severity')).toBe('warning');
+    expect(block?.textContent).toContain('Launch finished with errors');
+    expect(block?.textContent).toContain('bob failed to start');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders a bulk retry action for failed OpenCode secondary teammates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.members = [
+      { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' },
+      {
+        name: 'alice',
+        agentType: 'developer',
+        providerId: 'opencode',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+    ];
+    storeState.teamDataCacheByName['northstar-core'] = {
+      members: [...storeState.selectedTeamData.members],
+    };
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {
+      alice: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: 'OpenRouter credits exhausted',
+        agentToolAccepted: false,
+      },
+    } as Record<string, unknown>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Retry failed OpenCode teammates');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses info severity while runtimes are online but teammate contact is still pending', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 0,
+        pendingCount: 3,
+        failedCount: 0,
+        runtimeAlivePendingCount: 3,
+      },
+      source: 'merged',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.getAttribute('data-success-severity')).toBe('info');
+    expect(block?.textContent).toContain('Finishing launch');
+    expect(block?.textContent).toContain('3 teammates still joining');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('surfaces provider retry wording when pending runtimes are retrying provider capacity', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.members = [
+      { name: 'team-lead', agentType: 'team-lead' },
+      {
+        name: 'alice',
+        agentType: 'reviewer',
+        runtimeAdvisory: {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-09T10:00:00.000Z',
+          retryUntil: '2026-04-09T10:00:45.000Z',
+          retryDelayMs: 45_000,
+        },
+      },
+      {
+        name: 'bob',
+        agentType: 'developer',
+        runtimeAdvisory: {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-09T10:00:00.000Z',
+          retryUntil: '2026-04-09T10:00:45.000Z',
+          retryDelayMs: 45_000,
+        },
+      },
+      {
+        name: 'jack',
+        agentType: 'developer',
+        runtimeAdvisory: {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-09T10:00:00.000Z',
+          retryUntil: '2026-04-09T10:00:45.000Z',
+          retryDelayMs: 45_000,
+        },
+      },
+    ];
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {
+      alice: {
+        status: 'online',
+        launchState: 'runtime_pending_bootstrap',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: true,
+      },
+      bob: {
+        status: 'online',
+        launchState: 'runtime_pending_bootstrap',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: true,
+      },
+      jack: {
+        status: 'online',
+        launchState: 'runtime_pending_bootstrap',
+        updatedAt: '2026-04-09T10:00:00.000Z',
+        runtimeAlive: true,
+      },
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: ['alice', 'bob', 'jack'],
+      statuses: {},
+      summary: {
+        confirmedCount: 1,
+        pendingCount: 3,
+        failedCount: 0,
+        runtimeAlivePendingCount: 3,
+      },
+      source: 'merged',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.textContent).toContain('Finishing launch');
+    expect(block?.textContent).toContain('2 teammates still joining');
+    expect(block?.getAttribute('data-success-severity')).toBe('info');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('trusts persisted snapshot member statuses even when expectedMembers and team cache are stale', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.members = [{ name: 'team-lead', agentType: 'team-lead' }];
+    storeState.teamDataCacheByName['northstar-core'] = {
+      members: [...storeState.selectedTeamData.members],
+    };
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {};
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
+      runId: 'run-1',
+      expectedMembers: [],
+      statuses: {
+        alice: {
+          status: 'online',
+          launchState: 'runtime_pending_bootstrap',
+          updatedAt: '2026-04-09T10:00:00.000Z',
+          runtimeAlive: true,
+          livenessSource: 'process',
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          agentToolAccepted: true,
+        },
+      },
+      summary: {
+        confirmedCount: 0,
+        pendingCount: 1,
+        failedCount: 0,
+        runtimeAlivePendingCount: 1,
+      },
+      source: 'persisted',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.textContent).toContain('Finishing launch');
+    expect(block?.textContent).toContain('1 teammate still joining');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});

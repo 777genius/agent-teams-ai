@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
+  <rect width="1200" height="750" rx="32" fill="#0f172a" />
+  <rect x="80" y="90" width="1040" height="570" rx="24" fill="#111827" stroke="#334155" stroke-width="2" />
+  <rect x="120" y="140" width="420" height="24" rx="12" fill="#22c55e" />
+  <rect x="120" y="200" width="360" height="16" rx="8" fill="#334155" />
+  <rect x="120" y="240" width="560" height="16" rx="8" fill="#334155" />
+  <rect x="120" y="280" width="520" height="16" rx="8" fill="#334155" />
+  <rect x="760" y="190" width="300" height="260" rx="16" fill="#1f2937" stroke="#4b5563" stroke-width="2" />
+  <text x="120" y="520" font-family="Arial, sans-serif" font-size="32" fill="#e2e8f0">Settings</text>
+</svg>

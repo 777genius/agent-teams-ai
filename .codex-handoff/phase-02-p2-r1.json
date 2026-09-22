@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.R1.ARCH_SECURITY",
+  "laneId": "p2-r1-architecture-security",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "disposition": "ACCEPT",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.R1.ARCH_SECURITY",
+      "path": "docs/research/hosted-web/phase-2/reviews/parallel-wave-architecture-security.md",
+      "proofLevel": "target_verified",
+      "sha256": "1ec9d2a5b5d8a201d1c33f2c789c4d122607a945cc7847a457c6284a1e8a9986"
+    }
+  ],
+  "evidenceIds": ["P2.R1.ARCH_SECURITY"],
+  "reviewer": {
+    "role": "independent-p2-parallel-wave-architecture-security-reviewer",
+    "taskId": "agent-teams-hosted-web-refactor-p2-parallel-wave-arch-security-review-v17-r2",
+    "provider": "codex",
+    "independentOfLaneProducers": true,
+    "candidateBytesAltered": false,
+    "subagentsOrAdditionalReviewersUsed": 0
+  },
+  "authority": {
+    "canonicalSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "headMatchesCanonicalSha": true,
+    "packetRevisionMatchesExecutionIndex": true,
+    "phaseTwoControllerAndDagRead": true,
+    "allFiveLanePacketsAndHandoffsRead": true,
+    "aggregateDiffReadCompletely": true,
+    "allThirtyFiveCurrentPathsRead": true,
+    "foundationIntegrationEvidenceRead": true,
+    "foundationIdentifierSha256": "73978dd8871f3af363810b9a90b4a42b464982a25898eac082677b9557d1dc41",
+    "foundationHostedIndexSha256": "a11b722edd3a9fb1b4ea451bbbf2f01703a93897515092ceefc6bef5157bbac2",
+    "authorityMismatchCount": 0
+  },
+  "reviewedAggregate": {
+    "brokerMaterializedPatchSha256": "d4f80a5c60f9fc7925ccaeb4480cf4349bc3d267d71e76413d3f4b41b402fade",
+    "patchByteLength": 531340,
+    "patchLineCount": 13738,
+    "provenanceSha256": "172f0a87e6607d1a9fe2f88d57ccdb9644049250a938502d41b2910a11f97d3f",
+    "stagedGitDiffSha256": "a322c6c8312ca9163b7e4578bc0b8cb59239b8cc0e443edaf6b81e00a42d1468",
+    "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "orderedReviewedOutputCount": 5,
+    "candidateChangedPathCount": 35,
+    "candidatePathsStaged": 35,
+    "candidateUnstagedByteDiffCount": 0,
+    "candidateBytesUnchangedByReviewer": true
+  },
+  "reviewedOutputs": [
+    {
+      "lane": "P2.A",
+      "reviewedOutputId": "58ac7a2cf712aec3254f8184ce6217def09a3b3200e0921f726a4f2f902b75f6",
+      "componentPatchSha256": "b231c636fc62c06994c5f12b8e1c2964b729b8fb60fc3f1f7c57ba0a80e5dfd3",
+      "changedPathCount": 5,
+      "handoffStatus": "verified",
+      "selfReviewComplete": true,
+      "terminalState": "HOLD",
+      "findingCounts": { "P0": 0, "P1": 0, "P2": 0 }
+    },
+    {
+      "lane": "P2.B",
+      "reviewedOutputId": "684bd31df38eaba57259ead6003a8596d37442bd58fc797961d51b2a2395d21d",
+      "componentPatchSha256": "9f83993858436493e18f5272c0c2bfe58e2bf83adefbad817fc9bf84a83a8282",
+      "changedPathCount": 5,
+      "handoffStatus": "verified",
+      "selfReviewComplete": true,
+      "terminalState": "HOLD",
+      "findingCounts": { "P0": 0, "P1": 0, "P2": 0 }
+    },
+    {
+      "lane": "P2.C",
+      "reviewedOutputId": "349546a6232433cc96381f109cfd24996230b23b2a99c36fec6a52843adc9d09",
+      "componentPatchSha256": "a001dfd1b5c91889ddecb7b8b63437a9fc994b2bac7134b4de20d7d2da408f2e",
+      "changedPathCount": 8,
+      "handoffStatus": "verified",
+      "selfReviewComplete": true,
+      "terminalState": "HOLD",
+      "findingCounts": { "P0": 0, "P1": 0, "P2": 0 }
+    },
+    {
+      "lane": "P2.D",
+      "reviewedOutputId": "ba27e423827f9923b48157338dafbe2765a6ec405c9dc8ba2bf747fe46e8c47f",
+      "componentPatchSha256": "98cbb0ef4cfc08af4d8713d68a37e9dad48a588d3b9441cdf423f938bf4a0079",
+      "changedPathCount": 7,
+      "handoffStatus": "verified",
+      "selfReviewComplete": true,
+      "terminalState": "HOLD",
+      "findingCounts": { "P0": 0, "P1": 0, "P2": 0 }
+    },
+    {
+      "lane": "P2.E",
+      "reviewedOutputId": "e3e56150f4fe8eed39c0504011ffb44d3b17610324420c5d2fb3394b34a5b2b7",
+      "componentPatchSha256": "d5430f2aa21ddd8eb57f51e43a237629702925a34f6c1120929b4dafdb8bf89e",
+      "changedPathCount": 10,
+      "handoffStatus": "verified",
+      "selfReviewComplete": true,
+      "terminalState": "HOLD",
+      "findingCounts": { "P0": 0, "P1": 0, "P2": 0 }
+    }
+  ],
+  "ownershipProof": {
+    "lanePathCounts": [5, 5, 8, 7, 10],
+    "declaredPathCount": 35,
+    "uniquePathCount": 35,
+    "pairwiseIntersectionCount": 0,
+    "allTenPairwiseIntersectionsEmpty": true,
+    "sharedEntrypointOrCompositionPathCount": 0,
+    "siblingImplementationImportCount": 0,
+    "allFiveLanesDisjoint": true,
+    "allFiveLanesSemanticallyIndependent": true
+  },
+  "gateResults": {
+    "exactlyFiveValidApprovedLanes": "pass",
+    "pairwiseOwnershipAndSiblingIndependence": "pass",
+    "opaqueIdentifiers": "pass",
+    "safeRootAdmission": "pass",
+    "durablePublicationAndRecovery": "pass",
+    "toctouDefense": "pass",
+    "teamIdentityReadsBoundedBeforeAttackerControlledAllocation": "pass",
+    "teamIdentityOversizeAndRaceFailureClosed": "pass",
+    "teamRemovalPerformsZeroPhysicalDelete": "pass",
+    "descriptorProvedConfiglessNestedQuarantine": "pass",
+    "movedInodeAndContainerReproof": "pass",
+    "containerThenParentFsyncOrdering": "pass",
+    "realTeamConfigReaderListingInvisibility": "pass",
+    "nestedConfigAndSentinelRecoverability": "pass",
+    "queryContextAuthorizationCancellationDeadlineBeforeIo": "pass",
+    "queryContextRecheckedBeforeFollowupIo": "pass",
+    "cappedReadsAndExactDtoProjection": "pass",
+    "transportNeutrality": "pass",
+    "noHiddenHostedMutation": "pass",
+    "noPathSecretCredentialOrProviderPayloadLeakage": "pass",
+    "producerSelfReviewsComplete": "pass",
+    "exactScope": "pass"
+  },
+  "checks": [
+    {
+      "lane": "P2.A",
+      "command": "pnpm exec vitest run test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testsPassed": 37,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.A foundation regression",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testsPassed": 36,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.B",
+      "command": "pnpm exec vitest run test/features/internal-storage/TeamIdentityStorage.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testsPassed": 17,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.B worker regression",
+      "command": "pnpm exec vitest run test/features/internal-storage/InternalStorageWorkerCore.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testsPassed": 14,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.C",
+      "command": "pnpm exec vitest run test/features/workspace-registry/core/WorkspaceRegistration.test.ts test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 3,
+      "testsPassed": 28,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.D",
+      "command": "pnpm exec vitest run test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testsPassed": 25,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.E",
+      "command": "pnpm exec vitest run test/features/team-lifecycle/core/ListTeamLifecycle.test.ts test/features/team-lifecycle/TeamLifecycleReadApi.test.ts test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 3,
+      "testsPassed": 22,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.E lifecycle regression",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testsPassed": 16,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "lane": "P2.E QueryContext regression",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testsPassed": 1,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "command": "five exact per-lane pnpm lint:fast:files commands",
+      "exitCode": 0,
+      "laneTypeScriptPathCounts": [4, 4, 7, 6, 9]
+    },
+    { "command": "pnpm typecheck", "exitCode": 0, "diagnosticCount": 0 },
+    {
+      "command": "pnpm exec prettier --check <exact 35 aggregate paths>",
+      "exitCode": 0,
+      "checkedPathCount": 35
+    },
+    {
+      "command": "git diff --check && git diff --cached --check && git diff HEAD --check",
+      "exitCode": 0
+    },
+    {
+      "command": "broker provenance pairwise ownership proof",
+      "exitCode": 0,
+      "lanePathCounts": [5, 5, 8, 7, 10],
+      "uniquePathCount": 35,
+      "pairwiseIntersectionCount": 0
+    },
+    {
+      "command": "classified aggregate secret/private-path/provider/transport/destructive-delete scans",
+      "exitCode": 0,
+      "highConfidenceSecretPayloadMatchCount": 0,
+      "productionPhysicalDeleteCallMatchCount": 0,
+      "allMatchesClassified": true
+    }
+  ],
+  "testSummary": {
+    "testFilesPassed": 17,
+    "testFilesTotal": 17,
+    "testsPassed": 196,
+    "testsTotal": 196,
+    "allRequiredLaneAndRegressionChecksReplayed": true
+  },
+  "securityProofs": {
+    "boundedIdentityReads": {
+      "identityMaxBytes": 4096,
+      "rootMarkerMaxBytes": 2048,
+      "allocationRule": "maxBytes + 1 only",
+      "attackerControlledSizeAllocation": false,
+      "decodeOccursOnlyAfterCapAndMetadataStabilityChecks": true,
+      "failsClosed": true
+    },
+    "teamRemoval": {
+      "productionRmUnlinkRmdirCallCount": 0,
+      "durableTombstoneBeforeMove": true,
+      "quarantineContainer": ".p2-d-removal-quarantine",
+      "containerHasDirectConfig": false,
+      "teamDirectoryNestedOneLevelBelowContainer": true,
+      "originalAndMovedInodeReproved": true,
+      "containerBindingReproved": true,
+      "fsyncOrder": ["quarantine_container", "parent"],
+      "postFsyncReproof": true,
+      "realTeamConfigReaderDoesNotListMovedTeam": true,
+      "nestedConfigAndSentinelRecoverable": true
+    },
+    "queryContext": {
+      "authorizationBeforeIo": true,
+      "cancellationBeforeIo": true,
+      "deadlineBeforeIo": true,
+      "recheckedBeforeFollowupIo": true,
+      "sameContextObjectPropagated": true,
+      "unauthorizedCancelledExpiredZeroIo": true
+    },
+    "leakage": {
+      "secretOrCredentialPayloadCount": 0,
+      "privateOrRealProjectPathPayloadCount": 0,
+      "providerCredentialOrPayloadCount": 0,
+      "unsafeReflectedErrorCount": 0,
+      "allTextMatchesClassified": true
+    }
+  },
+  "reviewerOwnedPaths": [
+    "docs/research/hosted-web/phase-2/reviews/parallel-wave-architecture-security.md",
+    ".codex-handoff/phase-02-p2-r1.json"
+  ],
+  "scopeProof": {
+    "candidatePathCount": 35,
+    "reviewerOutputPathCount": 2,
+    "totalWorkspaceChangedPathCount": 37,
+    "candidatePathsStaged": 35,
+    "candidateUnstagedByteDiffCount": 0,
+    "reviewerOutputsUntracked": 2,
+    "onlyAuthorizedAggregateAndReviewerPathsChanged": true,
+    "producerPathsAlteredByReviewer": false
+  },
+  "findingCounts": { "P0": 0, "P1": 0, "P2": 0 },
+  "findings": { "P0": [], "P1": [], "P2": [] },
+  "unverifiedClaims": [
+    "P2.I serial cross-lane composition and concrete adapters",
+    "production live filesystem revalidation and the full ADR-28 openat2 runtime topology",
+    "production IPC, HTTP, preload, renderer, provider and runtime wiring",
+    "backup recovery as a coordinated recovery point",
+    "physical quarantine retention policy and garbage collection",
+    "integration, commit, push, remote equality, successor execution and Phase 2 activation or milestone acceptance"
+  ],
+  "finalValidation": {
+    "jsonParsePassed": true,
+    "reviewerOutputPrettierPassed": true,
+    "reviewMarkdownHashRecomputed": true,
+    "aggregateArtifactHashRecomputed": true,
+    "stagedCandidateHashRecomputedAfterReviewerOutputs": true,
+    "candidateUnstagedByteDiffCount": 0,
+    "finalChangedPathCount": 37,
+    "onlyAuthorizedPathsChanged": true,
+    "completeOutputReread": true,
+    "completeDiffReread": true
+  },
+  "blockers": [],
+  "generatedAt": "2026-07-16T18:48:33Z",
+  "nextAction": "P2.I.INTEGRATION"
+}

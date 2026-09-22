@@ -1,0 +1,45 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "environment": {
+    "runtime": "Node.js ABI 137",
+    "driver": "better-sqlite3 12.11.1",
+    "filesystem": "temporary marker-owned Linux fixture"
+  },
+  "implementation": "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+  "results": [
+    {
+      "case": "wal-active snapshot",
+      "expected": "Database#backup completes while source WAL exists; copied DB independently reopens and integrity_check=ok",
+      "status": "verified-by-targeted-test"
+    },
+    {
+      "case": "SQLITE_BUSY/SQLITE_LOCKED",
+      "expected": "typed backup_busy, partial destination removed, no DB/WAL/SHM raw-copy fallback",
+      "status": "verified-by-fault-injected-adapter"
+    },
+    {
+      "case": "source corruption",
+      "expected": "source_corrupt before backup starts and no destination publication",
+      "status": "verified-by-corrupt-file-test"
+    },
+    {
+      "case": "bounded deadline",
+      "expected": "progress callback aborts with backup_deadline and removes partial destination",
+      "status": "verified-by-fault-injected-clock"
+    },
+    {
+      "case": "production worker async wire",
+      "expected": "worker entry must await the Promise before postMessage and use a backup-specific timeout",
+      "status": "not-implemented-phase0-by-design"
+    }
+  ],
+  "forbiddenFallback": "The spike contains no copyFile/readFile/writeFile/checkpoint path for database bytes or -wal/-shm; any error removes partial destination and propagates typed failure.",
+  "proofLevel": "executable-spike",
+  "limitations": [
+    "BUSY is deterministically injected at the Database#backup adapter boundary because inducing a portable real SQLite Online Backup BUSY across supported builds is timing-dependent.",
+    "This proves the Node ABI available in the lane environment, not the final packaged Electron ABI or final container image; W6/integration must repeat the artifact probe."
+  ]
+}

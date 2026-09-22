@@ -1,0 +1,67 @@
+import type { CliProviderModelCatalogItem, CliProviderReasoningEffort } from '@shared/types';
+
+const DEFAULT_CODEX_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
+const GPT_5_6_SOL_TERRA_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'] as const;
+const GPT_5_6_LUNA_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+const MINI_CODEX_EFFORTS = ['medium', 'high'] as const;
+
+function createFallbackModel(options: {
+  id: string;
+  displayName: string;
+  badgeLabel: string;
+  isDefault?: boolean;
+  efforts?: readonly CliProviderReasoningEffort[];
+  defaultEffort?: CliProviderReasoningEffort;
+}): CliProviderModelCatalogItem {
+  const efforts = [...(options.efforts ?? DEFAULT_CODEX_EFFORTS)];
+  return {
+    id: options.id,
+    launchModel: options.id,
+    displayName: options.displayName,
+    hidden: false,
+    supportedReasoningEfforts: efforts,
+    defaultReasoningEffort: options.defaultEffort ?? 'medium',
+    inputModalities: ['text', 'image'],
+    supportsPersonality: false,
+    isDefault: options.isDefault === true,
+    upgrade: false,
+    source: 'static-fallback',
+    badgeLabel: options.badgeLabel,
+  };
+}
+
+export function createStaticCodexModelCatalogModels(): CliProviderModelCatalogItem[] {
+  return [
+    createFallbackModel({
+      id: 'gpt-5.6-sol',
+      displayName: 'GPT-5.6 Sol',
+      badgeLabel: '5.6-sol',
+      efforts: GPT_5_6_SOL_TERRA_EFFORTS,
+      defaultEffort: 'low',
+      isDefault: true,
+    }),
+    createFallbackModel({
+      id: 'gpt-5.6-terra',
+      displayName: 'GPT-5.6 Terra',
+      badgeLabel: '5.6-terra',
+      efforts: GPT_5_6_SOL_TERRA_EFFORTS,
+    }),
+    createFallbackModel({
+      id: 'gpt-5.6-luna',
+      displayName: 'GPT-5.6 Luna',
+      badgeLabel: '5.6-luna',
+      efforts: GPT_5_6_LUNA_EFFORTS,
+    }),
+    createFallbackModel({
+      id: 'gpt-5.5',
+      displayName: 'GPT-5.5',
+      badgeLabel: '5.5',
+    }),
+    createFallbackModel({
+      id: 'gpt-5.3-codex-spark',
+      displayName: 'GPT-5.3 Codex Spark',
+      badgeLabel: '5.3-spark',
+      efforts: MINI_CODEX_EFFORTS,
+    }),
+  ];
+}

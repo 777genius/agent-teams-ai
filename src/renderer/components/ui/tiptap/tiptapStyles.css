@@ -1,0 +1,235 @@
+/* =============================================================================
+   TiptapEditor — ProseMirror DOM styles
+   Значения извлечены из MarkdownViewer.tsx для pixel-perfect совпадения
+   ============================================================================= */
+
+/* === Placeholder === */
+.tiptap-editor-wrapper .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-text-muted);
+  font-size: 0.875rem; /* text-sm */
+}
+
+/* === Base text === */
+.tiptap-editor-wrapper .tiptap {
+  outline: none;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.625; /* leading-relaxed */
+  color: var(--prose-body);
+}
+
+/* === Headings === */
+.tiptap-editor-wrapper .tiptap h1 {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 600; /* font-semibold */
+  color: var(--prose-heading);
+  margin-top: 1rem; /* mt-4 */
+  margin-bottom: 0.5rem; /* mb-2 */
+}
+
+.tiptap-editor-wrapper .tiptap h2 {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600;
+  color: var(--prose-heading);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-wrapper .tiptap h3 {
+  font-size: 1rem; /* text-base */
+  font-weight: 600;
+  color: var(--prose-heading);
+  margin-top: 0.75rem; /* mt-3 */
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-wrapper .tiptap :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+
+/* === Paragraphs === */
+.tiptap-editor-wrapper .tiptap p {
+  margin-top: 0.5rem; /* my-2 */
+  margin-bottom: 0.5rem;
+  color: var(--prose-body);
+}
+
+.tiptap-editor-wrapper .tiptap p:first-child {
+  margin-top: 0;
+}
+
+.tiptap-editor-wrapper .tiptap p:last-child {
+  margin-bottom: 0;
+}
+
+/* === Strong/Em/Strike === */
+.tiptap-editor-wrapper .tiptap strong {
+  font-weight: 600;
+  color: var(--prose-heading);
+}
+
+.tiptap-editor-wrapper .tiptap em {
+  font-style: italic;
+}
+
+.tiptap-editor-wrapper .tiptap s {
+  text-decoration: line-through;
+}
+
+/* === Inline code === */
+.tiptap-editor-wrapper .tiptap code {
+  border-radius: 0.25rem; /* rounded */
+  padding: 0.125rem 0.375rem; /* px-1.5 py-0.5 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem; /* text-xs */
+  background-color: var(--prose-code-bg);
+  color: var(--prose-code-text);
+  word-break: break-all;
+}
+
+/* === Code blocks (pre > code) === */
+.tiptap-editor-wrapper .tiptap pre {
+  margin-top: 0.75rem; /* my-3 */
+  margin-bottom: 0.75rem;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.5rem; /* rounded-lg */
+  padding: 0.75rem; /* p-3 */
+  font-size: 0.75rem; /* text-xs */
+  line-height: 1.625;
+  background-color: var(--prose-pre-bg);
+  border: 1px solid var(--prose-pre-border);
+}
+
+.tiptap-editor-wrapper .tiptap pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: var(--color-text);
+  word-break: normal;
+}
+
+/* === Blockquote === */
+.tiptap-editor-wrapper .tiptap blockquote {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-left: 4px solid var(--prose-blockquote-border);
+  padding-left: 1rem; /* pl-4 */
+  font-style: italic;
+  color: var(--prose-muted);
+}
+
+/* Reset inner margins at blockquote boundaries */
+.tiptap-editor-wrapper .tiptap blockquote > :first-child {
+  margin-top: 0;
+}
+
+.tiptap-editor-wrapper .tiptap blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* === Lists === */
+.tiptap-editor-wrapper .tiptap ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  list-style-type: disc;
+  padding-left: 1.25rem; /* pl-5 */
+  color: var(--prose-body);
+}
+
+.tiptap-editor-wrapper .tiptap ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  color: var(--prose-body);
+}
+
+/* Nested list bullet styles: disc → circle → square */
+.tiptap-editor-wrapper .tiptap ul ul {
+  list-style-type: circle;
+}
+
+.tiptap-editor-wrapper .tiptap ul ul ul {
+  list-style-type: square;
+}
+
+/* Nested lists inside li — reduce top margin */
+.tiptap-editor-wrapper .tiptap li > ul,
+.tiptap-editor-wrapper .tiptap li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.tiptap-editor-wrapper .tiptap li {
+  font-size: 0.875rem;
+  color: var(--prose-body);
+}
+
+.tiptap-editor-wrapper .tiptap li + li {
+  margin-top: 0.25rem; /* space-y-1 */
+}
+
+/* ProseMirror wraps li content in <p> — reset paragraph margins inside list items */
+.tiptap-editor-wrapper .tiptap li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.tiptap-editor-wrapper .tiptap li > p + p {
+  margin-top: 0.25rem;
+}
+
+/* === Horizontal rule === */
+.tiptap-editor-wrapper .tiptap hr {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border-color: var(--prose-table-border);
+}
+
+/* === Links === */
+.tiptap-editor-wrapper .tiptap a {
+  color: var(--prose-link);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tiptap-editor-wrapper .tiptap a:hover {
+  text-decoration: underline;
+}
+
+/* === Gap cursor — ProseMirror invisible without styles === */
+.tiptap-editor-wrapper .tiptap .ProseMirror-gapcursor {
+  position: relative;
+}
+
+.tiptap-editor-wrapper .tiptap .ProseMirror-gapcursor::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid var(--color-text);
+  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes ProseMirror-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* === Selection styles — для readonly mode === */
+.tiptap-editor-wrapper .tiptap ::selection {
+  background-color: rgba(99, 102, 241, 0.3); /* indigo with opacity */
+}
+
+/* === Focus ring для wrapper при фокусе внутри === */
+.tiptap-editor-wrapper:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-border-emphasis);
+}

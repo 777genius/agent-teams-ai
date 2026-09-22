@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "generation-mismatch",
+  "taskId": "fixture-generation-mismatch",
+  "description": "Fixture with intentionally mismatched freshness metadata to force journal fallback.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/mismatch.ts"
+    ],
+    "relationKinds": []
+  }
+}

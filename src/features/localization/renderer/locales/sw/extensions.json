@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Ongeza Maalum",
+      "openDashboard": "Fungua Dashibodi",
+      "refreshCatalog": "Onyesha upya katalogi"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Programu-jalizi: {{status}}",
+      "skills": "Ujuzi: {{status}}"
+    },
+    "desktopOnly": "Inapatikana katika programu ya eneo-kazi pekee.",
+    "provider": {
+      "checkingStatus": "Inakagua hali ya mtoa huduma...",
+      "connected": "Imeunganishwa",
+      "loading": "Inapakia...",
+      "needsSetup": "Inahitaji usanidi",
+      "readyToConfigure": "Tayari kusanidi",
+      "unsupported": "Haungwi mkono"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Viendelezi vinahitaji runtime iliyosanidiwa ili kudhibiti programu-jalizi, seva za MCP, ujuzi, na miunganisho ya watoa huduma.",
+      "checkingAvailabilityTitle": "Inakagua upatikanaji wa runtime ya viendelezi",
+      "failedToStartDescription": "Viendelezi vimezimwa hadi runtime ipite ukaguzi wake wa afya wa uanzishaji. Fungua Dashibodi ili kuirekebisha au kuisakinisha upya.",
+      "failedToStartTitle": "Runtime iliyosanidiwa ilipatikana lakini imeshindwa kuanza",
+      "multimodelCapabilitiesDescription": "Usaidizi wa mtoa huduma unaweza kutofautiana kwa sehemu. Programu-jalizi zinaonyeshwa tu pale runtime inapotangaza usaidizi kwa uwazi.",
+      "multimodelCapabilitiesTitle": "Uwezo wa runtime ya modeli nyingi",
+      "needsSignInDescription": "{{runtime}} ilipatikana{{version}}, lakini usakinishaji wa programu-jalizi umezimwa hadi uingie kutoka Dashibodi.",
+      "needsSignInTitle": "{{runtime}} inahitaji kuingia",
+      "notAvailableDescription": "Viendelezi vimezimwa hadi runtime isakinishwe. Fungua Dashibodi ili kuisakinisha na ujaribu tena.",
+      "notAvailableTitle": "Runtime iliyosanidiwa haipatikani",
+      "readyDescription": "Programu-jalizi zinaweza kusakinishwa kutoka ukurasa huu{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} iko tayari",
+      "requiredForMutations": "Runtime iliyosanidiwa inahitajika ili kusakinisha au kuondoa viendelezi. Isakinishe au irekebishe kutoka Dashibodi."
+    },
+    "sessionsRestartWarning": "Vipindi vinavyoendeshwa havitachukua mabadiliko ya viendelezi hadi vianzishwe upya.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Funguo za siri za huduma za mtandaoni. Ziongeze hapa ili programu-jalizi, seva, na miunganisho viweze kuunganisha na kufanya kazi.",
+        "label": "Funguo za API"
+      },
+      "mcpServers": {
+        "description": "Miunganisho na zana na programu za nje. Inaruhusu runtime kusoma data au kufanya vitendo zaidi ya programu hii.",
+        "label": "Seva za MCP"
+      },
+      "plugins": {
+        "description": "Viongezi vidogo vya runtime. Katika hali ya modeli nyingi kwa sasa vinatumika kwa vipindi vya Anthropic vinapoungwa mkono. Usaidizi mpana wa watoa huduma uko katika maendeleo.",
+        "label": "Programu-jalizi"
+      },
+      "skills": {
+        "description": "Maagizo yaliyotengenezwa tayari kwa kazi za kawaida. Yanasaidia runtime kushughulikia kazi zinazorudiwarudiwa kwa uthabiti zaidi.",
+        "label": "Ujuzi"
+      }
+    },
+    "title": "Viendelezi"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} hai",
+    "browseByFit": "Vinjari kwa ulinganifu",
+    "capabilities": "Uwezo",
+    "categories": "Kategoria",
+    "clearAllFilters": "Futa vichujio vyote",
+    "clearFilters": "Futa vichujio",
+    "counts": {
+      "capabilities": "uwezo {{count}}",
+      "categories": "kategoria {{count}}",
+      "plugins": "programu-jalizi {{count}}",
+      "capabilities_few": "uwezo {{count}}",
+      "capabilities_many": "uwezo {{count}}",
+      "capabilities_one": "uwezo {{count}}",
+      "capabilities_other": "uwezo {{count}}",
+      "categories_few": "kategoria {{count}}",
+      "categories_many": "kategoria {{count}}",
+      "categories_one": "kategoria {{count}}",
+      "categories_other": "kategoria {{count}}",
+      "plugins_few": "programu-jalizi {{count}}",
+      "plugins_many": "programu-jalizi {{count}}",
+      "plugins_one": "programu-jalizi {{count}}",
+      "plugins_other": "programu-jalizi {{count}}"
+    },
+    "empty": {
+      "description": "Rudi baadaye kwa programu-jalizi mpya",
+      "filteredDescription": "Jaribu kurekebisha utafutaji wako au vigezo vya kichujio",
+      "filteredTitle": "Hakuna programu-jalizi zinazolingana na vichujio vyako",
+      "title": "Hakuna programu-jalizi zinazopatikana"
+    },
+    "filterDescription": "Punguza katalogi kwa kategoria, uwezo, au hali ya usakinishaji.",
+    "installedOnly": "Zilizosakinishwa pekee",
+    "providerSupportNotice": "Usaidizi wa programu-jalizi kwa sasa unahakikishwa kwa vipindi vya Anthropic (Claude) pekee. Tunafanya kazi kuunga mkono programu-jalizi katika mawakala wote.",
+    "resultsUpdateInstantly": "Matokeo yanasasishwa papo hapo unaporekebisha vichujio.",
+    "searchPlaceholder": "Tafuta programu-jalizi...",
+    "selectedCount": "{{count}} zimechaguliwa",
+    "showing": "Inaonyesha programu-jalizi {{shown}} kati ya {{total}}",
+    "sort": {
+      "category": "Kategoria",
+      "nameAsc": "Jina A-Z",
+      "nameDesc": "Jina Z-A",
+      "popular": "Maarufu"
+    },
+    "activeFilters_few": "{{count}} hai",
+    "activeFilters_many": "{{count}} hai",
+    "activeFilters_one": "{{count}} hai",
+    "activeFilters_other": "{{count}} hai",
+    "selectedCount_few": "{{count}} zimechaguliwa",
+    "selectedCount_many": "{{count}} zimechaguliwa",
+    "selectedCount_one": "{{count}} imechaguliwa",
+    "selectedCount_other": "{{count}} zimechaguliwa"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Ongeza",
+      "cancel": "Ghairi",
+      "install": "Sakinisha",
+      "installing": "Inasakinisha..."
+    },
+    "description": "Ongeza seva kwa mkono bila katalogi.",
+    "errors": {
+      "installFailed": "Usakinishaji umeshindwa",
+      "invalidServerName": "Jina la seva batili. Tumia herufi za alfanumeriki, mistari, vibambo vya chini, nukta.",
+      "npmPackageRequired": "Jina la kifurushi cha npm linahitajika",
+      "serverNameRequired": "Jina la seva linahitajika",
+      "serverUrlRequired": "URL ya seva inahitajika"
+    },
+    "fields": {
+      "environmentVariables": "Vigeu vya Mazingira",
+      "headers": "Vichwa",
+      "npmPackage": "Kifurushi cha npm",
+      "scope": "Wigo",
+      "serverName": "Jina la Seva",
+      "serverUrl": "URL ya Seva",
+      "transport": "Usafirishaji",
+      "transportType": "Aina ya Usafirishaji",
+      "versionOptional": "Toleo (hiari)"
+    },
+    "title": "Ongeza Seva Maalum ya MCP",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Seva za mbali za MCP zinaweza bado kuhitaji vichwa maalum au funguo za API hata wakati rejista hazizielezi. Iwapo muunganisho utashindwa baada ya usakinishaji, kagua hati za mtoa huduma.",
+      "required": "Seva hii inahitaji uthibitishaji"
+    },
+    "diagnostics": {
+      "launchTarget": "Lengo la Uzinduzi"
+    },
+    "form": {
+      "autoFilled": "Imejazwa kiotomatiki",
+      "environmentVariables": "Vigeu vya Mazingira",
+      "headers": "Vichwa",
+      "scope": "Wigo",
+      "serverName": "Jina la Seva"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Seva hii inahitaji usanidi wa mkono. Kagua hazina kwa maagizo ya usakinishaji.",
+      "manualSetupRequired": "Usanidi wa mkono unahitajika",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Dhibiti Usakinishaji",
+      "install": "Sakinisha Seva"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Hazina",
+      "website": "Tovuti"
+    },
+    "metadata": {
+      "author": "Mwandishi",
+      "githubStars": "Nyota za GitHub",
+      "hosting": "Mwenyeji",
+      "installType": "Aina ya Usakinishaji",
+      "license": "Leseni",
+      "published": "Imechapishwa",
+      "source": "Chanzo",
+      "updated": "Imesasishwa",
+      "version": "Toleo"
+    },
+    "scope": {
+      "local": "Ya ndani",
+      "project": "Mradi"
+    },
+    "tools": {
+      "title": "Zana ({{count}})",
+      "title_few": "Zana ({{count}})",
+      "title_many": "Zana ({{count}})",
+      "title_one": "Zana ({{count}})",
+      "title_other": "Zana ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Ghairi",
+      "createSkill": "Unda Ujuzi",
+      "preparing": "Inaandaa...",
+      "reviewAndCreate": "Pitia Na Unda",
+      "reviewAndSave": "Pitia Na Hifadhi",
+      "saveSkill": "Hifadhi Ujuzi"
+    },
+    "advanced": {
+      "customDescription": "Ujuzi huu unatumia muundo maalum wa markdown, kwa hivyo uhariri moja kwa moja hapa.",
+      "customTitle": "2. Kihariri cha SKILL.md",
+      "description": "Watu wengi wanaweza kuruka hii. Ifungue tu ikiwa unataka udhibiti wa moja kwa moja juu ya faili ghafi ya markdown.",
+      "hide": "Ficha Kihariri cha Kina",
+      "resetFromStructuredFields": "Weka Upya Kutoka Sehemu Zilizopangwa",
+      "show": "Onyesha Kihariri cha Kina",
+      "title": "4. Kihariri cha kina cha SKILL.md"
+    },
+    "basics": {
+      "description": "Mpe ujuzi huu jina wazi, chagua nani anaweza kuutumia, na uamue mahali unapaswa kukaa.",
+      "title": "1. Misingi"
+    },
+    "description": {
+      "create": "Eleza mtiririko wa kazi kwa lugha rahisi, pitia faili zitakazoundwa, kisha uhifadhi.",
+      "edit": "Sasisha ujuzi huu, pitia mabadiliko ya faili yanayotokana, kisha uhifadhi."
+    },
+    "extraFiles": {
+      "addedFiles": "Faili zilizoongezwa:",
+      "assets": "Rasilimali",
+      "assetsDescription": "Ongeza picha za skrini au midia iliyofungashwa tu ikiwa zinasaidia kueleza mtiririko wa kazi.",
+      "description": "Ongeza hati za usaidizi, hati za maandishi, au rasilimali tu ikiwa ujuzi huu unazihitaji kweli.",
+      "lockedForEdits": "Mzizi na folda vimefungwa kwa marekebisho",
+      "optionalDescription": "Ongeza faili za kuanzia ambazo zitajumuishwa katika mapitio na kuandikwa pamoja na `SKILL.md`.",
+      "optionalTitle": "Faili za hiari",
+      "references": "Marejeleo",
+      "referencesDescription": "Ongeza hati za usaidizi, viungo, au mifano ambayo runtime inaweza kuangalia.",
+      "scripts": "Hati za Maandishi",
+      "scriptsDescription": "Ongeza amri za usaidizi au madokezo ya usanidi. Pitia kwa makini kabla ya kushiriki ujuzi huu.",
+      "title": "3. Faili za ziada"
+    },
+    "fields": {
+      "compatibility": "Uoanifu",
+      "description": "Maelezo",
+      "folderName": "Jina la folda",
+      "folderNameHint": "Tunapendekeza hili kiotomatiki kutoka jina la ujuzi ili mapitio yafanye kazi mara moja.",
+      "invocation": "Jinsi unavyopaswa kutumika",
+      "license": "Leseni",
+      "name": "Jina la ujuzi",
+      "notes": "Madokezo ya ziada au ulinzi",
+      "root": "Mahali pa kuihifadhi",
+      "scope": "Nani anaweza kuutumia",
+      "steps": "Hatua kuu za kufuata",
+      "whenToUse": "Wakati wa kutumia huu"
+    },
+    "instructions": {
+      "description": "Sehemu hizi huzalisha faili ya ujuzi kwa ajili yako, kwa hivyo hauhitaji kuhariri markdown isipokuwa unataka.",
+      "locked": "Sehemu zilizopangwa zimefungwa kwa sababu umebadilisha kuwa uhariri wa mkono wa `SKILL.md` hapa chini.",
+      "title": "2. Maagizo"
+    },
+    "invocation": {
+      "auto": "Inaweza kutumika kiotomatiki",
+      "manualOnly": "Tu unapoiomba"
+    },
+    "placeholders": {
+      "description": "Ujuzi huu unasaidia na nini",
+      "name": "Andika jina fupi la ujuzi",
+      "notes": "Mfano: Onyesha majaribio yanayokosekana, kurudi nyuma, na dhana hatari.",
+      "steps": "1. Kagua faili husika.\n2. Eleza hatari kuu kwanza.\n3. Pendekeza suluhisho salama zaidi.",
+      "whenToUse": "Mfano: Tumia hii wakati kazi ni ombi la mapitio ya msimbo au utatuzi wa hitilafu.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Inaunda ujuzi",
+      "hint": "Pitia mabadiliko ya faili kwanza, kisha thibitisha kuhifadhi katika hatua inayofuata.",
+      "saving": "Inahifadhi ujuzi huu"
+    },
+    "root": {
+      "codexOnly": " - Codex pekee",
+      "shared": " - Inashirikiwa"
+    },
+    "scope": {
+      "project": "Mradi: {{project}}",
+      "projectUnavailable": "Mradi haupatikani",
+      "user": "Mtumiaji"
+    },
+    "title": {
+      "create": "Unda ujuzi",
+      "edit": "Hariri ujuzi"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Ghairi",
+      "delete": "Futa",
+      "deleteSkill": "Futa Ujuzi",
+      "deleting": "Inafuta...",
+      "editSkill": "Hariri Ujuzi",
+      "openFolder": "Fungua Folda",
+      "openSkillFile": "Fungua SKILL.md",
+      "retry": "Jaribu tena"
+    },
+    "badges": {
+      "assets": "Rasilimali",
+      "autoUse": "Matumizi otomatiki",
+      "hasScripts": "Ina hati za maandishi",
+      "manualUse": "Matumizi ya mkono",
+      "references": "Marejeleo",
+      "storedIn": "Imehifadhiwa katika {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Futa ujuzi huu na uuhamishe kwenye Tupio?",
+      "descriptionWithName": "Futa \"{{name}}\" na uuhamishe kwenye Tupio? Unaweza kuurejesha baadaye kutoka Tupio ikihitajika.",
+      "title": "Futa ujuzi?"
+    },
+    "descriptionFallback": "Kagua metadata ya ujuzi uliogunduliwa na maagizo ghafi.",
+    "errors": {
+      "deleteFailed": "Imeshindwa kufuta ujuzi",
+      "loadFailed": "Haiwezi kupakia ujuzi huu."
+    },
+    "files": {
+      "advancedDetails": "Maelezo ya kina ya faili",
+      "assets": "Rasilimali",
+      "references": "Marejeleo",
+      "scripts": "Hati za Maandishi",
+      "storedAt": "Imehifadhiwa katika"
+    },
+    "includes": {
+      "assets": "rasilimali",
+      "instructionsOnly": "Maagizo ya ujuzi pekee",
+      "references": "marejeleo",
+      "scripts": "hati za maandishi"
+    },
+    "invocation": {
+      "auto": "Inaendeshwa kiotomatiki inapolingana na kazi.",
+      "manualOnly": "Inaendeshwa tu unapoiomba kwa uwazi."
+    },
+    "issues": {
+      "bundledScripts": "Ujuzi huu unajumuisha hati za maandishi zilizofungashwa",
+      "reviewCarefully": "Pitia ujuzi huu kwa makini kabla ya kuutumia"
+    },
+    "loading": "Inapakia maelezo ya ujuzi...",
+    "scope": {
+      "personal": "Ujuzi wako binafsi",
+      "projectOnly": "Mradi huu pekee"
+    },
+    "summary": {
+      "howUsed": "Jinsi unavyotumika",
+      "included": "Kinachokuja nacho",
+      "whoCanUse": "Nani anaweza kuutumia"
+    },
+    "titleFallback": "Maelezo ya ujuzi"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Unda Ujuzi",
+      "import": "Leta"
+    },
+    "badges": {
+      "assets": "Rasilimali",
+      "hasScripts": "Ina hati za maandishi",
+      "needsAttention": "Inahitaji uangalifu",
+      "references": "Marejeleo",
+      "storedIn": "Imehifadhiwa katika {{root}}"
+    },
+    "configuredRuntime": "runtime iliyosanidiwa",
+    "counts": {
+      "codexOnly": "{{count}} Codex pekee",
+      "personal": "{{count}} binafsi",
+      "project": "{{count}} mradi",
+      "shared": "{{count}} inashirikiwa",
+      "total": "{{count}} jumla",
+      "codexOnly_few": "{{count}} Codex pekee",
+      "codexOnly_many": "{{count}} Codex pekee",
+      "codexOnly_one": "{{count}} Codex pekee",
+      "codexOnly_other": "{{count}} Codex pekee",
+      "personal_few": "{{count}} binafsi",
+      "personal_many": "{{count}} binafsi",
+      "personal_one": "{{count}} binafsi",
+      "personal_other": "{{count}} binafsi",
+      "project_few": "{{count}} mradi",
+      "project_many": "{{count}} mradi",
+      "project_one": "{{count}} mradi",
+      "project_other": "{{count}} mradi",
+      "shared_few": "{{count}} inashirikiwa",
+      "shared_many": "{{count}} inashirikiwa",
+      "shared_one": "{{count}} inashirikiwa",
+      "shared_other": "{{count}} inashirikiwa",
+      "total_few": "{{count}} jumla",
+      "total_many": "{{count}} jumla",
+      "total_one": "{{count}} jumla",
+      "total_other": "{{count}} jumla"
+    },
+    "empty": {
+      "noMatches": "Hakuna ujuzi unaolingana na utafutaji wako",
+      "noMatchesDescription": "Jaribu neno lingine la utafutaji au ubadilishe vichujio.",
+      "noSkills": "Bado hakuna ujuzi",
+      "noSkillsDescription": "Unda ujuzi wako wa kwanza ili kufundisha mtiririko wa kazi unaorudiwarudiwa, au leta uliokwisha kutumia."
+    },
+    "filters": {
+      "all": "Ujuzi wote",
+      "codexOnly": "Codex pekee",
+      "hasScripts": "Ina hati za maandishi",
+      "needsAttention": "Inahitaji uangalifu",
+      "personal": "Binafsi",
+      "project": "Mradi",
+      "shared": "Inashirikiwa"
+    },
+    "hero": {
+      "codexAvailable": "Tumia `.codex` wakati ujuzi unapaswa kubaki Codex pekee.",
+      "codexUnavailable": "Ujuzi uliopo wa `.codex` unabaki unaohariri hapa, lakini ujuzi mpya wa Codex pekee unahitaji runtime ya Codex iwezeshwe.",
+      "description": "Ujuzi ni maagizo yanayoweza kutumika tena yanayosaidia runtime kushughulikia aina ile ile ya kazi kwa uthabiti zaidi.",
+      "guidance": "Tumia ujuzi binafsi kwa tabia unazotaka kila mahali. Tumia ujuzi wa mradi kwa mitiririko ya kazi inayoeleweka tu ndani ya msingi mmoja wa msimbo.",
+      "personalContext": "Unaona ujuzi wako binafsi pekee sasa hivi.",
+      "projectContext": "Unaona ujuzi wa {{project}} pamoja na ujuzi wako binafsi.",
+      "title": "Fundisha kazi inayorudiwarudiwa"
+    },
+    "invocation": {
+      "auto": "Inaendeshwa kiotomatiki inapofaa",
+      "manualOnly": "Inaendeshwa tu unapoiomba kwa uwazi"
+    },
+    "loading": {
+      "loading": "Inapakia ujuzi...",
+      "refreshing": "Inaonyesha upya ujuzi..."
+    },
+    "runtimeAudience": "Ujuzi unaoshirikiwa katika `.claude`, `.cursor`, na `.agents` unapatikana kwa {{audience}}. Ujuzi uliohifadhiwa katika `.codex` unabaki Codex pekee wakati usaidizi wa Codex unapatikana.",
+    "scope": {
+      "project": "Mradi huu",
+      "user": "Binafsi"
+    },
+    "searchPlaceholder": "Tafuta kwa jina la ujuzi au unachosaidia...",
+    "sections": {
+      "personal": {
+        "description": "Tabia na maagizo unayotaka yapatikane kila mahali.",
+        "title": "Ujuzi binafsi"
+      },
+      "project": {
+        "description": "Mitiririko ya kazi inayoeleweka tu kwa msingi huu wa msimbo.",
+        "title": "Ujuzi wa mradi"
+      }
+    },
+    "sort": {
+      "label": "Panga ujuzi",
+      "name": "Jina",
+      "recent": "Hivi karibuni"
+    },
+    "status": {
+      "hasScripts": "Inajumuisha hati za maandishi, kwa hivyo ipitie kwa makini",
+      "needsAttention": "Inahitaji uangalifu kabla ya kuitegemea",
+      "ready": "Tayari kutumia"
+    },
+    "success": {
+      "created": "Ujuzi umeundwa kwa mafanikio.",
+      "imported": "Ujuzi umeletwa kwa mafanikio.",
+      "saved": "Ujuzi umehifadhiwa kwa mafanikio."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Haijulikani",
+    "metadata": {
+      "author": "Mwandishi",
+      "category": "Kategoria",
+      "source": "Chanzo",
+      "version": "Toleo",
+      "capabilities": "Uwezo",
+      "installs": "Usakinishaji"
+    },
+    "scope": {
+      "label": "Wigo:",
+      "options": {
+        "user": "Mtumiaji (kimataifa)",
+        "project": "Mradi (inashirikiwa)",
+        "local": "Ya ndani (imepuuzwa na git)"
+      }
+    },
+    "links": {
+      "homepage": "Ukurasa wa nyumbani",
+      "contact": "Wasiliana"
+    },
+    "readme": {
+      "loading": "Inapakia README...",
+      "empty": "Hakuna README inayopatikana."
+    }
+  },
+  "skillImport": {
+    "title": "Leta ujuzi",
+    "description": "Chagua folda ya ujuzi iliyopo, pitia kitakachonakiliwa, kisha uilete katika moja ya maeneo yako ya ujuzi yanayoungwa mkono.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Chagua folda ya ujuzi",
+        "description": "Hii inapaswa kuwa folda ambayo tayari ina faili ya `SKILL.md`, `Skill.md`, au `skill.md`."
+      },
+      "location": {
+        "title": "2. Amua mahali inapostahili",
+        "description": "Ujuzi binafsi hufanya kazi kila mahali. Ujuzi wa mradi huonekana tu kwa msingi mmoja wa msimbo."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Folda ya chanzo",
+      "destinationFolderName": "Jina la folda lengwa",
+      "audience": "Nani anaweza kuutumia",
+      "storage": "Mahali pa kuihifadhi"
+    },
+    "placeholders": {
+      "defaultFolderName": "Chaguo-msingi ni jina la folda ya chanzo"
+    },
+    "actions": {
+      "browse": "Vinjari",
+      "cancel": "Ghairi",
+      "preparing": "Inaandaa...",
+      "reviewAndImport": "Pitia Na Lete",
+      "importSkill": "Leta Ujuzi",
+      "backToImport": "Rudi Kwenye Kuleta"
+    },
+    "scope": {
+      "user": "Mtumiaji",
+      "project": "Mradi: {{project}}",
+      "projectUnavailable": "Mradi haupatikani"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex pekee",
+      "shared": " - Inashirikiwa"
+    },
+    "reviewHint": "Pitia faili zilizonakiliwa kwanza, kisha thibitisha kuleta katika hatua inayofuata.",
+    "reviewLabel": "Inaleta ujuzi huu",
+    "errors": {
+      "missingSkillFile": "Folda hii bado haionekani kama ujuzi. Inahitaji faili ya SKILL.md, Skill.md, au skill.md.",
+      "symbolicLinks": "Folda hii ina viungo vya kiishara. Leta faili halisi badala ya viungo.",
+      "tooManyFiles": "Folda hii ya ujuzi ni kubwa mno kuleta kwa wakati mmoja. Ondoa faili za ziada na ujaribu tena.",
+      "tooLarge": "Folda hii ya ujuzi ni kubwa mno kuleta kwa usalama. Punguza rasilimali kubwa na ujaribu tena.",
+      "invalidFolderName": "Chagua jina rahisi zaidi la folda lengwa ukitumia herufi, namba, nukta, mistari, au vibambo vya chini.",
+      "mustBeDirectory": "Chagua folda ya kuleta, si faili moja.",
+      "reviewFailed": "Imeshindwa kupitia mabadiliko ya kuleta",
+      "importFailed": "Imeshindwa kuleta ujuzi"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Jina A→Z",
+      "nameDesc": "Jina Z→A",
+      "toolsDesc": "Zana nyingi zaidi"
+    },
+    "health": {
+      "title": "Hali ya Afya ya MCP",
+      "checkingViaRuntime": "Inakagua seva za MCP zilizosakinishwa kupitia {{runtime}} ...",
+      "lastChecked": "Imekaguliwa mwisho {{time}}",
+      "description": "Endesha utambuzi kutoka ukurasa huu ili kuthibitisha muunganisho wa MCP uliosakinishwa.",
+      "checking": "Inakagua...",
+      "checkStatus": "Kagua Hali"
+    },
+    "diagnostics": {
+      "title": "Utambuzi wa MCP wa Runtime",
+      "serversCount": "seva {{count}}",
+      "serversCount_one": "seva {{count}}",
+      "serversCount_other": "seva {{count}}",
+      "waiting": "Inasubiri matokeo ya utambuzi...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Inakagua hali ya runtime...",
+        "checkingRuntimeAvailability": "Inakagua upatikanaji wa runtime...",
+        "runtimeFailedToStart": "Runtime iliyosanidiwa ilipatikana lakini imeshindwa kuanza. Fungua Dashibodi ili kuirekebisha au kuisakinisha upya.",
+        "runtimeRequired": "Runtime iliyosanidiwa inahitajika. Isakinishe au irekebishe kutoka Dashibodi."
+      },
+      "serversCount_few": "seva {{count}}",
+      "serversCount_many": "seva {{count}}"
+    },
+    "searchPlaceholder": "Tafuta seva za MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} haipatikani",
+      "notInstalled": "{{runtime}} haijasakinishwa",
+      "requiredDescription": "Ukaguzi wa afya wa MCP unahitaji {{runtime}}. Nenda kwenye Dashibodi ili kuisakinisha au kuirekebisha."
+    },
+    "empty": {
+      "searchTitle": "Hakuna seva zilizopatikana",
+      "title": "Hakuna seva za MCP zinazopatikana",
+      "searchDescription": "Jaribu neno lingine la utafutaji",
+      "description": "Rudi baadaye kwa seva mpya"
+    },
+    "loadMore": "Pakia zaidi"
+  },
+  "apiKeys": {
+    "description": "Hifadhi funguo za API kwa usalama ili kujaza kiotomatiki unaposakinisha seva za MCP.",
+    "storage": {
+      "osKeychain": "Funguo zimesimbwa kupitia {{backend}} na kuhifadhiwa kwa ruhusa za faili zilizozuiwa (mmiliki pekee).",
+      "localEncryption": "Mnyororo wa funguo wa OS haupatikani - funguo zimesimbwa kwa ndani kwa AES-256. Kwa ulinzi imara zaidi, sakinisha huduma ya keyring (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Ongeza Ufunguo wa API",
+      "addFirst": "Ongeza ufunguo wako wa kwanza",
+      "edit": "Hariri",
+      "copied": "Imenakiliwa!",
+      "copyEnvVarName": "Nakili jina la kigeu cha mazingira",
+      "confirmDelete": "Bofya tena ili kuthibitisha",
+      "delete": "Futa"
+    },
+    "empty": {
+      "title": "Hakuna funguo za API zilizohifadhiwa",
+      "description": "Ongeza funguo ili kujaza kiotomatiki vigeu vya mazingira unaposakinisha seva za MCP."
+    },
+    "form": {
+      "addTitle": "Ongeza Ufunguo wa API",
+      "editTitle": "Hariri Ufunguo wa API",
+      "addDescription": "Hifadhi ufunguo wa API kwa kujaza kiotomatiki katika usakinishaji wa seva za MCP.",
+      "editDescription": "Sasisha maelezo ya ufunguo. Lazima uweke tena thamani.",
+      "keychainUnavailable": "Mnyororo wa funguo wa OS haupatikani - funguo zimesimbwa kwa AES-256 kwa ndani. Sakinisha gnome-keyring kwa ulinzi wa kiwango cha OS.",
+      "name": "Jina",
+      "namePlaceholder": "k.m. OpenAI Production",
+      "environmentVariableName": "Jina la Kigeu cha Mazingira",
+      "envVarPlaceholder": "k.m. OPENAI_API_KEY",
+      "value": "Thamani",
+      "reenterValue": "Weka tena thamani ya ufunguo",
+      "valuePlaceholder": "sk-...",
+      "scope": "Wigo",
+      "userScopeLabel": "Mtumiaji (kimataifa)",
+      "projectScopeLabel": "Mradi: {{project}}",
+      "projectUnavailable": "Mradi haupatikani",
+      "boundTo": "Imefungwa kwa {{path}}",
+      "cancel": "Ghairi",
+      "saving": "Inahifadhi...",
+      "update": "Sasisha",
+      "save": "Hifadhi",
+      "errors": {
+        "invalidEnvVarFormat": "Tumia herufi, tarakimu, vibambo vya chini. Lazima ianze na herufi au kibambo cha chini.",
+        "nameRequired": "Jina linahitajika",
+        "envVarRequired": "Jina la kigeu cha mazingira linahitajika",
+        "invalidEnvVar": "Jina la kigeu cha mazingira batili",
+        "valueRequired": "Thamani ya ufunguo inahitajika",
+        "projectScopeRequiresProject": "Funguo za API zenye wigo wa mradi zinahitaji mradi hai",
+        "saveFailed": "Imeshindwa kuhifadhi"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Pitia mabadiliko ya ujuzi",
+    "description": "{{reviewLabel}} huhakiki mabadiliko ya mfumo wa faili kwanza. Hakuna kinachoandikwa hadi uthibitishe hapa chini.",
+    "noPreview": "Hakuna hakikisho linalopatikana.",
+    "confirmPromptPrefix": "Pitia tofauti hapa chini, kisha tumia",
+    "confirmPromptSuffix": "kutumia mabadiliko haya.",
+    "noChanges": "Bado hakuna mabadiliko ya faili yaliyogunduliwa.",
+    "binaryBadge": "binari",
+    "binaryPreviewHidden": "Hakikisho la faili ya binari halionyeshwi. Faili itanakiliwa kama ilivyo.",
+    "summary": {
+      "fileChanges": "mabadiliko {{count}} ya faili",
+      "fileChanges_one": "badiliko {{count}} la faili",
+      "fileChanges_other": "mabadiliko {{count}} ya faili",
+      "new": "{{count}} mpya",
+      "updated": "{{count}} zimesasishwa",
+      "removed": "{{count}} zimeondolewa",
+      "binary": "{{count}} binari",
+      "fileChanges_few": "mabadiliko {{count}} ya faili",
+      "fileChanges_many": "mabadiliko {{count}} ya faili"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "zana {{count}}",
+    "toolsCount_one": "zana {{count}}",
+    "toolsCount_other": "zana {{count}}",
+    "envCount": "vigeu {{count}}",
+    "envCount_one": "kigeu {{count}}",
+    "envCount_other": "vigeu {{count}}",
+    "auth": "Uthibitishaji",
+    "byAuthor": "na {{author}}",
+    "hosting": {
+      "remote": "Mbali",
+      "local": "Ya ndani",
+      "both": "Vyote viwili"
+    },
+    "toolsCount_few": "zana {{count}}",
+    "toolsCount_many": "zana {{count}}",
+    "envCount_few": "vigeu {{count}}",
+    "envCount_many": "vigeu {{count}}",
+    "repository": "Hazina",
+    "website": "Tovuti"
+  },
+  "installButton": {
+    "installing": "Inasakinisha...",
+    "removing": "Inaondoa...",
+    "done": "Imekamilika",
+    "retry": "Jaribu tena",
+    "uninstall": "Ondoa usakinishaji",
+    "install": "Sakinisha"
+  },
+  "pluginCard": {
+    "official": "Rasmi"
+  }
+}

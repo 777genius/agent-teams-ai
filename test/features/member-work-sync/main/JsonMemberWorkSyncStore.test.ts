@@ -1,0 +1,2620 @@
+import { archiveFileWithGenerations } from '@features/internal-storage/main';
+import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
+import * as atomicWrite from '@main/utils/atomicWrite';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type {
+  MemberWorkSyncNudgePayload,
+  MemberWorkSyncOutboxItem,
+  MemberWorkSyncReportIntent,
+  MemberWorkSyncStatus,
+} from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncAuditEvent } from '@features/member-work-sync/core/application';
+
+function makeStatus(overrides: Partial<MemberWorkSyncStatus>): MemberWorkSyncStatus {
+  return {
+    teamName: 'team-a',
+    memberName: 'bob',
+    state: 'needs_sync',
+    agenda: {
+      teamName: 'team-a',
+      memberName: 'bob',
+      generatedAt: '2026-04-29T00:00:00.000Z',
+      fingerprint: 'agenda:v1:abc',
+      items: [
+        {
+          taskId: 'task-1',
+          displayId: '11111111',
+          subject: 'Ship UI',
+          kind: 'work',
+          assignee: 'bob',
+          priority: 'normal',
+          reason: 'owned_pending_task',
+          evidence: { status: 'pending', owner: 'bob' },
+        },
+      ],
+      diagnostics: [],
+    },
+    shadow: {
+      reconciledBy: 'queue',
+      wouldNudge: true,
+      fingerprintChanged: false,
+    },
+    evaluatedAt: '2026-04-29T00:00:00.000Z',
+    diagnostics: [],
+    ...overrides,
+  };
+}
+
+function makeNudgePayload(
+  overrides: Partial<MemberWorkSyncNudgePayload> = {}
+): MemberWorkSyncNudgePayload {
+  return {
+    from: 'system',
+    to: 'bob',
+    messageKind: 'member_work_sync_nudge',
+    source: 'member-work-sync',
+    actionMode: 'do',
+    workSyncIntent: 'agenda_sync',
+    text: 'Work sync check: continue the current task or report a blocker.',
+    taskRefs: [{ teamName: 'team-a', taskId: 'task-1', displayId: '11111111' }],
+    ...overrides,
+  };
+}
+
+function memberWorkSyncDir(root: string, teamName: string, memberName: string): string {
+  return join(
+    root,
+    teamName,
+    'members',
+    encodeURIComponent(memberName.trim().toLowerCase()),
+    '.member-work-sync'
+  );
+}
+
+describe('JsonMemberWorkSyncStore', () => {
+  let root: string;
+  let store: JsonMemberWorkSyncStore;
+
+  it.each(['{broken', '{"schemaVersion":999}'])('strict backup index reader preserves invalid source %s', async (raw) => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const index = paths.getMetricsIndexPath('team-a');
+    await mkdir(join(paths.getTeamDir('team-a'), 'indexes'), {recursive: true});
+    await writeFile(index, raw);
+    const backupReader = new JsonMemberWorkSyncStore(paths, {strictIndexReads: true});
+    await expect(backupReader.readSnapshotForImport('team-a')).rejects.toThrow();
+    expect(await readFile(index, 'utf8')).toBe(raw);
+    expect(await readdir(join(paths.getTeamDir('team-a'), 'indexes'))).toEqual(['metrics.json']);
+  });
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'member-work-sync-store-'));
+    store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(root));
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it('restores encoded report/outbox routes without relying on later index repair', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const memberName = 'Alice Smith';
+    const time = '2026-09-10T00:00:00.000Z';
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report-1',
+      teamName: 'team-a',
+      memberName,
+      request: {
+        teamName: 'team-a',
+        memberName,
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: time,
+    };
+    const outbox: MemberWorkSyncOutboxItem = {
+      id: 'outbox-1',
+      teamName: 'team-a',
+      memberName,
+      agendaFingerprint: 'agenda',
+      payloadHash: 'hash',
+      payload: makeNudgePayload({ to: memberName }),
+      status: 'pending',
+      attemptGeneration: 0,
+      createdAt: time,
+      updatedAt: time,
+    };
+    await store.restoreReplicaSnapshot('team-a', {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [outbox],
+      metricEvents: [],
+      filesToArchive: [],
+    });
+    for (const [path, id] of [
+      [paths.getPendingReportsIndexPath('team-a'), report.id],
+      [paths.getOutboxIndexPath('team-a'), outbox.id],
+    ]) {
+      const index = JSON.parse(await readFile(path, 'utf8'));
+      expect(index.items[id].memberKey).toBe(paths.getMemberKey(memberName));
+      expect(index.items[id].memberName).toBe(memberName);
+    }
+    const restored = await store.readSnapshotForImport('team-a');
+    expect(restored?.reportIntents).toEqual([report]);
+    expect(restored?.outboxItems).toEqual([outbox]);
+  });
+
+  it('preserves terminal delivery evidence while restoring older pending data', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const time = '2026-09-10T00:00:00Z';
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report',
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: time,
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+    };
+    const item: MemberWorkSyncOutboxItem = {
+      id: 'outbox',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda',
+      payloadHash: 'hash',
+      payload: makeNudgePayload(),
+      status: 'pending',
+      attemptGeneration: 1,
+      createdAt: time,
+      updatedAt: time,
+    };
+    const pending = {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [item],
+      metricEvents: [],
+      filesToArchive: [],
+    };
+    await store.restoreReplicaSnapshot('team-a', pending);
+    const accepted = { ...report, status: 'accepted', processedAt: time, resultCode: 'accepted' };
+    const delivered = {
+      ...item,
+      status: 'delivered',
+      deliveredMessageId: 'proof',
+      attemptGeneration: 2,
+    };
+    await writeFile(
+      paths.getMemberReportsPath('team-a', 'bob'),
+      JSON.stringify({ schemaVersion: 2, intents: { report: accepted } })
+    );
+    await writeFile(
+      paths.getMemberOutboxPath('team-a', 'bob'),
+      JSON.stringify({ schemaVersion: 2, items: { outbox: delivered } })
+    );
+    await store.restoreReplicaSnapshot('team-a', pending);
+    const restored = await store.readSnapshotForImport('team-a');
+    expect(restored?.reportIntents).toEqual([accepted]);
+    expect(restored?.outboxItems).toEqual([delivered]);
+  });
+
+  it('does not complete delivery hydration when strict publication fails and can retry', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const report: MemberWorkSyncReportIntent = {
+      id: 'report',
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'retry',
+      status: 'pending',
+      recordedAt: '2026-09-10T00:00:00Z',
+      request: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        state: 'caught_up',
+        agendaFingerprint: 'agenda',
+        taskIds: [],
+      },
+    };
+    const snapshot = {
+      statuses: [],
+      reportIntents: [report],
+      outboxItems: [],
+      metricEvents: [],
+      filesToArchive: [],
+    };
+    const original = atomicWrite.atomicWriteAsync;
+    let fail = true;
+    vi.spyOn(atomicWrite, 'atomicWriteAsync').mockImplementation(async (...args) => {
+      if (args[0] === paths.getMemberReportsPath('team-a', 'bob') && fail) {
+        fail = false;
+        throw new Error('report fsync failed');
+      }
+      await original(...args);
+    });
+    await expect(store.restoreReplicaSnapshot('team-a', snapshot)).rejects.toThrow('fsync failed');
+    await store.restoreReplicaSnapshot('team-a', snapshot);
+    expect((await store.readSnapshotForImport('team-a'))?.reportIntents).toEqual([report]);
+  });
+
+  it('preserves invalid legacy status JSON and reports corruption', async () => {
+    const statusPath = join(root, 'team-a', '.member-work-sync', 'status.json');
+    await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
+    await writeFile(statusPath, '{bad json', 'utf8');
+
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(readFile(statusPath, 'utf8')).resolves.toBe('{bad json');
+
+    const teamDir = join(root, 'team-a', '.member-work-sync');
+    const entries = await readdir(teamDir);
+    expect(entries.some((entry) => entry.startsWith('status.json.invalid.'))).toBe(false);
+  });
+
+  it('does not let an ordinary read hide corrupt canonical state before import', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const canonical = paths.getMemberStatusPath('team-a', 'bob');
+    const legacy = paths.getLegacyStatusPath('team-a');
+    await mkdir(memberWorkSyncDir(root, 'team-a', 'bob'), { recursive: true });
+    await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
+    await writeFile(canonical, '{corrupt');
+    await writeFile(legacy, JSON.stringify({ schemaVersion: 1, members: { bob: makeStatus({}) } }));
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(store.readSnapshotForImport('team-a')).rejects.toMatchObject({
+      reason: 'corrupt',
+    });
+    await expect(
+      store.readCanonicalStatusSnapshot({ teamName: 'team-a', memberName: 'bob' })
+    ).resolves.toMatchObject({ state: 'corrupt', raw: '{corrupt' });
+    await expect(readFile(canonical, 'utf8')).resolves.toBe('{corrupt');
+  });
+
+  it('preserves unreadable canonical state instead of falling back to empty', async () => {
+    const canonical = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+    await mkdir(canonical, { recursive: true });
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).rejects.toMatchObject({
+      reason: 'unavailable',
+    });
+    await expect(readdir(canonical)).resolves.toEqual([]);
+  });
+
+  it.each(['{bad json', 'null', '{"schemaVersion":2,"status":null}'])(
+    'rejects corrupt archived status without erasing evidence: %s',
+    async (raw) => {
+      const canonical = new MemberWorkSyncStorePaths(root).getMemberStatusPath('team-a', 'bob');
+      const memberDir = memberWorkSyncDir(root, 'team-a', 'bob');
+      await mkdir(memberDir, { recursive: true });
+      await writeFile(canonical, raw);
+      await archiveFileWithGenerations(canonical);
+      const before = await readdir(memberDir);
+      await expect(store.readArchivedSnapshotForImport('team-a')).rejects.toMatchObject({
+        reason: 'corrupt',
+      });
+      expect(await readdir(memberDir)).toEqual(before);
+      for (const name of before) expect(await readFile(join(memberDir, name), 'utf8')).toBe(raw);
+    }
+  );
+
+  it('writes status into member-scoped storage and keeps team metrics in an index', async () => {
+    await store.write(makeStatus({ providerId: 'opencode' }));
+
+    const statusFile = JSON.parse(
+      await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'status.json'), 'utf8')
+    );
+    expect(statusFile).toMatchObject({
+      schemaVersion: 2,
+      status: {
+        teamName: 'team-a',
+        memberName: 'bob',
+        providerId: 'opencode',
+      },
+    });
+
+    const metaFile = JSON.parse(
+      await readFile(join(root, 'team-a', 'members', 'bob', 'member.meta.json'), 'utf8')
+    );
+    expect(metaFile).toMatchObject({
+      schemaVersion: 1,
+      memberName: 'bob',
+      memberKey: 'bob',
+    });
+
+    const metricsIndex = JSON.parse(
+      await readFile(join(root, 'team-a', '.member-work-sync', 'indexes', 'metrics.json'), 'utf8')
+    );
+    expect(metricsIndex.members.bob).toMatchObject({
+      memberName: 'bob',
+      state: 'needs_sync',
+      actionableCount: 1,
+    });
+  });
+
+  it('prefers member-scoped v2 status over legacy v1 status', async () => {
+    await store.write(
+      makeStatus({ state: 'caught_up', agenda: { ...makeStatus({}).agenda, items: [] } })
+    );
+
+    const legacyStatusPath = join(root, 'team-a', '.member-work-sync', 'status.json');
+    await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
+    await writeFile(
+      legacyStatusPath,
+      JSON.stringify({ schemaVersion: 1, members: { bob: makeStatus({ state: 'needs_sync' }) } }),
+      'utf8'
+    );
+
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).resolves.toMatchObject({
+      state: 'caught_up',
+    });
+  });
+
+  it('deduplicates pending report intents and marks them processed', async () => {
+    const request = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: 'wrs:v1.test',
+      taskIds: ['task-2', 'task-1', 'task-1'],
+      source: 'mcp' as const,
+    };
+
+    await store.appendPendingReport(request, 'control_api_unavailable');
+    await store.appendPendingReport({ ...request, taskIds: ['task-1', 'task-2'] }, 'duplicate');
+
+    const pending = await store.listPendingReports('team-a');
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({
+      teamName: 'team-a',
+      memberName: 'bob',
+      reason: 'control_api_unavailable',
+      status: 'pending',
+    });
+
+    await store.markPendingReportProcessed('team-a', pending[0].id, {
+      status: 'accepted',
+      resultCode: 'accepted',
+      processedAt: '2026-04-29T00:00:00.000Z',
+    });
+
+    expect(await store.listPendingReports('team-a')).toEqual([]);
+    const file = JSON.parse(
+      await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'reports.json'), 'utf8')
+    );
+    expect(file.intents[pending[0].id]).toMatchObject({
+      status: 'accepted',
+      resultCode: 'accepted',
+    });
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'pending-reports-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[pending[0].id]).toMatchObject({
+      memberName: 'bob',
+      status: 'accepted',
+    });
+  });
+
+  it('repairs a missing pending-report index from member-scoped report files', async () => {
+    const request = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: 'wrs:v1.test',
+      source: 'mcp' as const,
+    };
+
+    await store.appendPendingReport(request, 'control_api_unavailable');
+    await rm(join(root, 'team-a', '.member-work-sync', 'indexes', 'pending-reports-index.json'), {
+      force: true,
+    });
+
+    await expect(store.listPendingReports('team-a')).resolves.toHaveLength(1);
+    const repaired = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'pending-reports-index.json'),
+        'utf8'
+      )
+    );
+    expect(Object.values(repaired.items)).toEqual([
+      expect.objectContaining({ memberName: 'bob', status: 'pending' }),
+    ]);
+  });
+
+  it('repairs a stale pending-report index route from member-scoped report files', async () => {
+    const bobRequest = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:bob',
+      reportToken: 'wrs:v1.bob',
+      source: 'mcp' as const,
+    };
+    const tomRequest = {
+      ...bobRequest,
+      memberName: 'tom',
+      agendaFingerprint: 'agenda:v1:tom',
+      reportToken: 'wrs:v1.tom',
+    };
+
+    await store.appendPendingReport(bobRequest, 'control_api_unavailable');
+    await store.appendPendingReport(tomRequest, 'control_api_unavailable');
+    await writeFile(
+      join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'reports.json'),
+      JSON.stringify({ schemaVersion: 2, intents: {} }),
+      'utf8'
+    );
+
+    const pending = await store.listPendingReports('team-a');
+    expect(pending.map((intent) => intent.memberName)).toEqual(['tom']);
+    const repaired = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'pending-reports-index.json'),
+        'utf8'
+      )
+    );
+    expect(
+      Object.values(repaired.items).map((item) => (item as { memberName: string }).memberName)
+    ).toEqual(['tom']);
+  });
+
+  it('repairs a partially missing pending-report index route from member-scoped report files', async () => {
+    const bobRequest = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:bob',
+      reportToken: 'wrs:v1.bob',
+      source: 'mcp' as const,
+    };
+    const tomRequest = {
+      ...bobRequest,
+      memberName: 'tom',
+      agendaFingerprint: 'agenda:v1:tom',
+      reportToken: 'wrs:v1.tom',
+    };
+
+    await store.appendPendingReport(bobRequest, 'control_api_unavailable');
+    await store.appendPendingReport(tomRequest, 'control_api_unavailable');
+    const indexPath = join(
+      root,
+      'team-a',
+      '.member-work-sync',
+      'indexes',
+      'pending-reports-index.json'
+    );
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    for (const [id, route] of Object.entries(index.items)) {
+      if ((route as { memberName: string }).memberName === 'tom') {
+        delete index.items[id];
+      }
+    }
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    const pending = await store.listPendingReports('team-a');
+    expect(pending.map((intent) => intent.memberName).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bob',
+      'tom',
+    ]);
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(
+      Object.values(repaired.items)
+        .map((item) => (item as { memberName: string }).memberName)
+        .sort((a, b) => a.localeCompare(b))
+    ).toEqual(['bob', 'tom']);
+  });
+
+  it('repairs a stale processed pending-report index route when member report is pending', async () => {
+    const request = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: 'wrs:v1.test',
+      source: 'mcp' as const,
+    };
+
+    await store.appendPendingReport(request, 'control_api_unavailable');
+    const [intent] = await store.listPendingReports('team-a');
+    await store.markPendingReportProcessed('team-a', intent.id, {
+      status: 'accepted',
+      resultCode: 'accepted',
+      processedAt: '2026-04-29T00:01:00.000Z',
+    });
+
+    const reportsPath = join(memberWorkSyncDir(root, 'team-a', 'bob'), 'reports.json');
+    const reports = JSON.parse(await readFile(reportsPath, 'utf8'));
+    reports.intents[intent.id] = {
+      ...reports.intents[intent.id],
+      status: 'pending',
+    };
+    delete reports.intents[intent.id].resultCode;
+    delete reports.intents[intent.id].processedAt;
+    await writeFile(reportsPath, JSON.stringify(reports), 'utf8');
+
+    const pending = await store.listPendingReports('team-a');
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({
+      id: intent.id,
+      memberName: 'bob',
+      status: 'pending',
+    });
+  });
+
+  it('repairs stale pending-report update routes before marking processed', async () => {
+    const request = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      state: 'still_working' as const,
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: 'wrs:v1.test',
+      source: 'mcp' as const,
+    };
+
+    await store.appendPendingReport(request, 'control_api_unavailable');
+    await mkdir(memberWorkSyncDir(root, 'team-a', 'tom'), { recursive: true });
+    const [intent] = await store.listPendingReports('team-a');
+    await writeFile(
+      join(memberWorkSyncDir(root, 'team-a', 'tom'), 'reports.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        intents: {
+          [intent.id]: {
+            ...intent,
+            teamName: 'other-team',
+            memberName: 'tom',
+          },
+        },
+      }),
+      'utf8'
+    );
+    const indexPath = join(
+      root,
+      'team-a',
+      '.member-work-sync',
+      'indexes',
+      'pending-reports-index.json'
+    );
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    index.items[intent.id] = {
+      ...index.items[intent.id],
+      memberKey: 'tom',
+      memberName: 'tom',
+    };
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    await store.markPendingReportProcessed('team-a', intent.id, {
+      status: 'accepted',
+      resultCode: 'accepted',
+      processedAt: '2026-04-29T00:01:00.000Z',
+    });
+
+    const reports = JSON.parse(
+      await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'reports.json'), 'utf8')
+    );
+    expect(reports.intents[intent.id]).toMatchObject({
+      memberName: 'bob',
+      status: 'accepted',
+      resultCode: 'accepted',
+    });
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(repaired.items[intent.id]).toMatchObject({
+      memberKey: 'bob',
+      memberName: 'bob',
+      status: 'accepted',
+    });
+  });
+
+  it('records bounded shadow metrics from status writes', async () => {
+    await store.write(makeStatus({}));
+    await store.write(
+      makeStatus({
+        agenda: {
+          teamName: 'team-a',
+          memberName: 'bob',
+          generatedAt: '2026-04-29T00:01:00.000Z',
+          fingerprint: 'agenda:v1:def',
+          items: [],
+          diagnostics: [],
+        },
+        state: 'caught_up',
+        shadow: {
+          reconciledBy: 'request',
+          wouldNudge: false,
+          fingerprintChanged: true,
+          previousFingerprint: 'agenda:v1:abc',
+        },
+        evaluatedAt: '2026-04-29T00:01:00.000Z',
+      })
+    );
+
+    const metrics = await store.readTeamMetrics('team-a');
+    expect(metrics).toMatchObject({
+      teamName: 'team-a',
+      memberCount: 1,
+      actionableItemCount: 0,
+      wouldNudgeCount: 1,
+      fingerprintChangeCount: 1,
+    });
+    expect(metrics.stateCounts.caught_up).toBe(1);
+    expect(metrics.recentEvents.map((event) => event.kind)).toEqual([
+      'status_evaluated',
+      'would_nudge',
+      'status_evaluated',
+      'fingerprint_changed',
+    ]);
+    expect(metrics.deliveryReadiness).toMatchObject({
+      state: 'collecting_shadow_data',
+      reasons: expect.arrayContaining([
+        'insufficient_status_events',
+        'insufficient_observation_window',
+      ]),
+    });
+    expect(metrics.deliveryReadiness).toMatchObject({
+      state: 'collecting_shadow_data',
+      reasons: expect.arrayContaining([
+        'insufficient_status_events',
+        'insufficient_observation_window',
+      ]),
+    });
+    const serializedMetrics = JSON.stringify(metrics);
+    expect(serializedMetrics).toContain('"deliveryReadiness":');
+    expect(serializedMetrics).toContain('"deliveryReadiness":');
+  });
+
+  it('refreshes undelivered outbox payloads but rejects delivered payload conflicts', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await expect(store.ensurePending(input)).resolves.toMatchObject({
+      ok: true,
+      outcome: 'created',
+      item: { status: 'pending', attemptGeneration: 0 },
+    });
+    await expect(store.ensurePending(input)).resolves.toMatchObject({
+      ok: true,
+      outcome: 'existing',
+    });
+    const refreshed = await store.ensurePending({
+      ...input,
+      payloadHash: 'hash-b',
+      payload: makeNudgePayload({
+        text: 'Work sync check: call member_work_sync_status and member_work_sync_report.',
+      }),
+      nowIso: '2026-04-29T00:01:00.000Z',
+    });
+    expect(refreshed).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: {
+        status: 'pending',
+        payloadHash: 'hash-b',
+        payload: {
+          text: 'Work sync check: call member_work_sync_status and member_work_sync_report.',
+        },
+      },
+    });
+
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:02:00.000Z',
+      limit: 1,
+    });
+    const claimedRefresh = await store.ensurePending({
+      ...input,
+      payloadHash: 'hash-c',
+      payload: makeNudgePayload({ text: 'New text while delivery is claimed.' }),
+      nowIso: '2026-04-29T00:02:30.000Z',
+    });
+    expect(claimedRefresh).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: {
+        status: 'pending',
+        payloadHash: 'hash-c',
+        payload: { text: 'New text while delivery is claimed.' },
+        attemptGeneration: claimed.attemptGeneration + 1,
+      },
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    });
+    const afterStaleDelivery = JSON.parse(
+      await readFile(
+        join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+        'utf8'
+      )
+    );
+    expect(afterStaleDelivery.items[input.id]).toMatchObject({
+      status: 'pending',
+      payloadHash: 'hash-c',
+    });
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:03:30.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      payloadHash: 'hash-c',
+      attemptGeneration: claimed.attemptGeneration + 2,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: reclaimed.attemptGeneration,
+      deliveredMessageId: 'message-2',
+      nowIso: '2026-04-29T00:03:45.000Z',
+    });
+
+    await expect(
+      store.ensurePending({
+        ...input,
+        payloadHash: 'hash-d',
+        payload: makeNudgePayload({ text: 'New text after delivery.' }),
+        nowIso: '2026-04-29T00:04:00.000Z',
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      outcome: 'payload_conflict',
+      existingPayloadHash: 'hash-c',
+      requestedPayloadHash: 'hash-d',
+    });
+  });
+
+  it('revives superseded outbox items but keeps delivered nudges one-per-fingerprint', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    await store.markSuperseded({
+      teamName: 'team-a',
+      id: input.id,
+      reason: 'status_no_longer_matches_outbox',
+      nowIso: '2026-04-29T00:01:00.000Z',
+    });
+
+    const revived = await store.ensurePending({ ...input, nowIso: '2026-04-29T00:02:00.000Z' });
+    expect(revived).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'pending' },
+    });
+    expect(revived.item).not.toHaveProperty('lastError');
+
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:03:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:04:00.000Z',
+    });
+
+    await expect(
+      store.ensurePending({ ...input, nowIso: '2026-04-29T00:05:00.000Z' })
+    ).resolves.toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'delivered', deliveredMessageId: 'message-1' },
+    });
+  });
+
+  it('clears stale retry delay when a fresh reconcile revives the same outbox item', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const revived = await store.ensurePending({ ...input, nowIso: '2026-04-29T00:03:00.000Z' });
+
+    expect(revived).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'pending', attemptGeneration: 1 },
+    });
+    expect(revived.item).not.toHaveProperty('nextAttemptAt');
+    expect(revived.item).not.toHaveProperty('lastError');
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({ id: input.id, attemptGeneration: 2 });
+  });
+
+  it('does not let a late claim failure overwrite revived pending work', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+
+    // A nudge with the SAME payload revives the claimed item back to pending
+    // WITHOUT bumping attemptGeneration (same-payload revive path).
+    const revived = await store.ensurePending({ ...input, nowIso: '2026-04-29T00:02:00.000Z' });
+    expect(revived).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'pending', attemptGeneration: claimed.attemptGeneration },
+    });
+
+    // The original in-flight attempt now fails with the SAME generation. It must
+    // NOT clobber the revived pending row (the failure belongs to a claim that no
+    // longer owns the item).
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: false,
+      error: 'member_busy:active_tool_activity',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    });
+
+    // Revived work survives and remains claimable.
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: claimed.attemptGeneration + 1,
+    });
+  });
+
+  it('keeps an explicitly requested retry delay when reviving an outbox item', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const revived = await store.ensurePending({
+      ...input,
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    });
+
+    expect(revived.item).toMatchObject({
+      status: 'pending',
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+    });
+    await expect(
+      store.claimDue({
+        teamName: 'team-a',
+        claimedBy: 'dispatcher-b',
+        nowIso: '2026-04-29T00:04:00.000Z',
+        limit: 1,
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('treats invalid retry delay timestamps as due so retryable items cannot sleep forever', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const memberOutboxPath = join(memberWorkSyncDir(root, 'team-a', 'bob'), 'outbox.json');
+    const memberOutbox = JSON.parse(await readFile(memberOutboxPath, 'utf8'));
+    memberOutbox.items[input.id].nextAttemptAt = 'not-a-date';
+    await writeFile(memberOutboxPath, JSON.stringify(memberOutbox), 'utf8');
+
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    index.items[input.id].nextAttemptAt = 'not-a-date';
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    await expect(
+      store.claimDue({
+        teamName: 'team-a',
+        claimedBy: 'dispatcher-b',
+        nowIso: '2026-04-29T00:04:00.000Z',
+        limit: 1,
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: input.id,
+        status: 'claimed',
+        attemptGeneration: claimed.attemptGeneration + 1,
+      }),
+    ]);
+  });
+
+  it('clears retry delay when a retryable outbox item is delivered', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'member_busy:active_tool_activity',
+      nextAttemptAt: '2026-04-29T00:30:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:30:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: reclaimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:31:00.000Z',
+    });
+
+    const memberOutbox = JSON.parse(
+      await readFile(
+        join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+        'utf8'
+      )
+    );
+    expect(memberOutbox.items[input.id]).toMatchObject({ status: 'delivered' });
+    expect(memberOutbox.items[input.id]).not.toHaveProperty('nextAttemptAt');
+
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[input.id]).toMatchObject({ status: 'delivered' });
+    expect(index.items[input.id]).not.toHaveProperty('nextAttemptAt');
+  });
+
+  it('keeps delivered outbox items delivered when a late retry mark races after delivery', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:01:30.000Z',
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'nudge dispatch item timed out after 1ms',
+      nextAttemptAt: '2026-04-29T00:03:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const memberOutbox = JSON.parse(
+      await readFile(
+        join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+        'utf8'
+      )
+    );
+    expect(memberOutbox.items[input.id]).toMatchObject({
+      status: 'delivered',
+      deliveredMessageId: 'message-1',
+    });
+    expect(memberOutbox.items[input.id]).not.toHaveProperty('lastError');
+    expect(memberOutbox.items[input.id]).not.toHaveProperty('nextAttemptAt');
+
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[input.id]).toMatchObject({
+      status: 'delivered',
+    });
+    expect(index.items[input.id]).not.toHaveProperty('nextAttemptAt');
+  });
+
+  it('keeps retryable outbox items retryable when a late delivery races after timeout', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:retry-race',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:retry-race',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: true,
+      error: 'nudge dispatch item timed out after 1ms',
+      nextAttemptAt: '2026-04-29T00:03:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'late-message',
+      nowIso: '2026-04-29T00:02:30.000Z',
+    });
+
+    const memberOutbox = JSON.parse(
+      await readFile(
+        join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+        'utf8'
+      )
+    );
+    expect(memberOutbox.items[input.id]).toMatchObject({
+      status: 'failed_retryable',
+      lastError: 'nudge dispatch item timed out after 1ms',
+      nextAttemptAt: '2026-04-29T00:03:00.000Z',
+    });
+    expect(memberOutbox.items[input.id]).not.toHaveProperty('deliveredMessageId');
+
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[input.id]).toMatchObject({
+      status: 'failed_retryable',
+      nextAttemptAt: '2026-04-29T00:03:00.000Z',
+    });
+    expect(index.items[input.id]).not.toHaveProperty('deliveredMessageId');
+  });
+
+  it('keeps terminal outbox items terminal when a late delivery races after failure', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:terminal-race',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:terminal-race',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: false,
+      error: 'inbox_payload_conflict',
+      nowIso: '2026-04-29T00:01:30.000Z',
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'late-message',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const memberOutbox = JSON.parse(
+      await readFile(
+        join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+        'utf8'
+      )
+    );
+    expect(memberOutbox.items[input.id]).toMatchObject({
+      status: 'failed_terminal',
+      lastError: 'inbox_payload_conflict',
+    });
+    expect(memberOutbox.items[input.id]).not.toHaveProperty('deliveredMessageId');
+
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[input.id]).toMatchObject({
+      status: 'failed_terminal',
+    });
+    expect(index.items[input.id]).not.toHaveProperty('deliveredMessageId');
+  });
+
+  it('finds recent recovery outbox rows by logical intent key', async () => {
+    const olderInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:older',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:older',
+      payloadHash: 'hash-older',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-1' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const latestInput = {
+      ...olderInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:latest',
+      agendaFingerprint: 'agenda:v1:latest',
+      payloadHash: 'hash-latest',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    };
+    const unrelatedInput = {
+      ...olderInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:unrelated',
+      agendaFingerprint: 'agenda:v1:unrelated',
+      payloadHash: 'hash-unrelated',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-2' }),
+      nowIso: '2026-04-29T00:04:00.000Z',
+    };
+
+    await store.ensurePending(olderInput);
+    await store.ensurePending(latestInput);
+    await store.ensurePending(unrelatedInput);
+
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:01:00.000Z',
+      })
+    ).resolves.toMatchObject({
+      id: latestInput.id,
+      status: 'pending',
+      payloadHash: 'hash-latest',
+      updatedAt: '2026-04-29T00:03:00.000Z',
+    });
+  });
+
+  it('ignores terminal and stale rows for logical recovery lookup', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:terminal',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:terminal',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-1' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      error: 'inbox_payload_conflict',
+      retryable: false,
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toBeNull();
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:03:00.000Z',
+      })
+    ).resolves.toBeNull();
+  });
+
+  it('ignores superseded rows for logical recovery lookup', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:superseded',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:superseded',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-1' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    await store.markSuperseded({
+      teamName: 'team-a',
+      id: input.id,
+      reason: 'status_no_longer_matches_outbox',
+      nowIso: '2026-04-29T00:01:00.000Z',
+    });
+
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toBeNull();
+  });
+
+  it('claims due outbox items and fences terminal updates by attempt generation', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0]).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 1,
+      claimedBy: 'dispatcher-a',
+    });
+
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: 0,
+      deliveredMessageId: 'wrong-generation',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+    await expect(
+      store.ensurePending({
+        ...input,
+        nowIso: '2026-04-29T00:03:00.000Z',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      item: { status: 'pending', attemptGeneration: 1 },
+    });
+
+    const claimedAgain = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimedAgain[0].attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:05:00.000Z',
+    });
+
+    const file = JSON.parse(
+      await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'outbox.json'), 'utf8')
+    );
+    expect(file.items[input.id]).toMatchObject({
+      status: 'delivered',
+      deliveredMessageId: 'message-1',
+      attemptGeneration: 2,
+    });
+    const index = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(index.items[input.id]).toMatchObject({
+      memberName: 'bob',
+      status: 'delivered',
+    });
+  });
+
+  it('reclaims stale claimed outbox items without waiting for a fresh reconcile', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:stale-claim',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:stale-claim',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    expect(claimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 1,
+      claimedBy: 'dispatcher-a',
+      claimedAt: '2026-04-29T00:01:00.000Z',
+    });
+
+    await expect(
+      store.claimDue({
+        teamName: 'team-a',
+        claimedBy: 'dispatcher-b',
+        nowIso: '2026-04-29T00:05:59.000Z',
+        limit: 1,
+      })
+    ).resolves.toEqual([]);
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:06:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 2,
+      claimedBy: 'dispatcher-b',
+      claimedAt: '2026-04-29T00:06:00.000Z',
+    });
+  });
+
+  it('treats future claimedAt outbox items as stale', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:future-claim',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:future-claim',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:10:00.000Z',
+      limit: 1,
+    });
+    expect(claimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 1,
+      claimedBy: 'dispatcher-a',
+      claimedAt: '2026-04-29T00:10:00.000Z',
+    });
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 2,
+      claimedBy: 'dispatcher-b',
+      claimedAt: '2026-04-29T00:01:00.000Z',
+    });
+  });
+
+  it('claims due outbox items from the index without scanning unrelated member outboxes', async () => {
+    const bobInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(bobInput);
+
+    await mkdir(join(root, 'team-a', 'members', 'tom', '.member-work-sync'), { recursive: true });
+    await writeFile(
+      join(root, 'team-a', 'members', 'tom', 'member.meta.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        memberName: 'tom',
+        memberKey: 'tom',
+        updatedAt: '2026-04-29T00:00:00.000Z',
+      }),
+      'utf8'
+    );
+    await writeFile(
+      join(root, 'team-a', 'members', 'tom', '.member-work-sync', 'outbox.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        items: {
+          'member-work-sync:team-a:tom:agenda:v1:other': {
+            ...bobInput,
+            id: 'member-work-sync:team-a:tom:agenda:v1:other',
+            memberName: 'tom',
+            status: 'pending',
+            attemptGeneration: 0,
+            createdAt: '2026-04-29T00:00:00.000Z',
+            updatedAt: '2026-04-29T00:00:00.000Z',
+          },
+        },
+      }),
+      'utf8'
+    );
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    expect(claimed.map((item) => item.memberName)).toEqual(['bob']);
+  });
+
+  it('repairs a missing outbox index from member-scoped outbox files for delivered counts', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+    await rm(join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'), {
+      force: true,
+    });
+
+    await expect(
+      store.countRecentDelivered({
+        teamName: 'team-a',
+        memberName: 'bob',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
+  });
+
+  it('counts delivered nudges from the member outbox when the outbox index is partially stale', async () => {
+    const bobInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const tomInput = {
+      ...bobInput,
+      id: 'member-work-sync:team-a:tom:agenda:v1:def',
+      memberName: 'tom',
+      payload: makeNudgePayload({ to: 'tom' }),
+    };
+    await store.ensurePending(bobInput);
+    await store.ensurePending(tomInput);
+    const [claimedBob] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: bobInput.id,
+      attemptGeneration: claimedBob.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    delete index.items[bobInput.id];
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    await expect(
+      store.countRecentDelivered({
+        teamName: 'team-a',
+        memberName: 'bob',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(repaired.items[bobInput.id]).toMatchObject({ memberName: 'bob', status: 'delivered' });
+  });
+
+  it('filters recent delivered counts by work sync intent key prefix when requested', async () => {
+    const baseInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const stillStuckInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:agenda-sync-still-stuck:agenda:v1:abc:hash-a:bucket',
+      payloadHash: 'hash-still-stuck',
+      payload: makeNudgePayload({
+        workSyncIntentKey: 'agenda-sync-still-stuck:agenda:v1:abc:hash-a:bucket',
+      }),
+    };
+    const statusOnlyInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:status-only:agenda:v1:abc',
+      payloadHash: 'hash-status-only',
+      payload: makeNudgePayload({ workSyncIntentKey: 'status-only:agenda:v1:abc' }),
+    };
+    await store.ensurePending(baseInput);
+    await store.ensurePending(stillStuckInput);
+    await store.ensurePending(statusOnlyInput);
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 3,
+    });
+    for (const item of claimed) {
+      await store.markDelivered({
+        teamName: 'team-a',
+        id: item.id,
+        attemptGeneration: item.attemptGeneration,
+        deliveredMessageId: `message:${item.id}`,
+        nowIso: '2026-04-29T00:02:00.000Z',
+      });
+    }
+
+    await expect(
+      store.countRecentDelivered({
+        teamName: 'team-a',
+        memberName: 'bob',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toEqual({ count: 3, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
+    await expect(
+      store.countRecentDelivered({
+        teamName: 'team-a',
+        memberName: 'bob',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+        workSyncIntentKeyPrefix: 'agenda-sync-still-stuck:',
+      })
+    ).resolves.toEqual({ count: 1, oldestUpdatedAt: '2026-04-29T00:02:00.000Z' });
+  });
+
+  it('counts delivered nudges for one agenda fingerprint from member-scoped outbox files', async () => {
+    const baseInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const recoveryInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:status-only:agenda:v1:abc',
+      payloadHash: 'hash-status-only',
+      payload: makeNudgePayload({ workSyncIntentKey: 'status-only:agenda:v1:abc' }),
+    };
+    const otherAgendaInput = {
+      ...baseInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:def',
+      agendaFingerprint: 'agenda:v1:def',
+      payloadHash: 'hash-other',
+    };
+    await store.ensurePending(baseInput);
+    await store.ensurePending(recoveryInput);
+    await store.ensurePending(otherAgendaInput);
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 3,
+    });
+    for (const item of claimed) {
+      await store.markDelivered({
+        teamName: 'team-a',
+        id: item.id,
+        attemptGeneration: item.attemptGeneration,
+        deliveredMessageId: `message:${item.id}`,
+        nowIso: '2026-04-29T00:02:00.000Z',
+      });
+    }
+
+    await expect(
+      store.countDeliveredForAgenda({
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:abc',
+      })
+    ).resolves.toBe(2);
+    await expect(
+      store.countDeliveredForAgenda({
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:v1:abc',
+        sinceIso: '2026-04-29T00:02:00.000Z',
+      })
+    ).resolves.toBe(0);
+  });
+
+  it('finds delivered review pickup request event ids from member-scoped outbox files', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:review-pickup:evt-a+evt-b',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:review',
+      payloadHash: 'hash-review',
+      payload: makeNudgePayload({
+        workSyncIntent: 'review_pickup',
+        workSyncIntentKey: 'review-pickup:evt-a+evt-b',
+        workSyncReviewRequestEventIds: ['evt-a', 'evt-b'],
+      }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: 'message-1',
+      deliveryState: 'prompt_accepted',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    await expect(
+      store.findDeliveredReviewPickupRequestEventIds({
+        teamName: 'team-a',
+        memberName: 'bob',
+        reviewRequestEventIds: ['evt-b', 'evt-c'],
+      })
+    ).resolves.toEqual(['evt-b']);
+  });
+
+  it('revives a claimed review pickup outbox item when only the payload text changed', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:review-pickup:evt-a',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:review-a',
+      payloadHash: 'hash-review-a',
+      payload: makeNudgePayload({
+        workSyncIntent: 'review_pickup',
+        workSyncIntentKey: 'review-pickup:evt-a',
+        workSyncReviewRequestEventIds: ['evt-a'],
+        text: 'Review pickup required: old subject',
+      }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    expect(claimed.status).toBe('claimed');
+
+    const result = await store.ensurePending({
+      ...input,
+      agendaFingerprint: 'agenda:v1:review-b',
+      payloadHash: 'hash-review-b',
+      payload: {
+        ...input.payload,
+        text: 'Review pickup required: renamed subject',
+      },
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: {
+        status: 'pending',
+        agendaFingerprint: 'agenda:v1:review-b',
+        payloadHash: 'hash-review-b',
+        payload: {
+          workSyncIntent: 'review_pickup',
+          workSyncIntentKey: 'review-pickup:evt-a',
+          text: 'Review pickup required: renamed subject',
+        },
+      },
+    });
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:03:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      payloadHash: 'hash-review-b',
+      payload: { text: 'Review pickup required: renamed subject' },
+    });
+  });
+
+  it('repairs stale due outbox index routes before persisting claim results', async () => {
+    const bobInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const tomInput = {
+      ...bobInput,
+      id: 'member-work-sync:team-a:tom:agenda:v1:def',
+      memberName: 'tom',
+      payload: makeNudgePayload({ to: 'tom' }),
+    };
+    await store.ensurePending(bobInput);
+    await store.ensurePending(tomInput);
+    await writeFile(
+      join(root, 'team-a', 'members', 'bob', '.member-work-sync', 'outbox.json'),
+      JSON.stringify({ schemaVersion: 2, items: {} }),
+      'utf8'
+    );
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 5,
+    });
+    expect(claimed.map((item) => item.memberName)).toEqual(['tom']);
+    const repaired = JSON.parse(
+      await readFile(
+        join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json'),
+        'utf8'
+      )
+    );
+    expect(
+      Object.values(repaired.items).map((item) => (item as { memberName: string }).memberName)
+    ).toEqual(['tom']);
+  });
+
+  it('repairs partially missing due outbox index routes before claiming', async () => {
+    const bobInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const tomInput = {
+      ...bobInput,
+      id: 'member-work-sync:team-a:tom:agenda:v1:def',
+      memberName: 'tom',
+      payload: makeNudgePayload({ to: 'tom' }),
+    };
+    await store.ensurePending(bobInput);
+    await store.ensurePending(tomInput);
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    delete index.items[tomInput.id];
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 5,
+    });
+    expect(claimed.map((item) => item.memberName).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bob',
+      'tom',
+    ]);
+  });
+
+  it('rewrites stale due outbox member keys while claiming', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    index.items[input.id] = {
+      ...index.items[input.id],
+      memberKey: 'tom',
+      memberName: 'bob',
+    };
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+
+    expect(claimed).toMatchObject({
+      id: input.id,
+      memberName: 'bob',
+      status: 'claimed',
+    });
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(repaired.items[input.id]).toMatchObject({
+      memberKey: 'bob',
+      memberName: 'bob',
+      status: 'claimed',
+    });
+  });
+
+  it('repairs stale outbox update routes before marking failures', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    await mkdir(memberWorkSyncDir(root, 'team-a', 'tom'), { recursive: true });
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await writeFile(
+      join(memberWorkSyncDir(root, 'team-a', 'tom'), 'outbox.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        items: {
+          [input.id]: {
+            ...input,
+            teamName: 'other-team',
+            memberName: 'tom',
+            status: 'claimed',
+            attemptGeneration: claimed.attemptGeneration,
+            claimedBy: 'dispatcher-a',
+            claimedAt: '2026-04-29T00:01:00.000Z',
+            updatedAt: '2026-04-29T00:01:00.000Z',
+          },
+        },
+      }),
+      'utf8'
+    );
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    index.items[input.id] = {
+      ...index.items[input.id],
+      memberKey: 'tom',
+      memberName: 'tom',
+    };
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      error: 'delivery failed',
+      retryable: true,
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const memberOutbox = JSON.parse(
+      await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'outbox.json'), 'utf8')
+    );
+    expect(memberOutbox.items[input.id]).toMatchObject({
+      status: 'failed_retryable',
+      lastError: 'delivery failed',
+      nextAttemptAt: '2026-04-29T00:10:00.000Z',
+    });
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(repaired.items[input.id]).toMatchObject({
+      memberKey: 'bob',
+      memberName: 'bob',
+      status: 'failed_retryable',
+    });
+  });
+
+  it('repairs wrong-member due outbox index routes before returning a limited claim', async () => {
+    const bobInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(bobInput);
+    await mkdir(memberWorkSyncDir(root, 'team-a', 'tom'), { recursive: true });
+    await writeFile(
+      join(memberWorkSyncDir(root, 'team-a', 'tom'), 'outbox.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        items: {
+          [bobInput.id]: {
+            ...bobInput,
+            teamName: 'other-team',
+            memberName: 'tom',
+            status: 'pending',
+            createdAt: '2026-04-29T00:00:00.000Z',
+            updatedAt: '2026-04-29T00:00:00.000Z',
+          },
+        },
+      }),
+      'utf8'
+    );
+    const indexPath = join(root, 'team-a', '.member-work-sync', 'indexes', 'outbox-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8'));
+    index.items[bobInput.id] = {
+      ...index.items[bobInput.id],
+      memberKey: 'tom',
+      memberName: 'tom',
+    };
+    await writeFile(indexPath, JSON.stringify(index), 'utf8');
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+
+    expect(claimed.map((item) => item.memberName)).toEqual(['bob']);
+    const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
+    expect(repaired.items[bobInput.id]).toMatchObject({
+      memberKey: 'bob',
+      memberName: 'bob',
+      status: 'claimed',
+    });
+  });
+
+  it('repairs stale terminal outbox index routes when member-scoped item is due', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markDelivered({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      deliveredMessageId: input.id,
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    const memberOutboxPath = join(memberWorkSyncDir(root, 'team-a', 'bob'), 'outbox.json');
+    const memberOutbox = JSON.parse(await readFile(memberOutboxPath, 'utf8'));
+    memberOutbox.items[input.id] = {
+      ...memberOutbox.items[input.id],
+      status: 'pending',
+      updatedAt: '2026-04-29T00:03:00.000Z',
+    };
+    delete memberOutbox.items[input.id].deliveredMessageId;
+    await writeFile(memberOutboxPath, JSON.stringify(memberOutbox), 'utf8');
+
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: 2,
+      claimedBy: 'dispatcher-b',
+    });
+  });
+
+  it('falls back to legacy v1 status and materializes legacy outbox during claim', async () => {
+    const auditEvents: MemberWorkSyncAuditEvent[] = [];
+    store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(root), {
+      auditJournal: {
+        append: (event) => {
+          auditEvents.push(event);
+          return Promise.resolve();
+        },
+      },
+      now: () => new Date('2026-04-29T00:02:00.000Z'),
+    });
+    const legacyStatusPath = join(root, 'team-a', '.member-work-sync', 'status.json');
+    await mkdir(join(root, 'team-a', '.member-work-sync'), { recursive: true });
+    await writeFile(
+      legacyStatusPath,
+      JSON.stringify({ schemaVersion: 1, members: { bob: makeStatus({}) } }),
+      'utf8'
+    );
+
+    await expect(store.read({ teamName: 'team-a', memberName: 'bob' })).resolves.toMatchObject({
+      memberName: 'bob',
+      state: 'needs_sync',
+    });
+
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:legacy',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:legacy',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      status: 'pending' as const,
+      attemptGeneration: 0,
+      createdAt: '2026-04-29T00:00:00.000Z',
+      updatedAt: '2026-04-29T00:00:00.000Z',
+    };
+    await writeFile(
+      join(root, 'team-a', '.member-work-sync', 'outbox.json'),
+      JSON.stringify({ schemaVersion: 1, items: { [input.id]: input } }),
+      'utf8'
+    );
+
+    const claimed = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    expect(claimed).toHaveLength(1);
+    expect(
+      JSON.parse(
+        await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'outbox.json'), 'utf8')
+      ).items[input.id]
+    ).toMatchObject({ status: 'claimed' });
+    expect(auditEvents.map((event) => `${event.event}:${event.reason}`)).toEqual(
+      expect.arrayContaining([
+        'legacy_fallback_used:status_v1',
+        'index_repaired:outbox',
+        'legacy_fallback_used:outbox_v1',
+      ])
+    );
+  });
+
+  it.each([
+    ['legacy terminal older', 'legacy', '2026-04-29T00:00:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['legacy terminal newer', 'legacy', '2026-04-29T00:02:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['member terminal older', 'member', '2026-04-29T00:00:00.000Z', '2026-04-29T00:01:00.000Z'],
+    ['member terminal newer', 'member', '2026-04-29T00:02:00.000Z', '2026-04-29T00:01:00.000Z'],
+  ] as const)(
+    'merges overlapping v1/v2 terminal proof semantically: %s',
+    async (_name, terminalFormat, terminalAt, pendingAt) => {
+      const paths = new MemberWorkSyncStorePaths(root);
+      const reportId = 'overlapping-report';
+      const outboxId = 'overlapping-outbox';
+      const terminalReport: MemberWorkSyncReportIntent = {
+        id: reportId,
+        teamName: 'team-a',
+        memberName: 'bob',
+        request: {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'caught_up',
+          agendaFingerprint: 'agenda:overlap',
+          reportToken: 'wrs:v1.overlap',
+        },
+        reason: 'processed',
+        status: 'accepted',
+        recordedAt: terminalAt,
+        processedAt: terminalAt,
+        resultCode: 'accepted',
+      };
+      const pendingReport: MemberWorkSyncReportIntent = {
+        ...terminalReport,
+        reason: 'retry_pending',
+        status: 'pending',
+        recordedAt: pendingAt,
+        processedAt: undefined,
+        resultCode: undefined,
+      };
+      const terminalOutbox: MemberWorkSyncOutboxItem = {
+        id: outboxId,
+        teamName: 'team-a',
+        memberName: 'bob',
+        agendaFingerprint: 'agenda:overlap',
+        payloadHash: 'hash-overlap',
+        payload: makeNudgePayload(),
+        status: 'delivered',
+        attemptGeneration: 1,
+        deliveredMessageId: 'delivered-message',
+        createdAt: terminalAt,
+        updatedAt: terminalAt,
+      };
+      const pendingOutbox: MemberWorkSyncOutboxItem = {
+        ...terminalOutbox,
+        status: 'pending',
+        attemptGeneration: 2,
+        deliveredMessageId: undefined,
+        createdAt: pendingAt,
+        updatedAt: pendingAt,
+      };
+      const legacyReport = terminalFormat === 'legacy' ? terminalReport : pendingReport;
+      const memberReport = terminalFormat === 'member' ? terminalReport : pendingReport;
+      const legacyOutbox = terminalFormat === 'legacy' ? terminalOutbox : pendingOutbox;
+      const memberOutbox = terminalFormat === 'member' ? terminalOutbox : pendingOutbox;
+      const legacyDir = join(root, 'team-a', '.member-work-sync');
+      const memberDir = memberWorkSyncDir(root, 'team-a', 'bob');
+      await mkdir(legacyDir, { recursive: true });
+      await mkdir(memberDir, { recursive: true });
+      await writeFile(
+        paths.getLegacyPendingReportsPath('team-a'),
+        JSON.stringify({ schemaVersion: 1, intents: { [reportId]: legacyReport } })
+      );
+      await writeFile(
+        paths.getMemberReportsPath('team-a', 'bob'),
+        JSON.stringify({ schemaVersion: 2, intents: { [reportId]: memberReport } })
+      );
+      await writeFile(
+        paths.getLegacyOutboxPath('team-a'),
+        JSON.stringify({ schemaVersion: 1, items: { [outboxId]: legacyOutbox } })
+      );
+      await writeFile(
+        paths.getMemberOutboxPath('team-a', 'bob'),
+        JSON.stringify({ schemaVersion: 2, items: { [outboxId]: memberOutbox } })
+      );
+
+      const assertTerminalProof = (
+        snapshot: Awaited<ReturnType<JsonMemberWorkSyncStore['readSnapshotForImport']>>
+      ): void => {
+        expect(snapshot?.reportIntents).toEqual([
+          expect.objectContaining({ id: reportId, status: 'accepted', resultCode: 'accepted' }),
+        ]);
+        expect(snapshot?.outboxItems).toEqual([
+          expect.objectContaining({
+            id: outboxId,
+            status: 'delivered',
+            deliveredMessageId: 'delivered-message',
+          }),
+        ]);
+      };
+
+      const active = await store.readSnapshotForImport('team-a');
+      assertTerminalProof(active);
+
+      for (const filePath of [
+        paths.getLegacyPendingReportsPath('team-a'),
+        paths.getMemberReportsPath('team-a', 'bob'),
+        paths.getLegacyOutboxPath('team-a'),
+        paths.getMemberOutboxPath('team-a', 'bob'),
+      ]) {
+        await archiveFileWithGenerations(filePath);
+      }
+      assertTerminalProof(await store.readArchivedSnapshotForImport('team-a'));
+    }
+  );
+
+  it('rebuilds cumulative state from every pre-sqlite file generation', async () => {
+    const statusFor = (
+      memberName: string,
+      overrides: Partial<MemberWorkSyncStatus> = {}
+    ): MemberWorkSyncStatus => {
+      const base = makeStatus({});
+      return makeStatus({
+        memberName,
+        agenda: { ...base.agenda, memberName },
+        ...overrides,
+      });
+    };
+    const archiveCurrentSnapshot = async (): Promise<void> => {
+      const snapshot = await store.readSnapshotForImport('team-a');
+      expect(snapshot).not.toBeNull();
+      for (const filePath of snapshot?.filesToArchive ?? []) {
+        await archiveFileWithGenerations(filePath);
+      }
+    };
+
+    await store.write(statusFor('alice'));
+    await store.write(statusFor('bob'));
+    await store.ensurePending({
+      id: 'nudge-alice',
+      teamName: 'team-a',
+      memberName: 'alice',
+      agendaFingerprint: 'agenda:v1:alice',
+      payloadHash: 'hash-alice',
+      payload: makeNudgePayload({ to: 'alice' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    });
+    await store.ensurePending({
+      id: 'nudge-bob',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:bob',
+      payloadHash: 'hash-bob-old',
+      payload: makeNudgePayload({ to: 'bob' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    });
+    await archiveCurrentSnapshot();
+
+    await store.write(
+      statusFor('bob', {
+        state: 'caught_up',
+        evaluatedAt: '2026-04-29T00:10:00.000Z',
+      })
+    );
+    await store.write(statusFor('carol'));
+    await store.ensurePending({
+      id: 'nudge-bob',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v2:bob',
+      payloadHash: 'hash-bob-new',
+      payload: makeNudgePayload({ to: 'bob' }),
+      nowIso: '2026-04-29T00:10:00.000Z',
+    });
+    await store.ensurePending({
+      id: 'nudge-carol',
+      teamName: 'team-a',
+      memberName: 'carol',
+      agendaFingerprint: 'agenda:v1:carol',
+      payloadHash: 'hash-carol',
+      payload: makeNudgePayload({ to: 'carol' }),
+      nowIso: '2026-04-29T00:10:00.000Z',
+    });
+    await archiveCurrentSnapshot();
+
+    await expect(store.readSnapshotForImport('team-a')).resolves.toBeNull();
+    const recovered = await store.readArchivedSnapshotForImport('team-a');
+
+    expect(
+      recovered?.statuses.map((status) => status.memberName).sort((a, b) => a.localeCompare(b))
+    ).toEqual(['alice', 'bob', 'carol']);
+    expect(recovered?.statuses.find((status) => status.memberName === 'bob')).toMatchObject({
+      state: 'caught_up',
+      evaluatedAt: '2026-04-29T00:10:00.000Z',
+    });
+    expect(
+      recovered?.outboxItems.map((item) => item.id).sort((a, b) => a.localeCompare(b))
+    ).toEqual(['nudge-alice', 'nudge-bob', 'nudge-carol']);
+    expect(recovered?.outboxItems.find((item) => item.id === 'nudge-bob')?.payloadHash).toBe(
+      'hash-bob-new'
+    );
+    expect(recovered?.filesToArchive).toEqual([]);
+  });
+
+  it('discovers exact metadata-free payload files and dedupes canonical member keys', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const liveStatusMember = 'live status/qa';
+    const dedupedStatusMember = 'deduped status/qa';
+    const archivedStatusMember = 'archived status/qa';
+    const liveReportMember = 'live report/qa';
+    const archivedReportMember = 'archived report/qa';
+    const liveOutboxMember = 'live outbox/qa';
+    const archivedOutboxMember = 'archived outbox/qa';
+    const memberNames = [
+      liveStatusMember,
+      dedupedStatusMember,
+      archivedStatusMember,
+      liveReportMember,
+      archivedReportMember,
+      liveOutboxMember,
+      archivedOutboxMember,
+    ];
+    const statusFor = (
+      memberName: string,
+      state: MemberWorkSyncStatus['state'] = 'needs_sync'
+    ): MemberWorkSyncStatus => {
+      const base = makeStatus({});
+      return makeStatus({
+        memberName,
+        state,
+        agenda: { ...base.agenda, memberName },
+      });
+    };
+    const appendReport = async (memberName: string): Promise<void> => {
+      await store.appendPendingReport(
+        {
+          teamName: 'team-a',
+          memberName,
+          state: 'still_working',
+          agendaFingerprint: `agenda:${memberName}`,
+          reportToken: `wrs:v1.${memberName}`,
+          source: 'mcp',
+        },
+        'control_api_unavailable'
+      );
+    };
+    const ensureOutbox = async (memberName: string): Promise<void> => {
+      await store.ensurePending({
+        id: `nudge-${memberName}`,
+        teamName: 'team-a',
+        memberName,
+        agendaFingerprint: `agenda:${memberName}`,
+        payloadHash: `hash-${memberName}`,
+        payload: makeNudgePayload({ to: memberName }),
+        nowIso: '2026-04-29T00:00:00.000Z',
+      });
+    };
+
+    await store.write(statusFor(archivedStatusMember, 'needs_sync'));
+    await archiveFileWithGenerations(paths.getMemberStatusPath('team-a', archivedStatusMember));
+    await store.write(statusFor(archivedStatusMember, 'caught_up'));
+    await archiveFileWithGenerations(paths.getMemberStatusPath('team-a', archivedStatusMember));
+    await store.write(statusFor(liveStatusMember));
+    await store.write(statusFor(dedupedStatusMember));
+
+    await appendReport(archivedReportMember);
+    await archiveFileWithGenerations(paths.getMemberReportsPath('team-a', archivedReportMember));
+    await appendReport(liveReportMember);
+
+    await ensureOutbox(archivedOutboxMember);
+    await archiveFileWithGenerations(paths.getMemberOutboxPath('team-a', archivedOutboxMember));
+    await ensureOutbox(liveOutboxMember);
+
+    for (const memberName of memberNames) {
+      await rm(join(root, 'team-a', 'members', paths.getMemberKey(memberName), 'member.meta.json'));
+    }
+    await rm(join(root, 'team-a', '.member-work-sync'), { recursive: true, force: true });
+
+    for (const alias of ['first-alias', 'second-alias']) {
+      const aliasDir = join(root, 'team-a', 'members', alias);
+      await mkdir(aliasDir, { recursive: true });
+      await writeFile(
+        join(aliasDir, 'member.meta.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          memberName:
+            alias === 'first-alias'
+              ? ` ${dedupedStatusMember} `
+              : dedupedStatusMember.toUpperCase(),
+          memberKey: paths.getMemberKey(dedupedStatusMember),
+          updatedAt: '2026-04-29T00:00:00.000Z',
+        })
+      );
+    }
+
+    const ignoredStatus = {
+      schemaVersion: 2,
+      status: statusFor('ignored member'),
+    };
+    const nonCanonicalDir = join(
+      root,
+      'team-a',
+      'members',
+      '%69gnored%20member',
+      '.member-work-sync'
+    );
+    await mkdir(nonCanonicalDir, { recursive: true });
+    await writeFile(join(nonCanonicalDir, 'status.json'), JSON.stringify(ignoredStatus));
+    const malformedDir = join(root, 'team-a', 'members', '%E0%A4%A', '.member-work-sync');
+    await mkdir(malformedDir, { recursive: true });
+    await writeFile(join(malformedDir, 'status.json'), JSON.stringify(ignoredStatus));
+    const boundaryDir = memberWorkSyncDir(root, 'team-a', 'boundary only');
+    await mkdir(boundaryDir, { recursive: true });
+    await writeFile(
+      join(boundaryDir, 'status.json.pre-sqlite-copy'),
+      JSON.stringify(ignoredStatus)
+    );
+
+    const active = await store.readSnapshotForImport('team-a');
+    expect(
+      active?.statuses.map((status) => status.memberName).sort((a, b) => a.localeCompare(b))
+    ).toEqual([dedupedStatusMember, liveStatusMember]);
+    expect(active?.reportIntents.map((intent) => intent.memberName)).toEqual([liveReportMember]);
+    expect(active?.outboxItems.map((item) => item.memberName)).toEqual([liveOutboxMember]);
+    expect(active?.filesToArchive).toHaveLength(4);
+    expect(new Set(active?.filesToArchive).size).toBe(4);
+
+    const archived = await store.readArchivedSnapshotForImport('team-a');
+    expect(archived?.statuses).toEqual([
+      expect.objectContaining({ memberName: archivedStatusMember, state: 'caught_up' }),
+    ]);
+    expect(archived?.reportIntents.map((intent) => intent.memberName)).toEqual([
+      archivedReportMember,
+    ]);
+    expect(archived?.outboxItems.map((item) => item.memberName)).toEqual([archivedOutboxMember]);
+    expect(archived?.filesToArchive).toEqual([]);
+  });
+});

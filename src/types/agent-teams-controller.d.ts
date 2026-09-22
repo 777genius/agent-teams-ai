@@ -1,0 +1,269 @@
+declare module 'agent-teams-controller' {
+  export interface ControllerContextOptions {
+    teamName: string;
+    claudeDir?: string;
+    allowUserMessageSender?: boolean;
+  }
+
+  export interface ControllerTaskReadApi {
+    getTask(taskId: string): unknown;
+    getTaskComment(
+      taskId: string,
+      commentId: string
+    ): {
+      comment: Record<string, unknown>;
+      task: {
+        id: string;
+        displayId: string;
+        subject: string;
+        status: string;
+        owner: string | null;
+        commentCount: number;
+      };
+    };
+    listTasks(): unknown[];
+    listTaskInventory(filters?: Record<string, unknown>): unknown[];
+    listDeletedTasks(): unknown[];
+    resolveTaskId(taskRef: string): string;
+    setTaskStatus(taskId: string, status: string, actor?: string): unknown;
+    startTask(taskId: string, actor?: string): unknown;
+    completeTask(taskId: string, actor?: string): unknown;
+    softDeleteTask(taskId: string, actor?: string): unknown;
+    restoreTask(taskId: string, actor?: string): unknown;
+    setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
+    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
+    attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
+    attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
+    addTaskAttachmentMeta(taskId: string, meta: Record<string, unknown>): unknown;
+    removeTaskAttachment(taskId: string, attachmentId: string): unknown;
+    setNeedsClarification(taskId: string, value: string | null): unknown;
+    linkTask(taskId: string, targetId: string, linkType: string): unknown;
+    unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
+    memberBriefing(
+      memberName: string,
+      options?: {
+        runtimeProvider?: 'native' | 'opencode' | 'codex';
+        includeActiveProcesses?: boolean;
+      }
+    ): Promise<string>;
+    leadBriefing(): Promise<string>;
+    taskBriefing(memberName: string): Promise<string>;
+  }
+
+  export interface ControllerTaskWriteApi {
+    createTask(flags: Record<string, unknown>): unknown;
+    setTaskStatus(taskId: string, status: string, actor?: string): unknown;
+    startTask(taskId: string, actor?: string): unknown;
+    completeTask(taskId: string, actor?: string): unknown;
+    softDeleteTask(taskId: string, actor?: string): unknown;
+    restoreTask(taskId: string, actor?: string): unknown;
+    setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
+    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
+    attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
+    attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
+    addTaskAttachmentMeta(taskId: string, meta: Record<string, unknown>): unknown;
+    removeTaskAttachment(taskId: string, attachmentId: string): unknown;
+    setNeedsClarification(taskId: string, value: string | null): unknown;
+    linkTask(taskId: string, targetId: string, linkType: string): unknown;
+    unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
+  }
+
+  export interface ControllerTaskBoardTaskApi
+    extends ControllerTaskReadApi, ControllerTaskWriteApi {
+    reconcileTaskCreation(flags: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerTaskApi extends ControllerTaskBoardTaskApi {
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.createTask. */
+    createTask(flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setTaskStatus. */
+    setTaskStatus(taskId: string, status: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.startTask. */
+    startTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.completeTask. */
+    completeTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.softDeleteTask. */
+    softDeleteTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.restoreTask. */
+    restoreTask(taskId: string, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setTaskOwner. */
+    setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.updateTaskFields. */
+    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.addTaskComment. */
+    addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.attachTaskFile. */
+    attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.attachCommentFile. */
+    attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.addTaskAttachmentMeta. */
+    addTaskAttachmentMeta(taskId: string, meta: Record<string, unknown>): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.removeTaskAttachment. */
+    removeTaskAttachment(taskId: string, attachmentId: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setNeedsClarification. */
+    setNeedsClarification(taskId: string, value: string | null): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.linkTask. */
+    linkTask(taskId: string, targetId: string, linkType: string): unknown;
+    /** @deprecated Internal task lifecycle write. Use controller.taskBoard.unlinkTask. */
+    unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
+  }
+
+  export interface ControllerKanbanReadApi {
+    getKanbanState(): unknown;
+    listReviewers(): string[];
+  }
+
+  export interface ControllerKanbanWriteApi {
+    setKanbanColumn(taskId: string, column: string, options?: Record<string, unknown>): unknown;
+    clearKanban(taskId: string): unknown;
+    addReviewer(reviewer: string): string[];
+    removeReviewer(reviewer: string): string[];
+    updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+  }
+
+  export interface ControllerTaskBoardKanbanApi
+    extends ControllerKanbanReadApi, ControllerKanbanWriteApi {}
+
+  export interface ControllerKanbanApi extends ControllerTaskBoardKanbanApi {
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.setKanbanColumn. */
+    setKanbanColumn(taskId: string, column: string, options?: Record<string, unknown>): unknown;
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.clearKanban. */
+    clearKanban(taskId: string): unknown;
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.addReviewer. */
+    addReviewer(reviewer: string): string[];
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.removeReviewer. */
+    removeReviewer(reviewer: string): string[];
+    /** @deprecated Internal board lifecycle write. Use controller.taskBoard.updateColumnOrder. */
+    updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+  }
+
+  export interface ControllerReviewWriteApi {
+    requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
+    startReview(taskId: string, flags?: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerReviewApi extends ControllerReviewWriteApi {
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestReview. */
+    requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.approveReview. */
+    approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestChanges. */
+    requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
+    /** @deprecated Internal review lifecycle write. Use controller.taskBoard.startReview. */
+    startReview(taskId: string, flags?: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerTaskBoardApi
+    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {}
+
+  export interface ControllerMessageApi {
+    appendSentMessage(flags: Record<string, unknown>): unknown;
+    lookupMessage(messageId: string): { message: Record<string, unknown>; store: string };
+    sendMessage(flags: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerProcessApi {
+    registerProcess(flags: Record<string, unknown>): unknown;
+    stopProcess(flags: Record<string, unknown>): unknown;
+    unregisterProcess(flags: Record<string, unknown>): unknown;
+    listProcesses(): unknown[];
+  }
+
+  export interface ControllerMaintenanceApi {
+    reconcileArtifacts(flags?: Record<string, unknown>): unknown;
+  }
+
+  export interface ControllerCrossTeamApi {
+    sendCrossTeamMessage(flags: Record<string, unknown>): unknown;
+    listCrossTeamTargets(flags?: Record<string, unknown>): unknown;
+    getCrossTeamOutbox(): unknown;
+  }
+
+  export interface ControllerRuntimeApi {
+    listTeams(flags?: Record<string, unknown>): Promise<unknown>;
+    getTeam(flags?: Record<string, unknown>): Promise<unknown>;
+    createTeam(flags: Record<string, unknown>): Promise<unknown>;
+    launchTeam(flags: Record<string, unknown>): Promise<unknown>;
+    stopTeam(flags?: Record<string, unknown>): Promise<unknown>;
+    getRuntimeState(flags?: Record<string, unknown>): Promise<unknown>;
+    runtimeBootstrapCheckin(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeDeliverMessage(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeTaskEvent(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeHeartbeat(flags: Record<string, unknown>): Promise<unknown>;
+  }
+
+  export interface AgentBlocksApi {
+    AGENT_BLOCK_TAG: string;
+    AGENT_BLOCK_OPEN: string;
+    AGENT_BLOCK_CLOSE: string;
+    AGENT_BLOCK_RE: RegExp;
+    stripAgentBlocks(text: string): string;
+    wrapAgentBlock(text: string): string;
+  }
+
+  export interface AgentTeamsController {
+    tasks: ControllerTaskApi;
+    kanban: ControllerKanbanApi;
+    review: ControllerReviewApi;
+    taskBoard: ControllerTaskBoardApi;
+    messages: ControllerMessageApi;
+    processes: ControllerProcessApi;
+    maintenance: ControllerMaintenanceApi;
+    crossTeam: ControllerCrossTeamApi;
+    runtime: ControllerRuntimeApi;
+  }
+
+  /** Context-free protocol text builders, shared across lead and member prompts. */
+  export interface ProtocolsApi {
+    buildActionModeProtocolText(delegateDescription: string): string;
+    MEMBER_DELEGATE_DESCRIPTION: string;
+    buildProcessProtocolText(teamName: string): string;
+  }
+
+  /** Context-free text classifiers shared with the MCP server. */
+  export interface TaskTextSignalsApi {
+    isTaskCompletionClaimText(text: string): boolean;
+  }
+
+  export type AgentTeamsMcpToolGroupId =
+    | 'task'
+    | 'lead'
+    | 'kanban'
+    | 'review'
+    | 'message'
+    | 'process'
+    | 'runtime'
+    | 'crossTeam';
+
+  export interface AgentTeamsMcpToolGroup {
+    id: AgentTeamsMcpToolGroupId;
+    teammateOperational: boolean;
+    toolNames: readonly string[];
+  }
+
+  export function createController(options: ControllerContextOptions): AgentTeamsController;
+
+  export const agentBlocks: AgentBlocksApi;
+
+  export const protocols: ProtocolsApi;
+
+  export const taskTextSignals: TaskTextSignalsApi;
+  export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_MESSAGE_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_CROSS_TEAM_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_PROCESS_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_KANBAN_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_RUNTIME_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_MCP_TOOL_GROUPS: readonly AgentTeamsMcpToolGroup[];
+  export const AGENT_TEAMS_REGISTERED_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_LEAD_BOOTSTRAP_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES: readonly string[];
+}

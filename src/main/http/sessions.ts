@@ -1,0 +1,339 @@
+/**
+ * HTTP route handlers for Session Operations.
+ *
+ * Routes:
+ * - GET /api/projects/:projectId/sessions - List sessions
+ * - GET /api/projects/:projectId/sessions-paginated - Paginated sessions
+ * - GET /api/projects/:projectId/sessions/:sessionId - Full session detail
+ * - GET /api/projects/:projectId/sessions/:sessionId/groups - Conversation groups
+ * - GET /api/projects/:projectId/sessions/:sessionId/metrics - Session metrics
+ * - GET /api/projects/:projectId/sessions/:sessionId/waterfall - Waterfall data
+ */
+
+import { createLogger } from '@shared/utils/logger';
+
+import { coercePageLimit, validateProjectId, validateSessionId } from '../ipc/guards';
+import { DataCache } from '../services/infrastructure/DataCache';
+
+import type { SessionsByIdsOptions, SessionsPaginationOptions } from '../types';
+import type { HttpServices } from './index';
+import type { FastifyInstance } from 'fastify';
+
+const logger = createLogger('HTTP:sessions');
+
+export function registerSessionRoutes(app: FastifyInstance, services: HttpServices): void {
+  // List sessions
+  app.get<{ Params: { projectId: string } }>(
+    '/api/projects/:projectId/sessions',
+    async (request) => {
+      try {
+        const validated = validateProjectId(request.params.projectId);
+        if (!validated.valid) {
+          logger.error(`GET sessions rejected: ${validated.error ?? 'unknown'}`);
+          return [];
+        }
+
+        const sessions = await services.projectScanner.listSessions(validated.value!);
+        return sessions;
+      } catch (error) {
+        logger.error(`Error in GET sessions for ${request.params.projectId}:`, error);
+        return [];
+      }
+    }
+  );
+
+  // Paginated sessions
+  app.get<{
+    Params: { projectId: string };
+    Querystring: {
+      cursor?: string;
+      limit?: string;
+      includeTotalCount?: string;
+      prefilterAll?: string;
+      metadataLevel?: 'light' | 'deep';
+    };
+  }>('/api/projects/:projectId/sessions-paginated', async (request) => {
+    try {
+      const validated = validateProjectId(request.params.projectId);
+      if (!validated.valid) {
+        logger.error(`GET sessions-paginated rejected: ${validated.error ?? 'unknown'}`);
+        return { sessions: [], nextCursor: null, hasMore: false, totalCount: 0 };
+      }
+
+      const cursor = request.query.cursor || null;
+      const limit = coercePageLimit(
+        request.query.limit ? Number(request.query.limit) : undefined,
+        20
+      );
+      const options: SessionsPaginationOptions = {
+        includeTotalCount: request.query.includeTotalCount !== 'false',
+        prefilterAll: request.query.prefilterAll !== 'false',
+        metadataLevel: request.query.metadataLevel,
+      };
+
+      const result = await services.projectScanner.listSessionsPaginated(
+        validated.value!,
+        cursor,
+        limit,
+        options
+      );
+      return result;
+    } catch (error) {
+      logger.error(`Error in GET sessions-paginated for ${request.params.projectId}:`, error);
+      return { sessions: [], nextCursor: null, hasMore: false, totalCount: 0 };
+    }
+  });
+
+  // Fetch sessions by IDs (for pinned sessions beyond paginated page)
+  app.post<{ Params: { projectId: string } }>(
+    '/api/projects/:projectId/sessions-by-ids',
+    async (request) => {
+      try {
+        const validated = validateProjectId(request.params.projectId);
+        if (!validated.valid) {
+          logger.error(`POST sessions-by-ids rejected: ${validated.error ?? 'unknown'}`);
+          return [];
+        }
+
+        const { sessionIds } = request.body as { sessionIds?: string[] };
+        if (!Array.isArray(sessionIds)) {
+          logger.error('POST sessions-by-ids rejected: sessionIds must be an array');
+          return [];
+        }
+        const { metadataLevel } = request.body as SessionsByIdsOptions;
+
+        // Cap at 50 IDs
+        const capped = sessionIds.slice(0, 50);
+
+        // Validate each session ID
+        const validIds: string[] = [];
+        for (const id of capped) {
+          const result = validateSessionId(id);
+          if (result.valid) {
+            validIds.push(result.value!);
+          }
+        }
+
+        if (validIds.length === 0) {
+          return [];
+        }
+
+        const fsType = services.projectScanner.getFileSystemProvider().type;
+        const effectiveMetadataLevel = metadataLevel ?? (fsType === 'ssh' ? 'light' : 'deep');
+        const results = await Promise.all(
+          validIds.map((id) =>
+            services.projectScanner.getSessionWithOptions(validated.value!, id, {
+              metadataLevel: effectiveMetadataLevel,
+            })
+          )
+        );
+
+        return results.filter((s): s is NonNullable<typeof s> => s !== null);
+      } catch (error) {
+        logger.error(`Error in POST sessions-by-ids for ${request.params.projectId}:`, error);
+        return [];
+      }
+    }
+  );
+
+  // Session detail
+  app.get<{
+    Params: { projectId: string; sessionId: string };
+    Querystring: { bypassCache?: string };
+  }>('/api/projects/:projectId/sessions/:sessionId', async (request) => {
+    try {
+      const validatedProject = validateProjectId(request.params.projectId);
+      const validatedSession = validateSessionId(request.params.sessionId);
+      if (!validatedProject.valid || !validatedSession.valid) {
+        logger.error(
+          `GET session-detail rejected: ${validatedProject.error ?? validatedSession.error ?? 'unknown'}`
+        );
+        return null;
+      }
+
+      const safeProjectId = validatedProject.value!;
+      const safeSessionId = validatedSession.value!;
+      const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
+      const bypassCache = request.query?.bypassCache === 'true';
+
+      // Check cache first
+      let sessionDetail = services.dataCache.get(cacheKey);
+      if (sessionDetail && !bypassCache) {
+        return sessionDetail;
+      }
+
+      const fsType = services.projectScanner.getFileSystemProvider().type;
+      // In SSH mode, avoid an extra deep metadata scan before full parse.
+      const session = await services.projectScanner.getSessionWithOptions(
+        safeProjectId,
+        safeSessionId,
+        {
+          metadataLevel: fsType === 'ssh' ? 'light' : 'deep',
+        }
+      );
+      if (!session) {
+        logger.error(`Session not found: ${safeSessionId}`);
+        return null;
+      }
+
+      // Parse session messages
+      const parsedSession = await services.sessionParser.parseSession(safeProjectId, safeSessionId);
+
+      // Resolve subagents
+      const subagents = await services.subagentResolver.resolveSubagents(
+        safeProjectId,
+        safeSessionId,
+        parsedSession.taskCalls,
+        parsedSession.messages
+      );
+      session.hasSubagents = subagents.length > 0;
+
+      // Build session detail with chunks
+      sessionDetail = services.chunkBuilder.buildSessionDetail(
+        session,
+        parsedSession.messages,
+        subagents
+      );
+
+      // Cache the result
+      services.dataCache.set(cacheKey, sessionDetail);
+
+      return sessionDetail;
+    } catch (error) {
+      logger.error(
+        `Error in GET session-detail for ${request.params.projectId}/${request.params.sessionId}:`,
+        error
+      );
+      return null;
+    }
+  });
+
+  // Conversation groups
+  app.get<{ Params: { projectId: string; sessionId: string } }>(
+    '/api/projects/:projectId/sessions/:sessionId/groups',
+    async (request) => {
+      try {
+        const validatedProject = validateProjectId(request.params.projectId);
+        const validatedSession = validateSessionId(request.params.sessionId);
+        if (!validatedProject.valid || !validatedSession.valid) {
+          logger.error(
+            `GET session-groups rejected: ${validatedProject.error ?? validatedSession.error ?? 'unknown'}`
+          );
+          return [];
+        }
+
+        const safeProjectId = validatedProject.value!;
+        const safeSessionId = validatedSession.value!;
+
+        const parsedSession = await services.sessionParser.parseSession(
+          safeProjectId,
+          safeSessionId
+        );
+
+        const subagents = await services.subagentResolver.resolveSubagents(
+          safeProjectId,
+          safeSessionId,
+          parsedSession.taskCalls,
+          parsedSession.messages
+        );
+
+        const groups = services.chunkBuilder.buildGroups(parsedSession.messages, subagents);
+        return groups;
+      } catch (error) {
+        logger.error(
+          `Error in GET session-groups for ${request.params.projectId}/${request.params.sessionId}:`,
+          error
+        );
+        return [];
+      }
+    }
+  );
+
+  // Session metrics
+  app.get<{ Params: { projectId: string; sessionId: string } }>(
+    '/api/projects/:projectId/sessions/:sessionId/metrics',
+    async (request) => {
+      try {
+        const validatedProject = validateProjectId(request.params.projectId);
+        const validatedSession = validateSessionId(request.params.sessionId);
+        if (!validatedProject.valid || !validatedSession.valid) {
+          return null;
+        }
+
+        const safeProjectId = validatedProject.value!;
+        const safeSessionId = validatedSession.value!;
+
+        // Try cache first
+        const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
+        const cached = services.dataCache.get(cacheKey);
+        if (cached) {
+          return cached.metrics;
+        }
+
+        const parsedSession = await services.sessionParser.parseSession(
+          safeProjectId,
+          safeSessionId
+        );
+        return parsedSession.metrics;
+      } catch (error) {
+        logger.error(
+          `Error in GET session-metrics for ${request.params.projectId}/${request.params.sessionId}:`,
+          error
+        );
+        return null;
+      }
+    }
+  );
+
+  // Waterfall data
+  app.get<{ Params: { projectId: string; sessionId: string } }>(
+    '/api/projects/:projectId/sessions/:sessionId/waterfall',
+    async (request) => {
+      try {
+        const validatedProject = validateProjectId(request.params.projectId);
+        const validatedSession = validateSessionId(request.params.sessionId);
+        if (!validatedProject.valid || !validatedSession.valid) {
+          return null;
+        }
+
+        const safeProjectId = validatedProject.value!;
+        const safeSessionId = validatedSession.value!;
+        const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
+
+        // Try cache first for session detail
+        let detail = services.dataCache.get(cacheKey);
+
+        if (!detail) {
+          const session = await services.projectScanner.getSession(safeProjectId, safeSessionId);
+          if (!session) return null;
+
+          const parsedSession = await services.sessionParser.parseSession(
+            safeProjectId,
+            safeSessionId
+          );
+          const subagents = await services.subagentResolver.resolveSubagents(
+            safeProjectId,
+            safeSessionId,
+            parsedSession.taskCalls,
+            parsedSession.messages
+          );
+
+          detail = services.chunkBuilder.buildSessionDetail(
+            session,
+            parsedSession.messages,
+            subagents
+          );
+          services.dataCache.set(cacheKey, detail);
+        }
+
+        return services.chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);
+      } catch (error) {
+        logger.error(
+          `Error in GET waterfall for ${request.params.projectId}/${request.params.sessionId}:`,
+          error
+        );
+        return null;
+      }
+    }
+  );
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaId",
+    "schemaVersion",
+    "evidenceId",
+    "packetRevision",
+    "pinnedBaseSha",
+    "phaseStartSha",
+    "roots",
+    "mountProofs",
+    "sourceFiles",
+    "excludedSourceFiles",
+    "actions",
+    "apiActionBindings",
+    "legacyChildApiActionBindings",
+    "deliberateAbsences"
+  ],
+  "properties": {
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mountProofs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["root", "mountChain"]
+      }
+    },
+    "sourceFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "interactionSiteCount"]
+      }
+    },
+    "excludedSourceFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "reason", "interactionSiteCount"]
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "owner",
+          "disposition",
+          "securityClass",
+          "target",
+          "evidence",
+          "sourceRefs"
+        ]
+      }
+    },
+    "apiActionBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["actionId", "owner", "source", "sourceMember", "rendererCallers"]
+      }
+    },
+    "legacyChildApiActionBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["childActionId", "apiActionId", "owner"]
+      }
+    },
+    "deliberateAbsences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "reason", "sourceRefs"]
+      }
+    }
+  }
+}

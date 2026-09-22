@@ -1,0 +1,1640 @@
+import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+import {
+  getOpenCodeQualifiedModelSourceLabel,
+  parseOpenCodeQualifiedModelRef,
+} from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
+import {
+  isOpenCodeWindowsAccessDeniedDiagnostic,
+  normalizeOpenCodeWindowsAccessDeniedDiagnostic,
+} from '@shared/utils/openCodeWindowsAccessDenied';
+import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
+
+import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsModels';
+
+import type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
+import type {
+  TeamProviderId,
+  TeamProvisioningModelCheckRequest,
+  TeamProvisioningModelVerificationMode,
+  TeamProvisioningPrepareResult,
+  TeamProvisioningSupportDiagnostic,
+} from '@shared/types';
+
+export type {
+  ProviderPrepareCheckStatus,
+  ProviderPrepareDiagnosticsCachedSnapshot,
+  ProviderPrepareDiagnosticsModelResult,
+  ProviderPrepareDiagnosticsResult,
+} from './providerPrepareDiagnosticsModels';
+export {
+  buildReusableProviderPrepareModelResults,
+  mergeReusableProviderPrepareModelResults,
+} from './providerPrepareDiagnosticsModels';
+
+type PrepareProvisioningFn = (
+  cwd?: string,
+  providerId?: TeamProviderId,
+  providerIds?: TeamProviderId[],
+  selectedModels?: string[],
+  limitContext?: boolean,
+  modelVerificationMode?: TeamProvisioningModelVerificationMode,
+  selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+) => Promise<TeamProvisioningPrepareResult>;
+
+interface ProviderPrepareDiagnosticsProgress {
+  status: ProviderPrepareCheckStatus | 'checking';
+  details: string[];
+  completedCount: number;
+  totalCount: number;
+}
+
+type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function uniquePrepareLines(lines: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const uniqueLines: string[] = [];
+  for (const line of lines) {
+    const trimmed = line?.trim() ?? '';
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    uniqueLines.push(trimmed);
+  }
+  return uniqueLines;
+}
+
+function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
+  const lower = value?.trim().toLowerCase() ?? '';
+  return (
+    lower.includes('opencode runtime check returned no output') ||
+    lower.includes('bridge stdout was empty') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    (lower.includes('opencode readiness bridge failed') && lower.includes('contract_violation'))
+  );
+}
+
+function cloneSupportDiagnostics(
+  diagnostics: readonly TeamProvisioningSupportDiagnostic[] | undefined
+): TeamProvisioningSupportDiagnostic[] {
+  return (diagnostics ?? []).map((diagnostic) => ({ ...diagnostic }));
+}
+
+function mergeSupportDiagnostics(
+  target: TeamProvisioningSupportDiagnostic[],
+  incoming: readonly TeamProvisioningSupportDiagnostic[] | undefined
+): void {
+  for (const diagnostic of incoming ?? []) {
+    if (!target.some((existing) => existing.id === diagnostic.id)) {
+      target.push({ ...diagnostic });
+    }
+  }
+}
+
+function withSupportDiagnostics(
+  result: ProviderPrepareDiagnosticsResult,
+  supportDiagnostics: readonly TeamProvisioningSupportDiagnostic[]
+): ProviderPrepareDiagnosticsResult {
+  const failedModelResults = Object.values(result.modelResultsById).filter(
+    (modelResult) => modelResult.status === 'failed'
+  );
+  const withOverrideAvailability: ProviderPrepareDiagnosticsResult =
+    failedModelResults.length > 0 &&
+    failedModelResults.every((modelResult) => modelResult.experimentalOverrideAvailable === true)
+      ? {
+          ...result,
+          experimentalOverrideAvailable: true,
+        }
+      : result;
+  return supportDiagnostics.length > 0
+    ? {
+        ...withOverrideAvailability,
+        supportDiagnostics: cloneSupportDiagnostics(supportDiagnostics),
+      }
+    : withOverrideAvailability;
+}
+
+function getModelLabel(providerId: TeamProviderId, modelId: string): string {
+  if (isDefaultProviderModelSelection(modelId)) {
+    return 'Default';
+  }
+  return getProviderScopedTeamModelLabel(providerId, modelId) ?? modelId;
+}
+
+export function buildProviderPrepareModelCheckingLine(
+  providerId: TeamProviderId,
+  modelId: string
+): string {
+  return `${getModelLabel(providerId, modelId)} - checking...`;
+}
+
+function isLocalOpenCodeModel(providerId: TeamProviderId, modelId: string): boolean {
+  const openCodeSourceId =
+    providerId === 'opencode' ? (parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null) : null;
+  return isOpenCodeLocalProviderId(openCodeSourceId);
+}
+
+function buildModelSuccessLine(
+  providerId: TeamProviderId,
+  modelId: string,
+  localCoordinationVerified: boolean
+): string {
+  if (isLocalOpenCodeModel(providerId, modelId) && localCoordinationVerified) {
+    return `${getModelLabel(providerId, modelId)} - response and team tools verified`;
+  }
+  if (isLocalOpenCodeModel(providerId, modelId)) {
+    return `${getModelLabel(providerId, modelId)} - response verified; team tools not tested`;
+  }
+  return `${getModelLabel(providerId, modelId)} - verified`;
+}
+
+function buildModelSuccessResult(
+  providerId: TeamProviderId,
+  modelId: string,
+  localCoordinationVerified = false
+): ProviderPrepareDiagnosticsModelResult {
+  const line = buildModelSuccessLine(providerId, modelId, localCoordinationVerified);
+  const hasUnverifiedTeamTools =
+    isLocalOpenCodeModel(providerId, modelId) && !localCoordinationVerified;
+  return {
+    status: hasUnverifiedTeamTools ? 'notes' : 'ready',
+    line,
+    warningLine: hasUnverifiedTeamTools ? line : null,
+  };
+}
+
+function normalizeSelectedModelChecks(
+  providerId: TeamProviderId,
+  selectedModelIds: readonly string[],
+  selectedModelChecks?: readonly TeamProvisioningModelCheckRequest[]
+): TeamProvisioningModelCheckRequest[] {
+  const rawChecks: TeamProvisioningModelCheckRequest[] =
+    selectedModelChecks && selectedModelChecks.length > 0
+      ? [...selectedModelChecks]
+      : selectedModelIds.map((model) => ({ providerId, model }));
+  const seen = new Set<string>();
+  const normalized: TeamProvisioningModelCheckRequest[] = [];
+  for (const check of rawChecks) {
+    const model = check.model.trim();
+    if (!model) {
+      continue;
+    }
+    const key = `${check.providerId}\n${model}\n${check.effort ?? ''}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push({
+      providerId: check.providerId,
+      model,
+      ...(check.effort ? { effort: check.effort } : {}),
+    });
+  }
+  return normalized;
+}
+
+function selectModelChecksForIds(
+  modelChecks: readonly TeamProvisioningModelCheckRequest[],
+  modelIds: readonly string[]
+): TeamProvisioningModelCheckRequest[] {
+  const modelIdSet = new Set(modelIds);
+  return modelChecks.filter((check) => modelIdSet.has(check.model));
+}
+
+function buildModelAvailableLine(providerId: TeamProviderId, modelId: string): string {
+  return `${getModelLabel(providerId, modelId)} - available for launch`;
+}
+
+function buildModelCompatibilityPendingLine(providerId: TeamProviderId, modelId: string): string {
+  return `${getModelLabel(providerId, modelId)} - compatible, deep verification pending...`;
+}
+
+export function getProviderPrepareCachedSnapshot({
+  providerId,
+  selectedModelIds,
+  cachedModelResultsById,
+}: {
+  providerId: TeamProviderId;
+  selectedModelIds: string[];
+  cachedModelResultsById?: Record<string, ProviderPrepareDiagnosticsModelResult>;
+}): ProviderPrepareDiagnosticsCachedSnapshot {
+  const reusableModelResultsById = cachedModelResultsById ?? {};
+  const orderedModelIds = Array.from(
+    new Set(selectedModelIds.map((modelId) => modelId.trim()).filter(Boolean))
+  );
+
+  let completedCount = 0;
+  let hasFailure = false;
+  let hasNotes = false;
+  let hasChecking = false;
+
+  const details = orderedModelIds.map((modelId) => {
+    const cachedResult = reusableModelResultsById[modelId];
+    if (!cachedResult) {
+      hasChecking = true;
+      return buildProviderPrepareModelCheckingLine(providerId, modelId);
+    }
+
+    completedCount += 1;
+    if (cachedResult.status === 'failed') {
+      hasFailure = true;
+    } else if (cachedResult.status === 'notes') {
+      hasNotes = true;
+    }
+    return cachedResult.line;
+  });
+
+  return {
+    status: hasChecking ? 'checking' : hasFailure ? 'failed' : hasNotes ? 'notes' : 'ready',
+    details,
+    completedCount,
+    totalCount: orderedModelIds.length,
+  };
+}
+
+function stripSelectedModelPrefix(modelId: string, message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  const patterns = [
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} is unavailable\\.\\s*`, 'i'),
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} could not be verified\\.\\s*`, 'i'),
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} verification deferred\\.\\s*`, 'i'),
+    new RegExp(
+      `^Selected model ${escapeRegExp(modelId)} verified for launch with Agent Teams tool coordination\\.\\s*`,
+      'i'
+    ),
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} verified for launch\\.\\s*`, 'i'),
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} is available for launch\\.\\s*`, 'i'),
+    new RegExp(
+      `^Selected model ${escapeRegExp(modelId)} is compatible\\. Deep verification pending\\.\\s*`,
+      'i'
+    ),
+  ];
+  for (const pattern of patterns) {
+    if (pattern.test(trimmed)) {
+      return trimmed.replace(pattern, '').trim();
+    }
+  }
+
+  return trimmed;
+}
+
+function decodeQuotedJsonString(value: string): string {
+  try {
+    return JSON.parse(`"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`) as string;
+  } catch {
+    return value;
+  }
+}
+
+function normalizeProviderAccountFailure(rawReason: string): string | null {
+  if (/not licensed to use copilot/i.test(rawReason)) {
+    return 'GitHub account connected, but this account does not have an active Copilot license';
+  }
+  if (
+    /payment required|used all available credits|monthly spending limit|insufficient credits/i.test(
+      rawReason
+    )
+  ) {
+    return 'Provider account has no available credits or reached its spending limit';
+  }
+  if (/invalid authentication credentials/i.test(rawReason)) {
+    return 'Provider credentials were rejected. Reconnect the account and retry';
+  }
+  return null;
+}
+
+function normalizeModelReason(
+  rawReason: string | null | undefined,
+  modelId?: string
+): string | null {
+  const trimmed = rawReason?.trim() ?? '';
+  if (!trimmed) {
+    return null;
+  }
+
+  const credentialProviderLabel = getOpenCodeQualifiedModelSourceLabel(modelId) ?? null;
+  if (
+    /\binvalid[\s_-]+api[\s_-]*key\b/i.test(trimmed) ||
+    /\bapi[\s_-]*key\s+(?:is\s+)?(?:invalid|expired|revoked)\b/i.test(trimmed)
+  ) {
+    const providerLabel = credentialProviderLabel ?? 'OpenCode provider';
+    return `${providerLabel} rejected its API key. Reconnect ${providerLabel} in Plans & providers`;
+  }
+  if (/access denied by security policy/i.test(trimmed)) {
+    const providerLabel = credentialProviderLabel ?? 'OpenCode provider';
+    return `${providerLabel} blocked the request by account or security policy. Review its key restrictions, then reconnect it in Plans & providers`;
+  }
+
+  if (
+    /The '[^']+' model is not supported when using Codex with a ChatGPT account\./i.test(trimmed)
+  ) {
+    return 'Not available on this Codex native runtime';
+  }
+  if (/The requested model is not available for your account\./i.test(trimmed)) {
+    return 'Not available for this account';
+  }
+  const accountFailure = normalizeProviderAccountFailure(trimmed);
+  if (accountFailure) {
+    return accountFailure;
+  }
+  if (/token refresh failed:\s*401/i.test(trimmed)) {
+    return 'OpenCode provider authentication failed (token refresh 401)';
+  }
+  if (/unauthorized|forbidden|\b401\b|\b403\b/i.test(trimmed)) {
+    return 'OpenCode provider authentication failed';
+  }
+  if (
+    trimmed.toLowerCase().includes('timeout running:') ||
+    trimmed.toLowerCase().includes('timed out') ||
+    trimmed.toLowerCase().includes('etimedout')
+  ) {
+    return 'Model verification timed out';
+  }
+
+  const detailMatch = /"detail":"((?:\\"|[^"])*)"/i.exec(trimmed);
+  if (detailMatch?.[1]) {
+    return normalizeModelReason(detailMatch[1].replace(/\\"/g, '"').trim(), modelId);
+  }
+
+  const messageMatch = /"message":"((?:\\"|[^"])*)"/i.exec(trimmed);
+  if (messageMatch?.[1]) {
+    const decodedMessage = messageMatch[1].replace(/\\"/g, '"');
+    const nestedDetailMatch = /"detail":"([^"]+)"/i.exec(decodedMessage);
+    if (nestedDetailMatch?.[1]) {
+      return normalizeModelReason(nestedDetailMatch[1].trim(), modelId);
+    }
+    return normalizeModelReason(decodeQuotedJsonString(decodedMessage).trim(), modelId);
+  }
+
+  return trimmed;
+}
+
+function looksLikeOpenCodeRuntimeFailureReason(reason: string | null | undefined): boolean {
+  const lower = reason?.trim().toLowerCase() ?? '';
+  if (!lower) {
+    return false;
+  }
+
+  return (
+    isOpenCodeBridgeNoOutputDiagnostic(reason) ||
+    isOpenCodeWindowsAccessDeniedDiagnostic(reason) ||
+    lower.includes('opencode /experimental/tool') ||
+    lower.includes('/experimental/tool') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    lower.includes('bridge stdout was empty') ||
+    lower.includes('mcp_unavailable') ||
+    lower.includes('unable to connect') ||
+    lower.includes('runtime store') ||
+    lower.includes('opencode cli') ||
+    lower.includes('opencode runtime binary')
+  );
+}
+
+function getBlockingProviderIssue(
+  providerId: TeamProviderId,
+  result: TeamProvisioningPrepareResult
+): TeamProvisioningPrepareIssue | null {
+  return (
+    result.issues?.find(
+      (entry) =>
+        entry.scope === 'provider' &&
+        entry.severity === 'blocking' &&
+        (!entry.providerId || entry.providerId === providerId) &&
+        entry.message.trim().length > 0
+    ) ?? null
+  );
+}
+
+function isProviderLevelOpenCodeBusyDeepVerificationWarning(value: string): boolean {
+  const lower = value.trim().toLowerCase();
+  return (
+    lower.includes('opencode is currently busy') &&
+    lower.includes('deep model verification') &&
+    lower.includes('idle')
+  );
+}
+
+function getResultReason(modelId: string, result: TeamProvisioningPrepareResult): string | null {
+  const candidates = [...(result.details ?? []), ...(result.warnings ?? []), result.message]
+    .map((entry) => entry?.trim() ?? '')
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    const stripped = stripSelectedModelPrefix(modelId, candidate);
+    if (stripped) {
+      return normalizeModelReason(stripped, modelId);
+    }
+  }
+
+  return null;
+}
+
+function getModelScopedEntries(modelId: string, result: TeamProvisioningPrepareResult): string[] {
+  const escapedModelId = escapeRegExp(modelId);
+  const scopedPattern = new RegExp(`^Selected model ${escapedModelId}\\b`, 'i');
+  return [...(result.details ?? []), ...(result.warnings ?? []), result.message]
+    .map((entry) => entry?.trim() ?? '')
+    .filter(Boolean)
+    .filter((entry) => scopedPattern.test(entry));
+}
+
+function isModelScopedEntryForAnyModel(modelIds: readonly string[], entry: string): boolean {
+  const trimmed = entry.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return modelIds.some((modelId) =>
+    new RegExp(`^Selected model ${escapeRegExp(modelId)}\\b`, 'i').test(trimmed)
+  );
+}
+
+function looksLikeSingleModelBatchFailure(
+  modelId: string,
+  result: TeamProvisioningPrepareResult
+): boolean {
+  const candidates = [...(result.details ?? []), ...(result.warnings ?? []), result.message]
+    .map((entry) => entry?.trim() ?? '')
+    .filter(Boolean);
+  const modelLower = modelId.toLowerCase();
+
+  return candidates.some((candidate) => {
+    const lower = candidate.toLowerCase();
+    return (
+      lower.includes(modelLower) ||
+      lower.includes('requested model') ||
+      lower.includes('model is not supported') ||
+      lower.includes('model is not available') ||
+      lower.includes('selected model')
+    );
+  });
+}
+
+function getScopedModelReason(modelId: string, entries: string[]): string | null {
+  for (const entry of entries) {
+    const stripped = stripSelectedModelPrefix(modelId, entry);
+    if (!stripped) {
+      continue;
+    }
+    const normalized = normalizeModelReason(stripped, modelId);
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function buildModelFailureLine(
+  providerId: TeamProviderId,
+  modelId: string,
+  kind: 'unavailable' | 'check failed',
+  reason: string | null
+): string {
+  const label = getModelLabel(providerId, modelId);
+  return reason ? `${label} - ${kind} - ${reason}` : `${label} - ${kind}`;
+}
+
+function buildModelVerificationDeferredLine(
+  providerId: TeamProviderId,
+  modelId: string,
+  reason: string | null
+): string {
+  const label = getModelLabel(providerId, modelId);
+  return reason
+    ? `${label} - verification deferred - ${reason}`
+    : `${label} - verification deferred`;
+}
+
+function createRuntimeDetailLines(
+  result: TeamProvisioningPrepareResult,
+  providerId: TeamProviderId
+): string[] {
+  return uniquePrepareLines(
+    [...(result.details ?? []), ...(result.warnings ?? [])]
+      .map((detail) => normalizeRuntimeDetailLine(detail, providerId))
+      .filter(Boolean)
+  );
+}
+
+function createRuntimeWarningLines(
+  result: TeamProvisioningPrepareResult,
+  providerId: TeamProviderId
+): string[] {
+  return uniquePrepareLines(
+    (result.warnings ?? [])
+      .map((warning) => normalizeRuntimeFailureDetailLine(warning, undefined, providerId))
+      .filter(Boolean)
+  );
+}
+
+function normalizeRuntimeFailureDetailLine(
+  detail: string | null | undefined,
+  code?: string | null,
+  providerId?: TeamProviderId
+): string | null {
+  const trimmed = detail?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (providerId === 'opencode') {
+    if (isOpenCodeBridgeNoOutputDiagnostic(trimmed)) {
+      return 'OpenCode runtime check returned no output.';
+    }
+    const accessDeniedDiagnostic = normalizeOpenCodeWindowsAccessDeniedDiagnostic(trimmed);
+    if (accessDeniedDiagnostic) {
+      return accessDeniedDiagnostic;
+    }
+  }
+
+  if (/opencode cli (?:not detected on path|not found)/i.test(trimmed)) {
+    return 'OpenCode runtime binary is not installed or not reachable by launch preflight.';
+  }
+
+  const accountFailure = normalizeProviderAccountFailure(trimmed);
+  if (accountFailure) {
+    return accountFailure;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('unable to connect') &&
+    (lower.includes('/experimental/tool') ||
+      lower.includes('mcp_unavailable') ||
+      code?.trim().toLowerCase() === 'mcp_unavailable')
+  ) {
+    const connectionDetail = trimmed.includes(' - ') ? trimmed.split(' - ').pop()?.trim() : trimmed;
+    const base = 'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge.';
+    return connectionDetail && connectionDetail !== trimmed
+      ? `${base} Details: ${connectionDetail}`
+      : base;
+  }
+
+  return trimmed;
+}
+
+function normalizeRuntimeDetailLine(
+  detail: string | null | undefined,
+  providerId: TeamProviderId
+): string | null {
+  const trimmed = detail?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (providerId !== 'opencode') {
+    return trimmed;
+  }
+
+  if (isOpenCodeBridgeNoOutputDiagnostic(trimmed)) {
+    return 'OpenCode runtime check returned no output.';
+  }
+  return normalizeOpenCodeWindowsAccessDeniedDiagnostic(trimmed) ?? trimmed;
+}
+
+function createRuntimeFailureDetailLines(
+  runtimeDetailLines: readonly string[],
+  message: string | null | undefined,
+  providerId: TeamProviderId
+): string[] {
+  return uniquePrepareLines(
+    [...runtimeDetailLines, message]
+      .map((detail) => normalizeRuntimeFailureDetailLine(detail, undefined, providerId))
+      .filter(Boolean)
+  );
+}
+
+function extractTimedOutPreflightProbeModelId(detail: string): string | null {
+  const trimmed = detail.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (
+    !trimmed.toLowerCase().includes('preflight check for `') ||
+    !trimmed.toLowerCase().includes('-p` did not complete')
+  ) {
+    return null;
+  }
+  const match = /--model\s+([^\s]+)/i.exec(trimmed);
+  return match?.[1]?.trim() || null;
+}
+
+function isSuppressibleGenericPreflightWarning(detail: string): boolean {
+  const lower = detail.trim().toLowerCase();
+  if (!lower) {
+    return false;
+  }
+
+  return (
+    lower.includes('one-shot diagnostic') ||
+    lower.includes('preflight check failed') ||
+    (lower.includes('preflight check for `') && lower.includes('-p` did not complete')) ||
+    lower.includes('preflight ping completed but did not return the expected pong')
+  );
+}
+
+function suppressSupersededRuntimeWarnings(params: {
+  runtimeDetailLines: string[];
+  runtimeWarnings: string[];
+  modelResultsById: Map<string, ProviderPrepareDiagnosticsModelResult>;
+}): {
+  runtimeDetailLines: string[];
+  runtimeWarnings: string[];
+} {
+  const suppressedEntries = new Set<string>();
+  const allSelectedModelsReady =
+    params.modelResultsById.size > 0 &&
+    Array.from(params.modelResultsById.values()).every((result) => result.status === 'ready');
+
+  for (const warning of params.runtimeWarnings) {
+    const probedModelId = extractTimedOutPreflightProbeModelId(warning);
+    if (probedModelId) {
+      if (params.modelResultsById.get(probedModelId)?.status !== 'ready') {
+        continue;
+      }
+      suppressedEntries.add(warning);
+      continue;
+    }
+
+    if (allSelectedModelsReady && isSuppressibleGenericPreflightWarning(warning)) {
+      suppressedEntries.add(warning);
+    }
+  }
+
+  return {
+    runtimeDetailLines: params.runtimeDetailLines.filter(
+      (detail) => !suppressedEntries.has(detail)
+    ),
+    runtimeWarnings: params.runtimeWarnings.filter((warning) => !suppressedEntries.has(warning)),
+  };
+}
+
+function getProgressStatus(params: {
+  completedCount: number;
+  totalCount: number;
+  runtimeWarnings: string[];
+  modelResultsById: Map<string, ProviderPrepareDiagnosticsModelResult>;
+}): ProviderPrepareCheckStatus | 'checking' {
+  if (params.completedCount < params.totalCount) {
+    return 'checking';
+  }
+  if (Array.from(params.modelResultsById.values()).some((result) => result.status === 'failed')) {
+    return 'failed';
+  }
+  if (
+    params.runtimeWarnings.length > 0 ||
+    Array.from(params.modelResultsById.values()).some((result) => result.status === 'notes')
+  ) {
+    return 'notes';
+  }
+  return 'ready';
+}
+
+function resolveModelResultFromBatch(
+  providerId: TeamProviderId,
+  modelId: string,
+  result: TeamProvisioningPrepareResult,
+  isOnlyModel: boolean
+): ProviderPrepareDiagnosticsModelResult {
+  const modelScopedEntries = getModelScopedEntries(modelId, result);
+  const hasModelScopedEntries = modelScopedEntries.length > 0;
+  const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
+  const fallbackBatchReason = isOnlyModel
+    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
+    : null;
+
+  const hasVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch\./i.test(entry)
+  );
+  const hasLocalCoordinationVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch with Agent Teams tool coordination\./i.test(entry)
+  );
+  if (hasLocalCoordinationVerifiedLine) {
+    return buildModelSuccessResult(providerId, modelId, true);
+  }
+  if (hasVerifiedLine) {
+    return buildModelSuccessResult(providerId, modelId);
+  }
+
+  const hasAvailableLine = modelScopedEntries.some((entry) =>
+    /selected model .* is available for launch\./i.test(entry)
+  );
+  if (hasAvailableLine) {
+    return {
+      status: 'ready',
+      line: buildModelAvailableLine(providerId, modelId),
+      warningLine: null,
+    };
+  }
+
+  const hasCompatibilityLine = modelScopedEntries.some((entry) =>
+    /selected model .* is compatible\. deep verification pending\./i.test(entry)
+  );
+  if (hasCompatibilityLine) {
+    if (providerId !== 'opencode') {
+      return {
+        status: 'ready',
+        line: buildModelAvailableLine(providerId, modelId),
+        warningLine: null,
+      };
+    }
+    return {
+      status: 'notes',
+      line: buildModelCompatibilityPendingLine(providerId, modelId),
+      warningLine: null,
+    };
+  }
+
+  const hasVerificationDeferredLine = modelScopedEntries.some((entry) =>
+    /selected model .* verification deferred\./i.test(entry)
+  );
+  if (hasVerificationDeferredLine) {
+    const line = buildModelVerificationDeferredLine(providerId, modelId, scopedReason);
+    return {
+      status: 'notes',
+      line,
+      warningLine: line,
+    };
+  }
+
+  const hasUnavailableLine = modelScopedEntries.some((entry) =>
+    /selected model .* is unavailable\./i.test(entry)
+  );
+  if (hasUnavailableLine || (!result.ready && isOnlyModel)) {
+    return {
+      status: 'failed',
+      line: buildModelFailureLine(
+        providerId,
+        modelId,
+        'unavailable',
+        scopedReason ?? fallbackBatchReason
+      ),
+      warningLine: null,
+      ...(hasExperimentalLocalModelOverride(modelId, result)
+        ? { experimentalOverrideAvailable: true }
+        : {}),
+    };
+  }
+
+  const hasVerificationWarningLine = modelScopedEntries.some((entry) =>
+    /selected model .* could not be verified\./i.test(entry)
+  );
+  if (
+    hasVerificationWarningLine ||
+    ((result.warnings?.length ?? 0) > 0 && isOnlyModel && hasModelScopedEntries)
+  ) {
+    const line = buildModelFailureLine(providerId, modelId, 'check failed', scopedReason);
+    return {
+      status: 'notes',
+      line,
+      warningLine: line,
+    };
+  }
+
+  if (result.ready && (result.warnings?.length ?? 0) > 0 && !hasModelScopedEntries) {
+    if (providerId !== 'opencode') {
+      return {
+        status: 'ready',
+        line: buildModelAvailableLine(providerId, modelId),
+        warningLine: null,
+      };
+    }
+    return {
+      status: 'notes',
+      line: buildModelCompatibilityPendingLine(providerId, modelId),
+      warningLine: null,
+    };
+  }
+
+  if (result.ready) {
+    return buildModelSuccessResult(providerId, modelId);
+  }
+
+  const line = buildModelFailureLine(
+    providerId,
+    modelId,
+    'check failed',
+    scopedReason ?? 'Model verification failed'
+  );
+  return {
+    status: 'notes',
+    line,
+    warningLine: line,
+  };
+}
+
+function resolveModelResultFromCompatibilityBatch(
+  providerId: TeamProviderId,
+  modelId: string,
+  result: TeamProvisioningPrepareResult,
+  isOnlyModel: boolean
+): { kind: 'compatible' } | { kind: 'terminal'; result: ProviderPrepareDiagnosticsModelResult } {
+  const modelScopedEntries = getModelScopedEntries(modelId, result);
+  const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
+  const fallbackBatchReason = isOnlyModel
+    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
+    : null;
+
+  const hasVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch\./i.test(entry)
+  );
+  const hasLocalCoordinationVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch with Agent Teams tool coordination\./i.test(entry)
+  );
+  if (hasLocalCoordinationVerifiedLine) {
+    return {
+      kind: 'terminal',
+      result: buildModelSuccessResult(providerId, modelId, true),
+    };
+  }
+  if (hasVerifiedLine) {
+    return {
+      kind: 'terminal',
+      result: buildModelSuccessResult(providerId, modelId),
+    };
+  }
+
+  const hasCompatibilityLine = modelScopedEntries.some((entry) =>
+    /selected model .* is compatible\. deep verification pending\./i.test(entry)
+  );
+  if (hasCompatibilityLine || (result.ready && modelScopedEntries.length === 0)) {
+    return { kind: 'compatible' };
+  }
+
+  const hasAvailableLine = modelScopedEntries.some((entry) =>
+    /selected model .* is available for launch\./i.test(entry)
+  );
+  if (hasAvailableLine) {
+    return {
+      kind: 'terminal',
+      result: {
+        status: 'ready',
+        line: buildModelAvailableLine(providerId, modelId),
+        warningLine: null,
+      },
+    };
+  }
+
+  const hasUnavailableLine = modelScopedEntries.some((entry) =>
+    /selected model .* is unavailable\./i.test(entry)
+  );
+  const hasVerificationWarningLine = modelScopedEntries.some((entry) =>
+    /selected model .* could not be verified\./i.test(entry)
+  );
+  if (hasUnavailableLine || (!result.ready && isOnlyModel && !hasVerificationWarningLine)) {
+    return {
+      kind: 'terminal',
+      result: {
+        status: 'failed',
+        line: buildModelFailureLine(
+          providerId,
+          modelId,
+          'unavailable',
+          scopedReason ?? fallbackBatchReason
+        ),
+        warningLine: null,
+        ...(hasExperimentalLocalModelOverride(modelId, result)
+          ? { experimentalOverrideAvailable: true }
+          : {}),
+      },
+    };
+  }
+
+  if (hasVerificationWarningLine) {
+    const line = buildModelFailureLine(
+      providerId,
+      modelId,
+      'check failed',
+      scopedReason ?? fallbackBatchReason
+    );
+    return {
+      kind: 'terminal',
+      result: {
+        status: result.ready ? 'notes' : 'failed',
+        line,
+        warningLine: result.ready ? line : null,
+      },
+    };
+  }
+
+  return {
+    kind: 'terminal',
+    result: {
+      status: 'notes',
+      line: buildModelFailureLine(
+        providerId,
+        modelId,
+        'check failed',
+        scopedReason ?? fallbackBatchReason ?? 'Model verification failed'
+      ),
+      warningLine: buildModelFailureLine(
+        providerId,
+        modelId,
+        'check failed',
+        scopedReason ?? fallbackBatchReason ?? 'Model verification failed'
+      ),
+    },
+  };
+}
+
+function looksLikeSingleModelCredentialFailure(result: TeamProvisioningPrepareResult): boolean {
+  const combined = [...(result.details ?? []), ...(result.warnings ?? []), result.message]
+    .map((entry) => entry?.trim() ?? '')
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+
+  const hasCredentialContext =
+    combined.includes('token') ||
+    combined.includes('authenticat') ||
+    combined.includes('credential') ||
+    combined.includes('api key') ||
+    combined.includes('apikey') ||
+    combined.includes('not_authenticated');
+  const hasAuthStatus =
+    combined.includes('unauthorized') ||
+    combined.includes('forbidden') ||
+    /\b401\b/.test(combined) ||
+    /\b403\b/.test(combined);
+
+  return (
+    combined.includes('token refresh failed') ||
+    combined.includes('authentication failed') ||
+    combined.includes('not_authenticated') ||
+    combined.includes('not licensed') ||
+    combined.includes('payment required') ||
+    combined.includes('available credits') ||
+    combined.includes('spending limit') ||
+    combined.includes('insufficient credits') ||
+    (hasCredentialContext && hasAuthStatus)
+  );
+}
+
+function getOpenCodeProviderScopedFailureFromModelScopedEntries(
+  modelIds: readonly string[],
+  result: TeamProvisioningPrepareResult
+): string | null {
+  if (result.ready) {
+    return null;
+  }
+
+  for (const modelId of modelIds) {
+    const scopedEntries = getModelScopedEntries(modelId, result);
+    for (const entry of scopedEntries) {
+      const stripped = stripSelectedModelPrefix(modelId, entry);
+      if (looksLikeOpenCodeRuntimeFailureReason(stripped)) {
+        return stripped;
+      }
+    }
+  }
+
+  return null;
+}
+
+function shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure(params: {
+  result: TeamProvisioningPrepareResult;
+  modelIds: readonly string[];
+  modelScopedEntriesPresent: boolean;
+  runtimeDetailLines: readonly string[];
+  runtimeWarnings: readonly string[];
+}): boolean {
+  if (params.result.ready || params.modelScopedEntriesPresent) {
+    return false;
+  }
+
+  const hasRuntimeScopedDiagnostics =
+    params.runtimeDetailLines.length > 0 ||
+    params.runtimeWarnings.length > 0 ||
+    Boolean(params.result.message?.trim());
+
+  if (!hasRuntimeScopedDiagnostics) {
+    return false;
+  }
+
+  const canTreatAsLegacySingleModelFailure =
+    params.modelIds.length === 1 &&
+    (looksLikeSingleModelBatchFailure(params.modelIds[0], params.result) ||
+      looksLikeSingleModelCredentialFailure(params.result)) &&
+    params.runtimeWarnings.length === 0;
+
+  return !canTreatAsLegacySingleModelFailure;
+}
+
+export async function runProviderPrepareDiagnostics({
+  cwd,
+  providerId,
+  selectedModelIds,
+  prepareProvisioning,
+  limitContext,
+  onModelProgress,
+  cachedModelResultsById,
+  selectedModelChecks,
+}: {
+  cwd: string;
+  providerId: TeamProviderId;
+  selectedModelIds: string[];
+  selectedModelChecks?: TeamProvisioningModelCheckRequest[];
+  prepareProvisioning: PrepareProvisioningFn;
+  limitContext?: boolean;
+  onModelProgress?: (progress: ProviderPrepareDiagnosticsProgress) => void;
+  cachedModelResultsById?: Record<string, ProviderPrepareDiagnosticsModelResult>;
+}): Promise<ProviderPrepareDiagnosticsResult> {
+  const normalizedModelChecks = normalizeSelectedModelChecks(
+    providerId,
+    selectedModelIds,
+    selectedModelChecks
+  );
+  const hasExplicitModelChecks = (selectedModelChecks?.length ?? 0) > 0;
+  const orderedModelIds = Array.from(new Set(normalizedModelChecks.map((check) => check.model)));
+  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
+  if (orderedModelIds.length === 0) {
+    const runtimeResult = await prepareProvisioning(
+      cwd,
+      providerId,
+      [providerId],
+      undefined,
+      limitContext
+    );
+    mergeSupportDiagnostics(supportDiagnostics, runtimeResult.supportDiagnostics);
+    const runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
+    const runtimeWarnings = createRuntimeWarningLines(runtimeResult, providerId);
+
+    if (!runtimeResult.ready) {
+      return withSupportDiagnostics(
+        {
+          status: 'failed',
+          details: createRuntimeFailureDetailLines(
+            runtimeDetailLines,
+            runtimeResult.message,
+            providerId
+          ),
+          warnings: runtimeWarnings,
+          modelResultsById: {},
+        },
+        supportDiagnostics
+      );
+    }
+
+    return withSupportDiagnostics(
+      {
+        status: runtimeWarnings.length > 0 ? 'notes' : 'ready',
+        details: runtimeDetailLines,
+        warnings: runtimeWarnings,
+        modelResultsById: {},
+      },
+      supportDiagnostics
+    );
+  }
+
+  const reusableModelResultsById = cachedModelResultsById ?? {};
+  const modelResultsById = new Map<string, ProviderPrepareDiagnosticsModelResult>();
+  const modelLines = new Map<string, string>();
+  let runtimeDetailLines: string[] = [];
+  let runtimeWarnings: string[] = [];
+  let completedCount = 0;
+  let hasFailure = false;
+  let hasNotes = false;
+  const modelWarnings: string[] = [];
+
+  for (const modelId of orderedModelIds) {
+    const cachedResult = reusableModelResultsById[modelId];
+    if (cachedResult) {
+      modelResultsById.set(modelId, cachedResult);
+      modelLines.set(modelId, cachedResult.line);
+      completedCount += 1;
+      if (cachedResult.status === 'failed') {
+        hasFailure = true;
+      } else if (cachedResult.status === 'notes') {
+        hasNotes = true;
+      }
+      if (cachedResult.warningLine) {
+        modelWarnings.push(cachedResult.warningLine);
+      }
+      continue;
+    }
+    modelLines.set(modelId, buildProviderPrepareModelCheckingLine(providerId, modelId));
+  }
+
+  const emitProgress = (): void => {
+    const filteredRuntime = suppressSupersededRuntimeWarnings({
+      runtimeDetailLines,
+      runtimeWarnings,
+      modelResultsById,
+    });
+    onModelProgress?.({
+      status: getProgressStatus({
+        completedCount,
+        totalCount: orderedModelIds.length,
+        runtimeWarnings: filteredRuntime.runtimeWarnings,
+        modelResultsById,
+      }),
+      details: [
+        ...filteredRuntime.runtimeDetailLines,
+        ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
+      ],
+      completedCount,
+      totalCount: orderedModelIds.length,
+    });
+  };
+
+  emitProgress();
+
+  const uncachedModelIds = orderedModelIds.filter((modelId) => !modelResultsById.has(modelId));
+  if (uncachedModelIds.length === 0) {
+    const runtimeResult = await prepareProvisioning(
+      cwd,
+      providerId,
+      [providerId],
+      undefined,
+      limitContext
+    );
+    mergeSupportDiagnostics(supportDiagnostics, runtimeResult.supportDiagnostics);
+    runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
+    runtimeWarnings = createRuntimeWarningLines(runtimeResult, providerId);
+
+    if (!runtimeResult.ready) {
+      return withSupportDiagnostics(
+        {
+          status: 'failed',
+          details: createRuntimeFailureDetailLines(
+            runtimeDetailLines,
+            runtimeResult.message,
+            providerId
+          ),
+          warnings: runtimeWarnings,
+          modelResultsById: {},
+        },
+        supportDiagnostics
+      );
+    }
+  } else {
+    const recordTerminalModelResult = (
+      modelId: string,
+      resolvedResult: ProviderPrepareDiagnosticsModelResult
+    ): void => {
+      modelLines.set(modelId, resolvedResult.line);
+      modelResultsById.set(modelId, resolvedResult);
+      completedCount += 1;
+      if (resolvedResult.status === 'failed') {
+        hasFailure = true;
+      } else if (resolvedResult.status === 'notes') {
+        hasNotes = true;
+      }
+      if (resolvedResult.warningLine) {
+        modelWarnings.push(resolvedResult.warningLine);
+      }
+    };
+
+    if (providerId === 'opencode') {
+      const compatibilityPassedModelIds: string[] = [];
+      try {
+        const compatibilityResult = await prepareProvisioning(
+          cwd,
+          providerId,
+          [providerId],
+          uncachedModelIds,
+          limitContext,
+          'compatibility',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+            : [])
+        );
+        mergeSupportDiagnostics(supportDiagnostics, compatibilityResult.supportDiagnostics);
+        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+        );
+        runtimeWarnings = createRuntimeWarningLines(compatibilityResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+        );
+
+        const hasModelScopedEntries = uncachedModelIds.some(
+          (modelId) => getModelScopedEntries(modelId, compatibilityResult).length > 0
+        );
+        const hasNonModelScopedDiagnostics =
+          runtimeDetailLines.length > 0 || runtimeWarnings.length > 0;
+        const hasSingleModelFallbackReason =
+          uncachedModelIds.length === 1 &&
+          looksLikeSingleModelBatchFailure(uncachedModelIds[0], compatibilityResult);
+        const providerScopedFailure = getOpenCodeProviderScopedFailureFromModelScopedEntries(
+          uncachedModelIds,
+          compatibilityResult
+        );
+        const structuredProviderScopedIssue = getBlockingProviderIssue(
+          providerId,
+          compatibilityResult
+        );
+        const structuredProviderScopedFailure =
+          structuredProviderScopedIssue?.message.trim() ?? null;
+        if (structuredProviderScopedFailure || providerScopedFailure) {
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: [
+                normalizeRuntimeFailureDetailLine(
+                  structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed',
+                  structuredProviderScopedIssue?.code,
+                  providerId
+                ) ?? 'OpenCode failed',
+              ],
+              warnings: [],
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
+        }
+        if (
+          shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
+            result: compatibilityResult,
+            modelIds: uncachedModelIds,
+            modelScopedEntriesPresent: hasModelScopedEntries,
+            runtimeDetailLines,
+            runtimeWarnings,
+          }) ||
+          (!compatibilityResult.ready &&
+            !hasModelScopedEntries &&
+            (uncachedModelIds.length > 1 ||
+              (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason)))
+        ) {
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: createRuntimeFailureDetailLines(
+                runtimeDetailLines,
+                compatibilityResult.message,
+                providerId
+              ),
+              warnings: runtimeWarnings,
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
+        }
+        if (!hasModelScopedEntries && uncachedModelIds.length === 1) {
+          runtimeDetailLines = [];
+          runtimeWarnings = [];
+        }
+        for (const modelId of uncachedModelIds) {
+          const compatibilityResolution = resolveModelResultFromCompatibilityBatch(
+            providerId,
+            modelId,
+            compatibilityResult,
+            uncachedModelIds.length === 1
+          );
+          if (compatibilityResolution.kind === 'compatible') {
+            modelLines.set(modelId, buildModelCompatibilityPendingLine(providerId, modelId));
+            compatibilityPassedModelIds.push(modelId);
+            continue;
+          }
+          recordTerminalModelResult(modelId, compatibilityResolution.result);
+        }
+      } catch (error) {
+        hasNotes = true;
+        const reason = normalizeModelReason(
+          error instanceof Error ? error.message.trim() : String(error).trim()
+        );
+        for (const modelId of uncachedModelIds) {
+          const line = buildModelFailureLine(providerId, modelId, 'check failed', reason || null);
+          recordTerminalModelResult(modelId, {
+            status: 'notes',
+            line,
+            warningLine: line,
+          });
+        }
+      }
+
+      emitProgress();
+
+      if (compatibilityPassedModelIds.length === 0) {
+        const filteredRuntime = suppressSupersededRuntimeWarnings({
+          runtimeDetailLines,
+          runtimeWarnings,
+          modelResultsById,
+        });
+        const dedupedWarnings = Array.from(
+          new Set([...filteredRuntime.runtimeWarnings, ...modelWarnings])
+        );
+        const selectedModelResultsById = Object.fromEntries(
+          orderedModelIds
+            .map((modelId) => [modelId, modelResultsById.get(modelId)] as const)
+            .filter((entry): entry is [string, ProviderPrepareDiagnosticsModelResult] =>
+              Boolean(entry[1])
+            )
+        );
+
+        return withSupportDiagnostics(
+          {
+            status: hasFailure
+              ? 'failed'
+              : hasNotes || dedupedWarnings.length > 0
+                ? 'notes'
+                : 'ready',
+            details: [
+              ...filteredRuntime.runtimeDetailLines,
+              ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
+            ],
+            warnings: dedupedWarnings,
+            modelResultsById: selectedModelResultsById,
+          },
+          supportDiagnostics
+        );
+      }
+
+      try {
+        const batchedModelResult = await prepareProvisioning(
+          cwd,
+          providerId,
+          [providerId],
+          compatibilityPassedModelIds,
+          limitContext,
+          'deep',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, compatibilityPassedModelIds)]
+            : [])
+        );
+        mergeSupportDiagnostics(supportDiagnostics, batchedModelResult.supportDiagnostics);
+        runtimeDetailLines = createRuntimeDetailLines(batchedModelResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(compatibilityPassedModelIds, entry)
+        );
+        runtimeWarnings = createRuntimeWarningLines(batchedModelResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(compatibilityPassedModelIds, entry)
+        );
+
+        const hasModelScopedEntries = compatibilityPassedModelIds.some(
+          (modelId) => getModelScopedEntries(modelId, batchedModelResult).length > 0
+        );
+        const hasNonModelScopedDiagnostics =
+          runtimeDetailLines.length > 0 || runtimeWarnings.length > 0;
+        const hasSingleModelFallbackReason =
+          compatibilityPassedModelIds.length === 1 &&
+          looksLikeSingleModelBatchFailure(compatibilityPassedModelIds[0], batchedModelResult);
+        const providerScopedFailure = getOpenCodeProviderScopedFailureFromModelScopedEntries(
+          compatibilityPassedModelIds,
+          batchedModelResult
+        );
+        const structuredProviderScopedIssue = getBlockingProviderIssue(
+          providerId,
+          batchedModelResult
+        );
+        const structuredProviderScopedFailure =
+          structuredProviderScopedIssue?.message.trim() ?? null;
+        let handledBusyDeepDeferral = false;
+        if (structuredProviderScopedFailure || providerScopedFailure) {
+          const failureReason =
+            structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed';
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: [
+                normalizeRuntimeFailureDetailLine(
+                  failureReason,
+                  structuredProviderScopedIssue?.code,
+                  providerId
+                ) ?? failureReason,
+              ],
+              warnings: [],
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
+        }
+        if (
+          batchedModelResult.ready &&
+          !hasModelScopedEntries &&
+          runtimeWarnings.some(isProviderLevelOpenCodeBusyDeepVerificationWarning)
+        ) {
+          runtimeDetailLines = [];
+          runtimeWarnings = [];
+          for (const modelId of compatibilityPassedModelIds) {
+            recordTerminalModelResult(modelId, {
+              status: 'ready',
+              line: buildModelAvailableLine(providerId, modelId),
+              warningLine: null,
+            });
+          }
+          handledBusyDeepDeferral = true;
+        }
+        if (
+          !handledBusyDeepDeferral &&
+          (shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
+            result: batchedModelResult,
+            modelIds: compatibilityPassedModelIds,
+            modelScopedEntriesPresent: hasModelScopedEntries,
+            runtimeDetailLines,
+            runtimeWarnings,
+          }) ||
+            (!batchedModelResult.ready &&
+              !hasModelScopedEntries &&
+              (compatibilityPassedModelIds.length > 1 ||
+                (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason))))
+        ) {
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: createRuntimeFailureDetailLines(
+                runtimeDetailLines,
+                batchedModelResult.message,
+                providerId
+              ),
+              warnings: runtimeWarnings,
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
+        }
+        if (
+          !handledBusyDeepDeferral &&
+          !hasModelScopedEntries &&
+          compatibilityPassedModelIds.length === 1
+        ) {
+          runtimeDetailLines = [];
+          runtimeWarnings = [];
+        }
+
+        if (!handledBusyDeepDeferral) {
+          for (const modelId of compatibilityPassedModelIds) {
+            recordTerminalModelResult(
+              modelId,
+              resolveModelResultFromBatch(
+                providerId,
+                modelId,
+                batchedModelResult,
+                compatibilityPassedModelIds.length === 1
+              )
+            );
+          }
+        }
+      } catch (error) {
+        const reason = normalizeModelReason(
+          error instanceof Error ? error.message.trim() : String(error).trim()
+        );
+        return withSupportDiagnostics(
+          {
+            status: 'failed',
+            details: [reason || 'OpenCode runtime verification failed'],
+            warnings: [],
+            modelResultsById: {},
+          },
+          supportDiagnostics
+        );
+      } finally {
+        emitProgress();
+      }
+    } else {
+      try {
+        const compatibilityResult = await prepareProvisioning(
+          cwd,
+          providerId,
+          [providerId],
+          uncachedModelIds,
+          limitContext,
+          'compatibility',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+            : [])
+        );
+        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+        );
+        runtimeWarnings = createRuntimeWarningLines(compatibilityResult, providerId).filter(
+          (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+        );
+
+        const hasModelScopedEntries = uncachedModelIds.some(
+          (modelId) => getModelScopedEntries(modelId, compatibilityResult).length > 0
+        );
+        const hasNonModelScopedDiagnostics =
+          runtimeDetailLines.length > 0 || runtimeWarnings.length > 0;
+        const hasSingleModelFallbackReason =
+          uncachedModelIds.length === 1 &&
+          looksLikeSingleModelBatchFailure(uncachedModelIds[0], compatibilityResult);
+        if (
+          !compatibilityResult.ready &&
+          !hasModelScopedEntries &&
+          (uncachedModelIds.length > 1 ||
+            (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason))
+        ) {
+          return {
+            status: 'failed',
+            details: createRuntimeFailureDetailLines(
+              runtimeDetailLines,
+              compatibilityResult.message,
+              providerId
+            ),
+            warnings: runtimeWarnings,
+            modelResultsById: {},
+          };
+        }
+        if (!hasModelScopedEntries && uncachedModelIds.length === 1) {
+          runtimeDetailLines = [];
+          runtimeWarnings = [];
+        }
+
+        for (const modelId of uncachedModelIds) {
+          recordTerminalModelResult(
+            modelId,
+            resolveModelResultFromBatch(
+              providerId,
+              modelId,
+              compatibilityResult,
+              uncachedModelIds.length === 1
+            )
+          );
+        }
+        emitProgress();
+        if (!hasFailure) {
+          try {
+            const deepResult = await prepareProvisioning(
+              cwd,
+              providerId,
+              [providerId],
+              providerId === 'codex' ? uncachedModelIds : undefined,
+              limitContext,
+              'deep',
+              ...(providerId === 'codex' && hasExplicitModelChecks
+                ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+                : [])
+            );
+            runtimeDetailLines = createRuntimeDetailLines(deepResult, providerId).filter(
+              (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+            );
+            runtimeWarnings = createRuntimeWarningLines(deepResult, providerId).filter(
+              (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
+            );
+            if (
+              !deepResult.ready &&
+              runtimeDetailLines.length === 0 &&
+              runtimeWarnings.length === 0
+            ) {
+              runtimeWarnings = uniquePrepareLines([deepResult.message]);
+            }
+          } catch (deepError) {
+            hasNotes = true;
+            runtimeWarnings = uniquePrepareLines([
+              normalizeModelReason(
+                deepError instanceof Error ? deepError.message.trim() : String(deepError).trim()
+              ) ?? 'One-shot diagnostic failed',
+            ]);
+          }
+        }
+      } catch (error) {
+        hasNotes = true;
+        const reason = normalizeModelReason(
+          error instanceof Error ? error.message.trim() : String(error).trim()
+        );
+        for (const modelId of uncachedModelIds) {
+          const line = buildModelFailureLine(providerId, modelId, 'check failed', reason || null);
+          recordTerminalModelResult(modelId, {
+            status: 'notes',
+            line,
+            warningLine: line,
+          });
+        }
+      } finally {
+        emitProgress();
+      }
+    }
+  }
+
+  const filteredRuntime = suppressSupersededRuntimeWarnings({
+    runtimeDetailLines,
+    runtimeWarnings,
+    modelResultsById,
+  });
+  const dedupedWarnings = Array.from(
+    new Set([...filteredRuntime.runtimeWarnings, ...modelWarnings])
+  );
+  const selectedModelResultsById = Object.fromEntries(
+    orderedModelIds
+      .map((modelId) => [modelId, modelResultsById.get(modelId)] as const)
+      .filter((entry): entry is [string, ProviderPrepareDiagnosticsModelResult] =>
+        Boolean(entry[1])
+      )
+  );
+
+  return withSupportDiagnostics(
+    {
+      status: hasFailure ? 'failed' : hasNotes || dedupedWarnings.length > 0 ? 'notes' : 'ready',
+      details: [
+        ...filteredRuntime.runtimeDetailLines,
+        ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
+      ],
+      warnings: dedupedWarnings,
+      modelResultsById: selectedModelResultsById,
+    },
+    supportDiagnostics
+  );
+}
