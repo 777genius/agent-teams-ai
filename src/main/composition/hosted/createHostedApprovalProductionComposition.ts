@@ -83,8 +83,8 @@ export interface CreateHostedApprovalProductionCompositionDependencies {
   }>;
   readonly approvalActivationTimeoutMs?: number;
   readonly onApprovalOwnerLoss?: (error: Error) => void;
-  /** A generation runtime drains acquired HTTP handlers before it closes their
-   * pinned producer provenance after owner loss. */
+  /** A generation runtime owns post-owner-loss teardown and drains acquired
+   * HTTP handlers before it closes their pinned provenance or transport. */
   readonly deferProducerProvenanceCloseOnOwnerLoss?: boolean;
   readonly producerProvenance: HostedProducerProvenance;
 }
@@ -371,6 +371,18 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
       clearProductHostedProducerProvenance(producerProvenance);
     }
   };
+  const reportOwnerLoss = (): void => {
+    const error = new Error('hosted-approval-production-activation-owner-lost');
+    // A generation runtime takes over physical teardown so an already admitted
+    // handler can produce its one terminal response with the provenance it
+    // captured. Ordinary compositions still close immediately after their
+    // owner-loss observer has run, even when that observer throws.
+    try {
+      onApprovalOwnerLoss?.(error);
+    } finally {
+      if (!deferProducerProvenanceCloseOnOwnerLoss) closeActivatedSurface();
+    }
+  };
   producerProvenance?.bindInvalidation(() => closeActivatedSurface());
   const activation: NonNullable<
     CreateHostedApprovalProductionCompositionDependencies['activateApprovalRuntime']
@@ -420,15 +432,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
       ...(approvalActivationTimeoutMs === undefined
         ? {}
         : { timeoutMs: approvalActivationTimeoutMs }),
-      onOwnerLoss: () => {
-        const error = new Error('hosted-approval-production-activation-owner-lost');
-        // The generation runtime owns a pinned handler's terminal provenance.
-        // Let it revoke and begin draining before this composition physically
-        // retires the mounted surface.  A runtime-owned provenance is closed by
-        // that drain after the handler has emitted its one terminal response.
-        try { onApprovalOwnerLoss?.(error); }
-        finally { closeActivatedSurface(deferProducerProvenanceCloseOnOwnerLoss); }
-      },
+      onOwnerLoss: reportOwnerLoss,
     });
     assertHostedApprovalRuntimeActivationPreflight(
       options,
@@ -502,7 +506,8 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
           route.socketPath,
           request.ownerBinding,
           activationLease,
-          () => !revoked
+          () => !revoked,
+          reportOwnerLoss
         ),
         ownerProofKey,
         authority: wireAuthority,
@@ -694,7 +699,8 @@ function createApprovalRouteMutationLease(
   socketPath: string,
   binding: HostedApprovalRuntimeActivationBinding['ownerBinding'],
   activationLease: HostedApprovalRuntimeActivationLease,
-  isCurrent: () => boolean
+  isCurrent: () => boolean,
+  onOwnerLoss: () => void
 ): TeamLifecycleCommandMutationLease {
   let invalidated = false;
   return Object.freeze({
@@ -702,9 +708,14 @@ function createApprovalRouteMutationLease(
     currentBinding: () =>
       invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding,
     invalidate: () => {
+      if (invalidated) return;
       invalidated = true;
       activationLease.invalidate();
-      activationLease.closeTransport();
+      // A runtime-authority mismatch is logical owner loss.  The generation
+      // runtime must first fence and drain any admitted HTTP handlers so their
+      // one terminal response retains this generation's provenance.  It closes
+      // the activation transport only after that drain completes.
+      onOwnerLoss();
     },
   });
 }

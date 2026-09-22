@@ -7,7 +7,10 @@ import { join } from 'node:path';
 
 import { type HostedAuthenticatedPrincipal,parseHostedSessionId, parseUserId } from '@features/hosted-access';
 import { currentProductHostedProducerProvenance, requireProductHostedProducerInstance } from '@features/hosted-producer-provenance/main';
-import { HOSTED_TEAM_APPROVAL_PAGE_ROUTE } from '@features/team-approvals/main/hosted';
+import {
+  HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+  HostedApprovalRuntimeOrchestratorAuthority,
+} from '@features/team-approvals/main/hosted';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -41,7 +44,8 @@ function deferred() {
 
 async function setup(authenticated = false, afterStreamDrain?: () => Promise<void>,
   afterSend?: (reply: Readonly<Record<string, unknown>>) => Promise<void>,
-  production?: Pick<HostedApprovalGenerationRuntimeOptions, 'drainStreams' | 'sseEmitter'>) {
+  production?: Pick<HostedApprovalGenerationRuntimeOptions, 'drainStreams' | 'sseEmitter'>,
+  createAuthority?: CreateHostedApprovalProductionCompositionDependencies['createApprovalRuntimeAuthority']) {
   const fixture = generationFixture();
   if (authenticated) {
     const sessionId = parseHostedSessionId('hss_generation-test');
@@ -109,7 +113,10 @@ async function setup(authenticated = false, afterStreamDrain?: () => Promise<voi
   const original = fixture.input.createApprovalRuntimeAuthority!;
   const runtime = new HostedApprovalGenerationRuntime({
     dependencies: { ...fixture.input, onApprovalOwnerLoss: fatal,
-      createApprovalRuntimeAuthority: options => { leases.push(options.lease); return original(options); } },
+      createApprovalRuntimeAuthority: options => {
+        leases.push(options.lease);
+        return createAuthority?.(options) ?? original(options);
+      } },
     createRouteAdmission: fixture.createRouteAdmission,
     initial: first.received, serializedBootstrap: fixture.bootstrap, provenance: fixture.writer,
     sseEmitter: () => true,
@@ -502,6 +509,134 @@ describe('actual Product approval generation composition', () => {
       )
     ).toBe(false);
     await activationClosed;
+    await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
+  });
+
+  it('drains paused handlers before closing after a real runtime-authority response-proof mismatch', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'approval-runtime-authority-test-'));
+    const authoritySocketPath = join(root, 'authority.sock');
+    const authorityServer = createServer(socket => {
+      socket.on('error', () => {});
+      socket.once('data', chunk => {
+        const request = JSON.parse(chunk.toString()) as Record<string, unknown>;
+        socket.end(
+          `${JSON.stringify({
+            schemaVersion: 4,
+            exchangeId: request.exchangeId,
+            operation: request.operation,
+            ownerBinding: request.ownerBinding,
+            authority: request.authority,
+            payload: null,
+            ownerProof: '0'.repeat(64),
+          })}\n`
+        );
+      });
+    });
+    authorityServer.listen(authoritySocketPath);
+    await once(authorityServer, 'listening');
+    cleanup.push(async () => {
+      await new Promise<void>(resolve => authorityServer.close(() => resolve()));
+      await rm(root, { recursive: true, force: true });
+    });
+    const authorities: HostedApprovalRuntimeOrchestratorAuthority[] = [];
+    const f = await setup(true, undefined, undefined, undefined, options => {
+      const authority = new HostedApprovalRuntimeOrchestratorAuthority({
+        ...options,
+        generateExchangeId: () => `approval-request_${'6'.repeat(32)}`,
+        connect: () => connect(authoritySocketPath),
+        inspectSocketIdentity: async () => options.lease.currentBinding()!.socketIdentity,
+      });
+      authorities.push(authority);
+      return authority;
+    });
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    let pendingHandlers = 0;
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementation(
+      async () => {
+        if (++pendingHandlers === 2) entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      }
+    );
+    const requestBody = {
+      schemaVersion: 1,
+      teamId: `team_${'1'.repeat(32)}`,
+      expectedRunId: `run_${'9'.repeat(32)}`,
+      cursor: null,
+      limit: 1,
+    };
+    const requests = [
+      app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: requestBody,
+      }),
+      app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: requestBody,
+      }),
+    ];
+    await entered.promise;
+
+    const authority = authorities[0];
+    if (!authority) throw new Error('runtime-authority-not-created');
+    await expect(
+      authority.acknowledgePermissionApprovalIngressEffect({
+        outboxId: `runtime_permission:effect:${'a'.repeat(64)}`,
+        generation: 1,
+        ownerId: 'approval-owner:owner-session_generation-1',
+        leaseToken: 'approval-lease:1:owner-session_generation-1',
+      })
+    ).rejects.toThrow('hosted-approval-runtime-response-proof-invalid');
+    await vi.waitFor(() => expect(f.fatal).toHaveBeenCalledOnce());
+
+    // The mismatch revoked the generation, but the retained activation socket
+    // and its producer provenance belong to the admitted handler until it can
+    // emit exactly one structured terminal response.
+    expect(f.first.received.socket.destroyed).toBe(false);
+    expect(f.writer.close).not.toHaveBeenCalled();
+    expect(f.leases[0]!.currentBinding()).toBeNull();
+    let terminalEvidenceAtTransportClose: number | null = null;
+    f.first.received.socket.once('close', () => {
+      terminalEvidenceAtTransportClose = vi.mocked(f.writer.emit).mock.calls.filter(
+        ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+      ).length;
+    });
+    const activationClosed = once(f.first.received.socket, 'close');
+    release.resolve();
+
+    const responses = await Promise.all(requests);
+    for (const response of responses) {
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toMatchObject({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'unavailable', reason: 'team_approval_unavailable' },
+        retryable: true,
+      });
+    }
+    const terminalResponses = vi.mocked(f.writer.emit).mock.calls.filter(
+      ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+    );
+    expect(terminalResponses).toHaveLength(2);
+    for (const [, response] of terminalResponses) {
+      expect(response).toMatchObject({
+        native: { outcome: 'unadmitted', routeId: 'team-approvals.page.v1', status: 503 },
+      });
+    }
+    expect(
+      vi.mocked(f.writer.emit).mock.calls.some(
+        ([, row]) => row.recordType === 'approval-http-response-finalized'
+      )
+    ).toBe(false);
+    await activationClosed;
+    expect(terminalEvidenceAtTransportClose).toBe(2);
+    expect(f.first.received.socket.destroyed).toBe(true);
     await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
   });
 
