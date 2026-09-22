@@ -68,23 +68,23 @@ describe('hosted approval production admission', () => {
       'dependencies.approvalStorage[method] !== version.approvalStorageMethods[method]'
     );
     expect(production).toContain(
-      'createApprovalRouteMutationLease(\n          route.socketPath,\n          request.ownerBinding,\n          activationLease,\n          () => !revoked\n        )'
+      'createApprovalRouteMutationLease(\n          route.socketPath,\n          request.ownerBinding,\n          activationLease,\n          () => !revoked,\n          reportOwnerLoss\n        )'
     );
     const normalizedProduction = production.replace(/\s+/g, ' ');
     expect(normalizedProduction).toContain(
       'const revoke = (): void => { if (revoked) return; revoked = true; operator?.close(); router?.close(); }'
     );
     expect(normalizedProduction).toContain(
-      'isReady: () => !revoked && !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady()'
+      'isReady: () => !revoked && !closed && !activationInvalidated && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady()'
     );
     expect(normalizedProduction).toContain(
-      "function createApprovalRouteMutationLease( socketPath: string, binding: HostedApprovalRuntimeActivationBinding['ownerBinding'], activationLease: HostedApprovalRuntimeActivationLease, isCurrent: () => boolean ): TeamLifecycleCommandMutationLease"
+      "function createApprovalRouteMutationLease( socketPath: string, binding: HostedApprovalRuntimeActivationBinding['ownerBinding'], activationLease: HostedApprovalRuntimeActivationLease, isCurrent: () => boolean, onOwnerLoss: () => void ): TeamLifecycleCommandMutationLease"
     );
     expect(normalizedProduction).toContain(
       'currentBinding: () => invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding'
     );
     expect(normalizedProduction).toContain(
-      'invalidate: () => { invalidated = true; activationLease.invalidate(); activationLease.closeTransport(); }'
+      'invalidate: () => { if (invalidated) return; invalidated = true; activationLease.invalidate(); onOwnerLoss(); }'
     );
     expect(production).toContain('ownerGeneration: route.ownerGeneration');
     expect(production).toContain('ownerSessionId: route.ownerSessionId');

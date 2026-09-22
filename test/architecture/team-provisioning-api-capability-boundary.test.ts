@@ -217,7 +217,10 @@ const implementationModules: readonly [string, ParsedModule, ImplementationModul
     {
       allowFunctionDeclarations: true,
       allowedTypeImportModules: new Set(['./TeamProvisioningCapabilityApis']),
-      allowedValueImportModules: new Set(),
+      allowedValueImportModules: new Set([
+        '@shared/utils/logger',
+        '../opencode/bridge/OpenCodeStartupSweepGate',
+      ]),
       allowedLocalTypeExports: [],
       expectedModuleReexports: [],
       expectedTypeExports: [],

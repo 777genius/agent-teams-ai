@@ -1,4 +1,5 @@
 import { createHash, createPublicKey, generateKeyPairSync, type KeyObject,sign } from 'node:crypto';
+import { vi } from 'vitest';
 
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
@@ -125,30 +126,30 @@ function dependencies(
       ),
     } as never,
     approvalStorage: {
-      hostedTeamApprovalObserve: (() => undefined as never),
-      hostedTeamApprovalReadPending: (() => undefined as never),
-      hostedTeamApprovalReadPreview: (() => undefined as never),
-      hostedTeamApprovalDecide: (() => undefined as never),
-      hostedTeamApprovalAuditTimeouts: (async () => ({
+      hostedTeamApprovalObserve: vi.fn(() => undefined as never),
+      hostedTeamApprovalReadPending: vi.fn(() => undefined as never),
+      hostedTeamApprovalReadPreview: vi.fn(() => undefined as never),
+      hostedTeamApprovalDecide: vi.fn(() => undefined as never),
+      hostedTeamApprovalAuditTimeouts: vi.fn(async () => ({
         resolvedCount: 0,
         nextAuditTimeMs: null,
       })),
-      hostedTeamApprovalClaimDeliveries: (async () => Object.freeze([])),
-      hostedTeamApprovalAcknowledgeDelivery: (() => undefined as never),
-      hostedTeamApprovalMarkDeliveryOperatorRequired: (() => undefined as never),
-      hostedTeamApprovalReadDeliveryReconciliation: (async () => ({
+      hostedTeamApprovalClaimDeliveries: vi.fn(async () => Object.freeze([])),
+      hostedTeamApprovalAcknowledgeDelivery: vi.fn(() => undefined as never),
+      hostedTeamApprovalMarkDeliveryOperatorRequired: vi.fn(() => undefined as never),
+      hostedTeamApprovalReadDeliveryReconciliation: vi.fn(async () => ({
         kind: 'not_found' as const,
       })),
-      hostedTeamApprovalSettleDeliveryReconciliation: (() => undefined as never),
+      hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(() => undefined as never),
     },
     producerProvenance: {
       role: 'product-producer',
       controllerNonce: 'controller_activation-test',
       runId: 'run_activation-test',
-      emit: (() => undefined as never),
-      bindInvalidation: (() => undefined as never),
+      emit: vi.fn(() => undefined as never),
+      bindInvalidation: vi.fn(() => undefined as never),
       poison: ((reason: string) => { throw new Error(reason); }),
-      close: (() => undefined as never),
+      close: vi.fn(() => undefined as never),
     },
     createApprovalRuntimeAuthority: (options) => ({
       claimPermissionApprovalIngressEffects: (async () => {

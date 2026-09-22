@@ -1,7 +1,6 @@
 import { createLogger } from '@shared/utils/logger';
 
 import {
-  OpenCodeStartupCleanupBusyError,
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '../opencode/bridge/OpenCodeStartupSweepGate';
 
@@ -81,6 +80,9 @@ async function runBeforeStart(
   try {
     await beforeStart(input);
   } catch (error) {
+    const { OpenCodeStartupCleanupBusyError } = await import(
+      '../opencode/bridge/OpenCodeStartupSweepGate'
+    );
     if (error instanceof OpenCodeStartupCleanupBusyError) {
       throw error;
     }

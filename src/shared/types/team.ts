@@ -1001,6 +1001,14 @@ export interface PersistedTeamLaunchMemberState {
   hardFailure: boolean;
   hardFailureReason?: string;
   pendingPermissionRequestIds?: string[];
+  /** Backend identity is retained so persisted reconcile can select the
+   * process-only bootstrap transport projection without inferring readiness. */
+  backendType?: TeamAgentRuntimeBackendType;
+  tmuxPaneId?: string;
+  agentId?: string;
+  bootstrapRunId?: string;
+  bootstrapExpectedAfter?: string;
+  bootstrapRuntimeEventsPath?: string;
   runtimePid?: number;
   /** Runtime/bootstrap run id that produced current liveness or bootstrap evidence. */
   runtimeRunId?: string;

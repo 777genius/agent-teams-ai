@@ -544,10 +544,7 @@ function normalizePersistedMemberState(
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
     providerId,
-    providerBackendId: migrateProviderBackendId(
-      providerId,
-      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
-    ),
+    providerBackendId: migrateProviderBackendId(providerId, typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined),
     billingMode: normalizeProviderBillingMode(parsed.billingMode),
     model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
     effort:
@@ -578,12 +575,14 @@ function normalizePersistedMemberState(
     runtimeAlive,
     bootstrapConfirmed,
     hardFailure,
-    hardFailureReason: !hardFailure
-      ? undefined
-      : normalizeLaunchFailureReasonText(parsed.hardFailureReason),
-    pendingPermissionRequestIds: normalizePendingPermissionRequestIds(
-      parsed.pendingPermissionRequestIds
-    ),
+    hardFailureReason: !hardFailure ? undefined : normalizeLaunchFailureReasonText(parsed.hardFailureReason),
+    pendingPermissionRequestIds: normalizePendingPermissionRequestIds(parsed.pendingPermissionRequestIds),
+    backendType: parsed.backendType === 'process' || parsed.backendType === 'tmux' ? parsed.backendType : undefined,
+    tmuxPaneId: normalizeOptionalString(parsed.tmuxPaneId),
+    agentId: normalizeOptionalString(parsed.agentId),
+    bootstrapRunId: normalizeOptionalString(parsed.bootstrapRunId),
+    bootstrapExpectedAfter: normalizeOptionalString(parsed.bootstrapExpectedAfter),
+    bootstrapRuntimeEventsPath: normalizeOptionalString(parsed.bootstrapRuntimeEventsPath),
     runtimePid: normalizeRuntimePid(parsed.runtimePid),
     runtimeRunId: normalizeOptionalString(parsed.runtimeRunId),
     runtimeSessionId: normalizeOptionalString(parsed.runtimeSessionId),

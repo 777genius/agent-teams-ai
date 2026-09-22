@@ -474,7 +474,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         !sameHostedApprovalActivationOwner(result.value, request.ownerBinding)
       ) {
         result.value.invalidate();
-        result.value.closeTransport();
+        closeApprovalActivationTransport(result.value);
         throw new Error('hosted-approval-production-activation-ready-invalid');
       }
       activationLeases.push(result.value);
@@ -483,7 +483,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
     for (const result of activationResults) {
       if (result.status === 'fulfilled') {
         result.value.invalidate();
-        result.value.closeTransport();
+        closeApprovalActivationTransport(result.value);
       }
     }
     closeActivatedSurface();
@@ -718,4 +718,14 @@ function createApprovalRouteMutationLease(
       onOwnerLoss();
     },
   });
+}
+
+/** A malformed activation result is still untrusted input. Tear down a real
+ * transport when it is available, but preserve the contract-specific failure
+ * instead of masking it with a missing-method TypeError. */
+function closeApprovalActivationTransport(lease: HostedApprovalRuntimeActivationLease): void {
+  const candidate = lease as unknown as { closeTransport?: unknown };
+  if (typeof candidate.closeTransport === 'function') {
+    candidate.closeTransport();
+  }
 }
