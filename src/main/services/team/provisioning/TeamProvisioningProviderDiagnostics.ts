@@ -693,7 +693,7 @@ export async function validateAgentTeamsMcpRuntime({
   };
   ports: TeamProvisioningProviderDiagnosticsPorts;
 }): Promise<void> {
-  let fixture: AgentTeamsMcpValidationFixture | null = null;
+  let fixture: Awaited<ReturnType<typeof createAgentTeamsMcpValidationFixture>> | null = null;
   let child: TeamProvisioningProbeChild | null = null;
   let stdoutBuffer = '';
   let stderrBuffer = '';
