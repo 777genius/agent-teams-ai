@@ -128,6 +128,6 @@ export {
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
 export {
-  validateMemberSettingsRelaunchFreshRoster,
   type TeamMemberSettingsRelaunchRosterReadPort,
+  validateMemberSettingsRelaunchFreshRoster,
 } from './utils/validateMemberSettingsRelaunchFreshRoster';

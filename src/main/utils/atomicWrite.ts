@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { cleanupAtomicCreateTempLinksRaceSafely } from './atomicWriteCleanup';
 import {
   type AtomicWriteDirectorySyncOutcome,
   closeDirectorySync,
@@ -21,7 +22,6 @@ import {
   publishHardlinkNoClobber,
   restoreDetachedPathNoClobber,
 } from './atomicWriteRecovery';
-import { cleanupAtomicCreateTempLinksRaceSafely } from './atomicWriteCleanup';
 import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
 export * from './durablePathOperations';

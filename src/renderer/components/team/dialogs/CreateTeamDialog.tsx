@@ -18,9 +18,6 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { WorkspaceTrustLaunchNotice } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
-import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
-import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
-import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
   buildMemberDraftColorMap,
@@ -53,6 +50,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -146,8 +146,8 @@ import {
   getShortLivedProviderPrepareModelIssueReasons,
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
-import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,

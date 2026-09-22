@@ -67,9 +67,9 @@ import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadi
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
-import { formatTeamProjectPathName, resolveLaunchDialogMembers } from './teamListPresentation';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { formatTeamProjectPathName, resolveLaunchDialogMembers } from './teamListPresentation';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
@@ -79,14 +79,14 @@ import {
 } from './teamProjectSelection';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
-import { useTeamStopControl } from './useTeamStopControl';
 import { useTeamRendererPorts } from './useTeamRendererPorts';
+import { useTeamStopControl } from './useTeamStopControl';
 
-import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
-import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
+import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
+import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
   ResolvedTeamMember,
   TeamCreateRequest,

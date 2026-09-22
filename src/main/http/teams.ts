@@ -1,40 +1,40 @@
+// eslint-disable-next-line no-restricted-imports -- HTTP composition owns this Node-only bridge adapter.
+import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_LIST_ROUTE,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
 } from '@features/team-lifecycle/contracts';
-// eslint-disable-next-line no-restricted-imports -- HTTP composition owns this Node-only bridge adapter.
-import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
+import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import {
   TeamApplicationHost,
   TeamApplicationUnavailableError,
 } from '@main/composition/team/TeamApplicationHost';
-import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import {
   getTeamHttpResponseErrorMessage,
   getTeamHttpStatusCode,
   shouldLogTeamHttpError,
 } from './teamHttpErrors';
-import { registerTeamRuntimeCompatibilityRoutes } from './teamRuntimeCompatibilityRoutes';
+import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
   parseDraftLaunchCreateRequest,
   parseLaunchRequest,
 } from './teamRouteParsers';
-import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
-import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamRuntimeCompatibilityRoutes } from './teamRuntimeCompatibilityRoutes';
 
+import type { HttpServices } from './index';
 import type { TeamCreateConfigRequest, TeamLaunchRequest } from '@shared/types/team';
 import type { FastifyInstance } from 'fastify';
-import type { HttpServices } from './index';
 
 const logger = createLogger('HTTP:teams');
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;

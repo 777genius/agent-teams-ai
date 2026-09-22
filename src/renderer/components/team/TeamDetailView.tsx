@@ -13,7 +13,6 @@ import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/prod
 import { api, isElectronMode } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -25,6 +24,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -107,12 +107,12 @@ import { deriveMetrics } from './context-metric-alias';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 import { TeamStatusBadge } from './TeamStatusBadge';
-import { useTeamStopControl } from './useTeamStopControl';
 import { useTeamRendererPorts } from './useTeamRendererPorts';
+import { useTeamStopControl } from './useTeamStopControl';
 
-import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
+import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { ComponentProps, CSSProperties } from 'react';
 
 const sumInjectionTokens = tokenMath[

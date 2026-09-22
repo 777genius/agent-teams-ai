@@ -24,10 +24,10 @@ import {
 } from './HostedCoordinationEventStreamFrames';
 import {
   admitsSameOriginEventSource,
+  boundedCursor,
   type HostedCoordinationHttpApplication,
   type HostedCoordinationHttpReply,
   type HostedCoordinationHttpRequest,
-  boundedCursor,
   initialCursor,
   rawConnectionClosed,
   resyncReason,

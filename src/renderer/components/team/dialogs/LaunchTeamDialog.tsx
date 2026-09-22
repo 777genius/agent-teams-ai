@@ -18,9 +18,6 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import { WorkspaceTrustLaunchControl } from '@features/workspace-trust/renderer';
-import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
-import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
-import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
@@ -46,6 +43,9 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
@@ -85,6 +85,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { CronScheduleInput } from '../schedule/CronScheduleInput';
+
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
@@ -139,8 +140,8 @@ import {
   getShortLivedProviderPrepareModelIssueReasons,
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
-import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -201,7 +202,6 @@ const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTr
 const teamRosterMutationTransport = createTeamRosterMutationTransport();
 
 // Props — discriminated union
-
 interface LaunchDialogBase {
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   validateMemberSettings?: () => Promise<void>;
