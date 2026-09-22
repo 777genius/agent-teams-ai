@@ -24,8 +24,8 @@ import {
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
-import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
+import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -41,8 +41,6 @@ import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
 } from '@shared/types';
-
-type RuntimeLaneStorageClearResult = boolean | 'cleared' | 'owner_changed';
 
 export interface OpenCodeAggregatePrimaryLaneRun {
   runId: string;

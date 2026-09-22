@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import {
   type MixedSecondaryLaneLaunchSetupPorts,
   type MixedSecondaryLaneLaunchSetupRun,
@@ -11,7 +13,6 @@ import {
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
-import * as path from 'path';
 
 import type {
   TeamRuntimeLaunchResult,

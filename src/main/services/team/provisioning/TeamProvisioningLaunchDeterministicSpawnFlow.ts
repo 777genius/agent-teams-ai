@@ -35,6 +35,11 @@ import {
 } from './TeamProvisioningLaunchTeamFlow';
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
+import {
+  applyProjectDirectoryLeaseAtProviderBoundary,
+  projectDirectoryLeaseForRequest,
+  type ProjectDirectoryLease,
+} from './TeamProvisioningProjectDirectoryLease';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
@@ -48,11 +53,6 @@ import {
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-import {
-  applyProjectDirectoryLeaseAtProviderBoundary,
-  projectDirectoryLeaseForRequest,
-  type ProjectDirectoryLease,
-} from './TeamProvisioningProjectDirectoryLease';
 
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {

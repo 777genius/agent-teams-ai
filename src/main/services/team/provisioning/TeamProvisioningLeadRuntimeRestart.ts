@@ -1,4 +1,5 @@
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+
 import { applyProjectDirectoryLeaseAtProviderBoundaryWithLease } from './TeamProvisioningProjectDirectoryLease';
 
 import type { TeamMetaFile } from '../TeamMetaStore';

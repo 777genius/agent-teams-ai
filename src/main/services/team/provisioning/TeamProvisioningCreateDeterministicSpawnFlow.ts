@@ -32,6 +32,11 @@ import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuar
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
+import {
+  applyProjectDirectoryLeaseAtProviderBoundary,
+  projectDirectoryLeaseForRequest,
+  type ProjectDirectoryLease,
+} from './TeamProvisioningProjectDirectoryLease';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import { buildCreateBootstrapUserPrompt } from './TeamProvisioningRosterPrompt';
 import {
@@ -45,11 +50,6 @@ import {
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-import {
-  applyProjectDirectoryLeaseAtProviderBoundary,
-  projectDirectoryLeaseForRequest,
-  type ProjectDirectoryLease,
-} from './TeamProvisioningProjectDirectoryLease';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -61,8 +61,6 @@ import type {
   TeamProvisioningProgress,
   TeamProvisioningState,
 } from '@shared/types';
-
-type SpawnedChild = ReturnType<typeof spawn>;
 
 export interface DeterministicCreateSpawnFlowRun
   extends TeamProvisioningCreateBootstrapRun, AnthropicApiKeyHelperRunOwner {

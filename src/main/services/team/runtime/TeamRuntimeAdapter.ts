@@ -1,3 +1,4 @@
+import type { ProjectDirectoryLease } from '../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   EffortLevel,
   MemberLaunchState,
@@ -13,7 +14,6 @@ import type {
   TeamLaunchAggregateState,
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
-import type { ProjectDirectoryLease } from '../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export const TEAM_RUNTIME_PROVIDER_IDS = ['anthropic', 'codex', 'gemini', 'opencode'] as const;
 

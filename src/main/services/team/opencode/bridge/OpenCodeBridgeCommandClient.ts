@@ -10,22 +10,6 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import {
-  abortOpenCodeBridgeCommandDispatch,
-  assertOpenCodeBridgeCommandDispatchAllowed,
-  ExecCliOpenCodeBridgeProcessRunner,
-  resolveOpenCodeBridgeProjectDirectoryLeaseDispatch,
-  type OpenCodeBridgeProcessRunner,
-} from './OpenCodeBridgeProjectDirectoryLease';
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
-
-export { ExecCliOpenCodeBridgeProcessRunner } from './OpenCodeBridgeProjectDirectoryLease';
-export type {
-  OpenCodeBridgeProcessRunInput,
-  OpenCodeBridgeProcessRunResult,
-  OpenCodeBridgeProcessRunner,
-} from './OpenCodeBridgeProjectDirectoryLease';
-
-import {
   extractRunId,
   OPEN_CODE_BRIDGE_SCHEMA_VERSION,
   OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
@@ -39,9 +23,25 @@ import {
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 import {
+  abortOpenCodeBridgeCommandDispatch,
+  assertOpenCodeBridgeCommandDispatchAllowed,
+  ExecCliOpenCodeBridgeProcessRunner,
+  resolveOpenCodeBridgeProjectDirectoryLeaseDispatch,
+  type OpenCodeBridgeProcessRunner,
+} from './OpenCodeBridgeProjectDirectoryLease';
+import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
 } from './OpenCodeStartupCleanupBridge';
+
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
+
+export { ExecCliOpenCodeBridgeProcessRunner } from './OpenCodeBridgeProjectDirectoryLease';
+export type {
+  OpenCodeBridgeProcessRunInput,
+  OpenCodeBridgeProcessRunResult,
+  OpenCodeBridgeProcessRunner,
+} from './OpenCodeBridgeProjectDirectoryLease';
 
 interface OpenCodeBridgeOutputReadResult {
   content: string;

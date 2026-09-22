@@ -67,6 +67,7 @@ import {
   type PreparePrimaryOwnedMemberRestartRuntimeInput,
   type PreparePrimaryOwnedMemberRestartRuntimeResult,
 } from './TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
+import { applyProjectDirectoryLeaseAtProviderBoundaryWithLease } from './TeamProvisioningProjectDirectoryLease';
 import {
   buildMemberSpawnPrompt,
   buildRestartMemberSpawnMessage,
@@ -76,7 +77,6 @@ import {
   type OpenCodeSecondaryRetryOutcome,
 } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
 import { createNodeResolveDirectRestartRuntimeCwdUseCase } from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
-import { applyProjectDirectoryLeaseAtProviderBoundaryWithLease } from './TeamProvisioningProjectDirectoryLease';
 import {
   createNodeStopPrimaryOwnedRosterRuntimeUseCase,
   type StopPrimaryOwnedRosterRuntimeInput,

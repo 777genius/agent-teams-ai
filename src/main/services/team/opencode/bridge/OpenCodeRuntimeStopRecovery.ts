@@ -19,11 +19,11 @@ import {
 } from './OpenCodeRuntimeStopProtocol';
 import { type OpenCodeStopTarget, recoverCompletedStop } from './OpenCodeStopOutcomeRecovery';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export function createStopTarget(
   input: {

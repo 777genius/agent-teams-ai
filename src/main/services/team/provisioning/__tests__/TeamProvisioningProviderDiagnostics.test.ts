@@ -1,11 +1,13 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
-import * as path from 'path';
 import { EventEmitter } from 'node:events';
 import { promises as fs } from 'node:fs';
 import { PassThrough } from 'node:stream';
+
+import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { bindProjectDirectoryLease } from '../TeamProvisioningProjectDirectoryLease';
 import {
   buildAgentTeamsMcpValidationError,
   createAgentTeamsMcpValidationFixture,
@@ -17,7 +19,6 @@ import {
   type TeamProvisioningProviderDiagnosticsPorts,
   validateAgentTeamsMcpRuntime,
 } from '../TeamProvisioningProviderDiagnostics';
-import { bindProjectDirectoryLease } from '../TeamProvisioningProjectDirectoryLease';
 import {
   buildTeamProvisioningProviderDiagnosticsPorts,
   createTeamProvisioningProviderDiagnosticsBasePorts,

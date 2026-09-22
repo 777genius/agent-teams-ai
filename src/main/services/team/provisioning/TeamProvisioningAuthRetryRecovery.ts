@@ -2,11 +2,11 @@ import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
+import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import {
   applyProjectDirectoryLeaseAtProviderBoundaryWithLease,
   type ProjectDirectoryLease,
 } from './TeamProvisioningProjectDirectoryLease';
-import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 

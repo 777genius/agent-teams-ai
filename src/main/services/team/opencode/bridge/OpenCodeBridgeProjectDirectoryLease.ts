@@ -1,5 +1,6 @@
-import { execCli, killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 import * as path from 'node:path';
+
+import { execCli, killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 
 import {
   resolveProjectDirectoryLeaseCwdAtProviderBoundary,
@@ -84,7 +85,6 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
       let stderrBytes = 0;
       let settled = false;
       let terminating = false;
-      let timer: NodeJS.Timeout | undefined;
       let child: ReturnType<typeof spawnCli> | undefined;
       const onAbort = () => terminate('timeout');
       const settle = (result: OpenCodeBridgeProcessRunResult): void => {
@@ -158,7 +158,7 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
       child.once('close', (code) => {
         if (!terminating) settle({ stdout, stderr, exitCode: code, timedOut: false });
       });
-      timer = setTimeout(() => terminate('timeout'), input.timeoutMs);
+      const timer = setTimeout(() => terminate('timeout'), input.timeoutMs);
       timer.unref?.();
     });
   }

@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
+
 import { openCodeReadinessArtifactKey } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../readiness/OpenCodeProjectIdentity';
+
 import {
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   stableHash,
@@ -20,6 +22,7 @@ import {
 } from './OpenCodeReadinessTimeoutPolicy';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
   OpenCodeTeamLaunchReadiness,
@@ -55,7 +58,6 @@ import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
 import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export interface OpenCodeLedgerBackfillPort {
   getRuntimeIdentity?(): Promise<string | null>;

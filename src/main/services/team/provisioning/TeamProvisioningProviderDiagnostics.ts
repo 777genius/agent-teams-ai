@@ -20,10 +20,11 @@ import {
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
-import { resolveProviderDiagnosticsSpawnOptions } from './TeamProvisioningProviderDiagnosticsProjectDirectoryLease';
 
 import { buildCombinedLogs } from './TeamProvisioningCliExitPresentation';
+import { createAgentTeamsMcpValidationFixture } from './TeamProvisioningMcpValidationContract';
 import { boundProbeOutputBuffer } from './TeamProvisioningProgressBuffers';
+import { resolveProviderDiagnosticsSpawnOptions } from './TeamProvisioningProviderDiagnosticsProjectDirectoryLease';
 import {
   appendPreflightDebugLog,
   buildAgentTeamsMcpValidationError as buildAgentTeamsMcpValidationErrorMessage,
@@ -33,7 +34,6 @@ import {
   truncatePreflightDebugText,
 } from './TeamProvisioningProviderPreflight';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
-import { createAgentTeamsMcpValidationFixture } from './TeamProvisioningMcpValidationContract';
 import {
   type AuthStatusCommandResponse,
   extractJsonObjectFromCli,
@@ -42,8 +42,6 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamProviderId } from '@shared/types';
-
-export { createAgentTeamsMcpValidationFixture };
 
 const { AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 
@@ -1082,7 +1080,6 @@ export async function spawnProbe({
     let stdoutText = '';
     let stderrText = '';
     let settled = false;
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const child = ports.spawnCli(claudePath, args, spawnOptions);
     let ownsProbe = true;
     const onStdoutData = (chunk: Buffer): void => {
@@ -1093,8 +1090,6 @@ export async function spawnProbe({
       stderrText = boundProbeOutputBuffer(stderrText + chunk.toString('utf8'));
       maybeResolveEarly();
     };
-    let onChildError: (error: Error) => void;
-    let onChildClose: (exitCode: number | null) => void;
     const detachChildListeners = (): void => {
       child.stdout?.off('data', onStdoutData);
       child.stderr?.off('data', onStderrData);
@@ -1129,8 +1124,8 @@ export async function spawnProbe({
         completion();
       }
     };
-    onChildError = (error: Error): void => settle(() => reject(error));
-    onChildClose = (exitCode: number | null): void =>
+    const onChildError = (error: Error): void => settle(() => reject(error));
+    const onChildClose = (exitCode: number | null): void =>
       settle(() =>
         resolve({
           exitCode,
@@ -1155,7 +1150,7 @@ export async function spawnProbe({
       return;
     }
 
-    timeoutHandle = setTimeout(() => {
+    const timeoutHandle = setTimeout(() => {
       terminate(() => {
         reject(new Error(`Timeout running: ${getConfiguredCliCommandLabel()} ${args.join(' ')}`));
       });

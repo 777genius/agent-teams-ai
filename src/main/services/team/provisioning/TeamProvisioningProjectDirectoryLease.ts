@@ -4,12 +4,6 @@ import * as path from 'path';
 import type { TeamCreateRequest } from '@shared/types';
 import type { SpawnOptions } from 'child_process';
 
-/**
- * An invocation-scoped directory capability for a launch which must not be
- * redirected by a later pathname replacement. It is intentionally kept in a
- * WeakMap rather than on TeamCreateRequest: request persistence, IPC, and
- * member metadata must never serialize an fd number or a /proc/fd pathname.
- */
 export interface ProjectDirectoryLease {
   fd: number;
   dev: string;

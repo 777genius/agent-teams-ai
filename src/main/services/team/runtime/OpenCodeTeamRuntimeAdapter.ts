@@ -1,10 +1,13 @@
 import { randomUUID } from 'crypto';
+
 import {
   freshOpenCodeExecutionProof,
   openCodeReadinessArtifactKey,
   reusableOpenCodeExecutionProof,
 } from '../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
+import { projectDirectoryLeaseForRequest } from '../provisioning/TeamProvisioningProjectDirectoryLease';
+
 import {
   blockedLaunchResult,
   firstDisplayableOpenCodeFailureMessage,
@@ -20,9 +23,6 @@ import {
 import { buildMemberBootstrapPrompt } from './OpenCodeMemberBootstrapPrompt';
 import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
 import { buildOpenCodeRuntimeMessageText } from './OpenCodeRuntimeMessageText';
-import { projectDirectoryLeaseForRequest } from '../provisioning/TeamProvisioningProjectDirectoryLease';
-import type { RuntimeStopObservation } from '../opencode/bridge/OpenCodeRuntimeStopProtocol';
-export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 import type {
   OpenCodeAnswerPermissionCommandBody,
@@ -41,6 +41,7 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
+import type { RuntimeStopObservation } from '../opencode/bridge/OpenCodeRuntimeStopProtocol';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
@@ -68,6 +69,8 @@ import type {
   OpenCodeAppManagedBootstrapCandidate,
   TaskRef,
 } from '@shared/types/team';
+
+export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 export interface OpenCodeTeamRuntimeBridgePort {
   checkOpenCodeTeamLaunchReadiness(input: {

@@ -1,7 +1,5 @@
 import { randomUUID } from 'crypto';
 
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
-
 import { isLowercaseSha256 } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
 
 import {
@@ -29,6 +27,7 @@ import {
 } from './OpenCodeRuntimeStopRecovery';
 import { assertStopDomainResult } from './OpenCodeStopOutcomeRecovery';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandLease,
   OpenCodeBridgeCommandLeaseStore,

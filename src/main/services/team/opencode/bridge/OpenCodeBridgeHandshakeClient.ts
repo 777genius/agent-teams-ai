@@ -6,6 +6,7 @@ import {
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandName,
   OpenCodeBridgeHandshake,
@@ -15,7 +16,6 @@ import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
-import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export interface OpenCodeBridgeCommandHandshakePortOptions {
   bridge: OpenCodeBridgeCommandExecutor;
