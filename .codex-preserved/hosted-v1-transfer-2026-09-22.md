@@ -76,3 +76,4 @@ Final follow-up:
 - a57180016a6b3c82b02942cf40c19e3edd005d7e applies exact project import groups.
 - Accepted patch SHA256 120113bedbc7782c85851e754673db262f8f085b79e87a1e231095b789b4077b.
 - CI run 35723557181 on predecessor 765891274 showed four remaining import-sort errors only; this follow-up addresses exactly those four.
+- CI run 35724512361 verified lint (main) SUCCESS on exact head a57180016a6b3c82b02942cf40c19e3edd005d7e. Other jobs were still running at the transfer snapshot; ReviewRouter remained an external control-plane failure.
