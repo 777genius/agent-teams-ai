@@ -1,4 +1,5 @@
 import { mkdir, readdir, readFile, stat } from 'node:fs/promises';
+import * as path from 'node:path';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import {
@@ -10,19 +11,17 @@ import {
   withIdentityStableDirectoryTreeAsync,
   withIdentityStableIndexedDirectoryLocksAsync,
 } from '@main/utils/durablePathOperations';
-import * as path from 'path';
 
 import { withFileLock } from '../../fileLock';
 
 import {
   type ClearOpenCodeRuntimeLaneStorageParams,
   type ClearOpenCodeRuntimeLaneStorageResult,
-  normalizeOpenCodeBootstrapSessionRecord,
   type OpenCodeCommittedBootstrapSessionEvidence,
-  type OpenCodeCommittedBootstrapSessionRecord,
   readRuntimeStoreManifestEvidenceData,
   resolveOpenCodeRuntimeLaneClearOwnership,
 } from './OpenCodeBootstrapSessionNormalization';
+import { readOpenCodeBootstrapSessionStore } from './OpenCodeBootstrapSessionStoreReader';
 import {
   createEmptyOpenCodeRuntimeLaneIndex,
   normalizeOpenCodeRuntimeLaneIndex,
@@ -122,39 +121,6 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-async function readOpenCodeBootstrapSessionStore(
-  filePath: string,
-  expected: {
-    teamName: string;
-    laneId: string;
-  }
-): Promise<OpenCodeCommittedBootstrapSessionRecord[]> {
-  const raw = await readFile(filePath, 'utf8');
-  const parsed = JSON.parse(raw) as unknown;
-  const record =
-    parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  const data =
-    record && Object.prototype.hasOwnProperty.call(record, 'data') ? record.data : record;
-  const sessions =
-    data && typeof data === 'object' && !Array.isArray(data)
-      ? (data as Record<string, unknown>).sessions
-      : null;
-  if (!Array.isArray(sessions)) {
-    return [];
-  }
-  return sessions.flatMap((session): OpenCodeCommittedBootstrapSessionRecord[] => {
-    const normalized = normalizeOpenCodeBootstrapSessionRecord(session);
-    if (!normalized) {
-      return [];
-    }
-    if (normalized.teamName !== expected.teamName || normalized.laneId !== expected.laneId) {
-      return [];
-    }
-    return [normalized];
-  });
 }
 async function resolveOpenCodeRuntimeManifestReadPath(
   teamsBasePath: string,

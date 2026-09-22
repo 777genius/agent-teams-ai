@@ -8,6 +8,10 @@ import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCod
 import { isSupportedLaunchStateDocument } from './TeamLaunchStateDocumentPersistence';
 
 import type {
+  LegacyPartialLaunchStateFile,
+  RuntimeMemberSpawnState,
+} from './TeamLaunchStateEvaluatorTypes';
+import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
   MemberSpawnStatusEntry,
@@ -23,42 +27,6 @@ import type {
   TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
 } from '@shared/types';
-
-interface LegacyPartialLaunchStateFile {
-  version?: unknown;
-  state?: unknown;
-  updatedAt?: unknown;
-  leadSessionId?: unknown;
-  expectedMembers?: unknown;
-  confirmedMembers?: unknown;
-  missingMembers?: unknown;
-}
-
-type RuntimeMemberSpawnState = Pick<
-  MemberSpawnStatusEntry,
-  | 'launchState'
-  | 'status'
-  | 'error'
-  | 'hardFailureReason'
-  | 'livenessSource'
-  | 'agentToolAccepted'
-  | 'runtimeAlive'
-  | 'bootstrapConfirmed'
-  | 'hardFailure'
-  | 'skippedForLaunch'
-  | 'skipReason'
-  | 'skippedAt'
-  | 'pendingPermissionRequestIds'
-  | 'livenessKind'
-  | 'runtimeDiagnostic'
-  | 'runtimeDiagnosticSeverity'
-  | 'bootstrapStalled'
-  | 'livenessLastCheckedAt'
-  | 'firstSpawnAcceptedAt'
-  | 'lastHeartbeatAt'
-  | 'runtimeModel'
-  | 'updatedAt'
->;
 
 function normalizePendingPermissionRequestIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {

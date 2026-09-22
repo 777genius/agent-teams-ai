@@ -1,12 +1,10 @@
+import { createHash } from 'node:crypto';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
+
 import { isSupportedLaunchStateDocument } from '@main/services/team/TeamLaunchStateDocumentPersistence';
 import { encodePath, getProjectsBasePath } from '@main/utils/pathDecoder';
-import {
-  inferProviderBillingMode,
-  normalizeProviderBillingMode,
-} from '@shared/utils/providerBillingMode';
-import { createHash } from 'crypto';
-import { readdir, readFile, stat } from 'fs/promises';
-import path from 'path';
+import { inferProviderBillingMode, normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 
 import type {
   TokenUsageBillingMode,
@@ -630,9 +628,7 @@ function runtimeKindFromProvider(providerId: TeamProviderId | undefined): TokenU
   return 'unknown';
 }
 
-function buildTeamLaunchCommandId(teamName: string): string {
-  return `team-launch:${teamName}`;
-}
+function buildTeamLaunchCommandId(teamName: string): string { return `team-launch:${teamName}`; }
 
 function buildTeamLaunchInvocationId(
   teamName: string,
