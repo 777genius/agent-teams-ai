@@ -1,4 +1,5 @@
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type { ProjectDirectoryLease } from './TeamProvisioningProjectDirectoryLease';
 import type {
   EffortLevel,
   MemberSpawnStatusEntry,
@@ -32,7 +33,16 @@ export interface ProvisioningRun {
   runId: string;
   teamName: string;
   request: TeamCreateRequest;
-  spawnContext?: { claudePath?: string };
+  /**
+   * Restarted direct-process members must retain the same invocation-only
+   * project descriptor that guarded the originating launch.  This mirrors the
+   * run model without exposing the rest of its mutable spawn state here.
+   */
+  spawnContext?: {
+    claudePath?: string;
+    projectDirectoryPath?: string;
+    projectDirectoryLease?: ProjectDirectoryLease;
+  };
   detectedSessionId: string | null;
   memberMcpConfigPaths: string[];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;

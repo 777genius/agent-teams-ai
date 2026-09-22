@@ -302,7 +302,7 @@ export function buildOpenCodeRuntimeAdapterLaunchInput(
       teamName: params.teamName,
       cwd: launchCwd,
       ...(path.resolve(launchCwd) === path.resolve(params.cwd)
-        ? { projectDirectoryLease: projectDirectoryLeaseForRequest(params.request) }
+        ? { projectDirectoryLease: projectDirectoryLeaseForRequest({ cwd: params.cwd }) }
         : {}),
       prompt: params.prompt,
       providerId: 'opencode',

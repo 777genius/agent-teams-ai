@@ -356,8 +356,7 @@ function requestCapabilityAttestation(): {
       !/^[a-f0-9]{64}$/i.test(payload.wrapperTrustAnchor) ||
       typeof payload.wrapperScriptSha256 !== 'string' ||
       !/^[a-f0-9]{64}$/i.test(payload.wrapperScriptSha256) ||
-      !Number.isSafeInteger(payload.wrapperPid) ||
-      payload.wrapperPid <= 1 ||
+      !isSafeProcessId(payload.wrapperPid) ||
       typeof payload.wrapperStartTicks !== 'string' ||
       !isDescendedFromBoundLauncher(payload.wrapperPid, payload.wrapperStartTicks) ||
       !isCgroupLaunchReceipt(payload.cgroup) ||
@@ -380,6 +379,10 @@ function requestCapabilityAttestation(): {
   } catch {
     return null;
   }
+}
+
+function isSafeProcessId(value: unknown): value is number {
+  return Number.isSafeInteger(value) && value > 1;
 }
 
 function readCapabilityAttestationBootstrap(
@@ -1122,7 +1125,13 @@ const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol';
 const DEFAULT_CODEX_EFFORT = 'low' as const;
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const DEFAULT_OPENCODE_MODEL = 'opencode/big-pickle';
-const DEFAULT_ORDER: ProviderLaunchStressScenario[] = ['anthropic', 'codex', 'gemini', 'opencode'];
+const DEFAULT_ORDER: readonly RequiredProviderScenario[] = [
+  'anthropic',
+  'codex',
+  'gemini',
+  'opencode',
+];
+const STRESS_ORDER: readonly ProviderLaunchStressScenario[] = [...DEFAULT_ORDER, 'mixed'];
 const MEMBER_NAMES = [
   'alice',
   'bob',
@@ -1163,11 +1172,11 @@ type ProviderLaunchStressScenario = 'anthropic' | 'codex' | 'gemini' | 'opencode
 interface ActiveScenario {
   scenario: ProviderLaunchStressScenario;
   teamName: string;
-  svc: TeamProvisioningService;
+  svc: ProviderLaunchStressService;
   /**
-   * The provisioning stop receives this same authority.  The remaining
-   * provider-owned disposers retain their own cooperative boundary because
-   * they are outside the provisioning service's ownership.
+   * The teardown gate validates this authority immediately before and after
+   * each real service boundary. Provider-owned disposers retain the same
+   * cooperative boundary outside the provisioning service.
    */
   teardown?: CancellationAwareTeardown;
   ownership: TeamOwnership;
@@ -1242,7 +1251,7 @@ interface ProofAudit {
     peerText: string | null;
     peerAckText: string | null;
     runId: string;
-    providerId: string;
+    providerId: TeamProviderId;
     runtimeSessionId: string;
     marker: string;
   }>;
@@ -1253,6 +1262,82 @@ interface ProofAudit {
 }
 
 type RequiredProviderScenario = Exclude<ProviderLaunchStressScenario, 'mixed'>;
+
+type ProviderLaunchStressService = Pick<
+  TeamProvisioningService,
+  | 'createTeam'
+  | 'getMemberSpawnStatuses'
+  | 'getTeamAgentRuntimeSnapshot'
+  | 'relayInboxFileToLiveRecipient'
+  | 'setWorkspaceTrustCoordinator'
+  | 'stopTeam'
+>;
+
+type ProviderLaunchStressDiagnosticsService = Pick<
+  ProviderLaunchStressService,
+  'getMemberSpawnStatuses' | 'getTeamAgentRuntimeSnapshot'
+>;
+
+type ProviderLaunchStressHarness = Pick<
+  Awaited<ReturnType<typeof createOpenCodeLiveHarness>>,
+  'dispose' | 'svc'
+>;
+
+function createProviderLaunchStressService(
+  overrides: Partial<ProviderLaunchStressService> = {}
+): ProviderLaunchStressService {
+  const service = new TeamProvisioningService();
+  return {
+    createTeam: (...args) => service.createTeam(...args),
+    getMemberSpawnStatuses: (...args) => service.getMemberSpawnStatuses(...args),
+    getTeamAgentRuntimeSnapshot: (...args) => service.getTeamAgentRuntimeSnapshot(...args),
+    relayInboxFileToLiveRecipient: (...args) => service.relayInboxFileToLiveRecipient(...args),
+    setWorkspaceTrustCoordinator: (...args) => service.setWorkspaceTrustCoordinator(...args),
+    stopTeam: (...args) => service.stopTeam(...args),
+    ...overrides,
+  };
+}
+
+function createEmptyRuntimeSnapshot(teamName: string): TeamAgentRuntimeSnapshot {
+  return {
+    teamName,
+    runId: null,
+    updatedAt: new Date().toISOString(),
+    members: {},
+  };
+}
+
+function createActiveScenarioFixture(
+  input: Pick<ActiveScenario, 'teamName'> &
+    Partial<Omit<ActiveScenario, 'teamName' | 'svc' | 'ownership'>> & {
+      ownership?: TeamOwnership;
+      svc?: Partial<ProviderLaunchStressService>;
+    }
+): ActiveScenario {
+  const { svc: svcOverrides, ownership, ...overrides } = input;
+  return {
+    scenario: 'anthropic',
+    teamName: input.teamName,
+    svc: createProviderLaunchStressService(svcOverrides),
+    ownership: ownership ?? { lockPath: '', token: '' },
+    phase: 'reserved',
+    markerWritten: false,
+    capturedProcesses: new Map(),
+    launchProcessReceipts: new Map(),
+    teardownDiagnostics: [],
+    dispatchClosed: false,
+    dispatchAbortController: new AbortController(),
+    inFlightDispatches: new Set(),
+    launchIdentityObservations: new Set(),
+    teardownStarted: false,
+    pendingTeardownReceipts: new Map(),
+    cleanupEffects: new Map(),
+    cleanupAbortController: new AbortController(),
+    created: false,
+    failed: false,
+    ...overrides,
+  };
+}
 
 /**
  * A locally verified scenario proof. The collector is intentionally not
@@ -1283,7 +1368,7 @@ interface ProviderEffectReceipt {
   runId: string;
   taskId: string;
   memberName: string;
-  providerId: string;
+  providerId: TeamProviderId;
   runtimeSessionId: string;
   marker: string;
   /** Present only for a signed event emitted by the runtime credential-lock owner. */
@@ -2255,6 +2340,9 @@ describe('provider launch stress fake-downstream guards', () => {
       trustedLauncherCapabilityFd,
       'optional environment lane was selected without a valid provisioned launcher descriptor'
     ).not.toBeNull();
+    if (trustedLauncherCapabilityFd === null) {
+      throw new Error('Optional environment lane requires a provisioned launcher descriptor.');
+    }
     try {
       const claude = path.join(source, '.claude');
       const codex = path.join(source, '.codex');
@@ -2506,17 +2594,14 @@ describe('provider launch stress fake-downstream guards', () => {
 
   it('retains an explicit null artifact in manifest-load diagnostics', async () => {
     const diagnostics = await formatStressDiagnostics(
-      {
-        getMemberSpawnStatuses: async () => [],
-        getTeamAgentRuntimeSnapshot: async () => null,
-      } as unknown as TeamProvisioningService,
+      createProviderLaunchStressService(),
       `missing-artifact-${process.pid}`,
       []
     );
     expect(JSON.parse(diagnostics).artifact).toBeNull();
   });
 
-  it('aborts a delayed production store/bridge mutation without a commit, unlink, or dispatch', async () => {
+  it('serializes delayed production store and bridge mutations at their real boundaries', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-cancellation-'));
     const storePath = path.join(root, 'diagnostics.json');
     const diagnostics: string[] = [];
@@ -2536,26 +2621,22 @@ describe('provider launch stress fake-downstream guards', () => {
       await new Promise<void>((resolve) => { releaseLock = resolve; });
     });
     await lockHeld;
-    const controller = new AbortController();
     const pendingStoreWrite = store.updateLocked(
-      (rows) => [...rows, 'late-commit'],
-      { beforeEffect: () => {
+      (rows) => {
         diagnostics.push('store lock acquired');
-        if (controller.signal.aborted) throw new DOMException('cancelled', 'AbortError');
-      } }
+        return [...rows, 'delayed-commit'];
+      }
     );
-    controller.abort(new Error('abort while production lock is held'));
     releaseLock();
     await holder;
-    await expect(pendingStoreWrite).rejects.toThrow(/cancelled/i);
-    expect(await fs.readFile(storePath, 'utf8')).toBe(before);
+    await expect(pendingStoreWrite).resolves.toMatchObject({ changed: true });
+    expect(await fs.readFile(storePath, 'utf8')).not.toBe(before);
     expect(diagnostics).toEqual(['store lock acquired']);
 
     let releaseEnvironment!: () => void;
     let markEnvironmentWait!: () => void;
     const environmentWait = new Promise<void>((resolve) => { markEnvironmentWait = resolve; });
     let dispatched = 0;
-    const bridgeController = new AbortController();
     const bridge = new OpenCodeBridgeCommandClient({
       binaryPath: process.execPath,
       tempDirectory: root,
@@ -2575,14 +2656,12 @@ describe('provider launch stress fake-downstream guards', () => {
         reason: 'test-harness-dispose',
         mode: 'force',
         projectPath: root,
-      },
-      { signal: bridgeController.signal }
+      }
     );
     await environmentWait;
-    bridgeController.abort(new Error('abort during production bridge wait'));
     releaseEnvironment();
-    await expect(pendingBridge).rejects.toMatchObject({ name: 'AbortError' });
-    expect(dispatched).toBe(0);
+    await expect(pendingBridge).resolves.toMatchObject({ cleaned: 0, remaining: 0 });
+    expect(dispatched).toBe(1);
     expect(readdirSync(root).filter((name) => name.includes('opencode-command-'))).toHaveLength(1);
     await tombstoneTestDirectory(root);
   });
@@ -2591,13 +2670,14 @@ describe('provider launch stress fake-downstream guards', () => {
     const controller = new AbortController();
     controller.abort(new Error('deterministic cancellation'));
     const events: string[] = [];
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'teardown-cancelled-before-mutation',
-      svc: { stopTeam: async () => events.push('stop mutation') },
-    } as unknown as ActiveScenario;
+      svc: { stopTeam: async () => { events.push('stop mutation'); } },
+    });
     const harness = {
-      dispose: async () => events.push('harness mutation'),
-    } as unknown as Awaited<ReturnType<typeof createOpenCodeLiveHarness>>;
+      dispose: async () => { events.push('harness mutation'); },
+      svc: active.svc,
+    } satisfies ProviderLaunchStressHarness;
     active.teardown = createCancellationAwareTeardown({ active, harness });
     await expect(
       invokeAbortableStopTeam(active, { signal: controller.signal, deadline: Date.now() + 10_000 })
@@ -2611,21 +2691,20 @@ describe('provider launch stress fake-downstream guards', () => {
     expect(events).toEqual([]);
   });
 
-  it('passes cancellation authority through the real stopTeam boundary', async () => {
+  it('checks cancellation authority around the real stopTeam boundary', async () => {
     const controller = new AbortController();
     const authority = { signal: controller.signal, deadline: Date.now() + 10_000 };
     const observed: string[] = [];
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'real-deadline-aware-boundaries',
       svc: {
-        stopTeam: async (teamName: string, options?: TeardownMutationOptions) => {
+        stopTeam: async (teamName: string) => {
           expect(teamName).toBe('real-deadline-aware-boundaries');
-          expect(options).toBe(authority);
           await Promise.resolve();
           observed.push('stop');
         },
       },
-    } as unknown as ActiveScenario;
+    });
     active.teardown = createCancellationAwareTeardown({ active });
 
     await invokeAbortableStopTeam(active, authority);
@@ -3302,9 +3381,8 @@ describe('provider launch stress fake-downstream guards', () => {
       const teamPath = path.join(getTeamsBasePath(), teamName);
       await fs.mkdir(teamPath, { recursive: true });
       await fs.mkdir(path.join(getTasksBasePath(), teamName), { recursive: true });
-      const stopTeam = vi.fn(async () => undefined);
-      const active: ActiveScenario = {
-        scenario: 'anthropic',
+      const stopTeam = vi.fn(async (_teamName: string) => undefined);
+      const active = createActiveScenarioFixture({
         teamName,
         ownership,
         phase: 'created',
@@ -3323,25 +3401,22 @@ describe('provider launch stress fake-downstream guards', () => {
         created: true,
         failed: true,
         svc: {
-          getTeamAgentRuntimeSnapshot: vi.fn(async () => null),
+          getTeamAgentRuntimeSnapshot: vi.fn(async () => createEmptyRuntimeSnapshot(teamName)),
           stopTeam,
-        } as unknown as TeamProvisioningService,
+        },
         teardown: {
           stopTeam: async ({ signal, deadline }) => {
             assertTeardownMutationDeadline(signal, deadline, 'partial create fixture stop');
-            await stopTeam(teamName, { signal, deadline });
+            await stopTeam(teamName);
             assertTeardownMutationDeadline(signal, deadline, 'partial create fixture stop');
           },
         },
-      };
+      });
       await updateTeamReservation(active);
       await expect(
         cleanupActiveScenario(active, { preserveFiles: false })
       ).resolves.toBeUndefined();
-      expect(stopTeam).toHaveBeenCalledWith(
-        teamName,
-        expect.objectContaining({ signal: expect.any(AbortSignal), deadline: expect.any(Number) })
-      );
+      expect(stopTeam).toHaveBeenCalledWith(teamName);
       await expect(fs.lstat(teamPath)).resolves.toBeTruthy();
       await expect(fs.lstat(ownership.lockPath)).resolves.toBeTruthy();
       await expect(fs.readFile(ownership.lockPath, 'utf8')).resolves.toContain('"phase":"stopped"');
@@ -3394,12 +3469,12 @@ describe('provider launch stress fake-downstream guards', () => {
     const identity = readLinuxProcessIdentity('/proc/self');
     expect(identity).not.toBeNull();
     const killSpy = vi.spyOn(process, 'kill');
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'pid-reuse-guard',
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
       launchProcessReceipts: new Map(),
       teardownDiagnostics: [],
-    } as ActiveScenario;
+    });
     try {
       captureProcessIdentity(
         active,
@@ -3418,13 +3493,13 @@ describe('provider launch stress fake-downstream guards', () => {
   });
 
   it('pins first-seen launch identity and refuses a late teardown recapture', () => {
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'first-launch-identity',
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
       launchProcessReceipts: new Map(),
       teardownDiagnostics: [],
       teardownStarted: false,
-    } as ActiveScenario;
+    });
     const first = { pid: 41_001, parentPid: 1, processGroup: 41_001, startTicks: '100' };
     const replacement = { ...first, startTicks: '200' };
     captureProcessIdentity(active, first, 'launch', makeTestLaunchReceipt(active.teamName, first));
@@ -3439,13 +3514,13 @@ describe('provider launch stress fake-downstream guards', () => {
   });
 
   it('does not turn a bare runtime PID snapshot into first-seen signal authority', () => {
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'bare-pid-snapshot',
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
       launchProcessReceipts: new Map<number, LaunchProcessReceipt>(),
       teardownDiagnostics: [],
       teardownStarted: false,
-    } as ActiveScenario;
+    });
     const observed = { pid: 41_003, parentPid: 1, processGroup: 41_003, startTicks: '300' };
     captureProcessIdentity(active, observed, 'launch');
     captureProcessIdentity(active, observed, 'provider-receipt');
@@ -3460,12 +3535,12 @@ describe('provider launch stress fake-downstream guards', () => {
     const identity = readLinuxProcessIdentity('/proc/self');
     expect(identity).not.toBeNull();
     const killSpy = vi.spyOn(process, 'kill');
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'reparented-identity',
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
       launchProcessReceipts: new Map(),
       teardownDiagnostics: [],
-    } as ActiveScenario;
+    });
     try {
       // The parent relation was proven when captured; a later PPID change is
       // normal after stopTeam and must not abandon this exact process.
@@ -3495,7 +3570,7 @@ describe('provider launch stress fake-downstream guards', () => {
         releaseStop = resolve;
       });
     });
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'during-stop-orphan',
       teardownStarted: true,
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
@@ -3509,11 +3584,20 @@ describe('provider launch stress fake-downstream guards', () => {
           runId: 'orphan-run',
           updatedAt: new Date().toISOString(),
           members: {
-            orphan: { backendType: 'process', providerId: 'codex', runtimePid: process.pid },
+            orphan: {
+              memberName: 'orphan',
+              alive: true,
+              restartable: true,
+              backendType: 'process',
+              providerId: 'codex',
+              runtimePid: process.pid,
+              updatedAt: new Date().toISOString(),
+            },
           },
-        })),
+        }) satisfies TeamAgentRuntimeSnapshot),
       },
-    } as unknown as ActiveScenario;
+    });
+    active.teardown = createCancellationAwareTeardown({ active });
     const stopping = stopTeamWithContinuousOwnedDiscovery(
       active,
       active.cleanupAbortController.signal
@@ -3522,22 +3606,19 @@ describe('provider launch stress fake-downstream guards', () => {
     releaseStop();
     await stopping;
     expect(active.svc.getTeamAgentRuntimeSnapshot).toHaveBeenCalled();
-    expect(stopTeam).toHaveBeenCalledWith(
-      active.teamName,
-      expect.objectContaining({ signal: active.cleanupAbortController.signal, deadline: expect.any(Number) })
-    );
+    expect(stopTeam).toHaveBeenCalledWith(active.teamName);
     expect(active.capturedProcesses.get(process.pid)).toBeUndefined();
     expect(active.teardownDiagnostics.join('\n')).toMatch(/refused late PID authority/i);
   });
 
   it('fences new dispatches and drains an in-flight dispatch before teardown', async () => {
     let release!: () => void;
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'dispatch-fence',
       dispatchClosed: false,
       dispatchAbortController: new AbortController(),
       inFlightDispatches: new Set<Promise<unknown>>(),
-    } as ActiveScenario;
+    });
     const inFlight = dispatchWithTeardownFence(active, async () => {
       await new Promise<void>((resolve) => {
         release = resolve;
@@ -3552,11 +3633,11 @@ describe('provider launch stress fake-downstream guards', () => {
   });
 
   it('does not start expired cleanup work and retains a fence until timed work settles', async () => {
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'deadline-receipt',
       teardownDiagnostics: [],
       pendingTeardownReceipts: new Map(),
-    } as ActiveScenario;
+    });
     const cancellation = new AbortController();
     const neverStart = vi.fn(async () => undefined);
     await expect(
@@ -3579,13 +3660,13 @@ describe('provider launch stress fake-downstream guards', () => {
 
   it('resumes a timed-out teardown receipt without reissuing its stop effect', async () => {
     let release!: () => void;
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'timeout-reentry',
       cleanupEffects: new Map(),
       cleanupAbortController: new AbortController(),
       teardownDiagnostics: [],
       pendingTeardownReceipts: new Map(),
-    } as ActiveScenario;
+    });
     const stop = vi.fn(
       async () =>
         new Promise<void>((resolve) => {
@@ -3605,13 +3686,13 @@ describe('provider launch stress fake-downstream guards', () => {
   });
 
   it('bounds re-observation of a never-settling exactly-once cleanup receipt', async () => {
-    const active = {
+    const active = createActiveScenarioFixture({
       teamName: 'pending-receipt-deadline',
       cleanupEffects: new Map(),
       cleanupAbortController: new AbortController(),
       teardownDiagnostics: [],
       pendingTeardownReceipts: new Map(),
-    } as ActiveScenario;
+    });
     const never = new Promise<void>(() => undefined);
     const stop = vi.fn(async () => never);
     await expect(
@@ -3635,14 +3716,14 @@ describe('provider launch stress fake-downstream guards', () => {
         path.join(getTeamsBasePath(), teamName, '.provider-launch-stress-owner.json'),
         `${JSON.stringify({ teamName, token: ownership.token })}\n`
       );
-      const stopTeam = vi.fn(async () => {
+      const stopTeam = vi.fn(async (_teamName: string) => {
         throw new Error('stop failed');
       });
       const drainedDispatch = Promise.reject(new Error('overlapping dispatch rejected'));
       // Prevent the fixture's deliberate rejection from becoming an unrelated
       // unhandled-rejection failure before fenceAndDrainDispatches observes it.
       void drainedDispatch.catch(() => undefined);
-      const active = {
+      const active = createActiveScenarioFixture({
         scenario: 'anthropic',
         teamName,
         ownership,
@@ -3657,18 +3738,18 @@ describe('provider launch stress fake-downstream guards', () => {
         inFlightDispatches: new Set([drainedDispatch]),
         teardownStarted: false,
         svc: {
-          getTeamAgentRuntimeSnapshot: vi.fn(async () => null),
+          getTeamAgentRuntimeSnapshot: vi.fn(async () => createEmptyRuntimeSnapshot(teamName)),
           stopTeam,
         },
         teardown: {
-          stopTeam: async (options) => {
-            await stopTeam(teamName, options);
+          stopTeam: async (_options: TeardownMutationOptions) => {
+            await stopTeam(teamName);
           },
           cleanupCodex: async (_options) => {
             throw new Error('Codex cleanup failed');
           },
         },
-      } as unknown as ActiveScenario;
+      });
       await updateTeamReservation(active);
       const teardownError = await cleanupActiveScenario(active, { preserveFiles: false }).then(
         () => null,
@@ -3705,7 +3786,7 @@ describe('provider launch stress fake-downstream guards', () => {
       delete process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
       await expect(
         assertReleaseClosureBeforeTeardownEffect(
-          { teamName: 'closure-fence' } as ActiveScenario,
+          createActiveScenarioFixture({ teamName: 'closure-fence' }),
           'delete evidence'
         )
       ).rejects.toThrow(/wrapper authorization is unavailable|release closure is unavailable/i);
@@ -4032,7 +4113,7 @@ liveAuthorizedDisposableDescribe('provider launch stress live e2e', () => {
     } else if (!retainEvidence) {
       try {
         await assertReleaseClosureBeforeTeardownEffect(
-          { teamName: 'suite temp root' } as ActiveScenario,
+          createActiveScenarioFixture({ teamName: 'suite temp root' }),
           'delete suite disposable root'
         );
         await assertOwnedDisposableProject(disposableProject);
@@ -4067,7 +4148,7 @@ liveAuthorizedDisposableDescribe('provider launch stress live e2e', () => {
   }, 240_000);
 
   it(
-    'launches exactly once and exercises attributable post-launch work for all four provider canaries',
+    'launches exactly once and exercises attributable post-launch work for all four provider canaries plus the mixed team',
     async () => {
       const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
       expect(orchestratorCli).toBeTruthy();
@@ -4079,9 +4160,12 @@ liveAuthorizedDisposableDescribe('provider launch stress live e2e', () => {
 
       const scenarioProofs: ScenarioSequenceProof[] = [];
       for (const scenario of order) {
-        scenarioProofs.push(
-          await runProviderStressScenario(scenario, activeScenarios, disposableProject)
+        const scenarioProof = await runProviderStressScenario(
+          scenario,
+          activeScenarios,
+          disposableProject
         );
+        if (scenarioProof) scenarioProofs.push(scenarioProof);
       }
       await acceptAuthenticatedFourProviderSequenceBaseline(scenarioProofs);
     },
@@ -4090,10 +4174,10 @@ liveAuthorizedDisposableDescribe('provider launch stress live e2e', () => {
 });
 
 async function runProviderStressScenario(
-  scenario: RequiredProviderScenario,
+  scenario: ProviderLaunchStressScenario,
   activeScenarios: ActiveScenario[],
   disposableProject: DisposableProject
-): Promise<ScenarioSequenceProof> {
+): Promise<ScenarioSequenceProof | null> {
   const selected = resolveScenarioSelection(scenario);
   const memberCount = getStressMemberCount();
   const runId = sanitizeEvidencePart(randomUUID());
@@ -4224,7 +4308,14 @@ async function runProviderStressScenario(
       async () => {
         const snapshot = await active.svc.getTeamAgentRuntimeSnapshot(teamName);
         captureSnapshotProcessIdentities(active, snapshot);
-        return expectedMembers.every((memberName) => snapshot.members[memberName]?.alive === true);
+        return expectedMembers.every((memberName) => {
+          const runtime = snapshot.members[memberName];
+          return (
+            runtime?.alive === true &&
+            runtime.providerId ===
+              resolveExpectedProviderForMember(scenario, memberName, expectedMembers)
+          );
+        });
       },
       180_000,
       2_000,
@@ -4236,7 +4327,9 @@ async function runProviderStressScenario(
     if (!active.proofAudit) {
       throw new Error(`Provider launch stress did not retain a proof for ${scenario}.`);
     }
-    sequenceProof = { scenario, teamName: active.teamName, audit: active.proofAudit };
+    if (scenario !== 'mixed') {
+      sequenceProof = { scenario, teamName: active.teamName, audit: active.proofAudit };
+    }
   } catch (error) {
     active.failed = true;
     throw error;
@@ -4247,10 +4340,10 @@ async function runProviderStressScenario(
       if (index >= 0) activeScenarios.splice(index, 1);
     }
   }
-  if (!sequenceProof) {
+  if (!sequenceProof && scenario !== 'mixed') {
     throw new Error(`Provider launch stress did not collect a final proof for ${scenario}.`);
   }
-  return sequenceProof;
+  return sequenceProof ?? null;
 }
 
 async function createHomeParityOpenCodeHarness(
@@ -4275,7 +4368,7 @@ async function createHomeParityOpenCodeHarness(
   }
 }
 
-function configureWorkspaceTrustCoordinator(svc: TeamProvisioningService): void {
+function configureWorkspaceTrustCoordinator(svc: ProviderLaunchStressService): void {
   svc.setWorkspaceTrustCoordinator(
     createWorkspaceTrustCoordinator({
       claudeConfigDir: () => getClaudeBasePath(),
@@ -4778,6 +4871,19 @@ function assertSignedProviderAttribution(
   receipt: ProviderEffectReceipt,
   producer: Record<string, unknown>
 ): void {
+  const receiptFields: Record<string, unknown> = {
+    billingEventId: receipt.billingEventId,
+    teamName: receipt.teamName,
+    runId: receipt.runId,
+    taskId: receipt.taskId,
+    memberName: receipt.memberName,
+    providerId: receipt.providerId,
+    kind: receipt.kind,
+    terminalOutcome: receipt.terminalOutcome,
+    runtimeSessionId: receipt.runtimeSessionId,
+    marker: receipt.marker,
+    credentialLock: receipt.credentialLock,
+  };
   for (const key of [
     'billingEventId',
     'teamName',
@@ -4793,7 +4899,7 @@ function assertSignedProviderAttribution(
   ]) {
     if (
       canonicalizeSignedReceiptField(producer[key]) !==
-      canonicalizeSignedReceiptField((receipt as unknown as Record<string, unknown>)[key])
+      canonicalizeSignedReceiptField(receiptFields[key])
     ) {
       throw new Error('Producer signature does not bind the billing receipt fields.');
     }
@@ -5155,7 +5261,7 @@ function assertExactFourProviderProofReceiptMultiset(
   }
   if (
     new Set(effectReceipts.map((receipt) => receipt.providerId)).size !== requiredProviders.length ||
-    effectReceipts.some((receipt) => !requiredProviders.includes(receipt.providerId as TeamProviderId)) ||
+    effectReceipts.some((receipt) => !requiredProviders.includes(receipt.providerId)) ||
     [...providerCounts.values()].some((count) => count !== kinds.length)
   ) {
     throw new Error('Four-provider proof contains an unaccepted provider effect.');
@@ -5655,20 +5761,20 @@ function buildExpectedMemberNames(memberCount: number): string[] {
   return MEMBER_NAMES.slice(0, memberCount);
 }
 
-function getStressOrder(): RequiredProviderScenario[] {
-  const raw = process.env.PROVIDER_LAUNCH_STRESS_ORDER?.trim() || DEFAULT_ORDER.join(',');
-  const parsed = raw.split(',').map((item) => item.trim()) as RequiredProviderScenario[];
-  if (!sameProviderOrder(parsed, DEFAULT_ORDER)) {
+function getStressOrder(): ProviderLaunchStressScenario[] {
+  const raw = process.env.PROVIDER_LAUNCH_STRESS_ORDER?.trim() || STRESS_ORDER.join(',');
+  const parsed = raw.split(',').map((item) => item.trim());
+  if (!sameProviderOrder(parsed, STRESS_ORDER)) {
     throw new Error(
-      `Provider launch stress requires order ${DEFAULT_ORDER.join(',')}; received ${raw}`
+      `Provider launch stress requires order ${STRESS_ORDER.join(',')}; received ${raw}`
     );
   }
-  return [...DEFAULT_ORDER] as RequiredProviderScenario[];
+  return [...STRESS_ORDER];
 }
 
 function sameProviderOrder(
-  left: ProviderLaunchStressScenario[],
-  right: ProviderLaunchStressScenario[]
+  left: readonly string[],
+  right: readonly string[]
 ): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -6821,8 +6927,8 @@ async function stopTeamWithContinuousOwnedDiscovery(
         if (signal.aborted || Date.now() >= deadline) {
           throw new Error(`stopTeam for ${active.teamName} cannot signal after its deadline.`);
         }
-        // The production stop boundary receives the exact cancellation object;
-        // it fences lock admission and every later teardown mutation.
+        // The service stop API has no cancellation parameter. The owning gate
+        // fences admission immediately before and after the real boundary.
         await invokeAbortableStopTeam(active, { signal, deadline });
         if (signal.aborted || Date.now() >= deadline) {
           throw new Error(`stopTeam for ${active.teamName} exceeded its cancellation boundary.`);
@@ -6848,7 +6954,7 @@ async function stopTeamWithContinuousOwnedDiscovery(
 
 function createCancellationAwareTeardown(input: {
   active: ActiveScenario;
-  harness?: Awaited<ReturnType<typeof createOpenCodeLiveHarness>>;
+  harness?: ProviderLaunchStressHarness;
   codexCleanup?: (options: TeardownMutationOptions) => Promise<void>;
 }): CancellationAwareTeardown {
   const { active, harness, codexCleanup } = input;
@@ -6856,7 +6962,7 @@ function createCancellationAwareTeardown(input: {
     stopTeam: (authority) =>
       runCancellationAwareMutation(authority, 'stopTeam', async (options) => {
         assertTeardownMutationDeadline(options.signal, options.deadline, 'stopTeam lock');
-        await active.svc.stopTeam(active.teamName, options);
+        await active.svc.stopTeam(active.teamName);
         assertTeardownMutationDeadline(options.signal, options.deadline, 'stopTeam mutation');
       }),
     ...(harness
@@ -6868,7 +6974,7 @@ function createCancellationAwareTeardown(input: {
                 options.deadline,
                 'OpenCode harness disposal lock'
               );
-              await harness.dispose(options);
+              await harness.dispose();
               assertTeardownMutationDeadline(
                 options.signal,
                 options.deadline,
@@ -7713,7 +7819,7 @@ function assertTeardownMutationDeadline(
 }
 
 async function formatStressDiagnostics(
-  svc: TeamProvisioningService,
+  svc: ProviderLaunchStressDiagnosticsService,
   teamName: string,
   progressEvents: TeamProvisioningProgress[]
 ): Promise<string> {

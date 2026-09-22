@@ -7,7 +7,9 @@ import { PassThrough } from 'node:stream';
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { bindProjectDirectoryLease } from '../TeamProvisioningProjectDirectoryLease';
+import type { TeamCreateRequest } from @shared/types;
+
+import { bindProjectDirectoryLease } from ../TeamProvisioningProjectDirectoryLease;
 import {
   buildAgentTeamsMcpValidationError,
   createAgentTeamsMcpValidationFixture,
@@ -24,6 +26,10 @@ import {
   createTeamProvisioningProviderDiagnosticsBasePorts,
   createTeamProvisioningProviderDiagnosticsRuntime,
 } from '../TeamProvisioningProviderDiagnosticsPorts';
+
+function createLeaseRequest(cwd: string): TeamCreateRequest {
+  return { teamName: 'provider-diagnostics-lease', cwd, members: [] };
+}
 
 function createFakePorts(
   overrides: Partial<TeamProvisioningProviderDiagnosticsPorts> = {}
@@ -69,7 +75,7 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     try {
       const identity = await directory.stat({ bigint: true });
       let cancelled = false;
-      bindProjectDirectoryLease({ cwd: projectPath } as never, {
+      bindProjectDirectoryLease(createLeaseRequest(projectPath), {
         fd: directory.fd,
         dev: String(identity.dev),
         ino: String(identity.ino),
@@ -148,6 +154,9 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
       stdout: new PassThrough(),
       stderr: new PassThrough(),
     }) as unknown as TeamProvisioningProbeChild;
+    const stdout = child.stdout;
+    const stderr = child.stderr;
+    if (!stdout || !stderr) throw new Error('Probe fixture requires stdout and stderr streams.');
     const childError = new Error('spawn failed after cancellation');
     process.on('unhandledRejection', onUnhandledRejection);
     child.once('error', (error) => {
@@ -161,8 +170,8 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
       killProcessTree: vi.fn(() => {
         errorListenerAttachedBeforeCancellation = child.listenerCount('error') > 1;
         closeListenerAttachedBeforeCancellation = child.listenerCount('close') > 0;
-        stdoutListenerAttachedBeforeCancellation = child.stdout.listenerCount('data') > 0;
-        stderrListenerAttachedBeforeCancellation = child.stderr.listenerCount('data') > 0;
+        stdoutListenerAttachedBeforeCancellation = stdout.listenerCount('data') > 0;
+        stderrListenerAttachedBeforeCancellation = stderr.listenerCount('data') > 0;
         child.emit('error', childError);
         child.emit('close', null, 'SIGTERM');
         killProcessTreeReturnedNormally = true;
@@ -197,8 +206,8 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     expect(emittedErrorObserved).toBe(childError);
     expect(child.listenerCount('error')).toBe(0);
     expect(child.listenerCount('close')).toBe(0);
-    expect(child.stdout.listenerCount('data')).toBe(0);
-    expect(child.stderr.listenerCount('data')).toBe(0);
+    expect(stdout.listenerCount('data')).toBe(0);
+    expect(stderr.listenerCount('data')).toBe(0);
     expect(unhandledRejections).toEqual([]);
   });
 
@@ -213,7 +222,7 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     }) as unknown as TeamProvisioningProbeChild;
     try {
       const identity = await directory.stat({ bigint: true });
-      bindProjectDirectoryLease({ cwd: projectPath } as never, {
+      bindProjectDirectoryLease(createLeaseRequest(projectPath), {
         fd: directory.fd,
         dev: String(identity.dev),
         ino: String(identity.ino),
